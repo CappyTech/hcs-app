@@ -1,5 +1,5 @@
 const moment = require('moment');
-const logger = require('./loggerService');
+const logger = require('../loggerService');
 const db = require('./sequelizeDatabaseService');
 const kf = require('./kashflowDatabaseService');
 

@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const customerSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true },
+  uuid: { type: String, unique: true, required: true, default: uuidv4 },
   CustomerID: Number,
   Code: String,
   Name: String,
@@ -21,5 +22,4 @@ const customerSchema = new mongoose.Schema({
   Updated: Date,
 });
 
-const Customer = mongoose.model('customer', customerSchema);
-module.exports = Customer;
+module.exports = mongoose.model('customer', customerSchema);

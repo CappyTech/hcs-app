@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const quoteSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true },
+  uuid: { type: String, unique: true, required: true, default: uuidv4 },
   InvoiceDBID: Number,
   InvoiceNumber: Number,
   InvoiceDate: Date,
@@ -36,5 +37,4 @@ const quoteSchema = new mongoose.Schema({
   IsCISReverseCharge: Boolean
 });
 
-const Quote = mongoose.model('quote', quoteSchema);
-module.exports = Quote;
+module.exports = mongoose.model('quote', quoteSchema);

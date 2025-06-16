@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const supplierSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true },
+  uuid: { type: String, unique: true, required: true, default: uuidv4 },
   SupplierID: Number,
   Code: String,
   Name: String,
@@ -30,5 +31,4 @@ const supplierSchema = new mongoose.Schema({
   IsSubcontractor: Boolean
 });
 
-const Supplier = mongoose.model('supplier', supplierSchema);
-module.exports = Supplier;
+module.exports = mongoose.model('supplier', supplierSchema);

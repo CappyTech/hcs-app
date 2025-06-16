@@ -1,9 +1,14 @@
 const { v4: uuidv4 } = require('uuid');
-const logger = require('./loggerService');
-const db = require('./mongooseDatabaseService'); // assuming this exports all models
+const logger = require('../loggerService');
+const mdb = require('./mongooseDatabaseService'); // assuming this exports all models
 
 async function ensureUUIDs() {
-  for (const [modelName, model] of Object.entries(db)) {
+  for (const [modelName, model] of Object.entries(mdb)) {
+    if (!model || !model.schema || typeof model.schema.path !== 'function') {
+      logger.warn(`Skipping ${modelName} – not a valid Mongoose model.`);
+      continue;
+    }
+
     if (!model.schema.path('uuid')) {
       logger.warn(`Model ${modelName} has no uuid field – skipping.`);
       continue;

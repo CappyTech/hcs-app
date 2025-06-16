@@ -51,10 +51,10 @@ module.exports = (sequelize, DataTypes) => {
 
     Locations.associate = (db) => {
         // Locations -> Jobs
-        Locations.hasMany(db.Jobs, { foreignKey: 'locationId', allowNull: false });
+        //Locations.hasMany(db.Jobs, { foreignKey: 'locationId', allowNull: false });
 
         // Locations -> Quotes
-        Locations.hasMany(db.Quotes, { foreignKey: 'locationId', allowNull: false });
+        //Locations.hasMany(db.Quotes, { foreignKey: 'locationId', allowNull: false });
 
         // Locations -> Attendances
         Locations.hasMany(db.Attendances, { foreignKey: 'locationId', allowNull: false });

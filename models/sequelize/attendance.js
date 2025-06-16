@@ -90,7 +90,7 @@ module.exports = (sequelize, DataTypes) => {
             }
         }
     });
-
+/*
     Attendances.associate = (db) => {
         // Attendances -> Employees
         db.Attendances.belongsTo(db.Employees, { foreignKey: 'employeeId' });
@@ -104,6 +104,6 @@ module.exports = (sequelize, DataTypes) => {
         db.Attendances.belongsTo(db.Locations, { foreignKey: 'locationId' });
         db.Locations.hasMany(db.Attendances, { foreignKey: 'locationId' });
     };
-
+*/
     return Attendances;
 };

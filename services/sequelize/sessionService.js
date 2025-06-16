@@ -1,7 +1,7 @@
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 require('dotenv').config({ path: '../.env' });
-const logger = require('./loggerService');
+const logger = require('../loggerService');
 
 const options = {
     host: process.env.DB_HOST,

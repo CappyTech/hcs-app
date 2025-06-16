@@ -1,9 +1,9 @@
 const cron = require('node-cron');
 require('dotenv').config();
-const fetchKF = require('../kf/fetchKashFlowData');
-const fetchKFMongoose = require('../kf/mongoose/fetchKashFlowDataMongoose');
-const holidayService = require('../services/holidayService');
-const logger = require('./loggerService');
+const fetchKF = require('../../kf/fetchKashFlowData');
+const fetchKFMongoose = require('../../kf/mongoose/fetchKashFlowDataMongoose');
+const holidayService = require('./holidayService');
+const logger = require('../loggerService');
 
 // Cron schedule for KashFlow fetch (6:30 AM to 6:30 PM hourly in production, hourly at :30 in development)
 const scheduleKashFlowData =

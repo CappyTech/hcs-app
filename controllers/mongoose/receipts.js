@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const mdb = require('../../services/mongooseDatabaseService');
+const mdb = require('../../services/mongoose/mongooseDatabaseService');
 const path = require('path');
 const moment = require('moment-timezone');
 const logger = require('../../services/loggerService');
 const taxService = require('../../services/taxService');
-const authService = require('../../services/authService');
+const authService = require('../../services/mongoose/authServiceMongoose');
 
 router.get('/test-cis-mongo', async (req, res) => {
   try {

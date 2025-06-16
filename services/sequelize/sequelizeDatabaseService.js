@@ -4,7 +4,7 @@ require('dotenv').config({ path: '../.env' });
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
-const logger = require('./loggerService');
+const logger = require('../loggerService');
 const basename = path.basename(__filename);
 const db = {};
 
@@ -35,7 +35,7 @@ sequelize
     });
 
 // Step 1: Dynamically load all models from the models directory
-const modelsDirectory = path.join(__dirname, '../models/sequelize');
+const modelsDirectory = path.join(__dirname, '../../models/sequelize');
 
 // Load model files
 const modelFiles = fs

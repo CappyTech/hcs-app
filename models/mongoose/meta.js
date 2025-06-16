@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const KF_MetaSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true },
+  uuid: { type: String, unique: true, required: true, default: uuidv4 },
   model: {
     type: String,
     required: true,

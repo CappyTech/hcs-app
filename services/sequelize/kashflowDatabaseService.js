@@ -4,7 +4,7 @@ require('dotenv').config({ path: '../.env' });
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
-const logger = require('./loggerService');
+const logger = require('../loggerService');
 const basename = path.basename(__filename);
 const { isMainThread } = require('worker_threads');
 

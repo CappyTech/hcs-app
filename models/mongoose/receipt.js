@@ -1,8 +1,9 @@
 // models/mongoose/KF_Receipt.js
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const ReceiptSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true },
+  uuid: { type: String, unique: true, required: true, default: uuidv4 },
   InvoiceDBID: { type: Number, unique: true, required: true },
   InvoiceNumber: Number,
   InvoiceDate: Date,

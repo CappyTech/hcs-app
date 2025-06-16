@@ -4,7 +4,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
-const logger = require('./loggerService');
+const logger = require('../loggerService');
 const basename = path.basename(__filename);
 const mdb = {};
 
@@ -16,7 +16,7 @@ mongoose
     })
     .then(() => {
         if (process.env.DEBUG) {
-            logger.info('Mongo Database connection has been established successfully.');
+            //logger.info('Mongo Database connection has been established successfully.');
         }
     })
     .catch((error) => {
@@ -25,7 +25,7 @@ mongoose
     });
 
 // Dynamically load all models from the models directory
-const modelsDirectory = path.join(__dirname, '../models/mongoose');
+const modelsDirectory = path.join(__dirname, '../../models/mongoose');
 fs.readdirSync(modelsDirectory)
     .filter((file) => {
         return (
@@ -38,7 +38,7 @@ fs.readdirSync(modelsDirectory)
     .forEach((file) => {
         const model = require(path.join(modelsDirectory, file));
         mdb[model.modelName] = model;
-        logger.info(`Mongoose Model Loaded: ${model.modelName}`);
+        //logger.info(`Mongoose Model Loaded: ${model.modelName}`);
     });
 
 // Export the database object with models
