@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "test": "mocha"
   },
   "keywords": [
     "SMS, developed, Heron CS LTD, comprehensive, web-based application, streamline, management, subcontractors, construction projects, efficient, data entry, automates, monthly returns, CIS/HMRC compliance, tracks payments, manages deductions, subcontractor verification, accurate record-keeping, regulatory compliance, effective communication, project stakeholders, subcontractor management efficiency, transparency"
@@ -52,7 +53,6 @@
     "sequelize": "^6.37.3",
     "soap": "^1.1.5",
     "speakeasy": "^2.0.0",
-    "supertest": "^7.0.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^10.0.0",
@@ -62,6 +62,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.4",
-    "sequelize-cli": "^6.6.0"
+    "sequelize-cli": "^6.6.0",
+    "supertest": "^7.0.0",
+    "mocha": "^10.2.0"
   }
 }

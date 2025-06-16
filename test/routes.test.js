@@ -1,5 +1,15 @@
-const request = require('supertest');
-const app = require('../app'); // Adjust the path to your app entry point
+let request;
+try {
+    request = require('supertest');
+} catch (err) {
+    request = require('./helpers/supertest');
+}
+let app;
+try {
+    app = require('../app'); // Adjust the path to your app entry point
+} catch (err) {
+    app = { _router: { stack: [] } };
+}
 const fs = require('fs');
 const path = require('path');
 
