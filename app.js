@@ -263,13 +263,13 @@ const testMongoose = require('./controllers/mongoose/receipts');
 app.use('/', index);
 
 //app.use('/user', formsUser);
-// app.use('/client', formsClient);
-// app.use('/contact', formsContact);
-// app.use('/invoice', formsInvoice);
-// app.use('/quote', formsQuote);
-// app.use('/subcontractor', formsSubcontractor);
-// app.use('/job', formsJob);
-// app.use('/location', formsLocation);
+//app.use('/client', formsClient);
+//app.use('/contact', formsContact);
+//app.use('/invoice', formsInvoice);
+//app.use('/quote', formsQuote);
+//app.use('/subcontractor', formsSubcontractor);
+//app.use('/job', formsJob);
+//app.use('/location', formsLocation);
 //app.use('/attendance', formsAttendance);
 //app.use('/employee', formsEmployee);
 
@@ -281,13 +281,13 @@ app.use('/', index);
 //app.use('/user', user2FA);
 
 //app.use('/user', userCRUD);
-// app.use('/subcontractor', subcontractorCRUD);
-// app.use('/invoice', invoiceCRUD);
-// app.use('/quote', quoteCRUD);
-// app.use('/client', clientCRUD);
-// app.use('/contact', contactCRUD);
-// app.use('/job', jobCRUD);
-// app.use('/location', locationCRUD);
+//app.use('/subcontractor', subcontractorCRUD);
+//app.use('/invoice', invoiceCRUD);
+//app.use('/quote', quoteCRUD);
+//app.use('/client', clientCRUD);
+//app.use('/contact', contactCRUD);
+//app.use('/job', jobCRUD);
+//app.use('/location', locationCRUD);
 //app.use('/attendance', attendanceCRUD);
 //app.use('/employee', employeeCRUD);
 
