@@ -1,0 +1,202 @@
+<div class="container py-4">
+    <div class="mb-4 bg-body-tertiary rounded-3">
+        <div class="container-fluid py-5">
+            <div class="d-flex justify-content-between mb-2">
+                <a class="btn btn-hcs-green" href="/mdb/CIS/<%= previousYear %>/<%= previousMonth %>">&laquo; Previous<br> Month <%= previousMonth %>, <%= previousYear %></a>
+                <h1 class="display-6">Month <%= specifiedMonth %> | <%= currentMonthlyReturn.periodStartDisplay %> - <%= currentMonthlyReturn.periodEndDisplay %></h1>
+                <a class="btn btn-hcs-green" href="/mdb/CIS/<%= nextYear %>/<%= nextMonth %>">Next &raquo;<br> Month <%= nextMonth %>, <%= nextYear %></a>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-6 col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>Total Suppliers</h4>
+                            <p class="display-4"><%= supplierCount %></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>Total Receipts</h4>
+                            <p class="display-4"><%= receiptCount %></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <% if (!allReceiptsSubmitted || receipts.length === 0) { %>
+            <div class="row mb-4">
+                <div class="col-lg-12">
+                    <div class="card bg-warning text-dark text-center">
+                        <div class="card-body">
+                            This month should be submitted between <span class="fw-bold"><%= submissionStartDate %></span> and <span class="fw-bold"><%= submissionEndDate %></span>.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } else if (submissionDate) { %>
+            <div class="row mb-4">
+                <div class="col-lg-12">
+                    <div class="card bg-success text-white text-center">
+                        <div class="card-body">
+                            <h4>Submitted On:</h4>
+                            <p class="display-6"><%= slimDateTime(submissionDate) %></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
+            <div class="row mb-4">
+                <div class="col-lg-6 col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h4>Tax Year</h4>
+                            <p><%= taxYear.start %> - <%= taxYear.end %></p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>Monthly Return</h4>
+                            <p><%= currentMonthlyReturn.periodStartDisplay %> - <%= currentMonthlyReturn.periodEndDisplay %></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h4>Submission Deadline</h4>
+                            <p><%= currentMonthlyReturn.submissionDeadline %> (<%= currentMonthlyReturn.submissionDeadlineInDays %> days left)</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>HMRC Update Date</h4>
+                            <p><%= currentMonthlyReturn.hmrcUpdateDate %> (<%= currentMonthlyReturn.hmrcUpdateDateInDays %> days left)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <h3 class="text-center">Suppliers</h3>
+                </div>
+                <div class="col-12">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Supplier</th>
+                                    <th>Gross Total</th>
+                                    <th>Labour Total</th>
+                                    <th>Materials Total</th>
+                                    <th>CIS Total</th>
+                                    <th>Reverse Charge Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (suppliers.length === 0) { %>
+                                <tr>
+                                    <td colspan="6" class="text-center">No receipts that cover this period.</td>
+                                </tr>
+                                <% } else { %>
+                                    <% suppliers.forEach(supplier => { %>
+                                    <tr>
+                                        <td><a href="/kashflow/supplier/read/<%= supplier.uuid %>"><%= supplier.Name %></a></td>
+                                        <% if (supplierTotals[String(supplier.SupplierID)]) { %>
+                                        <td><%= formatCurrency(supplierTotals[String(supplier.SupplierID)].grossAmount) %></td>
+                                        <td><%= formatCurrency(supplierTotals[String(supplier.SupplierID)].labourCost) %></td>
+                                        <td><%= formatCurrency(supplierTotals[String(supplier.SupplierID)].materialsCost) %></td>
+                                        <td><%= formatCurrency(supplierTotals[String(supplier.SupplierID)].cisDeductions) %></td>
+                                        <td><%= formatCurrency(supplierTotals[String(supplier.SupplierID)].reverseChargeVAT) %></td>
+                                        <% } else { %>
+                                        <td colspan="6" class="text-center">No Data</td>
+                                        <% } %>
+                                    </tr>
+                                    <% }); %>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <% const midIndex = Math.ceil(receipts.length / 2); %>
+                <div class="col-12">
+                    <h3 class="text-center">Receipts</h3>
+                </div>
+                <div class="col-6">
+                    <ul class="list-group">
+                        <% receipts.slice(0, midIndex).forEach(receipt => { %>
+                        <a href="/kashflow/receipt/read/<%= receipt.uuid %>" class="list-group-item list-group-item-action">
+                            <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
+                            <i class="bi bi-pencil-square" style="font-size: 0.65rem;"></i>
+                            <% if (receipt.SubmissionDate) { %>
+                                <i class="bi bi-check hcs-green-text"></i>
+                            <% } else { %>
+                                <i class="bi bi-x hcs-red-text"></i>
+                            <% } %>
+                        </a>
+                        <% }); %>
+                    </ul>
+                </div>
+                <div class="col-6">
+                    <ul class="list-group">
+                        <% receipts.slice(midIndex).forEach(receipt => { %>
+                        <a href="/kashflow/receipt/read/<%= receipt.uuid %>" class="list-group-item list-group-item-action">
+                            <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
+                            <i class="bi bi-pencil-square" style="font-size: 0.65rem;"></i>
+                            <% if (receipt.SubmissionDate) { %>
+                                <i class="bi bi-check hcs-green-text"></i>
+                            <% } else { %>
+                                <i class="bi bi-x hcs-red-text"></i>
+                            <% } %>
+                        </a>
+                        <% }); %>
+                    </ul>
+                </div>
+            </div>
+
+            <% if (!allReceiptsSubmitted || receipts.length === 0) { %>
+            <hr>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h4 class="text-center">Update Submission Date for Selected Receipts</h4>
+                </div>
+                <div class="col-12">
+                    <form action="/kashflow/receipt/change" method="POST">
+                        <input type="hidden" name="redirectPath" value="/dashboard/CIS/<%= specifiedYear %>/<%= specifiedMonth %>">
+                        <div class="row mb-3">
+                            <label for="submissionDate" class="form-label">Submission Date</label>
+                            <input type="date" class="form-control" id="submissionDate" name="submissionDate" required>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="form-label">Select Receipts</label>
+                            <% receipts.forEach(receipt => { %>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="uuids" value="<%= receipt.uuid %>" id="receipt-<%= receipt.uuid %>">
+                                <label class="form-check-label" for="receipt-<%= receipt.uuid %>">
+                                    <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %>
+                                </label>
+                            </div>
+                            <% }); %>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Update Selected Receipts</button>
+                    </form>
+                </div>
+            </div>
+            <% } else {%>
+            <hr>
+            <div class="row">
+                <div class="col-12">
+                    <h4 class="text-center">All Receipts Submitted</h4>
+                </div>
+            </div>
+            <% } %>
+        </div>
+    </div>
+</div>

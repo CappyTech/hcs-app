@@ -14,7 +14,10 @@ const fs = require('fs');
 
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', [
+  path.join(__dirname, 'views'),
+  path.join(__dirname, 'mongoose/views')
+]);
 app.set('layout', 'layout');
 app.use(expressLayouts);
 app.use(express.json());
@@ -202,12 +205,6 @@ if (process.env.NODE_ENV === 'development') {
     }
 }
 
-const index = require('./controllers/mongoose/index');
-const login = require('./controllers/mongoose/login');
-const register = require('./controllers/mongoose/register');
-const settings = require('./controllers/mongoose/settings');
-const twoFA = require('./controllers/mongoose/2fa');
-
 //const formsUser = require('./controllers/forms/user');
 //const formsSubcontractor = require('./controllers/forms/subcontractor');
 //const formsInvoice = require('./controllers/forms/invoice');
@@ -261,15 +258,11 @@ const twoFA = require('./controllers/mongoose/2fa');
 //const kashflowYearlyReturns = require('./controllers/kashflowYearlyReturns');
 
 const adminLogger = require('./controllers/admin/logger');
+const mongooseRoutes = require("./mongoose/routes");
 
-const testMongoose = require('./controllers/mongoose/receipts');
-const mogooseRoutes = require('./controllers/mogoose');
 
-app.use('/', index);
 
 //app.use('/user', formsUser);
-//app.use('/client', formsClient);
-//app.use('/contact', formsContact);
 //app.use('/invoice', formsInvoice);
 //app.use('/quote', formsQuote);
 //app.use('/subcontractor', formsSubcontractor);
@@ -318,20 +311,15 @@ app.use('/', index);
 
 //app.use('/kashflow/monthly', kashflowMonthlyReturns);
 //app.use('/kashflow/yearly', kashflowYearlyReturns);
+app.use('/', mongooseRoutes);
 
 app.use('/', adminLogger);
 
-app.use('/', testMongoose);
-app.use('/', mogooseRoutes);
 
 app.use("/api-docs", authService.ensureAuthenticated, authService.ensureRole('admin'), swaggerUi.serve, (req, res, next) => {
     const swaggerDocument = JSON.parse(
         fs.readFileSync(path.join(__dirname, "swagger.json"), "utf8")
     );
-    swaggerUi.setup(swaggerDocument)(req, res, next);
-});
-
-// Catch undefined routes (404 handler)
 app.use((req, res, next) => {
     const error = new Error(`Route not found: ${req.method} ${req.originalUrl}`);
     error.statusCode = 404;
