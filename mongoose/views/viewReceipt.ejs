@@ -1,0 +1,130 @@
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-6">
+            <h1 class="display-3"><%= Receipt.InvoiceNumber %></h1>
+        </div>
+        <div class="col-6 text-end">
+            <h2 class="display-3"><%= slimDateTime(Receipt.InvoiceDate) %></h2>
+        </div>
+    </div>
+
+    <% if (Supplier) { %>
+        <address class="mb-4">
+            <strong><a href="/kashflow/supplier/read/<%= Supplier.uuid %>"><%= Supplier.Name %></a></strong><br>
+            <%= Supplier.Mobile %><br>
+            <%= Supplier.Email %><br>
+            <%= [Supplier.Address1, Supplier.Address2, Supplier.Address3, Supplier.Address4, Supplier.PostCode].filter(Boolean).join(', ') %>
+        </address>
+    <% } %>
+
+    <% if (Array.isArray(Receipt.Lines) && Receipt.Lines.length > 0) { %>
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Purchase Code</th>
+                        <th>Job</th>
+                        <th>Quantity</th>
+                        <th>Description</th>
+                        <th>Rate (£)</th>
+                        <th>VAT Rate</th>
+                        <th>VAT Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% Receipt.Lines.forEach(line => { 
+                        const project = Projects.find(p => p.ID === line.ProjID);
+                    %>
+                        <tr>
+                            <td><%= line.ChargeType %></td>
+                            <td><%= project ? project.Name : line.ProjID %></td>
+                            <td><%= line.Quantity %></td>
+                            <td><%= line.Description %></td>
+                            <td><%= line.Rate %></td>
+                            <td><%= line.VatRate %></td>
+                            <td><%= line.VatAmount %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } else { %>
+        <p class="text-danger">No line items available for this receipt.</p>
+    <% } %>
+
+    <% if (Array.isArray(Receipt.Payments) && Receipt.Payments.length > 0) { %>
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Pay Invoice</th>
+                        <th>Pay Date</th>
+                        <th>Pay Note</th>
+                        <th>Pay Amount (£)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% Receipt.Payments.forEach(payment => { %>
+                        <tr>
+                            <td><%= payment.PayInvoice %></td>
+                            <td><%= slimDateTime(payment.PayDate) %></td>
+                            <td><%= payment.PayNote %></td>
+                            <td><%= payment.PayAmount %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } else { %>
+        <p class="text-danger">No payment records available for this receipt.</p>
+    <% } %>
+
+    <div class="table-responsive mb-5">
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Summary</th>
+                    <th>Net (£)</th>
+                    <th>VAT (£)</th>
+                    <th>Amount Paid (£)</th>
+                    <th>Submission Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td></td>
+                    <td><%= Receipt.NetAmount %></td>
+                    <td><%= Receipt.VATAmount %></td>
+                    <td><%= Receipt.AmountPaid %></td>
+                    <td><%= Receipt.SubmissionDate || 'Not Submitted' %></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <% if (!Receipt.SubmissionDate) { %>
+            <div class="col-6 text-center">
+                <form action="/kashflow/receipt/<%= Receipt.uuid %>/submit" method="POST">
+                    <button type="submit" class="btn btn-hcs-green">Mark as Submitted (Today)</button>
+                </form>
+            </div>
+        <% } else { %>
+            <div class="col-6 text-center">
+                <form action="/kashflow/receipt/<%= Receipt.uuid %>/cancel" method="POST">
+                    <button type="submit" class="btn btn-danger">Cancel Submission</button>
+                </form>
+            </div>
+        <% } %>
+
+        <div class="col-6">
+            <form action="/kashflow/receipt/<%= Receipt.uuid %>/change/" method="POST">
+                <div class="mb-3 d-grid gap-2">
+                    <label for="submissionDate" class="form-label text-center">Select Submission Date</label>
+                    <input type="date" class="form-control" id="submissionDate" name="submissionDate" required>
+                    <button type="submit" class="btn btn-warning">Change to a specific Submission Date</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,61 @@
+<div class="container mt-5">
+    <h1 class="display-3">Quote: <%= Quote.InvoiceNumber %></h1>
+    <p><strong>Date:</strong> <%= slimDateTime(Quote.InvoiceDate) %></p>
+    <p><strong>Valid Until:</strong> <%= Quote.DueDate ? slimDateTime(Quote.DueDate) : 'Not Specified' %></p>
+
+    <!-- Customer Information -->
+    <% if (Customer) { %>
+        <h2 class="display-4">Customer Information</h2>
+        <p><strong>Name:</strong> <a href="/kashflow/customer/read/<%= Customer.uuid %>"><%= Customer.Name %></a></p>
+    <% } %>
+
+    <h2 class="display-6">Quote Items</h2>
+
+    <% if (Array.isArray(Quote.Lines) && Quote.Lines.length > 0) { %>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Item Code</th>
+                    <th>Job</th>
+                    <th>Quantity</th>
+                    <th>Description</th>
+                    <th>Rate (£)</th>
+                    <th>VAT Rate</th>
+                    <th>VAT Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% Quote.Lines.forEach(line => { %>
+                    <tr>
+                        <td><%= line.ChargeType %></td>
+                        <td>
+                            <% if (line.ProjID) { %>
+                                <a href="/kashflow/project/read/<%= line.ProjID %>"><%= line.ProjID %></a>
+                            <% } else { %>
+                                N/A
+                            <% } %>
+                        </td>
+                        <td><%= line.Quantity %></td>
+                        <td><%= line.Description %></td>
+                        <td><%= line.Rate %></td>
+                        <td><%= line.VatRate %></td>
+                        <td><%= line.VatAmount %></td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+    <% } else { %>
+        <p class="text-danger">No line items available for this quote.</p>
+    <% } %>
+
+    <h2 class="display-6">Summary</h2>
+    <p><strong>Net:</strong> £<%= Quote.NetAmount %></p>
+    <p><strong>VAT:</strong> £<%= Quote.VATAmount %></p>
+
+    <h2 class="display-6">Actions</h2>
+    <form action="/kashflow/quote/<%= Quote.uuid %>/convert" method="POST">
+        <button type="submit" disabled class="btn btn-success">Convert to Invoice</button>
+    </form>
+</div>

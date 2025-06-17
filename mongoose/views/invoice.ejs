@@ -1,0 +1,83 @@
+<div class="container my-5">
+    <h1 class="text-center mb-4">Invoices Dashboard</h1>
+
+    <!-- Dashboard Summary -->
+    <div class="row text-center mb-5">
+        <div class="col-md-6">
+            <div class="card text-bg-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Total Invoices</h5>
+                    <h2 class="card-text"><%= totalInvoices %></h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-bg-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Paid Invoices</h5>
+                    <h2 class="card-text"><%= paidInvoices %></h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Invoices -->
+    <div class="card">
+        <div class="card-header">
+            Recent Invoices (Last 5 in 30 days)
+        </div>
+        <div class="card-body">
+            <ul class="list-group">
+                <% recentInvoices.slice(0, 5).forEach((invoice) => { %>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong><a href="/kashflow/invoice/read/<%= invoice.uuid %>"><%= invoice.InvoiceNumber %></a></strong>
+                            <p class="mb-0 text-muted">Due: <%= slimDateTime(invoice.DueDate) || 'N/A' %></p>
+                        </div>
+                        <span>£<%= invoice.NetAmount %></span>
+                    </li>
+                <% }) %>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Full Invoice List -->
+    <h2 class="mt-5 text-center">All Invoices</h2>
+    <table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>KF #</th>
+            <th>Customer</th>
+            <th>Net Amount</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        <% invoices.forEach(invoice => { %>
+        <tr>
+            <td><%= invoice.CustomerReference %></td>
+            <td><a href="/kashflow/invoice/read/<%= invoice.uuid %>"><%= invoice.InvoiceNumber %></a></td>
+            <td>
+                <% if (invoice.customer) { %>
+                    <a href="/kashflow/customer/read/<%= invoice.customer.uuid %>">
+                        <%= invoice.customer.Name %>
+                    </a>
+                <% } else { %>
+                    <span class="text-muted">No Customer</span>
+                <% } %>
+            </td>
+            <td>£<%= invoice.NetAmount %></td>
+            <td>
+                <% if (invoice.Paid) { %>
+                <span class="badge bg-success">Paid</span>
+                <% } else { %>
+                <span class="badge bg-warning">Unpaid</span>
+                <% } %>
+            </td>
+        </tr>
+        <% }) %>
+    </tbody>
+    </table>
+
+</div>

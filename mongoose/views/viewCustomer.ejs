@@ -1,0 +1,143 @@
+<div class="container mt-5">
+    <h1 class="display-3">Customer: <%= Customer.Name %></h1>
+    <p><strong>Customer Code:</strong> <%= Customer.Code || 'N/A' %></p>
+
+    <h2 class="display-4">Contact Information</h2>
+    <p><strong>Contact:</strong> <%= Customer.Contact || 'N/A' %></p>
+    <p><strong>Email:</strong> <a href="mailto:<%= Customer.Email %>"><%= Customer.Email || 'N/A' %></a></p>
+    <p><strong>Phone:</strong> <%= Customer.Telephone || 'N/A' %></p>
+    <p><strong>Mobile:</strong> <%= Customer.Mobile || 'N/A' %></p>
+    <p><strong>Fax:</strong> <%= Customer.Fax || 'N/A' %></p>
+    <% if (Customer.Website) { %>
+        <p><strong>Website:</strong> <a href="<%= Customer.Website %>" target="_blank"><%= Customer.Website %></a></p>
+    <% } %>
+
+    <h2 class="display-4">Billing Address</h2>
+    <p>
+        <% if (Customer.Address1) { %> <%= Customer.Address1 %><br> <% } %>
+        <% if (Customer.Address2) { %> <%= Customer.Address2 %><br> <% } %>
+        <% if (Customer.Address3) { %> <%= Customer.Address3 %><br> <% } %>
+        <% if (Customer.Address4) { %> <%= Customer.Address4 %><br> <% } %>
+        <% if (Customer.Postcode) { %> <strong>Postcode:</strong> <%= Customer.Postcode %><br> <% } %>
+        <% if (Customer.CountryName) { %> <strong>Country:</strong> <%= Customer.CountryName %><br> <% } %>
+    </p>
+
+    <% if (Customer.CustHasDeliveryAddress) { %>
+        <h2 class="display-4">Delivery Address</h2>
+        <p>
+            <% if (Customer.DeliveryAddress1) { %> <%= Customer.DeliveryAddress1 %><br> <% } %>
+            <% if (Customer.DeliveryAddress2) { %> <%= Customer.DeliveryAddress2 %><br> <% } %>
+            <% if (Customer.DeliveryAddress3) { %> <%= Customer.DeliveryAddress3 %><br> <% } %>
+            <% if (Customer.DeliveryAddress4) { %> <%= Customer.DeliveryAddress4 %><br> <% } %>
+            <% if (Customer.DeliveryPostcode) { %> <strong>Postcode:</strong> <%= Customer.DeliveryPostcode %><br> <% } %>
+            <% if (Customer.DeliveryCountryName) { %> <strong>Country:</strong> <%= Customer.DeliveryCountryName %><br> <% } %>
+        </p>
+    <% } %>
+
+    <h2 class="display-4">Financial Details</h2>
+    <p><strong>Discount:</strong> <%= Customer.Discount ? Customer.Discount + '%' : 'N/A' %></p>
+    <p><strong>VAT Number:</strong> <%= Customer.VATNumber || 'N/A' %></p>
+    <p><strong>Payment Terms:</strong> <%= Customer.PaymentTerms ? Customer.PaymentTerms + ' days' : 'N/A' %></p>
+
+    <h2 class="display-4">Related Invoices</h2>
+    <% if (Customer.invoices && Customer.invoices.length > 0) { %>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Invoice Number</th>
+                        <th>Invoice Date</th>
+                        <th>Due Date</th>
+                        <th>Amount (£)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% Customer.invoices.forEach(invoice => { %>
+                        <tr>
+                            <td>
+                                <a href="/kashflow/invoice/read/<%= invoice.uuid %>">
+                                    <%= invoice.InvoiceNumber %>
+                                </a>
+                            </td>
+                            <td><%= slimDateTime(invoice.InvoiceDate) %></td>
+                            <td><%= invoice.DueDate ? slimDateTime(invoice.DueDate) : 'N/A' %></td>
+                            <td>£<%= invoice.NetAmount %></td>
+                            <td>
+                                <a href="/kashflow/invoice/read/<%= invoice.uuid %>" class="btn btn-primary btn-sm">View</a>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } else { %>
+        <p class="text-danger">No invoices found for this customer.</p>
+    <% } %>
+
+    <h2 class="display-4">Related Quotes</h2>
+    <% if (Customer.quotes && Customer.quotes.length > 0) { %>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Quote Number</th>
+                        <th>Quote Date</th>
+                        <th>Amount (£)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% Customer.quotes.forEach(quote => { %>
+                        <tr>
+                            <td>
+                                <a href="/kashflow/quote/read/<%= quote.uuid %>">
+                                    <%= quote.InvoiceNumber %>
+                                </a>
+                            </td>
+                            <td><%= slimDateTime(quote.InvoiceDate) %></td>
+                            <td>£<%= quote.NetAmount %></td>
+                            <td>
+                                <a href="/kashflow/quote/read/<%= quote.uuid %>" class="btn btn-primary btn-sm">View</a>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } else { %>
+        <p class="text-danger">No quotes found for this customer.</p>
+    <% } %>
+
+    <h2 class="display-4">Related Projects</h2>
+    <% if (Customer.projects && Customer.projects.length > 0) { %>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Project ID</th>
+                        <th>Project Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% Customer.projects.forEach(project => { %>
+                        <tr>
+                            <td>
+                                <a href="/kashflow/project/read/<%= project.uuid %>">
+                                    <%= project.CustomerID %>
+                                </a>
+                            </td>
+                            <td><%= project.Name || 'Unnamed Project' %></td>
+                            <td>
+                                <a href="/kashflow/project/read/<%= project.uuid %>" class="btn btn-primary btn-sm">View</a>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } else { %>
+        <p class="text-danger">No projects found for this customer.</p>
+    <% } %>
+</div>

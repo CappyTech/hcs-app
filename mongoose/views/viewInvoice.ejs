@@ -1,0 +1,98 @@
+<div class="container mt-5">
+    <h1 class="display-3">Invoice: <%= Invoice.InvoiceNumber %></h1>
+    <p><strong>Date:</strong> <%= slimDateTime(Invoice.InvoiceDate) %></p>
+    <p><strong>Due Date:</strong> <%= Invoice.DueDate ? slimDateTime(Invoice.DueDate) : 'Not Specified' %></p>
+
+    <!-- Customer Information -->
+    <% if (Customer) { %>
+        <h2 class="display-4">Customer Information</h2>
+        <p><strong>Name:</strong> <a href="/kashflow/customer/read/<%= Customer.uuid %>"><%= Customer.Name %></a></p>
+    <% } %>
+
+    <h2 class="display-6">Invoice Items</h2>
+
+    <% if (Array.isArray(Invoice.Lines) && Invoice.Lines.length > 0) { %>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Item Code</th>
+                    <th>Job</th>
+                    <th>Quantity</th>
+                    <th>Description</th>
+                    <th>Rate (£)</th>
+                    <th>VAT Rate</th>
+                    <th>VAT Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% Invoice.Lines.forEach(line => { %>
+                    <tr>
+                        <td><%= line.ChargeType %></td>
+                        <td>
+                            <% if (line.ProjID) { %>
+                                <a href="/kashflow/project/read/<%= line.ProjID %>"><%= line.ProjID %></a>
+                            <% } else { %>
+                                N/A
+                            <% } %>
+                        </td>
+                        <td><%= line.Quantity %></td>
+                        <td><%= line.Description %></td>
+                        <td><%= line.Rate %></td>
+                        <td><%= line.VatRate %></td>
+                        <td><%= line.VatAmount %></td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+    <% } else { %>
+        <p class="text-danger">No line items available for this invoice.</p>
+    <% } %>
+
+    <h2 class="display-6">Payments</h2>
+
+    <% if (Invoice.Payments && Invoice.Payments.Payment) { %>
+        <% if (Array.isArray(Invoice.Payments.Payment)) { %>
+            <% if (Invoice.Payments.Payment.length > 0) { %>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Pay Invoice</th>
+                                <th>Pay Date</th>
+                                <th>Pay Note</th>
+                                <th>Pay Amount (£)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% Invoice.Payments.Payment.forEach(payment => { %>
+                                <tr>
+                                    <td>
+                                        <a href="/kashflow/invoice/read/<%= payment.PayInvoice %>">
+                                            <%= payment.PayInvoice %>
+                                        </a>
+                                    </td>
+                                    <td><%= slimDateTime(payment.PayDate) %></td>
+                                    <td><%= payment.PayNote %></td>
+                                    <td><%= payment.PayAmount %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="text-danger">No payments recorded for this invoice.</p>
+            <% } %>
+        <% } else { %>
+            <p class="text-danger">Invalid payment data structure.</p>
+        <% } %>
+    <% } else { %>
+        <p class="text-danger">No payment information available.</p>
+    <% } %>
+
+    <h2 class="display-6">Summary</h2>
+    <p><strong>Net:</strong> £<%= Invoice.NetAmount %></p>
+    <p><strong>VAT:</strong> £<%= Invoice.VATAmount %></p>
+    <p><strong>Amount Paid:</strong> £<%= Invoice.AmountPaid %></p>
+</div>
