@@ -59,7 +59,8 @@ router.post('/project/:uuid/:number/upload', authService.ensureAuthenticated, au
 });
 
 router.get('/project/:uuid/:number/download/:filename', authService.ensureAuthenticated, authService.ensureRole('admin'), (req, res) => {
-        const filePath = path.join(projectsDir, req.params.number.toString(), req.params.filename);
+        const sanitizedFileName = sanitize(req.params.filename);
+        const filePath = path.join(projectsDir, req.params.number.toString(), sanitizedFileName);
 
         if (!fs.existsSync(filePath)) {
             return res.status(404).send("File not found.");

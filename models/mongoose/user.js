@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const encryptionService = require('../../services/encryptionService');
+const { getPermissionsForRole } = require('../../services/permissionsService');
 const { v4: uuidv4 } = require('uuid');
 const { Schema } = mongoose;
 
@@ -66,6 +67,11 @@ const userSchema = new Schema({
 userSchema.pre('save', async function (next) {
     if (this.isModified('password')) {
         this.password = await bcrypt.hash(this.password, 10);
+    }
+
+    // Assign permissions if new or role changed or permissions empty
+    if (this.isNew || this.isModified('role') || !this.permissions || Object.keys(this.permissions).length === 0) {
+        this.permissions = getPermissionsForRole(this.role);
     }
 
     // Ensure only one of the foreign keys is set

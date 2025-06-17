@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
 const axios = require('axios');
+const bcrypt = require('bcrypt');
 const path = require('path');
 const logger = require('../../services/loggerService');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
@@ -66,6 +66,7 @@ const loginUser = async (req, res) => {
 
         const sessionData = {
             id: user._id.toString(),
+            uuid: user.uuid,
             username: user.username,
             email: user.email,
             role: user.role,

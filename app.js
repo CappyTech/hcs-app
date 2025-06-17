@@ -14,7 +14,10 @@ const fs = require('fs');
 
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', [
+  path.join(__dirname, 'views'),
+  path.join(__dirname, 'mongoose/views')
+]);
 app.set('layout', 'layout');
 app.use(expressLayouts);
 app.use(express.json());
@@ -31,6 +34,10 @@ vendorPackages.forEach(pkg => {
 
 app.use(useragent.express());
 
+//const db = require('./services/sequelizeDatabaseService');
+//const kf = require('./services/kashflowDatabaseService');
+const mdb = require('./services/mongoose/mongooseDatabaseService');
+
 app.use(require('./services/securityService'));
 app.use(require('./services/mongoose/sessionServiceMongoose'));
 app.use(flash());
@@ -39,10 +46,6 @@ app.use(require('./services/rateLimiterService'));
 app.use(require('./services/mongoose/cronServiceMongoose'));
 
 const databaseUsed = process.env.DATABASE_TYPE || 'mdb';
-
-//const db = require('./services/sequelizeDatabaseService');
-//const kf = require('./services/kashflowDatabaseService');
-const mdb = require('./services/mongoose/mongooseDatabaseService');
 
 app.use(async (req, res, next) => {
     res.locals.session = req.session;
@@ -73,8 +76,8 @@ app.use(async (req, res, next) => {
         //logger.info('Using Mongoose database');
         try {
             const user = req.session.user;
-            if (user && user._id) {
-                const User = await mdb.user.findById(user._id);
+            if (user && user.id) {
+                const User = await mdb.user.findById(user.id);
                 if (User) {
                     res.locals.isAuthenticated = true;
                     res.locals.isAdmin = User.role === 'admin';
@@ -202,8 +205,6 @@ if (process.env.NODE_ENV === 'development') {
     }
 }
 
-const index = require('./controllers/renderIndex');
-
 //const formsUser = require('./controllers/forms/user');
 //const formsSubcontractor = require('./controllers/forms/subcontractor');
 //const formsInvoice = require('./controllers/forms/invoice');
@@ -257,19 +258,16 @@ const index = require('./controllers/renderIndex');
 //const kashflowYearlyReturns = require('./controllers/kashflowYearlyReturns');
 
 const adminLogger = require('./controllers/admin/logger');
+const mongooseRoutes = require("./mongoose/routes");
 
-const testMongoose = require('./controllers/mongoose/receipts');
 
-app.use('/', index);
 
 //app.use('/user', formsUser);
-// app.use('/client', formsClient);
-// app.use('/contact', formsContact);
-// app.use('/invoice', formsInvoice);
-// app.use('/quote', formsQuote);
-// app.use('/subcontractor', formsSubcontractor);
-// app.use('/job', formsJob);
-// app.use('/location', formsLocation);
+//app.use('/invoice', formsInvoice);
+//app.use('/quote', formsQuote);
+//app.use('/subcontractor', formsSubcontractor);
+//app.use('/job', formsJob);
+//app.use('/location', formsLocation);
 //app.use('/attendance', formsAttendance);
 //app.use('/employee', formsEmployee);
 
@@ -281,13 +279,13 @@ app.use('/', index);
 //app.use('/user', user2FA);
 
 //app.use('/user', userCRUD);
-// app.use('/subcontractor', subcontractorCRUD);
-// app.use('/invoice', invoiceCRUD);
-// app.use('/quote', quoteCRUD);
-// app.use('/client', clientCRUD);
-// app.use('/contact', contactCRUD);
-// app.use('/job', jobCRUD);
-// app.use('/location', locationCRUD);
+//app.use('/subcontractor', subcontractorCRUD);
+//app.use('/invoice', invoiceCRUD);
+//app.use('/quote', quoteCRUD);
+//app.use('/client', clientCRUD);
+//app.use('/contact', contactCRUD);
+//app.use('/job', jobCRUD);
+//app.use('/location', locationCRUD);
 //app.use('/attendance', attendanceCRUD);
 //app.use('/employee', employeeCRUD);
 
@@ -313,19 +311,10 @@ app.use('/', index);
 
 //app.use('/kashflow/monthly', kashflowMonthlyReturns);
 //app.use('/kashflow/yearly', kashflowYearlyReturns);
+app.use('/', mongooseRoutes);
 
 app.use('/', adminLogger);
 
-app.use('/', testMongoose);
-
-app.use("/api-docs", authService.ensureAuthenticated, authService.ensureRole('admin'), swaggerUi.serve, (req, res, next) => {
-    const swaggerDocument = JSON.parse(
-        fs.readFileSync(path.join(__dirname, "swagger.json"), "utf8")
-    );
-    swaggerUi.setup(swaggerDocument)(req, res, next);
-});
-
-// Catch undefined routes (404 handler)
 app.use((req, res, next) => {
     const error = new Error(`Route not found: ${req.method} ${req.originalUrl}`);
     error.statusCode = 404;
