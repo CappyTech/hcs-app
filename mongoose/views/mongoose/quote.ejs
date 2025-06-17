@@ -32,7 +32,7 @@
                     <% recentQuotes.slice(0, 5).forEach((quote) => { %>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <strong><a href="/kashflow/quote/read/<%= quote.uuid %>"><%= quote.InvoiceNumber %></a></strong>
+                                <strong><a href="/quote/read/<%= quote.uuid %>"><%= quote.InvoiceNumber %></a></strong>
                                 <p class="mb-0 text-muted">Date: <%= slimDateTime(quote.InvoiceDate) %></p>
                             </div>
                             <span>£<%= quote.NetAmount %></span>
@@ -61,10 +61,10 @@
             <% quotes.forEach(quote => { %>
             <tr>
                 <td><%= quote.CustomerReference %></td>
-                <td><a href="/kashflow/quote/read/<%= quote.uuid %>"><%= quote.InvoiceNumber %></a></td>
+                <td><a href="/quote/read/<%= quote.uuid %>"><%= quote.InvoiceNumber %></a></td>
                 <td>
                     <% if (quote.customer) { %>
-                        <a href="/kashflow/customer/read/<%= quote.customer.uuid %>">
+                        <a href="/customer/read/<%= quote.customer.uuid %>">
                             <%= quote.customer.Name %>
                         </a>
                     <% } else { %>

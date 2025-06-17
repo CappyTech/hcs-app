@@ -56,7 +56,7 @@
                     <% Customer.invoices.forEach(invoice => { %>
                         <tr>
                             <td>
-                                <a href="/kashflow/invoice/read/<%= invoice.uuid %>">
+                                <a href="/invoice/read/<%= invoice.uuid %>">
                                     <%= invoice.InvoiceNumber %>
                                 </a>
                             </td>
@@ -64,7 +64,7 @@
                             <td><%= invoice.DueDate ? slimDateTime(invoice.DueDate) : 'N/A' %></td>
                             <td>£<%= invoice.NetAmount %></td>
                             <td>
-                                <a href="/kashflow/invoice/read/<%= invoice.uuid %>" class="btn btn-primary btn-sm">View</a>
+                                <a href="/invoice/read/<%= invoice.uuid %>" class="btn btn-primary btn-sm">View</a>
                             </td>
                         </tr>
                     <% }) %>
@@ -91,14 +91,14 @@
                     <% Customer.quotes.forEach(quote => { %>
                         <tr>
                             <td>
-                                <a href="/kashflow/quote/read/<%= quote.uuid %>">
+                                <a href="/quote/read/<%= quote.uuid %>">
                                     <%= quote.InvoiceNumber %>
                                 </a>
                             </td>
                             <td><%= slimDateTime(quote.InvoiceDate) %></td>
                             <td>£<%= quote.NetAmount %></td>
                             <td>
-                                <a href="/kashflow/quote/read/<%= quote.uuid %>" class="btn btn-primary btn-sm">View</a>
+                                <a href="/quote/read/<%= quote.uuid %>" class="btn btn-primary btn-sm">View</a>
                             </td>
                         </tr>
                     <% }) %>
@@ -124,13 +124,13 @@
                     <% Customer.projects.forEach(project => { %>
                         <tr>
                             <td>
-                                <a href="/kashflow/project/read/<%= project.uuid %>">
+                                <a href="/project/read/<%= project.uuid %>">
                                     <%= project.CustomerID %>
                                 </a>
                             </td>
                             <td><%= project.Name || 'Unnamed Project' %></td>
                             <td>
-                                <a href="/kashflow/project/read/<%= project.uuid %>" class="btn btn-primary btn-sm">View</a>
+                                <a href="/project/read/<%= project.uuid %>" class="btn btn-primary btn-sm">View</a>
                             </td>
                         </tr>
                     <% }) %>

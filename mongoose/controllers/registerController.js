@@ -3,14 +3,14 @@ const path = require('path');
 const logger = require('../../services/loggerService');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
 
-exports.renderRegistrationForm = (req, res) => {
-    res.render(path.join('user', 'register'), {
+exports.renderRegistrationForm = (req, res, next) => {
+    res.render(path.join('mongoose', 'register'), {
         title: 'Register',
         siteKey: process.env.TURNSTILE_SITE_KEY,
     });
 };
 
-exports.registerUser = async (req, res) => {
+exports.registerUser = async (req, res, next) => {
     try {
         const { username, email, password, role } = req.body;
         const token = req.body['cf-turnstile-response'];
@@ -57,8 +57,8 @@ exports.registerUser = async (req, res) => {
         await newUser.save();
 
         logger.info('New User Created.');
-        req.flash('success', 'Account created. You can now sign in.');
-        return res.redirect('/user/signin');
+        req.flash('success', 'Account created. You can now log in.');
+        return res.redirect('/user/login');
 
     } catch (error) {
         logger.error('Error registering user: ' + error.message);

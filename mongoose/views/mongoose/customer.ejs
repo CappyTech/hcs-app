@@ -39,7 +39,7 @@
                 <% recentCustomers.slice(0, 5).forEach((customer) => { %>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
-                            <strong><a href="/kashflow/customer/read/<%= customer.uuid %>"><%= customer.Name %></a></strong>
+                            <strong><a href="/customer/read/<%= customer.uuid %>"><%= customer.Name %></a></strong>
                             <p class="mb-0 text-muted">Added on: <%= slimDateTime(customer.Created) %></p>
                         </div>
                         <span><%= customer.Email || 'No Email' %></span>
@@ -64,7 +64,7 @@
         <tbody>
             <% customers.forEach(customer => { %>
             <tr>
-                <td><a href="/kashflow/customer/read/<%= customer.uuid %>"><%= customer.Name %></a></td>
+                <td><a href="/customer/read/<%= customer.uuid %>"><%= customer.Name %></a></td>
                 <td><a href="mailto:<%= customer.Email %>"><%= customer.Email || 'No Email' %></a></td>
                 <td><%= [customer.Address1, customer.Address2, customer.Address3].filter(Boolean).join(', ') %></td>
                 <td><%= customer.Postcode %></td>

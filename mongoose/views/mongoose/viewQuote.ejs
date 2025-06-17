@@ -6,7 +6,7 @@
     <!-- Customer Information -->
     <% if (Customer) { %>
         <h2 class="display-4">Customer Information</h2>
-        <p><strong>Name:</strong> <a href="/kashflow/customer/read/<%= Customer.uuid %>"><%= Customer.Name %></a></p>
+        <p><strong>Name:</strong> <a href="/customer/read/<%= Customer.uuid %>"><%= Customer.Name %></a></p>
     <% } %>
 
     <h2 class="display-6">Quote Items</h2>
@@ -31,7 +31,7 @@
                         <td><%= line.ChargeType %></td>
                         <td>
                             <% if (line.ProjID) { %>
-                                <a href="/kashflow/project/read/<%= line.ProjID %>"><%= line.ProjID %></a>
+                                <a href="/project/read/<%= line.ProjID %>"><%= line.ProjID %></a>
                             <% } else { %>
                                 N/A
                             <% } %>
@@ -55,7 +55,7 @@
     <p><strong>VAT:</strong> £<%= Quote.VATAmount %></p>
 
     <h2 class="display-6">Actions</h2>
-    <form action="/kashflow/quote/<%= Quote.uuid %>/convert" method="POST">
+    <form action="/quote/<%= Quote.uuid %>/convert" method="POST">
         <button type="submit" disabled class="btn btn-success">Convert to Invoice</button>
     </form>
 </div>

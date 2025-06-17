@@ -55,8 +55,8 @@
                     <% receipts = receipts.sort((a, b) => Number(b.CustomerReference) - Number(a.CustomerReference)); %>
                     <% receipts.forEach(function(receipt) { %>
                         <tr>
-                            <td><a href="/kashflow/receipt/read/<%= receipt.uuid %>"><%= receipt.CustomerReference %></a></td>
-                            <td><a href="/kashflow/receipt/read/<%= receipt.uuid %>"><%= receipt.InvoiceNumber %></a></td>
+                            <td><a href="/receipt/read/<%= receipt.uuid %>"><%= receipt.CustomerReference %></a></td>
+                            <td><a href="/receipt/read/<%= receipt.uuid %>"><%= receipt.InvoiceNumber %></a></td>
                             <td><%= slimDateTime(receipt.InvoiceDate) %></td>
                             <td><%= slimDateTime(receipt.DueDate) %></td>
                             <td class="text-left">£<%= receipt.NetAmount %></td>

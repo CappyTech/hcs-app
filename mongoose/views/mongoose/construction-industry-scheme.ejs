@@ -105,7 +105,7 @@
                                 <% } else { %>
                                     <% suppliers.forEach(supplier => { %>
                                     <tr>
-                                        <td><a href="/kashflow/supplier/read/<%= supplier.uuid %>"><%= supplier.Name %></a></td>
+                                        <td><a href="/supplier/read/<%= supplier.uuid %>"><%= supplier.Name %></a></td>
                                         <% if (supplierTotals[String(supplier.SupplierID)]) { %>
                                         <td><%= formatCurrency(supplierTotals[String(supplier.SupplierID)].grossAmount) %></td>
                                         <td><%= formatCurrency(supplierTotals[String(supplier.SupplierID)].labourCost) %></td>
@@ -132,7 +132,7 @@
                 <div class="col-6">
                     <ul class="list-group">
                         <% receipts.slice(0, midIndex).forEach(receipt => { %>
-                        <a href="/kashflow/receipt/read/<%= receipt.uuid %>" class="list-group-item list-group-item-action">
+                        <a href="/receipt/read/<%= receipt.uuid %>" class="list-group-item list-group-item-action">
                             <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
                             <i class="bi bi-pencil-square" style="font-size: 0.65rem;"></i>
                             <% if (receipt.SubmissionDate) { %>
@@ -147,7 +147,7 @@
                 <div class="col-6">
                     <ul class="list-group">
                         <% receipts.slice(midIndex).forEach(receipt => { %>
-                        <a href="/kashflow/receipt/read/<%= receipt.uuid %>" class="list-group-item list-group-item-action">
+                        <a href="/receipt/read/<%= receipt.uuid %>" class="list-group-item list-group-item-action">
                             <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
                             <i class="bi bi-pencil-square" style="font-size: 0.65rem;"></i>
                             <% if (receipt.SubmissionDate) { %>
@@ -168,8 +168,8 @@
                     <h4 class="text-center">Update Submission Date for Selected Receipts</h4>
                 </div>
                 <div class="col-12">
-                    <form action="/kashflow/receipt/change" method="POST">
-                        <input type="hidden" name="redirectPath" value="/dashboard/CIS/<%= specifiedYear %>/<%= specifiedMonth %>">
+                    <form action="/receipt/change" method="POST">
+                        <input type="hidden" name="redirectPath" value="/mdb/CIS/<%= specifiedYear %>/<%= specifiedMonth %>">
                         <div class="row mb-3">
                             <label for="submissionDate" class="form-label">Submission Date</label>
                             <input type="date" class="form-control" id="submissionDate" name="submissionDate" required>

@@ -6,7 +6,7 @@ const totpService = require('../../services/totpService');
 const { validationResult, body } = require('express-validator');
 const moment = require('moment');
 
-exports.getProfilePage = async (req, res) => {
+exports.getProfilePage = async (req, res, next) => {
   try {
     const user = await mdb.user.findById(req.session.user.id);
     const employee = user.employeeId ? await mdb.employee.findById(user.employeeId) : null;
@@ -105,7 +105,7 @@ exports.updateAccountSettings = async (req, res) => {
   }
 };
 
-exports.logoutSession = async (req, res) => {
+exports.logoutSession = async (req, res, next) => {
   try {
     const { sessionId } = req.body;
     if (!sessionId) {

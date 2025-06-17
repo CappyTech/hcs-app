@@ -4,14 +4,14 @@ const path = require('path');
 const logger = require('../../services/loggerService');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
 
-exports.renderSigninForm = (req, res) => {
-    res.render(path.join('user', 'signin'), {
-        title: 'Sign In',
+exports.renderLoginForm = (req, res, next) => {
+    res.render(path.join('mongoose', 'login'), {
+        title: 'Log In',
         siteKey: process.env.TURNSTILE_SITE_KEY,
     });
 };
 
-exports.loginUser = async (req, res) => {
+exports.loginUser = async (req, res, next) => {
     try {
         const { usernameOrEmail, password } = req.body;
         const token = req.body['cf-turnstile-response'];
@@ -21,7 +21,7 @@ exports.loginUser = async (req, res) => {
         if (!token) {
             logger.error('CAPTCHA token missing.');
             req.flash('error', 'CAPTCHA token missing.');
-            return res.redirect('/user/signin');
+            return res.redirect('/user/login');
         }
 
         const verifyResponse = await axios.post(
@@ -36,13 +36,13 @@ exports.loginUser = async (req, res) => {
         if (!verifyResponse.data.success) {
             logger.error('CAPTCHA verification failed.');
             req.flash('error', 'CAPTCHA verification failed.');
-            return res.redirect('/user/signin');
+            return res.redirect('/user/login');
         }
 
         if (!usernameOrEmail || !password) {
             logger.error('Username and password are required.');
             req.flash('error', 'Username and password are required.');
-            return res.redirect('/user/signin');
+            return res.redirect('/user/login');
         }
 
         const user = await mdb.user.findOne({
@@ -52,14 +52,14 @@ exports.loginUser = async (req, res) => {
         if (!user) {
             logger.error('Invalid username.');
             req.flash('error', 'Invalid username.');
-            return res.redirect('/user/signin');
+            return res.redirect('/user/login');
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             logger.error('Invalid password.');
             req.flash('error', 'Invalid password.');
-            return res.redirect('/user/signin');
+            return res.redirect('/user/login');
         }
 
         const sessionData = {
@@ -90,7 +90,7 @@ exports.loginUser = async (req, res) => {
             if (error) {
                 logger.error('Error saving session: ' + error.message);
                 req.flash('error', 'An error occurred while logging in. Please try again.');
-                return res.redirect('/user/signin');
+                return res.redirect('/user/login');
             }
 
             logger.info(`${req.session.user.username} successfully logged in.`);
@@ -101,11 +101,11 @@ exports.loginUser = async (req, res) => {
     } catch (error) {
         logger.error('Error during login: ' + error.message);
         req.flash('error', 'An error occurred during login. Please try again.');
-        return res.redirect('/user/signin');
+        return res.redirect('/user/login');
     }
 };
 
-exports.logoutUser = (req, res) => {
+exports.logoutUser = (req, res, next) => {
     req.session.destroy((error) => {
         if (error) {
             logger.error('Error logging out: ' + error.message);
@@ -113,6 +113,6 @@ exports.logoutUser = (req, res) => {
             return res.redirect('/');
         }
         res.clearCookie('connect.sid');
-        return res.redirect('/user/signin');
+        return res.redirect('/user/login');
     });
 };

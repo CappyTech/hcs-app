@@ -24,7 +24,7 @@
                     <% recentReceipts.slice(0, 5).forEach((receipt) => { %>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <strong><a href="/kashflow/receipt/read/<%= receipt.uuid %>"><%= receipt.InvoiceNumber %></a></strong>
+                                <strong><a href="/receipt/read/<%= receipt.uuid %>"><%= receipt.InvoiceNumber %></a></strong>
                                 <p class="mb-0 text-muted">Date: <%= slimDateTime(receipt.InvoiceDate) %></p>
                             </div>
                             <span>£<%= receipt.NetAmount %></span>
@@ -53,10 +53,10 @@
             <% receipts.forEach(receipt => { %>
             <tr>
                 <td><%= receipt.CustomerReference %></td>
-                <td><a href="/kashflow/receipt/read/<%= receipt.uuid %>"><%= receipt.InvoiceNumber %></a></td>
+                <td><a href="/receipt/read/<%= receipt.uuid %>"><%= receipt.InvoiceNumber %></a></td>
                 <td>
                     <% if (receipt.supplier) { %>
-                        <a href="/kashflow/supplier/read/<%= receipt.supplier.uuid %>">
+                        <a href="/supplier/read/<%= receipt.supplier.uuid %>">
                             <%= receipt.supplier.Name %>
                         </a>
                     <% } else { %>

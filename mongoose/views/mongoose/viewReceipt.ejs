@@ -10,7 +10,7 @@
 
     <% if (Supplier) { %>
         <address class="mb-4">
-            <strong><a href="/kashflow/supplier/read/<%= Supplier.uuid %>"><%= Supplier.Name %></a></strong><br>
+            <strong><a href="/supplier/read/<%= Supplier.uuid %>"><%= Supplier.Name %></a></strong><br>
             <%= Supplier.Mobile %><br>
             <%= Supplier.Email %><br>
             <%= [Supplier.Address1, Supplier.Address2, Supplier.Address3, Supplier.Address4, Supplier.PostCode].filter(Boolean).join(', ') %>
@@ -105,20 +105,20 @@
     <div class="d-flex justify-content-between">
         <% if (!Receipt.SubmissionDate) { %>
             <div class="col-6 text-center">
-                <form action="/kashflow/receipt/<%= Receipt.uuid %>/submit" method="POST">
+                <form action="/receipt/<%= Receipt.uuid %>/submit" method="POST">
                     <button type="submit" class="btn btn-hcs-green">Mark as Submitted (Today)</button>
                 </form>
             </div>
         <% } else { %>
             <div class="col-6 text-center">
-                <form action="/kashflow/receipt/<%= Receipt.uuid %>/cancel" method="POST">
+                <form action="/receipt/<%= Receipt.uuid %>/cancel" method="POST">
                     <button type="submit" class="btn btn-danger">Cancel Submission</button>
                 </form>
             </div>
         <% } %>
 
         <div class="col-6">
-            <form action="/kashflow/receipt/<%= Receipt.uuid %>/change/" method="POST">
+            <form action="/receipt/<%= Receipt.uuid %>/change/" method="POST">
                 <div class="mb-3 d-grid gap-2">
                     <label for="submissionDate" class="form-label text-center">Select Submission Date</label>
                     <input type="date" class="form-control" id="submissionDate" name="submissionDate" required>

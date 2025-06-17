@@ -40,7 +40,7 @@
                 <% suppliers.slice(0, 5).forEach((supplier) => { %>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
-                            <strong><a href="/kashflow/supplier/read/<%= supplier.uuid %>"><%= supplier.Name %></a></strong>
+                            <strong><a href="/supplier/read/<%= supplier.uuid %>"><%= supplier.Name %></a></strong>
                             <p class="mb-0 text-muted">Added on: <%= new Date(supplier.Created).toLocaleDateString() %></p>
                         </div>
                         <span><%= supplier.Email || 'No Email' %></span>
@@ -71,7 +71,7 @@
         <tbody>
             <% suppliers.forEach(supplier => { %>
                 <tr>
-                    <td><a href="/kashflow/supplier/read/<%= supplier.uuid %>"><%= supplier.Name %></a></td>
+                    <td><a href="/supplier/read/<%= supplier.uuid %>"><%= supplier.Name %></a></td>
                     <td>
                         <%= [supplier.Address1, supplier.Address2, supplier.Address3, supplier.Address4].filter(Boolean).join(', ') %>
                     </td>
@@ -84,7 +84,7 @@
                     <td><%= slimDateTime(supplier.Updated) %></td>
                     <td><%= supplier.VATNumber %></td>
                     <td><%= supplier.PaymentTerms %></td>
-                    <td><%= supplier.Subcontractor ? 'Yes' : 'No' %> <a href="/kashflow/supplier/change/<%= supplier.uuid %>">change</a></td>
+                    <td><%= supplier.Subcontractor ? 'Yes' : 'No' %> <a href="/supplier/change/<%= supplier.uuid %>">change</a></td>
                 </tr>
             <% }); %>
         </tbody>

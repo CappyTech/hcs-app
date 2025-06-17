@@ -25,6 +25,21 @@ exports.viewReceipt = async (req, res, next) => {
       req.flash('error', 'Receipt not found.');
       return res.redirect('/receipts');
     }
+    // add receipt.lines to get project.ID from ProjID in receipt.lines
+    let Projects = [];
+    if (receipt.lines && receipt.lines.length > 0) {
+      Projects = await mdb.project.find({ ID: { $in: receipt.lines.map(line => line.ProjID) } }).lean();
+    }
+    for (const line of receipt.lines) {
+      if (line.ProjID) {
+        const project = mdb.project.find(p => p.ID === line.ProjID);
+        if (project) {
+          line.Project = project;
+
+        }
+      }
+    }
+
     const supplier = await mdb.supplier.findOne({ SupplierID: receipt.CustomerID }).lean();
     res.render(path.join('mongoose', 'viewReceipt'), {
       title: 'Receipt Overview',
