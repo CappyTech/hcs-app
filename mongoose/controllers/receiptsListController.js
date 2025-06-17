@@ -25,14 +25,21 @@ exports.viewReceipt = async (req, res, next) => {
       req.flash('error', 'Receipt not found.');
       return res.redirect('/receipts');
     }
-    // add receipt.lines to get project.ID from ProjID in receipt.lines
+    // normalize receipt lines and fetch related projects
+    const lines = Array.isArray(receipt.Lines)
+      ? receipt.Lines
+      : (receipt.Lines?.Line
+          ? (Array.isArray(receipt.Lines.Line)
+              ? receipt.Lines.Line
+              : [receipt.Lines.Line])
+          : []);
     let Projects = [];
-    if (receipt.lines && receipt.lines.length > 0) {
+    if (lines.length > 0) {
       Projects = await mdb.project
-        .find({ ID: { $in: receipt.lines.map(line => line.ProjID) } })
+        .find({ ID: { $in: lines.map(line => line.ProjID) } })
         .lean();
     }
-    for (const line of receipt.lines) {
+    for (const line of lines) {
       if (line.ProjID) {
         const project = Projects.find(p => p.ID === line.ProjID);
         if (project) {
@@ -40,6 +47,9 @@ exports.viewReceipt = async (req, res, next) => {
         }
       }
     }
+
+    // ensure view has normalized lines
+    receipt.Lines = lines;
 
     const supplier = await mdb.supplier.findOne({ SupplierID: receipt.CustomerID }).lean();
     res.render(path.join('mongoose', 'viewReceipt'), {
