@@ -41,8 +41,8 @@ exports.getAccountPage = async (req, res, next) => {
 
     const qrCodeUrl = await totpService.generateQRCode(secret, user);
 
-    const sessions = await mdb.session.find({
-      'session.user.id': req.session.user.id
+    const sessions = await mdb.sessions.find({
+      _id: req.session.user.id
     });
 
     const activeSessions = sessions.map(session => {
