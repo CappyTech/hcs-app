@@ -1,0 +1,61 @@
+<div class="container py-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5 fw-bold text-center"><%= typeof title !== 'undefined' ? title : '' %></h1>
+    <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Quotes</h5>
+            <p class="card-text">Review and manage quotations.</p>
+            <a href="/dashboard/quote" class="btn btn-hcs-green mt-auto">Quotes</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Jobs</h5>
+            <p class="card-text">Track active projects and job files.</p>
+            <a href="/dashboard/job" class="btn btn-hcs-green mt-auto">Jobs</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Clients</h5>
+            <p class="card-text">View client details and contacts.</p>
+            <a href="/dashboard/client" class="btn btn-hcs-green mt-auto">Clients</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Contacts</h5>
+            <p class="card-text">Manage client and supplier contacts.</p>
+            <a href="/dashboard/contact" class="btn btn-hcs-green mt-auto">Contacts</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Locations</h5>
+            <p class="card-text">Set up project and attendance locations.</p>
+            <a href="/dashboard/location" class="btn btn-hcs-green mt-auto">Locations</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Weekly Attendance</h5>
+            <p class="card-text">View weekly attendance summaries.</p>
+            <a href="/attendance/weekly" class="btn btn-hcs-green mt-auto">Weekly Attendance</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

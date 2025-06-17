@@ -1,0 +1,45 @@
+<div class="container py-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5 fw-bold text-center"><%= typeof title !== 'undefined' ? title : '' %></h1>
+    <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Attendance</h5>
+            <p class="card-text">Log a new attendance record.</p>
+            <a href="/attendance/create" class="btn btn-hcs-green mt-auto">Attendance</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Employee</h5>
+            <p class="card-text">Add an employee to the system.</p>
+            <a href="/employee/create" class="btn btn-hcs-green mt-auto">Employee</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Location</h5>
+            <p class="card-text">Create a new job or attendance location.</p>
+            <a href="/location/create" class="btn btn-hcs-green mt-auto">Location</a>
+          </div>
+        </div>
+      </div>
+      <% if (isAdmin) { %>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">User</h5>
+            <p class="card-text">Create a user account.</p>
+            <a href="/user/create" class="btn btn-hcs-green mt-auto">User</a>
+          </div>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
