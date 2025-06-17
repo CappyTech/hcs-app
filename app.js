@@ -34,6 +34,10 @@ vendorPackages.forEach(pkg => {
 
 app.use(useragent.express());
 
+//const db = require('./services/sequelizeDatabaseService');
+//const kf = require('./services/kashflowDatabaseService');
+const mdb = require('./services/mongoose/mongooseDatabaseService');
+
 app.use(require('./services/securityService'));
 app.use(require('./services/mongoose/sessionServiceMongoose'));
 app.use(flash());
@@ -42,10 +46,6 @@ app.use(require('./services/rateLimiterService'));
 app.use(require('./services/mongoose/cronServiceMongoose'));
 
 const databaseUsed = process.env.DATABASE_TYPE || 'mdb';
-
-//const db = require('./services/sequelizeDatabaseService');
-//const kf = require('./services/kashflowDatabaseService');
-const mdb = require('./services/mongoose/mongooseDatabaseService');
 
 app.use(async (req, res, next) => {
     res.locals.session = req.session;
@@ -315,11 +315,6 @@ app.use('/', mongooseRoutes);
 
 app.use('/', adminLogger);
 
-
-app.use("/api-docs", authService.ensureAuthenticated, authService.ensureRole('admin'), swaggerUi.serve, (req, res, next) => {
-    const swaggerDocument = JSON.parse(
-        fs.readFileSync(path.join(__dirname, "swagger.json"), "utf8")
-    );
 app.use((req, res, next) => {
     const error = new Error(`Route not found: ${req.method} ${req.originalUrl}`);
     error.statusCode = 404;
