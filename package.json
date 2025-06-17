@@ -33,6 +33,7 @@
     "express-useragent": "^1.0.15",
     "express-validator": "^7.2.0",
     "helmet": "^7.0.0",
+    "js-yaml": "^4.1.0",
     "joi": "^17.11.0",
     "json2csv": "^6.0.0-alpha.2",
     "mariadb": "^3.4.2",
