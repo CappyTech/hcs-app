@@ -32,12 +32,10 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <% Receipt.Lines.forEach(line => { 
-                        const project = Projects.find(p => p.ID === line.ProjID);
-                    %>
+                    <% Receipt.Lines.forEach(line => { %>
                         <tr>
                             <td><%= line.ChargeType %></td>
-                            <td><%= project ? project.Name : line.ProjID %></td>
+                            <td><%= line.Project ? line.Project.Name : line.ProjID %></td>
                             <td><%= line.Quantity %></td>
                             <td><%= line.Description %></td>
                             <td><%= line.Rate %></td>
