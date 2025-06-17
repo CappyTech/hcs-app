@@ -202,7 +202,11 @@ if (process.env.NODE_ENV === 'development') {
     }
 }
 
-const index = require('./controllers/renderIndex');
+const index = require('./controllers/mongoose/index');
+const login = require('./controllers/mongoose/login');
+const register = require('./controllers/mongoose/register');
+const settings = require('./controllers/mongoose/settings');
+const twoFA = require('./controllers/mongoose/2fa');
 
 //const formsUser = require('./controllers/forms/user');
 //const formsSubcontractor = require('./controllers/forms/subcontractor');
