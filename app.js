@@ -76,8 +76,8 @@ app.use(async (req, res, next) => {
         //logger.info('Using Mongoose database');
         try {
             const user = req.session.user;
-            if (user && user._id) {
-                const User = await mdb.user.findById(user._id);
+            if (user && user.id) {
+                const User = await mdb.user.findById(user.id);
                 if (User) {
                     res.locals.isAuthenticated = true;
                     res.locals.isAdmin = User.role === 'admin';
