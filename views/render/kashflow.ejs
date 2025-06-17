@@ -1,6 +1,88 @@
 <div class="container py-4">
-  <div class="p-5 mb-4 bg-body-tertiary rounded-3 text-center">
-    <h1 class="display-5 fw-bold"><%= typeof title !== 'undefined' ? title : '' %></h1>
-    <p class="fs-5 text-body-secondary">This page is under construction.</p>
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5 fw-bold text-center"><%= typeof title !== 'undefined' ? title : '' %></h1>
+    <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Overview</h5>
+            <p class="card-text">Financial summary and KPIs.</p>
+            <a href="/dashboard/KF" class="btn btn-hcs-green mt-auto">Overview</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Customers</h5>
+            <p class="card-text">Manage customer records and invoices.</p>
+            <a href="/dashboard/KFcustomer" class="btn btn-hcs-green mt-auto">Customers</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Suppliers</h5>
+            <p class="card-text">View suppliers and purchase history.</p>
+            <a href="/dashboard/KFsupplier" class="btn btn-hcs-green mt-auto">Suppliers</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Invoices</h5>
+            <p class="card-text">Browse all sales invoices.</p>
+            <a href="/dashboard/KFinvoice" class="btn btn-hcs-green mt-auto">Invoices</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Quotes</h5>
+            <p class="card-text">Access quotes issued to clients.</p>
+            <a href="/dashboard/KFquote" class="btn btn-hcs-green mt-auto">Quotes</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Purchases</h5>
+            <p class="card-text">Track supplier receipts and expenses.</p>
+            <a href="/dashboard/KFreceipt" class="btn btn-hcs-green mt-auto">Purchases</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Jobs</h5>
+            <p class="card-text">View projects and associated files.</p>
+            <a href="/dashboard/KFproject" class="btn btn-hcs-green mt-auto">Jobs</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">CIS</h5>
+            <p class="card-text">Construction Industry Scheme features.</p>
+            <a href="/dashboard/CIS" class="btn btn-hcs-green mt-auto">CIS</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Monthly Returns</h5>
+            <p class="card-text">Submit monthly CIS returns.</p>
+            <a href="/kashflow/monthly/returns/form" class="btn btn-hcs-green mt-auto">Monthly Returns</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

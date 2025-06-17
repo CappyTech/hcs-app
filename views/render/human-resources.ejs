@@ -1,6 +1,25 @@
 <div class="container py-4">
-  <div class="p-5 mb-4 bg-body-tertiary rounded-3 text-center">
-    <h1 class="display-5 fw-bold"><%= typeof title !== 'undefined' ? title : '' %></h1>
-    <p class="fs-5 text-body-secondary">This page is under construction.</p>
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5 fw-bold text-center"><%= typeof title !== 'undefined' ? title : '' %></h1>
+    <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Create User</h5>
+            <p class="card-text">Add new system users and assign roles.</p>
+            <a href="/user/create" class="btn btn-hcs-green mt-auto">Create User</a>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-body">
+            <h5 class="card-header-pills">Manage Users</h5>
+            <p class="card-text">Edit or deactivate existing users.</p>
+            <a href="/dashboard/user" class="btn btn-hcs-green mt-auto">Manage Users</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
