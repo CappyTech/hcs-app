@@ -259,6 +259,7 @@ const index = require('./controllers/renderIndex');
 const adminLogger = require('./controllers/admin/logger');
 
 const testMongoose = require('./controllers/mongoose/receipts');
+const mogooseRoutes = require('./controllers/mogoose');
 
 app.use('/', index);
 
@@ -317,6 +318,7 @@ app.use('/', index);
 app.use('/', adminLogger);
 
 app.use('/', testMongoose);
+app.use('/', mogooseRoutes);
 
 app.use("/api-docs", authService.ensureAuthenticated, authService.ensureRole('admin'), swaggerUi.serve, (req, res, next) => {
     const swaggerDocument = JSON.parse(
