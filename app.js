@@ -14,7 +14,10 @@ const fs = require('fs');
 
 app.set('trust proxy', true);
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', [
+  path.join(__dirname, 'views'),
+  path.join(__dirname, 'mongoose/views')
+]);
 app.set('layout', 'layout');
 app.use(expressLayouts);
 app.use(express.json());
@@ -36,6 +39,8 @@ app.use(require('./services/cronService'));
 
 const db = require('./services/sequelizeDatabaseService');
 const kf = require('./services/kashflowDatabaseService');
+// Initialize MongoDB connection and models
+require('./services/mongooseDatabaseService');
 
 const { slimDateTime } = require('./services/dateService');
 const { formatCurrency, rounding } = require('./services/currencyService');
@@ -214,6 +219,7 @@ const dailyAttendance = require('./controllers/dailyAttendance');
 const weeklyAttendance = require('./controllers/weeklyAttendance');
 
 const kashflowRoutes = require('./kf/routes')
+const mongooseRoutes = require('./mongoose/routes');
 
 const verificationRoutes = require('./controllers/renderVerification');
 
@@ -230,6 +236,7 @@ const kashflowMonthlyReturns = require('./controllers/kashflowMonthlyReturns');
 const kashflowYearlyReturns = require('./controllers/kashflowYearlyReturns');
 
 app.use('/', index);
+app.use('/', mongooseRoutes);
 
 app.use('/client', formsClient);
 app.use('/contact', formsContact);

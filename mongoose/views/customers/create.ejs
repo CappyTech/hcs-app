@@ -1,0 +1,28 @@
+<%- include('../../views/partials/successAlert') %>
+<%- include('../../views/partials/errorAlerts') %>
+<div class="container py-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5">Create Customer</h1>
+    <form action="/mongo/customers/new" method="POST" class="needs-validation">
+      <div class="mb-3">
+        <label for="CustomerID" class="form-label">Customer ID</label>
+        <input type="number" class="form-control" id="CustomerID" name="CustomerID" required>
+      </div>
+      <div class="mb-3">
+        <label for="Name" class="form-label">Name</label>
+        <input type="text" class="form-control" id="Name" name="Name" required>
+      </div>
+      <div class="mb-3">
+        <label for="Telephone" class="form-label">Telephone</label>
+        <input type="text" class="form-control" id="Telephone" name="Telephone">
+      </div>
+      <div class="mb-3">
+        <label for="Email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="Email" name="Email">
+      </div>
+      <div class="d-grid">
+        <button type="submit" class="btn btn-hcs-green"><i class="bi bi-save"></i> Save</button>
+      </div>
+    </form>
+  </div>
+</div>

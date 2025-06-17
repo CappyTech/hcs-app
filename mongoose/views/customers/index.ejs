@@ -1,0 +1,26 @@
+<%- include('../../views/partials/successAlert') %>
+<%- include('../../views/partials/errorAlerts') %>
+<div class="container py-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5">Customers</h1>
+    <a href="/mongo/customers/new" class="btn btn-hcs-green mb-3"><i class="bi bi-plus-circle"></i> New Customer</a>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Telephone</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% customers.forEach(c => { %>
+          <tr>
+            <td><a href="/mongo/customers/<%= c._id %>"><%= c.CustomerID %></a></td>
+            <td><%= c.Name %></td>
+            <td><%= c.Telephone %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
