@@ -1,0 +1,141 @@
+<div class="text-center mt-4">
+    <h1 class="mb-4">Year <%= year %> Report</h1>
+    <% subcontractors.forEach(subcontractor => { %>
+        <div>
+            <%= subcontractor.name %> | <%= subcontractor.company %> @ <% if (subcontractor.deduction === 0.0) { %>
+                0%
+            <% } else if (subcontractor.deduction === 0.2) { %>
+                20%
+            <% } else if (subcontractor.deduction === 0.3) { %>
+                30%
+            <% } %>
+            <% if (subcontractor.isGross) { %>
+                GROSS
+            <% } %>
+            <br>
+            <%= subcontractor.utrNumber %> | <%= subcontractor.cisNumber %>
+        </div>
+        <div class="container">
+            <% const hasInvoices = subcontractor.invoices.length > 0; %>
+            <% if (hasInvoices) { %>
+                <table class="table table-hover table-sm caption-top">
+                    <caption class="text-start">Year <%= year %></caption>
+                    <thead>
+                        <tr>
+                            <th>
+                                <span class="d-none d-md-table-cell">Invoice</span>
+                                <span class="d-md-none">Inv</span>
+                            </th>
+                            <th>
+                                <span class="d-none d-md-table-cell">Kashflow</span>
+                                <span class="d-md-none">KF</span>
+                            </th>
+                            <th>
+                                <span class="d-none d-md-table-cell">Invoiced</span>
+                                <span class="d-md-none">Invoiced</span>
+                            </th>
+                            <th>
+                                <span class="d-none d-md-table-cell">Paid</span>
+                                <span class="d-md-none">Paid</span>
+                            </th>
+                            <th>
+                                <span class="d-none d-md-table-cell">Gross</span>
+                                <span class="d-md-none">Gross</span>
+                            </th>
+                            <th>
+                                <span class="d-none d-md-table-cell">Labour</span>
+                                <span class="d-md-none">Labour</span>
+                            </th>
+                            <th>
+                                <span class="d-none d-md-table-cell">Material</span>
+                                <span class="d-md-none">Material</span>
+                            </th>
+                            <th>
+                                <span class="d-none d-md-table-cell">CIS @ <% if (subcontractor.deduction === 0.0) { %>
+                                        0%
+                                    <% } else if (subcontractor.deduction === 0.2) { %>
+                                        20%
+                                    <% } else if (subcontractor.deduction === 0.3) { %>
+                                        30%
+                                    <% } %>
+                                </span>
+                                <span class="d-md-none">CIS</span>
+                            </th>
+                            <th>
+                                <span class="d-none d-md-table-cell">Net</span>
+                                <span class="d-md-none">Net</span>
+                            </th>
+                            <% if (subcontractor.isReverseCharge) { %>
+                                <th>
+                                    <span class="d-none d-md-table-cell">Reverse Charge</span>
+                                    <span class="d-md-none">RC</span>
+                                </th>
+                            <% } %>
+                            <th>Month</th>
+                            <th>Year</th>
+                            <th>
+                                <span class="d-none d-md-table-cell">Submission Date</span>
+                                <span class="d-md-none">Submission</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="table-group-divider">
+                        <% let totalGross = 0; %>
+                        <% let totalLabourCost = 0; %>
+                        <% let totalMaterialCost = 0; %>
+                        <% let totalCISAmount = 0; %>
+                        <% let totalNetAmount = 0; %>
+                        <% let totalReverseCharge = 0; %>
+                        <% subcontractor.invoices.forEach(invoice => { %>
+                        <tr>
+                            <td><%= invoice.invoiceNumber %></td>
+                            <td><%= invoice.kashflowNumber %></td>
+                            <td><%= slimDateTime(invoice.invoiceDate) %></td>
+                            <td><%= slimDateTime(invoice.remittanceDate) %></td>
+                            <td><%= formatCurrency(invoice.grossAmount) %></td>
+                            <td><%= formatCurrency(invoice.labourCost) %></td>
+                            <td><%= formatCurrency(invoice.materialCost) %></td>
+                            <td><%= formatCurrency(invoice.cisAmount) %></td>
+                            <td><%= formatCurrency(invoice.netAmount) %></td>
+                            <% if (subcontractor.isReverseCharge) { %>
+                                <td><%= formatCurrency(invoice.reverseCharge) %></td>
+                            <% } %>
+                            <td><%= invoice.month %></td>
+                            <td><%= invoice.year %></td>
+                            <td><%= slimDateTime(invoice.submissionDate) %></td>
+                        </tr>
+                        <% totalGross += invoice.grossAmount; %>
+                        <% totalLabourCost += invoice.labourCost; %>
+                        <% totalMaterialCost += invoice.materialCost; %>
+                        <% totalCISAmount += invoice.cisAmount; %>
+                        <% totalNetAmount += invoice.netAmount; %>
+                        <% totalReverseCharge += invoice.reverseCharge; %>
+                        <% }); %>
+                        <tr>
+                            <td colspan="2"><strong>Total:</strong></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong><%= formatCurrency(totalGross) %></strong></td>
+                            <td><strong><%= formatCurrency(totalLabourCost) %></strong></td>
+                            <td><strong><%= formatCurrency(totalMaterialCost) %></strong></td>
+                            <td><strong><%= formatCurrency(totalCISAmount) %></strong></td>
+                            <td><strong><%= formatCurrency(totalNetAmount) %></strong></td>
+                            <td></td>
+                            <% if (subcontractor.isReverseCharge) { %>
+                                <td><strong><%= formatCurrency(totalReverseCharge) %></strong></td>
+                            <% } %>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                        <! -- make another total table that takes from submission table, the inputted values and calculates the total of each column inside  -->
+                    </tbody>
+                </table>
+                <% } else { %>
+                <p class="text-muted text-center">
+                    No invoices available for the selected month and year.
+                </p>
+            <% } %>
+        </div>
+    <% }); %>
+</div>
