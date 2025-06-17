@@ -28,14 +28,15 @@ exports.viewReceipt = async (req, res, next) => {
     // add receipt.lines to get project.ID from ProjID in receipt.lines
     let Projects = [];
     if (receipt.lines && receipt.lines.length > 0) {
-      Projects = await mdb.project.find({ ID: { $in: receipt.lines.map(line => line.ProjID) } }).lean();
+      Projects = await mdb.project
+        .find({ ID: { $in: receipt.lines.map(line => line.ProjID) } })
+        .lean();
     }
     for (const line of receipt.lines) {
       if (line.ProjID) {
-        const project = mdb.project.find(p => p.ID === line.ProjID);
+        const project = Projects.find(p => p.ID === line.ProjID);
         if (project) {
           line.Project = project;
-
         }
       }
     }
@@ -44,7 +45,8 @@ exports.viewReceipt = async (req, res, next) => {
     res.render(path.join('mongoose', 'viewReceipt'), {
       title: 'Receipt Overview',
       Receipt: receipt,
-      Supplier: supplier
+      Supplier: supplier,
+      Projects
     });
   } catch (error) {
     next(error);
