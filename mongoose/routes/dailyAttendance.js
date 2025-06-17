@@ -3,6 +3,6 @@ const router = express.Router();
 const auth = require('../../services/mongoose/authServiceMongoose');
 const ctrl = require('../controllers/dailyAttendanceController');
 
-router.get('/attendance/daily/:date?', auth.ensureAuthenticated, auth.ensureRole('admin'), ctrl.getDailyAttendance);
+router.get('/attendance/daily/:date?', auth.ensureAuthenticated, auth.ensurePermission(['adminAccess']), ctrl.getDailyAttendance);
 
 module.exports = router;
