@@ -1,41 +1,29 @@
 const path = require('path');
 const speakeasy = require('speakeasy');
-const jwt = require('jsonwebtoken');
 const logger = require('../../services/loggerService');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
 const encryptionService = require('../../services/encryptionService');
-const generateToken = require('../../services/generateTokenService');
 
 exports.render2FAPage = (req, res) => {
-  const pendingToken = req.cookies.pending2FA;
-
-  if (!pendingToken) {
+  if (!req.session.userPending2FA) {
     req.flash('error', '2FA session expired. Please log in again.');
     return res.redirect('/user/login');
   }
 
-  try {
-    const decoded = jwt.verify(pendingToken, process.env.JWT_SECRET);
-    res.render(path.join('user', '2fa'), { title: 'Two-Factor Authentication' });
-  } catch (err) {
-    res.clearCookie('pending2FA');
-    req.flash('error', '2FA token invalid or expired.');
-    return res.redirect('/user/login');
-  }
+  res.render(path.join('user', '2fa'), { title: 'Two-Factor Authentication' });
 };
 
 exports.verify2FA = async (req, res) => {
   try {
     const code = req.body.totpToken;
-    const pendingToken = req.cookies.pending2FA;
+    const pending = req.session.userPending2FA;
 
-    if (!pendingToken) {
+    if (!pending) {
       req.flash('error', '2FA session missing. Please log in again.');
       return res.redirect('/user/login');
     }
 
-    const decoded = jwt.verify(pendingToken, process.env.JWT_SECRET);
-    const user = await mdb.user.findOne({ uuid: decoded.uuid });
+    const user = await mdb.user.findOne({ uuid: pending.uuid });
 
     if (!user || !user.totpSecret) {
       req.flash('error', 'User not found or 2FA not enabled.');
@@ -59,8 +47,9 @@ exports.verify2FA = async (req, res) => {
     const agent = req.useragent || {};
     const ip = req.ip;
 
-    const authToken = generateToken({
-      userId: user._id.toString(),
+    req.session.user = {
+      id: user._id.toString(),
+      uuid: user.uuid,
       username: user.username,
       email: user.email,
       role: user.role,
@@ -73,22 +62,19 @@ exports.verify2FA = async (req, res) => {
         os: agent.os || 'Unknown',
         platform: agent.platform || 'Unknown',
       },
-    }, '8h');
+    };
 
-    res.clearCookie('pending2FA');
+    delete req.session.userPending2FA;
 
-    res.cookie('token', authToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Strict',
-      maxAge: 1000 * 60 * 60 * 8
+    await new Promise((resolve, reject) => {
+      req.session.save(err => (err ? reject(err) : resolve()));
     });
 
     req.flash('success', 'Successfully logged in.');
     return res.redirect('/');
   } catch (error) {
     logger.error('2FA verification error: ' + error.message);
-    res.clearCookie('pending2FA');
+    delete req.session.userPending2FA;
     req.flash('error', 'An error occurred during 2FA. Please log in again.');
     return res.redirect('/user/login');
   }

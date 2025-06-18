@@ -1,22 +1,18 @@
-const jwt = require('jsonwebtoken');
 const mdb = require('./mongoose/mongooseDatabaseService');
 
-// Checks token and populates req.user (non-blocking)
+// Populate req.user from session if available (non-blocking)
 async function ensureAuthenticated(req, res, next) {
-  const token = req.cookies.token;
-
-  if (!token) return next();
+  if (!req.session || !req.session.user) return next();
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await mdb.user.findById(decoded.id);
+    const user = await mdb.user.findById(req.session.user.id);
     if (user) {
       req.user = user;
     } else {
-      res.clearCookie('token');
+      delete req.session.user;
     }
   } catch (err) {
-    res.clearCookie('token');
+    delete req.session.user;
   }
 
   next();
@@ -25,7 +21,7 @@ async function ensureAuthenticated(req, res, next) {
 // Blocks if user is not authenticated
 function requireLogin(req, res, next) {
   if (!req.user) {
-    return res.redirect('/signin'); // or res.status(401).send('Unauthorized');
+    return res.redirect('/user/login');
   }
   next();
 }
@@ -33,7 +29,7 @@ function requireLogin(req, res, next) {
 // Blocks if user is authenticated (e.g. signin/register pages)
 function doesntRequireLogin(req, res, next) {
   if (req.user) {
-    return res.redirect('/dashboard'); // or wherever you want to redirect logged-in users
+    return res.redirect('/');
   }
   next();
 }
