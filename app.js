@@ -11,6 +11,7 @@ const packageJson = require('./package.json');
 const crypto = require('crypto');
 
 const mdb = require('./services/mongoose/mongooseDatabaseService');
+const sessionService = require('./services/mongoose/sessionServiceMongoose');
 const { ensureAuthenticated } = require('./services/authService');
 
 const main = async () => {
@@ -30,8 +31,9 @@ const main = async () => {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    // Add cookie parser for JWT and pending2FA
+    // Cookie parser and session handling
     app.use(cookieParser());
+    app.use(sessionService);
 
     // Static assets
     app.use('/resources', express.static(path.join(__dirname, 'public')));
