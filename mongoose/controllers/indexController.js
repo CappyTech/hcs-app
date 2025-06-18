@@ -4,7 +4,7 @@ exports.renderIndex = async (req, res, next) => {
     try {
         let tasks = [];
         if (req.user) {
-            const taskService = require('../../services/mongoose/taskService');
+            const taskService = require('../services/taskService');
             tasks = await taskService.getPendingTasksForUser(req.user._id);
         }
         res.render(path.join('mongoose','index'), {
