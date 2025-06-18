@@ -28,7 +28,17 @@ const supplierSchema = new mongoose.Schema({
   ContactFirstName: String,
   ContactLastName: String,
   TradeBorderType: Number,
-  IsSubcontractor: Boolean
+  IsSubcontractor: Boolean,
+  Subcontractor: Boolean,
+  CISRate: {
+    type: String,
+    enum: ['0.3', '0.2', '0'],
+    default: '0.3'
+  },
+  CISNumber: {
+    type: String,
+    default: null
+  }
 });
 
 module.exports = mongoose.model('supplier', supplierSchema);
