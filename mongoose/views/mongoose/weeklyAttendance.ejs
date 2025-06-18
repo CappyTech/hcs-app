@@ -83,7 +83,7 @@
         <!-- Employee Table -->
         <h3 class="mt-5 mb-3">Employees</h3>
         <div class="table-responsive mb-5">
-            <%- include('../../../views/attendance/partials/weeklyTable', {
+            <%- include('./partials/weeklyTable', {
                 entries: employeeEntries,
                 daysOfWeek,
                 startDate,
@@ -95,7 +95,7 @@
         <!-- Subcontractor Table -->
         <h3 class="mt-5 mb-3">Subcontractors</h3>
         <div class="table-responsive mb-5">
-            <%- include('../../../views/attendance/partials/weeklyTable', {
+            <%- include('./partials/weeklyTable', {
                 entries: subcontractorEntries,
                 daysOfWeek,
                 startDate,
