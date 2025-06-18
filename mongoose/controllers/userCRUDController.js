@@ -33,7 +33,7 @@ exports.readUser = async (req, res, next) => {
   try {
     const user = await mdb.user.findOne({ uuid: req.params.uuid });
     if (!user) return res.status(404).send('Not found');
-    res.render(path.join('users','viewUser'), {
+    res.render(path.join('mongoose','viewUser'), {
       title: 'User',
       user
     });
