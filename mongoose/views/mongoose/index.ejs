@@ -1,0 +1,101 @@
+<div class="container-fluid py-4">
+  <!-- Greeting Section -->
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3 text-center">
+    <% if (isAuthenticated) { %>
+      <h1 class="display-5 fw-bold">Welcome, <%= firstName %>.</h1>
+      <p class="lead fw-light text-body-secondary">
+        Role: <strong><%= role.charAt(0).toUpperCase() + role.slice(1) %></strong>
+      </p>
+    <% } else { %>
+      <h1 class="display-5 fw-bold">Subcontractor Management System</h1>
+      <p class="lead fw-light text-body-secondary">
+        Developed by Heron Constructive Solutions LTD
+      </p>
+    <% } %>
+
+    <% if (isAuthenticated) { %>
+    <% if (tasks && tasks.length) { %>
+    <div class="card mb-3">
+      <div class="card-header">Your Tasks</div>
+      <ul class="list-group list-group-flush">
+        <% tasks.forEach(t => { %>
+        <li class="list-group-item">
+          <strong><%= t.title %></strong>
+          <% if (t.dueDate) { %>
+            <span class="text-muted"> - due <%= slimDateTime(t.dueDate) %></span>
+          <% } %>
+          <div><%= t.description %></div>
+        </li>
+        <% }) %>
+      </ul>
+    </div>
+    <% } %>
+    <!-- Actions Section -->
+    <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+      <% if (permissions.createInvoice) { %>
+        <div class="col">
+          <div class="card h-100 d-flex flex-column">
+            <div class="card-body">
+              <h5 class="card-header-pills">Create Invoice</h5>
+              <p class="card-text">Generate and manage invoices efficiently.</p>
+              <a href="/invoice/create" class="btn btn-hcs-green mt-auto">Create Invoice</a>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (permissions.readSubcontractor) { %>
+        <div class="col">
+          <div class="card h-100 d-flex flex-column">
+            <div class="card-body">
+              <h5 class="card-header-pills">View Subcontractors</h5>
+              <p class="card-text">Access and manage your subcontractors.</p>
+              <a href="/dashboard/subcontractor" class="btn btn-hcs-green mt-auto">View Subcontractors</a>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (isAdmin) { %>
+        <!-- Admin-Specific Actions -->
+        <div class="col">
+          <div class="card h-100 d-flex flex-column">
+            <div class="card-body">
+              <h5 class="card-header-pills">Manage Users</h5>
+              <p class="card-text">Create and manage user accounts with role-based permissions.</p>
+              <a href="/dashboard/user" class="btn btn-hcs-green mt-auto">Manage Users</a>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (permissions.readInvoice) { %>
+        <div class="col">
+          <div class="card h-100 d-flex flex-column">
+            <div class="card-body">
+              <h5 class="card-header-pills">View Invoices</h5>
+              <p class="card-text">Track and review all your invoices.</p>
+              <a href="/dashboard/invoice" class="btn btn-hcs-green mt-auto">View Invoices</a>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+    <% } %>
+
+    <!-- Contact Support -->
+    <% if (isAuthenticated) { %>
+    <p class="text-center text-muted mt-4">
+      If you are missing any permissions, please email: 
+      <a href="mailto:<%= contactEmail %>" class="hcs-green-text"><%= contactEmail %></a>.
+    </p>
+    <% } %>
+
+    <% if (!isAuthenticated) { %>
+    <!-- Non-Authenticated Users -->
+    <div class="text-center">
+      <p class="lead">Sign in to access your dashboard and features.</p>
+    </div>
+    <% } %>
+  </div>
+</div>
