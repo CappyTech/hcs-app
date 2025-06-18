@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../../services/authService');
+const authService = require('../../services/authService');
 const ctrl = require('../controllers/dailyAttendanceController');
 
-router.get('/attendance/daily/:date?', auth.ensureRole(), ctrl.getDailyAttendance);
+router.get('/attendance/daily/:date?', authService.ensureRole(), ctrl.getDailyAttendance);
 
 module.exports = router;
