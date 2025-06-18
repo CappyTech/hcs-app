@@ -51,3 +51,4 @@ The server will start and log the port in the console. Access the application wi
    or directly execute the test file:
    ```bash
    node test/routes.test.js
+   ```
