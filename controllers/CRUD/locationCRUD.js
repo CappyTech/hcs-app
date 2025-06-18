@@ -24,7 +24,7 @@ const createLocation = async (req, res, next) => {
         req.flash('success', 'Location created successfully.');
         res.redirect(`/dashboard/location`);
     } catch (error) {
-        logger.error('Error creating location:', error.message);
+        logger.error('Error creating location: ' + error.message);
         req.flash('error', 'Error creating location: ' + error.message);
         res.redirect('/location/create');
     }
@@ -78,7 +78,7 @@ const updateLocation = async (req, res, next) => {
         req.flash('success', 'Location updated successfully.');
         res.redirect(`/location/read/${location.id}`);
     } catch (error) {
-        logger.error('Error updating location:', error.message);
+        logger.error('Error updating location: ' + error.message);
         req.flash('error', 'Error updating location: ' + error.message);
         res.redirect(`/location/update/${req.params.locationId}`);
     }

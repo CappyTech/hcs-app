@@ -196,7 +196,7 @@ const deleteSubcontractor = async (req, res, next, error) => {
         logger.info('Subcontractor deleted.');
         res.redirect('/dashboard/subcontractor');
     } catch (error) {
-        logger.error('Error deleting subcontractor:  ', error.message);
+        logger.error('Error deleting subcontractor:   ' + error.message);
         req.flash('error', 'Error deleting subcontractor: ' + error.message);
         res.redirect('/dashboard/subcontractor');
     }

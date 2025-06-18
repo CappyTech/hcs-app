@@ -31,7 +31,7 @@ const selectContact = async (req, res, next) => {
 
         });
     } catch (error) {
-        logger.error('Error selecting contact:  ', error.message);
+        logger.error('Error selecting contact:   ' + error.message);
         req.flash('error', 'Error selecting contact: ' + error.message);
         next(error); // Pass the error to the error handler
     }

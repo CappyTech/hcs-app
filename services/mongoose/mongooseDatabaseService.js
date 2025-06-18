@@ -77,7 +77,7 @@ mdb.connect = () => {
         return reject(new Error(msg));
       }
 
-      const uri = `mongodb://127.0.0.1:${sshConfig.localPort}/${process.env.MONGO_DBNAME}`;
+      const uri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@${sshConfig.localHost}:${sshConfig.localPort}/${process.env.MONGO_DBNAME}?authSource=admin`;
 
       tunnel(sshConfig, (err, server) => {
         if (err) {
@@ -86,8 +86,6 @@ mdb.connect = () => {
         }
 
         mongoose.connect(uri, {
-          useNewUrlParser: true,
-          useUnifiedTopology: true,
         }).then(() => {
           if (process.env.DEBUG) {
             logger.info('✅ Connected to MongoDB via SSH tunnel');

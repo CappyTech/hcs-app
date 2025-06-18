@@ -60,7 +60,7 @@ const renderQuoteUpdateForm = async (req, res, next) => {
 
         });
     } catch (error) {
-        logger.error('Error rendering quote update form:  ', error.message);
+        logger.error('Error rendering quote update form:   ' + error.message);
         req.flash('error', 'Error rendering quote update form: ' + error.message);
         next(error); // Pass the error to the error handler
     }

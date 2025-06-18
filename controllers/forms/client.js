@@ -23,7 +23,7 @@ const selectClient = async (req, res, next) => {
 
         });
     } catch (error) {
-        logger.error('Error selecting client:  ', error.message);
+        logger.error('Error selecting client:   ' + error.message);
         req.flash('error', 'Error selecting client: ' + error.message);
         next(error); // Pass the error to the error handler
     }

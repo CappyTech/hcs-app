@@ -65,7 +65,7 @@ const holidayService = {
                 type: null
             };
         } catch (error) {
-            logger.error('Error checking holiday:', error.message);
+            logger.error('Error checking holiday: ' + error.message);
             return {
                 isHoliday: false,
                 reason: 'Error occurred while fetching holiday details',
@@ -103,7 +103,7 @@ const holidayService = {
 
             return bankHoliday || customHoliday || null;
         } catch (error) {
-            logger.error('Error fetching holiday details for date:', error.message);
+            logger.error('Error fetching holiday details for date: ' + error.message);
             return null;
         }
     },

@@ -48,7 +48,7 @@ const holidayService = {
         type: null
       };
     } catch (error) {
-      logger.error('Error checking holiday:', error.message);
+      logger.error('Error checking holiday: ' + error.message);
       return {
         isHoliday: false,
         reason: 'Error occurred while fetching holiday details',
@@ -69,7 +69,7 @@ const holidayService = {
 
       return holiday || customHoliday || null;
     } catch (error) {
-      logger.error('Error fetching holiday details for date:', error.message);
+      logger.error('Error fetching holiday details for date: ' + error.message);
       return null;
     }
   },
@@ -134,7 +134,7 @@ const holidayService = {
         logger.info('Bank holidays updated.');
       }
     } catch (error) {
-      logger.error('Error syncing bank holidays:', error.message);
+      logger.error('Error syncing bank holidays: ' + error.message);
     }
   }
 };

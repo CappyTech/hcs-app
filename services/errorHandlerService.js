@@ -21,6 +21,12 @@ const errorHandlerService = (error, req, res, next) => {
     // Render the error page
     res.status(statusCode);
     try {
+        // ✅ Patch locals if missing
+        res.locals.isAuthenticated ??= false;
+        res.locals.isAdmin ??= false;
+        res.locals.firstName ??= null;
+        res.locals.successMessage ??= [];
+        res.locals.errorMessage ??= [];
         res.render('error', {
             title,
             error: {
@@ -31,7 +37,7 @@ const errorHandlerService = (error, req, res, next) => {
         });
     } catch (renderError) {
         // Fallback if res.render fails
-        logger.error('Error rendering error page:', renderError.message);
+        logger.error('Error rendering error page: ' + renderError.message);
         res.type('text/plain').send(`${title}: ${message}`);
     }
 };

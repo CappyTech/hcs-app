@@ -4,13 +4,10 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
-const flash = require('express-flash');
 const useragent = require('express-useragent');
 const cookieParser = require('cookie-parser');
 const logger = require('./services/loggerService');
 const packageJson = require('./package.json');
-const moment = require('moment');
-const fs = require('fs');
 const crypto = require('crypto');
 
 const mdb = require('./services/mongoose/mongooseDatabaseService');
@@ -45,7 +42,7 @@ const main = async () => {
     // Core middleware
     app.use(useragent.express());
     app.use(require('./services/securityService'));
-    app.use(flash());
+    app.use(require('./services/flashService'));
     app.use(ensureAuthenticated);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
@@ -56,10 +53,12 @@ const main = async () => {
       res.locals.successMessage = req.flash('success');
       res.locals.errorMessage = req.flash('error');
       res.locals.isAuthenticated = !!req.user;
-      res.locals.role = req.user?.role || null;
-      res.locals.isAdmin = req.user?.role === 'admin';
-      res.locals.firstName = req.user?.username?.split('.')[0]?.replace(/^\w/, c => c.toUpperCase()) || null;
-      res.locals.permissions = req.user?.permissions || {};
+      res.locals.role = req.user && req.user.role || null;
+      res.locals.isAdmin = req.user && req.user.role === 'admin';
+      res.locals.firstName = req.user && req.user.username
+        ? req.user.username.split('.')[0].replace(/^\w/, c => c.toUpperCase())
+        : null;
+      res.locals.permissions = req.user && req.user.permissions || {};
       res.locals.package = packageJson.version;
       res.locals.slimDateTime = require('./services/dateService').slimDateTime;
       res.locals.formatCurrency = require('./services/currencyService').formatCurrency;
