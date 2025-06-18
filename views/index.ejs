@@ -14,6 +14,22 @@
     <% } %>
 
     <% if (isAuthenticated) { %>
+    <% if (tasks && tasks.length) { %>
+    <div class="card mb-3">
+      <div class="card-header">Your Tasks</div>
+      <ul class="list-group list-group-flush">
+        <% tasks.forEach(t => { %>
+        <li class="list-group-item">
+          <strong><%= t.title %></strong>
+          <% if (t.dueDate) { %>
+            <span class="text-muted"> - due <%= slimDateTime(t.dueDate) %></span>
+          <% } %>
+          <div><%= t.description %></div>
+        </li>
+        <% }) %>
+      </ul>
+    </div>
+    <% } %>
     <!-- Actions Section -->
     <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
       <% if (permissions.createInvoice) { %>
