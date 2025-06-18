@@ -1,6 +1,12 @@
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 
+exports.renderCreateUserForm = (req, res) => {
+  res.render(path.join('mongoose', 'createUser'), {
+    title: 'Create User'
+  });
+};
+
 exports.createUser = async (req, res, next) => {
   try {
     const user = await mdb.user.create(req.body);
