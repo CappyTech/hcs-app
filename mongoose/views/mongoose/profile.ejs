@@ -1,0 +1,83 @@
+<div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="card shadow-lg">
+          <div class="card-body">
+            <div class="row">
+              <!-- Profile Information -->
+              <div class="col-md-4 text-center">
+                <i class="bi bi-person-circle" style="font-size: 5rem;"></i>
+                <h3 class="mt-3 hcs-green-text"><%= user.username %></h3>
+                <p class=""><%= user.email %></p>
+                <p class="">
+                  Role: <span class="hcs-green-text text-capitalize"><%= user.role %></span>
+                </p>
+                <p class="">
+                  Account Created: <%= slimDateTime(user.createdAt, true) %>
+                </p>
+                <p class="">
+                  Last Login: <%= slimDateTime(user.lastLogin, true) %>
+                </p>
+              </div>
+  
+              <!-- Editable Profile Settings -->
+              <div class="col-md-8">
+                <% if (user.subcontractorId && subcontractor) { %>
+                <h5 class="mb-4 hcs-green-text text-center">Subcontractor Information</h5>
+                <ul class="list-group">
+                  <li class="list-group-item">
+                    <strong>Name:</strong> <%= subcontractor.name %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>Company:</strong> <%= subcontractor.company %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>VAT Number:</strong> <%= subcontractor.vatNumber || 'N/A' %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>UTR Number:</strong> <%= subcontractor.utrNumber || 'N/A' %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>Address:</strong>
+                    <%= subcontractor.line1 %> <%= subcontractor.line2 %>, <%= subcontractor.city %>,
+                    <%= subcontractor.county %>, <%= subcontractor.postalCode %>
+                  </li>
+                </ul>
+                <% } else if (user.clientId && client) { %>
+                <h5 class="mb-4 hcs-green-text text-center">Client Information</h5>
+                <ul class="list-group">
+                  <li class="list-group-item">
+                    <strong>Name:</strong> <%= client.name %>
+                  </li>
+                </ul>
+                <% } else if (user.employeeId && employee) { %>
+                <h5 class="mb-4 hcs-green-text text-center">Employee Information</h5>
+                <ul class="list-group">
+                  <li class="list-group-item">
+                    <strong>Name:</strong> <%= employee.name %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>Email:</strong> <%= employee.email || 'N/A' %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>Position:</strong> <%= employee.position || 'N/A' %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>Status:</strong> <%= employee.status %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>Hourly Rate:</strong> £<%= employee.hourlyRate || 'N/A' %>
+                  </li>
+                  <li class="list-group-item">
+                    <strong>Hire Date:</strong> <%= slimDateTime(employee.hireDate, true) %>
+                  </li>
+                </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
