@@ -11,7 +11,6 @@ router.get('/human-resources', authService.ensureRole(), index.renderHumanResour
 router.get('/kashflow', authService.ensureRole(), index.renderKashflow);
 router.get('/create', authService.ensureRole(), index.renderCreate);
 
-const fetch = require('../kf/fetchKashFlowDataMongoose');
 const logger = require('../../services/loggerService');
 
 router.get('/fetch-kashflow-data-mongoose', async (req, res) => {
