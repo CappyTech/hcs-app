@@ -77,6 +77,7 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
     });
     res.render(path.join('mongoose','monthlyReturnsForOneSubcontractor'),{
       title:'Subcontractor Monthly Returns',
+      month,
       year,
       supplier,
       receiptsByMonth,
