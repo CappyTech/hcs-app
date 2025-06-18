@@ -8,36 +8,32 @@ const logRequestDetailsService = (req, res, next) => {
   const platform = req.headers['sec-ch-ua-platform'] || 'Unknown';
   const isMobile = req.headers['sec-ch-ua-mobile'] === '?1';
 
-  // Browser Detection
-  let browser = 'Unknown';
-  if (clientHints.includes('Brave')) {
-    browser = 'Brave';
-  } else if (clientHints.includes('Chrome')) {
-    browser = 'Chrome';
-  } else if (userAgent.includes('Firefox')) {
-    browser = 'Firefox';
-  } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-    browser = 'Safari';
-  } else if (userAgent.includes('Edge')) {
-    browser = 'Edge';
-  } else if (userAgent.includes('Opera') || userAgent.includes('OPR')) {
-    browser = 'Opera';
-  } else if (userAgent.includes('MSIE') || userAgent.includes('Trident')) {
-    browser = 'Internet Explorer';
-  }
+  // Detect browser
+  const detectBrowser = () => {
+    if (clientHints.includes('Brave')) return 'Brave';
+    if (clientHints.includes('Chrome')) return 'Chrome';
+    if (userAgent.includes('Firefox')) return 'Firefox';
+    if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
+    if (userAgent.includes('Edge')) return 'Edge';
+    if (userAgent.includes('Opera') || userAgent.includes('OPR')) return 'Opera';
+    if (userAgent.includes('MSIE') || userAgent.includes('Trident')) return 'Internet Explorer';
+    return 'Unknown';
+  };
 
-  // Attach metadata to the request for downstream use (optional)
+  const browser = detectBrowser();
+  const version = userAgent.match(/(?:Chrome|Firefox|Version|MSIE|Opera|Safari|Edge|OPR)[/ ]([0-9.]+)/)?.[1] || 'Unknown';
+
   req.userDetails = {
     browser,
-    version: userAgent.match(/(?:Chrome|Firefox|Version|MSIE|Opera|Safari|Edge|OPR)[/ ]([0-9.]+)/)?.[1] || 'Unknown',
+    version,
     os: platform,
     mobile: isMobile ? 'Yes' : 'No',
     ip: req.ip,
     timestamp: new Date().toISOString(),
   };
 
-  // Log Request Summary
-  logger.info(`[${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${req.ip})`);
+  const logUser = req.user?.username || 'unknown user';
+  logger.info(`${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${req.ip})`);
 
   next();
 };

@@ -1,35 +1,42 @@
-const cookieParser = require('cookie-parser');
-
 module.exports = (req, res, next) => {
-  // Parse flash from cookie if exists
+  let flashData = {};
   const raw = req.cookies?.__flash;
-  let flashMessages = {};
-
   if (raw) {
     try {
-      flashMessages = JSON.parse(raw);
-      res.clearCookie('__flash');
+      flashData = JSON.parse(raw);
     } catch (e) {
-      flashMessages = {};
+      flashData = {};
     }
+    res.clearCookie('__flash');
   }
 
-  // Expose to views
-  res.locals.flash = flashMessages;
+  const flashToSet = {};
 
-  // Define req.flash(type, message)
   req.flash = (type, message) => {
-    const existing = JSON.parse(req.cookies?.__flash || '{}');
-    const updated = {
-      ...existing,
-      [type]: Array.isArray(existing[type])
-        ? [...existing[type], message]
-        : [message],
-    };
-    res.cookie('__flash', JSON.stringify(updated), {
-      maxAge: 5000,
-      httpOnly: false,
-    });
+    if (typeof message !== 'undefined') {
+      if (!flashToSet[type]) flashToSet[type] = [];
+      flashToSet[type].push(message);
+    } else {
+      const messages = flashData[type] || [];
+      delete flashData[type];
+      return messages;
+    }
+  };
+
+  res.locals.successMessage = flashData.success || null;
+  res.locals.errorMessage = flashData.error || null;
+  res.locals.flash = flashData;
+
+  // Inject flash cookie safely before headers are sent
+  const originalEnd = res.end;
+  res.end = function (...args) {
+    if (Object.keys(flashToSet).length > 0 && !res.headersSent) {
+      res.cookie('__flash', JSON.stringify(flashToSet), {
+        maxAge: 5000,
+        httpOnly: false,
+      });
+    }
+    originalEnd.apply(this, args);
   };
 
   next();
