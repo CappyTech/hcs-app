@@ -1,9 +1,11 @@
+const path = require('path');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
 
 exports.createLocation = async (req,res,next)=>{
   try {
     const loc = await mdb.location.create(req.body);
-    res.json({location:loc});
+    req.flash('success', 'Location created successfully.');
+    res.redirect('/dashboard/location');
   }catch(err){ next(err); }
 };
 
@@ -14,7 +16,10 @@ exports.readLocation = async (req,res,next)=>{
       req.flash('error', 'Location not found.');
       return res.redirect('/locations');
     }
-    res.json({location:loc});
+    res.render(path.join('locations','viewLocation'), {
+      title: 'View Location',
+      location: loc
+    });
   }catch(err){ next(err); }
 };
 
@@ -25,13 +30,15 @@ exports.updateLocation = async (req,res,next)=>{
       req.flash('error', 'Location not found.');
       return res.redirect('/locations');
     }
-    res.json({location:loc});
+    req.flash('success', 'Location updated successfully.');
+    res.redirect('/dashboard/location');
   }catch(err){ next(err); }
 };
 
 exports.deleteLocation = async (req,res,next)=>{
   try {
     await mdb.location.findOneAndDelete({ uuid:req.params.uuid });
-    res.json({success:true});
+    req.flash('success', 'Location deleted successfully.');
+    res.redirect('/dashboard/location');
   }catch(err){ next(err); }
 };

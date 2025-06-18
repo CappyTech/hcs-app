@@ -1,11 +1,13 @@
 const mongoose = require('mongoose');
+const path = require('path');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
 
 exports.createEmployee = async (req,res,next)=>{
   try {
     const data = req.body;
     const emp = await mdb.employee.create(data);
-    res.json({employee:emp});
+    req.flash('success', 'Employee created successfully.');
+    res.redirect('/dashboard/employee');
   }catch(err){ next(err); }
 };
 
@@ -20,7 +22,10 @@ exports.readEmployee = async (req,res,next)=>{
       req.flash('error', 'Employee not found.');
       return res.redirect('/employees');
     }
-    res.json({employee:emp});
+    res.render(path.join('employees','viewEmployee'), {
+      title: 'Employee',
+      employee: emp
+    });
   }catch(err){ next(err); }
 };
 
@@ -35,7 +40,8 @@ exports.updateEmployee = async (req,res,next)=>{
       req.flash('error', 'Employee not found.');
       return res.redirect('/employees');
     }
-    res.json({employee:emp});
+    req.flash('success', 'Employee updated successfully.');
+    res.redirect('/dashboard/employee');
   }catch(err){ next(err); }
 };
 
@@ -46,6 +52,7 @@ exports.deleteEmployee = async (req,res,next)=>{
       ? { $or: [{ uuid: identifier }, { _id: identifier }] }
       : { uuid: identifier };
     await mdb.employee.findOneAndDelete(query);
-    res.json({success:true});
+    req.flash('success', 'Employee deleted successfully.');
+    res.redirect('/dashboard/employee');
   }catch(err){ next(err); }
 };
