@@ -11,8 +11,6 @@ const packageJson = require('./package.json');
 const crypto = require('crypto');
 
 const mdb = require('./services/mongoose/mongooseDatabaseService');
-const sessionService = require('./services/mongoose/sessionServiceMongoose');
-const { ensureAuthenticated } = require('./services/authService');
 
 const main = async () => {
   try {
@@ -33,7 +31,7 @@ const main = async () => {
 
     // Cookie parser and session handling
     app.use(cookieParser());
-    app.use(sessionService);
+    app.use(require('./services/mongoose/sessionServiceMongoose'));
 
     // Static assets
     app.use('/resources', express.static(path.join(__dirname, 'public')));
@@ -45,7 +43,7 @@ const main = async () => {
     app.use(useragent.express());
     app.use(require('./services/securityService'));
     app.use(require('./services/flashService'));
-    app.use(ensureAuthenticated);
+    app.use(require('./services/authService'));
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
     app.use(require('./services/mongoose/cronServiceMongoose'));
