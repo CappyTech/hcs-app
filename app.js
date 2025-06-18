@@ -41,6 +41,11 @@ const main = async () => {
       app.use(`/resources/${pkg}`, express.static(path.join(__dirname, `node_modules/${pkg}`)));
     });
 
+    // Serve favicon to avoid 404 errors
+    app.get('/favicon.ico', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'images', 'favicon.ico'));
+    });
+
     const authService = require('./services/authService')
 
     // Core middleware
