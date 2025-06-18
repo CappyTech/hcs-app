@@ -11,7 +11,7 @@ const sessionService = session({
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        client: mongoose.connection.getClient(), // assumes mongoose.connect() is already called before use
+        client: mongoose.connection.getClient(),
         dbName: mongoose.connection.name,
         collectionName: 'sessions',
         ttl: 60 * 60 * 24, // 1 day in seconds
