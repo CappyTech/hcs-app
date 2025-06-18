@@ -17,7 +17,7 @@
             <% if (details.employeeId) { %>
               <a href="/employee/read/<%= details.employeeId %>" class="text-decoration-none"><%= person %></a>
             <% } else { %>
-              <a href="/kashflow/supplier/read/<%= details.subcontractorId %>" class="text-decoration-none"><%= person %></a>
+              <a href="/supplier/read/<%= details.subcontractorId %>" class="text-decoration-none"><%= person %></a>
             <% } %>
           </td>
           <% daysOfWeek.forEach(day => { %>
@@ -26,7 +26,7 @@
               <% if (Object.keys(dailyRecords).length > 0) { %>
                 <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
                   <% const isReceipt = recordId.startsWith('receipt-'); %>
-                  <% const href = isReceipt ? `/kashflow/receipt/read/${recordId.split('receipt-')[1]}` : `/attendance/read/${recordId}`; %>
+                  <% const href = isReceipt ? `/receipt/read/${recordId.split('receipt-')[1]}` : `/attendance/read/${recordId}`; %>
                   <a href="<%= href %>" class="text-decoration-none">
                     <%= record.location ? record.location.name : record.type %>
                   </a><br>

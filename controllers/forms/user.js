@@ -28,7 +28,8 @@ const renderUserUpdateForm = async (req, res, next) => {
                 ? JSON.parse(user.permissions) 
                 : user.permissions || {};
         } else {
-            return res.status(404).send('User not found');
+            req.flash('error', 'User not found.');
+            return res.redirect('/users');
         }
         logger.info(user.permissions);
         res.render(path.join('users', 'updateUser'), {

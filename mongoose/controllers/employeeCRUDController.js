@@ -11,7 +11,10 @@ exports.createEmployee = async (req,res,next)=>{
 exports.readEmployee = async (req,res,next)=>{
   try {
     const emp = await mdb.employee.findOne({ uuid:req.params.uuid });
-    if(!emp) return res.status(404).send('Not found');
+    if(!emp) {
+      req.flash('error', 'Employee not found.');
+      return res.redirect('/employees');
+    }
     res.json({employee:emp});
   }catch(err){ next(err); }
 };
@@ -19,7 +22,10 @@ exports.readEmployee = async (req,res,next)=>{
 exports.updateEmployee = async (req,res,next)=>{
   try {
     const emp = await mdb.employee.findOneAndUpdate({ uuid:req.params.uuid }, req.body, { new:true });
-    if(!emp) return res.status(404).send('Not found');
+    if(!emp) {
+      req.flash('error', 'Employee not found.');
+      return res.redirect('/employees');
+    }
     res.json({employee:emp});
   }catch(err){ next(err); }
 };

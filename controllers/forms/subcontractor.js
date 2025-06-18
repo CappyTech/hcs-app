@@ -55,7 +55,8 @@ const renderSubcontractorUpdateForm = async (req, res, next) => {
         const subcontractor = await db.Subcontractors.findByPk(subcontractorId);
 
         if (!subcontractor) {
-            return res.status(404).send('Subcontractor not found');
+            req.flash('error', 'Subcontractor not found.');
+            return res.redirect('/subcontractors');
         }
 
         res.render(path.join('subcontractors', 'updateSubcontractor'), {
