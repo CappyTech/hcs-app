@@ -1,6 +1,12 @@
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 
+exports.renderCreateLocationForm = (req, res) => {
+  res.render(path.join('mongoose', 'createLocation'), {
+    title: 'Create Location'
+  });
+};
+
 exports.createLocation = async (req,res,next)=>{
   try {
     const loc = await mdb.location.create(req.body);
