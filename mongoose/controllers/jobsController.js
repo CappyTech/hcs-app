@@ -43,7 +43,7 @@ exports.registerJob = async (req,res,next)=>{
           ? await mdb.user.findOne({ subcontractorId: supplierId })
           : null;
       if (user) {
-        const taskService = require('../../services/mongoose/taskService');
+        const taskService = require('../services/taskService');
         await taskService.createTask({
           title: `Job Scheduled: ${jobRef}`,
           description: description || '',
