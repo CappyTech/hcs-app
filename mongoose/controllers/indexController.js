@@ -1,9 +1,19 @@
 const path = require('path');
 
-exports.renderIndex = (req, res, next) => {
-    res.render('index', {
-        title: 'Home',
-    });
+exports.renderIndex = async (req, res, next) => {
+    try {
+        let tasks = [];
+        if (req.user) {
+            const taskService = require('../../services/mongoose/taskService');
+            tasks = await taskService.getPendingTasksForUser(req.user._id);
+        }
+        res.render('index', {
+            title: 'Home',
+            tasks
+        });
+    } catch (err) {
+        next(err);
+    }
 };
 
 exports.renderConstructionIndustryScheme = (req, res, next) => {

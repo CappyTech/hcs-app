@@ -28,6 +28,24 @@
             </select>
         </div>
         <div class="mb-3">
+            <label for="employeeId" class="form-label">Assign Employee</label>
+            <select id="employeeId" name="employeeId" class="form-select">
+                <option value="">Select Employee</option>
+                <% employees.forEach(e => { %>
+                    <option value="<%= e._id %>"><%= e.name %></option>
+                <% }) %>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="supplierId" class="form-label">Assign Supplier</label>
+            <select id="supplierId" name="supplierId" class="form-select">
+                <option value="">Select Supplier</option>
+                <% suppliers.forEach(s => { %>
+                    <option value="<%= s._id %>"><%= s.Name %></option>
+                <% }) %>
+            </select>
+        </div>
+        <div class="mb-3">
             <label for="startDate" class="form-label">Start Date</label>
             <input type="date" id="startDate" name="startDate" class="form-control">
         </div>
