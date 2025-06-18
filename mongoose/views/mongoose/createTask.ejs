@@ -1,0 +1,41 @@
+<div class="container py-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5 fw-bold text-center">Create Task</h1>
+    <div class="container-fluid text-center">
+      <form action="/task/create" method="POST" class="needs-validation">
+        <div class="row mb-3">
+          <label for="title" class="col-sm-3 col-form-label">Title</label>
+          <div class="col-sm-9">
+            <input type="text" id="title" name="title" class="form-control" required>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <label for="description" class="col-sm-3 col-form-label">Description</label>
+          <div class="col-sm-9">
+            <textarea id="description" name="description" rows="3" class="form-control"></textarea>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <label for="dueDate" class="col-sm-3 col-form-label">Due Date</label>
+          <div class="col-sm-9">
+            <input type="date" id="dueDate" name="dueDate" class="form-control">
+          </div>
+        </div>
+        <div class="row mb-3">
+          <label for="recurrence" class="col-sm-3 col-form-label">Recurrence</label>
+          <div class="col-sm-9">
+            <select id="recurrence" name="recurrence" class="form-select">
+              <option value="none">None</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+        </div>
+        <div class="d-grid">
+          <button type="submit" class="btn btn-hcs-green">Create Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
