@@ -2,6 +2,32 @@ const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 
+exports.renderCreateEmployeeForm = (req, res) => {
+  res.render(path.join('mongoose', 'createEmployee'), {
+    title: 'Create Employee'
+  });
+};
+
+exports.renderUpdateEmployeeForm = async (req, res, next) => {
+  try {
+    const identifier = req.params.id;
+    const query = mongoose.Types.ObjectId.isValid(identifier)
+      ? { $or: [{ uuid: identifier }, { _id: identifier }] }
+      : { uuid: identifier };
+    const emp = await mdb.employee.findOne(query);
+    if (!emp) {
+      req.flash('error', 'Employee not found.');
+      return res.redirect('/employees');
+    }
+    res.render(path.join('mongoose', 'updateEmployee'), {
+      title: 'Update Employee',
+      employee: emp
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createEmployee = async (req,res,next)=>{
   try {
     const data = req.body;
