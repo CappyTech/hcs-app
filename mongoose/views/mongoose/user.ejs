@@ -1,0 +1,23 @@
+<div class="container my-5">
+  <h1 class="text-center mb-4">Users</h1>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach(u => { %>
+      <tr>
+        <td><a href="/user/read/<%= u.uuid %>"><%= u.username %></a></td>
+        <td><%= u.email %></td>
+        <td class="text-capitalize"><%= u.role %></td>
+        <td><%= slimDateTime(u.createdAt) %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
