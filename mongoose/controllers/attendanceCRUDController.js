@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const path = require('path');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
 
 exports.createAttendance = async (req,res,next)=>{
@@ -18,7 +19,8 @@ exports.createAttendance = async (req,res,next)=>{
       return res.redirect('/attendance/create');
     }
     const attendance = await mdb.attendance.create({ date, locationId:locationId||null, projectId:projectId||null, employeeId:employeeId||null, subcontractorId:subcontractorId||null, type, hoursWorked:hoursWorked||null, dayRate:dayRate||null });
-    res.json({attendance});
+    req.flash('success', 'Attendance created successfully.');
+    res.redirect('/dashboard/attendance');
   }catch(err){ next(err); }
 };
 
@@ -33,7 +35,10 @@ exports.readAttendance = async (req,res,next)=>{
       req.flash('error', 'Attendance not found.');
       return res.redirect('/attendance');
     }
-    res.json({attendance});
+    res.render(path.join('attendance','viewAttendance'), {
+      title: 'Attendance Details',
+      attendance
+    });
   }catch(err){ next(err); }
 };
 
@@ -50,7 +55,8 @@ exports.updateAttendance = async (req,res,next)=>{
       req.flash('error', 'Attendance not found.');
       return res.redirect('/attendance');
     }
-    res.json({attendance});
+    req.flash('success', 'Attendance updated successfully.');
+    res.redirect('/dashboard/attendance');
   }catch(err){ next(err); }
 };
 
@@ -61,6 +67,7 @@ exports.deleteAttendance = async (req,res,next)=>{
       ? { $or: [{ uuid: identifier }, { _id: identifier }] }
       : { uuid: identifier };
     await mdb.attendance.findOneAndDelete(query);
-    res.json({success:true});
+    req.flash('success', 'Attendance deleted successfully.');
+    res.redirect('/dashboard/attendance');
   }catch(err){ next(err); }
 };
