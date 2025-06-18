@@ -2,6 +2,7 @@ const moment = require('moment-timezone');
 const path = require('path');
 const attendanceService = require('../../services/mongoose/attendanceServicesMongoose');
 const taxService = require('../../services/taxService');
+const mdb = require('../../services/mongoose/mongooseDatabaseService');
 
 exports.getWeeklyAttendance = async (req,res,next)=>{
   try {
@@ -26,6 +27,11 @@ exports.getWeeklyAttendance = async (req,res,next)=>{
     const nextYear = requestedWeekNumber===totalWeeksInYear?year+1:year;
     const { attendanceRecords, employeeCount, subcontractorCount, allEmployees, allSubcontractors, paidReceipts } = await attendanceService.getAttendanceForWeek(payrollWeekStart,endDate);
     const { groupedAttendance, totalEmployeeHours, totalEmployeePay, totalSubcontractorPay, daysOfWeek } = attendanceService.groupAttendanceByPerson(attendanceRecords,payrollWeekStart,endDate,allEmployees,allSubcontractors,paidReceipts);
+    const activeJobs = await mdb.job.find({
+      startDate: { $lte: endDate.toDate() },
+      $or: [{ endDate: null }, { endDate: { $gte: payrollWeekStart.toDate() } }],
+      status: { $ne: "archived" }
+    }).populate("projectId").populate("locationId").lean();
     res.render(path.join('mongoose','weeklyAttendance'),{
       moment,
       groupedAttendance,
@@ -41,7 +47,8 @@ exports.getWeeklyAttendance = async (req,res,next)=>{
       totalEmployeeHours,
       totalSubcontractorPay,
       currentTab:'weekly',
-      daysOfWeek
+      daysOfWeek,
+      activeJobs
     });
   }catch(err){
     next(err);
