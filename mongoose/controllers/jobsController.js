@@ -65,6 +65,6 @@ exports.registerJob = async (req,res,next)=>{
 exports.listJobs = async (req,res,next)=>{
   try {
     const jobs = await mdb.job.find().populate('projectId').populate('locationId').sort({ createdAt:-1 }).lean();
-    res.render(path.join('mongoose','jobRegList'),{ title:'Jobs', jobs });
+    res.render(path.join('mongoose','jobs'),{ title:'Jobs', jobs });
   }catch(err){ next(err); }
 };
