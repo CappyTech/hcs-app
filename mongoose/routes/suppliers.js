@@ -5,5 +5,7 @@ const suppliers = require('../controllers/suppliersController');
 
 router.get('/suppliers', authService.ensureRole(), suppliers.listSuppliers);
 router.get('/supplier/read/:uuid', authService.ensureRole(), suppliers.viewSupplier);
+router.get('/supplier/change/:uuid', authService.ensureRole(), suppliers.renderChangeSupplierForm);
+router.post('/supplier/change/:uuid', authService.ensureRole(), suppliers.changeSupplier);
 
 module.exports = router;
