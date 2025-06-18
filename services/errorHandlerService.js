@@ -27,6 +27,7 @@ const errorHandlerService = (error, req, res, next) => {
         res.locals.firstName ??= null;
         res.locals.successMessage ??= [];
         res.locals.errorMessage ??= [];
+        res.locals.session ??= req.session || {};
         res.render('error', {
             title,
             error: {
