@@ -6,13 +6,21 @@ exports.listSuppliers = async (req, res, next) => {
   try {
     const suppliers = await mdb.supplier.find().sort({ Created: -1 }).lean();
     const totalSuppliers = suppliers.length;
-    const recentSuppliers = suppliers.filter(s => s.Created && moment(s.Created).isAfter(moment().subtract(30, 'days')));
+
+    const suppliersWithContact = suppliers.filter(
+      s => s.Email || s.Mobile || s.Telephone
+    ).length;
+
+    const recentSuppliers = suppliers.filter(
+      s => s.Created && moment(s.Created).isAfter(moment().subtract(30, 'days'))
+    ).length;
+
     res.render(path.join('mongoose', 'supplier'), {
       title: 'Suppliers',
       suppliers,
       totalSuppliers,
-      recentSuppliers,
-      recentSuppliersCount: recentSuppliers.length
+      suppliersWithContact,
+      recentSuppliers
     });
   } catch (error) {
     next(error);

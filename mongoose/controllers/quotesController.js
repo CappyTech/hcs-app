@@ -5,8 +5,20 @@ const mdb = require('../../services/mongoose/mongooseDatabaseService');
 exports.listQuotes = async (req, res, next) => {
   try {
     const quotes = await mdb.quote.find().sort({ InvoiceDate: -1 }).lean();
+
+    // Fetch customers referenced by the quotes
+    const customerIds = [...new Set(quotes.map(q => q.CustomerID).filter(id => id))];
+    const customers = await mdb.customer.find({ CustomerID: { $in: customerIds } }).lean();
+    const customerMap = Object.fromEntries(customers.map(c => [c.CustomerID, c]));
+
+    // Attach customer information to each quote
+    quotes.forEach(q => {
+      q.customer = customerMap[q.CustomerID] || null;
+    });
+
     const totalQuotes = quotes.length;
     const recentQuotes = quotes.filter(q => q.InvoiceDate && moment(q.InvoiceDate).isAfter(moment().subtract(30, 'days')));
+
     res.render(path.join('mongoose', 'quote'), {
       title: 'Quotes',
       quotes,
