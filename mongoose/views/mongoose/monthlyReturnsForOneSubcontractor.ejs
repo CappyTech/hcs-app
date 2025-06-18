@@ -1,39 +1,62 @@
-<div class="text-center mt-4">
-    <h1 class="mb-4"><%= monthNames[month - 1] %> Monthly Returns</h1>
-    <%= subcontractor.name %> | <%= subcontractor.company %> @ <% if (subcontractor.deduction === 0.0) { %>
-        0%
-    <% } else if (subcontractor.deduction === 0.2) { %>
-        20%
-    <% } else if (subcontractor.deduction === 0.3) { %>
-        30%
-    <% } %>
-    <% if (subcontractor.isGross) { %>
-        GROSS
-    <% } %>
-    <br>
-    <%= subcontractor.utrNumber %> | <%= subcontractor.cisNumber %>
-    <address>
-        <%= subcontractor.line1 %>,
-        <%= subcontractor.line2 %>,
-        <%= subcontractor.city %>,
-        <%= subcontractor.county %>,
-        <%= subcontractor.postalCode %>
-    </address>
+<div class="page-number">
+    <%= supplier.Name %> | Heron Constructive Solutions LTD | <%= year %> Monthly Returns
 </div>
-<div class="container">
-    <% const hasInvoices = invoices.length > 0; %>
-    <% if (hasInvoices) { %>
-        <table class="table table-hover table-sm caption-top">
-            <caption class="text-start">Month <%= month %></caption>
+<div class="mt-4">
+    <h1 class="mb-4 display-3 text-center">
+        <%= year %> Monthly Returns
+    </h1>
+    <div class="row justify-content-evenly">
+        <div class="col-6 ms-auto text-center">
+            <p class="display-5">Subcontractor</p>
+            <%= supplier.Name %>
+            <br>
+            CIS: <%= supplier.CISNumber %>
+            <br>
+            VAT: <%= supplier.VATNumber %>
+            <br>
+            <address>
+                <%= supplier.Address1 %>,
+                <%= supplier.Address2 %>,
+                <%= supplier.Address3 %>,
+                <%= supplier.PostCode %>
+            </address>
+        </div>
+        <div class="col-6 text-center">
+            <p class="display-5">Contractor</p>
+            Heron Constructive Solutions LTD
+            <br>
+            Company: 09276951
+            <br>
+            VAT: 252295994
+            <br>
+            <address>
+                103 Herondale Road, Mossley Hill, Liverpool, Merseyside, L18 1JZ.
+            </address>
+        </div>
+    </div>
+</div>
+
+<% for (let monthIndex = 1; monthIndex <= 12; monthIndex++) { %>
+    <% const monthKey = monthIndex.toString(); %>
+    <% let receipts = receiptsByMonth[monthKey] || []; %>
+    <% receipts = receipts.sort((a, b) => new Date(a.PayDate) - new Date(b.PayDate)); %>
+    <% const hasReceipts = receipts.length > 0; %>
+    <% if (hasReceipts) { %>
+        <% if (pageBreakMonths.includes(monthIndex)) { %>
+            <table class="table table-hover table-sm caption-top page-break d-print-table">
+        <% } else { %>
+            <table class="table table-hover table-sm caption-top d-print-table">
+        <% } %>
+        <caption class="text-center">Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= year %>)</caption>
             <thead>
                 <tr>
                     <th>
-                        <span class="d-none d-md-table-cell">Invoice</span>
-                        <span class="d-md-none">Inv</span>
+                        <span class="d-none d-md-table-cell">#</span>
+                        <span class="d-md-none">#</span>
                     </th>
                     <th>
-                        <span class="d-none d-md-table-cell">Kashflow</span>
-                        <span class="d-md-none">KF</span>
+                        <span class="d-none d-md-table-cell">KF #</span>
+                        <span class="d-md-none">KF #</span>
                     </th>
                     <th>
                         <span class="d-none d-md-table-cell">Invoiced</span>
@@ -56,11 +79,13 @@
                         <span class="d-md-none">Material</span>
                     </th>
                     <th>
-                        <span class="d-none d-md-table-cell">CIS @ <% if (subcontractor.deduction === 0.0) { %>
+                        <span class="d-none d-md-table-cell">
+                            CIS @ 
+                            <% if (supplier.CISRate==='0') { %>
                                 0%
-                            <% } else if (subcontractor.deduction === 0.2) { %>
+                            <% } else if (supplier.CISRate==='0.2') { %>
                                 20%
-                            <% } else if (subcontractor.deduction === 0.3) { %>
+                            <% } else if (supplier.CISRate==='0.3') { %>
                                 30%
                             <% } %>
                         </span>
@@ -70,11 +95,11 @@
                         <span class="d-none d-md-table-cell">Net</span>
                         <span class="d-md-none">Net</span>
                     </th>
-                    <% if (subcontractor.isReverseCharge) { %>
-                        <th>
-                            <span class="d-none d-md-table-cell">Reverse Charge</span>
-                            <span class="d-md-none">RC</span>
-                        </th>
+                    <% if (supplier.isReverseCharge) { %>
+                    <th>
+                        <span class="d-none d-md-table-cell">Reverse Charge</span>
+                        <span class="d-md-none">RC</span>
+                    </th>
                     <% } %>
                     <th>Month</th>
                     <th>Year</th>
@@ -84,60 +109,39 @@
                     </th>
                 </tr>
             </thead>
-            <tbody class="table-group-divider">
-                <% let totalGross = 0; %>
-                <% let totalLabourCost = 0; %>
-                <% let totalMaterialCost = 0; %>
-                <% let totalCISAmount = 0; %>
-                <% let totalNetAmount = 0; %>
-                <% let totalReverseCharge = 0; %>
-                <% invoices.forEach(invoice => { %>
-                <tr>
-                    <td><%= invoice.invoiceNumber %></td>
-                    <td><%= invoice.kashflowNumber %></td>
-                    <td><%= slimDateTime(invoice.invoiceDate) %></td>
-                    <td><%= slimDateTime(invoice.remittanceDate) %></td>
-                    <td><%= formatCurrency(invoice.grossAmount) %></td>
-                    <td><%= formatCurrency(invoice.labourCost) %></td>
-                    <td><%= formatCurrency(invoice.materialCost) %></td>
-                    <td><%= formatCurrency(invoice.cisAmount) %></td>
-                    <td><%= formatCurrency(invoice.netAmount) %></td>
-                    <% if (subcontractor.isReverseCharge) { %>
-                        <td><%= formatCurrency(invoice.reverseCharge) %></td>
-                    <% } %>
-                    <td><%= invoice.month %></td>
-                    <td><%= invoice.year %></td>
-                    <td><%= slimDateTime(invoice.submissionDate) %></td>
-                </tr>
-                <% totalGross += invoice.grossAmount; %>
-                <% totalLabourCost += invoice.labourCost; %>
-                <% totalMaterialCost += invoice.materialCost; %>
-                <% totalCISAmount += invoice.cisAmount; %>
-                <% totalNetAmount += invoice.netAmount; %>
-                <% totalReverseCharge += invoice.reverseCharge; %>
-                <% }); %>
-                <tr>
-                    <td colspan="2"><strong>Total:</strong></td>
-                    <td></td>
-                    <td></td>
-                    <td><strong><%= formatCurrency(totalGross) %></strong></td>
-                    <td><strong><%= formatCurrency(totalLabourCost) %></strong></td>
-                    <td><strong><%= formatCurrency(totalMaterialCost) %></strong></td>
-                    <td><strong><%= formatCurrency(totalCISAmount) %></strong></td>
-                    <td><strong><%= formatCurrency(totalNetAmount) %></strong></td>
-                    <td></td>
-                    <% if (subcontractor.isReverseCharge) { %>
-                        <td><strong><%= formatCurrency(totalReverseCharge) %></strong></td>
-                    <% } %>
-                    <td></td>
-                    <td></td>
+            <tbody>
+                <% let totalGross = 0, totalLabour = 0, totalMaterial = 0, totalCIS = 0, totalNet = 0; %>
+                <% receipts.forEach(receipt => { %>
+                    <tr>
+                        <td><%= receipt.InvoiceNumber %></td>
+                        <td><%= receipt.KashflowNumber %></td>
+                        <td><%= slimDateTime(receipt.InvoiceDate) %></td>
+                        <td><%= receipt.PayDate %></td>
+                        <td><%= formatCurrency(receipt.GrossAmount) %></td>
+                        <td><%= formatCurrency(receipt.LabourCost) %></td>
+                        <td><%= formatCurrency(receipt.MaterialCost) %></td>
+                        <td><%= formatCurrency(receipt.CISAmount) %></td>
+                        <td><%= formatCurrency(receipt.NetAmount) %></td>
+                        <td><%= receipt.TaxMonth %></td>
+                        <td><%= receipt.TaxYear %></td>
+                        <td><%= slimDateTime(receipt.SubmissionDate) %></td>
+                    </tr>
+                    <% totalGross += receipt.GrossAmount; %>
+                    <% totalLabour += receipt.LabourCost; %>
+                    <% totalMaterial += receipt.MaterialCost; %>
+                    <% totalCIS += receipt.CISAmount; %>
+                    <% totalNet += receipt.NetAmount; %>
+                <% }) %>
+                <tr class="fw-bold">
+                    <td colspan="4">Total for Month <%= monthKey %>:</td>
+                    <td><%= formatCurrency(totalGross) %></td>
+                    <td><%= formatCurrency(totalLabour) %></td>
+                    <td><%= formatCurrency(totalMaterial) %></td>
+                    <td><%= formatCurrency(totalCIS) %></td>
+                    <td><%= formatCurrency(totalNet) %></td>
                     <td></td>
                 </tr>
             </tbody>
         </table>
-        <% } else { %>
-        <p class="text-muted text-center">
-            No invoices available for the selected month and year.
-        </p>
     <% } %>
-</div>
+<% } %>
