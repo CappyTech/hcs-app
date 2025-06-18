@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
 
 exports.createAttendance = async (req,res,next)=>{
@@ -23,7 +24,11 @@ exports.createAttendance = async (req,res,next)=>{
 
 exports.readAttendance = async (req,res,next)=>{
   try {
-    const attendance = await mdb.attendance.findOne({ uuid: req.params.uuid }).populate('employeeId subcontractorId locationId');
+    const identifier = req.params.id;
+    let attendance = await mdb.attendance.findOne({ uuid: identifier }).populate('employeeId subcontractorId locationId');
+    if(!attendance && mongoose.Types.ObjectId.isValid(identifier)) {
+      attendance = await mdb.attendance.findById(identifier).populate('employeeId subcontractorId locationId');
+    }
     if(!attendance) {
       req.flash('error', 'Attendance not found.');
       return res.redirect('/attendance');
@@ -34,9 +39,13 @@ exports.readAttendance = async (req,res,next)=>{
 
 exports.updateAttendance = async (req,res,next)=>{
   try {
+    const identifier = req.params.id;
     const { date, locationId, projectId, employeeId, subcontractorId, type, hoursWorked, dayRate } = req.body;
     const update = { date, locationId:locationId||null, projectId:projectId||null, employeeId:employeeId||null, subcontractorId:subcontractorId||null, type, hoursWorked:employeeId?hoursWorked||null:null, dayRate:dayRate||null };
-    const attendance = await mdb.attendance.findOneAndUpdate({ uuid:req.params.uuid }, update, { new:true });
+    const query = mongoose.Types.ObjectId.isValid(identifier)
+      ? { $or: [{ uuid: identifier }, { _id: identifier }] }
+      : { uuid: identifier };
+    const attendance = await mdb.attendance.findOneAndUpdate(query, update, { new:true });
     if(!attendance) {
       req.flash('error', 'Attendance not found.');
       return res.redirect('/attendance');
@@ -47,7 +56,11 @@ exports.updateAttendance = async (req,res,next)=>{
 
 exports.deleteAttendance = async (req,res,next)=>{
   try {
-    await mdb.attendance.findOneAndDelete({ uuid:req.params.uuid });
+    const identifier = req.params.id;
+    const query = mongoose.Types.ObjectId.isValid(identifier)
+      ? { $or: [{ uuid: identifier }, { _id: identifier }] }
+      : { uuid: identifier };
+    await mdb.attendance.findOneAndDelete(query);
     res.json({success:true});
   }catch(err){ next(err); }
 };
