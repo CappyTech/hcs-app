@@ -1,43 +1,116 @@
 <div class="container py-4">
   <div class="p-5 mb-4 bg-body-tertiary rounded-3">
     <h1 class="display-5 fw-bold text-center">Update Employee</h1>
-    <form action="/employee/update/<%= employee.uuid %>" method="POST" class="needs-validation">
+    <form action="/employee/update/<%= employee.uuid %>" method="POST" class="needs-validation" novalidate>
+
+      <!-- Basic Details -->
       <div class="row mb-3">
-        <label for="name" class="col-sm-3 col-form-label">Name</label>
+        <label for="name" class="col-sm-3 col-form-label">Full Name</label>
         <div class="col-sm-9">
           <input type="text" id="name" name="name" class="form-control" value="<%= employee.name %>" required>
         </div>
       </div>
+
       <div class="row mb-3">
         <label for="email" class="col-sm-3 col-form-label">Email</label>
         <div class="col-sm-9">
           <input type="email" id="email" name="email" class="form-control" value="<%= employee.email %>">
         </div>
       </div>
+
       <div class="row mb-3">
         <label for="phoneNumber" class="col-sm-3 col-form-label">Phone</label>
         <div class="col-sm-9">
           <input type="text" id="phoneNumber" name="phoneNumber" class="form-control" value="<%= employee.phoneNumber %>">
         </div>
       </div>
+
+      <!-- Emergency Contact -->
+      <div class="row mb-3">
+        <label for="contactName" class="col-sm-3 col-form-label">Emergency Contact Name</label>
+        <div class="col-sm-9">
+          <input type="text" id="contactName" name="contactName" class="form-control" value="<%= employee.contactName %>">
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <label for="contactNumber" class="col-sm-3 col-form-label">Emergency Contact Number</label>
+        <div class="col-sm-9">
+          <input type="text" id="contactNumber" name="contactNumber" class="form-control" value="<%= employee.contactNumber %>">
+        </div>
+      </div>
+
+      <!-- Employment Info -->
       <div class="row mb-3">
         <label for="position" class="col-sm-3 col-form-label">Position</label>
         <div class="col-sm-9">
           <input type="text" id="position" name="position" class="form-control" value="<%= employee.position %>">
         </div>
       </div>
+
       <div class="row mb-3">
         <label for="type" class="col-sm-3 col-form-label">Type</label>
         <div class="col-sm-9">
-          <input type="text" id="type" name="type" class="form-control" value="<%= employee.type %>" required>
+          <select id="type" name="type" class="form-select" required>
+            <option value="">Select Type</option>
+            <option value="Full-Time" <%= employee.type === 'Full-Time' ? 'selected' : '' %>>Full-Time</option>
+            <option value="Part-Time" <%= employee.type === 'Part-Time' ? 'selected' : '' %>>Part-Time</option>
+            <option value="Contractor" <%= employee.type === 'Contractor' ? 'selected' : '' %>>Contractor</option>
+          </select>
         </div>
       </div>
+
       <div class="row mb-3">
         <label for="status" class="col-sm-3 col-form-label">Status</label>
         <div class="col-sm-9">
-          <input type="text" id="status" name="status" class="form-control" value="<%= employee.status %>" required>
+          <select id="status" name="status" class="form-select" required>
+            <option value="">Select Status</option>
+            <option value="Active" <%= employee.status === 'Active' ? 'selected' : '' %>>Active</option>
+            <option value="Inactive" <%= employee.status === 'Inactive' ? 'selected' : '' %>>Inactive</option>
+            <option value="Suspended" <%= employee.status === 'Suspended' ? 'selected' : '' %>>Suspended</option>
+          </select>
         </div>
       </div>
+
+      <!-- Optional: Manager -->
+      <div class="row mb-3">
+        <label for="managerId" class="col-sm-3 col-form-label">Manager</label>
+        <div class="col-sm-9">
+          <select id="managerId" name="managerId" class="form-select">
+            <option value="">None</option>
+            <% managers.forEach(manager => { %>
+              <option value="<%= manager._id %>" <%= employee.managerId?.toString() === manager._id.toString() ? 'selected' : '' %>>
+                <%= manager.name %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <!-- Rates (only one should be filled) -->
+      <div class="row mb-3">
+        <label for="hourlyRate" class="col-sm-3 col-form-label">Hourly Rate (£)</label>
+        <div class="col-sm-9">
+          <input type="number" step="0.01" id="hourlyRate" name="hourlyRate" class="form-control" value="<%= employee.hourlyRate ? employee.hourlyRate.toString() : '' %>">
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <label for="dailyRate" class="col-sm-3 col-form-label">Daily Rate (£)</label>
+        <div class="col-sm-9">
+          <input type="number" step="0.01" id="dailyRate" name="dailyRate" class="form-control" value="<%= employee.dailyRate ? employee.dailyRate.toString() : '' %>">
+        </div>
+      </div>
+
+      <!-- Hire Date -->
+      <div class="row mb-4">
+        <label for="hireDate" class="col-sm-3 col-form-label">Hire Date</label>
+        <div class="col-sm-9">
+          <input type="date" id="hireDate" name="hireDate" class="form-control" value="<%= employee.hireDate ? employee.hireDate.toISOString().split('T')[0] : '' %>">
+        </div>
+      </div>
+
+      <!-- Submit -->
       <div class="d-grid">
         <button type="submit" class="btn btn-hcs-green">Update Employee</button>
       </div>
