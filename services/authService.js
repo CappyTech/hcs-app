@@ -1,4 +1,4 @@
-const mdb = require('./mongoose/mongooseDatabaseService');
+const mdb = require('../mongoose/services/mongooseDatabaseService');
 
 // Populate req.user from session if available (non-blocking)
 async function ensureAuthenticated(req, res, next) {

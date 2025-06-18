@@ -10,13 +10,13 @@ const logger = require('./services/loggerService');
 const packageJson = require('./package.json');
 const crypto = require('crypto');
 
-const mdb = require('./services/mongoose/mongooseDatabaseService');
+const mdb = require('./mongoose/services/mongooseDatabaseService');
 
 const main = async () => {
   try {
     await mdb.connect(); // Wait for MongoDB/SSH tunnel
 
-    const sessionService = require('./services/mongoose/sessionServiceMongoose');
+    const sessionService = require('./mongoose/services/sessionServiceMongoose');
 
     const app = express();
 
@@ -54,7 +54,7 @@ const main = async () => {
     app.use(authService.ensureAuthenticated);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
-    app.use(require('./services/mongoose/cronServiceMongoose'));
+    app.use(require('./mongoose/services/cronServiceMongoose'));
 
     // Attach user info to templates
     app.use((req, res, next) => {
@@ -106,7 +106,6 @@ const main = async () => {
     });
 
     // Holiday block page
-    const holidayService = require('./services/mongoose/holidayServiceMongoose');
     app.use(async (req, res, next) => {
       try {
         const holidayDetails = await holidayService.isDateHoliday();
