@@ -50,7 +50,6 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
       req.flash('error', 'Supplier not found.');
       return res.redirect('/suppliers');
     }
-
     const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID, TaxYear: year, TaxMonth: month }).sort({ InvoiceNumber: 1 }).lean();
     const receiptsByMonth = {};
     receipts.forEach(receipt=>{
