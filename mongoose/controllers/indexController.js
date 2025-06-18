@@ -7,37 +7,37 @@ exports.renderIndex = (req, res, next) => {
 };
 
 exports.renderConstructionIndustryScheme = (req, res, next) => {
-    res.render(path.join('render','construction-industry-scheme'), {
+    res.render(path.join('mongoose','construction-industry-scheme'), {
         title: 'Construction Industry Scheme',
     });
 };
 
 exports.renderManagement = (req, res, next) => {
-    res.render(path.join('render','management'), {
+    res.render(path.join('mongoose','management'), {
         title: 'Management',
     });
 };
 
 exports.renderPayroll = (req, res, next) => {
-    res.render(path.join('render','payroll'), {
+    res.render(path.join('mongoose','payroll'), {
         title: 'Payroll',
     });
 };
 
 exports.renderHumanResources = (req, res, next) => {
-    res.render(path.join('render','human-resources'), {
+    res.render(path.join('mongoose','human-resources'), {
         title: 'Human Resources',
     });
 };
 
 exports.renderKashflow = (req, res, next) => {
-    res.render(path.join('render','kashflow'), {
+    res.render(path.join('mongoose','kashflow'), {
         title: 'Kashflow',
     });
 };
 
 exports.renderCreate = (req, res, next) => {
-    res.render(path.join('render','create'), {
+    res.render(path.join('mongoose','create'), {
         title: 'Create',
     });
 };

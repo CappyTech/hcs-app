@@ -34,6 +34,13 @@ const ChargeTypes = require('../../controllers/CRUD/kashflow/chargeTypes.json');
   const startfetch = workerData.startfetch;
 
   try {
+    await mdb.connect();
+  } catch (err) {
+    logger.error('❌ Failed to connect to MongoDB: ' + err.message);
+    process.exit(1);
+  }
+
+  try {
     const context = `worker thread - working on: ${supplier.Name}`;
     const client = await authenticate(context);
     const receipts = await getReceiptsForSupplier(client, supplier.SupplierID);
