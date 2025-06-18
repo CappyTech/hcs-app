@@ -1,10 +1,8 @@
 const axios = require('axios');
 const bcrypt = require('bcrypt');
 const path = require('path');
-const jwt = require('jsonwebtoken');
 const logger = require('../../services/loggerService');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
-const generateToken = require('../../services/generateTokenService');
 
 exports.renderLoginForm = (req, res) => {
   res.render(path.join('mongoose', 'login'), {
@@ -53,8 +51,9 @@ exports.loginUser = async (req, res) => {
       return res.redirect('/user/login');
     }
 
-    const payload = {
-      userId: user._id.toString(),
+    const sessionData = {
+      id: user._id.toString(),
+      uuid: user.uuid,
       username: user.username,
       email: user.email,
       role: user.role,
@@ -71,22 +70,14 @@ exports.loginUser = async (req, res) => {
 
     // If TOTP is enabled, stage login for /user/2fa
     if (user.totpEnabled) {
-      const pendingToken = generateToken(payload, '5m');
-      res.cookie('pending2FA', pendingToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
-        maxAge: 1000 * 60 * 5
-      });
+      req.session.userPending2FA = sessionData;
       return res.redirect('/user/2fa');
     }
 
-    const authToken = generateToken(payload, '8h');
-    res.cookie('token', authToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Strict',
-      maxAge: 1000 * 60 * 60 * 8
+    req.session.user = sessionData;
+
+    await new Promise((resolve, reject) => {
+      req.session.save(err => (err ? reject(err) : resolve()));
     });
 
     logger.info(`${user.username} successfully logged in.`);
@@ -101,8 +92,14 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.logoutUser = (req, res) => {
-  res.clearCookie('token');
-  res.clearCookie('pending2FA');
-  req.flash('success', 'You have been logged out.');
-  return res.redirect('/user/login');
+  req.session.destroy(err => {
+    if (err) {
+      logger.error('Error logging out: ' + err.message);
+      req.flash('error', 'An error occurred while logging out.');
+      return res.redirect('/');
+    }
+    res.clearCookie('connect.sid');
+    req.flash('success', 'You have been logged out.');
+    return res.redirect('/user/login');
+  });
 };
