@@ -48,7 +48,7 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB file size limit
 });
 
-router.post('/project/:uuid/:number/upload',  authService.ensureRoles('admin'), upload.array('files', 10), (req, res) => {
+router.post('/project/:uuid/:number/upload',  authService.ensureRole(), upload.array('files', 10), (req, res) => {
     const projectDir = path.join(projectsDir, req.params.number.toString());
     req.files.forEach(file => {
         const sanitizedFileName = sanitize(file.originalname);
@@ -58,7 +58,7 @@ router.post('/project/:uuid/:number/upload',  authService.ensureRoles('admin'), 
     res.redirect(`/kashflow/project/read/${req.params.uuid}`);
 });
 
-router.get('/project/:uuid/:number/download/:filename',  authService.ensureRoles('admin'), (req, res) => {
+router.get('/project/:uuid/:number/download/:filename',  authService.ensureRole(), (req, res) => {
         const sanitizedFileName = sanitize(req.params.filename);
         const filePath = path.join(projectsDir, req.params.number.toString(), sanitizedFileName);
 

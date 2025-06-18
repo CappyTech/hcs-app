@@ -87,7 +87,7 @@ const renderContactUpdateForm = async (req, res, next) => {
 };
 
 //router.get('/contact/select', selectContact);
-router.get('/create',  authService.ensureRoles('admin'), renderContactCreateForm);
-router.get('/update/:contact',  authService.ensureRoles('admin'), renderContactUpdateForm);
+router.get('/create',  authService.ensureRole(), renderContactCreateForm);
+router.get('/update/:contact',  authService.ensureRole(), renderContactUpdateForm);
 
 module.exports = router;

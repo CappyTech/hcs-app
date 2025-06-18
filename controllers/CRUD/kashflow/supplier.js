@@ -76,7 +76,7 @@ const changeSupplier = async (req, res, next) => {
     }
 }
 
-router.get('/supplier/read/:uuid',  authService.ensureRoles('admin'), readSupplier);
-router.get('/supplier/change/:uuid',  authService.ensureRoles('admin'), renderchangeSupplierForm);
-router.post('/supplier/change/:uuid',  authService.ensureRoles('admin'), changeSupplier);
+router.get('/supplier/read/:uuid',  authService.ensureRole(), readSupplier);
+router.get('/supplier/change/:uuid',  authService.ensureRole(), renderchangeSupplierForm);
+router.post('/supplier/change/:uuid',  authService.ensureRole(), changeSupplier);
 module.exports = router;

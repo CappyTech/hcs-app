@@ -99,9 +99,9 @@ const viewFile = async (req, res, next) => {
     }
 };
 
-router.get('/project/read/:uuid',  authService.ensureRoles('admin'), readProject);
-router.get('/project/:uuid/serve/:filename',  authService.ensureRoles('admin'), serveFile);
-router.get('/project/:uuid/view/:filename',  authService.ensureRoles('admin'), viewFile);
+router.get('/project/read/:uuid',  authService.ensureRole(), readProject);
+router.get('/project/:uuid/serve/:filename',  authService.ensureRole(), serveFile);
+router.get('/project/:uuid/view/:filename',  authService.ensureRole(), viewFile);
 
 
 module.exports = router;

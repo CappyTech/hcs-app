@@ -202,7 +202,7 @@ const deleteSubcontractor = async (req, res, next, error) => {
     }
 };
 
-router.get('/fetch/subcontractor/:id',  authService.ensureRoles('admin'), async (req, res, next) => {
+router.get('/fetch/subcontractor/:id',  authService.ensureRole(), async (req, res, next) => {
     try {
         const subcontractor = await db.Subcontractors.findAll({
             where: { id: req.params.id },
@@ -234,9 +234,9 @@ router.get('/fetch/subcontractor/:id',  authService.ensureRoles('admin'), async 
     }
 });
 
-router.post('/create',  authService.ensureRoles('admin'), createSubcontractor);
-router.get('/read/:id',  authService.ensureRoles('admin'), readSubcontractor);
-router.post('/update/:id',  authService.ensureRoles('admin'), updateSubcontractor);
-router.post('/delete/:id',  authService.ensureRoles('admin'), deleteSubcontractor);
+router.post('/create',  authService.ensureRole(), createSubcontractor);
+router.get('/read/:id',  authService.ensureRole(), readSubcontractor);
+router.post('/update/:id',  authService.ensureRole(), updateSubcontractor);
+router.post('/delete/:id',  authService.ensureRole(), deleteSubcontractor);
 
 module.exports = router;

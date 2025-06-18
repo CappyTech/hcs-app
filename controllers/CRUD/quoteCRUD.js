@@ -161,10 +161,10 @@ router.get('/fetch/quote/:quoteId', async (req, res, next) => {
 });
 
 
-router.post('/create/:client',  authService.ensureRoles('admin'), createQuote);
-router.get('/read/:quoteId',  authService.ensureRoles('admin'), readQuote);
-router.get('/read/:client',  authService.ensureRoles('admin'), readQuotes);
-router.post('/update/:id',  authService.ensureRoles('admin'), updateQuote);
-router.post('/delete/:id',  authService.ensureRoles('admin'), deleteQuote);
+router.post('/create/:client',  authService.ensureRole(), createQuote);
+router.get('/read/:quoteId',  authService.ensureRole(), readQuote);
+router.get('/read/:client',  authService.ensureRole(), readQuotes);
+router.post('/update/:id',  authService.ensureRole(), updateQuote);
+router.post('/delete/:id',  authService.ensureRole(), deleteQuote);
 
 module.exports = router;

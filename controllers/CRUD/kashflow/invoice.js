@@ -38,6 +38,6 @@ const readInvoice = async (req, res, next) => {
 };
 
 
-router.get('/invoice/read/:uuid',  authService.ensureRoles('admin'), readInvoice);
+router.get('/invoice/read/:uuid',  authService.ensureRole(), readInvoice);
 
 module.exports = router;

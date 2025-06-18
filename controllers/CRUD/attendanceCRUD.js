@@ -162,7 +162,7 @@ const deleteAttendance = async (req, res, next) => {
     }
 };
 
-router.get('/fetch/attendance/:id',  authService.ensureRoles('admin'), async (req, res, next) => {
+router.get('/fetch/attendance/:id',  authService.ensureRole(), async (req, res, next) => {
     try {
         const attendance = await db.Attendances.findOne({
             where: { id: req.params.id },
@@ -184,9 +184,9 @@ router.get('/fetch/attendance/:id',  authService.ensureRoles('admin'), async (re
 });
 
 
-router.post('/create',  authService.ensureRoles('admin'), createAttendance);
-router.get('/read/:attendance',  authService.ensureRoles('admin'), readAttendance);
-router.post('/update/:attendance',  authService.ensureRoles('admin'), updateAttendance);
-router.post('/delete/:attendance',  authService.ensureRoles('admin'), deleteAttendance);
+router.post('/create',  authService.ensureRole(), createAttendance);
+router.get('/read/:attendance',  authService.ensureRole(), readAttendance);
+router.post('/update/:attendance',  authService.ensureRole(), updateAttendance);
+router.post('/delete/:attendance',  authService.ensureRole(), deleteAttendance);
 
 module.exports = router;

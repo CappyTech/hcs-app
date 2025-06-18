@@ -52,6 +52,6 @@ const getDailyAttendance = async (req, res, next) => {
  * @param {Function} authService.ensureRoles - Middleware to ensure user has 'admin' role.
  * @param {Function} getDailyAttendance - Controller function to handle the route.
  */
-router.get('/daily/:date?',  authService.ensureRoles('admin'), getDailyAttendance);
+router.get('/daily/:date?',  authService.ensureRole(), getDailyAttendance);
 
 module.exports = router;
