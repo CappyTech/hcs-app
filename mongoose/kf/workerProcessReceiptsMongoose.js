@@ -1,11 +1,11 @@
 const { parentPort, workerData } = require('worker_threads');
-const authenticate = require('../autoAuth');
+const authenticate = require('../../kf/autoAuth');
 const taxService = require('../../services/taxService');
 const logger = require('../../services/loggerService');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
-const getReceiptsForSupplier = require('../getReceiptsForSupplier');
-const getReceiptPayment = require('../getReceiptPayment');
-const getReceiptNotes = require('../getReceiptNotes');
+const getReceiptsForSupplier = require('../../kf/getReceiptsForSupplier');
+const getReceiptPayment = require('../../kf/getReceiptPayment');
+const getReceiptNotes = require('../../kf/getReceiptNotes');
 const normalizePayments = require('../../services/kashflowNormalizer').normalizePayments;
 function mapLine(line) {
   return {
