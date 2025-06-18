@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
 
 exports.createEmployee = async (req,res,next)=>{
@@ -10,7 +11,11 @@ exports.createEmployee = async (req,res,next)=>{
 
 exports.readEmployee = async (req,res,next)=>{
   try {
-    const emp = await mdb.employee.findOne({ uuid:req.params.uuid });
+    const identifier = req.params.id;
+    let emp = await mdb.employee.findOne({ uuid: identifier });
+    if(!emp && mongoose.Types.ObjectId.isValid(identifier)) {
+      emp = await mdb.employee.findById(identifier);
+    }
     if(!emp) {
       req.flash('error', 'Employee not found.');
       return res.redirect('/employees');
@@ -21,7 +26,11 @@ exports.readEmployee = async (req,res,next)=>{
 
 exports.updateEmployee = async (req,res,next)=>{
   try {
-    const emp = await mdb.employee.findOneAndUpdate({ uuid:req.params.uuid }, req.body, { new:true });
+    const identifier = req.params.id;
+    const query = mongoose.Types.ObjectId.isValid(identifier)
+      ? { $or: [{ uuid: identifier }, { _id: identifier }] }
+      : { uuid: identifier };
+    const emp = await mdb.employee.findOneAndUpdate(query, req.body, { new:true });
     if(!emp) {
       req.flash('error', 'Employee not found.');
       return res.redirect('/employees');
@@ -32,7 +41,11 @@ exports.updateEmployee = async (req,res,next)=>{
 
 exports.deleteEmployee = async (req,res,next)=>{
   try {
-    await mdb.employee.findOneAndDelete({ uuid:req.params.uuid });
+    const identifier = req.params.id;
+    const query = mongoose.Types.ObjectId.isValid(identifier)
+      ? { $or: [{ uuid: identifier }, { _id: identifier }] }
+      : { uuid: identifier };
+    await mdb.employee.findOneAndDelete(query);
     res.json({success:true});
   }catch(err){ next(err); }
 };
