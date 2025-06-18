@@ -116,9 +116,9 @@ router.get('/fetch/:clientId', async (req, res, next) => {
     }
 });
 
-router.post('/create', authService.ensureAuthenticated, authService.ensureRole('admin'), createClient);
-router.get('/read/:clientId', authService.ensureAuthenticated, authService.ensureRole('admin'), readClient);
-router.post('/update/:clientId', authService.ensureAuthenticated, authService.ensureRole('admin'), updateClient);
-router.post('/delete/:clientId', authService.ensureAuthenticated, authService.ensureRole('admin'), deleteClient);
+router.post('/create',  authService.ensureRoles('admin'), createClient);
+router.get('/read/:clientId',  authService.ensureRoles('admin'), readClient);
+router.post('/update/:clientId',  authService.ensureRoles('admin'), updateClient);
+router.post('/delete/:clientId',  authService.ensureRoles('admin'), deleteClient);
 
 module.exports = router;

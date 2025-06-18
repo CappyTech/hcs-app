@@ -57,8 +57,8 @@ const renderClientVerification = async (req, res, next) => {
     }
 };
 
-router.get('/subcontractor', authService.ensureAuthenticated, authService.ensureRole('admin'), renderSubcontractorVerification);
-router.get('/invoice', authService.ensureAuthenticated, authService.ensureRole('admin'), renderInvoiceVerification);
-router.get('/client', authService.ensureAuthenticated, authService.ensureRole('admin'), renderClientVerification);
+router.get('/subcontractor',  authService.ensureRoles('admin'), renderSubcontractorVerification);
+router.get('/invoice',  authService.ensureRoles('admin'), renderInvoiceVerification);
+router.get('/client',  authService.ensureRoles('admin'), renderClientVerification);
 
 module.exports = router;

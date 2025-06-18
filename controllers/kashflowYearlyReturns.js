@@ -456,6 +456,6 @@ router.post('/download-xlsx', async (req, res) => {
     }
 });
 
-router.get('/returns/:year/:uuid', authService.ensureAuthenticated, authService.ensureRole('admin'), renderKFYearlyReturns);
+router.get('/returns/:year/:uuid',  authService.ensureRoles('admin'), renderKFYearlyReturns);
 
 module.exports = router;

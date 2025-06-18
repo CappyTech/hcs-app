@@ -167,7 +167,7 @@ const renderKFMonthlyReturns = async (req, res, next) => {
     }
 };
 
-router.get('/returns/form', authService.ensureAuthenticated, authService.ensureRole('admin'), renderKFMonthlyReturnsForm);
-router.get('/returns/:month/:year/:uuid', authService.ensureAuthenticated, authService.ensureRole('admin'), renderKFMonthlyReturns);
+router.get('/returns/form',  authService.ensureRoles('admin'), renderKFMonthlyReturnsForm);
+router.get('/returns/:month/:year/:uuid',  authService.ensureRoles('admin'), renderKFMonthlyReturns);
 
 module.exports = router;

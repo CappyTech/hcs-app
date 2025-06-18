@@ -4,7 +4,7 @@ const logger = require('../../services/loggerService');
 const db = require('../../services/sequelizeDatabaseService');
 const authService = require('../../services/authService');
 
-router.get('/fetch/user/:id', authService.ensureAuthenticated, authService.ensureRole('admin'), async (req, res, next) => {
+router.get('/fetch/user/:id',  authService.ensureRoles('admin'), async (req, res, next) => {
     try {
         const user = await db.Users.findAll({
             where: { id: req.params.id },

@@ -89,7 +89,7 @@ const getWeeklyAttendance = async (req, res, next) => {
 };
 
 // Redirect `/attendance/weekly` to the current week's attendance
-router.get('/weekly', authService.ensureAuthenticated, authService.ensureRole('admin'), (req, res, next) => {
+router.get('/weekly',  authService.ensureRoles('admin'), (req, res, next) => {
     try {
         const currentTaxYear = taxService.getCurrentTaxYear();
         const { start: startOfTaxYear, end: endOfTaxYear } = taxService.getTaxYearStartEnd(currentTaxYear);
@@ -115,6 +115,6 @@ router.get('/weekly', authService.ensureAuthenticated, authService.ensureRole('a
     }
 });
 
-router.get('/weekly/:year?/:week?', authService.ensureAuthenticated, authService.ensureRole('admin'), getWeeklyAttendance);
+router.get('/weekly/:year?/:week?',  authService.ensureRoles('admin'), getWeeklyAttendance);
 
 module.exports = router;

@@ -8,7 +8,7 @@ const logger = require('../services/loggerService');
 let isFetching = false;
 /*
 // Route for rendering the fetch status page
-router.get('/kashflow', authService.ensureAuthenticated, authService.ensureRole('admin'), (req, res) => {
+router.get('/kashflow',  authService.ensureRoles('admin'), (req, res) => {
     res.render(path.join('kashflow', 'fetchStatus'), {
         title: 'Gathering KashFlow Data',
         isFetching,
@@ -63,7 +63,7 @@ router.get('/fetch-kashflow-data', async (req, res) => {
 });
 
 /*
-router.get('/fetch-status', authService.ensureAuthenticated, authService.ensureRole('admin'), (req, res) => {
+router.get('/fetch-status',  authService.ensureRoles('admin'), (req, res) => {
     res.status(200).json({
         messages: fetchMessages,
         completed: !isFetching,
@@ -73,7 +73,7 @@ router.get('/fetch-status', authService.ensureAuthenticated, authService.ensureR
 
 const updateTaxMonthTaxYear = require('./updateTaxMonthTaxYear');
 
-router.get('/update-tax-month-year', authService.ensureAuthenticated, authService.ensureRole('admin'), async (req, res) => {
+router.get('/update-tax-month-year',  authService.ensureRoles('admin'), async (req, res) => {
     try {
         await updateTaxMonthTaxYear();
         res.status(200).json({ message: 'Tax month and year updated successfully.' });

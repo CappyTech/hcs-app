@@ -48,7 +48,7 @@ const renderInvoiceUpdateForm = async (req, res, next) => {
     }
 };
 
-router.get('/create', authService.ensureAuthenticated, authService.ensureRole('admin'), renderInvoiceCreateForm);
-router.get('/update/:invoice', authService.ensureAuthenticated, authService.ensureRole('admin'), renderInvoiceUpdateForm);
+router.get('/create',  authService.ensureRoles('admin'), renderInvoiceCreateForm);
+router.get('/update/:invoice',  authService.ensureRoles('admin'), renderInvoiceUpdateForm);
 
 module.exports = router;

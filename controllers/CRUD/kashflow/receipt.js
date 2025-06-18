@@ -42,9 +42,9 @@ const readReceipt = async (req, res, next) => {
     }
 };
 
-router.get('/receipt/read/:uuid', authService.ensureAuthenticated, authService.ensureRole('admin'), readReceipt);
+router.get('/receipt/read/:uuid',  authService.ensureRoles('admin'), readReceipt);
 
-router.post('/receipt/:uuid/change', authService.ensureAuthenticated, authService.ensureRole('admin'), async (req, res) => {
+router.post('/receipt/:uuid/change',  authService.ensureRoles('admin'), async (req, res) => {
     try {
         const receipt = await kf.KF_Receipts.findOne({ where: { uuid: req.params.uuid } });
 
@@ -62,7 +62,7 @@ router.post('/receipt/:uuid/change', authService.ensureAuthenticated, authServic
     }
 });
 
-router.post('/receipt/change', authService.ensureAuthenticated, authService.ensureRole('admin'), async (req, res) => {
+router.post('/receipt/change',  authService.ensureRoles('admin'), async (req, res) => {
     try {
         const { submissionDate, uuids, redirectPath  } = req.body;
         const targetUUIDs = uuids?.length ? Array.isArray(uuids) ? uuids : [uuids] : [req.params.uuid];
@@ -86,7 +86,7 @@ router.post('/receipt/change', authService.ensureAuthenticated, authService.ensu
     }
 });
 
-router.post('/receipt/:uuid/submit', authService.ensureAuthenticated, authService.ensureRole('admin'), async (req, res) => {
+router.post('/receipt/:uuid/submit',  authService.ensureRoles('admin'), async (req, res) => {
     try {
         const receipt = await kf.KF_Receipts.findOne({ where: { uuid: req.params.uuid } });
 
@@ -106,7 +106,7 @@ router.post('/receipt/:uuid/submit', authService.ensureAuthenticated, authServic
     }
 });
 
-router.post('/receipt/:uuid/cancel', authService.ensureAuthenticated, authService.ensureRole('admin'), async (req, res) => {
+router.post('/receipt/:uuid/cancel',  authService.ensureRoles('admin'), async (req, res) => {
     try {
         const receipt = await kf.KF_Receipts.findOne({ where: { uuid: req.params.uuid } });
 

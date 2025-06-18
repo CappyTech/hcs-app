@@ -141,7 +141,7 @@ router.post(
     body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
     body('confirmNewPassword').custom((value, { req }) => value === req.body.newPassword).withMessage('Passwords do not match')
   ],
-  authService.ensureAuthenticated,
+  
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -183,9 +183,9 @@ const validateAccountSettings = [
 ];
 
 // Routes
-router.get('/profile', authService.ensureAuthenticated, getProfilePage);
-router.get('/account', authService.ensureAuthenticated, getAccountPage);
-router.post('/account/settings', authService.ensureAuthenticated, validateAccountSettings, updateAccountSettings);
-router.post('/account/logout-session', authService.ensureAuthenticated, logoutSession);
+router.get('/profile',  getProfilePage);
+router.get('/account',  getAccountPage);
+router.post('/account/settings',  validateAccountSettings, updateAccountSettings);
+router.post('/account/logout-session',  logoutSession);
 
 module.exports = router;

@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const authService = require('../../services/mongoose/authServiceMongoose');
+const authService = require('../../services/authService');
 const index = require('../controllers/indexController');
 
-router.get('/', index.renderIndex);
-router.get('/construction-industry-scheme', authService.ensureAuthenticated, index.renderConstructionIndustryScheme);
-router.get('/management', authService.ensureAuthenticated, index.renderManagement);
-router.get('/payroll', authService.ensureAuthenticated, index.renderPayroll);
-router.get('/human-resources', authService.ensureAuthenticated, index.renderHumanResources);
-router.get('/kashflow', authService.ensureAuthenticated, index.renderKashflow);
-router.get('/create', authService.ensureAuthenticated, index.renderCreate);
+router.get('/', authService.doesntRequireLogin, index.renderIndex);
+router.get('/construction-industry-scheme',  index.renderConstructionIndustryScheme);
+router.get('/management',  index.renderManagement);
+router.get('/payroll',  index.renderPayroll);
+router.get('/human-resources',  index.renderHumanResources);
+router.get('/kashflow',  index.renderKashflow);
+router.get('/create',  index.renderCreate);
 
 module.exports = router;

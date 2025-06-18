@@ -43,7 +43,7 @@ const renderUserUpdateForm = async (req, res, next) => {
     }
 };
 
-router.get('/create', authService.ensureAuthenticated, authService.ensureRole('admin'), renderUserCreateForm);
-router.get('/update/:user', authService.ensureAuthenticated, authService.ensureRole('admin'), renderUserUpdateForm);
+router.get('/create',  authService.ensureRoles('admin'), renderUserCreateForm);
+router.get('/update/:user',  authService.ensureRoles('admin'), renderUserUpdateForm);
 
 module.exports = router;

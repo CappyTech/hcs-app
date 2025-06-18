@@ -2,10 +2,10 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const authService = require('../../services/mongoose/authServiceMongoose');
+const authService = require('../../services/authService');
 const router = express.Router();
 /*
-router.get('/logs', authService.ensureAuthenticated, authService.ensureRole('admin'), async (req, res) => {
+router.get('/logs',  authService.ensureRoles('admin'), async (req, res) => {
     const logPath = path.join(__dirname, '..', '..', 'logs', 'app.log');
     const lines = [];
 
@@ -29,7 +29,7 @@ router.get('/logs', authService.ensureAuthenticated, authService.ensureRole('adm
     });
 });
 */
-router.get('/logs', authService.ensureAuthenticated, authService.ensureRole('admin'), async (req, res) => {
+router.get('/logs',  authService.ensureRoles('admin'), async (req, res) => {
     const logPath = path.join(__dirname, '..', '..', 'logs', 'app.json.log');
     const logsByLevel = {
         info: [],

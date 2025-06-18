@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../../services/mongoose/authServiceMongoose');
+const auth = require('../../services/authService');
 const ctrl = require('../controllers/yearlyReturnsController');
 
-router.get('/yearly/returns/:year/:uuid', auth.ensureAuthenticated, auth.ensurePermission(['adminAccess']), ctrl.renderYearlyReturns);
+router.get('/yearly/returns/:year/:uuid',  auth.ensureRoles(['adminAccess']), ctrl.renderYearlyReturns);
 
 module.exports = router;

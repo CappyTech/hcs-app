@@ -47,11 +47,11 @@ const renderCreate = (req, res) => {
 };
 
 router.get('/', renderIndex);
-router.get('/construction-industry-scheme', authService.ensureAuthenticated, renderConstructionIndustryScheme);
-router.get('/management', authService.ensureAuthenticated, renderManagement);
-router.get('/payroll', authService.ensureAuthenticated, renderPayroll);
-router.get('/human-resources', authService.ensureAuthenticated, renderHumanResources);
-router.get('/kashflow', authService.ensureAuthenticated, renderKashflow);
-router.get('/create', authService.ensureAuthenticated, renderCreate);
+router.get('/construction-industry-scheme',  renderConstructionIndustryScheme);
+router.get('/management',  renderManagement);
+router.get('/payroll',  renderPayroll);
+router.get('/human-resources',  renderHumanResources);
+router.get('/kashflow',  renderKashflow);
+router.get('/create',  renderCreate);
 
 module.exports = router;
