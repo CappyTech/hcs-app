@@ -35,7 +35,7 @@ const renderUpdateEmployeeForm = async (req, res, next) => {
     }
 };
 
-router.get('/create',  authService.ensureRoles('admin'), renderCreateEmployeeForm);
-router.get('/update/:employee',  authService.ensureRoles('admin'), renderUpdateEmployeeForm);
+router.get('/create',  authService.ensureRole(), renderCreateEmployeeForm);
+router.get('/update/:employee',  authService.ensureRole(), renderUpdateEmployeeForm);
 
 module.exports = router;

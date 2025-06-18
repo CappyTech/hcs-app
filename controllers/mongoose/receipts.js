@@ -165,8 +165,8 @@ const renderCISDashboardMongo = async (req, res, next) => {
   }
 };
 
-router.get('/mdb/CIS/:year/:month',  authService.ensureRoles('admin'), renderCISDashboardMongo);
-router.get('/mdb/CIS',  authService.ensureRoles('admin'), (req, res) => {
+router.get('/mdb/CIS/:year/:month',  authService.ensureRole(), renderCISDashboardMongo);
+router.get('/mdb/CIS',  authService.ensureRole(), (req, res) => {
   const { taxYear, taxMonth } = taxService.calculateTaxYearAndMonth(moment());
   return res.redirect(`/mdb/CIS/${taxYear}/${taxMonth}`);
 });

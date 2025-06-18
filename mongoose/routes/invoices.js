@@ -3,7 +3,7 @@ const router = express.Router();
 const auth = require('../../services/authService');
 const invoices = require('../controllers/invoicesController');
 
-router.get('/invoices', invoices.listInvoices);
-router.get('/invoice/read/:uuid', invoices.viewInvoice);
+router.get('/invoices', auth.ensureRole(), invoices.listInvoices);
+router.get('/invoice/read/:uuid', auth.ensureRole(), invoices.viewInvoice);
 
 module.exports = router;

@@ -59,7 +59,7 @@ const renderJobUpdateForm = async (req, res, next) => {
     }
 };
 
-router.get('/create',  authService.ensureRoles('admin'), renderJobCreateForm);
-router.get('/update/:jobId',  authService.ensureRoles('admin'), renderJobUpdateForm);
+router.get('/create',  authService.ensureRole(), renderJobCreateForm);
+router.get('/update/:jobId',  authService.ensureRole(), renderJobUpdateForm);
 
 module.exports = router;

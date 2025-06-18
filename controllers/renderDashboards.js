@@ -730,7 +730,7 @@ const renderKashflowDashboard = async (req, res, next) => {
     }
 };
 
-router.get('/stats',  authService.ensureRoles('admin'), (req, res) => {
+router.get('/stats',  authService.ensureRole(), (req, res) => {
     try {
         const { taxYear, taxMonth } = taxService.calculateTaxYearAndMonth(moment());
         logger.info(`Tax Year: ${taxYear}, Tax Month: ${taxMonth}`);
@@ -741,26 +741,26 @@ router.get('/stats',  authService.ensureRoles('admin'), (req, res) => {
         next(error); // Pass the error to the error handler
     }
 });
-router.get('/stats/:year?/:month?',  authService.ensureRoles('admin'), renderStatsDashboard);
-router.get('/user',  authService.ensureRoles('admin'), renderUserDashboard);
-router.get('/subcontractor',  authService.ensureRoles('admin'), renderSubcontractorDashboard);
-router.get('/invoice',  authService.ensureRoles('admin'), renderInvoiceDashboard);
-router.get('/quote',  authService.ensureRoles('admin'), renderQuotesDashboard);
-router.get('/client',  authService.ensureRoles('admin'), renderClientsDashboard);
-router.get('/contact',  authService.ensureRoles('admin'), renderContactsDashboard);
-router.get('/job',  authService.ensureRoles('admin'), renderJobsDashboard);
-//router.get('/archive',  authService.ensureRoles('admin'), renderQuoteArchiveDashboard);
-router.get('/location',  authService.ensureRoles('admin'), renderLocationsDashboard);
-router.get('/attendance',  authService.ensureRoles('admin'), renderAttendanceDashboard);
-router.get('/employee',  authService.ensureRoles('admin'), renderEmployeeDashboard);
+router.get('/stats/:year?/:month?',  authService.ensureRole(), renderStatsDashboard);
+router.get('/user',  authService.ensureRole(), renderUserDashboard);
+router.get('/subcontractor',  authService.ensureRole(), renderSubcontractorDashboard);
+router.get('/invoice',  authService.ensureRole(), renderInvoiceDashboard);
+router.get('/quote',  authService.ensureRole(), renderQuotesDashboard);
+router.get('/client',  authService.ensureRole(), renderClientsDashboard);
+router.get('/contact',  authService.ensureRole(), renderContactsDashboard);
+router.get('/job',  authService.ensureRole(), renderJobsDashboard);
+//router.get('/archive',  authService.ensureRole(), renderQuoteArchiveDashboard);
+router.get('/location',  authService.ensureRole(), renderLocationsDashboard);
+router.get('/attendance',  authService.ensureRole(), renderAttendanceDashboard);
+router.get('/employee',  authService.ensureRole(), renderEmployeeDashboard);
 
-router.get('/KFcustomer',  authService.ensureRoles('admin'), renderKFCustomersDashboard);
-router.get('/KFinvoice',  authService.ensureRoles('admin'), renderKFInvoicesDashboard);
-router.get('/KFquote',  authService.ensureRoles('admin'), renderKFQuotesDashboard);
-router.get('/KFsupplier',  authService.ensureRoles('admin'), renderKFSuppliersDashboard);
-router.get('/KFreceipt',  authService.ensureRoles('admin'), renderKFReceiptsDashboard);
-router.get('/KFproject',  authService.ensureRoles('admin'), renderKFProjectsDashboard);
-router.get('/KF',  authService.ensureRoles('admin'), renderKashflowDashboard);
+router.get('/KFcustomer',  authService.ensureRole(), renderKFCustomersDashboard);
+router.get('/KFinvoice',  authService.ensureRole(), renderKFInvoicesDashboard);
+router.get('/KFquote',  authService.ensureRole(), renderKFQuotesDashboard);
+router.get('/KFsupplier',  authService.ensureRole(), renderKFSuppliersDashboard);
+router.get('/KFreceipt',  authService.ensureRole(), renderKFReceiptsDashboard);
+router.get('/KFproject',  authService.ensureRole(), renderKFProjectsDashboard);
+router.get('/KF',  authService.ensureRole(), renderKashflowDashboard);
 
 const renderCISSubmissionDashboard = async (req, res, next) => {
     try {
@@ -1031,7 +1031,7 @@ const renderCISDashboard = async (req, res, next) => {
 };
 
 
-router.get('/CIS',  authService.ensureRoles('admin'), (req, res) => {
+router.get('/CIS',  authService.ensureRole(), (req, res) => {
     try {
         const { taxYear, taxMonth } = taxService.calculateTaxYearAndMonth(moment());
         return res.redirect(`/dashboard/CIS/${taxYear}/${taxMonth}`);
@@ -1042,7 +1042,7 @@ router.get('/CIS',  authService.ensureRoles('admin'), (req, res) => {
     }
 });
 
-router.get('/CIS/:year?/:month?',  authService.ensureRoles('admin'), renderCISDashboard);
+router.get('/CIS/:year?/:month?',  authService.ensureRole(), renderCISDashboard);
 
 const renderKFSubcontractorDashboard = async (req, res, next) => {
     try {
@@ -1062,6 +1062,6 @@ const renderKFSubcontractorDashboard = async (req, res, next) => {
     }
 };
 
-router.get('/KFsubcontractor',  authService.ensureRoles('admin'), renderKFSubcontractorDashboard);
+router.get('/KFsubcontractor',  authService.ensureRole(), renderKFSubcontractorDashboard);
 
 module.exports = router;

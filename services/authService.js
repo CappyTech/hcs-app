@@ -45,9 +45,16 @@ function ensureRoles(...roles) {
   };
 }
 
+// Default role-based middleware
+function ensureRole(role = 'admin') {
+  if (role === 'none') return (req, res, next) => next();
+  return ensureRoles(role);
+}
+
 module.exports = {
   ensureAuthenticated,
   requireLogin,
   doesntRequireLogin,
   ensureRoles,
+  ensureRole,
 };

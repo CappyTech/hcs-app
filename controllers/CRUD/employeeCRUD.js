@@ -75,9 +75,9 @@ router.get('/fetch/employee/:id', async (req, res, next) => {
     }
 });
 
-router.post('/create',  authService.ensureRoles('admin'), createEmployee);
-router.get('/read/:employee',  authService.ensureRoles('admin'), readEmployee)
-router.post('/update/:employee',  authService.ensureRoles('admin'), updateEmployee);
-router.post('/delete/:employee',  authService.ensureRoles('admin'), deleteEmployee);
+router.post('/create',  authService.ensureRole(), createEmployee);
+router.get('/read/:employee',  authService.ensureRole(), readEmployee)
+router.post('/update/:employee',  authService.ensureRole(), updateEmployee);
+router.post('/delete/:employee',  authService.ensureRole(), deleteEmployee);
 
 module.exports = router;

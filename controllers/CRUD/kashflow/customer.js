@@ -44,6 +44,6 @@ const readCustomer = async (req, res, next) => {
 };
 
 
-router.get('/customer/read/:uuid',  authService.ensureRoles('admin'), readCustomer);
+router.get('/customer/read/:uuid',  authService.ensureRole(), readCustomer);
 
 module.exports = router;
