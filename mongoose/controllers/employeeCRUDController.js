@@ -7,7 +7,7 @@ exports.createEmployee = async (req,res,next)=>{
     const data = req.body;
     const emp = await mdb.employee.create(data);
     req.flash('success', 'Employee created successfully.');
-    res.redirect('/dashboard/employee');
+    res.redirect('/employees');
   }catch(err){ next(err); }
 };
 
@@ -22,7 +22,7 @@ exports.readEmployee = async (req,res,next)=>{
       req.flash('error', 'Employee not found.');
       return res.redirect('/employees');
     }
-    res.render(path.join('employees','viewEmployee'), {
+    res.render(path.join('mongoose','viewEmployee'), {
       title: 'Employee',
       employee: emp
     });
@@ -41,7 +41,7 @@ exports.updateEmployee = async (req,res,next)=>{
       return res.redirect('/employees');
     }
     req.flash('success', 'Employee updated successfully.');
-    res.redirect('/dashboard/employee');
+    res.redirect('/employees');
   }catch(err){ next(err); }
 };
 
@@ -53,6 +53,6 @@ exports.deleteEmployee = async (req,res,next)=>{
       : { uuid: identifier };
     await mdb.employee.findOneAndDelete(query);
     req.flash('success', 'Employee deleted successfully.');
-    res.redirect('/dashboard/employee');
+    res.redirect('/employees');
   }catch(err){ next(err); }
 };

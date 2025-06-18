@@ -54,7 +54,7 @@ router.get('/logs',  authService.ensureRole(), async (req, res) => {
         });
     }
 
-    res.render(path.join('admin', 'logger'), {
+    res.render(path.join('mongoose', 'admin', 'logger'), {
         title: 'Application Logs',
         logsByLevel
     });

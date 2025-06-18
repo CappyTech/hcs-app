@@ -23,10 +23,9 @@ const main = async () => {
     app.set('trust proxy', 1);
     app.set('view engine', 'ejs');
     app.set('views', [
-      path.join(__dirname, 'views'),
       path.join(__dirname, 'mongoose/views')
     ]);
-    app.set('layout', 'layout');
+    app.set('layout', path.join('mongoose', 'layout'));
     app.use(expressLayouts);
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));

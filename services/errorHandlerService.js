@@ -1,4 +1,5 @@
 const logger = require('./loggerService');
+const path = require('path');
 
 const errorHandlerService = (error, req, res, next) => {
     // Determine the status code, title, and message
@@ -28,7 +29,7 @@ const errorHandlerService = (error, req, res, next) => {
         res.locals.successMessage ??= [];
         res.locals.errorMessage ??= [];
         res.locals.session ??= req.session || {};
-        res.render('error', {
+        res.render(path.join('mongoose', 'error'), {
             title,
             error: {
                 title,
