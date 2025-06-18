@@ -1,18 +1,18 @@
 <div class="container py-4">
     <div class="p-5 mb-4 bg-body-tertiary rounded-3">
         <h1 class="display-5">Monthly Returns</h1>
-        <div class="accordion" id="subcontractorsAccordion">
-            <% subcontractorsWithMonths.forEach((data, index) => { %>
-                <% const subcontractor = data.subcontractor; %>
+        <div class="accordion" id="suppliersAccordion">
+            <% suppliersWithMonths.forEach((data, index) => { %>
+                <% const supplier = data.supplier; %>
                 <% const years = data.years; %>
-                <% const invoicesByYear = data.invoicesByYear; %>
+                <% const receiptsByYear = data.receiptsByYear; %>
                 <div class="accordion-item">
-                    <h2 class="accordion-header" id="heading-<%= subcontractor.id %>">
-                        <button class="accordion-button <%= index === 0 ? '' : 'collapsed' %>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<%= subcontractor.id %>" aria-expanded="<%= index === 0 %>" aria-controls="collapse-<%= subcontractor.id %>">
-                            <%= subcontractor.dataValues.company %> <span class="badge bg-body-secondary ms-2"><%= years.length %> <%= years.length === 1 ? 'Year' : 'Years' %></span>
+                    <h2 class="accordion-header" id="heading-<%= supplier.uuid %>">
+                        <button class="accordion-button <%= index === 0 ? '' : 'collapsed' %>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<%= supplier.uuid %>" aria-expanded="<%= index === 0 %>" aria-controls="collapse-<%= supplier.uuid %>">
+                            <%= supplier.Name %> <span class="badge bg-body-secondary ms-2"><%= years.length %> <%= years.length === 1 ? 'Year' : 'Years' %></span>
                         </button>
                     </h2>
-                    <div id="collapse-<%= subcontractor.id %>" class="accordion-collapse collapse <%= index === 0 ? 'show' : '' %>" aria-labelledby="heading-<%= subcontractor.id %>" data-bs-parent="#subcontractorsAccordion">
+                    <div id="collapse-<%= supplier.uuid %>" class="accordion-collapse collapse <%= index === 0 ? 'show' : '' %>" aria-labelledby="heading-<%= supplier.uuid %>" data-bs-parent="#suppliersAccordion">
                         <div class="accordion-body">
                             <div class="row">
                                 <% years.forEach(year => { %>
@@ -22,13 +22,13 @@
                                             <div class="card-body text-center">
                                                 <ul class="list-group ">
                                                     <li class="list-group-item">
-                                                        <a class="stretched-link" href="/yearly/returns/<%= year %>/<%= subcontractor.id %>">
+                                                        <a class="stretched-link" href="/yearly/returns/<%= year %>/<%= supplier.uuid %>">
                                                             Yearly Report
                                                         </a>
                                                     </li>
-                                                    <% invoicesByYear[year].forEach(month => { %>
+                                                    <% receiptsByYear[year].forEach(month => { %>
                                                         <li class="list-group-item">
-                                                            <a class="stretched-link" href="/monthly/returns/<%= month %>/<%= year %>/<%= subcontractor.id %>">
+                                                            <a class="stretched-link" href="/monthly/returns/<%= month %>/<%= year %>/<%= supplier.uuid %>">
                                                                 <%= monthNames[month - 1] %>
                                                             </a>
                                                         </li>
