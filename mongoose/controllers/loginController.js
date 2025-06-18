@@ -2,7 +2,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const logger = require('../../services/loggerService');
-const mdb = require('../../services/mongoose/mongooseDatabaseService');
+const mdb = require('../services/mongooseDatabaseService');
 
 exports.renderLoginForm = (req, res) => {
   res.render(path.join('mongoose', 'login'), {

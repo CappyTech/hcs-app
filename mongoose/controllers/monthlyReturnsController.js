@@ -1,6 +1,6 @@
 const path = require('path');
 const moment = require('moment');
-const mdb = require('../../services/mongoose/mongooseDatabaseService');
+const mdb = require('../services/mongooseDatabaseService');
 const normalizePayments = require('../../services/kashflowNormalizer').normalizePayments;
 
 const monthNames = [

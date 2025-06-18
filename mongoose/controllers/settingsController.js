@@ -1,6 +1,6 @@
 const logger = require('../../services/loggerService');
 const path = require('path');
-const mdb = require('../../services/mongoose/mongooseDatabaseService');
+const mdb = require('../services/mongooseDatabaseService');
 const encryptionService = require('../../services/encryptionService');
 const totpService = require('../../services/totpService');
 const { validationResult, body } = require('express-validator');

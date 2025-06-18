@@ -1,6 +1,6 @@
 const moment = require('moment');
 const path = require('path');
-const attendanceService = require('../../services/mongoose/attendanceServicesMongoose');
+const attendanceService = require('../services/attendanceServicesMongoose');
 
 exports.getDailyAttendance = async (req,res,next)=>{
   const date = req.params.date || moment().format('YYYY-MM-DD');

@@ -1,8 +1,8 @@
 const moment = require('moment-timezone');
 const path = require('path');
-const attendanceService = require('../../services/mongoose/attendanceServicesMongoose');
+const attendanceService = require('../services/attendanceServicesMongoose');
 const taxService = require('../../services/taxService');
-const mdb = require('../../services/mongoose/mongooseDatabaseService');
+const mdb = require('../services/mongooseDatabaseService');
 
 exports.getWeeklyAttendance = async (req,res,next)=>{
   try {

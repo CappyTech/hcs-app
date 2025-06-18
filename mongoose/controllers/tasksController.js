@@ -1,5 +1,5 @@
 const path = require('path');
-const taskService = require('../../services/mongoose/taskService');
+const taskService = require('../services/taskService');
 
 exports.renderCreateTaskForm = (req, res) => {
   res.render(path.join('mongoose', 'createTask'), {

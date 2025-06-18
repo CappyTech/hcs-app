@@ -1,4 +1,4 @@
-const mdb = require('../../services/mongoose/mongooseDatabaseService');
+const mdb = require('../services/mongooseDatabaseService');
 const path = require('path');
 const moment = require('moment-timezone');
 const logger = require('../../services/loggerService');

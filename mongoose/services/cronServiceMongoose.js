@@ -1,7 +1,6 @@
 const cron = require('node-cron');
 require('dotenv').config();
 
-const fetchKFMongoose = require('../kf/fetchKashFlowDataMongoose');
 const holidayService = require('./holidayServiceMongoose');
 const logger = require('../../services/loggerService');
 

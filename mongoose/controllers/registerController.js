@@ -1,7 +1,7 @@
 const axios = require('axios');
 const path = require('path');
 const logger = require('../../services/loggerService');
-const mdb = require('../../services/mongoose/mongooseDatabaseService');
+const mdb = require('../services/mongooseDatabaseService');
 
 exports.renderRegistrationForm = (req, res, next) => {
     res.render(path.join('mongoose', 'register'), {

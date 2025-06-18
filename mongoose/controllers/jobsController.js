@@ -1,5 +1,5 @@
 const path = require('path');
-const mdb = require('../../services/mongoose/mongooseDatabaseService');
+const mdb = require('../services/mongooseDatabaseService');
 
 exports.renderJobForm = async (req,res,next)=>{
   try {

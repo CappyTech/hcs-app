@@ -1,7 +1,7 @@
 const path = require('path');
 const speakeasy = require('speakeasy');
 const logger = require('../../services/loggerService');
-const mdb = require('../../services/mongoose/mongooseDatabaseService');
+const mdb = require('../services/mongooseDatabaseService');
 const encryptionService = require('../../services/encryptionService');
 
 exports.render2FAPage = (req, res) => {

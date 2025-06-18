@@ -133,10 +133,8 @@ const main = async () => {
     }
 
     // Routes
-    const adminLogger = require('./controllers/admin/logger');
     const mongooseRoutes = require("./mongoose/routes");
     app.use('/', mongooseRoutes);
-    app.use('/', adminLogger);
 
     // Catch-all 404
     app.use((req, res, next) => {
