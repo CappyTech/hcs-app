@@ -16,6 +16,8 @@ const main = async () => {
   try {
     await mdb.connect(); // Wait for MongoDB/SSH tunnel
 
+    const sessionService = require('./services/mongoose/sessionServiceMongoose');
+
     const app = express();
 
     app.set('trust proxy', 1);
@@ -31,7 +33,7 @@ const main = async () => {
 
     // Cookie parser and session handling
     app.use(cookieParser());
-    app.use(require('./services/mongoose/sessionServiceMongoose'));
+    app.use(sessionService);
 
     // Static assets
     app.use('/resources', express.static(path.join(__dirname, 'public')));
@@ -39,11 +41,13 @@ const main = async () => {
       app.use(`/resources/${pkg}`, express.static(path.join(__dirname, `node_modules/${pkg}`)));
     });
 
+    const authService = require('./services/authService')
+
     // Core middleware
     app.use(useragent.express());
     app.use(require('./services/securityService'));
     app.use(require('./services/flashService'));
-    app.use(require('./services/authService'));
+    app.use(authService.ensureAuthenticated);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
     app.use(require('./services/mongoose/cronServiceMongoose'));
