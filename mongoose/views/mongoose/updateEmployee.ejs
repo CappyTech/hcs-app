@@ -1,0 +1,46 @@
+<div class="container py-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5 fw-bold text-center">Update Employee</h1>
+    <form action="/employee/update/<%= employee.uuid %>" method="POST" class="needs-validation">
+      <div class="row mb-3">
+        <label for="name" class="col-sm-3 col-form-label">Name</label>
+        <div class="col-sm-9">
+          <input type="text" id="name" name="name" class="form-control" value="<%= employee.name %>" required>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="email" class="col-sm-3 col-form-label">Email</label>
+        <div class="col-sm-9">
+          <input type="email" id="email" name="email" class="form-control" value="<%= employee.email %>">
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="phoneNumber" class="col-sm-3 col-form-label">Phone</label>
+        <div class="col-sm-9">
+          <input type="text" id="phoneNumber" name="phoneNumber" class="form-control" value="<%= employee.phoneNumber %>">
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="position" class="col-sm-3 col-form-label">Position</label>
+        <div class="col-sm-9">
+          <input type="text" id="position" name="position" class="form-control" value="<%= employee.position %>">
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="type" class="col-sm-3 col-form-label">Type</label>
+        <div class="col-sm-9">
+          <input type="text" id="type" name="type" class="form-control" value="<%= employee.type %>" required>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="status" class="col-sm-3 col-form-label">Status</label>
+        <div class="col-sm-9">
+          <input type="text" id="status" name="status" class="form-control" value="<%= employee.status %>" required>
+        </div>
+      </div>
+      <div class="d-grid">
+        <button type="submit" class="btn btn-hcs-green">Update Employee</button>
+      </div>
+    </form>
+  </div>
+</div>

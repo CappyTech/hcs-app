@@ -13,7 +13,7 @@ exports.getProfilePage = async (req, res, next) => {
     const subcontractor = user.subcontractorId ? await mdb.subcontractor.findById(user.subcontractorId) : null;
     const client = user.clientId ? await mdb.client.findById(user.clientId) : null;
 
-    res.render(path.join('user', 'profile'), {
+    res.render(path.join('mongoose', 'profile'), {
       title: 'Profile',
       user,
       employee,

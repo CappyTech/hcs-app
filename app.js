@@ -106,6 +106,7 @@ const main = async () => {
     });
 
     // Holiday block page
+    const holidayService = require('./mongoose/services/holidayServiceMongoose');
     app.use(async (req, res, next) => {
       try {
         const holidayDetails = await holidayService.isDateHoliday();
