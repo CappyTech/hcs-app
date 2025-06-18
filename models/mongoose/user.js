@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const encryptionService = require('../../services/encryptionService');
-const { getPermissionsForRole } = require('../../services/permissionsService');
 const { v4: uuidv4 } = require('uuid');
 const { Schema } = mongoose;
 

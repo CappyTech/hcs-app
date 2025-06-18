@@ -2,7 +2,6 @@ const axios = require('axios');
 const path = require('path');
 const logger = require('../../services/loggerService');
 const mdb = require('../../services/mongoose/mongooseDatabaseService');
-const { getPermissionsForRole } = require('../../services/permissionsService');
 
 exports.renderRegistrationForm = (req, res, next) => {
     res.render(path.join('mongoose', 'register'), {
@@ -54,7 +53,6 @@ exports.registerUser = async (req, res, next) => {
             email,
             password,
             role: assignedRole,
-            permissions: getPermissionsForRole(assignedRole)
         });
 
         await newUser.save();
