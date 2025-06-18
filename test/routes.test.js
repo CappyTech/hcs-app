@@ -106,6 +106,8 @@ describe('Route tests', function () {
       module: '../mongoose/routes/employeeCrud',
       stubs: {
         '../controllers/employeeCRUDController': {
+          renderCreateEmployeeForm: ok(),
+          renderUpdateEmployeeForm: ok(),
           createEmployee: ok(),
           readEmployee: ok(),
           updateEmployee: ok(),
@@ -154,6 +156,7 @@ describe('Route tests', function () {
       module: '../mongoose/routes/locationCrud',
       stubs: {
         '../controllers/locationCRUDController': {
+          renderCreateLocationForm: ok(),
           createLocation: ok(),
           readLocation: ok(),
           updateLocation: ok(),
@@ -335,6 +338,8 @@ describe('Route tests', function () {
       module: '../mongoose/routes/userCrud',
       stubs: {
         '../controllers/userCRUDController': {
+          listUsers: ok(),
+          renderCreateUserForm: ok(),
           createUser: ok(),
           readUser: ok(),
           updateUser: ok(),
@@ -343,6 +348,8 @@ describe('Route tests', function () {
         '../../services/authService': ensureRoleStub,
       },
       endpoints: [
+        { method: 'get', path: '/users' },
+        { method: 'get', path: '/user/create' },
         { method: 'post', path: '/user/create' },
         { method: 'get', path: '/user/read/abc' },
         { method: 'post', path: '/user/update/abc' },
