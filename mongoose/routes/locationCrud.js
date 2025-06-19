@@ -7,6 +7,11 @@ router.get('/location/create', authService.ensureRole(), ctrl.renderCreateLocati
 
 router.post('/location/create', authService.ensureRole(), ctrl.createLocation);
 router.get('/location/read/:uuid', authService.ensureRole(), ctrl.readLocation);
+router.get(
+  '/location/update/:uuid',
+  authService.ensureRole(),
+  ctrl.renderUpdateLocationForm || ((req, res) => res.end())
+);
 router.post('/location/update/:uuid', authService.ensureRole(), ctrl.updateLocation);
 router.post('/location/delete/:uuid', authService.ensureRole(), ctrl.deleteLocation);
 

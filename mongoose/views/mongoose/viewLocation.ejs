@@ -1,0 +1,33 @@
+<div class="container py-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <div class="container-fluid py-5">
+      <h1 class="display-5 fw-bold text-center">Location: <%= location.name %></h1>
+      <div class="card">
+        <div class="card-header text-bg-secondary">
+          <span>Location ID: <%= location.uuid %></span>
+        </div>
+        <div class="card-body">
+          <ul class="list-group">
+            <li class="list-group-item"><strong>Name:</strong> <%= location.name || 'N/A' %></li>
+            <li class="list-group-item"><strong>Address:</strong> <%= location.address || 'N/A' %></li>
+            <li class="list-group-item"><strong>City:</strong> <%= location.city || 'N/A' %></li>
+            <li class="list-group-item"><strong>Postal Code:</strong> <%= location.postalCode || 'N/A' %></li>
+            <li class="list-group-item"><strong>Country:</strong> <%= location.country || 'N/A' %></li>
+            <li class="list-group-item"><strong>Latitude:</strong> <%= location.latitude || 'N/A' %></li>
+            <li class="list-group-item"><strong>Longitude:</strong> <%= location.longitude || 'N/A' %></li>
+            <li class="list-group-item"><strong>Created:</strong> <%= slimDateTime(location.createdAt, true) %></li>
+            <li class="list-group-item"><strong>Updated:</strong> <%= slimDateTime(location.updatedAt, true) %></li>
+          </ul>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+          <a class="btn btn-hcs-green btn-sm" href="/location/update/<%= location.uuid %>">Update Location</a>
+          <% if (isAdmin) { %>
+          <form action="/location/delete/<%= location.uuid %>" method="POST" class="m-0">
+            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this location?');">Delete</button>
+          </form>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
