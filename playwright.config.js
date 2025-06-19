@@ -5,7 +5,7 @@ const config = {
     headless: true,
     browserName: 'chromium',
     launchOptions: {
-      executablePath: '/usr/bin/chromium-browser'
+      executablePath: '/root/.cache/ms-playwright/chromium-1179/chrome-linux/chrome'
     }
   }
 };
