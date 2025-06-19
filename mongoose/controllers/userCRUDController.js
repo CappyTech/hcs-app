@@ -19,6 +19,22 @@ exports.renderCreateUserForm = (req, res) => {
   });
 };
 
+exports.renderUpdateUserForm = async (req, res, next) => {
+  try {
+    const user = await mdb.user.findOne({ uuid: req.params.uuid });
+    if (!user) {
+      req.flash('error', 'User not found.');
+      return res.redirect('/dashboard/user');
+    }
+    res.render(path.join('mongoose', 'updateUser'), {
+      title: 'Update User',
+      user
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createUser = async (req, res, next) => {
   try {
     const user = await mdb.user.create(req.body);
