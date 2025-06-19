@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "mocha"
+    "test": "npm run test:unit && npm run test:e2e && npm run test:stress",
+    "test:unit": "mocha",
+    "test:e2e": "playwright test",
+    "test:stress": "node stress_test.js"
   },
   "keywords": [
     "SMS, developed, Heron CS LTD, comprehensive, web-based application, streamline, management, subcontractors, construction projects, efficient, data entry, automates, monthly returns, CIS/HMRC compliance, tracks payments, manages deductions, subcontractor verification, accurate record-keeping, regulatory compliance, effective communication, project stakeholders, subcontractor management efficiency, transparency"
