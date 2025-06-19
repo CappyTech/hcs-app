@@ -5,20 +5,15 @@ const proxyquire = require('proxyquire').noCallThru();
 
 let userStub = null;
 
-const stubs = {
-  '../../services/sequelizeDatabaseService': {
-    Users: {
-      findByPk: async () => userStub,
-    },
-  },
-  '../../services/authService': {
-    ensureRole: () => (req, res, next) => next(),
-  },
-  '../../services/loggerService': { error: () => {}, info: () => {} },
-  '../../models/sequelize/user': { rolePermissions: {} },
-};
+const controller = proxyquire('../mongoose/controllers/userCRUDController', {
+  '../services/mongooseDatabaseService': { user: { findOne: async () => userStub } },
+});
 
-const router = proxyquire('../controllers/forms/user.js', stubs);
+function createRouter() {
+  const router = express.Router();
+  router.get('/user/update/:uuid', controller.renderUpdateUserForm);
+  return router;
+}
 
 function createApp() {
   const app = express();
@@ -29,7 +24,7 @@ function createApp() {
     };
     next();
   });
-  app.use(router);
+  app.use(createRouter());
   app.use((err, req, res, next) => {
     res.status(500).send(err.message);
   });
@@ -38,15 +33,15 @@ function createApp() {
 
 describe('user controller', () => {
   it('renders update form when user exists', async () => {
-    userStub = { id: 'abc', permissions: '{}' };
-    const res = await request(createApp()).get('/update/abc').expect(200);
+    userStub = { uuid: 'abc', permissions: '{}' };
+    const res = await request(createApp()).get('/user/update/abc').expect(200);
     expect(res.body.view).to.include('updateUser');
-    expect(res.body.user.id).to.equal('abc');
+    expect(res.body.user.uuid).to.equal('abc');
   });
 
   it('redirects to /users when user missing', async () => {
     userStub = null;
-    const res = await request(createApp()).get('/update/missing').expect(302);
-    expect(res.headers.location).to.equal('/users');
+    const res = await request(createApp()).get('/user/update/missing').expect(302);
+    expect(res.headers.location).to.equal('/dashboard/user');
   });
 });
