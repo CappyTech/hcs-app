@@ -2,6 +2,15 @@
 
 This project is a web application for managing subcontractors. It requires Node.js and npm.
 
+## Features
+
+- Track subcontractor information, jobs and invoices
+- Automate monthly CIS/HMRC returns
+- User authentication with optional TOTP
+- MongoDB and MariaDB support via migration scripts
+- REST API documentation via Swagger
+
+
 ## Installation
 
 1. Install [Node.js](https://nodejs.org/) (version 16 or later).
@@ -38,17 +47,25 @@ The server will start and log the port in the console. Access the application wi
 
 ## Testing
 
-## Running Tests
+Mocha unit tests can be executed with:
+```bash
+npm test
+```
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Run the test suite with Mocha:
-   ```bash
-   npm test
-   ```
-   or directly execute the test file:
-   ```bash
-   node test/routes.test.js
-   ```
+End-to-end tests run with Playwright:
+```bash
+npx playwright test
+```
+
+You can also execute a single test file:
+```bash
+node test/routes.test.js
+```
+
+## API Documentation
+
+Swagger UI is available at `/api-docs` once the server is running.
+
+## License
+
+This project is released under the license specified in `package.json`.
