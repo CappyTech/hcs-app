@@ -307,6 +307,31 @@ describe('Route tests', function () {
       ],
     },
     {
+      module: '../mongoose/routes/fileSystemProjects',
+      stubs: {
+        fs: {
+          existsSync: () => false,
+          mkdirSync: () => {},
+          chmodSync: () => {},
+          renameSync: () => {},
+        },
+        multer: () => ({
+          array: () => (req, res, next) => {
+            req.files = [{ originalname: 'file.txt', path: '/tmp/file.txt' }];
+            next();
+          },
+        }),
+        'sanitize-filename': (name) => name,
+        '../services/mongooseDatabaseService': { project: { find: async () => [] } },
+        '../../services/loggerService': { info: () => {}, error: () => {} },
+        '../../services/authService': ensureRoleStub,
+      },
+      endpoints: [
+        { method: 'post', path: '/project/abc/123/upload', expected: 302 },
+        { method: 'get', path: '/project/abc/123/download/file.txt', expected: 404 },
+      ],
+    },
+    {
       module: '../mongoose/routes/tasks',
       stubs: {
         '../controllers/tasksController': {
