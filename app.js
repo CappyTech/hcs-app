@@ -77,6 +77,8 @@ const main = async () => {
       res.locals.contactEmail = process.env.SUPPORTEMAIL;
       res.locals.lastfetched = null;
       res.locals.session = null;
+      res.locals.copyrightyearstart = process.env.INCORPORATION_YEAR;
+      res.locals.copyrightyear = new Date().getFullYear();
 
       const logUser = req.user?.username || 'unknown user';
       const logMsg = `${logUser} accessed ${req.method} ${req.path}`;
