@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 exports.getLogs = async (req, res) => {
     const logPath = path.join(__dirname, '..', '..', 'logs', 'app.json.log');
     const logsByLevel = {
