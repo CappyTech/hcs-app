@@ -20,7 +20,7 @@ exports.createAttendance = async (req,res,next)=>{
     }
     const attendance = await mdb.attendance.create({ date, locationId:locationId||null, projectId:projectId||null, employeeId:employeeId||null, subcontractorId:subcontractorId||null, type, hoursWorked:hoursWorked||null, dayRate:dayRate||null });
     req.flash('success', 'Attendance created successfully.');
-    res.redirect('/dashboard/attendance');
+    res.redirect('/attendances');
   }catch(err){ next(err); }
 };
 
@@ -56,7 +56,7 @@ exports.updateAttendance = async (req,res,next)=>{
       return res.redirect('/attendance');
     }
     req.flash('success', 'Attendance updated successfully.');
-    res.redirect('/dashboard/attendance');
+    res.redirect('/attendances');
   }catch(err){ next(err); }
 };
 
@@ -68,6 +68,6 @@ exports.deleteAttendance = async (req,res,next)=>{
       : { uuid: identifier };
     await mdb.attendance.findOneAndDelete(query);
     req.flash('success', 'Attendance deleted successfully.');
-    res.redirect('/dashboard/attendance');
+    res.redirect('/attendances');
   }catch(err){ next(err); }
 };

@@ -30,9 +30,8 @@
       </ul>
     </div>
     <% } %>
-    <!-- Actions Section -->
+
     <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
-      <% if (permissions.createInvoice) { %>
         <div class="col">
           <div class="card h-100 d-flex flex-column">
             <div class="card-body">
@@ -42,22 +41,18 @@
             </div>
           </div>
         </div>
-      <% } %>
 
-      <% if (permissions.readSubcontractor) { %>
         <div class="col">
           <div class="card h-100 d-flex flex-column">
             <div class="card-body">
               <h5 class="card-header-pills">View Subcontractors</h5>
               <p class="card-text">Access and manage your subcontractors.</p>
-              <a href="/dashboard/subcontractor" class="btn btn-hcs-green mt-auto">View Subcontractors</a>
+              <a href="/suppliers" class="btn btn-hcs-green mt-auto">View Subcontractors</a>
             </div>
           </div>
         </div>
-      <% } %>
 
       <% if (isAdmin) { %>
-        <!-- Admin-Specific Actions -->
         <div class="col">
           <div class="card h-100 d-flex flex-column">
             <div class="card-body">
@@ -69,21 +64,18 @@
         </div>
       <% } %>
 
-      <% if (permissions.readInvoice) { %>
         <div class="col">
           <div class="card h-100 d-flex flex-column">
             <div class="card-body">
               <h5 class="card-header-pills">View Invoices</h5>
               <p class="card-text">Track and review all your invoices.</p>
-              <a href="/dashboard/invoice" class="btn btn-hcs-green mt-auto">View Invoices</a>
+              <a href="/invoices" class="btn btn-hcs-green mt-auto">View Invoices</a>
             </div>
           </div>
         </div>
-      <% } %>
     </div>
-    <% } %>
+    <% } else { %>
 
-    <!-- Contact Support -->
     <% if (isAuthenticated) { %>
     <p class="text-center text-muted mt-4">
       If you are missing any permissions, please email: 
@@ -92,7 +84,6 @@
     <% } %>
 
     <% if (!isAuthenticated) { %>
-    <!-- Non-Authenticated Users -->
     <div class="text-center">
       <p class="lead">Sign in to access your dashboard and features.</p>
     </div>

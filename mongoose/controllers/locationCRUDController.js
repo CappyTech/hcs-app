@@ -12,7 +12,7 @@ exports.renderUpdateLocationForm = async (req, res, next) => {
     const loc = await mdb.location.findOne({ uuid: req.params.uuid });
     if (!loc) {
       req.flash('error', 'Location not found.');
-      return res.redirect('/dashboard/location');
+      return res.redirect('locations');
     }
     res.render(path.join('mongoose', 'updateLocation'), {
       title: 'Update Location',
@@ -27,7 +27,7 @@ exports.createLocation = async (req,res,next)=>{
   try {
     const loc = await mdb.location.create(req.body);
     req.flash('success', 'Location created successfully.');
-    res.redirect('/dashboard/location');
+    res.redirect('/locations');
   }catch(err){ next(err); }
 };
 
@@ -53,7 +53,7 @@ exports.updateLocation = async (req,res,next)=>{
       return res.redirect('/locations');
     }
     req.flash('success', 'Location updated successfully.');
-    res.redirect('/dashboard/location');
+    res.redirect('/locations');
   }catch(err){ next(err); }
 };
 
@@ -61,6 +61,6 @@ exports.deleteLocation = async (req,res,next)=>{
   try {
     await mdb.location.findOneAndDelete({ uuid:req.params.uuid });
     req.flash('success', 'Location deleted successfully.');
-    res.redirect('/dashboard/location');
+    res.redirect('/locations');
   }catch(err){ next(err); }
 };

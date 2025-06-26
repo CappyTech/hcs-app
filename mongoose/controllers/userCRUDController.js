@@ -24,7 +24,7 @@ exports.renderUpdateUserForm = async (req, res, next) => {
     const user = await mdb.user.findOne({ uuid: req.params.uuid });
     if (!user) {
       req.flash('error', 'User not found.');
-      return res.redirect('/dashboard/user');
+      return res.redirect('/users');
     }
     res.render(path.join('mongoose', 'updateUser'), {
       title: 'Update User',
@@ -39,7 +39,7 @@ exports.createUser = async (req, res, next) => {
   try {
     const user = await mdb.user.create(req.body);
     req.flash('success', 'User created successfully.');
-    res.redirect('/dashboard/user');
+    res.redirect('/users');
   } catch (err) {
     next(err);
   }
@@ -67,7 +67,7 @@ exports.updateUser = async (req, res, next) => {
     );
     if (!user) return res.status(404).send('Not found');
     req.flash('success', 'User updated successfully.');
-    res.redirect('/dashboard/user');
+    res.redirect('/users');
   } catch (err) {
     next(err);
   }
@@ -77,7 +77,7 @@ exports.deleteUser = async (req, res, next) => {
   try {
     await mdb.user.findOneAndDelete({ uuid: req.params.uuid });
     req.flash('success', 'User deleted successfully.');
-    res.redirect('/dashboard/user');
+    res.redirect('/users');
   } catch (err) {
     next(err);
   }
