@@ -104,7 +104,13 @@ mdb.connect = async () => {
 const cleanup = async () => {
   logger.info('🧹 Cleaning up database and SSH tunnel...');
   try {
-    await mongoose.disconnect();
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.disconnect();
+      logger.info('✅ Mongoose disconnected');
+    } else {
+      logger.info('ℹ️ Mongoose was not connected');
+    }
+
     if (sshServer && sshServer.close) {
       sshServer.close();
       logger.info('🛑 SSH tunnel closed');
