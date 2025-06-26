@@ -118,7 +118,7 @@ const cleanup = async () => {
   } catch (err) {
     logger.error('⚠️ Cleanup error: ' + err.message);
   } finally {
-    process.exit(0);
+    logger.info('✅ Cleanup complete');
   }
 };
 
