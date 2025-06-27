@@ -33,7 +33,7 @@ exports.readAttendance = async (req,res,next)=>{
     }
     if(!attendance) {
       req.flash('error', 'Attendance not found.');
-      return res.redirect('/attendance');
+      return res.redirect('/attendances');
     }
     res.render(path.join('attendance','viewAttendance'), {
       title: 'Attendance Details',
@@ -53,7 +53,7 @@ exports.updateAttendance = async (req,res,next)=>{
     const attendance = await mdb.attendance.findOneAndUpdate(query, update, { new:true });
     if(!attendance) {
       req.flash('error', 'Attendance not found.');
-      return res.redirect('/attendance');
+      return res.redirect('/attendances');
     }
     req.flash('success', 'Attendance updated successfully.');
     res.redirect('/attendances');
