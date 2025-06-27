@@ -4,9 +4,6 @@ const config = {
   use: {
     headless: true,
     browserName: 'chromium',
-    launchOptions: {
-      executablePath: '/root/.cache/ms-playwright/chromium-1179/chrome-linux/chrome'
-    }
   }
 };
 module.exports = config;
