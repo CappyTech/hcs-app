@@ -34,7 +34,7 @@ function createApp() {
 
 describe.skip('user controller', () => {
   it('renders update form when user exists', async () => {
-    userStub = { id: 'abc', permissions: '{}' };
+    userStub = { id: 'abc' };
     const res = await request(createApp()).get('/user/update/abc').expect(200);
     expect(res.body.view).to.include('updateUser');
     expect(res.body.user.id).to.equal('abc');

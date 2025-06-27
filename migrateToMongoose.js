@@ -11,7 +11,6 @@ const transformUser = async (record) => {
     email: record.email.toLowerCase(),
     password: record.password,
     role: record.role,
-    permissions: record.permissions || {},
     totpSecret: record.totpSecret || null,
     totpEnabled: record.totpEnabled || false,
     createdAt: record.createdAt,

@@ -69,7 +69,6 @@ const main = async () => {
       res.locals.firstName = req.user && req.user.username
         ? req.user.username.split('.')[0].replace(/^\w/, c => c.toUpperCase())
         : null;
-      res.locals.permissions = req.user && req.user.permissions || {};
       res.locals.package = packageJson.version;
       res.locals.slimDateTime = require('./services/dateService').slimDateTime;
       res.locals.formatCurrency = require('./services/currencyService').formatCurrency;
@@ -168,7 +167,6 @@ main();
 
 
 // TODO:
-// - Remove all permissions checks from routes and logic.
 // - Allow for Subcontractor users to see their own data.
 // - Allow for Client users to see their own data.
 // - Allow for Employee users to see their own data.

@@ -57,7 +57,6 @@ exports.loginUser = async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
-      permissions: user.permissions || {},
       loginTime: new Date().toISOString(),
       ip,
       userAgent: {

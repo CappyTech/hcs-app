@@ -29,7 +29,6 @@ describe('twoFAController.verify2FA', () => {
       username: 'name',
       email: 'e@e.com',
       role: 'admin',
-      permissions: {},
       totpSecret: 'enc'
     });
     decryptStub = () => 'secret';
@@ -37,7 +36,7 @@ describe('twoFAController.verify2FA', () => {
 
     const req = {
       body: { totpToken: '123' },
-      session: { userPending2FA: { uuid: 'abc', username: 'name', role: 'admin', permissions: {} } },
+      session: { userPending2FA: { uuid: 'abc', username: 'name', role: 'admin' } },
       useragent: {},
       ip: '1.2.3.4'
     };
@@ -59,7 +58,6 @@ describe('twoFAController.verify2FA', () => {
       username: 'name',
       email: 'e@e.com',
       role: 'admin',
-      permissions: {},
       totpSecret: 'enc'
     });
     decryptStub = () => 'secret';
