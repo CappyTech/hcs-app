@@ -165,3 +165,17 @@ const main = async () => {
 };
 
 main();
+
+
+// TODO:
+// - Remove all permissions checks from routes and logic.
+// - Allow for Subcontractor users to see their own data.
+// - Allow for Client users to see their own data.
+// - Allow for Employee users to see their own data.
+// - Allow for Manager Employees users to manage their assigned employees.
+// - Allow for Accountant users to come in and do their work.
+// - Allow for HMRC users to audit the system.
+// - Allow for Admin users to manage the system.
+// - Allow for Super Admin users to manage the system and all users.
+// - Make routes /role/* the primary route for each user role.
+// - Ensure 2FA works
