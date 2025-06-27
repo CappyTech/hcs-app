@@ -28,10 +28,6 @@ const userSchema = new Schema({
         enum: ['subcontractor', 'employee', 'accountant', 'hmrc', 'admin', 'client'],
         default: 'subcontractor'
     },
-    permissions: {
-        type: Object,
-        default: {}
-    },
     subcontractorId: {
         type: Schema.Types.ObjectId,
         ref: 'supplier',
@@ -62,15 +58,10 @@ const userSchema = new Schema({
     toObject: { getters: true }
 });
 
-// Hash password and assign permissions before save
+// Hash password before save
 userSchema.pre('save', async function (next) {
     if (this.isModified('password')) {
         this.password = await bcrypt.hash(this.password, 10);
-    }
-
-    // Assign permissions if new or role changed or permissions empty
-    if (this.isNew || this.isModified('role') || !this.permissions || Object.keys(this.permissions).length === 0) {
-        this.permissions = getPermissionsForRole(this.role);
     }
 
     // Ensure only one of the foreign keys is set

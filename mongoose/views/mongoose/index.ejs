@@ -57,7 +57,7 @@
           <div class="card h-100 d-flex flex-column">
             <div class="card-body">
               <h5 class="card-header-pills">Manage Users</h5>
-              <p class="card-text">Create and manage user accounts with role-based permissions.</p>
+              <p class="card-text">Create and manage user accounts.</p>
               <a href="/users" class="btn btn-hcs-green mt-auto">Manage Users</a>
             </div>
           </div>
@@ -78,7 +78,7 @@
 
     <% if (isAuthenticated) { %>
     <p class="text-center text-muted mt-4">
-      If you are missing any permissions, please email: 
+      For additional access, email:
       <a href="mailto:<%= contactEmail %>" class="hcs-green-text"><%= contactEmail %></a>.
     </p>
     <% } %>
