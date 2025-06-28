@@ -5,12 +5,9 @@
 app.log
 *.zip
 /logs/
-/logs
 logs/customers.txt
 logs/invoices.txt
 logs/quotes.txt
 logs/receipts.txt
-logs/customers.txt
-logs/quotes.txt
 /Projects
 test/routes_test.log

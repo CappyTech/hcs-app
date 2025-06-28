@@ -47,12 +47,12 @@ The server will start and log the port in the console. Access the application wi
 
 ## Testing
 
-Mocha unit tests can be executed with:
+Running all tests including unit, end-to-end and stress tests:
 ```bash
 npm test
 ```
 
-End-to-end tests run with Playwright:
+You can run only the end-to-end tests with:
 ```bash
 npx playwright test
 ```
@@ -68,4 +68,18 @@ Swagger UI is available at `/api-docs` once the server is running.
 
 ## License
 
-This project is released under the license specified in `package.json`.
+See the [LICENSE](LICENSE) file for license information.
+
+## Roadmap
+
+Upcoming features planned for future releases:
+- Allow for Subcontractor users to see their own data.
+- Allow for Client users to see their own data.
+- Allow for Employee users to see their own data.
+- Allow for Manager Employees users to manage their assigned employees.
+- Allow for Accountant users to come in and do their work.
+- Allow for HMRC users to audit the system.
+- Allow for Admin users to manage the system.
+- Allow for Super Admin users to manage the system and all users.
+- Make routes /role/* the primary route for each user role.
+- Ensure 2FA works
