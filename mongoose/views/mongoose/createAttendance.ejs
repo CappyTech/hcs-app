@@ -1,0 +1,85 @@
+<div class="container py-4">
+  <div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <h1 class="display-5 fw-bold text-center">Create Attendance</h1>
+    <form action="/attendance/create" method="POST" class="needs-validation">
+      <div class="row mb-3">
+        <label for="date" class="col-sm-3 col-form-label">Date</label>
+        <div class="col-sm-9">
+          <input type="date" id="date" name="date" value="<%= date %>" class="form-control" required>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="type" class="col-sm-3 col-form-label">Type</label>
+        <div class="col-sm-9">
+          <select id="type" name="type" class="form-select">
+            <option value="work">Work</option>
+            <option value="off">Off</option>
+            <option value="holiday">Holiday</option>
+            <option value="sick">Sick</option>
+            <option value="training">Training</option>
+            <option value="leave">Leave</option>
+          </select>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="locationId" class="col-sm-3 col-form-label">Location</label>
+        <div class="col-sm-9">
+          <select id="locationId" name="locationId" class="form-select">
+            <option value="">Select Location</option>
+            <% locations.forEach(l => { %>
+              <option value="<%= l._id %>"><%= l.name || l.address %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="projectId" class="col-sm-3 col-form-label">Project</label>
+        <div class="col-sm-9">
+          <select id="projectId" name="projectId" class="form-select">
+            <option value="">Select Project</option>
+            <% projects.forEach(p => { %>
+              <option value="<%= p._id %>"><%= p.Name || p.Reference %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="employeeId" class="col-sm-3 col-form-label">Employee</label>
+        <div class="col-sm-9">
+          <select id="employeeId" name="employeeId" class="form-select">
+            <option value="">Select Employee</option>
+            <% employees.forEach(e => { %>
+              <option value="<%= e._id %>"><%= e.name %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="subcontractorId" class="col-sm-3 col-form-label">Subcontractor</label>
+        <div class="col-sm-9">
+          <select id="subcontractorId" name="subcontractorId" class="form-select">
+            <option value="">Select Subcontractor</option>
+            <% subcontractors.forEach(s => { %>
+              <option value="<%= s._id %>"><%= s.Name %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="hoursWorked" class="col-sm-3 col-form-label">Hours Worked</label>
+        <div class="col-sm-9">
+          <input type="number" step="0.1" id="hoursWorked" name="hoursWorked" class="form-control">
+        </div>
+      </div>
+      <div class="row mb-3">
+        <label for="dayRate" class="col-sm-3 col-form-label">Day Rate</label>
+        <div class="col-sm-9">
+          <input type="number" step="0.01" id="dayRate" name="dayRate" class="form-control">
+        </div>
+      </div>
+      <div class="d-grid">
+        <button type="submit" class="btn btn-hcs-green">Create Attendance</button>
+      </div>
+    </form>
+  </div>
+</div>
