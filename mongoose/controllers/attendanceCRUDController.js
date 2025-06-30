@@ -2,6 +2,30 @@ const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 
+exports.renderCreateAttendanceForm = async (req, res, next) => {
+  try {
+    const [employees, subcontractors, locations, projects] = await Promise.all([
+      mdb.employee.find().sort({ name: 1 }).lean(),
+      mdb.supplier.find({ Subcontractor: true }).sort({ Name: 1 }).lean(),
+      mdb.location.find().sort({ name: 1 }).lean(),
+      mdb.project.find().sort({ Name: 1 }).lean()
+    ]);
+
+    const date = req.query.date || new Date().toISOString().slice(0, 10);
+
+    res.render(path.join('mongoose', 'createAttendance'), {
+      title: 'Create Attendance',
+      employees,
+      subcontractors,
+      locations,
+      projects,
+      date
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createAttendance = async (req,res,next)=>{
   try {
     const { date, locationId, projectId, employeeId, subcontractorId, type, hoursWorked, dayRate } = req.body;

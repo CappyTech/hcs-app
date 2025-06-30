@@ -60,6 +60,7 @@ describe('Route tests', function () {
       module: '../mongoose/routes/attendanceCrud',
       stubs: {
         '../controllers/attendanceCRUDController': {
+          renderCreateAttendanceForm: ok(),
           createAttendance: ok(),
           readAttendance: ok(),
           updateAttendance: ok(),
@@ -68,6 +69,7 @@ describe('Route tests', function () {
         '../../services/authService': ensureRoleStub,
       },
       endpoints: [
+        { method: 'get', path: '/attendance/create' },
         { method: 'post', path: '/attendance/create' },
         { method: 'get', path: '/attendance/read/1' },
         { method: 'post', path: '/attendance/update/1' },
