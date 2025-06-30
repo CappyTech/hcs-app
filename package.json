@@ -42,6 +42,7 @@
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
     "mongoose": "^8.15.2",
+    "multer": "^2.0.1",
     "node-cron": "^3.0.3",
     "promise-limit": "^2.7.0",
     "puppeteer": "^24.6.1",
