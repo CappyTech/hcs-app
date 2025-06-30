@@ -2,10 +2,22 @@ const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 
+exports.listContracts = async (req, res, next) => {
+  try {
+    const contracts = await mdb.contract.find().sort({ createdAt: -1 }).lean();
+    res.render(path.join('mongoose', 'contract'), {
+      title: 'Contracts',
+      contracts
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createContract = async (req, res, next) => {
   try {
-    const { quoteId, title, location, startDate, endDate, status, notes } = req.body;
-    await mdb.Contract.create({ quoteId: quoteId || null, title, location, startDate, endDate, status, notes });
+  const { quoteId, title, location, startDate, endDate, status, notes } = req.body;
+  await mdb.contract.create({ quoteId: quoteId || null, title, location, startDate, endDate, status, notes });
     req.flash('success', 'Contract created successfully.');
     res.redirect('/contracts');
   } catch (err) {
@@ -15,7 +27,7 @@ exports.createContract = async (req, res, next) => {
 
 exports.readContract = async (req, res, next) => {
   try {
-    const contract = await mdb.Contract.findById(req.params.id).populate('quoteId');
+    const contract = await mdb.contract.findById(req.params.id).populate('quoteId');
     if (!contract) {
       req.flash('error', 'Contract not found.');
       return res.redirect('/contracts');
@@ -32,7 +44,7 @@ exports.readContract = async (req, res, next) => {
 exports.updateContract = async (req, res, next) => {
   try {
     const { quoteId, title, location, startDate, endDate, status, notes } = req.body;
-    const contract = await mdb.Contract.findByIdAndUpdate(
+    const contract = await mdb.contract.findByIdAndUpdate(
       req.params.id,
       { quoteId: quoteId || null, title, location, startDate, endDate, status, notes },
       { new: true }
@@ -50,7 +62,7 @@ exports.updateContract = async (req, res, next) => {
 
 exports.deleteContract = async (req, res, next) => {
   try {
-    await mdb.Contract.findByIdAndDelete(req.params.id);
+    await mdb.contract.findByIdAndDelete(req.params.id);
     req.flash('success', 'Contract deleted successfully.');
     res.redirect('/contracts');
   } catch (err) {
