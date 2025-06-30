@@ -41,12 +41,12 @@ exports.getAccountPage = async (req, res, next) => {
 
     const qrCodeUrl = await totpService.generateQRCode(secret, user);
 
-    const sessions = await mdb.sessions.find({
+    const sessions = await mdb.session.find({
       _id: req.session.user.id
     });
 
     const activeSessions = sessions.map(session => {
-      const sessionData = session.session.user || {};
+      const sessionData = session.user || {};
       return {
         sessionId: session.sid,
         username: sessionData.username,
@@ -62,7 +62,7 @@ exports.getAccountPage = async (req, res, next) => {
       };
     });
 
-    res.render(path.join('user', 'account'), {
+    res.render(path.join('mongoose', 'account'), {
       title: 'Set up Two-Factor Authentication',
       qrCodeUrl,
       secret,
