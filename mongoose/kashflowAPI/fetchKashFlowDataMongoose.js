@@ -15,6 +15,7 @@ const ChargeTypes = require('../../kashflowAPI/chargeTypes');
 const upsertData = require('./upsertDataMongoose');
 const promiseLimit = require('promise-limit');
 const limit = promiseLimit(3); // Limit to 3 concurrent workers
+const mdb = require('../services/mongooseDatabaseService');
 
 let isFetching = false;
 
