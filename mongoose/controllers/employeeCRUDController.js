@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
+const logger = require('../services/loggerService');
 
 exports.renderCreateEmployeeForm = (req, res) => {
   res.render(path.join('mongoose', 'createEmployee'), {

@@ -1,7 +1,8 @@
-const mdb = require('../services/mongooseDatabaseService');
+const mongoose = require('mongoose');
 const path = require('path');
+const mdb = require('../services/mongooseDatabaseService');
+const logger = require('../services/loggerService');
 const moment = require('moment-timezone');
-const logger = require('../../services/loggerService');
 const taxService = require('../../services/taxService');
 
 exports.renderCISDashboardMongo = async (req, res, next) => {
@@ -107,5 +108,5 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
 exports.redirectCIS = (req, res, next) => {
   const { taxYear, taxMonth } = taxService.calculateTaxYearAndMonth(moment());
-  return res.redirect(`/mdb/CIS/${taxYear}/${taxMonth}`);
+  return res.redirect(`/CIS/${taxYear}/${taxMonth}`);
 };

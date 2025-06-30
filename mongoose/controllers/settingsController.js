@@ -1,10 +1,11 @@
-const logger = require('../../services/loggerService');
+const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
+const logger = require('../services/loggerService');
+const moment = require('moment-timezone');
 const encryptionService = require('../../services/encryptionService');
 const totpService = require('../../services/totpService');
 const { validationResult, body } = require('express-validator');
-const moment = require('moment');
 
 exports.getProfilePage = async (req, res, next) => {
   try {

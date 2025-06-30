@@ -1,8 +1,10 @@
+const mongoose = require('mongoose');
+const path = require('path');
+const mdb = require('../services/mongooseDatabaseService');
+const logger = require('../services/loggerService');
+const moment = require('moment-timezone');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
-const path = require('path');
-const logger = require('../../services/loggerService');
-const mdb = require('../services/mongooseDatabaseService');
 
 exports.renderLoginForm = (req, res) => {
   res.render(path.join('mongoose', 'login'), {

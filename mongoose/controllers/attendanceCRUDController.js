@@ -1,6 +1,19 @@
 const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
+const logger = require('../services/loggerService');
+
+exports.listAttendances = async (req, res, next) => {
+  try {
+    const attendances = await mdb.attendance.find().populate('employeeId subcontractorId locationId');
+    res.render(path.join('mongoose', 'listAttendances'), {
+      title: 'List of Attendances',
+      attendances
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 exports.renderCreateAttendanceForm = async (req, res, next) => {
   try {
@@ -66,6 +79,24 @@ exports.readAttendance = async (req,res,next)=>{
   }catch(err){ next(err); }
 };
 
+exports.renderUpdateAttendanceForm = async (req,res,next)=>{
+  try {
+    const identifier = req.params.id;
+    const attendance = await mdb.attendance.findOne({ uuid: identifier }).populate('employeeId subcontractorId locationId');
+    if(!attendance && mongoose.Types.ObjectId.isValid(identifier)) {
+      attendance = await mdb.attendance.findById(identifier).populate('employeeId subcontractorId locationId');
+    }
+    if(!attendance) {
+      req.flash('error', 'Attendance not found.');
+      return res.redirect('/attendances');
+    }
+    res.render(path.join('mongoose','updateAttendance'), {
+      title: 'Update Attendance',
+      attendance
+    });
+  }catch(err){ next(err); }
+};
+
 exports.updateAttendance = async (req,res,next)=>{
   try {
     const identifier = req.params.id;
@@ -94,4 +125,21 @@ exports.deleteAttendance = async (req,res,next)=>{
     req.flash('success', 'Attendance deleted successfully.');
     res.redirect('/attendances');
   }catch(err){ next(err); }
+};
+
+//////
+
+exports.getDailyAttendance = async (req,res,next)=>{
+  const date = req.params.date || moment().format('YYYY-MM-DD');
+  try {
+    const attendance = await attendanceService.getAttendanceForDay(date);
+    res.render(path.join('mongoose','dailyAttendance'),{
+      moment,
+      attendance,
+      date,
+      currentTab:'daily'
+    });
+  }catch(err){
+    next(err);
+  }
 };
