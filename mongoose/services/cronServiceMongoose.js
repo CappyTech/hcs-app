@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const holidayService = require('./holidayServiceMongoose');
 const logger = require('../../services/loggerService');
+const fetchKFMongoose = require('../kashflowAPI/fetchKashFlowDataMongoose');
 
 // Cron schedule for KashFlow fetch (6:30 AM to 6:30 PM hourly in production, hourly at :30 in development)
 const scheduleKashFlowData =
