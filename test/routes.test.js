@@ -91,6 +91,36 @@ describe('Route tests', function () {
       ],
     },
     {
+      module: '../mongoose/routes/contractRoutes',
+      stubs: {
+        '../controllers/contractCRUDController': {
+          listContracts: ok(),
+          readContract: ok(),
+          createContract: ok(),
+          updateContract: ok(),
+          deleteContract: ok(),
+        },
+        '../controllers/contractAssignmentCRUDController': {
+          createAssignment: ok(),
+          readAssignment: ok(),
+          updateAssignment: ok(),
+          deleteAssignment: ok(),
+        },
+        '../../services/authService': ensureRoleStub,
+      },
+      endpoints: [
+        { method: 'get', path: '/contracts' },
+        { method: 'get', path: '/contract/1' },
+        { method: 'post', path: '/contract' },
+        { method: 'post', path: '/contract/1/update' },
+        { method: 'post', path: '/contract/1/delete' },
+        { method: 'post', path: '/contract/1/assignment' },
+        { method: 'get', path: '/assignment/1' },
+        { method: 'post', path: '/assignment/1/update' },
+        { method: 'post', path: '/assignment/1/delete' },
+      ],
+    },
+    {
       module: '../mongoose/routes/customers',
       stubs: {
         '../controllers/customersController': {
