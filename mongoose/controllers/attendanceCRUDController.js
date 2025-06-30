@@ -59,7 +59,7 @@ exports.readAttendance = async (req,res,next)=>{
       req.flash('error', 'Attendance not found.');
       return res.redirect('/attendances');
     }
-    res.render(path.join('attendance','viewAttendance'), {
+    res.render(path.join('mongoose','viewAttendance'), {
       title: 'Attendance Details',
       attendance
     });
