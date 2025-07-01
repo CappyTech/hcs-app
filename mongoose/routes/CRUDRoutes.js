@@ -5,6 +5,16 @@ const authService = require('../../services/authService');
 
 const router = express.Router();
 
+const uuidv4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+router.param('uuid', (req, res, next, uuid) => {
+  if (!uuidv4Regex.test(uuid)) {
+    // Not a valid UUID, skip CRUD route and call next route (likely your /login route)
+    return res.status(404).send('Not Found');
+  }
+  next();
+});
+
 // Resolve a string like 'ensureRole:admin' into actual middleware
 const resolveMiddleware = (entry = '') => {
   if (!entry.includes(':')) return authService[entry];
