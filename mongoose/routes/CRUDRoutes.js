@@ -28,7 +28,7 @@ for (const [key, handler] of Object.entries(crudController)) {
 
   switch (action) {
     case 'create':
-      router.get(`${routePath}/create`, ...resolvedMiddleware, authService.ensureRole(), authService.ensureAuthenticated, handler);     // e.g. /employee/create
+      router.get(`${routePath}/create`, ...resolvedMiddleware, handler);     // e.g. /employee/create
       router.post(`${routePath}`, ...resolvedMiddleware, handler);           // e.g. /employee
       break;
 
