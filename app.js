@@ -16,9 +16,9 @@ const main = async () => {
   try {
     await mdb.connect(); // Wait for MongoDB/SSH tunnel
 
-    const sessionService = require('./mongoose/services/sessionServiceMongoose');
-
     const app = express();
+
+    const sessionService = require('./mongoose/services/sessionServiceMongoose');
 
     app.set('trust proxy', 1);
     app.set('view engine', 'ejs');
@@ -133,6 +133,8 @@ const main = async () => {
       const hex = Buffer.from(newKey, 'hex');
       console.log('Generated ENCRYPTION_KEY (hex):', hex);
     }
+
+    //app.use(require ('./mongoose/services/uuidCheckServiceMongoose').ensureUUIDs);
 
     app.use('/', require('./mongoose/routes/userRoutes'));
     // Routes
