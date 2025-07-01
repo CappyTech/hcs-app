@@ -3,8 +3,20 @@ const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 
+exports.listEmployees = async (req, res, next) => {
+  try {
+    const employees = await mdb.employee.find().lean();
+    res.render(path.join('mongoose', 'employee', 'listEmployees'), {
+      title: 'List Employees',
+      employees
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.renderCreateEmployeeForm = (req, res) => {
-  res.render(path.join('mongoose', 'createEmployee'), {
+  res.render(path.join('mongoose', 'employee', 'createEmployee'), {
     title: 'Create Employee'
   });
 };
