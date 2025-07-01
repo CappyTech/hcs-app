@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-
+const logger = require('../../services/loggerService');
 const router = express.Router();
 
 function loadRoutes(dir) {
@@ -12,7 +12,12 @@ function loadRoutes(dir) {
       loadRoutes(fullPath);
     } else if (file !== 'index.js' && path.extname(fullPath) === '.js') {
       const r = require(fullPath);
-      router.use('/', r);
+      if (typeof r === 'function' || (typeof r === 'object' && r.stack && r.handle)) {
+        router.use('/', r);
+        logger.debug(`Mounted routes from ${file} at /`);
+      } else {
+        logger.warn(`Skipping ${file}: does not export an Express router`);
+      }
     }
   });
 }
