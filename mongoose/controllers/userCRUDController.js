@@ -69,8 +69,6 @@ exports.registerUser = async (req, res, next) => {
     }
 };
 
-////
-
 exports.renderLoginForm = (req, res) => {
   res.render(path.join('mongoose', 'user', 'login'), {
     title: 'Log In',
