@@ -16,11 +16,7 @@ const attendanceSchema = new mongoose.Schema({
     hoursWorked: { type: mongoose.Decimal128, min: 0 },
     payRate: { type: mongoose.Decimal128, min: 0 },
     dayRate: { type: mongoose.Decimal128, min: 0 },
-    contractAssignmentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'ContractAssignment',
-        required: false
-    },
+    contractAssignmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'contractAssignment' },
 }, {
     timestamps: true
 });
