@@ -12,7 +12,7 @@ for (const [functionName, handler] of Object.entries(listController)) {
   const pluralPath = `${modelName.charAt(0).toLowerCase()}${modelName.slice(1)}s`;
 
   // Register route: e.g. GET /contracts
-  router.get(`/${pluralPath}`, handler);
+  router.get(`/${pluralPath}`, authService.ensureRole(), authService.ensureAuthenticated, handler);
 }
 
 module.exports = router;
