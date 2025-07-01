@@ -56,7 +56,7 @@
             </td>
             <% }); %>
               <td class="text-center">
-                <a href="/attendance/weekly/<%= startDate %>/<%= endDate %>/<%= details.employeeId || details.subcontractorId %>"
+                <a href="/weekly/<%= startDate %>/<%= endDate %>/<%= details.employeeId || details.subcontractorId %>"
                   class="text-decoration-none">
                   £<%= details.weeklyPay.toFixed(2) %><br>
                     <%= details.totalHoursWorked %> hours
