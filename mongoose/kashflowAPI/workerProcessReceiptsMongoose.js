@@ -1,4 +1,7 @@
 const { parentPort, workerData } = require('worker_threads');
+const supplier = workerData?.supplier; // ✅ Now defined at top
+const startfetch = workerData?.startfetch;
+
 const authenticate = require('../../kashflowAPI/autoAuth');
 const taxService = require('../../services/taxService');
 const logger = require('../../services/loggerService');
