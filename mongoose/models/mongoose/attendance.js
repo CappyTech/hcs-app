@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const attendanceSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: uuidv4 },
-    date: { type: String, required: true }, // ISO YYYY-MM-DD
+    date: { type: Date, required: true },
     type: {
         type: String,
         enum: ['off', 'holiday', 'sick', 'work', 'training', 'leave'],
