@@ -12,35 +12,36 @@ async function ensureAuthenticated(req, res, next) {
       delete req.session.user;
     }
   } catch (err) {
-    delete req.session.user;
+    return next({
+      statusCode: 500,
+      name: 'DatabaseError',
+      message: 'Failed to fetch user from database',
+      stack: err.stack,
+    });
   }
 
-  next();
-}
-
-// Blocks if user is not authenticated
-function requireLogin(req, res, next) {
-  if (!req.user) {
-    return res.redirect('/user/login');
-  }
-  next();
-}
-
-// Blocks if user is authenticated (e.g. signin/register pages)
-function doesntRequireLogin(req, res, next) {
-  if (req.user) {
-    return res.redirect('/');
-  }
   next();
 }
 
 // Blocks unless user has required role(s)
 function ensureRoles(...roles) {
   return (req, res, next) => {
-    if (!req.user) return res.status(401).send('Unauthorized');
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).send(`Forbidden: Requires one of [${roles.join(', ')}]`);
+    if (!req.user) {
+      return next({
+        statusCode: 401,
+        name: 'UnauthorizedError',
+        message: 'User not authenticated',
+      });
     }
+
+    if (!roles.includes(req.user.role)) {
+      return next({
+        statusCode: 403,
+        name: 'ForbiddenError',
+        message: `User role "${req.user.role}" is not in [${roles.join(', ')}]`,
+      });
+    }
+
     next();
   };
 }
@@ -53,8 +54,6 @@ function ensureRole(role = 'admin') {
 
 module.exports = {
   ensureAuthenticated,
-  requireLogin,
-  doesntRequireLogin,
   ensureRoles,
   ensureRole,
 };
