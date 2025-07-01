@@ -6,7 +6,7 @@ const logger = require('../../services/loggerService');
 exports.listAttendances = async (req, res, next) => {
   try {
     const attendances = await mdb.attendance.find().populate('employeeId subcontractorId locationId');
-    res.render(path.join('mongoose', 'listAttendances'), {
+    res.render(path.join('mongoose', 'listAttendance'), {
       title: 'List of Attendances',
       attendances
     });
