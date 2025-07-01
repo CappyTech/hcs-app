@@ -1,6 +1,4 @@
-<div class="container-fluid py-4">
-  <!-- Greeting Section -->
-  <div class="p-5 mb-4 bg-body-tertiary rounded-3 text-center">
+<div class="p-5 mb-4 bg-body-tertiary rounded-3 text-center">
     <% if (isAuthenticated) { %>
       <h1 class="display-5 fw-bold">Welcome, <%= firstName %>.</h1>
       <p class="lead fw-light text-body-secondary">
@@ -13,80 +11,37 @@
       </p>
     <% } %>
 
-    <% if (isAuthenticated) { %>
-    <% if (tasks && tasks.length) { %>
-    <div class="card mb-3">
-      <div class="card-header">Your Tasks</div>
-      <ul class="list-group list-group-flush">
-        <% tasks.forEach(t => { %>
-        <li class="list-group-item">
-          <strong><%= t.title %></strong>
-          <% if (t.dueDate) { %>
-            <span class="text-muted"> - due <%= slimDateTime(t.dueDate) %></span>
-          <% } %>
-          <div><%= t.description %></div>
-        </li>
-        <% }) %>
-      </ul>
+<% if (isAuthenticated) { %>
+  <div class="card mb-3">
+    <div class="card-header fw-bold">Your Tasks</div>
+    <div class="card-body d-flex justify-content-between gap-4 flex-wrap">
+      <!-- Overdue -->
+      <%- include('partials/taskCard', { title: 'Overdue Tasks', tasks: tasks.overdue, emptyMsg: 'No overdue tasks', showRecurrence: true }) %>
+
+      <!-- Today -->
+      <%- include('partials/taskCard', { title: 'Today', tasks: tasks.today, emptyMsg: 'No tasks today', showRecurrence: true }) %>
+
+      <!-- This Week -->
+      <%- include('partials/taskCard', { title: 'This Week', tasks: tasks.week, emptyMsg: 'No tasks this week', showRecurrence: true }) %>
+
+      <!-- This Month -->
+      <%- include('partials/taskCard', { title: 'This Month', tasks: tasks.month, emptyMsg: 'No tasks this month', showRecurrence: true }) %>
+
+      <!-- General -->
+      <%- include('partials/taskCard', { title: 'General Tasks', tasks: tasks.general, emptyMsg: 'No general tasks', showRecurrence: true }) %>
+
+      <!-- Recurring -->
+      <%- include('partials/taskCard', { title: 'Recurring Tasks', tasks: tasks.recurring, emptyMsg: 'No recurring tasks', showRecurrence: true }) %>
     </div>
-    <% } %>
-
-    <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
-        <div class="col">
-          <div class="card h-100 d-flex flex-column">
-            <div class="card-body">
-              <h5 class="card-header-pills">Create Invoice</h5>
-              <p class="card-text">Generate and manage invoices efficiently.</p>
-              <a href="/invoice/create" class="btn btn-hcs-green mt-auto">Create Invoice</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="col">
-          <div class="card h-100 d-flex flex-column">
-            <div class="card-body">
-              <h5 class="card-header-pills">View Subcontractors</h5>
-              <p class="card-text">Access and manage your subcontractors.</p>
-              <a href="/suppliers" class="btn btn-hcs-green mt-auto">View Subcontractors</a>
-            </div>
-          </div>
-        </div>
-
-      <% if (isAdmin) { %>
-        <div class="col">
-          <div class="card h-100 d-flex flex-column">
-            <div class="card-body">
-              <h5 class="card-header-pills">Manage Users</h5>
-              <p class="card-text">Create and manage user accounts.</p>
-              <a href="/users" class="btn btn-hcs-green mt-auto">Manage Users</a>
-            </div>
-          </div>
-        </div>
-      <% } %>
-
-        <div class="col">
-          <div class="card h-100 d-flex flex-column">
-            <div class="card-body">
-              <h5 class="card-header-pills">View Invoices</h5>
-              <p class="card-text">Track and review all your invoices.</p>
-              <a href="/invoices" class="btn btn-hcs-green mt-auto">View Invoices</a>
-            </div>
-          </div>
-        </div>
+    <div class="card-footer text-center">
+      <a class="btn btn-outline-secondary btn-sm" href="/tasks">View All Tasks</a>
     </div>
-    <% } %>
-
-    <% if (isAuthenticated) { %>
-    <p class="text-center text-muted mt-4">
-      For additional access, email:
-      <a href="mailto:<%= contactEmail %>" class="hcs-green-text"><%= contactEmail %></a>.
-    </p>
-    <% } %>
-
-    <% if (!isAuthenticated) { %>
-    <div class="text-center">
-      <p class="lead">Sign in to access your dashboard and features.</p>
-    </div>
-    <% } %>
   </div>
+<% } %>
+
+  <% if (!isAuthenticated) { %>
+  <div class="text-center">
+    <p class="lead">Sign in to access your dashboard and features.</p>
+  </div>
+  <% } %>
 </div>

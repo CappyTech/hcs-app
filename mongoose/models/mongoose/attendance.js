@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../../../services/loggerService')
 
 const attendanceSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: uuidv4 },
@@ -22,6 +23,9 @@ const attendanceSchema = new mongoose.Schema({
 });
 
 attendanceSchema.pre('validate', function (next) {
+    logger.debug('employeeId:', this.employeeId);
+    logger.debug('subcontractorId:', this.subcontractorId);
+
     if ((this.employeeId && this.subcontractorId) || (!this.employeeId && !this.subcontractorId)) {
         return next(new Error('Attendance must reference either employee or subcontractor, not both or neither.'));
     }

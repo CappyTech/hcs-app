@@ -2,50 +2,67 @@
   <h1 class="mb-4"><%= title %></h1>
   <form action="<%= formAction %>" method="POST">
     <% for (const key in schema) {
-    const field = schema[key];
-    let labelSuffix = '';
-    if (field.required) {
+      const field = schema[key];
+      const selectedValue = formData?.[key];
+      const isUuid = field.type === 'String';
+      
+      let labelSuffix = '';
+      if (field.required) {
         labelSuffix = '<span class="text-danger">*</span>';
-    } else {
+      } else {
         labelSuffix = '<small class="text-muted">(optional)</small>';
-    }
-    if (field.default != null && field.default !== '') {
+      }
+      if (field.default != null && field.default !== '') {
         labelSuffix += ` <small class="text-muted">(default: ${field.default})</small>`;
-    }
-    const label = field.label + ' ' + labelSuffix;
+      }
+      const label = field.label + ' ' + labelSuffix;
     %>
+
     <div class="mb-3">
-        <label for="<%= key %>" class="form-label"><%- label %></label>
+      <label for="<%= key %>" class="form-label"><%- label %></label>
 
-        <% if (field.enum) { %>
+      <% if (field.enum) { %>
+        <!-- type 1: Enum -->
         <select class="form-select" id="<%= key %>" name="<%= key %>">
-            <option value="">-- Select --</option>
-            <% field.enum.forEach(option => { %>
-            <option value="<%= option %>"><%= option %></option>
-            <% }) %>
+          <option value="">-- Select --</option>
+          <% field.enum.forEach(option => { %>
+            <option value="<%= option %>" <%= selectedValue == option ? 'selected' : '' %>><%= option %></option>
+          <% }) %>
         </select>
 
-        <% } else if (field.ref && referenceData?.[key]) { %>
+      <% } else if (field.ref && referenceData?.[key]) { %>
+        <!-- type 2: Reference (employee or subcontractor) -->
         <select class="form-select" id="<%= key %>" name="<%= key %>">
-            <option value="">-- Select --</option>
-            <% referenceData[key].forEach(refItem => { %>
-            <option value="<%= refItem.uuid %>"><%= refItem.name || refItem.title || refItem.uuid %></option>
-            <% }) %>
+        <option value="">-- Select --</option>
+        <% referenceData[key].forEach(refItem => {
+            const value = isUuid ? refItem.uuid : refItem._id;
+            const label = refItem.name || refItem.Name || refItem.InvoiceNumber || refItem.username || refItem.JobRef || refItem.title || value;
+            const selected = selectedValue?.toString() === value?.toString() ? 'selected' : '';
+        %>
+            <option value="<%= value %>" <%= selected %>><%= label %></option>
+        <% }) %>
         </select>
 
-        <% } else if (field.type === 'Boolean') { %>
+      <% } else if (field.type === 'Boolean') { %>
+        <!-- type 3: Boolean -->
         <select class="form-select" id="<%= key %>" name="<%= key %>">
-            <option value="true">True</option>
-            <option value="false">False</option>
+          <option value="">-- Select --</option>
+          <option value="true" <%= selectedValue === true || selectedValue === 'true' ? 'selected' : '' %>>True</option>
+          <option value="false" <%= selectedValue === false || selectedValue === 'false' ? 'selected' : '' %>>False</option>
         </select>
 
-        <% } else if (field.type === 'Date') { %>
-        <input type="date" class="form-control" id="<%= key %>" name="<%= key %>">
+      <% } else if (field.type === 'Date') { %>
+        <!-- type 4: Date -->
+        <input type="date" class="form-control" id="<%= key %>" name="<%= key %>" value="<%= selectedValue || '' %>">
 
-        <% } else { %>
-        <input type="text" class="form-control" id="<%= key %>" name="<%= key %>" placeholder="<%= field.default ? `Default: ${field.default}` : '' %>">
-        <% } %>
+      <% } else { %>
+        <!-- type else: Text -->
+        <input type="text" class="form-control" id="<%= key %>" name="<%= key %>" 
+               value="<%= selectedValue || '' %>" 
+               placeholder="<%= field.default ? `Default: ${field.default}` : '' %>">
+      <% } %>
     </div>
+
     <% } %>
 
     <p class="text-muted"><span class="text-danger">*</span> Required fields</p>

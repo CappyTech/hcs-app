@@ -17,23 +17,43 @@ function advanceDate(date, recurrence) {
 async function getPendingTasksForUser(userId) {
   if (!userId) return [];
   const tasks = await mdb.task.find({ userId, completed: false }).sort({ dueDate: 1 });
-  const now = new Date();
-
-  for (const task of tasks) {
-    if (task.recurrence !== 'none' && task.dueDate && task.dueDate < now) {
-      let next = new Date(task.dueDate);
-      while (next < now) {
-        next = advanceDate(next, task.recurrence);
-      }
-      task.dueDate = next;
-      await task.save();
-    }
-  }
-
   return tasks.map(t => t.toObject());
 }
+
+async function processRecurringTasks() {
+  const now = new Date();
+  const recurringTasks = await mdb.task.find({
+    recurrence: { $ne: 'none' },
+    dueDate: { $lt: now },
+    completed: false
+  });
+
+  for (const task of recurringTasks) {
+    const nextDate = advanceDate(task.dueDate, task.recurrence);
+
+    // Check if a future task already exists
+    const existing = await mdb.task.findOne({
+      userId: task.userId,
+      title: task.title,
+      dueDate: { $gte: nextDate },
+    });
+
+    if (!existing) {
+      await createTask({
+        title: task.title,
+        description: task.description,
+        userId: task.userId,
+        jobId: task.jobId,
+        dueDate: nextDate,
+        recurrence: task.recurrence
+      });
+    }
+  }
+}
+
 
 module.exports = {
   createTask,
   getPendingTasksForUser,
+  processRecurringTasks,
 };

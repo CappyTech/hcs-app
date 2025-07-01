@@ -22,7 +22,7 @@ function mapLine(line) {
       ProjID: line.ProjID || null,
   };
 }
-const ChargeTypes = require('../../controllers/CRUD/kashflow/chargeTypes.json');
+const ChargeTypes = require('../../kashflowAPI/chargeTypes.json');
 
 (async () => {
   if (!workerData || !workerData.supplier) {

@@ -1,7 +1,3 @@
-const { read } = require("@popperjs/core");
-const session = require("express-session");
-const { supplier } = require("./listControllerConfig");
-
 module.exports = {
   default: {
     middleware: {
@@ -25,7 +21,12 @@ module.exports = {
       create: ['ensureRole:admin', 'ensureAuthenticated'],
       update: ['ensureRole:admin', 'ensureAuthenticated'],
       delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+    },
+    xorGroups: [ // can only choose one.
+      ['employeeId', 'subcontractorId'],
+      ['locationId', 'projectId'],
+      ['hoursWorked', 'dayRate']
+    ]
   },
 
   contract: {

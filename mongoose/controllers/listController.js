@@ -3,6 +3,7 @@ const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const listControllerConfig = require('../config/listControllerConfig');
 
+const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 const listController = {};
 
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
@@ -16,11 +17,7 @@ const generateHeaders = (firstDoc, config = {}) => {
   if (Array.isArray(config.fieldOrder)) {
     const ordered = config.fieldOrder.filter(k => keys.includes(k));
     const extras = keys.filter(k => !ordered.includes(k));
-    if (config.strictOrder === true) {
-      keys = ordered;
-    } else {
-      keys = [...ordered, ...extras];
-    }
+    keys = config.strictOrder ? ordered : [...ordered, ...extras];
   }
 
   return keys.map(key => ({
@@ -36,9 +33,11 @@ for (const modelName of Object.keys(mdb)) {
   const model = mdb[modelName];
   if (typeof model?.find !== 'function') continue;
 
+  const config = listControllerConfig[modelName] || {};
+  if (denyGuard(config, 'l')) continue; // 👈 skip if list is denied
+
   const functionName = `list${capitalize(modelName)}`;
   listController[functionName] = async (req, res, next) => {
-    const config = listControllerConfig[modelName] || {};
     const sortField = config.sortField || 'createdAt';
     const sortOrder = config.sortOrder ?? -1;
 

@@ -1,25 +1,37 @@
 <div class="container py-4">
   <div class="p-5 mb-4 bg-body-tertiary rounded-3">
-    <h1 class="display-5 fw-bold text-center"><%= typeof title !== 'undefined' ? title : '' %></h1>
+    <h1 class="display-5 fw-bold text-center">
+      <%= title %>
+    </h1>
+
     <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
-      <div class="col">
-        <div class="card h-100 d-flex flex-column">
-          <div class="card-body">
-            <h5 class="card-header-pills">Attendance</h5>
-            <p class="card-text">Record and review daily attendance.</p>
-            <a href="/attendance/daily" class="btn btn-hcs-green mt-auto">Attendance</a>
+      <% dashboardModels.forEach(model=> { %>
+        <div class="col">
+          <div class="card h-100 d-flex flex-column">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-header-pills">
+                <%= model.title %>
+              </h5>
+              <p class="card-text">
+                <%= model.description %>
+              </p>
+              <a href="<%= model.link %>" class="btn btn-hcs-green mt-auto">
+                <%= model.title %> List
+              </a>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 d-flex flex-column">
-          <div class="card-body">
-            <h5 class="card-header-pills">Weekly Attendance</h5>
-            <p class="card-text">Check weekly attendance summaries.</p>
-            <a href="/attendance/weekly" class="btn btn-hcs-green mt-auto">Weekly Attendance</a>
+        <% }) %>
+          <div class="col">
+            <div class="card h-100 d-flex flex-column">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-header-pills">Weekly Attendance</h5>
+                <p class="card-text">Manage Weekly Attendance</p>
+                <a href="/weekly" class="btn btn-hcs-green mt-auto">Go to</a>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
     </div>
+
   </div>
 </div>

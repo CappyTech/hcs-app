@@ -3,7 +3,7 @@ const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const listConfig = require('../config/listControllerConfig');
 const crudConfig = require('../config/CRUDControllerConfig');
-
+const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 const crudController = {};
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 
@@ -58,7 +58,7 @@ const fetchReferenceData = async (schema) => {
     if (field.ref && mdb[field.ref]) {
       referenceData[key] = await mdb[field.ref]
         .find()
-        .select('uuid name title')
+        .select('uuid name Name InvoiceNumber Customer jobRef title username')
         .lean();
     }
   }
@@ -75,6 +75,7 @@ for (const modelName of Object.keys(mdb)) {
   const baseName = capitalize(modelName);
   const config = getMergedConfig(modelName);
 
+if (!denyGuard(config, 'r')) {
   // READ
   crudController[`read${baseName}`] = async (req, res, next) => {
     try {
@@ -94,16 +95,46 @@ for (const modelName of Object.keys(mdb)) {
       next(err);
     }
   };
-
+}
+if (!denyGuard(config, 'c')) {
   // CREATE
   crudController[`create${baseName}`] = async (req, res, next) => {
     if (req.method === 'GET') {
       const schema = extractSchema(Model, config);
       const referenceData = await fetchReferenceData(schema);
 
+      let formData = { ...req.query };
+
+      // 1. Attempt direct UUID → ObjectId mapping for any known .ref fields
+      for (const key of Object.keys(formData)) {
+        const refField = schema[key];
+        if (refField?.ref && mdb[refField.ref]) {
+          const candidate = await mdb[refField.ref]
+            .findOne({ uuid: formData[key] })
+            .select('_id')
+            .lean();
+
+          if (candidate) {
+            formData[key] = candidate._id.toString();
+          }
+        }
+      }
+
+      // 2. Fallback: if just ?uuid=... is passed, try matching it to employee/supplier
+      if (req.query.uuid) {
+        const employee = await mdb.employee.findOne({ uuid: req.query.uuid }).select('_id').lean();
+        const subcontractor = await mdb.supplier.findOne({ uuid: req.query.uuid }).select('_id').lean();
+
+        if (employee && !formData.employeeId) {
+          formData.employeeId = employee._id.toString();
+        } else if (subcontractor && !formData.subcontractorId) {
+          formData.subcontractorId = subcontractor._id.toString();
+        }
+      }
+
       return res.render(path.join('mongoose', 'partials', 'form-create'), {
         title: `Create ${config.title || baseName}`,
-        formData: {},
+        formData,
         schema,
         referenceData,
         formAction: `/${modelName}`,
@@ -112,7 +143,13 @@ for (const modelName of Object.keys(mdb)) {
     }
 
     try {
-      const doc = new Model(req.body);
+      // Clean up submitted data: convert empty strings to undefined
+      const cleanedData = {};
+      for (const [key, value] of Object.entries(req.body)) {
+        cleanedData[key] = value === '' ? undefined : value;
+      }
+
+      const doc = new Model(cleanedData);
       await doc.save();
       res.redirect(`/${modelName}s`);
     } catch (err) {
@@ -120,7 +157,8 @@ for (const modelName of Object.keys(mdb)) {
       next(err);
     }
   };
-
+}
+if (!denyGuard(config, 'u')) {
   // UPDATE
   crudController[`update${baseName}`] = async (req, res, next) => {
     if (req.method === 'GET') {
@@ -153,7 +191,8 @@ for (const modelName of Object.keys(mdb)) {
       next(err);
     }
   };
-
+}
+if (!denyGuard(config, 'd')) {
   // DELETE
   crudController[`delete${baseName}`] = async (req, res, next) => {
     if (req.method === 'GET') {
@@ -181,6 +220,7 @@ for (const modelName of Object.keys(mdb)) {
       next(err);
     }
   };
+}
 }
 
 module.exports = crudController;

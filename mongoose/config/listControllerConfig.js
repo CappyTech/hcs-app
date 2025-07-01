@@ -1,7 +1,17 @@
-const { totp } = require("speakeasy");
-const attendance = require("../models/mongoose/attendance");
-
 module.exports = {
+  assignment: {
+    title: 'Assignments',
+    linkField: 'title',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['management'],
+  },
+  attendance: {
+    title: 'Attendances',
+    linkField: 'date',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    fieldOrder: ['date', 'type', 'employeeId', 'subcontractorId', 'hoursWorked', 'payRate', 'dayRate', 'locationId', 'projectId'],
+    department: ['management'],
+  },
   contract: {
     title: 'Contracts',
     linkField: 'title',
@@ -15,31 +25,100 @@ module.exports = {
     },
     hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
     sortField: 'createdAt',
-    sortOrder: -1
+    sortOrder: -1,
+    department: ['management'],
   },
-
+  customer: {
+    title: 'Customers',
+    linkField: 'Name',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['kashflow'],
+    deny: ['c','d'],
+  },
   employee: {
     title: 'Employees',
     linkField: 'name',
     hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
     fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type','dailyRate', 'hourlyRate', 'hireDate', 'managerId'],
+    department: ['payroll','human-resources'],
   },
-  attendance: {
-    title: 'Attendances',
-    linkField: 'date',
+  holiday: {
+    title: 'Holidays',
+    linkField: 'title',
+    department: ['human-resources'],
+    deny: ['c','r','u','d'],
+  },
+  invoice: {
+    title: 'Invoices',
+    linkField: 'InvoiceNumber',
     hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
-    fieldOrder: ['date', 'type', 'employeeId', 'subcontractorId', 'hoursWorked', 'payRate', 'dayRate', 'locationId', 'projectId'],
+    department: ['kashflow'],
+    deny: ['c','d'],
+  },
+  job: {
+    title: 'Jobs',
+    linkField: 'JobRef',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['management'],
+  },
+  location: {
+    title: 'Locations',
+    linkField: 'name',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['management'],
+  },
+  meta: {
+    deny: ['c','r','u','d','l'],
+  },
+  project: {
+    title: 'Projects',
+    linkField: 'ID',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['kashflow'],
+    deny: ['c','d'],
+  },
+  quote: {
+    title: 'Quotes',
+    linkField: 'InvoiceNumber',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['kashflow'],
+    deny: ['c','d'],
+  },
+  receipt: {
+    title: 'Receipts',
+    linkField: 'InvoiceNumber',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['kashflow'],
+    deny: ['c','d'],
+  },
+  session: {
+    deny: ['c','r','u','d','l'],
   },
   supplier: {
     title: 'Suppliers',
     linkField: 'Name',
     hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid', 'Created', 'Updated'],
     fieldOrder: ['Name', 'Email', 'Mobile', 'Address1', 'Address2', 'Address3', 'Address4', 'PostCode', 'Telephone', 'Website', 'Contact', 'Mobile', 'Fax', 'CurrencyID', 'PaymentTerms', 'ContactTitle', 'ContactFirstName', 'ContactLastName', 'TradeBorderType', 'IsSubcontractor', 'Subcontractor', 'CISRate', 'CISNumber'],
+    department: ['kashflow'],
+    deny: ['c','d'],
+  },
+  task: {
+    title: 'Tasks',
+    linkField: 'title',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['human-resources'],
   },
   user: {
     title: 'Users',
     linkField: 'username',
     hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid', 'password', 'totpSecret', 'totpEnabled'],
     fieldOrder: ['username', 'email', 'role', 'status', 'lastLogin'],
+    department: ['human-resources'],
+  },
+  vehicle: {
+    title: 'Vehicles',
+    linkField: 'registrationNumber',
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    department: ['management'],
   },
 };

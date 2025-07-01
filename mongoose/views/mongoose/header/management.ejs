@@ -1,43 +1,20 @@
 <div class="container py-4">
   <div class="p-5 mb-4 bg-body-tertiary rounded-3">
-    <h1 class="display-5 fw-bold text-center"><%= typeof title !== 'undefined' ? title : '' %></h1>
+    <h1 class="display-5 fw-bold text-center"><%= title %></h1>
+
     <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
-      <div class="col">
-        <div class="card h-100 d-flex flex-column">
-          <div class="card-body">
-            <h5 class="card-header-pills">Quotes</h5>
-            <p class="card-text">Review and manage quotations.</p>
-            <a href="/quotes" class="btn btn-hcs-green mt-auto">Quotes</a>
+      <% dashboardModels.forEach(model => { %>
+        <div class="col">
+          <div class="card h-100 d-flex flex-column">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-header-pills"><%= model.title %></h5>
+              <p class="card-text"><%= model.description %></p>
+              <a href="<%= model.link %>" class="btn btn-hcs-green mt-auto"><%= model.title %> List</a>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 d-flex flex-column">
-          <div class="card-body">
-            <h5 class="card-header-pills">Clients</h5>
-            <p class="card-text">View client details and contacts.</p>
-            <a href="/customers" class="btn btn-hcs-green mt-auto">Clients</a>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 d-flex flex-column">
-          <div class="card-body">
-            <h5 class="card-header-pills">Jobs</h5>
-            <p class="card-text">Register and review jobs.</p>
-            <a href="/job/register" class="btn btn-hcs-green mt-auto">Job Register</a>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 d-flex flex-column">
-          <div class="card-body">
-            <h5 class="card-header-pills">Weekly Attendance</h5>
-            <p class="card-text">View weekly attendance summaries.</p>
-            <a href="/weekly" class="btn btn-hcs-green mt-auto">Weekly Attendance</a>
-          </div>
-        </div>
-      </div>
+      <% }) %>
     </div>
+
   </div>
 </div>

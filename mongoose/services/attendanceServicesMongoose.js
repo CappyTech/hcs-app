@@ -82,7 +82,7 @@ const groupAttendanceByPerson = (
   // Init employees
   allEmployees.forEach(emp => {
     groupedAttendance[emp.name] = {
-      employeeId: emp._id,
+      employeeId: emp.uuid,
       subcontractorId: null,
       totalHoursWorked: 0,
       weeklyPay: 0,
@@ -103,7 +103,7 @@ const groupAttendanceByPerson = (
     if (!groupedAttendance[name]) {
       groupedAttendance[name] = {
         employeeId: null,
-        subcontractorId: supplier._id,
+        subcontractorId: supplier.uuid,
         totalHoursWorked: 0,
         weeklyPay: 0,
         dailyRecords: {},
@@ -140,7 +140,7 @@ const groupAttendanceByPerson = (
 
     if (!groupedAttendance[name]) {
       groupedAttendance[name] = {
-        employeeId: employee._id,
+        employeeId: employee.uuid,
         subcontractorId: null,
         totalHoursWorked: 0,
         weeklyPay: 0,
