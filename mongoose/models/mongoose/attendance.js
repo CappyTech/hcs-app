@@ -19,7 +19,7 @@ const attendanceSchema = new mongoose.Schema({
     contractAssignmentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ContractAssignment',
-        required: true
+        required: false
     },
 }, {
     timestamps: true

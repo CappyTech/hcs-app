@@ -20,13 +20,13 @@
                 <% 
                   const val = row[h.key];
                   const isDate = val instanceof Date;
-                  const isLink = (h.key === 'title' || h.key === 'name') && row.uuid;
+                  const isLink = h.key === linkField && row.uuid;
                 %>
 
                 <% if (isLink) { %>
-                  <a href="/<%= basePath %>/<%= row.uuid %>"><%= val %></a>
+                  <a href="/<%= basePath %>/read/<%= row.uuid %>"><%= val %></a>
                 <% } else if (isDate) { %>
-                  <%= val.toISOString().slice(0, 10) %>
+                  <%= slimDateTime(val) %>
                 <% } else if (typeof val === 'boolean') { %>
                   <span class="badge bg-<%= val ? 'success' : 'secondary' %>">
                     <%= val ? 'Yes' : 'No' %>

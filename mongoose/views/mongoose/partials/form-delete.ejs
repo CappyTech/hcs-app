@@ -1,0 +1,18 @@
+<div class="container my-5">
+  <h1><%= title %></h1>
+  <p>Are you sure you want to delete this record?</p>
+
+  <table class="table table-bordered">
+    <% for (const key in item) { %>
+      <tr>
+        <th><%= key %></th>
+        <td><%= item[key] %></td>
+      </tr>
+    <% } %>
+  </table>
+
+  <form action="<%= formAction %>" method="POST">
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="<%= cancelUrl %>" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>

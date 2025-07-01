@@ -1,48 +1,68 @@
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
+const listControllerConfig = require('../config/listControllerConfig');
 
 const listController = {};
 
-const capitalize = str =>
-  str.charAt(0).toUpperCase() + str.slice(1);
+const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 
-const generateHeaders = (firstDoc) => {
-  const keys = Object.keys(firstDoc).filter(k => !['_id', '__v'].includes(k));
+const generateHeaders = (firstDoc, config = {}) => {
+  let keys = Object.keys(firstDoc).filter(
+    k => !(config.hideFields || []).includes(k)
+  );
+
+  // Reorder keys based on fieldOrder if provided
+  if (Array.isArray(config.fieldOrder)) {
+    const ordered = config.fieldOrder.filter(k => keys.includes(k));
+    const extras = keys.filter(k => !ordered.includes(k));
+    if (config.strictOrder === true) {
+      keys = ordered;
+    } else {
+      keys = [...ordered, ...extras];
+    }
+  }
+
   return keys.map(key => ({
     key,
-    label: key
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase())
+    label: config.labelOverrides?.[key] ||
+      key.replace(/([a-z])([A-Z])/g, '$1 $2')
+         .replace(/_/g, ' ')
+         .replace(/\b\w/g, c => c.toUpperCase())
   }));
 };
 
 for (const modelName of Object.keys(mdb)) {
-  // Skip non-model entries like mdb.connect
-  if (typeof mdb[modelName]?.find !== 'function') continue;
+  const model = mdb[modelName];
+  if (typeof model?.find !== 'function') continue;
 
   const functionName = `list${capitalize(modelName)}`;
   listController[functionName] = async (req, res, next) => {
+    const config = listControllerConfig[modelName] || {};
+    const sortField = config.sortField || 'createdAt';
+    const sortOrder = config.sortOrder ?? -1;
+
     try {
-      const items = await mdb[modelName].find().sort({ createdAt: -1 }).lean();
+      const items = await model.find().sort({ [sortField]: sortOrder }).lean();
 
       if (!items.length) {
         return res.render(path.join('mongoose', 'partials', 'listTable'), {
-          title: `${capitalize(modelName)}s`,
+          title: config.title || capitalize(modelName) + 's',
           headers: [],
           rows: [],
-          basePath: modelName
+          basePath: modelName,
+          linkField: config.linkField || 'title'
         });
       }
 
-      const headers = generateHeaders(items[0]);
+      const headers = generateHeaders(items[0], config);
 
       res.render(path.join('mongoose', 'partials', 'listTable'), {
-        title: `${capitalize(modelName)}s`,
+        title: config.title || capitalize(modelName) + 's',
         headers,
         rows: items,
-        basePath: modelName
+        basePath: modelName,
+        linkField: config.linkField || 'title'
       });
     } catch (err) {
       logger.error(`Error listing ${modelName}:`, err);
