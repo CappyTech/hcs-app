@@ -5,10 +5,10 @@ const { supplier } = require("./listControllerConfig");
 module.exports = {
   default: {
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   attendance: {
@@ -21,10 +21,10 @@ module.exports = {
       dayRate: value => typeof value === 'number' && value >= 0,
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
 
@@ -35,10 +35,10 @@ module.exports = {
       status: value => ['active', 'completed', 'draft'].includes(value),
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   contractAssignment: {
@@ -50,10 +50,10 @@ module.exports = {
       contractId: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   employee: {
@@ -63,19 +63,19 @@ module.exports = {
       startDate: value => !isNaN(Date.parse(value))
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   customer: {
     readOnly: ['uuid', 'createdAt'],
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   holiday: {
@@ -85,10 +85,10 @@ module.exports = {
       description: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   invoice: {
@@ -99,10 +99,10 @@ module.exports = {
       dueDate: value => !isNaN(Date.parse(value)),
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   job: {
@@ -114,10 +114,10 @@ module.exports = {
       salary: value => typeof value === 'number' && value >= 0,
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   location: {
@@ -127,10 +127,10 @@ module.exports = {
       address: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   meta: {
@@ -140,10 +140,10 @@ module.exports = {
       value: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   project: {
@@ -155,10 +155,10 @@ module.exports = {
       endDate: value => !isNaN(Date.parse(value)) || value === null,
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   quote: {
@@ -169,10 +169,10 @@ module.exports = {
       date: value => !isNaN(Date.parse(value)),
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   session: {
@@ -182,10 +182,10 @@ module.exports = {
       expiresAt: value => !isNaN(Date.parse(value)),
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   supplier: {
@@ -200,10 +200,10 @@ module.exports = {
       Website: value => typeof value === 'string' && (value.length === 0 || /^https?:\/\/.+/.test(value)),
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   task: {
@@ -214,10 +214,10 @@ module.exports = {
       dueDate: value => !isNaN(Date.parse(value)),
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   user: {
@@ -228,10 +228,10 @@ module.exports = {
       name: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
   vehicle: {
@@ -243,10 +243,10 @@ module.exports = {
       year: value => !isNaN(value) && value > 1900 && value <= new Date().getFullYear(),
     },
     middleware: {
-      read: ['ensureRole:admin'],
-      create: ['ensureRole:admin'],
-      update: ['ensureRole:admin'],
-      delete: ['ensureRole:admin'],
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
 }
