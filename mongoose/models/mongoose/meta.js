@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
-const KF_MetaSchema = new mongoose.Schema({
+const metaSchema = new mongoose.Schema({
   uuid: { type: String, unique: true, required: true, default: uuidv4 },
   model: {
     type: String,
@@ -28,4 +28,4 @@ const KF_MetaSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('meta', KF_MetaSchema);
+module.exports = mongoose.model('meta', metaSchema);

@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const contractAssignmentSchema = new mongoose.Schema({
+  uuid: { type: String, unique: true, required: true, default: uuidv4 },
   contractId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'contract',

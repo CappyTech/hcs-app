@@ -2,9 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const encryptionService = require('../../../services/encryptionService');
 const { v4: uuidv4 } = require('uuid');
-const { Schema } = mongoose;
 
-const userSchema = new Schema({
+const userSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: uuidv4 },
     username: {
         type: String,
@@ -29,17 +28,17 @@ const userSchema = new Schema({
         default: 'subcontractor'
     },
     subcontractorId: {
-        type: Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'supplier',
         default: null
     },
     clientId: {
-        type: Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'customer',
         default: null
     },
     employeeId: {
-        type: Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'employee',
         default: null
     },
