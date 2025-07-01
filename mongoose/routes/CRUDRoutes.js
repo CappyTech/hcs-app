@@ -7,7 +7,7 @@ const router = express.Router();
 
 // Resolve a string like 'ensureRole:admin' into actual middleware
 const resolveMiddleware = (entry = '') => {
-  if (!entry.includes(':')) return auth[entry];
+  if (!entry.includes(':')) return authService[entry];
   const [fn, arg] = entry.split(':');
   return authService[fn]?.(arg);
 };
