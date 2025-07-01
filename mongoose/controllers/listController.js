@@ -50,7 +50,10 @@ for (const modelName of Object.keys(mdb)) {
           headers: [],
           rows: [],
           basePath: modelName,
-          linkField: config.linkField || 'title'
+          linkField: config.linkField || 'title',
+          actions: listControllerConfig.supplier.actions,
+          hasActions: listControllerConfig.supplier.actions?.length > 0,
+          model
         });
       }
 
@@ -61,7 +64,10 @@ for (const modelName of Object.keys(mdb)) {
         headers,
         rows: items,
         basePath: modelName,
-        linkField: config.linkField || 'title'
+        linkField: config.linkField || 'title',
+        actions: listControllerConfig.supplier.actions,
+        hasActions: listControllerConfig.supplier.actions?.length > 0,
+        model
       });
     } catch (err) {
       logger.error(`Error listing ${modelName}:`, err);

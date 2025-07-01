@@ -1,46 +1,67 @@
-<div class="container my-5">
+<% const hasActions = typeof actions !== 'undefined' && Array.isArray(actions) && actions.length > 0; %>
+
+<div class="container-fluid my-5">
   <h1 class="mb-4"><%= title || 'Data Table' %></h1>
 
   <% if (!rows || rows.length === 0) { %>
     <div class="alert alert-info">No records found.</div>
   <% } else { %>
-    <table class="table table-striped table-bordered align-middle">
-      <thead class="table-light">
-        <tr>
-          <% headers.forEach(h => { %>
-            <th><%= h.label %></th>
-          <% }) %>
-        </tr>
-      </thead>
-      <tbody>
-        <% rows.forEach(row => { %>
+    <div class="table-responsive">
+      <table class="table table-sm table-striped table-hover table-bordered">
+        <thead>
           <tr>
             <% headers.forEach(h => { %>
-              <td>
+              <th scope="col"><%= h.label %></th>
+            <% }) %>
+            <% if (hasActions) { %>
+              <th scope="col">Actions</th>
+            <% } %>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach(row => { %>
+            <tr>
+              <% headers.forEach(h => { %>
+                <td class="<%= model === 'supplier' && h.key === 'Name' && row.IsSubcontractor ? 'bg-warning-subtle' : '' %>">
                 <% 
-                  const val = row[h.key];
-                  const isDate = val instanceof Date;
-                  const isLink = h.key === linkField && row.uuid;
+                const val = row[h.key];
+                const isDate = val instanceof Date;
+                const isLink = h.key === linkField && row.uuid;
                 %>
 
-                <% if (isLink) { %>
-                  <a href="/<%= basePath %>/read/<%= row.uuid %>"><%= val %></a>
-                <% } else if (isDate) { %>
-                  <%= slimDateTime(val) %>
-                <% } else if (typeof val === 'boolean') { %>
-                  <span class="badge bg-<%= val ? 'success' : 'secondary' %>">
-                    <%= val ? 'Yes' : 'No' %>
-                  </span>
-                <% } else if (val !== null && val !== undefined) { %>
-                  <%= val %>
-                <% } else { %>
-                  &mdash;
-                <% } %>
-              </td>
-            <% }) %>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
+
+                  <% if (isLink) { %>
+                    <a href="/<%= basePath %>/read/<%= row.uuid %>" class="text-decoration-none"><%= val %></a>
+                  <% } else if (isDate) { %>
+                    <%= slimDateTime(val) %>
+                  <% } else if (typeof val === 'boolean') { %>
+                    <span class="badge rounded-pill bg-<%= val ? 'success' : 'secondary' %>">
+                      <%= val ? 'Yes' : 'No' %>
+                    </span>
+                  <% } else if (val !== null && val !== undefined) { %>
+                    <%= val %>
+                    <% if (model === 'supplier' && h.key === 'Name' && row.IsSubcontractor) { %>
+                      <span class="badge bg-warning text-dark ms-2">Subcontractor</span>
+                    <% } %>
+                  <% } else { %>
+                    &mdash;
+                  <% } %>
+                </td>
+              <% }) %>
+
+              <% if (hasActions) { %>
+                <td>
+                  <% actions.forEach(action => { %>
+                    <a href="<%= action.href(row) %>" class="btn btn-sm btn-<%= action.class || 'primary' %> me-1">
+                      <%= action.label %>
+                    </a>
+                  <% }) %>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
   <% } %>
 </div>

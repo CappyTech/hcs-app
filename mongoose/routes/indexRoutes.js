@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authService = require('../../services/authService');
 const index = require('../controllers/indexController');
+const fetch = require('../kashflowAPI/fetchKashFlowDataMongoose');
 
 router.get('/', authService.ensureRole('none'), index.renderIndex);
 router.get('/construction-industry-scheme', authService.ensureRole(), index.renderConstructionIndustryScheme);

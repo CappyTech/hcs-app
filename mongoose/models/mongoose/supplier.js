@@ -29,7 +29,6 @@ const supplierSchema = new mongoose.Schema({
   ContactLastName: String,
   TradeBorderType: Number,
   IsSubcontractor: Boolean,
-  Subcontractor: Boolean,
   CISRate: {
     type: String,
     enum: ['0.3', '0.2', '0'],

@@ -73,21 +73,21 @@ module.exports = {
   project: {
     title: 'Projects',
     linkField: 'ID',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid'],
     department: ['kashflow'],
     deny: ['c','d'],
   },
   quote: {
     title: 'Quotes',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid'],
     department: ['kashflow'],
     deny: ['c','d'],
   },
   receipt: {
     title: 'Receipts',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid'],
     department: ['kashflow'],
     deny: ['c','d'],
   },
@@ -97,15 +97,20 @@ module.exports = {
   supplier: {
     title: 'Suppliers',
     linkField: 'Name',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid', 'Created', 'Updated'],
-    fieldOrder: ['Name', 'Email', 'Mobile', 'Address1', 'Address2', 'Address3', 'Address4', 'PostCode', 'Telephone', 'Website', 'Contact', 'Mobile', 'Fax', 'CurrencyID', 'PaymentTerms', 'ContactTitle', 'ContactFirstName', 'ContactLastName', 'TradeBorderType', 'IsSubcontractor', 'Subcontractor', 'CISRate', 'CISNumber'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','Created','Updated','Fax','CurrencyID','TradeBorderType','EC','PaymentTerms','Contact','ContactFirstName','ContactLastName','Mobile','Website','Email','VATNumber','ContactTitle','Telephone'],
+    fieldOrder: ['Name', 'Subcontractor', 'CISRate', 'CISNumber'],
     department: ['kashflow'],
     deny: ['c','d'],
+    actions: [{
+      label: 'Change',
+      class: 'warning',
+      href: row => `/suppliers/change/${row.uuid}`
+    }]
   },
   task: {
     title: 'Tasks',
     linkField: 'title',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid'],
     department: ['human-resources'],
   },
   user: {

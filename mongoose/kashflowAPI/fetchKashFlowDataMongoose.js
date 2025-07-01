@@ -1,4 +1,3 @@
-// fetchKashFlowDataMongoose.js
 const fs = require('fs');
 const path = require('path');
 const { Worker } = require('worker_threads');
@@ -14,8 +13,12 @@ const logger = require('../../services/loggerService');
 const ChargeTypes = require('../../kashflowAPI/chargeTypes.json');
 const upsertData = require('./upsertDataMongoose');
 const promiseLimit = require('promise-limit');
-const limit = promiseLimit(3); // Limit to 3 concurrent workers
+const limit = promiseLimit(3);
 const mdb = require('../services/mongooseDatabaseService');
+
+const cliProgress = require('cli-progress');
+const chalk = require('chalk');
+const process = require('process');
 
 let isFetching = false;
 
@@ -24,9 +27,9 @@ exports.fetchKashFlowDataMongoose = async (sendUpdate = () => {}) => {
   isFetching = true;
   const startfetch = Date.now();
   const operationLog = [];
+  const workerErrors = [];
 
   try {
-
     const client = await authenticate('main thread');
 
     const baseModels = [
@@ -36,6 +39,15 @@ exports.fetchKashFlowDataMongoose = async (sendUpdate = () => {}) => {
 
     for (const { name, fetchFn, model, uniqueKey } of baseModels) {
       const data = await fetchFn(client);
+      if (name === 'supplier') {
+        data.forEach(supplier => {
+          if (supplier.IsSubcontractor === undefined) supplier.IsSubcontractor = false;
+          if (supplier.CISRate === undefined || supplier.CISRate === '') supplier.CISRate = '0.3';
+          if (supplier.CISNumber === undefined) supplier.CISNumber = null;
+        });
+        console.log('🔎 Sample injected supplier:', data[0]);
+      }
+
       if (data.length > 0) {
         await upsertData(model, data, uniqueKey, mdb.meta, operationLog, `../logs/${name}.txt`, sendUpdate, startfetch);
       }
@@ -68,38 +80,73 @@ exports.fetchKashFlowDataMongoose = async (sendUpdate = () => {}) => {
     await upsertData(mdb.quote, quoteTransformed, 'InvoiceDBID', mdb.meta, operationLog, '../logs/quotes.txt', sendUpdate, startfetch);
 
     const suppliers = await mdb.supplier.find().lean();
+    let completedSuppliers = 0;
+    const totalSuppliers = suppliers.length;
+
+    // ✅ CLI progress bar
+    const progressBar = new cliProgress.SingleBar({
+      format: chalk.blue('{bar}') + ` {percentage}% | {value}/{total} suppliers`,
+      barCompleteChar: '█',
+      barIncompleteChar: '░',
+      hideCursor: true
+    });
+    progressBar.start(totalSuppliers, 0);
 
     await Promise.all(
-      suppliers.map(supplier => limit(() => new Promise((resolve, reject) => {
-        const worker = new Worker(path.join(__dirname, 'workerProcessReceiptsMongoose.js'), {
-          workerData: { supplier, startfetch }
-        });
+      suppliers.map(supplier =>
+        limit(() =>
+          new Promise((resolve, reject) => {
+            const worker = new Worker(path.join(__dirname, 'workerProcessReceiptsMongoose.js'), {
+              workerData: { supplier, startfetch }
+            });
 
-        worker.on('message', msg => {
-          if (msg.type === 'done') return resolve();
-          if (msg.type === 'log') return sendUpdate(`[${msg.timestamp}] [${msg.supplier}] ${msg.log}`);
-          if (msg.type === 'error') {
-            logger.error(`Worker error for ${supplier.Name}: ${msg.message}`);
-            sendUpdate(`❌ Worker error for ${supplier.Name}: ${msg.message}`);
-            return reject(new Error(msg.message));
-          }
-        });
+            worker.on('message', msg => {
+              if (msg.type === 'done') {
+                completedSuppliers++;
+                progressBar.update(completedSuppliers);
+                sendUpdate(`✅ ${msg.supplier} (${msg.count} receipts, ${msg.duration}ms)`);
+                sendUpdate(`📊 Progress: ${completedSuppliers}/${totalSuppliers}`);
+                process.stdout.write('\x07'); // ✅ sound on complete
+                return resolve();
+              }
+              if (msg.type === 'log') sendUpdate(`[${msg.timestamp}] [${msg.supplier}] ${msg.log}`);
+              if (msg.type === 'error') {
+                workerErrors.push({ supplier: supplier.Name, message: msg.message });
+                sendUpdate(`❌ Worker error for ${supplier.Name}: ${msg.message}`);
+                process.stdout.write('\x07'); // ✅ sound on error
+                return resolve();
+              }
+            });
 
-        worker.on('error', reject);
-        worker.on('exit', code => {
-          if (code !== 0) {
-            logger.error(`Worker for ${supplier.Name} exited with code ${code}`);
-            reject(new Error(`Worker exited unexpectedly: ${code}`));
-          }
-        });
-      }))
-    ));
+            worker.on('error', err => {
+              process.stdout.write('\x07');
+              reject(err);
+            });
+            worker.on('exit', code => {
+              if (code !== 0) {
+                process.stdout.write('\x07');
+                reject(new Error(`Worker exited unexpectedly: ${code}`));
+              }
+            });
+          })
+        )
+      )
+    );
 
-    logger.info('Data fetch and upsert completed.');
+    progressBar.stop();
+    process.stdout.write('\x07'); // ✅ final bell
+
+    if (workerErrors.length > 0) {
+      sendUpdate(`⚠️ ${workerErrors.length} suppliers failed.`);
+      workerErrors.forEach(err => sendUpdate(`❌ ${err.supplier}: ${err.message}`));
+    }
+
+    sendUpdate('✅ Mongoose fetch complete.');
     const logFilename = `fetch-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
     await fs.promises.writeFile(path.join(__dirname, '../logs', logFilename), JSON.stringify(operationLog, null, 2));
 
   } catch (err) {
+    process.stdout.write('\x07');
     logger.error(`Fetch error: ${err.message}`);
   } finally {
     isFetching = false;

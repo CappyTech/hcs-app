@@ -1,5 +1,6 @@
 // upsertDataMongoose.js
 const fs = require('fs');
+const path = require('path');
 const logger = require('../../services/loggerService');
 
 const PLACEHOLDER_DATES = [
@@ -14,6 +15,11 @@ function isPlaceholderDate(value) {
 
 async function appendLogEntry(logFilePath, logEntry) {
   try {
+    const logDir = path.dirname(logFilePath);
+
+    // ✅ Ensure directory exists
+    await fs.promises.mkdir(logDir, { recursive: true });
+
     const logData = `${new Date().toISOString()} - ${JSON.stringify(logEntry, null, 2)}\n`;
     await fs.promises.appendFile(logFilePath, logData, 'utf8');
   } catch (error) {
@@ -21,7 +27,7 @@ async function appendLogEntry(logFilePath, logEntry) {
   }
 }
 
-async function upsertDataMongoose(model, data, uniqueKey, metaModel = null, logDetails = [], logFilePath = '', sendUpdate = () => {}, startfetch = Date.now()) {
+async function upsertDataMongoose(model, data, uniqueKey, metaModel = null, logDetails = [], logFilePath = '', sendUpdate = () => { }, startfetch = Date.now()) {
   try {
     logger.info(`(Mongo) Upserting data into ${model.modelName}...`);
     sendUpdate(`📥 Upserting into ${model.modelName}...`);
@@ -40,12 +46,29 @@ async function upsertDataMongoose(model, data, uniqueKey, metaModel = null, logD
         const changes = {};
         let hasRealChange = false;
 
+        // ✅ Check for any fields that must always be injected if missing
+        if (
+          existing.IsSubcontractor === undefined ||
+          existing.CISRate === undefined ||
+          existing.CISNumber === undefined
+        ) {
+          hasRealChange = true;
+          Object.assign(changes, {
+            ...(existing.IsSubcontractor === undefined && { IsSubcontractor: { from: undefined, to: item.IsSubcontractor } }),
+            ...(existing.CISRate === undefined && { CISRate: { from: undefined, to: item.CISRate } }),
+            ...(existing.CISNumber === undefined && { CISNumber: { from: undefined, to: item.CISNumber } }),
+          });
+        }
+
+        // 🔁 Normal diff comparison
         for (const key of Object.keys(item)) {
-          const currentValue = existing[key];
-          const newValue = item[key];
+          let currentValue = existing[key];
+          let newValue = item[key];
 
+          // Normalize dates for placeholder check
+          if (currentValue instanceof Date) currentValue = currentValue.toISOString();
+          if (newValue instanceof Date) newValue = newValue.toISOString();
           if (isPlaceholderDate(currentValue) && isPlaceholderDate(newValue)) continue;
-
           if (key.toLowerCase().includes('created') || key.toLowerCase().includes('updated')) {
             const normCurrent = currentValue ? new Date(currentValue).toISOString().split('.')[0] : null;
             const normNew = newValue ? new Date(newValue).toISOString().split('.')[0] : null;
@@ -60,6 +83,8 @@ async function upsertDataMongoose(model, data, uniqueKey, metaModel = null, logD
             typeof currentValue === typeof newValue &&
             JSON.stringify(currentValue) !== JSON.stringify(newValue)
           ) {
+            // Skip changes if both are placeholders and same type
+            if (isPlaceholderDate(currentValue) && isPlaceholderDate(newValue)) continue;
             changes[key] = { from: currentValue, to: newValue };
             hasRealChange = true;
           }

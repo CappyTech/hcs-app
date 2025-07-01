@@ -1,0 +1,2 @@
+curl -X POST "http://app.heroncs.co.uk/fetch-kashflow-data-mongoose?token=abc123" \
+  -H "Content-Type: application/json"
