@@ -1,8 +1,6 @@
-const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
-const moment = require('moment-timezone');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
 
@@ -69,88 +67,6 @@ exports.registerUser = async (req, res, next) => {
         req.flash('error', 'Error registering user: ' + error.message);
         return res.redirect('/user/register');
     }
-};
-
-exports.listUsers = async (req, res, next) => {
-  try {
-    const users = await mdb.user.find().sort({ createdAt: -1 }).lean();
-    res.render(path.join('mongoose', 'user', 'listUser'), {
-      title: 'Users',
-      users
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.renderCreateUserForm = (req, res) => {
-  res.render(path.join('mongoose', 'user', 'createUser'), {
-    title: 'Create User'
-  });
-};
-
-exports.renderUpdateUserForm = async (req, res, next) => {
-  try {
-    const user = await mdb.user.findOne({ uuid: req.params.uuid });
-    if (!user) {
-      req.flash('error', 'User not found.');
-      return res.redirect('/users');
-    }
-    res.render(path.join('mongoose', 'user', 'updateUser'), {
-      title: 'Update User',
-      user
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.createUser = async (req, res, next) => {
-  try {
-    const user = await mdb.user.create(req.body);
-    req.flash('success', 'User created successfully.');
-    res.redirect('/users');
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.readUser = async (req, res, next) => {
-  try {
-    const user = await mdb.user.findOne({ uuid: req.params.uuid });
-    if (!user) return res.status(404).send('Not found');
-    res.render(path.join('mongoose', 'user', 'viewUser'), {
-      title: 'User',
-      user
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.updateUser = async (req, res, next) => {
-  try {
-    const user = await mdb.user.findOneAndUpdate(
-      { uuid: req.params.uuid },
-      req.body,
-      { new: true }
-    );
-    if (!user) return res.status(404).send('Not found');
-    req.flash('success', 'User updated successfully.');
-    res.redirect('/users');
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.deleteUser = async (req, res, next) => {
-  try {
-    await mdb.user.findOneAndDelete({ uuid: req.params.uuid });
-    req.flash('success', 'User deleted successfully.');
-    res.redirect('/users');
-  } catch (err) {
-    next(err);
-  }
 };
 
 ////

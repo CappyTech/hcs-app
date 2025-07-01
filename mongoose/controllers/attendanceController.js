@@ -1,10 +1,23 @@
-const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
-const logger = require('../../services/loggerService');
 const moment = require('moment-timezone');
 const attendanceService = require('../services/attendanceServicesMongoose');
 const taxService = require('../../services/taxService');
+
+exports.getDailyAttendance = async (req,res,next)=>{
+  const date = req.params.date || moment().format('YYYY-MM-DD');
+  try {
+    const attendance = await attendanceService.getAttendanceForDay(date);
+    res.render(path.join('mongoose', 'attendance', 'dailyAttendance'), {
+      moment,
+      attendance,
+      date,
+      currentTab:'daily'
+    });
+  }catch(err){
+    next(err);
+  }
+};
 
 exports.getWeeklyAttendance = async (req,res,next)=>{
   try {
