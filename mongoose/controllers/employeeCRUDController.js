@@ -6,7 +6,7 @@ const logger = require('../../services/loggerService');
 exports.listEmployees = async (req, res, next) => {
   try {
     const employees = await mdb.employee.find().lean();
-    res.render(path.join('mongoose', 'employee', 'listEmployees'), {
+    res.render(path.join('mongoose', 'employee', 'listEmployee'), {
       title: 'List Employees',
       employees
     });
