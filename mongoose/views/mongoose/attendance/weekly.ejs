@@ -1,30 +1,28 @@
 <div class="container py-4">
-    <div class="mb-4 bg-body-tertiary rounded-3">
 
         <!-- Navigation Tabs -->
         <ul class="nav nav-tabs justify-content-center mb-4">
             <li class="nav-item">
-                <a href="/attendance/daily" class="nav-link <%= currentTab === 'daily' ? 'active' : '' %>">Daily</a>
+                <a href="/daily" class="nav-link <%= currentTab === 'daily' ? 'active' : '' %>">Daily</a>
             </li>
             <li class="nav-item">
-                <a href="/attendance/weekly" class="nav-link <%= currentTab === 'weekly' ? 'active' : '' %>">Weekly</a>
+                <a href="/weekly" class="nav-link <%= currentTab === 'weekly' ? 'active' : '' %>">Weekly</a>
             </li>
         </ul>
 
         <!-- Week Navigation -->
         <div class="d-flex justify-content-between mb-4 d-print-none">
             <button class="btn btn-hcs-green">
-                <a class="text-white text-decoration-none" href="/attendance/weekly/<%= previousYear %>/<%= previousWeek %>">&laquo; Previous Week</a>
+                <a class="text-white text-decoration-none" href="/weekly/<%= previousYear %>/<%= previousWeek %>">&laquo; Previous Week</a>
             </button>
             <h1 class="display-5 text-center">Weekly Attendance</h1>
             <button class="btn btn-hcs-green">
-                <a class="text-white text-decoration-none" href="/attendance/weekly/<%= nextYear %>/<%= nextWeek %>">Next Week &raquo;</a>
+                <a class="text-white text-decoration-none" href="/weekly/<%= nextYear %>/<%= nextWeek %>">Next Week &raquo;</a>
             </button>
         </div>
 
         <p class="text-center">From <%= moment(startDate).format('Do MMMM YYYY') %> to <%= moment(endDate).format('Do MMMM YYYY') %></p>
 
-        <!-- Weekly Totals -->
         <div class="row mb-4">
             <div class="col-lg-6 col-md-6">
                 <div class="card text-center">
@@ -44,13 +42,20 @@
             </div>
         </div>
 
-        <!-- Total Employee Hours -->
         <div class="row mb-4">
             <div class="col-lg-6 col-md-6">
                 <div class="card text-center">
                     <div class="card-body">
                         <h4>Total Employee Hours Worked</h4>
                         <p class="display-6"><%= totalEmployeeHours ? totalEmployeeHours : '0' %> hours</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4>Total Subcontractor Days Worked</h4>
+                        <p class="display-6"><%= totalSubcontractorDays ? totalSubcontractorDays : '0' %> days</p>
                     </div>
                 </div>
             </div>
@@ -83,7 +88,7 @@
         <!-- Employee Table -->
         <h3 class="mt-5 mb-3">Employees</h3>
         <div class="table-responsive mb-5">
-            <%- include('./partials/weeklyTable', {
+            <%- include('../partials/weeklyTable', {
                 entries: employeeEntries,
                 daysOfWeek,
                 startDate,
@@ -95,7 +100,7 @@
         <!-- Subcontractor Table -->
         <h3 class="mt-5 mb-3">Subcontractors</h3>
         <div class="table-responsive mb-5">
-            <%- include('./partials/weeklyTable', {
+            <%- include('../partials/weeklyTable', {
                 entries: subcontractorEntries,
                 daysOfWeek,
                 startDate,
@@ -103,6 +108,4 @@
                 moment
             }) %>
         </div>
-
-    </div>
 </div>

@@ -25,6 +25,7 @@ const extractSchema = (model, config = {}) => {
       type: path.instance,
       required: path.isRequired || false,
       enum: path.enumValues?.length ? path.enumValues : undefined,
+      default: path.defaultValue,
       label: config.labelOverrides?.[field] ||
              field.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
       readOnly: config.readOnly?.includes?.(field),

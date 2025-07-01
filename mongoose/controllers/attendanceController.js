@@ -1,14 +1,12 @@
 const path = require('path');
-const mdb = require('../services/mongooseDatabaseService');
 const moment = require('moment-timezone');
 const attendanceService = require('../services/attendanceServicesMongoose');
-const taxService = require('../../services/taxService');
 
 exports.getDailyAttendance = async (req,res,next)=>{
   const date = req.params.date || moment().format('YYYY-MM-DD');
   try {
     const attendance = await attendanceService.getAttendanceForDay(date);
-    res.render(path.join('mongoose', 'attendance', 'dailyAttendance'), {
+    res.render(path.join('mongoose', 'attendance', 'daily'), {
       moment,
       attendance,
       date,
@@ -19,35 +17,38 @@ exports.getDailyAttendance = async (req,res,next)=>{
   }
 };
 
-exports.getWeeklyAttendance = async (req,res,next)=>{
+exports.getWeeklyAttendance = async (req, res, next) => {
   try {
     const yearParam = parseInt(req.params.year);
     const weekParam = parseInt(req.params.week);
-    const year = !isNaN(yearParam) ? yearParam : taxService.getCurrentTaxYear();
-    const { start: startOfTaxYear, end: endOfTaxYear } = taxService.getTaxYearStartEnd(year);
-    const taxYearStart = moment.tz(startOfTaxYear,'Do MMMM YYYY','Europe/London');
-    const taxYearEnd = moment.tz(endOfTaxYear,'Do MMMM YYYY','Europe/London');
-    let firstPayrollWeekStart = taxYearStart.clone().day(6);
-    if(firstPayrollWeekStart.isBefore(taxYearStart)) firstPayrollWeekStart.add(7,'days');
-    const totalWeeksInYear = taxYearEnd.diff(firstPayrollWeekStart,'weeks')+1;
-    const today = moment.tz('Europe/London');
-    let requestedWeekNumber = !isNaN(weekParam)?weekParam:today.diff(firstPayrollWeekStart,'weeks')+1;
-    if(requestedWeekNumber<1) requestedWeekNumber=1;
-    if(requestedWeekNumber>totalWeeksInYear) requestedWeekNumber=totalWeeksInYear;
-    const payrollWeekStart = firstPayrollWeekStart.clone().add((requestedWeekNumber-1)*7,'days');
-    const endDate = payrollWeekStart.clone().add(6,'days');
-    const previousWeek = requestedWeekNumber===1?totalWeeksInYear:requestedWeekNumber-1;
-    const previousYear = requestedWeekNumber===1?year-1:year;
-    const nextWeek = requestedWeekNumber===totalWeeksInYear?1:requestedWeekNumber+1;
-    const nextYear = requestedWeekNumber===totalWeeksInYear?year+1:year;
-    const { attendanceRecords, employeeCount, subcontractorCount, allEmployees, allSubcontractors, paidReceipts } = await attendanceService.getAttendanceForWeek(payrollWeekStart,endDate);
-    const { groupedAttendance, totalEmployeeHours, totalEmployeePay, totalSubcontractorPay, daysOfWeek } = attendanceService.groupAttendanceByPerson(attendanceRecords,payrollWeekStart,endDate,allEmployees,allSubcontractors,paidReceipts);
-    const activeJobs = await mdb.job.find({
-      startDate: { $lte: endDate.toDate() },
-      $or: [{ endDate: null }, { endDate: { $gte: payrollWeekStart.toDate() } }],
-      status: { $ne: "archived" }
-    }).populate("projectId").populate("locationId").lean();
-    res.render(path.join('mongoose', 'attendance', 'weeklyAttendance'), {
+
+    const {
+      groupedAttendance,
+      payrollWeekStart,
+      endDate,
+      previousYear,
+      previousWeek,
+      nextYear,
+      nextWeek,
+      employeeCount,
+      subcontractorCount,
+      totalEmployeePay,
+      totalEmployeeHours,
+      totalSubcontractorPay,
+      totalSubcontractorDays,
+      daysOfWeek,
+      activeJobs
+    } = await attendanceService.getAttendanceForWeek(yearParam, weekParam);
+
+    const employeeEntries = Object.entries(groupedAttendance)
+    .filter(([_, v]) => v.type === 'employee')
+    .map(([name, v]) => ({ name, ...v }));  
+
+    const subcontractorEntries = Object.entries(groupedAttendance)
+      .filter(([_, v]) => v.type === 'subcontractor')
+      .map(([name, v]) => ({ name, ...v }));
+
+    res.render(path.join('mongoose', 'attendance', 'weekly'), {
       moment,
       groupedAttendance,
       startDate: payrollWeekStart.format('YYYY-MM-DD'),
@@ -61,11 +62,15 @@ exports.getWeeklyAttendance = async (req,res,next)=>{
       totalEmployeePay,
       totalEmployeeHours,
       totalSubcontractorPay,
-      currentTab:'weekly',
+      totalSubcontractorDays,
+      currentTab: 'weekly',
       daysOfWeek,
-      activeJobs
+      activeJobs,
+      employeeEntries,
+      subcontractorEntries
     });
-  }catch(err){
+  } catch (err) {
     next(err);
   }
 };
+

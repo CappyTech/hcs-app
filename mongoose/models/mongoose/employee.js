@@ -9,8 +9,16 @@ const employeeSchema = new mongoose.Schema({
   contactName: { type: String },
   contactNumber: { type: String },
   position: { type: String },
-  type: { type: String, required: true },
-  status: { type: String, required: true },
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
+  },
+  type: {
+    type: String,
+    enum: ['full-time', 'part-time'],
+    default: 'full-time'
+  },
   managerId: { type: mongoose.Schema.Types.ObjectId, ref: 'employee' },
   hireDate: { type: Date, default: Date.now },
   hourlyRate: { type: mongoose.Decimal128 },
