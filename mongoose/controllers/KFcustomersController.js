@@ -12,7 +12,7 @@ exports.listCustomers = async (req, res, next) => {
     const totalCustomers = customers.length;
     const customersWithEmail = customers.filter(c => c.Email).length;
     const recentCustomers = customers.filter(c => c.Created && moment(c.Created).isAfter(moment().subtract(30, 'days')));
-    res.render(path.join('mongoose', 'customer'), {
+    res.render(path.join('mongoose', 'customer', 'listCustomer'), {
       title: 'Customers',
       customers,
       totalCustomers,
@@ -38,7 +38,7 @@ exports.viewCustomer = async (req, res, next) => {
     customer.invoices = invoices;
     customer.quotes = quotes;
     customer.projects = projects;
-    res.render(path.join('mongoose', 'viewCustomer'), {
+    res.render(path.join('mongoose', 'customer', 'viewCustomer'), {
       title: 'Customer Overview',
       Customer: customer
     });

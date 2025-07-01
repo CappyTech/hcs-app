@@ -12,7 +12,7 @@ exports.listInvoices = async (req, res, next) => {
     const totalInvoices = invoices.length;
     const paidInvoices = invoices.filter(i => i.Paid).length;
     const recentInvoices = invoices.filter(i => i.InvoiceDate && moment(i.InvoiceDate).isAfter(moment().subtract(30, 'days')));
-    res.render(path.join('mongoose', 'invoice'), {
+    res.render(path.join('mongoose', 'invoice', 'listInvoice'), {
       title: 'Invoices',
       invoices,
       totalInvoices,
@@ -32,7 +32,7 @@ exports.viewInvoice = async (req, res, next) => {
       return res.redirect('/invoices');
     }
     const customer = await mdb.customer.findOne({ CustomerID: invoice.CustomerID }).lean();
-    res.render(path.join('mongoose', 'viewInvoice'), {
+    res.render(path.join('mongoose', 'invoice','viewInvoice'), {
       title: 'Invoice Overview',
       Invoice: invoice,
       Customer: customer

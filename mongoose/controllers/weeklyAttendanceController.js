@@ -34,7 +34,7 @@ exports.getWeeklyAttendance = async (req,res,next)=>{
       $or: [{ endDate: null }, { endDate: { $gte: payrollWeekStart.toDate() } }],
       status: { $ne: "archived" }
     }).populate("projectId").populate("locationId").lean();
-    res.render(path.join('mongoose','weeklyAttendance'),{
+    res.render(path.join('mongoose', 'attendance', 'weeklyAttendance'), {
       moment,
       groupedAttendance,
       startDate: payrollWeekStart.format('YYYY-MM-DD'),

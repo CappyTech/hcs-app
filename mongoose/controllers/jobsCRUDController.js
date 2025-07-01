@@ -10,7 +10,7 @@ exports.renderJobForm = async (req,res,next)=>{
     const employees = await mdb.employee.find().sort({ name: 1 }).lean();
     const suppliers = await mdb.supplier.find().sort({ Name: 1 }).lean();
     const jobs = await mdb.job.find().populate('projectId').populate('locationId').sort({ createdAt:-1 }).lean();
-    res.render(path.join('mongoose','jobRegistration'),{
+    res.render(path.join('mongoose', 'job', 'createJobReg'),{
       title:'Job Registration',
       projects,
       locations,
@@ -67,6 +67,6 @@ exports.registerJob = async (req,res,next)=>{
 exports.listJobs = async (req,res,next)=>{
   try {
     const jobs = await mdb.job.find().populate('projectId').populate('locationId').sort({ createdAt:-1 }).lean();
-    res.render(path.join('mongoose','jobs'),{ title:'Jobs', jobs });
+    res.render(path.join('mongoose', 'job', 'listJobs'),{ title:'Jobs', jobs });
   }catch(err){ next(err); }
 };

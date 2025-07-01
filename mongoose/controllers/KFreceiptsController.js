@@ -11,7 +11,7 @@ exports.listReceipts = async (req, res, next) => {
     const receipts = await mdb.receipt.find().sort({ InvoiceDate: -1 }).lean();
     const totalReceipts = receipts.length;
     const recentReceipts = receipts.filter(r => r.InvoiceDate && moment(r.InvoiceDate).isAfter(moment().subtract(30, 'days')));
-    res.render(path.join('mongoose', 'receipt'), {
+    res.render(path.join('mongoose', 'receipt', 'listReceipt'), {
       title: 'Receipts',
       receipts,
       totalReceipts,
@@ -56,7 +56,7 @@ exports.viewReceipt = async (req, res, next) => {
     receipt.Lines = lines;
 
     const supplier = await mdb.supplier.findOne({ SupplierID: receipt.CustomerID }).lean();
-    res.render(path.join('mongoose', 'viewReceipt'), {
+    res.render(path.join('mongoose', 'receipt', 'viewReceipt'), {
       title: 'Receipt Overview',
       Receipt: receipt,
       Supplier: supplier,

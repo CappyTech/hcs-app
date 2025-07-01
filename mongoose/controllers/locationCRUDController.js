@@ -4,8 +4,28 @@ const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const moment = require('moment-timezone');
 
+exports.listLocations = async (req, res, next) => {
+  try {
+    const locations = await mdb.location.find().sort({ Created: -1 }).lean();
+    const totalLocations = locations.length;
+
+    const recentLocations = locations.filter(
+      loc => loc.Created && moment(loc.Created).isAfter(moment().subtract(30, 'days'))
+    ).length;
+
+    res.render(path.join('mongoose', 'location', 'listLocation'), {
+      title: 'Locations',
+      locations,
+      totalLocations,
+      recentLocations
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.renderCreateLocationForm = (req, res) => {
-  res.render(path.join('mongoose', 'createLocation'), {
+  res.render(path.join('mongoose', 'location', 'createLocation'), {
     title: 'Create Location'
   });
 };
@@ -17,7 +37,7 @@ exports.renderUpdateLocationForm = async (req, res, next) => {
       req.flash('error', 'Location not found.');
       return res.redirect('locations');
     }
-    res.render(path.join('mongoose', 'updateLocation'), {
+    res.render(path.join('mongoose', 'location', 'updateLocation'), {
       title: 'Update Location',
       location: loc
     });
@@ -41,7 +61,7 @@ exports.readLocation = async (req,res,next)=>{
       req.flash('error', 'Location not found.');
       return res.redirect('/locations');
     }
-    res.render(path.join('mongoose','viewLocation'), {
+    res.render(path.join('mongoose', 'location', 'viewLocation'), {
       title: 'View Location',
       location: loc
     });

@@ -6,7 +6,7 @@ const logger = require('../../services/loggerService');
 exports.listContracts = async (req, res, next) => {
   try {
     const contracts = await mdb.contract.find().sort({ createdAt: -1 }).lean();
-    res.render(path.join('mongoose', 'contract'), {
+    res.render(path.join('mongoose', 'contract', 'listContract'), {
       title: 'Contracts',
       contracts
     });
@@ -33,7 +33,7 @@ exports.readContract = async (req, res, next) => {
       req.flash('error', 'Contract not found.');
       return res.redirect('/contracts');
     }
-    res.render(path.join('mongoose', 'viewContract'), {
+    res.render(path.join('mongoose', 'contract', 'viewContract'), {
       title: 'Contract Details',
       contract
     });
@@ -81,7 +81,7 @@ exports.renderCreateAssignmentForm = async (req, res, next) => {
       req.flash('error', 'Contract not found.');
       return res.redirect('/contracts');
     }
-    res.render(path.join('mongoose', 'createAssignment'), {
+    res.render(path.join('mongoose', 'assignment', 'createAssignment'), {
       title: 'Create Assignment',
       contract
     });
@@ -124,7 +124,7 @@ exports.readAssignment = async (req, res, next) => {
       return res.redirect('/contracts');
     }
 
-    res.render(path.join('mongoose', 'viewAssignment'), {
+    res.render(path.join('mongoose', 'assignment', 'viewAssignment'), {
       title: 'Assignment Details',
       assignment
     });
@@ -145,7 +145,7 @@ exports.renderUpdateAssignmentForm = async (req, res, next) => {
       return res.redirect('/contracts');
     }
 
-    res.render(path.join('mongoose', 'updateAssignment'), {
+    res.render(path.join('mongoose', 'assignment', 'updateAssignment'), {
       title: 'Update Assignment',
       assignment
     });

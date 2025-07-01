@@ -23,7 +23,7 @@ exports.listQuotes = async (req, res, next) => {
     const totalQuotes = quotes.length;
     const recentQuotes = quotes.filter(q => q.InvoiceDate && moment(q.InvoiceDate).isAfter(moment().subtract(30, 'days')));
 
-    res.render(path.join('mongoose', 'quote'), {
+    res.render(path.join('mongoose', 'quote', 'listQuote'), {
       title: 'Quotes',
       quotes,
       totalQuotes,
@@ -42,7 +42,7 @@ exports.viewQuote = async (req, res, next) => {
       return res.redirect('/quotes');
     }
     const customer = await mdb.customer.findOne({ CustomerID: quote.CustomerID }).lean();
-    res.render(path.join('mongoose', 'viewQuote'), {
+    res.render(path.join('mongoose', 'quote', 'viewQuote'), {
       title: 'Quote Overview',
       Quote: quote,
       Customer: customer

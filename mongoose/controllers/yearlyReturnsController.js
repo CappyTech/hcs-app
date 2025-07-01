@@ -41,7 +41,7 @@ exports.renderYearlyReturns = async (req,res,next)=>{
         Submission: receipt.SubmissionDate
       });
     });
-    res.render(path.join('mongoose','yearlyReturns'),{
+    res.render(path.join('mongoose', 'cis', 'yearlyReturns'),{
       title:'Subcontractor Yearly Returns',
       year,
       supplier,

@@ -37,7 +37,7 @@ exports.readAssignment = async (req, res, next) => {
       return res.redirect('/contracts');
     }
 
-    res.render(path.join('mongoose', 'viewAssignment'), {
+    res.render(path.join('mongoose', 'assignment', 'viewAssignment'), {
       title: 'Assignment Details',
       assignment
     });

@@ -7,7 +7,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 
 exports.renderRegistrationForm = (req, res, next) => {
-    res.render(path.join('mongoose', 'register'), {
+    res.render(path.join('mongoose', 'user', 'register'), {
         title: 'Register',
         siteKey: process.env.TURNSTILE_SITE_KEY,
     });
@@ -74,7 +74,7 @@ exports.registerUser = async (req, res, next) => {
 exports.listUsers = async (req, res, next) => {
   try {
     const users = await mdb.user.find().sort({ createdAt: -1 }).lean();
-    res.render(path.join('mongoose', 'user'), {
+    res.render(path.join('mongoose', 'user', 'listUser'), {
       title: 'Users',
       users
     });
@@ -84,7 +84,7 @@ exports.listUsers = async (req, res, next) => {
 };
 
 exports.renderCreateUserForm = (req, res) => {
-  res.render(path.join('mongoose', 'createUser'), {
+  res.render(path.join('mongoose', 'user', 'createUser'), {
     title: 'Create User'
   });
 };
@@ -96,7 +96,7 @@ exports.renderUpdateUserForm = async (req, res, next) => {
       req.flash('error', 'User not found.');
       return res.redirect('/users');
     }
-    res.render(path.join('mongoose', 'updateUser'), {
+    res.render(path.join('mongoose', 'user', 'updateUser'), {
       title: 'Update User',
       user
     });
@@ -119,7 +119,7 @@ exports.readUser = async (req, res, next) => {
   try {
     const user = await mdb.user.findOne({ uuid: req.params.uuid });
     if (!user) return res.status(404).send('Not found');
-    res.render(path.join('mongoose','viewUser'), {
+    res.render(path.join('mongoose', 'user', 'viewUser'), {
       title: 'User',
       user
     });
@@ -156,7 +156,7 @@ exports.deleteUser = async (req, res, next) => {
 ////
 
 exports.renderLoginForm = (req, res) => {
-  res.render(path.join('mongoose', 'login'), {
+  res.render(path.join('mongoose', 'user', 'login'), {
     title: 'Log In',
     siteKey: process.env.TURNSTILE_SITE_KEY,
   });

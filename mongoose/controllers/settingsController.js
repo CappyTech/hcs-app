@@ -14,7 +14,7 @@ exports.getProfilePage = async (req, res, next) => {
     const subcontractor = user.subcontractorId ? await mdb.subcontractor.findById(user.subcontractorId) : null;
     const client = user.clientId ? await mdb.client.findById(user.clientId) : null;
 
-    res.render(path.join('mongoose', 'profile'), {
+    res.render(path.join('mongoose', 'user', 'profile'), {
       title: 'Profile',
       user,
       employee,
@@ -63,7 +63,7 @@ exports.getAccountPage = async (req, res, next) => {
       };
     });
 
-    res.render(path.join('mongoose', 'account'), {
+    res.render(path.join('mongoose', 'user', 'account'), {
       title: 'Set up Two-Factor Authentication',
       qrCodeUrl,
       secret,

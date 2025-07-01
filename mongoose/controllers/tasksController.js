@@ -6,7 +6,7 @@ const moment = require('moment-timezone');
 const taskService = require('../services/taskService');
 
 exports.renderCreateTaskForm = (req, res) => {
-  res.render(path.join('mongoose', 'createTask'), {
+  res.render(path.join('mongoose', 'task', 'createTask'), {
     title: 'Create Task'
   });
 };

@@ -26,7 +26,7 @@ exports.renderUpdateEmployeeForm = async (req, res, next) => {
       .sort({ name: 1 })
       .lean();
 
-    res.render(path.join('mongoose', 'updateEmployee'), {
+    res.render(path.join('mongoose', 'employee', 'updateEmployee'), {
       title: 'Update Employee',
       employee: emp,
       managers
@@ -56,7 +56,7 @@ exports.readEmployee = async (req,res,next)=>{
       req.flash('error', 'Employee not found.');
       return res.redirect('/employees');
     }
-    res.render(path.join('mongoose','viewEmployee'), {
+    res.render(path.join('mongoose', 'employee', 'viewEmployee'), {
       title: 'Employee',
       employee: emp
     });

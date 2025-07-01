@@ -17,37 +17,37 @@ exports.renderIndex = async (req, res, next) => {
 };
 
 exports.renderConstructionIndustryScheme = (req, res, next) => {
-    res.render(path.join('mongoose','construction-industry-scheme'), {
+    res.render(path.join('mongoose', 'header', 'construction-industry-scheme'), {
         title: 'Construction Industry Scheme',
     });
 };
 
 exports.renderManagement = (req, res, next) => {
-    res.render(path.join('mongoose','management'), {
+    res.render(path.join('mongoose', 'header', 'management'), {
         title: 'Management',
     });
 };
 
 exports.renderPayroll = (req, res, next) => {
-    res.render(path.join('mongoose','payroll'), {
+    res.render(path.join('mongoose', 'header', 'payroll'), {
         title: 'Payroll',
     });
 };
 
 exports.renderHumanResources = (req, res, next) => {
-    res.render(path.join('mongoose','human-resources'), {
+    res.render(path.join('mongoose', 'header', 'human-resources'), {
         title: 'Human Resources',
     });
 };
 
 exports.renderKashflow = (req, res, next) => {
-    res.render(path.join('mongoose','kashflow'), {
+    res.render(path.join('mongoose', 'header', 'kashflow'), {
         title: 'Kashflow',
     });
 };
 
 exports.renderCreate = (req, res, next) => {
-    res.render(path.join('mongoose','create'), {
+    res.render(path.join('mongoose', 'header', 'create'), {
         title: 'Create',
     });
 };

@@ -33,7 +33,7 @@ exports.renderMonthlyReturnsForm = async (req,res,next)=>{
         receiptsByYear
       });
     }
-    res.render(path.join('mongoose','monthlyReturnsForm'),{
+    res.render(path.join('mongoose', 'cis','monthlyReturnsForm'),{
       title:'Monthly Returns Form',
       suppliersWithMonths,
       monthNames
@@ -80,8 +80,8 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
         SubmissionDate: receipt.SubmissionDate
       });
     });
-    res.render(path.join('mongoose','monthlyReturnsForOneSubcontractor'),{
-      title:'Subcontractor Monthly Returns',
+    res.render(path.join('mongoose', 'cis', 'monthlyReturnsForOneSubcontractor'), {
+      title: 'Subcontractor Monthly Returns',
       month,
       year,
       supplier,

@@ -26,7 +26,7 @@ exports.renderCreateAttendanceForm = async (req, res, next) => {
 
     const date = req.query.date || new Date().toISOString().slice(0, 10);
 
-    res.render(path.join('mongoose', 'createAttendance'), {
+    res.render(path.join('mongoose', 'attendance', 'createAttendance'), {
       title: 'Create Attendance',
       employees,
       subcontractors,
@@ -72,7 +72,7 @@ exports.readAttendance = async (req,res,next)=>{
       req.flash('error', 'Attendance not found.');
       return res.redirect('/attendances');
     }
-    res.render(path.join('mongoose','viewAttendance'), {
+    res.render(path.join('mongoose', 'attendance', 'viewAttendance'), {
       title: 'Attendance Details',
       attendance
     });
@@ -90,7 +90,7 @@ exports.renderUpdateAttendanceForm = async (req,res,next)=>{
       req.flash('error', 'Attendance not found.');
       return res.redirect('/attendances');
     }
-    res.render(path.join('mongoose','updateAttendance'), {
+    res.render(path.join('mongoose', 'attendance', 'updateAttendance'), {
       title: 'Update Attendance',
       attendance
     });
@@ -133,7 +133,7 @@ exports.getDailyAttendance = async (req,res,next)=>{
   const date = req.params.date || moment().format('YYYY-MM-DD');
   try {
     const attendance = await attendanceService.getAttendanceForDay(date);
-    res.render(path.join('mongoose','dailyAttendance'),{
+    res.render(path.join('mongoose', 'attendance', 'dailyAttendance'), {
       moment,
       attendance,
       date,

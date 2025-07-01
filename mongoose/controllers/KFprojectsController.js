@@ -13,7 +13,7 @@ exports.listProjects = async (req, res, next) => {
     const activeProjects = projects.filter(p => p.Status === 1).length;
     const completedProjects = projects.filter(p => p.Status === 0).length;
     const recentProjects = projects.filter(p => p.Date1 && moment(p.Date1).isAfter(moment().subtract(30, 'days')));
-    res.render(path.join('mongoose', 'project'), {
+    res.render(path.join('mongoose', 'project', 'listProject'), {
       title: 'Projects',
       projects,
       totalProjects,
@@ -34,7 +34,7 @@ exports.viewProject = async (req, res, next) => {
       return res.redirect('/projects');
     }
     const customer = await mdb.customer.findOne({ CustomerID: project.CustomerID }).lean();
-    res.render(path.join('mongoose', 'viewProject'), {
+    res.render(path.join('mongoose', 'project', 'viewProject'), {
       title: 'Project Overview',
       Project: project,
       Customer: customer

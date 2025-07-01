@@ -7,7 +7,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 
 exports.renderLoginForm = (req, res) => {
-  res.render(path.join('mongoose', 'login'), {
+  res.render(path.join('mongoose', 'user', 'login'), {
     title: 'Log In',
     siteKey: process.env.TURNSTILE_SITE_KEY,
   });

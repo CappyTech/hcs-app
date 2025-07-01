@@ -19,7 +19,7 @@ exports.listSuppliers = async (req, res, next) => {
       s => s.Created && moment(s.Created).isAfter(moment().subtract(30, 'days'))
     ).length;
 
-    res.render(path.join('mongoose', 'supplier'), {
+    res.render(path.join('mongoose', 'supplier', 'listSupplier'), {
       title: 'Suppliers',
       suppliers,
       totalSuppliers,
@@ -39,7 +39,7 @@ exports.viewSupplier = async (req, res, next) => {
       return res.redirect('/suppliers');
     }
     const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID }).lean();
-    res.render(path.join('mongoose', 'viewSupplier'), {
+    res.render(path.join('mongoose', 'supplier', 'viewSupplier'), {
       title: 'Supplier Overview',
       supplier,
       receipts
@@ -57,7 +57,7 @@ exports.renderChangeSupplierForm = async (req, res, next) => {
       req.flash('error', 'Supplier not found.');
       return res.redirect('/suppliers');
     }
-    res.render(path.join('mongoose', 'updateSupplier'), {
+    res.render(path.join('mongoose', 'supplier', 'updateSupplier'), {
       title: 'Change Supplier',
       supplier
     });
