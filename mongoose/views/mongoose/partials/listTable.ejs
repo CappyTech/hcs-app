@@ -28,8 +28,6 @@
                 const isDate = val instanceof Date;
                 const isLink = h.key === linkField && row.uuid;
                 %>
-
-
                   <% if (isLink) { %>
                     <a href="/<%= basePath %>/read/<%= row.uuid %>" class="text-decoration-none"><%= val %></a>
                   <% } else if (isDate) { %>
@@ -38,6 +36,8 @@
                     <span class="badge rounded-pill bg-<%= val ? 'success' : 'secondary' %>">
                       <%= val ? 'Yes' : 'No' %>
                     </span>
+                  <% } else if (typeof val === 'string' && val.trim() === '') { %>
+                    &mdash;
                   <% } else if (val !== null && val !== undefined) { %>
                     <%= val %>
                     <% if (model === 'supplier' && h.key === 'Name' && row.IsSubcontractor) { %>

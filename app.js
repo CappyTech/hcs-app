@@ -148,6 +148,8 @@ const main = async () => {
     app.use('/', require('./mongoose/routes/returns'));
     app.use('/', require('./mongoose/routes/settings'));
     app.use('/', require('./mongoose/routes/twoFA'));
+    app.use('/', require('./mongoose/routes/subcontractorRoutes'));
+    app.use('/', require('./mongoose/routes/submissionRoutes'));
 
     // Catch-all 404
     app.use((req, res, next) => {
