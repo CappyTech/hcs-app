@@ -3,7 +3,7 @@ const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const moment = require('moment-timezone');
-const taskService = require('../services/taskService');
+const taskService = require('../services/taskServiceMongoose');
 
 exports.renderCreateTaskForm = (req, res) => {
   res.render(path.join('mongoose', 'task', 'createTask'), {

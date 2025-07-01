@@ -6,9 +6,33 @@ const logger = require('../../services/loggerService');
 exports.listContracts = async (req, res, next) => {
   try {
     const contracts = await mdb.contract.find().sort({ createdAt: -1 }).lean();
-    res.render(path.join('mongoose', 'contract', 'listContract'), {
+
+    if (!contracts.length) {
+      return res.render(path.join('mongoose', 'table'), {
+        title: 'Contracts',
+        headers: [],
+        rows: [],
+      });
+    }
+
+    const first = contracts[0];
+    const keys = Object.keys(first).filter(k => !['_id', '__v'].includes(k));
+
+    const headers = keys.map(key => ({
+      key,
+      label: key
+        .replace(/([a-z])([A-Z])/g, '$1 $2')   // camelCase → camel Case
+        .replace(/_/g, ' ')                   // snake_case → snake case
+        .replace(/\b\w/g, c => c.toUpperCase()) // capitalize each word
+    }));
+
+    // Add _id back in case it's needed for links
+    if (first._id) headers.unshift({ key: '_id', label: 'ID' });
+
+    res.render(path.join('mongoose', 'table'), {
       title: 'Contracts',
-      contracts
+      headers,
+      rows: contracts,
     });
   } catch (err) {
     next(err);

@@ -1,0 +1,46 @@
+<div class="container my-5">
+  <h1 class="mb-4"><%= title || 'Data Table' %></h1>
+
+  <% if (!rows || rows.length === 0) { %>
+    <div class="alert alert-info">No records found.</div>
+  <% } else { %>
+    <table class="table table-striped table-bordered align-middle">
+      <thead class="table-light">
+        <tr>
+          <% headers.forEach(h => { %>
+            <th><%= h.label %></th>
+          <% }) %>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => { %>
+          <tr>
+            <% headers.forEach(h => { %>
+              <td>
+                <% 
+                  const val = row[h.key];
+                  const isDate = val instanceof Date;
+                  const isLink = (h.key === 'title' || h.key === 'name') && row.uuid;
+                %>
+
+                <% if (isLink) { %>
+                  <a href="/<%= basePath %>/<%= row.uuid %>"><%= val %></a>
+                <% } else if (isDate) { %>
+                  <%= val.toISOString().slice(0, 10) %>
+                <% } else if (typeof val === 'boolean') { %>
+                  <span class="badge bg-<%= val ? 'success' : 'secondary' %>">
+                    <%= val ? 'Yes' : 'No' %>
+                  </span>
+                <% } else if (val !== null && val !== undefined) { %>
+                  <%= val %>
+                <% } else { %>
+                  &mdash;
+                <% } %>
+              </td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>

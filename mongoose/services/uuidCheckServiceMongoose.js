@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../../services/loggerService');
-const mdb = require('./mongooseDatabaseService'); // assuming this exports all models
+const mdb = require('./mongooseDatabaseService');
 
 async function ensureUUIDs() {
   for (const [modelName, model] of Object.entries(mdb)) {

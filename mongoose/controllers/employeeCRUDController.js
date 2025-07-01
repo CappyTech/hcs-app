@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
-
+/*
 exports.listEmployees = async (req, res, next) => {
   try {
     const employees = await mdb.employee.find().lean();
@@ -14,7 +14,7 @@ exports.listEmployees = async (req, res, next) => {
     next(err);
   }
 };
-
+*/
 exports.renderCreateEmployeeForm = (req, res) => {
   res.render(path.join('mongoose', 'employee', 'createEmployee'), {
     title: 'Create Employee'
