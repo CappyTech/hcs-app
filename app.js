@@ -134,9 +134,18 @@ const main = async () => {
       console.log('Generated ENCRYPTION_KEY (hex):', hex);
     }
 
+    app.use('/', require('./mongoose/routes/userRoutes'));
     // Routes
-    const mongooseRoutes = require("./mongoose/routes");
-    app.use('/', mongooseRoutes);
+    app.use('/', require('./mongoose/routes/attendanceRoutes'));
+    app.use('/', require('./mongoose/routes/cisRoutes'));
+    app.use('/', require('./mongoose/routes/CRUDRoutes'));
+    app.use('/', require('./mongoose/routes/fileSystemProjects'));
+    app.use('/', require('./mongoose/routes/indexRoutes'));
+    app.use('/', require('./mongoose/routes/listRoutes'));
+    app.use('/', require('./mongoose/routes/logger'));
+    app.use('/', require('./mongoose/routes/returns'));
+    app.use('/', require('./mongoose/routes/settings'));
+    app.use('/', require('./mongoose/routes/twoFA'));
 
     // Catch-all 404
     app.use((req, res, next) => {
