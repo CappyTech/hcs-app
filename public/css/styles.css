@@ -1,116 +1,51 @@
-body {
+/* === Base Font === */
+body, .lato {
   font-family: "Lato", serif;
-  font-weight: 400;
   font-style: normal;
+}
+body {
+  font-weight: 400;
 }
 strong {
-  font-family: "Lato", serif;
-  font-weight: 700;
-  font-style: normal;
-}
-.lato-thin {
-  font-family: "Lato", serif;
-  font-weight: 100;
-  font-style: normal;
-}
-
-.lato-light {
-  font-family: "Lato", serif;
-  font-weight: 300;
-  font-style: normal;
-}
-
-.lato-regular {
-  font-family: "Lato", serif;
-  font-weight: 400;
-  font-style: normal;
-}
-
-.lato-bold {
-  font-family: "Lato", serif;
-  font-weight: 700;
-  font-style: normal;
-}
-
-.lato-black {
-  font-family: "Lato", serif;
-  font-weight: 900;
-  font-style: normal;
-}
-
-.lato-thin-italic {
-  font-family: "Lato", serif;
-  font-weight: 100;
-  font-style: italic;
-}
-
-.lato-light-italic {
-  font-family: "Lato", serif;
-  font-weight: 300;
-  font-style: italic;
-}
-
-.lato-regular-italic {
-  font-family: "Lato", serif;
-  font-weight: 400;
-  font-style: italic;
-}
-
-.lato-bold-italic {
-  font-family: "Lato", serif;
-  font-weight: 700;
-  font-style: italic;
-}
-
-.lato-black-italic {
-  font-family: "Lato", serif;
-  font-weight: 900;
-  font-style: italic;
-}
-
-.hcs-blue {
-  background-color: #007bff !important;
-}
-.hcs-red {
-  background-color: #a0333d !important;
-}
-.hcs-green {
-  background-color: #2b9e1b !important;
-}
-.hcs-black {
-  background-color: #4e4e4e !important;
-}
-.hcs-black.lighten-1 {
-  background-color: #818181 !important;
-}
-.hcs-black.lighten-2 {
-  background-color: #a7a9ac !important;
-}
-.hcs-black.lighten-3 {
-  background-color: #d1d3d4 !important;
-}
-.hcs-black.lighten-4 {
-  background-color: #e6e7e8 !important;
-}
-.hcs-blue-text {
-  color: #007bff !important;
-}
-.hcs-red-text {
-  color: #a0333d !important;
-}
-.hcs-green-text {
-  color: #2b9e1b !important;
   font-weight: 700;
 }
-.hcs-black-text {
-  color: #4e4e4e !important;
-}
+
+/* === Font Weight Utilities === */
+.lato-thin        { font-weight: 100; }
+.lato-light       { font-weight: 300; }
+.lato-regular     { font-weight: 400; }
+.lato-bold        { font-weight: 700; }
+.lato-black       { font-weight: 900; }
+
+.lato-thin-italic    { font-weight: 100; font-style: italic; }
+.lato-light-italic   { font-weight: 300; font-style: italic; }
+.lato-regular-italic { font-weight: 400; font-style: italic; }
+.lato-bold-italic    { font-weight: 700; font-style: italic; }
+.lato-black-italic   { font-weight: 900; font-style: italic; }
+
+/* === HCS Colors === */
+.hcs-blue  { background-color: #007bff !important; }
+.hcs-red   { background-color: #a0333d !important; }
+.hcs-green { background-color: #2b9e1b !important; }
+.hcs-black { background-color: #4e4e4e !important; }
+
+.hcs-black.lighten-1 { background-color: #818181 !important; }
+.hcs-black.lighten-2 { background-color: #a7a9ac !important; }
+.hcs-black.lighten-3 { background-color: #d1d3d4 !important; }
+.hcs-black.lighten-4 { background-color: #e6e7e8 !important; }
+
+.hcs-blue-text   { color: #007bff !important; }
+.hcs-red-text    { color: #a0333d !important; }
+.hcs-green-text  { color: #2b9e1b !important; font-weight: 700; }
+.hcs-black-text  { color: #4e4e4e !important; }
+
 .hcs-red-text:hover,
 .hcs-green-text:hover,
 .hcs-black-text:hover {
   color: #a7a9ac !important;
 }
 
+/* === Dropdown Hover Trigger === */
 .dropdown:hover .dropdown-menu {
   display: block !important;
 }
@@ -118,181 +53,99 @@ strong {
   display: none !important;
 }
 
-.dropdown .dropdown-menu.dropdown-hcs-red .dropdown-item:hover,
-.dropdown .dropdown-menu.dropdown-hcs-red .dropdown-item:active,
-.dropdown .dropdown-menu.dropdown-hcs-red .dropdown-item.active,
-.dropup .dropdown-menu.dropdown-hcs-red .dropdown-item:hover,
-.dropup .dropdown-menu.dropdown-hcs-red .dropdown-item:active,
-.dropup .dropdown-menu.dropdown-hcs-red .dropdown-item.active,
-.dropleft .dropdown-menu.dropdown-hcs-red .dropdown-item:hover,
-.dropleft .dropdown-menu.dropdown-hcs-red .dropdown-item:active,
-.dropleft .dropdown-menu.dropdown-hcs-red .dropdown-item.active,
-.dropright .dropdown-menu.dropdown-hcs-red .dropdown-item:hover,
-.dropright .dropdown-menu.dropdown-hcs-red .dropdown-item:active,
-.dropright .dropdown-menu.dropdown-hcs-red .dropdown-item.active {
-  background-color: #a0333d !important;
+/* === Generic Dropdown Item Styling === */
+.dropdown-menu[class*="dropdown-hcs-"] .dropdown-item:hover,
+.dropdown-menu[class*="dropdown-hcs-"] .dropdown-item:active,
+.dropdown-menu[class*="dropdown-hcs-"] .dropdown-item.active {
   color: #fff;
-  -webkit-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18),
-    0 4px 15px 0 rgba(0, 0, 0, 0.15);
-  box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18), 0 4px 15px 0 rgba(0, 0, 0, 0.15);
-  -webkit-border-radius: 0.125rem;
   border-radius: 0.125rem;
+  box-shadow: 0 5px 11px rgba(0, 0, 0, 0.18),
+              0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
-.dropdown .dropdown-menu.dropdown-hcs-red .dropdown-item:hover.disabled,
-.dropdown .dropdown-menu.dropdown-hcs-red .dropdown-item:active.disabled,
-.dropdown .dropdown-menu.dropdown-hcs-red .dropdown-item.active.disabled,
-.dropup .dropdown-menu.dropdown-hcs-red .dropdown-item:hover.disabled,
-.dropup .dropdown-menu.dropdown-hcs-red .dropdown-item:active.disabled,
-.dropup .dropdown-menu.dropdown-hcs-red .dropdown-item.active.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-red .dropdown-item:hover.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-red .dropdown-item:active.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-red .dropdown-item.active.disabled,
-.dropright .dropdown-menu.dropdown-hcs-red .dropdown-item:hover.disabled,
-.dropright .dropdown-menu.dropdown-hcs-red .dropdown-item:active.disabled,
-.dropright .dropdown-menu.dropdown-hcs-red .dropdown-item.active.disabled {
+/* === Dropdown Item Disabled Styling === */
+.dropdown-menu[class*="dropdown-hcs-"] .dropdown-item:hover.disabled,
+.dropdown-menu[class*="dropdown-hcs-"] .dropdown-item:active.disabled,
+.dropdown-menu[class*="dropdown-hcs-"] .dropdown-item.active.disabled {
   background-color: transparent;
-  -webkit-box-shadow: none;
   box-shadow: none;
 }
 
+/* === Dropdown Content Overrides (Red/Green/Black) === */
 .dropdown-hcs-red .dropdown-content li.active,
 .dropdown-hcs-red .dropdown-content li a,
-.dropdown-hcs-red .dropdown-content li span:hover {
-  background-color: #a0333d !important;
-}
-
-.dropdown-hcs-red .dropdown-content li.disabled.active {
-  background-color: transparent !important;
-  color: white;
-}
-
+.dropdown-hcs-red .dropdown-content li span:hover,
 .dropdown-hcs-red .search-wrap input:focus {
+  background-color: #a0333d !important;
   border-bottom: 1px solid #a0333d;
-  -webkit-box-shadow: 0 1px 0 0 #a0333d;
   box-shadow: 0 1px 0 0 #a0333d;
 }
 
-/* Styles for dropdown with hcs-green background color */
-.dropdown .dropdown-menu.dropdown-hcs-green .dropdown-item:hover,
-.dropdown .dropdown-menu.dropdown-hcs-green .dropdown-item:active,
-.dropdown .dropdown-menu.dropdown-hcs-green .dropdown-item.active,
-.dropup .dropdown-menu.dropdown-hcs-green .dropdown-item:hover,
-.dropup .dropdown-menu.dropdown-hcs-green .dropdown-item:active,
-.dropup .dropdown-menu.dropdown-hcs-green .dropdown-item.active,
-.dropleft .dropdown-menu.dropdown-hcs-green .dropdown-item:hover,
-.dropleft .dropdown-menu.dropdown-hcs-green .dropdown-item:active,
-.dropleft .dropdown-menu.dropdown-hcs-green .dropdown-item.active,
-.dropright .dropdown-menu.dropdown-hcs-green .dropdown-item:hover,
-.dropright .dropdown-menu.dropdown-hcs-green .dropdown-item:active,
-.dropright .dropdown-menu.dropdown-hcs-green .dropdown-item.active {
-  background-color: #2b9e1b !important;
-  color: #fff;
-  -webkit-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18),
-    0 4px 15px 0 rgba(0, 0, 0, 0.15);
-  box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18), 0 4px 15px 0 rgba(0, 0, 0, 0.15);
-  -webkit-border-radius: 0.125rem;
-  border-radius: 0.125rem;
-}
-
-/* Styles for disabled dropdown items with hcs-green background color */
-.dropdown .dropdown-menu.dropdown-hcs-green .dropdown-item:hover.disabled,
-.dropdown .dropdown-menu.dropdown-hcs-green .dropdown-item:active.disabled,
-.dropdown .dropdown-menu.dropdown-hcs-green .dropdown-item.active.disabled,
-.dropup .dropdown-menu.dropdown-hcs-green .dropdown-item:hover.disabled,
-.dropup .dropdown-menu.dropdown-hcs-green .dropdown-item:active.disabled,
-.dropup .dropdown-menu.dropdown-hcs-green .dropdown-item.active.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-green .dropdown-item:hover.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-green .dropdown-item:active.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-green .dropdown-item.active.disabled,
-.dropright .dropdown-menu.dropdown-hcs-green .dropdown-item:hover.disabled,
-.dropright .dropdown-menu.dropdown-hcs-green .dropdown-item:active.disabled,
-.dropright .dropdown-menu.dropdown-hcs-green .dropdown-item.active.disabled {
-  background-color: transparent;
-  -webkit-box-shadow: none;
-  box-shadow: none;
-}
-
-/* Styles for active and hovered dropdown items with hcs-green background color */
 .dropdown-hcs-green .dropdown-content li.active,
 .dropdown-hcs-green .dropdown-content li a,
-.dropdown-hcs-green .dropdown-content li span:hover {
-  background-color: #2b9e1b !important;
-  color: white;
-}
-
-/* Styles for disabled active dropdown items with hcs-green background color */
-.dropdown-hcs-green .dropdown-content li.disabled.active {
-  background-color: transparent !important;
-  color: white;
-}
-
-/* Styles for search input focus in dropdown with hcs-green background color */
+.dropdown-hcs-green .dropdown-content li span:hover,
 .dropdown-hcs-green .search-wrap input:focus {
+  background-color: #2b9e1b !important;
   border-bottom: 1px solid #2b9e1b;
-  -webkit-box-shadow: 0 1px 0 0 #2b9e1b;
   box-shadow: 0 1px 0 0 #2b9e1b;
 }
 
-/* Styles for dropdown with hcs-black background color */
-.dropdown .dropdown-menu.dropdown-hcs-black .dropdown-item:hover,
-.dropdown .dropdown-menu.dropdown-hcs-black .dropdown-item:active,
-.dropdown .dropdown-menu.dropdown-hcs-black .dropdown-item.active,
-.dropup .dropdown-menu.dropdown-hcs-black .dropdown-item:hover,
-.dropup .dropdown-menu.dropdown-hcs-black .dropdown-item:active,
-.dropup .dropdown-menu.dropdown-hcs-black .dropdown-item.active,
-.dropleft .dropdown-menu.dropdown-hcs-black .dropdown-item:hover,
-.dropleft .dropdown-menu.dropdown-hcs-black .dropdown-item:active,
-.dropleft .dropdown-menu.dropdown-hcs-black .dropdown-item.active,
-.dropright .dropdown-menu.dropdown-hcs-black .dropdown-item:hover,
-.dropright .dropdown-menu.dropdown-hcs-black .dropdown-item:active,
-.dropright .dropdown-menu.dropdown-hcs-black .dropdown-item.active {
-  background-color: #4e4e4e !important;
-  color: #fff;
-  -webkit-box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18),
-    0 4px 15px 0 rgba(0, 0, 0, 0.15);
-  box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18), 0 4px 15px 0 rgba(0, 0, 0, 0.15);
-  -webkit-border-radius: 0.125rem;
-  border-radius: 0.125rem;
-}
-
-/* Styles for disabled dropdown items with hcs-black background color */
-.dropdown .dropdown-menu.dropdown-hcs-black .dropdown-item:hover.disabled,
-.dropdown .dropdown-menu.dropdown-hcs-black .dropdown-item:active.disabled,
-.dropdown .dropdown-menu.dropdown-hcs-black .dropdown-item.active.disabled,
-.dropup .dropdown-menu.dropdown-hcs-black .dropdown-item:hover.disabled,
-.dropup .dropdown-menu.dropdown-hcs-black .dropdown-item:active.disabled,
-.dropup .dropdown-menu.dropdown-hcs-black .dropdown-item.active.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-black .dropdown-item:hover.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-black .dropdown-item:active.disabled,
-.dropleft .dropdown-menu.dropdown-hcs-black .dropdown-item.active.disabled,
-.dropright .dropdown-menu.dropdown-hcs-black .dropdown-item:hover.disabled,
-.dropright .dropdown-menu.dropdown-hcs-black .dropdown-item:active.disabled,
-.dropright .dropdown-menu.dropdown-hcs-black .dropdown-item.active.disabled {
-  background-color: transparent;
-  -webkit-box-shadow: none;
-  box-shadow: none;
-}
-
-/* Styles for active and hovered dropdown items with hcs-black background color */
 .dropdown-hcs-black .dropdown-content li.active,
 .dropdown-hcs-black .dropdown-content li a,
-.dropdown-hcs-black .dropdown-content li span:hover {
+.dropdown-hcs-black .dropdown-content li span:hover,
+.dropdown-hcs-black .search-wrap input:focus {
   background-color: #4e4e4e !important;
-  color: white;
+  border-bottom: 1px solid #4e4e4e;
+  box-shadow: 0 1px 0 0 #4e4e4e;
 }
 
-/* Styles for disabled active dropdown items with hcs-black background color */
+.dropdown-hcs-red   .dropdown-content li.disabled.active,
+.dropdown-hcs-green .dropdown-content li.disabled.active,
 .dropdown-hcs-black .dropdown-content li.disabled.active {
   background-color: transparent !important;
   color: white;
 }
 
-/* Styles for search input focus in dropdown with hcs-black background color */
-.dropdown-hcs-black .search-wrap input:focus {
-  border-bottom: 1px solid #4e4e4e;
-  -webkit-box-shadow: 0 1px 0 0 #4e4e4e;
-  box-shadow: 0 1px 0 0 #4e4e4e;
+/* === Buttons === */
+.btn-hcs-red    { background-color: #a0333d; color: white; border-color: #a0333d; }
+.btn-hcs-green  { background-color: #2b9e1b; color: white; border-color: #2b9e1b; }
+.btn-hcs-black  { background-color: #4e4e4e; color: white; border-color: #4e4e4e; }
+
+.btn-hcs-red:hover,
+.btn-hcs-green:hover {
+  background-color: #a7a9ac;
+  border-color: #a7a9ac;
+  color: white;
+}
+
+.btn-hcs-black:hover {
+  background-color: #818181;
+  border-color: #818181;
+  color: white;
+}
+
+/* === Misc === */
+.form-check-input:checked {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.scrollable-list {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
 }
 
 .sticky-bottom {
@@ -306,145 +159,19 @@ strong {
   padding: 10px;
 }
 
-/* Define your custom button classes */
-.btn-hcs-red {
-  background-color: #a0333d;
-  color: white;
-  border-color: #a0333d;
-}
-
-.btn-hcs-green {
-  background-color: #2b9e1b;
-  color: white;
-  border-color: #2b9e1b;
-}
-
-.btn-hcs-black {
-  background-color: #4e4e4e;
-  color: white;
-  border-color: #4e4e4e;
-}
-
-/* Override Bootstrap styles for these custom buttons */
-.btn-hcs-red:hover {
-  background-color: #a7a9ac;
-  border-color: #a7a9ac;
-  color: white;
-}
-
-.btn-hcs-green:hover {
-  background-color: #a7a9ac;
-  border-color: #a7a9ac;
-  color: white;
-}
-
-.btn-hcs-black:hover {
-  background-color: #818181;
-  border-color: #818181;
-  color: white;
-}
-
-.form-check-input:checked {
-  background-color: #28a745;
-  border-color: #28a745;
-}
-.scrollable-list {
-  max-height: 70vh; /* Set a fixed height */
-  overflow-y: auto; /* Enable vertical scrolling */
-}
-
-html,
-body {
-  height: 100%;
-}
-body {
-  display: flex;
-  flex-direction: column;
-}
-.content {
-  flex: 1;
-}
-
-/* General Cookie Banner Styles */
-#cookieConsent {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background-color: #f8f9fa;
-  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
-  z-index: 9999;
-  padding: 10px;
-  border-top: 2px solid #2b9e1b;
-}
-
-/* Cookie Text Styling */
-#cookieConsent p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #555;
-}
-
-#cookieConsent a {
-  color: #2b9e1b;
-  text-decoration: underline;
-}
-
-#cookieConsent a:hover {
-  text-decoration: none;
-  color: #196914;
-}
-
-/* Button Styling */
-#cookieConsent .btn-hcs-green {
-  background-color: #2b9e1b;
-  border: none;
-  color: white;
-  padding: 5px 10px;
-  font-size: 0.85rem;
-  border-radius: 4px;
-}
-
-#cookieConsent .btn-hcs-green:hover {
-  background-color: #196914;
-  color: white;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  #cookieConsent {
-    padding: 8px;
-  }
-
-  #cookieConsent p {
-    font-size: 0.8rem;
-  }
-
-  #cookieConsent .btn-hcs-green {
-    font-size: 0.8rem;
-    padding: 3px 8px;
-  }
-}
-
+/* === Tooltips === */
 .tooltip-inner {
   background-color: #212529;
   color: #f8f9fa;
   border: 1px solid #343a40;
 }
 
-.tooltip.bs-tooltip-top .tooltip-arrow::before {
-  border-top-color: #212529;
-}
-.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
-  border-bottom-color: #212529;
-}
-.tooltip.bs-tooltip-start .tooltip-arrow::before {
-  border-left-color: #212529;
-}
-.tooltip.bs-tooltip-end .tooltip-arrow::before {
-  border-right-color: #212529;
-}
+.tooltip.bs-tooltip-top .tooltip-arrow::before    { border-top-color: #212529; }
+.tooltip.bs-tooltip-bottom .tooltip-arrow::before { border-bottom-color: #212529; }
+.tooltip.bs-tooltip-start .tooltip-arrow::before  { border-left-color: #212529; }
+.tooltip.bs-tooltip-end .tooltip-arrow::before    { border-right-color: #212529; }
 
+/* === Transitions === */
 .transition-all {
   transition: all 0.3s ease;
 }
