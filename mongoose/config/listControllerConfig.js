@@ -119,7 +119,7 @@ module.exports = {
   supplier: {
     title: 'Suppliers',
     linkField: 'Name',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','Created','Updated','SupplierID','EC','TradeBorderType','Contact','ContactTitle','ContactFirstName','ContactLastName','Telephone','Fax','Mobile','Website'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','Created','Updated','SupplierID','EC','TradeBorderType','Contact','ContactTitle','ContactFirstName','ContactLastName','Telephone','Fax','Mobile','Website','CurrencyID','PaymentTerms'],
     fieldOrder: ['Name', 'Subcontractor', 'CISRate', 'CISNumber'],
     sortField: 'Name',
     sortOrder: 1,

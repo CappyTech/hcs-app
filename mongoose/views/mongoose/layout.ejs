@@ -23,16 +23,74 @@
 </head>
 
 <body>
-  <div class="app-wrapper d-flex flex-column flex-lg-row">
+  <% if (isAuthenticated) { %>
+    <nav class="navbar fixed-top bg-body-secondary border-bottom shadow-sm">
+      <div class="container-fluid justify-content-around px-0 text-center">
+        <a href="/construction-industry-scheme" class="nav-link">
+          <i class="bi bi-building fs-5"></i><br>
+          <small>Construction Industry Scheme</small>
+        </a>
+        <a href="/management" class="nav-link">
+          <i class="bi bi-folder2-open fs-5"></i><br>
+          <small>Management</small>
+        </a>
+        <a href="/payroll" class="nav-link">
+          <i class="bi bi-cash-coin fs-5"></i><br>
+          <small>Payroll</small>
+        </a>
+        <% if (isAdmin) { %>
+          <a href="/human-resources" class="nav-link">
+            <i class="bi bi-people fs-5"></i><br>
+            <small>Human Resources</small>
+          </a>
+        <% } %>
+        <a href="/kashflow" class="nav-link">
+          <i class="bi bi-graph-up fs-5"></i><br>
+          <small>Kashflow</small>
+        </a>
+        <a href="/create" class="nav-link">
+          <i class="bi bi-plus fs-5"></i><br>
+          <small>Create</small>
+        </a>
+      </div>
+    </nav>
+  <% } %>
 
-    <main id="main-content" class="p-4 bg-body flex-grow-1">
-      <%- include('./partials/topnav.ejs') %>
-      <%- include('./partials/successAlert.ejs') %>
-      <%- include('./partials/errorAlert.ejs') %>
-      <%- body %>
-      <%- include('./partials/footer.ejs') %>
-    </main>
-  </div>
+  <main id="main-content" class="p-4 pt-5 mt-2">
+    <%- include('./partials/successAlert.ejs') %>
+    <%- include('./partials/errorAlert.ejs') %>
+    <%- body %>
+    <%- include('./partials/footer.ejs') %>
+  </main>
+
+  <% if (isAuthenticated) { %>
+    <nav class="navbar fixed-bottom bg-body-secondary border-top shadow-sm">
+      <div class="container-fluid justify-content-around px-0 text-center">
+        <a href="/user/profile" class="nav-link">
+          <i class="bi bi-person fs-5"></i><br>
+          <small>Profile</small>
+        </a>
+        <% if (isAdmin) { %>
+          <a href="/logs" class="nav-link">
+            <i class="bi bi-journal-text fs-5"></i><br>
+            <small>Logs</small>
+          </a>
+        <% } %>
+        <a href="/user/account" class="nav-link">
+          <i class="bi bi-sliders fs-5"></i><br>
+          <small>Settings</small>
+        </a>
+        <a href="#" id="theme-toggle" class="nav-link">
+          <i id="theme-icon" class="bi bi-moon-stars fs-5"></i><br>
+          <small>Theme</small>
+        </a>
+        <a href="/user/logout" class="nav-link text-danger">
+          <i class="bi bi-box-arrow-right fs-5"></i><br>
+          <small>Logout</small>
+        </a>
+      </div>
+    </nav>
+  <% } %>
 
 
 
@@ -65,8 +123,8 @@
         const appliedTheme = theme === 'auto' ? getPreferredTheme() : theme;
         document.documentElement.setAttribute('data-bs-theme', appliedTheme);
         icon.className = appliedTheme === 'dark'
-          ? 'bi bi-sun me-2'
-          : 'bi bi-moon-stars me-2';
+          ? 'bi bi-sun fs-5'
+          : 'bi bi-moon-stars fs-5';
         toggleBtn.title = appliedTheme === 'dark'
           ? 'Enable Light Mode'
           : 'Enable Dark Mode';

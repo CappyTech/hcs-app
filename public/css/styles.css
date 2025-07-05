@@ -445,32 +445,6 @@ body {
   border-right-color: #212529;
 }
 
-/* Default layout */
-.app-wrapper {
-  display: flex;
-}
-
-.sidebar {
-  width: 16%;
-}
-
-/* Mobile layout when under 1100px */
-@media (max-width: 1080px) {
-  .app-wrapper {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    min-width: 0;
-    order: 1;
-  }
-
-  #main-content {
-    order: 2;
-  }
-}
-
 .transition-all {
   transition: all 0.3s ease;
 }

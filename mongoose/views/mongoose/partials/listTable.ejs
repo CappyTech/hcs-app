@@ -1,12 +1,59 @@
 <% const hasActions = typeof actions !== 'undefined' && Array.isArray(actions) && actions.length > 0; %>
 
 <div class="container-fluid my-5">
-  <h1 class="mb-4"><%= title || 'Data Table' %></h1>
+  <!-- Header: Title + Search + Limit Dropdown -->
+  <div class="row align-items-center mb-4">
+    <div class="col-lg">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <h1 class="text-center"><%= title || 'Data Table' %></h1>
+        <form id="list-controls" method="GET" action="" class="d-flex flex-wrap align-items-center gap-2">
+          <!-- limit dropdown -->
+          <div class="input-group input-group-sm">
+            <label class="input-group-text" for="limitSelect">Show</label>
+            <select id="limitSelect" name="limit" class="form-select">
+              <% [10, 50, 100].forEach(opt => { %>
+                <option value="<%= opt %>" <%= limit == opt ? 'selected' : '' %>><%= opt %></option>
+              <% }) %>
+            </select>
+          </div>
+          <!-- force page reset -->
+          <input type="hidden" name="page" value="1">
+          <!-- search input -->
+          <div class="input-group">
+            <input
+              type="text"
+              name="search"
+              class="form-control"
+              placeholder="Search..."
+              value="<%= query || '' %>"
+            >
+            <button class="btn btn-hcs-green" type="submit">Apply</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
+  <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+    <nav>
+      <ul class="pagination justify-content-center flex-wrap">
+        <% for (let i = 1; i <= totalPages; i++) { %>
+          <li class="page-item <%= i === page ? 'active' : '' %>">
+            <a class="page-link" href="?page=<%= i %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %>">
+              <%= i %>
+            </a>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
+  <% } %>
+
+  <!-- Table / No Data -->
   <% if (!rows || rows.length === 0) { %>
     <div class="alert alert-info">No records found.</div>
   <% } else { %>
-    <div class="table-responsive">
+
+    <div class="table">
       <table class="table table-sm table-striped table-hover table-bordered">
         <thead>
           <tr>
@@ -24,9 +71,9 @@
               <% headers.forEach(h => { %>
                 <td class="<%= model === 'supplier' && h.key === 'Name' && row.IsSubcontractor ? 'bg-warning-subtle' : '' %>">
                 <% 
-                const val = row[h.key];
-                const isDate = val instanceof Date;
-                const isLink = h.key === linkField && row.uuid;
+                  const val = row[h.key];
+                  const isDate = val instanceof Date;
+                  const isLink = h.key === linkField && row.uuid;
                 %>
                   <% if (isLink) { %>
                     <a href="/<%= basePath %>/read/<%= row.uuid %>" class="text-decoration-none"><%= val %></a>
@@ -51,11 +98,13 @@
 
               <% if (hasActions) { %>
                 <td>
-                  <% actions.forEach(action => { %>
-                    <a href="<%= action.href(row) %>" class="btn btn-sm btn-<%= action.class || 'primary' %> me-1">
-                      <%= action.label %>
-                    </a>
-                  <% }) %>
+                  <div class="d-flex flex-wrap gap-1">
+                    <% actions.forEach(action => { %>
+                      <a href="<%= action.href(row) %>" class="btn btn-sm btn-<%= action.class || 'primary' %>">
+                        <%= action.label %>
+                      </a>
+                    <% }) %>
+                  </div>
                 </td>
               <% } %>
             </tr>
@@ -63,5 +112,23 @@
         </tbody>
       </table>
     </div>
+
   <% } %>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const limitSelect = document.getElementById('limitSelect');
+    const form = document.getElementById('list-controls');
+
+    if (limitSelect && form) {
+      limitSelect.addEventListener('change', function () {
+        const pageInput = form.querySelector('input[name="page"]');
+        if (pageInput) {
+          pageInput.value = '1'; // reset to page 1
+        }
+        form.submit();
+      });
+    }
+  });
+</script>

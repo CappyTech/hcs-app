@@ -1,76 +1,32 @@
-<nav id="top-nav" class="navbar navbar-expand bg-body-secondary px-3 py-2">
-  <div class="container-fluid d-flex justify-content-between align-items-center">
+<nav class="navbar navbar-expand-md bg-body-secondary px-3 py-2">
+  <div class="container-fluid">
 
-    <!-- Left Section: Brand and Navigation -->
-    <div class="d-flex align-items-center gap-2">
-      <a href="/" class="d-flex align-items-center text-decoration-none">
-        <img src="/resources/images/favicon.png" alt="Logo" width="32" height="32" class="me-2">
-        <span class="hcs-green-text fw-semibold">Heron CS LTD</span>
-      </a>
+    <a href="/" class="navbar-brand d-flex align-items-center text-decoration-none me-auto">
+      <img src="/resources/images/favicon.png" alt="Logo" width="32" height="32" class="me-2">
+    </a>
 
+    <div class="d-flex flex-wrap gap-2 justify-content-end text-nowrap">
       <% if (isAuthenticated) { %>
-        <a href="/construction-industry-scheme" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" title="Construction Industry Scheme">
-          <i class="bi bi-building"></i>
-          <span class="d-none d-sm-inline small">Construction Industry Scheme</span>
+        <a href="/construction-industry-scheme" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-building"></i> <span class="d-sm-inline d-none">Construction Industry Scheme</span>
         </a>
-        <a href="/management" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" title="Management">
-          <i class="bi bi-folder2-open"></i>
-          <span class="d-none d-sm-inline small">Management</span>
+        <a href="/management" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-folder2-open"></i> <span class="d-sm-inline d-none">Management</span>
         </a>
-        <a href="/payroll" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" title="Payroll">
-          <i class="bi bi-cash-coin"></i>
-          <span class="d-none d-sm-inline small">Payroll</span>
+        <a href="/payroll" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-cash-coin"></i> <span class="d-sm-inline d-none">Payroll</span>
         </a>
         <% if (isAdmin) { %>
-          <a href="/human-resources" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" data-="HR">
-            <i class="bi bi-person"></i>
-            <span class="d-none d-sm-inline small">Human Resources</span>
+          <a href="/human-resources" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-person"></i> <span class="d-sm-inline d-none">Human Resources</span>
           </a>
         <% } %>
-        <a href="/kashflow" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" title="Kashflow">
-          <i class="bi bi-graph-up"></i>
-          <span class="d-none d-sm-inline small">Kashflow</span>
+        <a href="/kashflow" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-graph-up"></i> <span class="d-sm-inline d-none">Kashflow</span>
         </a>
-        <a href="/create" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" title="Create">
-          <i class="bi bi-plus"></i>
-          <span class="d-none d-sm-inline small">Create</span>
+        <a href="/create" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-plus"></i> <span class="d-sm-inline d-none">Create</span>
         </a>
-      <% } %>
-
-    </div>
-
-    <!-- Right Section: User Profile/Actions -->
-    <div class="d-flex align-items-center gap-2">
-      <% if (isAuthenticated) { %>
-        <a href="/user/profile" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" title="Profile">
-          <i class="bi bi-person"></i>
-        </a>
-        <% if (isAdmin) { %>
-          <a href="/logs" class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center" title="View Logs">
-            <i class="bi bi-terminal"></i>
-          </a>
-        <% } %>
-        <a href="/user/account" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" title="Account Settings">
-          <i class="bi bi-gear"></i>
-        </a>
-        <!-- Theme Toggle -->
-        <button class="btn btn-outline-secondary btn-sm" id="theme-toggle" title="Toggle Theme">
-          <i id="theme-icon" class="bi bi-moon-stars"></i>
-        </button>
-        <a href="/user/logout" class="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center" title="Logout">
-          <i class="bi bi-box-arrow-right"></i>
-        </a>
-      <% } else { %>
-        <a href="/user/login" class="btn btn-hcs-green btn-sm d-flex align-items-center justify-content-center" title="Sign In">
-          <i class="bi bi-box-arrow-in-right"></i>
-        </a>
-        <a href="/user/register" class="btn btn-secondary btn-sm d-flex align-items-center justify-content-center" title="Register">
-          <i class="bi bi-book"></i>
-        </a>
-        <!-- Theme Toggle -->
-        <button class="btn btn-outline-secondary btn-sm" id="theme-toggle" title="Toggle Theme">
-          <i id="theme-icon" class="bi bi-moon-stars me-2"></i>
-        </button>
       <% } %>
     </div>
 

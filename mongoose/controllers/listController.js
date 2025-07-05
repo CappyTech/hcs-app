@@ -13,7 +13,6 @@ const generateHeaders = (firstDoc, config = {}) => {
     k => !(config.hideFields || []).includes(k)
   );
 
-  // Reorder keys based on fieldOrder if provided
   if (Array.isArray(config.fieldOrder)) {
     const ordered = config.fieldOrder.filter(k => keys.includes(k));
     const extras = keys.filter(k => !ordered.includes(k));
@@ -34,40 +33,62 @@ for (const modelName of Object.keys(mdb)) {
   if (typeof model?.find !== 'function') continue;
 
   const config = listControllerConfig[modelName] || {};
-  if (denyGuard(config, 'l')) continue; // 👈 skip if list is denied
+  if (denyGuard(config, 'l')) continue;
 
   const functionName = `list${capitalize(modelName)}`;
   listController[functionName] = async (req, res, next) => {
     const sortField = config.sortField || 'createdAt';
     const sortOrder = config.sortOrder ?? -1;
 
-    try {
-      const items = await model.find().sort({ [sortField]: sortOrder }).lean();
+    const searchQuery = req.query.search || '';
+    const limit = parseInt(req.query.limit) || 100;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
 
-      if (!items.length) {
-        return res.render(path.join('mongoose', 'partials', 'listTable'), {
-          title: config.title || capitalize(modelName) + 's',
-          headers: [],
-          rows: [],
-          basePath: modelName,
-          linkField: config.linkField || 'title',
-          actions: listControllerConfig.supplier.actions,
-          hasActions: listControllerConfig.supplier.actions?.length > 0,
-          model
-        });
+    let query = {};
+
+    try {
+      // Search filtering
+      if (searchQuery && typeof searchQuery === 'string') {
+        const regex = new RegExp(searchQuery, 'i');
+
+        let searchFields = [];
+        if (Array.isArray(config.search) && config.search.length > 0) {
+          searchFields = config.search;
+        } else if (Array.isArray(config.fieldOrder) && config.fieldOrder.length > 0) {
+          searchFields = config.fieldOrder;
+        } else {
+          searchFields = [config.linkField, config.sortField].filter(Boolean);
+        }
+
+        query = {
+          $or: searchFields.map(field => ({ [field]: { $regex: regex } }))
+        };
       }
 
-      const headers = generateHeaders(items[0], config);
+      const totalCount = await model.countDocuments(query);
+      const totalPages = Math.ceil(totalCount / limit);
+      const items = await model.find(query)
+        .sort({ [sortField]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .lean();
 
-      res.render(path.join('mongoose', 'partials', 'listTable'), {
+      const headers = items.length ? generateHeaders(items[0], config) : [];
+
+      return res.render(path.join('mongoose', 'partials', 'listTable'), {
         title: config.title || capitalize(modelName) + 's',
         headers,
         rows: items,
         basePath: modelName,
         linkField: config.linkField || 'title',
-        actions: listControllerConfig.supplier.actions,
-        hasActions: listControllerConfig.supplier.actions?.length > 0,
-        model
+        actions: config.actions || [],
+        hasActions: !!(config.actions?.length),
+        model,
+        query: searchQuery,
+        limit,
+        page,
+        totalPages
       });
     } catch (err) {
       logger.error(`Error listing ${modelName}:`, err);
