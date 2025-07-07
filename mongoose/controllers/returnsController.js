@@ -31,7 +31,7 @@ exports.renderMonthlyReturnsForm = async (req,res,next)=>{
         receiptsByYear
       });
     }
-    res.render(path.join('mongoose', 'cis','monthlyReturnsForm'),{
+    res.render(path.join('tailwindcss', 'cis','monthlyReturnsForm'),{
       title:'Monthly Returns Form',
       suppliersWithMonths,
       monthNames
@@ -78,7 +78,7 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
         SubmissionDate: receipt.SubmissionDate
       });
     });
-    res.render(path.join('mongoose', 'cis', 'monthlyReturnsForOneSubcontractor'), {
+    res.render(path.join('tailwindcss', 'cis', 'monthlyReturnsForOneSubcontractor'), {
       title: 'Subcontractor Monthly Returns',
       month,
       year,
@@ -124,7 +124,7 @@ exports.renderYearlyReturns = async (req,res,next)=>{
         Submission: receipt.SubmissionDate
       });
     });
-    res.render(path.join('mongoose', 'cis', 'yearlyReturns'),{
+    res.render(path.join('tailwindcss', 'cis', 'yearlyReturns'),{
       title:'Subcontractor Yearly Returns',
       year,
       supplier,

@@ -29,7 +29,7 @@ const errorHandlerService = (error, req, res, next) => {
         res.locals.successMessage ??= [];
         res.locals.errorMessage ??= [];
         res.locals.session ??= req.session || {};
-        res.render(path.join('mongoose', 'error'), {
+        res.render(path.join('tailwindcss', 'error'), {
             title,
             error: {
                 title,

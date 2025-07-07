@@ -12,7 +12,7 @@ exports.render2FAPage = (req, res) => {
     return res.redirect('/user/login');
   }
 
-  res.render(path.join('mongoose', 'user', '2fa'), { title: 'Two-Factor Authentication' });
+  res.render(path.join('tailwindcss', 'user', '2fa'), { title: 'Two-Factor Authentication' });
 };
 
 exports.verify2FA = async (req, res) => {

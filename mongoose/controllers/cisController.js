@@ -78,7 +78,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const submissionStartDate = periodEnd.clone().date(7).format('Do MMMM YYYY');
     const submissionEndDate = periodEnd.clone().date(11).format('Do MMMM YYYY');
 
-    res.render(path.join('mongoose', 'cis', 'cis'), {
+    res.render(path.join('tailwindcss', 'cis', 'cis'), {
       title: 'CIS Submission Dashboard',
       supplierCount: suppliers.length,
       receiptCount: receipts.length,

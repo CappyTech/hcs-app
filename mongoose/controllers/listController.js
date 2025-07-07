@@ -76,7 +76,7 @@ for (const modelName of Object.keys(mdb)) {
 
       const headers = items.length ? generateHeaders(items[0], config) : [];
 
-      return res.render(path.join('mongoose', 'partials', 'listTable'), {
+      return res.render(path.join('tailwindcss', 'partials', 'listTable'), {
         title: config.title || capitalize(modelName) + 's',
         headers,
         rows: items,

@@ -80,11 +80,11 @@ if (!denyGuard(config, 'r')) {
   crudController[`read${baseName}`] = async (req, res, next) => {
     try {
       const item = await Model.findOne({ uuid: req.params.uuid }).lean();
-      if (!item) return res.status(404).render('mongoose/notFound');
+      if (!item) return res.status(404).render(path.join('mongoose', 'error'));
 
       const schema = extractSchema(Model, config);
 
-      res.render(path.join('mongoose', 'partials', 'form-read'), {
+      res.render(path.join('tailwindcss', 'partials', 'form-read'), {
         title: `${config.title || baseName} Details`,
         item,
         schema,
@@ -132,7 +132,7 @@ if (!denyGuard(config, 'c')) {
         }
       }
 
-      return res.render(path.join('mongoose', 'partials', 'form-create'), {
+      return res.render(path.join('tailwindcss', 'partials', 'form-create'), {
         title: `Create ${config.title || baseName}`,
         formData,
         schema,
@@ -169,7 +169,7 @@ if (!denyGuard(config, 'u')) {
         const schema = extractSchema(Model, config);
         const referenceData = await fetchReferenceData(schema);
 
-        return res.render(path.join('mongoose', 'partials', 'form-update'), {
+        return res.render(path.join('tailwindcss', 'partials', 'form-update'), {
           title: `Update ${config.title || baseName}`,
           formData: item,
           schema,
@@ -198,9 +198,9 @@ if (!denyGuard(config, 'd')) {
     if (req.method === 'GET') {
       try {
         const item = await Model.findOne({ uuid: req.params.uuid }).lean();
-        if (!item) return res.status(404).render('mongoose/notFound');
+        if (!item) return res.status(404).render(path.join('mongoose', 'error'));
 
-        return res.render(path.join('mongoose', 'partials', 'form-delete'), {
+        return res.render(path.join('tailwindcss', 'partials', 'form-delete'), {
           title: `Delete ${config.title || baseName}`,
           item,
           cancelUrl: `/${modelName}s`,

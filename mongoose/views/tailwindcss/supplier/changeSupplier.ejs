@@ -1,0 +1,58 @@
+<div class="container mt-5">
+  <h2>Change <%= supplier.Name %> Details</h2>
+  <form action="/supplier/change/<%= supplier.uuid %>" method="POST">
+    
+    <!-- Subcontractor Checkbox -->
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="subcontractor" name="subcontractor"
+             <%= supplier.Subcontractor ? 'checked' : '' %>>
+      <label class="form-check-label" for="subcontractor">
+        Is this supplier a subcontractor under CIS?
+      </label>
+      <div class="form-text text-muted">
+        Subcontractors may have CIS tax deductions applied (0%, 20%, or 30%) based on HMRC verification.
+      </div>
+    </div>
+
+    <!-- CIS Fields -->
+    <div id="cis-fields">
+      <div class="mb-3">
+        <label for="cisRate" class="form-label">CIS Rate</label>
+        <select class="form-select" id="cisRate" name="cisRate">
+          <option value="0" <%= supplier.CISRate === '0' ? 'selected' : '' %>>0% (Gross)</option>
+          <option value="0.2" <%= supplier.CISRate === '0.2' ? 'selected' : '' %>>20% (Standard)</option>
+          <option value="0.3" <%= supplier.CISRate === '0.3' ? 'selected' : '' %>>30% (Higher)</option>
+        </select>
+        <div class="form-text text-muted">
+          0% = Gross payment status, 20% = standard rate, 30% = unverified subcontractor.
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="cisNumber" class="form-label">HMRC CIS Verification Number</label>
+        <input type="text" class="form-control" id="cisNumber" name="cisNumber"
+               value="<%= supplier.CISNumber || '' %>" placeholder="VXXXXXXXXXXXXX">
+        <div class="form-text text-muted">
+          Issued by HMRC when a subcontractor is verified.
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-hcs-green">Save Changes</button>
+  </form>
+</div>
+
+<!-- Show/hide CIS fields based on checkbox -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const subcontractorCheckbox = document.getElementById("subcontractor");
+    const cisFields = document.getElementById("cis-fields");
+
+    function toggleCISFields() {
+      cisFields.style.display = subcontractorCheckbox.checked ? "block" : "none";
+    }
+
+    subcontractorCheckbox.addEventListener("change", toggleCISFields);
+    toggleCISFields(); // Initial state
+  });
+</script>

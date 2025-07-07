@@ -1,0 +1,51 @@
+<div class="container my-5">
+  <h1 class="mb-4"><%= title %></h1>
+  <form action="<%= formAction %>" method="POST">
+    <% for (const key in schema) {
+    const field = schema[key];
+    const isRequired = field.required;
+    const label = field.label + (isRequired ? ' <span class="text-danger">*</span>' : ' <small class="text-muted">(optional)</small>');
+    %>
+    <div class="mb-3">
+        <label for="<%= key %>" class="form-label"><%- label %></label>
+
+        <% if (field.enum) { %>
+        <select class="form-select" id="<%= key %>" name="<%= key %>">
+            <option value="">-- Select --</option>
+            <% field.enum.forEach(option => { %>
+            <option value="<%= option %>" <%= formData[key] === option ? 'selected' : '' %>><%= option %></option>
+            <% }) %>
+        </select>
+        
+        <% } else if (field.ref && referenceData?.[key]) { %>
+        <select class="form-select" id="<%= key %>" name="<%= key %>">
+            <option value="">-- Select --</option>
+            <% referenceData[key].forEach(refItem => { %>
+            <option value="<%= refItem.uuid %>" <%= formData[key] === refItem.uuid ? 'selected' : '' %>>
+                <%= refItem.name || refItem.title || refItem.uuid %>
+            </option>
+            <% }) %>
+        </select>
+
+        <% } else if (field.type === 'Boolean') { %>
+        <select class="form-select" id="<%= key %>" name="<%= key %>">
+            <option value="true" <%= formData[key] === true ? 'selected' : '' %>>True</option>
+            <option value="false" <%= formData[key] === false ? 'selected' : '' %>>False</option>
+        </select>
+
+        <% } else if (field.type === 'Date') { %>
+        <input type="date" class="form-control" id="<%= key %>" name="<%= key %>"
+                value="<%= formData[key] ? new Date(formData[key]).toISOString().split('T')[0] : '' %>">
+
+        <% } else if (field.readOnly) { %>
+        <input type="text" class="form-control" id="<%= key %>" name="<%= key %>" value="<%= formData[key] || '' %>" readonly>
+
+        <% } else { %>
+        <input type="text" class="form-control" id="<%= key %>" name="<%= key %>" value="<%= formData[key] || '' %>">
+        <% } %>
+    </div>
+    <% } %>
+    <p class="text-muted"><span class="text-danger">*</span> Required fields</p>
+    <button type="submit" class="btn btn-primary">Update</button>
+  </form>
+</div>

@@ -26,7 +26,7 @@ exports.getLogs = async (req, res) => {
         });
     }
 
-    res.render(path.join('mongoose', 'admin', 'logger'), {
+    res.render(path.join('tailwindcss', 'admin', 'logger'), {
         title: 'Application Logs',
         logsByLevel
     });

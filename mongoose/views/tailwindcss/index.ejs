@@ -1,0 +1,91 @@
+<div class="p-6 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl text-center shadow">
+  <% if (isAuthenticated) { %>
+    <!-- Authenticated Welcome -->
+    <h1 class="text-3xl font-bold">Welcome, <%= firstName %>.</h1>
+    <p class="text-lg text-gray-600 dark:text-gray-300 mt-2">
+      Role: <strong><%= role.charAt(0).toUpperCase() + role.slice(1) %></strong>
+    </p>
+  <% } else { %>
+    <!-- Public Jumbotron -->
+    <div class="container mx-auto py-8">
+      <div class="flex flex-col lg:flex-row items-center gap-8">
+        <div class="lg:w-1/2 text-left">
+          <h1 class="text-4xl font-bold">Subcontractor Management System</h1>
+          <p class="text-lg text-gray-600 dark:text-gray-300 mt-2">
+            Developed by
+            <a href="https://heroncs.co.uk" class="text-green-700 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-medium">
+              Heron Constructive Solutions LTD
+            </a>
+          </p>
+          <p class="text-base mt-4">
+            Streamline subcontractor management, compliance, and documentation—built for the modern construction team.
+          </p>
+          <a href="/user/login"
+             class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">
+            Log In
+          </a>
+        </div>
+        <div class="lg:w-1/2 hidden lg:block">
+          <img src="https://placehold.co/600x300"
+               class="rounded shadow-lg" alt="Dashboard Screenshot">
+        </div>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<!-- Authenticated Dashboard Cards -->
+<% if (isAuthenticated) { %>
+  <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-xl shadow mb-6">
+    <div class="border-b dark:border-gray-700 px-4 py-2 font-bold text-lg">
+      Your Tasks
+    </div>
+    <div class="p-4 flex flex-wrap gap-4 justify-between">
+      <%- include('partials/taskCard', { title: 'Overdue Tasks', tasks: tasks.overdue, emptyMsg: 'No overdue tasks', showRecurrence: true }) %>
+      <%- include('partials/taskCard', { title: 'Today', tasks: tasks.today, emptyMsg: 'No tasks today', showRecurrence: true }) %>
+      <%- include('partials/taskCard', { title: 'This Week', tasks: tasks.week, emptyMsg: 'No tasks this week', showRecurrence: true }) %>
+      <%- include('partials/taskCard', { title: 'This Month', tasks: tasks.month, emptyMsg: 'No tasks this month', showRecurrence: true }) %>
+      <%- include('partials/taskCard', { title: 'General Tasks', tasks: tasks.general, emptyMsg: 'No general tasks', showRecurrence: true }) %>
+      <%- include('partials/taskCard', { title: 'Recurring Tasks', tasks: tasks.recurring, emptyMsg: 'No recurring tasks', showRecurrence: true }) %>
+    </div>
+    <div class="border-t dark:border-gray-700 px-4 py-3 text-center">
+      <a href="/tasks"
+         class="inline-block text-sm text-gray-600 dark:text-gray-300 border border-gray-400 dark:border-gray-500 rounded px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+        View All Tasks
+      </a>
+    </div>
+  </div>
+<% } %>
+
+<!-- Public Feature Highlights -->
+<% if (!isAuthenticated) { %>
+  <section class="container mx-auto text-center my-12">
+    <h2 class="text-2xl font-bold mb-6">Why Use Our System?</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+      <div>
+        <img src="https://placehold.co/200x150"
+             class="mx-auto rounded shadow mb-3" alt="Subcontractor Profiles">
+        <h5 class="text-lg font-semibold">Manage Subcontractors</h5>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Easily store and track contact, compliance, and employment details.
+        </p>
+      </div>
+      <div>
+        <img src="https://placehold.co/200x150"
+             class="mx-auto rounded shadow mb-3" alt="Receipts">
+        <h5 class="text-lg font-semibold">Upload Documents</h5>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Centralised uploads for job documents, expenses, and evidence.
+        </p>
+      </div>
+      <div>
+        <img src="https://placehold.co/200x150"
+             class="mx-auto rounded shadow mb-3" alt="CIS Reports">
+        <h5 class="text-lg font-semibold">Generate CIS Reports</h5>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Automatically build and export monthly or yearly HMRC-ready summaries.
+        </p>
+      </div>
+    </div>
+  </section>
+<% } %>

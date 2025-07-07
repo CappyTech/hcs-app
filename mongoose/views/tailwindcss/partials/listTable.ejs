@@ -1,0 +1,143 @@
+<% const hasActions = typeof actions !== 'undefined' && Array.isArray(actions) && actions.length > 0; %>
+
+<div class="w-full my-10 px-4">
+  <!-- Header: Title + Search + Limit Dropdown -->
+  <div class="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6">
+    <h1 class="text-2xl font-bold text-center lg:text-left"><%= title || 'Data Table' %></h1>
+
+    <form id="list-controls" method="GET" action="" class="flex flex-wrap gap-2 items-center">
+      <!-- Limit Dropdown -->
+      <label for="limitSelect" class="text-sm font-medium text-gray-700 dark:text-gray-200">Show</label>
+      <select id="limitSelect" name="limit"
+              class="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
+        <% [10, 50, 100].forEach(opt => { %>
+          <option value="<%= opt %>" <%= limit == opt ? 'selected' : '' %>><%= opt %></option>
+        <% }) %>
+      </select>
+
+      <input type="hidden" name="page" value="1">
+
+      <!-- Search Field -->
+      <input type="text"
+             name="search"
+             placeholder="Search..."
+             value="<%= query || '' %>"
+             class="text-sm border rounded px-3 py-1 w-48 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
+
+      <button type="submit"
+              class="text-sm bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition">
+        Apply
+      </button>
+    </form>
+  </div>
+
+  <!-- Pagination -->
+  <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+    <nav class="mb-4">
+      <ul class="flex justify-center flex-wrap gap-2">
+        <% for (let i = 1; i <= totalPages; i++) { %>
+          <li>
+            <a href="?page=<%= i %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %>"
+               class="px-3 py-1 rounded border text-sm <%= i === page ? 'bg-green-700 text-white' : 'bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600' %> hover:bg-green-600 hover:text-white transition">
+              <%= i %>
+            </a>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
+  <% } %>
+
+  <!-- No Data -->
+  <% if (!rows || rows.length === 0) { %>
+    <div class="bg-blue-100 text-blue-800 p-4 rounded text-sm border border-blue-300 dark:bg-blue-900 dark:text-blue-100 dark:border-blue-700">
+      No records found.
+    </div>
+  <% } else { %>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300 dark:border-gray-600">
+        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+          <tr>
+            <% headers.forEach(h => { %>
+              <th class="px-3 py-2 border-b dark:border-gray-600 text-left font-medium">
+                <%= h.label %>
+              </th>
+            <% }) %>
+            <% if (hasActions) { %>
+              <th class="px-3 py-2 border-b dark:border-gray-600 font-medium">Actions</th>
+            <% } %>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+          <% rows.forEach(row => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+              <% headers.forEach(h => { %>
+                <td class="px-3 py-2 border-b dark:border-gray-700 <%= model === 'supplier' && h.key === 'Name' && row.IsSubcontractor ? 'bg-yellow-50 dark:bg-yellow-900' : '' %>">
+                  <% 
+                    const val = row[h.key];
+                    const isDate = val instanceof Date;
+                    const isLink = h.key === linkField && row.uuid;
+                  %>
+                  <% if (isLink) { %>
+                    <a href="/<%= basePath %>/read/<%= row.uuid %>" class="text-blue-600 dark:text-blue-400 hover:underline">
+                      <%= val %>
+                    </a>
+                  <% } else if (isDate) { %>
+                    <%= slimDateTime(val) %>
+                  <% } else if (typeof val === 'boolean') { %>
+                    <span class="inline-block px-2 py-1 text-xs rounded-full <%= val ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>">
+                      <%= val ? 'Yes' : 'No' %>
+                    </span>
+                  <% } else if (typeof val === 'string' && val.trim() === '') { %>
+                    &mdash;
+                  <% } else if (val !== null && val !== undefined) { %>
+                    <%= val %>
+                    <% if (model === 'supplier' && h.key === 'Name' && row.IsSubcontractor) { %>
+                      <span class="ml-2 px-2 py-0.5 text-xs rounded bg-yellow-300 text-black dark:bg-yellow-600 dark:text-white">
+                        Subcontractor
+                      </span>
+                    <% } %>
+                  <% } else { %>
+                    &mdash;
+                  <% } %>
+                </td>
+              <% }) %>
+
+              <% if (hasActions) { %>
+                <td class="px-3 py-2 border-b dark:border-gray-700">
+                  <div class="flex flex-wrap gap-2">
+                    <% actions.forEach(action => { %>
+                      <a href="<%= action.href(row) %>"
+                         class="text-xs px-3 py-1 rounded text-white bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-600 hover:bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-700 transition">
+                        <%= action.label %>
+                      </a>
+                    <% }) %>
+                  </div>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+  <% } %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const limitSelect = document.getElementById('limitSelect');
+    const form = document.getElementById('list-controls');
+
+    if (limitSelect && form) {
+      limitSelect.addEventListener('change', function () {
+        const pageInput = form.querySelector('input[name="page"]');
+        if (pageInput) {
+          pageInput.value = '1'; // reset to page 1
+        }
+        form.submit();
+      });
+    }
+  });
+</script>

@@ -5,7 +5,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 
 exports.renderRegistrationForm = (req, res, next) => {
-    res.render(path.join('mongoose', 'user', 'register'), {
+    res.render(path.join('tailwindcss', 'user', 'register'), {
         title: 'Register',
         siteKey: process.env.TURNSTILE_SITE_KEY,
     });
@@ -70,7 +70,7 @@ exports.registerUser = async (req, res, next) => {
 };
 
 exports.renderLoginForm = (req, res) => {
-  res.render(path.join('mongoose', 'user', 'login'), {
+  res.render(path.join('tailwindcss', 'user', 'login'), {
     title: 'Log In',
     siteKey: process.env.TURNSTILE_SITE_KEY,
   });

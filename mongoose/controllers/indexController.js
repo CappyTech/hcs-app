@@ -1,5 +1,12 @@
 const path = require('path');
 const listConfig = require('../config/listControllerConfig');
+const taskService = require('../services/taskServiceMongoose');
+const {
+  endOfToday,
+  endOfWeek,
+  endOfMonth
+} = require('date-fns');
+
 const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 
 // Helper to get all visible listable models for a department
@@ -17,13 +24,19 @@ const getDashboardModels = (department) => {
     }));
 };
 
-const taskService = require('../services/taskServiceMongoose');
-const {
-  endOfToday,
-  endOfWeek,
-  endOfMonth
-} = require('date-fns');
+// Helper to get all creatable models
+const getCreateModels = () => {
+  return Object.entries(listConfig)
+    .filter(([_, config]) => !denyGuard(config, 'c'))
+    .map(([model, config]) => ({
+      model,
+      title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
+      description: config.description || `Create a new ${model}.`,
+      link: config.createPath || `/${model}/create`
+    }));
+};
 
+// Home / Index Page
 exports.renderIndex = async (req, res, next) => {
   try {
     let tasks = {
@@ -38,7 +51,6 @@ exports.renderIndex = async (req, res, next) => {
     if (req.user) {
       const allTasks = await taskService.getPendingTasksForUser(req.user._id);
       const now = new Date();
-
       const todayEnd = endOfToday();
       const weekEnd = endOfWeek(now, { weekStartsOn: 6 }); // Saturday to Friday
       const monthEnd = endOfMonth(now);
@@ -51,7 +63,7 @@ exports.renderIndex = async (req, res, next) => {
       tasks.month = allTasks.filter(t => t.dueDate && new Date(t.dueDate) > weekEnd && new Date(t.dueDate) <= monthEnd);
     }
 
-    res.render('mongoose/index', {
+    res.render(path.join('tailwindcss', 'index'), {
       title: 'Home',
       tasks,
       isAuthenticated: !!req.user
@@ -60,58 +72,38 @@ exports.renderIndex = async (req, res, next) => {
     next(err);
   }
 };
+const departments = [
+  ['renderConstructionIndustryScheme', 'Construction Industry Scheme', 'construction-industry-scheme'],
+  ['renderManagement', 'Management', 'management'],
+  ['renderPayroll', 'Payroll', 'payroll'],
+  ['renderHumanResources', 'Human Resources','human-resources'],
+  ['renderKashflow', 'Kashflow', 'kashflow'],
+  ['renderCreate', 'Create', 'create']
+];
 
-exports.renderConstructionIndustryScheme = (req, res, next) => {
-  res.render(path.join('mongoose', 'header', 'construction-industry-scheme'), {
-    title: 'Construction Industry Scheme',
-  });
-};
-
-exports.renderManagement = (req, res, next) => {
-  const dashboardModels = getDashboardModels('management');
-  res.render(path.join('mongoose', 'header', 'management'), {
-    title: 'Management',
-    dashboardModels
-  });
-};
-
-exports.renderPayroll = (req, res, next) => {
-  const dashboardModels = getDashboardModels('payroll');
-  res.render(path.join('mongoose', 'header', 'payroll'), {
-    title: 'Payroll',
-    dashboardModels
-  });
-};
-
-exports.renderHumanResources = (req, res, next) => {
-  const dashboardModels = getDashboardModels('human-resources');
-  res.render(path.join('mongoose', 'header', 'human-resources'), {
-    title: 'Human Resources',
-    dashboardModels
-  });
-};
-
-exports.renderKashflow = (req, res, next) => {
-  const dashboardModels = getDashboardModels('kashflow');
-  res.render(path.join('mongoose', 'header', 'kashflow'), {
-    title: 'Kashflow',
-    dashboardModels
-  });
-};
-
-exports.renderCreate = (req, res, next) => {
-  const createModels = Object.entries(listConfig)
-    .filter(([_, config]) => !Array.isArray(config.deny) || !config.deny.includes('c'))
-    .map(([model, config]) => ({
-      model,
-      title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
-      description: config.description || `Create a new ${model}.`,
-      link: config.createPath || `/${model}/create`
-    }));
-
-  res.render(path.join('mongoose', 'header', 'create'), {
-    title: 'Create',
-    createModels
-  });
-};
+departments.forEach(([exportName, title, department]) => {
+  if (exportName === 'renderCreate') {
+    exports[exportName] = (req, res, next) => {
+      const createModels = getCreateModels();
+      res.render(path.join('tailwindcss', 'partials', 'listModels'), {
+        title,
+        models: createModels
+      });
+    };
+  } else if (exportName === 'renderConstructionIndustryScheme') {
+    exports[exportName] = (req, res, next) => {
+      res.render(path.join('tailwindcss', 'header', department), {
+        title
+      });
+    };
+  } else {
+    exports[exportName] = (req, res, next) => {
+      const dashboardModels = getDashboardModels(department);
+      res.render(path.join('tailwindcss', 'partials', 'listModels'), {
+        title,
+        models: dashboardModels
+      });
+    };
+  }
+});
 

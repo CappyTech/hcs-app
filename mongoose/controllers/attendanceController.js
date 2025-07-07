@@ -6,7 +6,7 @@ exports.getDailyAttendance = async (req,res,next)=>{
   const date = req.params.date || moment().format('YYYY-MM-DD');
   try {
     const attendance = await attendanceService.getAttendanceForDay(date);
-    res.render(path.join('mongoose', 'attendance', 'daily'), {
+    res.render(path.join('tailwindcss', 'attendance', 'daily'), {
       moment,
       attendance,
       date,
@@ -48,7 +48,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       .filter(([_, v]) => v.type === 'subcontractor')
       .map(([name, v]) => ({ name, ...v }));
 
-    res.render(path.join('mongoose', 'attendance', 'weekly'), {
+    res.render(path.join('tailwindcss', 'attendance', 'weekly'), {
       moment,
       groupedAttendance,
       startDate: payrollWeekStart.format('YYYY-MM-DD'),

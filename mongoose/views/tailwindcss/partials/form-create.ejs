@@ -1,0 +1,104 @@
+<div class="max-w-3xl mx-auto my-10 px-4">
+  <h1 class="text-2xl font-bold mb-6"><%= title %></h1>
+
+  <form action="<%= formAction %>" method="POST" class="space-y-6">
+
+    <% for (const key in schema) {
+      const field = schema[key];
+      const selectedValue = formData?.[key];
+      const isUuid = field.type === 'String';
+
+      let labelSuffix = '';
+      if (field.required) {
+        labelSuffix = '<span class="text-red-600">*</span>';
+      } else {
+        labelSuffix = '<small class="text-gray-500">(optional)</small>';
+      }
+      if (field.default != null && field.default !== '') {
+        labelSuffix += ` <small class="text-gray-500">(default: ${field.default})</small>`;
+      }
+      const label = field.label + ' ' + labelSuffix;
+    %>
+
+    <div>
+      <label for="<%= key %>" class="block mb-1 font-medium text-gray-700 dark:text-gray-200">
+        <%- label %>
+      </label>
+
+      <% if (field.enum) { %>
+        <!-- type 1: Enum -->
+        <select
+          id="<%= key %>"
+          name="<%= key %>"
+          class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
+        >
+          <option value="">-- Select --</option>
+          <% field.enum.forEach(option => { %>
+            <option value="<%= option %>" <%= selectedValue == option ? 'selected' : '' %>><%= option %></option>
+          <% }) %>
+        </select>
+
+      <% } else if (field.ref && referenceData?.[key]) { %>
+        <!-- type 2: Reference -->
+        <select
+          id="<%= key %>"
+          name="<%= key %>"
+          class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
+        >
+          <option value="">-- Select --</option>
+          <% referenceData[key].forEach(refItem => {
+              const value = isUuid ? refItem.uuid : refItem._id;
+              const label = refItem.name || refItem.Name || refItem.InvoiceNumber || refItem.username || refItem.JobRef || refItem.title || value;
+              const selected = selectedValue?.toString() === value?.toString() ? 'selected' : '';
+          %>
+            <option value="<%= value %>" <%= selected %>><%= label %></option>
+          <% }) %>
+        </select>
+
+      <% } else if (field.type === 'Boolean') { %>
+        <!-- type 3: Boolean -->
+        <select
+          id="<%= key %>"
+          name="<%= key %>"
+          class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
+        >
+          <option value="">-- Select --</option>
+          <option value="true" <%= selectedValue === true || selectedValue === 'true' ? 'selected' : '' %>>True</option>
+          <option value="false" <%= selectedValue === false || selectedValue === 'false' ? 'selected' : '' %>>False</option>
+        </select>
+
+      <% } else if (field.type === 'Date') { %>
+        <!-- type 4: Date -->
+        <input
+          type="date"
+          id="<%= key %>"
+          name="<%= key %>"
+          value="<%= selectedValue || '' %>"
+          class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
+        >
+
+      <% } else { %>
+        <!-- type else: Text -->
+        <input
+          type="text"
+          id="<%= key %>"
+          name="<%= key %>"
+          value="<%= selectedValue || '' %>"
+          placeholder="<%= field.default ? `Default: ${field.default}` : '' %>"
+          class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
+        >
+      <% } %>
+    </div>
+
+    <% } %>
+
+    <p class="text-sm text-gray-500">
+      <span class="text-red-600">*</span> Required fields
+    </p>
+
+    <button type="submit"
+            class="bg-blue-700 text-white px-6 py-2 rounded hover:bg-blue-800 transition">
+      Create
+    </button>
+  </form>
+</div>

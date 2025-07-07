@@ -25,7 +25,7 @@ const main = async () => {
     app.set('views', [
       path.join(__dirname, 'mongoose/views')
     ]);
-    app.set('layout', path.join('mongoose', 'layout'));
+    app.set('layout', path.join('tailwindcss', 'layout'));
     app.use(expressLayouts);
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
@@ -54,7 +54,8 @@ const main = async () => {
     app.use(authService.ensureAuthenticated);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
-    app.use(require('./mongoose/services/cronServiceMongoose'));
+    const startCronJobs = require('./mongoose/services/cronServiceMongoose');
+    startCronJobs();
 
     // Attach user info to templates
     app.use((req, res, next) => {

@@ -14,14 +14,16 @@ const securityService = [
                 "'unsafe-inline'", 
                 "https://cdn.jsdelivr.net", 
                 "https://fonts.googleapis.com", 
-                "https://unpkg.com"
+                "https://unpkg.com",
+                "https://cdn.tailwindcss.com/"
             ],
             scriptSrc: [
                 "'self'", 
                 "'unsafe-inline'", 
                 "https://cdn.jsdelivr.net", 
                 "https://unpkg.com", 
-                "https://challenges.cloudflare.com"
+                "https://challenges.cloudflare.com",
+                "https://cdn.tailwindcss.com/"
             ],
             fontSrc: ["'self'", 
                 "'unsafe-inline'", 
@@ -40,7 +42,8 @@ const securityService = [
                 "https://b.tile.openstreetmap.org",
                 "https://c.tile.openstreetmap.org",
                 "https://unpkg.com",
-                "https://challenges.cloudflare.com"
+                "https://challenges.cloudflare.com",
+                "https://placehold.co/"
             ],
             connectSrc: [
                 "'self'",

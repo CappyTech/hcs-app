@@ -8,7 +8,7 @@ exports.renderChangeSupplierForm = async (req, res, next) => {
       req.flash('error', 'Supplier not found.');
       return res.redirect('/suppliers');
     }
-    res.render(path.join('mongoose', 'supplier', 'changeSupplier'), {
+    res.render(path.join('tailwindcss', 'supplier', 'changeSupplier'), {
       title: 'Change Supplier',
       supplier
     });

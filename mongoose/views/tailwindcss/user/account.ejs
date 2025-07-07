@@ -1,0 +1,158 @@
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[600px]">
+  <!-- LEFT: TOTP Section -->
+  <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg flex flex-col justify-between shadow">
+    <div>
+      <h2 class="text-2xl font-semibold text-center mb-4">Two-Factor Authentication (TOTP)</h2>
+
+      <% if (!user.totpEnabled) { %>
+        <p class="text-center text-gray-600 dark:text-gray-300 mb-4">Two-Factor Authentication is not enabled for your account.</p>
+        <p class="mb-2">Scan the QR code below with your authentication app<br> <small>(e.g., Google Authenticator, Authy).</small></p>
+        <p class="text-sm font-semibold text-gray-600">Secret QR:</p>
+        <div class="text-center">
+          <img src="<%= qrCodeUrl %>" alt="QR Code" class="mx-auto mb-3 max-w-[200px]">
+        </div>
+
+        <hr class="my-6 border-t-2 border-line">
+
+        <p class="mb-2">Alternatively, enter this key manually into your authentication app of choice:</p>
+        <p class="text-sm font-semibold text-gray-600">Secret Key: <pre class="text-center"><%= secret %></pre></p>
+      <% } else { %>
+        <div class="text-center text-green-600 dark:text-green-400 font-medium">
+          <p>Two-Factor Authentication is enabled for your account.</p>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (!user.totpEnabled) { %>
+      <form action="/account/verify-totp" method="POST" class="mt-6">
+        <label for="totpToken" class="block font-medium mb-1">Enter the 6-digit authentication code:</label>
+        <input type="text" name="totpToken" id="totpToken" required
+          class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 mb-3">
+        <div class="flex justify-center">
+          <button type="submit" class="w-full max-w-xs bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+            Verify & Enable 2FA
+          </button>
+        </div>
+      </form>
+    <% } %>
+  </div>
+
+  <!-- RIGHT: Account Details + Change Password -->
+  <div class="space-y-6">
+    <!-- Account Details -->
+    <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
+      <h1 class="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">Account Details</h1>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username:</label>
+        <input type="text" readonly class="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white rounded" value="<%= user.username %>">
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email:</label>
+        <input type="text" readonly class="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white rounded" value="<%= user.email %>">
+      </div>
+
+      <hr class="my-6 border-t-2 border-line">
+
+      <form action="/account/settings" method="POST" class="space-y-4">
+        <div>
+          <label for="username" class="block font-medium mb-1">New Username:</label>
+          <input type="text" name="newUsername" id="username" value="<%= user.username %>" required class="w-full px-4 py-2 rounded border border-gray-300 text-black">
+        </div>
+        <div>
+          <label for="email" class="block font-medium mb-1">New Email:</label>
+          <input type="email" name="newEmail" id="email" value="<%= user.email %>" required class="w-full px-4 py-2 rounded border border-gray-300 text-black">
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+          <button type="submit" class="bg-red-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+            Update Details
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Change Password -->
+    <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
+      <h1 class="text-2xl font-bold text-center mb-6">Change Password</h1>
+      <form action="/user/account/change-password" method="POST" class="space-y-4">
+        <div>
+          <label for="currentPassword" class="block font-medium mb-1">Current Password</label>
+          <input type="password" id="currentPassword" name="currentPassword" required class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+        </div>
+        <div>
+          <label for="newPassword" class="block font-medium mb-1">New Password</label>
+          <input type="password" id="newPassword" name="newPassword" required class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+        </div>
+        <div>
+          <label for="confirmNewPassword" class="block font-medium mb-1">Confirm New Password</label>
+          <input type="password" id="confirmNewPassword" name="confirmNewPassword" required class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+          <button type="submit" class="bg-red-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+            Update Password
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Active Sessions -->
+<div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg mt-2">
+  <h1 class="text-2xl font-bold text-center mb-6">Active Sessions</h1>
+
+  <% if (sessions.length === 0) { %>
+    <div class="text-center text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-6 rounded shadow">
+      <p>No active sessions.</p>
+    </div>
+  <% } else { %>
+    <div class="overflow-auto">
+      <table class="min-w-full text-sm text-left border border-gray-300 rounded-lg">
+        <thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+          <tr>
+            <th class="px-4 py-2">Username</th>
+            <th class="px-4 py-2">Email</th>
+            <th class="px-4 py-2">Role</th>
+            <th class="px-4 py-2">IP Address</th>
+            <th class="px-4 py-2">Browser</th>
+            <th class="px-4 py-2">Platform</th>
+            <th class="px-4 py-2">Login Time</th>
+            <th class="px-4 py-2">Session Expiration</th>
+            <th class="px-4 py-2">Secure</th>
+            <th class="px-4 py-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800">
+          <% sessions.forEach(session => { %>
+            <tr class="border-t border-gray-200 dark:border-gray-700">
+              <td class="px-4 py-2"><%= session.username %></td>
+              <td class="px-4 py-2"><%= session.email %></td>
+              <td class="px-4 py-2"><%= session.role %></td>
+              <td class="px-4 py-2"><%= session.ip %></td>
+              <td class="px-4 py-2"><%= session.browser %></td>
+              <td class="px-4 py-2"><%= session.platform.replace(/['"]+/g, '') || 'Unknown' %></td>
+              <td class="px-4 py-2"><%= slimDateTime(session.loginTime, true) %></td>
+              <td class="px-4 py-2">
+                <%= slimDateTime(session.expires, true) %><br>
+                (<%= session.timeUntilExpiry %>)
+              </td>
+              <td class="px-4 py-2 font-medium <%= session.secure ? 'text-green-600' : 'text-red-600' %>">
+                <%= session.secure ? 'Yes' : 'No' %>
+              </td>
+              <td class="px-4 py-2">
+                <form action="/account/logout-session" method="POST">
+                  <input type="hidden" name="sessionId" value="<%= session.sessionId %>">
+                  <div class="flex justify-end gap-2 mt-2">
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+                      Logout
+                    </button>
+                  </div>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>

@@ -1,0 +1,49 @@
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-terminal me-2"></i> Application Logs
+    </h1>
+    <form method="GET" action="/logs">
+      <button class="btn btn-outline-primary" type="submit">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+      </button>
+    </form>
+  </div>
+
+  <ul class="nav nav-tabs" id="logTabs" role="tablist">
+    <% ['info', 'debug', 'warn', 'error'].forEach((level, i) => { %>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link <%= i === 0 ? 'active' : '' %>" id="<%= level %>-tab" data-bs-toggle="tab" data-bs-target="#<%= level %>" type="button" role="tab">
+          <span class="text-<%= level === 'info' ? 'primary' : level === 'debug' ? 'secondary' : level === 'warn' ? 'warning' : 'danger' %> text-capitalize"><%= level %></span>
+          <span class="badge bg-secondary"><%= logsByLevel[level].length %></span>
+        </button>
+      </li>
+    <% }) %>
+  </ul>
+
+  <div class="tab-content border border-top-0 p-3" style="max-height: 70vh; overflow-y: auto;">
+    <% ['info', 'debug', 'warn', 'error'].forEach((level, i) => { %>
+      <div class="tab-pane fade <%= i === 0 ? 'show active' : '' %>" id="<%= level %>" role="tabpanel">
+        <% if (logsByLevel[level].length > 0) { %>
+          <% logsByLevel[level].forEach(entry => { %>
+            <div class="mb-3 border-bottom pb-2">
+              <div class="d-flex justify-content-between align-items-center small text-muted">
+                <span><%= entry.timestamp %></span>
+                <span class="badge bg-<%= level === 'info' ? 'primary' : level === 'debug' ? 'secondary' : level === 'warn' ? 'warning text-dark' : 'danger' %> text-uppercase"><%= level %></span>
+              </div>
+              <div class="fw-bold"><%= entry.message %></div>
+              <% if (entry.user) { %>
+                <div class="small text-muted">User: <%= entry.user.username %> (ID: <%= entry.user.id %>)</div>
+              <% } %>
+              <% if (entry.route) { %>
+                <div class="small text-muted">Route: <%= entry.route %></div>
+              <% } %>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="text-muted">No <%= level %> logs available.</div>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+</div>

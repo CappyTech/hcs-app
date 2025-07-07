@@ -1,0 +1,22 @@
+<div class="card flex-fill">
+  <div class="card-header fw-bold"><%= title %></div>
+  <ul class="list-group list-group-flush">
+    <% if (tasks.length) { %>
+      <% tasks.forEach(t => { %>
+        <li class="list-group-item">
+          <a href="/task/read/<%= t.uuid %>" class="fw-bold">
+            <%= t.title %>
+          </a> <% if (showRecurrence && t.recurrence && t.recurrence !== 'none') { %> 🔁<% } %>
+          <% if (t.dueDate) { %>
+            <div class="text-muted">Due <%= slimDateTime(t.dueDate) %></div>
+          <% } %>
+          <% if (t.description) { %>
+            <div><%= t.description %></div>
+          <% } %>
+        </li>
+      <% }) %>
+    <% } else { %>
+      <li class="list-group-item fst-italic text-muted"><%= emptyMsg %></li>
+    <% } %>
+  </ul>
+</div>

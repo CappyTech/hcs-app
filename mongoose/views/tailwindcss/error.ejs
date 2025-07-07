@@ -1,0 +1,27 @@
+<div class="max-w-3xl mx-auto mt-12 px-4">
+  <div class="text-center">
+    <!-- Bootstrap Icon with Tailwind sizing & color -->
+    <i class="bi bi-exclamation-triangle-fill text-red-600 dark:text-red-400 text-[5rem]"></i>
+
+    <!-- Error Title -->
+    <h1 class="mt-6 text-3xl font-bold"><%= error.title %></h1>
+
+    <!-- Error Message -->
+    <p class="mt-2 text-lg text-gray-600 dark:text-gray-300"><%= error.message %></p>
+
+    <!-- Stack Trace -->
+    <% if (error.stack) { %>
+      <div class="mt-6 bg-yellow-100 dark:bg-yellow-900 border border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-100 rounded p-4 text-left">
+        <details class="text-sm whitespace-pre-wrap">
+          <summary class="cursor-pointer font-semibold">View Stack Trace</summary>
+          <pre class="mt-2 overflow-x-auto"><code><%= error.stack %></code></pre>
+        </details>
+      </div>
+    <% } %>
+
+    <!-- Return Button -->
+    <a href="/" class="inline-block mt-6 px-6 py-3 bg-red-700 text-white rounded hover:bg-red-800 transition">
+      Return to Home
+    </a>
+  </div>
+</div>
