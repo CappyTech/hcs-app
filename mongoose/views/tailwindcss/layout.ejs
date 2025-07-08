@@ -25,35 +25,35 @@
   </script>
 </head>
 
-<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-700 dark:text-gray-100 min-h-screen flex flex-col">
 
   <% if (isAuthenticated) { %>
     <!-- Top Nav -->
     <nav class="fixed top-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50">
       <div class="flex justify-around text-center py-2">
-        <a href="/construction-industry-scheme" class="text-sm hover:text-blue-600">
+        <a href="/construction-industry-scheme" class="text-sm hover:text-green-600">
           <i class="bi bi-building fs-5"></i><br>
           <div>Construction Industry Scheme</div>
         </a>
-        <a href="/management" class="text-sm hover:text-blue-600">
+        <a href="/management" class="text-sm hover:text-green-600">
           <i class="bi bi-folder2-open fs-5"></i><br>
           <div>Management</div>
         </a>
-        <a href="/payroll" class="text-sm hover:text-blue-600">
+        <a href="/payroll" class="text-sm hover:text-green-600">
           <i class="bi bi-cash-coin fs-5"></i><br>
           <div>Payroll</div>
         </a>
         <% if (isAdmin) { %>
-          <a href="/human-resources" class="text-sm hover:text-blue-600">
+          <a href="/human-resources" class="text-sm hover:text-green-600">
             <i class="bi bi-people fs-5"></i><br>
             <div>Human Resources</div>
           </a>
           <% } %>
-            <a href="/kashflow" class="text-sm hover:text-blue-600">
+            <a href="/kashflow" class="text-sm hover:text-green-600">
               <i class="bi bi-graph-up fs-5"></i><br>
               <div>Kashflow</div>
             </a>
-            <a href="/create" class="text-sm hover:text-blue-600">
+            <a href="/create" class="text-sm text-green-600 hover:text-green-800">
               <i class="bi bi-plus fs-5"></i><br>
               <div>Create</div>
             </a>
@@ -72,25 +72,25 @@
         <!-- Bottom Nav -->
         <nav class="fixed bottom-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50">
           <div class="flex justify-around text-center py-2">
-            <a href="/user/profile" class="text-sm hover:text-blue-600">
+            <a href="/user/profile" class="text-sm hover:text-green-600">
               <i class="bi bi-person fs-5"></i><br>
               <div>Profile</div>
             </a>
             <% if (isAdmin) { %>
-              <a href="/logs" class="text-sm hover:text-blue-600">
+              <a href="/logs" class="text-sm hover:text-green-600">
                 <i class="bi bi-journal-text fs-5"></i><br>
                 <div>Logs</div>
               </a>
               <% } %>
-                <a href="/user/account" class="text-sm hover:text-blue-600">
+                <a href="/user/account" class="text-sm hover:text-green-600">
                   <i class="bi bi-sliders fs-5"></i><br>
                   <div>Settings</div>
                 </a>
-                <a href="#" id="theme-toggle" class="text-sm hover:text-blue-600">
+                <a href="#" id="theme-toggle" class="text-sm hover:text-green-600">
                   <i id="theme-icon" class="bi bi-moon-stars fs-5"></i><br>
                   <small>Theme</small>
                 </a>
-                <a href="/user/logout" class="text-sm text-red-600 hover:text-red-800">
+                <a href="/user/logout" class="text-sm text-red-500 hover:text-red-600">
                   <i class="bi bi-box-arrow-right fs-5"></i><br>
                   <div>Logout</div>
                 </a>

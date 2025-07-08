@@ -1,22 +1,27 @@
-<div class="card flex-fill">
-  <div class="card-header fw-bold"><%= title %></div>
-  <ul class="list-group list-group-flush">
+<div class="flex flex-col flex-grow bg-white rounded shadow">
+  <div class="px-4 py-2 font-bold border-b border-gray-200">
+    <%= title %>
+  </div>
+  <ul class="divide-y divide-gray-200">
     <% if (tasks.length) { %>
       <% tasks.forEach(t => { %>
-        <li class="list-group-item">
-          <a href="/task/read/<%= t.uuid %>" class="fw-bold">
+        <li class="px-4 py-3">
+          <a href="/task/read/<%= t.uuid %>" class="font-semibold text-blue-600 hover:underline">
             <%= t.title %>
-          </a> <% if (showRecurrence && t.recurrence && t.recurrence !== 'none') { %> 🔁<% } %>
+          </a>
+          <% if (showRecurrence && t.recurrence && t.recurrence !== 'none') { %> 🔁 <% } %>
           <% if (t.dueDate) { %>
-            <div class="text-muted">Due <%= slimDateTime(t.dueDate) %></div>
+            <div class="text-gray-500 text-sm mt-1">Due <%= slimDateTime(t.dueDate) %></div>
           <% } %>
           <% if (t.description) { %>
-            <div><%= t.description %></div>
+            <div class="mt-1 text-gray-700 text-sm"><%= t.description %></div>
           <% } %>
         </li>
       <% }) %>
     <% } else { %>
-      <li class="list-group-item fst-italic text-muted"><%= emptyMsg %></li>
+      <li class="px-4 py-3 italic text-gray-500">
+        <%= emptyMsg %>
+      </li>
     <% } %>
   </ul>
 </div>

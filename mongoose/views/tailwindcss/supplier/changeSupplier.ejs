@@ -1,48 +1,59 @@
-<div class="container mt-5">
-  <h2>Change <%= supplier.Name %> Details</h2>
-  <form action="/supplier/change/<%= supplier.uuid %>" method="POST">
-    
+<div class="container mx-auto mt-10 max-w-xl px-4">
+  <h2 class="text-2xl font-semibold mb-6">Change <%= supplier.Name %> Details</h2>
+  <form action="/supplier/change/<%= supplier.uuid %>" method="POST" novalidate>
+
     <!-- Subcontractor Checkbox -->
-    <div class="mb-3 form-check">
-      <input type="checkbox" class="form-check-input" id="subcontractor" name="subcontractor"
-             <%= supplier.Subcontractor ? 'checked' : '' %>>
-      <label class="form-check-label" for="subcontractor">
+    <div class="mb-6 flex items-start space-x-3">
+      <input 
+        type="checkbox" 
+        id="subcontractor" 
+        name="subcontractor" 
+        class="mt-1 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-bg-green-600"
+        <%= supplier.Subcontractor ? 'checked' : '' %>>
+      <label for="subcontractor" class="select-none text-gray-700">
         Is this supplier a subcontractor under CIS?
       </label>
-      <div class="form-text text-muted">
-        Subcontractors may have CIS tax deductions applied (0%, 20%, or 30%) based on HMRC verification.
-      </div>
+    </div>
+    <div class="mb-6 text-sm text-gray-500">
+      Subcontractors may have CIS tax deductions applied (0%, 20%, or 30%) based on HMRC verification.
     </div>
 
     <!-- CIS Fields -->
-    <div id="cis-fields">
-      <div class="mb-3">
-        <label for="cisRate" class="form-label">CIS Rate</label>
-        <select class="form-select" id="cisRate" name="cisRate">
+    <div id="cis-fields" class="space-y-6">
+      <div>
+        <label for="cisRate" class="block mb-1 font-medium text-gray-700">CIS Rate</label>
+        <select id="cisRate" name="cisRate" class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-bg-green-600">
           <option value="0" <%= supplier.CISRate === '0' ? 'selected' : '' %>>0% (Gross)</option>
           <option value="0.2" <%= supplier.CISRate === '0.2' ? 'selected' : '' %>>20% (Standard)</option>
           <option value="0.3" <%= supplier.CISRate === '0.3' ? 'selected' : '' %>>30% (Higher)</option>
         </select>
-        <div class="form-text text-muted">
+        <p class="mt-1 text-sm text-gray-500">
           0% = Gross payment status, 20% = standard rate, 30% = unverified subcontractor.
-        </div>
+        </p>
       </div>
 
-      <div class="mb-3">
-        <label for="cisNumber" class="form-label">HMRC CIS Verification Number</label>
-        <input type="text" class="form-control" id="cisNumber" name="cisNumber"
-               value="<%= supplier.CISNumber || '' %>" placeholder="VXXXXXXXXXXXXX">
-        <div class="form-text text-muted">
+      <div>
+        <label for="cisNumber" class="block mb-1 font-medium text-gray-700">HMRC CIS Verification Number</label>
+        <input 
+          type="text" 
+          id="cisNumber" 
+          name="cisNumber" 
+          value="<%= supplier.CISNumber || '' %>" 
+          placeholder="VXXXXXXXXXXXXX"
+          class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-bg-green-600"
+        >
+        <p class="mt-1 text-sm text-gray-500">
           Issued by HMRC when a subcontractor is verified.
-        </div>
+        </p>
       </div>
     </div>
 
-    <button type="submit" class="btn btn-hcs-green">Save Changes</button>
+    <button type="submit" class="mt-6 inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded transition">
+      Save Changes
+    </button>
   </form>
 </div>
 
-<!-- Show/hide CIS fields based on checkbox -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const subcontractorCheckbox = document.getElementById("subcontractor");

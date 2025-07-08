@@ -1,7 +1,7 @@
 // cronJobs.js
 const cron = require('node-cron');
 require('dotenv').config();
-const { getIo } = require('../services/socketService');
+const { getIo } = require('../../services/socketService');
 const holidayService = require('./holidayServiceMongoose');
 const logger = require('../../services/loggerService');
 const fetchKFMongoose = require('../kashflowAPI/fetchKashFlowDataMongoose');

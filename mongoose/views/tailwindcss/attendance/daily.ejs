@@ -1,95 +1,124 @@
+<div class="container mx-auto py-4 px-4">
+  <div class="mb-4 bg-gray-100 rounded-lg">
+    <!-- Tabs -->
+    <ul class="flex justify-center space-x-4 mb-4 border-b">
+      <li>
+        <button
+          class="pb-2 text-sm font-medium border-b-2 transition-colors duration-300 focus:outline-none"
+          data-tab="daily"
+          aria-current="<%= currentTab === 'daily' ? 'page' : 'false' %>"
+          :class="currentTab === 'daily' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+        >
+          Daily
+        </button>
+      </li>
+      <li>
+        <button
+          class="pb-2 text-sm font-medium border-b-2 transition-colors duration-300 focus:outline-none"
+          data-tab="weekly"
+          aria-current="<%= currentTab === 'weekly' ? 'page' : 'false' %>"
+          :class="currentTab === 'weekly' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+        >
+          Weekly
+        </button>
+      </li>
+    </ul>
 
+    <div class="container mx-auto py-5">
+      <h1 class="text-4xl font-extrabold text-center mb-8">
+        Daily Attendance for <%= moment(date).format('Do MMMM YYYY') %>
+      </h1>
 
-<div class="container py-4">
-    <div class="mb-4 bg-body-tertiary rounded-3">
-        <!-- Vertical Navigation Tabs for Daily, Weekly, Monthly -->
-        <ul class="nav nav-tabs justify-content-center mb-4">
-            <li class="nav-item">
-                <a href="/daily" class="nav-link <%= currentTab === 'daily' ? 'active' : '' %>">Daily</a>
-            </li>
-            <li class="nav-item">
-                <a href="/weekly" class="nav-link <%= currentTab === 'weekly' ? 'active' : '' %>">Weekly</a>
-            </li>
-        </ul>
-
-        <div class="container-fluid py-5">
-            <h1 class="display-5 fw-bold text-center">Daily Attendance for <%= moment(date).format('Do MMMM YYYY') %></h1>
-            <table class="table table-bordered table-striped">
-                <thead>
-                    <tr>
-                        <th>Location</th>
-                        <th>Person</th>
-                        <th>Type</th>
-                        <th>Hours Worked</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% if (attendance.length > 0) { %>
-                        <% attendance.forEach(record => { %>
-                            <tr>
-                                <!-- Location Column -->
-                                <td>
-                                    <% if (record.Location) { %>
-                                        <a href="/location/read/<%= record.Location.id %>">
-                                            <%= record.Location.name || `${record.Location.address}, ${record.Location.city}, ${record.Location.postalCode}` %>
-                                        </a>
-                                    <% } else { %>
-                                        N/A
-                                    <% } %>
-                                </td>
-                                
-                                <!-- Person Column (Either Employee or Subcontractor) -->
-                                <td>
-                                    <% if (record.Employee) { %>
-                                        <a href="/employee/read/<%= record.Employee.id %>"><%= record.Employee.name %></a>
-                                    <% } else if (record.Subcontractor) { %>
-                                        <a href="/subcontractor/read/<%= record.Subcontractor.id %>"><%= record.Subcontractor.company %></a>
-                                    <% } else { %>
-                                        N/A
-                                    <% } %>
-                                </td>
-
-                                <!-- Type of Attendance (ENUM) -->
-                                <td><%= record.type || 'N/A' %></td>
-
-                                <!-- Hours Worked (if available for the Employee) -->
-                                <td>
-                                    <% if (record.hoursWorked) { %>
-                                        <%= record.hoursWorked %> hours
-                                    <% } else { %>
-                                        N/A
-                                    <% } %>
-                                </td>
-
-                                <!-- Actions Column -->
-                                <td class="text-center">
-                                    <!-- Link to view the record in more detail -->
-                                    <a href="/attendance/read/<%= record.id %>" class="btn btn-hcs-green btn-sm">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-
-                                    <!-- Link to update the attendance record -->
-                                    <a href="/attendance/update/<%= record.id %>" class="btn btn-secondary btn-sm">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="5" class="text-center">No attendance records found for this day.</td>
-                        </tr>
-                    <% } %>
-                    <tr class="fw-light">
-                        <td>
-                            <button class="btn btn-hcs-green" style="transform: rotate(0);">
-                                <a href="/attendance/create?date=<%= date %>" class="text-white stretched-link text-decoration-none">+</a>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+      <table class="min-w-full table-auto border border-gray-300 rounded-lg overflow-hidden">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="px-4 py-2 border-r border-gray-300 text-left">Location</th>
+            <th class="px-4 py-2 border-r border-gray-300 text-left">Person</th>
+            <th class="px-4 py-2 border-r border-gray-300 text-left">Type</th>
+            <th class="px-4 py-2 border-r border-gray-300 text-left">Hours Worked</th>
+            <th class="px-4 py-2 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (attendance.length > 0) { %>
+            <% attendance.forEach(record => { %>
+              <tr class="even:bg-white odd:bg-gray-50">
+                <td class="px-4 py-2 border-r border-gray-300">
+                  <% if (record.Location) { %>
+                    <a href="/location/read/<%= record.Location.id %>" class="text-blue-600 hover:underline">
+                      <%= record.Location.name || `${record.Location.address}, ${record.Location.city}, ${record.Location.postalCode}` %>
+                    </a>
+                  <% } else { %>
+                    <span class="text-gray-400">N/A</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2 border-r border-gray-300">
+                  <% if (record.Employee) { %>
+                    <a href="/employee/read/<%= record.Employee.id %>" class="text-blue-600 hover:underline">
+                      <%= record.Employee.name %>
+                    </a>
+                  <% } else if (record.Subcontractor) { %>
+                    <a href="/subcontractor/read/<%= record.Subcontractor.id %>" class="text-blue-600 hover:underline">
+                      <%= record.Subcontractor.company %>
+                    </a>
+                  <% } else { %>
+                    <span class="text-gray-400">N/A</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2 border-r border-gray-300"><%= record.type || 'N/A' %></td>
+                <td class="px-4 py-2 border-r border-gray-300">
+                  <% if (record.hoursWorked) { %>
+                    <%= record.hoursWorked %> hours
+                  <% } else { %>
+                    <span class="text-gray-400">N/A</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2 text-center space-x-2">
+                  <a href="/attendance/read/<%= record.id %>" class="inline-block rounded bg-green-600 hover:bg-green-700 text-white p-1" title="View">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="/attendance/update/<%= record.id %>" class="inline-block rounded bg-gray-600 hover:bg-gray-700 text-white p-1" title="Edit">
+                    <i class="bi bi-pencil-square"></i>
+                  </a>
+                </td>
+              </tr>
+            <% }); %>
+          <% } else { %>
+            <tr>
+              <td colspan="5" class="px-4 py-6 text-center text-gray-500">No attendance records found for this day.</td>
+            </tr>
+          <% } %>
+          <tr class="font-light">
+            <td class="px-4 py-2">
+              <a href="/attendance/create?date=<%= date %>" class="inline-block bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1">
+                +
+              </a>
+            </td>
+            <td colspan="4"></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+  </div>
 </div>
+
+<script>
+  // Optional JS for tabs if you want to switch without reload
+  document.querySelectorAll('ul.nav-tabs button[data-tab]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      const selectedTab = e.target.dataset.tab;
+
+      // Update active class on buttons
+      document.querySelectorAll('ul.nav-tabs button[data-tab]').forEach(b => {
+        b.classList.toggle('border-blue-600', b.dataset.tab === selectedTab);
+        b.classList.toggle('text-blue-600', b.dataset.tab === selectedTab);
+        b.classList.toggle('border-transparent', b.dataset.tab !== selectedTab);
+        b.classList.toggle('text-gray-500', b.dataset.tab !== selectedTab);
+      });
+
+      // Optionally you can fetch data for selected tab via AJAX or reload page
+      // location.href = `/${selectedTab}`;
+    });
+  });
+</script>

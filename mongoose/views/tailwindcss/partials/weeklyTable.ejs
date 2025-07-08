@@ -1,66 +1,66 @@
-<table class="table table-bordered table-striped table-sm">
+<table class="min-w-full border-collapse border border-gray-300 text-sm">
   <thead>
-    <tr>
-      <th class="text-center fw-normal">Name</th>
-      <% daysOfWeek.forEach(day=> { %>
-      <th class="text-center fs-6 fw-normal">
-        <a href="/daily/<%= day %>">
+    <tr class="bg-gray-100">
+      <th class="text-center font-normal border border-gray-300 px-3 py-2">Name</th>
+      <% daysOfWeek.forEach(day => { %>
+      <th class="text-center text-xs font-normal border border-gray-300 px-3 py-2">
+        <a href="/daily/<%= day %>" class="hover:underline">
           <%= moment(day).format('DD/MM/YYYY') %>
         </a><br>
-        <%= moment(day).format('dddd') %>
+        <span class="text-gray-600"><%= moment(day).format('dddd') %></span>
       </th>
       <% }); %>
-      <th class="text-center fw-normal">Weekly Pay <br>/ Total Hours</th>
+      <th class="text-center font-normal border border-gray-300 px-3 py-2">
+        Weekly Pay <br> / Total Hours
+      </th>
     </tr>
   </thead>
   <tbody>
-<% entries.forEach(([person, details])=> { %>
-  <tr class="fw-light">
-    <td>
-    <% if (details.employeeId) { %>
-      <a href="/employee/read/<%= details.employeeId %>" class="text-decoration-none">
-      <%= person %>
-      </a>
-    <% } else { %>
-      <a href="/supplier/read/<%= details.subcontractorId %>" class="text-decoration-none">
-      <%= person %>
-      </a>
-    <% } %>
-    </td>
-    <% daysOfWeek.forEach(day=> { %>
-    <% const dailyRecords=details.dailyRecords[day] || {}; %>
-    <td class="text-center">
-      <% if (Object.keys(dailyRecords).length> 0) { %>
-        <% Object.entries(dailyRecords).forEach(([recordId, record])=> { %>
-          <% const isReceipt=recordId.startsWith('receipt-'); %>
-          <% const href=isReceipt ? `/receipt/read/${recordId.split('receipt-')[1]}` : `/attendance/read/${recordId}`; %>
-          <a href="<%= href %>" class="text-decoration-none">
-            <%= record.location ? record.location.name : record.type %>
-          </a>
-          <br>
-            <% if (record.hoursWorked) { %>
-            <a href="<%= href %>" class="text-decoration-none">
-            <span>
-            <%= record.hoursWorked %> hours
-            </span>
+    <% entries.forEach(([person, details]) => { %>
+      <tr class="font-light border-b border-gray-200 hover:bg-gray-50">
+        <td class="border border-gray-300 px-3 py-2">
+          <% if (details.employeeId) { %>
+            <a href="/employee/read/<%= details.employeeId %>" class="text-blue-600 hover:underline">
+              <%= person %>
             </a>
+          <% } else { %>
+            <a href="/supplier/read/<%= details.subcontractorId %>" class="text-blue-600 hover:underline">
+              <%= person %>
+            </a>
+          <% } %>
+        </td>
+
+        <% daysOfWeek.forEach(day => { %>
+          <% const dailyRecords = details.dailyRecords[day] || {}; %>
+          <td class="border border-gray-300 text-center px-3 py-2 align-top">
+            <% if (Object.keys(dailyRecords).length > 0) { %>
+              <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
+                <% const isReceipt = recordId.startsWith('receipt-'); %>
+                <% const href = isReceipt ? `/receipt/read/${recordId.split('receipt-')[1]}` : `/attendance/read/${recordId}`; %>
+                <a href="<%= href %>" class="block text-blue-600 hover:underline">
+                  <%= record.location ? record.location.name : record.type %>
+                </a>
+                <% if (record.hoursWorked) { %>
+                  <a href="<%= href %>" class="block text-gray-700 text-xs">
+                    <%= record.hoursWorked %> hours
+                  </a>
+                <% } %>
+              <% }); %>
+            <% } else { %>
+              <% if (details.type === 'employee') { %>
+                <a href="/attendance/create?date=<%= day %>&uuid=<%= details.employeeId %>" class="text-gray-400 text-xs hover:text-gray-600 hover:underline">
+                  Add Attendance
+                </a>
+              <% } %>
             <% } %>
+          </td>
         <% }); %>
-      <% } else { %>
-        <% if (details.type==='employee' ) { %>
-          <a href="/attendance/create?date=<%= day %>&uuid=<%= details.employeeId %>" class="text-decoration-none text-muted">
-          Add Attendance
-          </a>
-        <% } %>
-      <% } %>
-    </td>
+
+        <td class="border border-gray-300 text-center px-3 py-2 font-semibold">
+          £<%= details.weeklyPay.toFixed(2) %><br>
+          <span class="text-sm font-normal"><%= details.totalHoursWorked %> hours</span>
+        </td>
+      </tr>
     <% }); %>
-    <td class="text-center">
-      £<%= details.weeklyPay.toFixed(2) %><br>
-      <%= details.totalHoursWorked %> hours
-    </td>
-  </tr>
-<% }); %>
   </tbody>
 </table>
-  

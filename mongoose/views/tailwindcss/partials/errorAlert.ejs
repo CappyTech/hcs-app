@@ -1,13 +1,13 @@
 <% if (flash.error && flash.error.length > 0) { %>
   <div class="fixed top-4 right-4 space-y-4 z-50">
     <% flash.error.forEach(function(message, index) { %>
-      <div id="errorToast<%= index %>"
+      <div id="errorToast<%= index %>" 
            class="relative flex items-start bg-red-600 text-white rounded-lg shadow-lg px-4 py-3 max-w-xs animate-slide-in">
         <div class="flex-1 pr-6">
           <p class="text-sm"><%= message %></p>
         </div>
         <button
-          class="absolute top-2 right-2 text-white hover:text-gray-200"
+          class="absolute top-2 right-2 text-white hover:text-red-300 focus:outline-none"
           onclick="document.getElementById('errorToast<%= index %>').remove()"
           aria-label="Close">
           <i class="bi bi-x-lg"></i>
@@ -16,7 +16,6 @@
     <% }); %>
   </div>
 
-  <!-- Optional animation (Tailwind custom class) -->
   <style>
     @keyframes slide-in {
       from { opacity: 0; transform: translateY(-10px); }
@@ -26,4 +25,15 @@
       animation: slide-in 0.3s ease-out;
     }
   </style>
+
+  <script>
+    window.addEventListener('load', function () {
+      // Auto-dismiss error toasts after 5 seconds
+      document.querySelectorAll('[id^="errorToast"]').forEach(toast => {
+        setTimeout(() => {
+          toast.remove();
+        }, 5000);
+      });
+    });
+  </script>
 <% } %>

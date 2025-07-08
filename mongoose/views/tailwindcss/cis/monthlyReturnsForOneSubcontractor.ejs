@@ -1,147 +1,111 @@
-<div class="page-number">
+<div class="text-center mt-4">
+  <div class="mb-6 text-gray-700 text-sm">
     <%= supplier.Name %> | Heron Constructive Solutions LTD | <%= year %> Monthly Returns
-</div>
-<div class="mt-4">
-    <h1 class="mb-4 display-3 text-center">
-        <%= year %> Monthly Returns
-    </h1>
-    <div class="row justify-content-evenly">
-        <div class="col-6 ms-auto text-center">
-            <p class="display-5">Subcontractor</p>
-            <%= supplier.Name %>
-            <br>
-            CIS: <%= supplier.CISNumber %>
-            <br>
-            VAT: <%= supplier.VATNumber %>
-            <br>
-            <address>
-                <%= supplier.Address1 %>,
-                <%= supplier.Address2 %>,
-                <%= supplier.Address3 %>,
-                <%= supplier.PostCode %>
-            </address>
-        </div>
-        <div class="col-6 text-center">
-            <p class="display-5">Contractor</p>
-            Heron Constructive Solutions LTD
-            <br>
-            Company: 09276951
-            <br>
-            VAT: 252295994
-            <br>
-            <address>
-                103 Herondale Road, Mossley Hill, Liverpool, Merseyside, L18 1JZ.
-            </address>
-        </div>
-    </div>
-</div>
+  </div>
 
-<% for (let monthIndex = 1; monthIndex <= 12; monthIndex++) { %>
-    <% const monthKey = monthIndex.toString(); %>
-    <% let receipts = receiptsByMonth[monthKey] || []; %>
-    <% receipts = receipts.sort((a, b) => new Date(a.PayDate) - new Date(b.PayDate)); %>
-    <% const hasReceipts = receipts.length > 0; %>
+  <h1 class="mb-6 text-5xl font-bold"><%= year %> Monthly Returns</h1>
+
+  <div class="flex flex-wrap justify-center gap-8 mb-8">
+    <div class="w-full md:w-1/2 text-center">
+      <p class="text-3xl font-semibold mb-2">Subcontractor</p>
+      <p><%= supplier.Name %></p>
+      <p>CIS: <%= supplier.CISNumber %></p>
+      <p>VAT: <%= supplier.VATNumber %></p>
+      <address class="not-italic mt-2 leading-relaxed">
+        <%= supplier.Address1 %>, <br>
+        <%= supplier.Address2 %>, <br>
+        <%= supplier.Address3 %>, <br>
+        <%= supplier.PostCode %>
+      </address>
+    </div>
+
+    <div class="w-full md:w-1/2 text-center">
+      <p class="text-3xl font-semibold mb-2">Contractor</p>
+      <p>Heron Constructive Solutions LTD</p>
+      <p>Company: 09276951</p>
+      <p>VAT: 252295994</p>
+      <address class="not-italic mt-2 leading-relaxed">
+        103 Herondale Road, Mossley Hill, Liverpool, Merseyside, L18 1JZ.
+      </address>
+    </div>
+  </div>
+
+  <% for (let monthIndex = 1; monthIndex <= 12; monthIndex++) { %>
+    <% 
+      const monthKey = monthIndex.toString(); 
+      let receipts = receiptsByMonth[monthKey] || []; 
+      receipts = receipts.sort((a, b) => new Date(a.PayDate) - new Date(b.PayDate));
+      const hasReceipts = receipts.length > 0; 
+    %>
     <% if (hasReceipts) { %>
-        <% if (pageBreakMonths.includes(monthIndex)) { %>
-            <table class="table table-hover table-sm caption-top page-break d-print-table">
-        <% } else { %>
-            <table class="table table-hover table-sm caption-top d-print-table">
-        <% } %>
-        <caption class="text-center">Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= year %>)</caption>
-            <thead>
-                <tr>
-                    <th>
-                        <span class="d-none d-md-table-cell">#</span>
-                        <span class="d-md-none">#</span>
-                    </th>
-                    <th>
-                        <span class="d-none d-md-table-cell">KF #</span>
-                        <span class="d-md-none">KF #</span>
-                    </th>
-                    <th>
-                        <span class="d-none d-md-table-cell">Invoiced</span>
-                        <span class="d-md-none">Invoiced</span>
-                    </th>
-                    <th>
-                        <span class="d-none d-md-table-cell">Paid</span>
-                        <span class="d-md-none">Paid</span>
-                    </th>
-                    <th>
-                        <span class="d-none d-md-table-cell">Gross</span>
-                        <span class="d-md-none">Gross</span>
-                    </th>
-                    <th>
-                        <span class="d-none d-md-table-cell">Labour</span>
-                        <span class="d-md-none">Labour</span>
-                    </th>
-                    <th>
-                        <span class="d-none d-md-table-cell">Material</span>
-                        <span class="d-md-none">Material</span>
-                    </th>
-                    <th>
-                        <span class="d-none d-md-table-cell">
-                            CIS @ 
-                            <% if (supplier.CISRate==='0') { %>
-                                0%
-                            <% } else if (supplier.CISRate==='0.2') { %>
-                                20%
-                            <% } else if (supplier.CISRate==='0.3') { %>
-                                30%
-                            <% } %>
-                        </span>
-                        <span class="d-md-none">CIS</span>
-                    </th>
-                    <th>
-                        <span class="d-none d-md-table-cell">Net</span>
-                        <span class="d-md-none">Net</span>
-                    </th>
-                    <% if (supplier.isReverseCharge) { %>
-                    <th>
-                        <span class="d-none d-md-table-cell">Reverse Charge</span>
-                        <span class="d-md-none">RC</span>
-                    </th>
-                    <% } %>
-                    <th>Month</th>
-                    <th>Year</th>
-                    <th>
-                        <span class="d-none d-md-table-cell">Submission Date</span>
-                        <span class="d-md-none">Submission</span>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                <% let totalGross = 0, totalLabour = 0, totalMaterial = 0, totalCIS = 0, totalNet = 0; %>
-                <% receipts.forEach(receipt => { %>
-                    <tr>
-                        <td><%= receipt.InvoiceNumber %></td>
-                        <td><%= receipt.KashflowNumber %></td>
-                        <td><%= slimDateTime(receipt.InvoiceDate) %></td>
-                        <td><%= receipt.PayDate %></td>
-                        <td><%= formatCurrency(receipt.GrossAmount) %></td>
-                        <td><%= formatCurrency(receipt.LabourCost) %></td>
-                        <td><%= formatCurrency(receipt.MaterialCost) %></td>
-                        <td><%= formatCurrency(receipt.CISAmount) %></td>
-                        <td><%= formatCurrency(receipt.NetAmount) %></td>
-                        <td><%= receipt.TaxMonth %></td>
-                        <td><%= receipt.TaxYear %></td>
-                        <td><%= slimDateTime(receipt.SubmissionDate) %></td>
-                    </tr>
-                    <% totalGross += receipt.GrossAmount; %>
-                    <% totalLabour += receipt.LabourCost; %>
-                    <% totalMaterial += receipt.MaterialCost; %>
-                    <% totalCIS += receipt.CISAmount; %>
-                    <% totalNet += receipt.NetAmount; %>
-                <% }) %>
-                <tr class="fw-bold">
-                    <td colspan="4">Total for Month <%= monthKey %>:</td>
-                    <td><%= formatCurrency(totalGross) %></td>
-                    <td><%= formatCurrency(totalLabour) %></td>
-                    <td><%= formatCurrency(totalMaterial) %></td>
-                    <td><%= formatCurrency(totalCIS) %></td>
-                    <td><%= formatCurrency(totalNet) %></td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
+      <table class="min-w-full border-collapse border border-gray-300 mb-10 print:table <%= pageBreakMonths.includes(monthIndex) ? 'print:break-after-page' : '' %>">
+        <caption class="text-center text-lg font-semibold mb-4">
+          Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= year %>)
+        </caption>
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">#</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">KF #</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Invoiced</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Paid</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Gross</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Labour</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Material</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">
+              CIS @
+              <% if (supplier.CISRate === '0') { %>0%<% } else if (supplier.CISRate === '0.2') { %>20%<% } else if (supplier.CISRate === '0.3') { %>30%<% } %>
+            </th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Net</th>
+            <% if (supplier.isReverseCharge) { %>
+              <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">RC</th>
+            <% } %>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Month</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Year</th>
+            <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Submission</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% 
+            let totalGross = 0, totalLabour = 0, totalMaterial = 0, totalCIS = 0, totalNet = 0;
+            receipts.forEach(receipt => { 
+          %>
+          <tr class="even:bg-gray-50">
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.InvoiceNumber %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.KashflowNumber %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= slimDateTime(receipt.InvoiceDate) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.PayDate %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.GrossAmount) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.LabourCost) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.MaterialCost) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.CISAmount) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.NetAmount) %></td>
+            <% if (supplier.isReverseCharge) { %>
+              <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.ReverseCharge) %></td>
+            <% } %>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.TaxMonth %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.TaxYear %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= slimDateTime(receipt.SubmissionDate) %></td>
+          </tr>
+          <% 
+            totalGross += receipt.GrossAmount;
+            totalLabour += receipt.LabourCost;
+            totalMaterial += receipt.MaterialCost;
+            totalCIS += receipt.CISAmount;
+            totalNet += receipt.NetAmount;
+          }); %>
+          <tr class="font-bold bg-gray-200">
+            <td colspan="4" class="border border-gray-300 px-3 py-1 text-left">Total for Month <%= monthKey %>:</td>
+            <td class="border border-gray-300 px-3 py-1 text-center"><%= formatCurrency(totalGross) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center"><%= formatCurrency(totalLabour) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center"><%= formatCurrency(totalMaterial) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center"><%= formatCurrency(totalCIS) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center"><%= formatCurrency(totalNet) %></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
     <% } %>
-<% } %>
+  <% } %>
+</div>

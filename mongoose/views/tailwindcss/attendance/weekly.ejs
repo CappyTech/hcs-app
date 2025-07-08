@@ -1,111 +1,103 @@
-<div class="container py-4">
+<div class="container mx-auto py-4 px-4">
 
-        <!-- Navigation Tabs -->
-        <ul class="nav nav-tabs justify-content-center mb-4">
-            <li class="nav-item">
-                <a href="/daily" class="nav-link <%= currentTab === 'daily' ? 'active' : '' %>">Daily</a>
-            </li>
-            <li class="nav-item">
-                <a href="/weekly" class="nav-link <%= currentTab === 'weekly' ? 'active' : '' %>">Weekly</a>
-            </li>
-        </ul>
+  <!-- Navigation Tabs -->
+  <ul class="flex justify-center space-x-6 mb-4 border-b">
+    <li>
+      <a href="/daily" class="pb-2 text-sm font-medium border-b-2
+         <%= currentTab === 'daily' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' %>">
+        Daily
+      </a>
+    </li>
+    <li>
+      <a href="/weekly" class="pb-2 text-sm font-medium border-b-2
+         <%= currentTab === 'weekly' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' %>">
+        Weekly
+      </a>
+    </li>
+  </ul>
 
-        <!-- Week Navigation -->
-        <div class="d-flex justify-content-between mb-4 d-print-none">
-            <button class="btn btn-hcs-green">
-                <a class="text-white text-decoration-none" href="/weekly/<%= previousYear %>/<%= previousWeek %>">&laquo; Previous Week</a>
-            </button>
-            <h1 class="display-5 text-center">Weekly Attendance</h1>
-            <button class="btn btn-hcs-green">
-                <a class="text-white text-decoration-none" href="/weekly/<%= nextYear %>/<%= nextWeek %>">Next Week &raquo;</a>
-            </button>
-        </div>
+  <!-- Week Navigation -->
+  <div class="flex justify-between items-center mb-4 print:hidden">
+    <a href="/weekly/<%= previousYear %>/<%= previousWeek %>" class="inline-block bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2">
+      &laquo; Previous Week
+    </a>
+    <h1 class="text-4xl font-extrabold text-center flex-grow mx-4">Weekly Attendance</h1>
+    <a href="/weekly/<%= nextYear %>/<%= nextWeek %>" class="inline-block bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2">
+      Next Week &raquo;
+    </a>
+  </div>
 
-        <p class="text-center">From <%= moment(startDate).format('Do MMMM YYYY') %> to <%= moment(endDate).format('Do MMMM YYYY') %></p>
+  <p class="text-center mb-6">
+    From <%= moment(startDate).format('Do MMMM YYYY') %> to <%= moment(endDate).format('Do MMMM YYYY') %>
+  </p>
 
-        <div class="row mb-4">
-            <div class="col-lg-6 col-md-6">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h4>Total Employee Payment</h4>
-                        <p class="display-6">£<%= totalEmployeePay.toFixed(2) %> <small class="fs-6">gross</small></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 col-md-6">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h4>Total Subcontractor Payment</h4>
-                        <p class="display-6">£<%= totalSubcontractorPay.toFixed(2) %> <small class="fs-6">net</small></p>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-lg shadow p-6 text-center">
+      <h4 class="text-lg font-semibold mb-2">Total Employee Payment</h4>
+      <p class="text-4xl font-bold">£<%= totalEmployeePay.toFixed(2) %> <small class="text-base font-normal">gross</small></p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6 text-center">
+      <h4 class="text-lg font-semibold mb-2">Total Subcontractor Payment</h4>
+      <p class="text-4xl font-bold">£<%= totalSubcontractorPay.toFixed(2) %> <small class="text-base font-normal">net</small></p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6 text-center">
+      <h4 class="text-lg font-semibold mb-2">Total Employee Hours Worked</h4>
+      <p class="text-4xl font-bold"><%= totalEmployeeHours || '0' %> hours</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6 text-center">
+      <h4 class="text-lg font-semibold mb-2">Total Subcontractor Days Worked</h4>
+      <p class="text-4xl font-bold"><%= totalSubcontractorDays || '0' %> days</p>
+    </div>
+  </div>
 
-        <div class="row mb-4">
-            <div class="col-lg-6 col-md-6">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h4>Total Employee Hours Worked</h4>
-                        <p class="display-6"><%= totalEmployeeHours ? totalEmployeeHours : '0' %> hours</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 col-md-6">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h4>Total Subcontractor Days Worked</h4>
-                        <p class="display-6"><%= totalSubcontractorDays ? totalSubcontractorDays : '0' %> days</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <% if (activeJobs && activeJobs.length > 0) { %>
-        <h3 class="mt-5 mb-3">Scheduled Jobs</h3>
-        <ul class="list-group mb-5">
-            <% activeJobs.forEach(job => { %>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>
-                        <%= job.jobRef %>
-                        <% if (job.projectId) { %>
-                            (<%= job.projectId.Name || job.projectId.Reference %>)
-                        <% } %>
-                    </span>
-                    <% if (job.locationId) { %>
-                        <span class="badge text-bg-secondary"><%= job.locationId.name || job.locationId.address %></span>
-                    <% } %>
-                </li>
-            <% }) %>
-        </ul>
+  <% if (activeJobs && activeJobs.length > 0) { %>
+  <h3 class="mt-5 mb-3 text-xl font-semibold">Scheduled Jobs</h3>
+  <ul class="divide-y divide-gray-200 mb-5 border rounded-lg overflow-hidden">
+    <% activeJobs.forEach(job => { %>
+      <li class="flex justify-between items-center px-4 py-3 bg-white">
+        <span>
+          <%= job.jobRef %>
+          <% if (job.projectId) { %>
+            (<%= job.projectId.Name || job.projectId.Reference %>)
+          <% } %>
+        </span>
+        <% if (job.locationId) { %>
+          <span class="inline-block bg-gray-300 text-gray-800 rounded-full px-3 py-1 text-sm font-medium">
+            <%= job.locationId.name || job.locationId.address %>
+          </span>
         <% } %>
+      </li>
+    <% }) %>
+  </ul>
+  <% } %>
 
-        <% 
-            const employeeEntries = Object.entries(groupedAttendance).filter(([_, v]) => v.type === 'employee');
-            const subcontractorEntries = Object.entries(groupedAttendance).filter(([_, v]) => v.type === 'subcontractor');
-        %>
+  <% 
+    const employeeEntries = Object.entries(groupedAttendance).filter(([_, v]) => v.type === 'employee');
+    const subcontractorEntries = Object.entries(groupedAttendance).filter(([_, v]) => v.type === 'subcontractor');
+  %>
 
-        <!-- Employee Table -->
-        <h3 class="mt-5 mb-3 text-center">Employees</h3>
-        <div class="table-responsive mb-5">
-            <%- include('../partials/weeklyTable', {
-                entries: employeeEntries,
-                daysOfWeek,
-                startDate,
-                endDate,
-                moment
-            }) %>
-        </div>
+  <!-- Employee Table -->
+  <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Employees</h3>
+  <div class="overflow-x-auto mb-5">
+    <%- include('../partials/weeklyTable', {
+      entries: employeeEntries,
+      daysOfWeek,
+      startDate,
+      endDate,
+      moment
+    }) %>
+  </div>
 
-        <!-- Subcontractor Table -->
-        <h3 class="mt-5 mb-3  text-center">Subcontractors</h3>
-        <div class="table-responsive mb-5">
-            <%- include('../partials/weeklyTable', {
-                entries: subcontractorEntries,
-                daysOfWeek,
-                startDate,
-                endDate,
-                moment
-            }) %>
-        </div>
+  <!-- Subcontractor Table -->
+  <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Subcontractors</h3>
+  <div class="overflow-x-auto mb-5">
+    <%- include('../partials/weeklyTable', {
+      entries: subcontractorEntries,
+      daysOfWeek,
+      startDate,
+      endDate,
+      moment
+    }) %>
+  </div>
 </div>
