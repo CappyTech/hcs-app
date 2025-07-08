@@ -163,31 +163,31 @@ const main = async () => {
     app.use(require('./services/errorHandlerService'));
 
     // Server init
-    const port = process.env.NODE_ENV === 'server2' ? 3000
-              : process.env.NODE_ENV === 'development' ? 80
-              : 443;
-    const host = process.env.NODE_ENV === 'development' ? '127.0.0.1' : '0.0.0.0';
+    const http = require('http');
+    const { setupWebSocket } = require('./mongoose/services/webSocketServiceMongoose');
 
-    app.listen(port, host, () => {
+    // Create HTTP server from Express app
+    const server = http.createServer(app);
+
+    // Choose port/host
+    const port = process.env.NODE_ENV === 'server2' ? 3000
+      : process.env.NODE_ENV === 'development' ? 80
+        : 443;
+    const host = process.env.NODE_ENV === 'development' ? 'localhost' : '0.0.0.0';
+
+    // Start server
+    server.listen(port, host, () => {
       logger.info(`🚀 Server running in ${process.env.NODE_ENV} on ${host}:${port}`);
     });
 
+    // Setup WebSocket with working sessionService
+    setupWebSocket(server, sessionService); // this sets io internally
+
+    logger.debug('🧪 Test log for WebSocket');
+
   } catch (err) {
-    logger.error('❌ Failed to start application: '+ err + err.stack);
+    logger.error('❌ Failed to start application: ' + err + err.stack);
   }
 };
 
 main();
-
-
-// TODO:
-// - Allow for Subcontractor users to see their own data.
-// - Allow for Client users to see their own data.
-// - Allow for Employee users to see their own data.
-// - Allow for Manager Employees users to manage their assigned employees.
-// - Allow for Accountant users to come in and do their work.
-// - Allow for HMRC users to audit the system.
-// - Allow for Admin users to manage the system.
-// - Allow for Super Admin users to manage the system and all users.
-// - Make routes /role/* the primary route for each user role.
-// - Ensure 2FA works
