@@ -79,12 +79,6 @@ const main = async () => {
       res.locals.session = null;
       res.locals.copyrightyearstart = process.env.INCORPORATION_YEAR;
       res.locals.copyrightyear = new Date().getFullYear();
-
-      const logUser = req.user?.username || 'unknown user';
-      const logMsg = `${logUser} accessed ${req.method} ${req.path}`;
-      if (req.path.includes('/update/')) logger.warn(`-- WARN: ${logMsg}`);
-      else if (req.path.includes('/delete/')) logger.error(`-- DANGER: ${logMsg}`);
-      else logger.info(logMsg);
       next();
     });
 
@@ -182,8 +176,6 @@ const main = async () => {
 
     // Setup WebSocket with working sessionService
     setupWebSocket(server, sessionService); // this sets io internally
-
-    logger.debug('🧪 Test log for WebSocket');
 
   } catch (err) {
     logger.error('❌ Failed to start application: ' + err + err.stack);

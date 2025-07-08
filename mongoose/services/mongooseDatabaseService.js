@@ -24,7 +24,7 @@ const loadModels = () => {
     .forEach((file) => {
       const model = require(path.join(modelsDirectory, file));
       mdb[model.modelName] = model;
-      if (process.env.DEBUG) {
+      if (process.env.DEBUG === true) {
         logger.info(`Model loaded: ${model.modelName}`);
       }
     });
@@ -35,7 +35,7 @@ mdb.connect = async () => {
     if (!isTunnelEnabled) {
       const uri = process.env.MONGO_URI;
       await mongoose.connect(uri);
-      if (process.env.DEBUG) {
+      if (process.env.DEBUG === true) {
         logger.info('✅ Connected to MongoDB via MONGO_URI');
       }
       loadModels();
@@ -90,7 +90,7 @@ mdb.connect = async () => {
     });
 
     await mongoose.connect(mongoURI);
-    if (process.env.DEBUG) {
+   if (process.env.DEBUG === true) {
       logger.info('✅ Connected to MongoDB via SSH tunnel');
     }
     loadModels();

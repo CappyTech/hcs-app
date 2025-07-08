@@ -1,12 +1,25 @@
+const fs = require('fs');
+const path = require('path');
 const { createLogger, format, transports } = require('winston');
 const Transport = require('winston-transport');
-const path = require('path');
 const { combine, timestamp, printf, colorize, json } = format;
 
 let io = null;
 
 function setSocketInstance(socketInstance) {
   io = socketInstance;
+}
+
+// Ensure log directory and file exist
+const logDir = path.join(__dirname, '../logs');
+const logFile = path.join(logDir, 'app.json.log');
+
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+
+if (!fs.existsSync(logFile)) {
+  fs.writeFileSync(logFile, '', { flag: 'wx' }); // Create empty file if not exists
 }
 
 // Custom WebSocket transport
@@ -55,7 +68,7 @@ const logger = createLogger({
       )
     }),
     new transports.File({
-      filename: path.join(__dirname, '../logs/app.json.log'),
+      filename: logFile,
       maxsize: 5 * 1024 * 1024,
       maxFiles: 5,
       tailable: true,
