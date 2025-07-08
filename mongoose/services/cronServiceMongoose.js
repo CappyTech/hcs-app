@@ -1,11 +1,27 @@
 // cronJobs.js
 const cron = require('node-cron');
 require('dotenv').config();
-
+const { getIo } = require('../services/socketService');
 const holidayService = require('./holidayServiceMongoose');
 const logger = require('../../services/loggerService');
 const fetchKFMongoose = require('../kashflowAPI/fetchKashFlowDataMongoose');
 const taskService = require('../services/taskServiceMongoose');
+
+function sendUpdate(message) {
+  try {
+    const io = getIo();
+    io.to('admins').emit('logs:update', {
+      level: 'info',
+      entry: {
+        timestamp: new Date().toISOString(),
+        message,
+        user: { username: 'system' }
+      },
+    });
+  } catch (err) {
+    logger.error(`Failed to emit socket update: ${err.message}`);
+  }
+}
 
 function startCronJobs() {
   const scheduleKashFlowData = process.env.NODE_ENV === 'production'
@@ -15,7 +31,7 @@ function startCronJobs() {
   cron.schedule(scheduleKashFlowData, async () => {
     try {
       logger.info('Cron job started: Fetching KashFlow data (MongoDB only)...');
-      await fetchKFMongoose.fetchKashFlowDataMongoose();
+      await fetchKFMongoose.fetchKashFlowDataMongoose(sendUpdate);
       logger.info('Cron job completed: KashFlow data fetched successfully.');
     } catch (error) {
       logger.error('Cron job (fetchKashFlowDataMongoose) failed: ' + error.message);

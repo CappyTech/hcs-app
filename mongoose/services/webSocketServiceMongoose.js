@@ -32,7 +32,7 @@ function setupWebSocket(server, sessionService) {
   io.on('connection', (socket) => {
     const user = socket.user;
 
-    if (!user.role === 'admin') {
+    if (user.role !== 'admin') {
       socket.disconnect(true);
       return;
     }

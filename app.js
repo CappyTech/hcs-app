@@ -17,7 +17,8 @@ const main = async () => {
     await mdb.connect(); // Wait for MongoDB/SSH tunnel
 
     const app = express();
-
+    const http = require('http');
+    const { initSocket } = require('./services/socketService');
     const sessionService = require('./mongoose/services/sessionServiceMongoose');
 
     app.set('trust proxy', 1);
@@ -156,10 +157,6 @@ const main = async () => {
     // Global error handler
     app.use(require('./services/errorHandlerService'));
 
-    // Server init
-    const http = require('http');
-    const { setupWebSocket } = require('./mongoose/services/webSocketServiceMongoose');
-
     // Create HTTP server from Express app
     const server = http.createServer(app);
 
@@ -174,7 +171,10 @@ const main = async () => {
       logger.info(`🚀 Server running in ${process.env.NODE_ENV} on ${host}:${port}`);
     });
 
+    const io = initSocket(server);
+
     // Setup WebSocket with working sessionService
+    const { setupWebSocket } = require('./mongoose/services/webSocketServiceMongoose');
     setupWebSocket(server, sessionService); // this sets io internally
 
   } catch (err) {
