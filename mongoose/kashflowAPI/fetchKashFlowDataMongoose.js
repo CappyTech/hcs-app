@@ -39,7 +39,16 @@ exports.fetchKashFlowDataMongoose = async (sendUpdate = () => {}) => {
 
     for (const { name, fetchFn, model, uniqueKey } of baseModels) {
       const data = await fetchFn(client);
-
+      /*
+      if (name === 'supplier') {
+        data.forEach(supplier => {
+          if (supplier.IsSubcontractor === undefined) supplier.IsSubcontractor = false;
+          if (supplier.CISRate === undefined || supplier.CISRate === '') supplier.CISRate = null;
+          if (supplier.CISNumber === undefined) supplier.CISNumber = null;
+        });
+        console.log('🔎 Sample injected supplier:', data[0]);
+      }
+      */
       if (data.length > 0) {
         await upsertData(model, data, uniqueKey, mdb.meta, operationLog, `../logs/${name}.txt`, sendUpdate, startfetch);
       }
