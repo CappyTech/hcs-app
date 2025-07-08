@@ -115,11 +115,11 @@
             <td class="border border-gray-300 px-3 py-1"><%= receipt.KashflowNumber %></td>
             <td class="border border-gray-300 px-3 py-1"><%= slimDateTime(receipt.InvoiceDate) %></td>
             <td class="border border-gray-300 px-3 py-1"><%= slimDateTime(receipt.PayDate) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.GrossAmount) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.LabourCost) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.MaterialCost) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.CISAmount) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.NetAmount) %></td>
+            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.Gross) %></td>
+            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.Labour) %></td>
+            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.Material) %></td>
+            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.CIS) %></td>
+            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.Net) %></td>
             <% if (supplier.isReverseCharge) { %>
               <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.ReverseCharge) %></td>
             <% } %>

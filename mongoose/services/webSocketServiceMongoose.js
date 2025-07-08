@@ -14,7 +14,7 @@ function setupWebSocket(server, sessionService) {
     }
   });
 
-  setSocketInstance(io); // ✅ Pass reference to loggerService
+  setSocketInstance(io);
 
   io.use(sharedSession(sessionService, { autoSave: true }));
 
@@ -47,10 +47,6 @@ function setupWebSocket(server, sessionService) {
       logger.info(`🔌 Socket disconnected: ${user.username}`);
     });
   });
-}
-
-function wrapSocketToReq(socket) {
-  return { user: socket.user };
 }
 
 module.exports = {

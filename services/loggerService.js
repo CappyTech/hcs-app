@@ -30,7 +30,6 @@ class WebSocketTransport extends Transport {
 
   log(info, callback) {
     setImmediate(() => {
-      console.log('🧪 WebSocketTransport triggered:', info); // ADD THIS
       if (io) {
         io.to('admins').emit('logs:update', {
           level: info.level,
