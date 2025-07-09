@@ -184,7 +184,16 @@ if (!denyGuard(config, 'u')) {
     }
 
     try {
-      await Model.findOneAndUpdate({ uuid: req.params.uuid }, req.body);
+      // Clean up submitted data: convert empty strings to undefined
+      const cleanedData = {};
+      for (const [key, value] of Object.entries(req.body)) {
+        cleanedData[key] = value === '' ? undefined : value;
+      }
+      await Model.findOneAndUpdate(
+        { uuid: req.params.uuid },
+        cleanedData,
+        { new: true, runValidators: true }
+      );
       res.redirect(`/${modelName}s`);
     } catch (err) {
       logger.error(`❌ Error updating ${modelName}: ${err.message}`);
