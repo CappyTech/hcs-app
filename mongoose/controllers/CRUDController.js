@@ -184,15 +184,41 @@ if (!denyGuard(config, 'u')) {
     }
 
     try {
-      // Clean up submitted data: convert empty strings to undefined
-      const cleanedData = {};
-      for (const [key, value] of Object.entries(req.body)) {
-        cleanedData[key] = value === '' ? undefined : value;
+      // 1) pull down your schema so you know which fields are .ref
+      const schema = extractSchema(Model, config);
+
+      // 2) clean + map
+      const cleaned = {};
+      for (const [key, val] of Object.entries(req.body)) {
+        // drop empty strings
+        if (val === '') continue;
+
+        // if this field is a ref, and it's not already a valid ObjectId…
+        if (
+          schema[key]?.ref &&
+          typeof val === 'string' &&
+          !mongoose.Types.ObjectId.isValid(val)
+        ) {
+          // try to find the doc by UUID
+          const candidate = await mdb[schema[key].ref]
+            .findOne({ uuid: val })
+            .select('_id')
+            .lean();
+          if (candidate) {
+            cleaned[key] = candidate._id;
+            continue;
+          }
+        }
+
+        // otherwise just use it as-is
+        cleaned[key] = val;
       }
+
+      // 3) actually update, dropping any undefined keys
       await Model.findOneAndUpdate(
         { uuid: req.params.uuid },
-        cleanedData,
-        { new: true, runValidators: true }
+        cleaned,
+        { new: true, runValidators: true, omitUndefined: true }
       );
       res.redirect(`/${modelName}s`);
     } catch (err) {
