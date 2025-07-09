@@ -134,7 +134,7 @@ module.exports = {
   task: {
     title: 'Tasks',
     linkField: 'title',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','password'],
     sortField: 'title',
     sortOrder: 1,
     department: ['human-resources'],
