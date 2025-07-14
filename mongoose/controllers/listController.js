@@ -23,8 +23,8 @@ const generateHeaders = (firstDoc, config = {}) => {
     key,
     label: config.labelOverrides?.[key] ||
       key.replace(/([a-z])([A-Z])/g, '$1 $2')
-         .replace(/_/g, ' ')
-         .replace(/\b\w/g, c => c.toUpperCase())
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
   }));
 };
 
@@ -62,7 +62,22 @@ for (const modelName of Object.keys(mdb)) {
         }
 
         query = {
-          $or: searchFields.map(field => ({ [field]: { $regex: regex } }))
+          $or: searchFields
+            .map(field => {
+              const path = schemaPaths[field];
+              if (!path) return null;
+
+              const type = path.instance;
+
+              if (type === 'String') {
+                return { [field]: { $regex: regex } };
+              } else if (type === 'Number' && !isNaN(searchQuery)) {
+                return { [field]: Number(searchQuery) };
+              } else {
+                return null; // Skip unsupported types
+              }
+            })
+            .filter(Boolean)
         };
       }
 
