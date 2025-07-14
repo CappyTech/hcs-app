@@ -6,7 +6,7 @@
     <h1 class="text-4xl font-extrabold text-hcs-green mb-8 flex items-center justify-center gap-3">
       <i class="bi bi-calendar-x"></i>
       <% if (isAuthenticated) { %>
-        You’re meant to be on Holiday! What are you doing here?
+        You’re meant to be on Holiday! <br> What are you doing here?
       <% } else { %>
         We’re on Holiday!
       <% } %>
@@ -41,15 +41,13 @@
     </p>
   </div>
   <% if (isAuthenticated) { %>
-    <button id="dismissHolidayBtn" class="btn btn-hcs-green mt-6">Dismiss Holiday Notice</button>
+    <button id="dismissHolidayBtn" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">Dismiss Holiday Notice</button>
   <% } else { %>
     <a href="/user/login" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">
       Log In
     </a>
   <% } %>
 </div>
-
-<button id="dismissHolidayBtn" class="btn btn-hcs-green mt-6">Dismiss Holiday Notice</button>
 
 <script>
   document.getElementById('dismissHolidayBtn').addEventListener('click', async () => {
