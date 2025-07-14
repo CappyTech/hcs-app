@@ -143,6 +143,8 @@
     ${user ? `<div class="text-xs text-gray-600">User: ${user.username} (ID: ${user.id})</div>` : ''}
     ${route ? `<div class="text-xs text-gray-600">Route: ${route}</div>` : ''}
   `;
-    panel.prepend(div);
+  console.log('Appending log entry for level:', level);
+  console.log('Target panel:', panel);
+  panel.prepend(div);
   });
 </script>
