@@ -92,7 +92,13 @@
                   <% } else if (typeof val === 'string' && val.trim() === '') { %>
                     &mdash;
                   <% } else if (val !== null && val !== undefined) { %>
-                    <%= val %>
+                    <% if (Array.isArray(val)) { %>
+                      <%= `${val.length} ${h.key.toLowerCase()}` %>
+                    <% } else if (typeof val === 'object') { %>
+                      <%= val?.name || val?.title || '[Object]' %>
+                    <% } else { %>
+                      <%= val %>
+                    <% } %>
                     <% if (model === 'supplier' && h.key === 'Name' && row.IsSubcontractor) { %>
                       <span class="ml-2 px-2 py-0.5 text-xs rounded bg-yellow-300 text-black dark:bg-yellow-600 dark:text-white">
                         Subcontractor
