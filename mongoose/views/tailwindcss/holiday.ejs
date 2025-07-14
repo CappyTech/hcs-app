@@ -39,14 +39,16 @@
         We’ll be back after <span class="text-green-600 font-bold"><%= slimDateTime(endDate) %></span>. Thank you for your patience!
       <% } %>
     </p>
+
+    <% if (isAuthenticated) { %>
+      <button id="dismissHolidayBtn" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">Dismiss Holiday Notice</button>
+    <% } else { %>
+      <a href="/user/login" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">
+        Log In
+      </a>
+    <% } %>
+
   </div>
-  <% if (isAuthenticated) { %>
-    <button id="dismissHolidayBtn" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">Dismiss Holiday Notice</button>
-  <% } else { %>
-    <a href="/user/login" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">
-      Log In
-    </a>
-  <% } %>
 </div>
 
 <script>
