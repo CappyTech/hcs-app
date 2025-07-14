@@ -1,0 +1,35 @@
+<%- include('./partials/successAlert.ejs') %>
+<%- include('./partials/errorAlerts.ejs') %>
+
+<div class="container mx-auto px-4 mt-20 text-center">
+  <div class="border-4 border-hcs-green rounded-3xl p-10 shadow-lg max-w-3xl mx-auto">
+    <h1 class="text-4xl font-extrabold text-hcs-green mb-8 flex items-center justify-center gap-3">
+      <i class="bi bi-calendar-x"></i>
+      <% if (isAuthenticated) { %>
+        You’re meant to be on Holiday! What are you doing here?
+      <% } else { %>
+        We’re on Holiday!
+      <% } %>
+    </h1>
+    <p class="text-lg text-gray-600 max-w-xl mx-auto mb-8">
+      <% if (isAuthenticated) { %>
+        Certain functionalities are temporarily unavailable during the holiday period. Please check back later or reach out if needed.
+      <% } else { %>
+        Our services are currently unavailable as we are observing a holiday.
+      <% } %>
+    </p>
+    <hr class="border-t border-gray-300 my-8 max-w-xl mx-auto" />
+    <p class="text-xl font-semibold mb-4">
+      <span class="font-light block">Reason:</span>
+      <%= reason %>
+    </p>
+    <p class="text-xl font-semibold mb-6">
+      <span class="font-light block">Period:</span>
+      from <span class="text-blue-600"><%= slimDateTime(startDate, true) %></span><br />
+      to <span class="text-blue-600"><%= slimDateTime(endDate, true) %></span>
+    </p>
+    <p class="text-gray-600 text-lg">
+      We’ll be back on <span class="text-green-600 font-bold"><%= slimDateTime(endDate) %></span>. Thank you for your patience!
+    </p>
+  </div>
+</div>
