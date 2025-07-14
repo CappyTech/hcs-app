@@ -136,7 +136,46 @@ const holidayService = {
     } catch (error) {
       logger.error('Error syncing bank holidays: ' + error.message);
     }
+  },
+
+  getNextHoliday: async () => {
+    const today = moment().startOf('day');
+
+    try {
+      // Fetch all bank holidays from DB, filter future dates
+      const allHolidays = await mdb.holiday.find();
+
+      // Filter bank holidays on or after today
+      const futureBankHolidays = allHolidays.filter(h => moment(h.date).isSameOrAfter(today));
+
+      // Map to unified format with startDate and endDate same for bank holidays
+      const bankHolidayObjs = futureBankHolidays.map(h => ({
+        reason: h.title,
+        startDate: h.date,
+        endDate: h.date,
+        type: 'Bank Holiday',
+        _id: h._id
+      }));
+
+      // Filter custom holidays on or after today (by startDate)
+      const futureCustomHolidays = customHolidays.filter(h => moment(h.startDate).isSameOrAfter(today));
+
+      // Merge all holidays
+      const combined = [...bankHolidayObjs, ...futureCustomHolidays];
+
+      if (combined.length === 0) return null;
+
+      // Sort by startDate ascending
+      combined.sort((a, b) => moment(a.startDate).diff(moment(b.startDate)));
+
+      // Return earliest upcoming holiday
+      return combined[0];
+    } catch (error) {
+      logger.error('Error fetching next holiday: ' + error.message);
+      return null;
+    }
   }
+
 };
 
 module.exports = holidayService;
