@@ -25,11 +25,19 @@
     </p>
     <p class="text-xl font-semibold mb-6">
       <span class="font-light block">Period:</span>
-      from <span class="text-blue-600"><%= slimDateTime(startDate, true) %></span><br />
-      to <span class="text-blue-600"><%= slimDateTime(endDate, true) %></span>
+      <% if (startDate === endDate) { %>
+        <span class="text-blue-600"><%= slimDateTime(startDate, true) %></span>
+      <% } else { %>
+        from <span class="text-blue-600"><%= slimDateTime(startDate, true) %></span><br />
+        to <span class="text-blue-600"><%= slimDateTime(endDate, true) %></span>
+      <% } %>
     </p>
     <p class="text-gray-600 text-lg">
-      We’ll be back on <span class="text-green-600 font-bold"><%= slimDateTime(endDate) %></span>. Thank you for your patience!
+      <% if (startDate === endDate) { %>
+        We’ll be back on <span class="text-green-600 font-bold"><%= slimDateTime(endDate) %></span>. Thank you for your patience!
+      <% } else { %>
+        We’ll be back after <span class="text-green-600 font-bold"><%= slimDateTime(endDate) %></span>. Thank you for your patience!
+      <% } %>
     </p>
   </div>
 </div>
