@@ -104,6 +104,7 @@ const main = async () => {
 
     // Holiday block page
     const holidayService = require('./mongoose/services/holidayServiceMongoose');
+    const moment = require('moment');
     app.use(async (req, res, next) => {
       try {
         const holidayDetails = await holidayService.isDateHoliday();
@@ -113,7 +114,8 @@ const main = async () => {
             title: 'Holiday Notice',
             reason: holidayDetails.reason,
             startDate: holidayDetails.startDate,
-            endDate: holidayDetails.endDate
+            endDate: holidayDetails.endDate,
+            moment: moment
           });
         }
         next();
