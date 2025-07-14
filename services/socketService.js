@@ -4,8 +4,11 @@ const { Server } = require('socket.io');
 let io = null;
 
 function initSocket(server) {
-  if (io) return io; // Prevent double init
-
+  if (io) {
+    console.warn('[DUPE CHECK] ⚠️ Socket.IO already initialized, returning existing instance');
+    return io; // Prevent double init
+  }
+  console.log('[DUPE CHECK] ✅ Initializing Socket.IO...');
   io = new Server(server, {
     cors: {
       origin: true,
