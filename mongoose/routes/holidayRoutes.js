@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const authService = require('../../services/authService');
-const ctrl = require('../controllers/attendanceController');
+const ctrl = require('../controllers/holidayController');
 
-router.post('/holiday/dismiss', authService.ensureAuthenticated, (req, res) => {
-  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
-  ctrl.dismissHoliday(req, res);
+router.post('/holiday/dismiss', authService.ensureAuthenticated, async (req, res, next) => {
+  try {
+    await ctrl.dismissHoliday(req, res, next);
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;
