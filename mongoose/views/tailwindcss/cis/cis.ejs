@@ -3,15 +3,15 @@
     <div class="py-12 px-4">
       <!-- Navigation -->
       <div class="flex justify-between items-center mb-4">
-        <a href="/mdb/CIS/<%= previousYear %>/<%= previousMonth %>" 
-           class="inline-block bg-hcs-green hover:bg-green-700 text-white px-4 py-3 rounded text-center text-sm leading-tight">
+        <a href="/CIS/<%= previousYear %>/<%= previousMonth %>" 
+           class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded text-center text-sm leading-tight">
           &laquo; Previous<br> Month <%= previousMonth %>, <%= previousYear %>
         </a>
         <h1 class="text-2xl font-semibold text-center flex-1 mx-4">
           Month <%= specifiedMonth %> | <%= currentMonthlyReturn.periodStartDisplay %> - <%= currentMonthlyReturn.periodEndDisplay %>
         </h1>
-        <a href="/mdb/CIS/<%= nextYear %>/<%= nextMonth %>" 
-           class="inline-block bg-hcs-green hover:bg-green-700 text-white px-4 py-3 rounded text-center text-sm leading-tight">
+        <a href="/CIS/<%= nextYear %>/<%= nextMonth %>" 
+           class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded text-center text-sm leading-tight">
           Next &raquo;<br> Month <%= nextMonth %>, <%= nextYear %>
         </a>
       </div>
