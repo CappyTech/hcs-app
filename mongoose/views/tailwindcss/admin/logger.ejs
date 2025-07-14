@@ -23,7 +23,7 @@
   <!-- Tab Panels -->
   <div id="log-panels">
     <% ['info', 'debug' , 'warn' , 'error' ].forEach((level, i)=> { %>
-      <div id="log-<%= level %>" class="tab-panel <%= i !== 0 ? 'hidden' : '' %> space-y-4">
+      <div id="log-<%= level %>" class="tab-panel flex flex-col-reverse <%= i !== 0 ? 'hidden' : '' %>">
         <% if (logsByLevel[level].length> 0) { %>
           <% logsByLevel[level].slice().sort((b, a) => new Date(a.timestamp) - new Date(b.timestamp)).forEach(entry => { %>
             <div class="border p-3 rounded bg-white dark:bg-gray-800 shadow-sm">
