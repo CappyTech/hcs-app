@@ -1,19 +1,9 @@
-const { Server } = require('socket.io');
 const sharedSession = require('express-socket.io-session');
 const mdb = require('./mongooseDatabaseService');
 const logger = require('../../services/loggerService');
-const { setSocketInstance } = require('../../services/loggerService'); // ⬅️ import it
+const { setSocketInstance } = require('../../services/loggerService');
 
-let io;
-
-function setupWebSocket(server, sessionService) {
-  io = new Server(server, {
-    cors: {
-      origin: true,
-      credentials: true,
-    }
-  });
-
+function setupWebSocket(io, sessionService) {
   setSocketInstance(io);
 
   io.use(sharedSession(sessionService, { autoSave: true }));
@@ -37,10 +27,7 @@ function setupWebSocket(server, sessionService) {
       return;
     }
 
-    if (user.role === 'admin') {
-      socket.join('admins');
-    }
-
+    socket.join('admins');
     socket.emit('logs:init', { message: 'Connected to log stream' });
 
     socket.on('disconnect', () => {
