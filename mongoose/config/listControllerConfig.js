@@ -1,3 +1,4 @@
+const holidayCustom = require("../models/mongoose/holidayCustom");
 const holidayDismissal = require("../models/mongoose/holidayDismissal");
 
 module.exports = {
@@ -162,6 +163,13 @@ module.exports = {
     title: 'Dismissed Holidays',
     linkField: 'uuid',
     sortField: 'dismissedAt',
+    sortOrder: 1,
+    department: ['human-resources'],
+  },
+  holidayCustom: {
+    title: 'Company Holidays',
+    linkField: 'title',
+    sortField: 'title',
     sortOrder: 1,
     department: ['human-resources'],
   }
