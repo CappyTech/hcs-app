@@ -20,7 +20,36 @@
       <% for (const key in schema) { const field = schema[key]; %>
         <tr class="border-b border-gray-200 last:border-b-0">
           <th class="text-left font-medium px-4 py-2 bg-gray-50 w-1/3"><%= field.label %></th>
-          <td class="px-4 py-2"><%= item[key] != null ? item[key] : '' %></td>
+          <td class="px-4 py-2">
+            <% const val = item[key]; %>
+
+            <% if (Array.isArray(val) && val.length && typeof val[0] === 'object') { %>
+              <div class="overflow-x-auto border border-gray-300 rounded mt-2">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-gray-100 text-gray-700">
+                    <tr>
+                      <% Object.keys(val[0]).forEach(subKey => { %>
+                        <th class="px-2 py-1 text-left border-b border-gray-300"><%= subKey %></th>
+                      <% }) %>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% val.forEach(entry => { %>
+                      <tr class="border-b border-gray-200">
+                        <% Object.keys(entry).forEach(subKey => { %>
+                          <td class="px-2 py-1"><%= entry[subKey] %></td>
+                        <% }) %>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else if (typeof val === 'object' && val !== null) { %>
+              <pre><%= JSON.stringify(val, null, 2) %></pre>
+            <% } else { %>
+              <%= val != null ? val : '' %>
+            <% } %>
+          </td>
         </tr>
       <% } %>
     </tbody>
