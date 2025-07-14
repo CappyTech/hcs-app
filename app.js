@@ -104,7 +104,7 @@ const main = async () => {
 
     // Holiday block page
     const holidayController = require('./mongoose/controllers/holidayController')
-    app.use(holidayController.checkHolidayMiddleware);
+    app.use(holidayController.checkHoliday);
 
     // Encryption key dev hint
     if (process.env.NODE_ENV === 'development' && !process.env.ENCRYPTION_KEY) {
