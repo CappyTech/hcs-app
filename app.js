@@ -109,7 +109,7 @@ const main = async () => {
         const holidayDetails = await holidayService.isDateHoliday();
         if (holidayDetails?.isHoliday) {
           logger.info(`Holiday: ${holidayDetails.reason} (${holidayDetails.startDate} to ${holidayDetails.endDate})`);
-          return res.render(path.join('tailwind','holiday'), {
+          return res.render(path.join('tailwindcss','holiday'), {
             title: 'Holiday Notice',
             reason: holidayDetails.reason,
             startDate: holidayDetails.startDate,
