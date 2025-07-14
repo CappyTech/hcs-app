@@ -159,7 +159,7 @@ const main = async () => {
 
     // Setup WebSocket with working sessionService
     const { setupWebSocket } = require('./mongoose/services/webSocketServiceMongoose');
-    setupWebSocket(server, sessionService); // this sets io internally
+    setupWebSocket(io, sessionService);
 
   } catch (err) {
     logger.error('❌ Failed to start application: ' + err + err.stack);
