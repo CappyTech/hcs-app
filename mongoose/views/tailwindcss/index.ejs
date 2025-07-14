@@ -57,6 +57,24 @@
   </div>
 <% } %>
 
+<% if (isAuthenticated && nextHoliday) { %>
+  <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-xl shadow mb-6 p-6 text-center max-w-xl mx-auto">
+    <h2 class="text-2xl font-semibold mb-2">Next Holiday</h2>
+    <p class="text-lg text-gray-700 dark:text-gray-300 mb-1">
+      <strong><%= nextHoliday.reason %></strong>
+    </p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      From <%= moment(nextHoliday.startDate).format('Do MMM YYYY') %> to <%= moment(nextHoliday.endDate).format('Do MMM YYYY') %>
+    </p>
+    <form method="POST" action="/holiday/dismiss" class="mt-4">
+      <button type="submit"
+        class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded transition">
+        Dismiss
+      </button>
+    </form>
+  </div>
+<% } %>
+
 <!-- Public Feature Highlights -->
 <% if (!isAuthenticated) { %>
   <section class="container mx-auto text-center my-12">
