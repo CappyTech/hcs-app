@@ -39,6 +39,7 @@ const getCreateModels = () => {
 // Home / Index Page
 exports.renderIndex = async (req, res, next) => {
   try {
+    const nextHoliday = await holidayService.getNextHoliday();
     let tasks = {
       overdue: [],
       today: [],
@@ -66,7 +67,8 @@ exports.renderIndex = async (req, res, next) => {
     res.render(path.join('tailwindcss', 'index'), {
       title: 'Home',
       tasks,
-      isAuthenticated: !!req.user
+      isAuthenticated: !!req.user,
+      nextHoliday
     });
   } catch (err) {
     next(err);
