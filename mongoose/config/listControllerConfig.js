@@ -64,7 +64,7 @@ module.exports = {
   invoice: {
     title: 'Invoices',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid','InvoiceDBID'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
@@ -101,7 +101,7 @@ module.exports = {
   quote: {
     title: 'Quotes',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
@@ -110,7 +110,7 @@ module.exports = {
   receipt: {
     title: 'Receipts',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
