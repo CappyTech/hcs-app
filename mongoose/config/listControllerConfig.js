@@ -1,3 +1,5 @@
+const holidayDismissal = require("../models/mongoose/holidayDismissal");
+
 module.exports = {
   assignment: {
     title: 'Assignments',
@@ -156,4 +158,11 @@ module.exports = {
     sortOrder: 1,
     department: ['management'],
   },
+  holidayDismissal: {
+    title: 'Dismissed Holidays',
+    linkField: 'uuid',
+    sortField: 'dismissedAt',
+    sortOrder: 1,
+    department: ['human-resources'],
+  }
 };
