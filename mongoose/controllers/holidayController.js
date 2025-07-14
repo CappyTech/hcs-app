@@ -6,9 +6,8 @@ const mdb = require('../services/mongooseDatabaseService');
 
 async function checkHoliday(req, res, next) {
     const skipPaths = ['/', '/user/login', '/user/register'];
-    if (skipPaths.includes(req.path)) {
-        return next();
-    }
+    if (!req.user.isAuthenticated) { return next(); }
+    if (skipPaths.includes(req.path)) { return next(); }
 
     try {
         const holidayDetails = await holidayService.isDateHoliday();
@@ -28,20 +27,21 @@ async function checkHoliday(req, res, next) {
                     moment: moment
                 });
             }
+            return next();
         }
-        next();
+        return next();
     } catch (err) {
         logger.error('Holiday check error: ' + err.message);
-        next(err);
+        return next(err);
     }
 }
 
 // POST handler for dismissing holiday for current user
-async function dismissHoliday(req, res) {
+async function dismissHoliday(req, res, next) {
     try {
         const holidayDetails = await holidayService.isDateHoliday();
         if (!holidayDetails?.isHoliday) {
-            return;
+            return next();
         }
 
         await mdb.holidayDismissal.updateOne(
@@ -60,7 +60,7 @@ async function dismissHoliday(req, res) {
         return res.redirect('/');
     } catch (err) {
         logger.error('Error dismissing holiday: ' + err.message);
-        next(err);
+        return next(err);
     }
 }
 
