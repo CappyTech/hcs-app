@@ -103,27 +103,8 @@ const main = async () => {
     });
 
     // Holiday block page
-    const holidayService = require('./mongoose/services/holidayServiceMongoose');
-    const moment = require('moment');
-    app.use(async (req, res, next) => {
-      try {
-        const holidayDetails = await holidayService.isDateHoliday();
-        if (holidayDetails?.isHoliday) {
-          logger.info(`Holiday: ${holidayDetails.reason} (${holidayDetails.startDate} to ${holidayDetails.endDate})`);
-          return res.render(path.join('tailwindcss','holiday'), {
-            title: 'Holiday Notice',
-            reason: holidayDetails.reason,
-            startDate: holidayDetails.startDate,
-            endDate: holidayDetails.endDate,
-            moment: moment
-          });
-        }
-        next();
-      } catch (err) {
-        logger.error('Holiday check error:', err.message);
-        next(err);
-      }
-    });
+    const holidayController = require('./mongoose/controllers/holidayController')
+    app.use(holidayController.checkHolidayMiddleware);
 
     // Encryption key dev hint
     if (process.env.NODE_ENV === 'development' && !process.env.ENCRYPTION_KEY) {
@@ -148,6 +129,7 @@ const main = async () => {
     app.use('/', require('./mongoose/routes/twoFA'));
     app.use('/', require('./mongoose/routes/subcontractorRoutes'));
     app.use('/', require('./mongoose/routes/submissionRoutes'));
+    app.use('/', require('./mongoose/routes/holidayRoutes'));
 
     // Catch-all 404
     app.use((req, res, next) => {

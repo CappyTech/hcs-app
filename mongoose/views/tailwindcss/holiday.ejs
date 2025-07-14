@@ -40,4 +40,30 @@
       <% } %>
     </p>
   </div>
+  <% if (isAuthenticated) { %>
+    <button id="dismissHolidayBtn" class="btn btn-hcs-green mt-6">Dismiss Holiday Notice</button>
+  <% } else { %>
+    <a href="/user/login" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">
+      Log In
+    </a>
+  <% } %>
 </div>
+
+<button id="dismissHolidayBtn" class="btn btn-hcs-green mt-6">Dismiss Holiday Notice</button>
+
+<script>
+  document.getElementById('dismissHolidayBtn').addEventListener('click', async () => {
+    try {
+      const res = await fetch('/holiday/dismiss', { method: 'POST', credentials: 'same-origin' });
+      if (res.ok) {
+        alert('Holiday dismissed. You will no longer see this notice.');
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert('Error: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Failed to dismiss holiday: ' + err.message);
+    }
+  });
+</script>
