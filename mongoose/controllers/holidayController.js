@@ -6,7 +6,7 @@ const mdb = require('../services/mongooseDatabaseService');
 
 async function checkHoliday(req, res, next) {
     const skipPaths = ['/', '/user/login', '/user/register'];
-    if (!req.user.isAuthenticated) { return next(); }
+    if (!res.locals.isAuthenticated) { return next(); }
     if (skipPaths.includes(req.path)) { return next(); }
 
     try {
