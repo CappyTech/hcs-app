@@ -61,6 +61,8 @@ for (const modelName of Object.keys(mdb)) {
           searchFields = [config.linkField, config.sortField].filter(Boolean);
         }
 
+        const schemaPaths = model.schema.paths;
+
         query = {
           $or: searchFields
             .map(field => {
