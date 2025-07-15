@@ -63,15 +63,15 @@
     <p class="text-lg text-gray-700 dark:text-gray-300 mb-1">
       <strong><%= nextHoliday.reason %></strong>
     </p>
-    <p class="text-sm text-gray-500 dark:text-gray-400">
-      From <%= moment(nextHoliday.startDate).format('Do MMM YYYY') %> to <%= moment(nextHoliday.endDate).format('Do MMM YYYY') %>
+    <p class="text-xl font-semibold mb-6">
+      <span class="font-light block">Period:</span>
+      <% if (startDate === endDate) { %>
+        <span class="text-blue-600"><%= slimDateTime(startDate) %></span>
+      <% } else { %>
+        from <span class="text-blue-600"><%= slimDateTime(startDate, true) %></span><br />
+        to <span class="text-blue-600"><%= slimDateTime(endDate, true) %></span>
+      <% } %>
     </p>
-    <form method="POST" action="/holiday/dismiss" class="mt-4">
-      <button type="submit"
-        class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded transition">
-        Dismiss
-      </button>
-    </form>
   </div>
 <% } %>
 
