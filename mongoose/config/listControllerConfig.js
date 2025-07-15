@@ -1,6 +1,3 @@
-const holidayCustom = require("../models/mongoose/holidayCustom");
-const holidayDismissal = require("../models/mongoose/holidayDismissal");
-
 module.exports = {
   assignment: {
     title: 'Assignments',
