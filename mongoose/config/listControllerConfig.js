@@ -161,6 +161,7 @@ module.exports = {
   },
   holidayDismissal: {
     title: 'Dismissed Holidays',
+    description: 'dismissed dolidays',
     linkField: 'uuid',
     sortField: 'dismissedAt',
     sortOrder: 1,
@@ -168,6 +169,7 @@ module.exports = {
   },
   holidayCustom: {
     title: 'Company Holidays',
+    description: 'company holidays',
     linkField: 'title',
     sortField: 'title',
     sortOrder: 1,
