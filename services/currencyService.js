@@ -1,5 +1,5 @@
 const logger = require('./loggerService');
-const moment = require('moment');
+const moment = require('moment-timezone');
 
 /**
  * Formats a given amount as a currency string in GBP (£).
