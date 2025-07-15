@@ -6,7 +6,8 @@ const {
   endOfWeek,
   endOfMonth
 } = require('date-fns');
-const holidayService = require('../services/holidayServiceMongoose')
+const holidayService = require('../services/holidayServiceMongoose');
+const moment = require('moment')
 
 const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 
@@ -69,7 +70,8 @@ exports.renderIndex = async (req, res, next) => {
       title: 'Home',
       tasks,
       isAuthenticated: !!req.user,
-      nextHoliday
+      nextHoliday,
+      moment
     });
   } catch (err) {
     next(err);
