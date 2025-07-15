@@ -21,7 +21,7 @@ const getDashboardModels = (department) => {
     .map(([model, config]) => ({
       model,
       title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
-      description: config.description || `Manage ${model}s.`,
+      description: `Manage ${config.description}` || `Manage ${model}s.`,
       link: config.listPath || `/${model}s`
     }));
 };
@@ -33,7 +33,7 @@ const getCreateModels = () => {
     .map(([model, config]) => ({
       model,
       title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
-      description: config.description || `Create a new ${model}.`,
+      description: `Create a new ${config.description}` || `Create a new ${model}.`,
       link: config.createPath || `/${model}/create`
     }));
 };
