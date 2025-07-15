@@ -1,4 +1,4 @@
-const moment = require('moment');
+const moment = require('moment-timezone');
 const logger = require('../../services/loggerService');
 const mdb = require('./mongooseDatabaseService');
 const taxService = require('../../services/taxService');
