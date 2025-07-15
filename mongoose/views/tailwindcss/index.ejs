@@ -65,7 +65,7 @@
     </p>
     <p class="text-xl font-semibold mb-6">
       <span class="font-light block">Period:</span>
-      <% if (startDate === endDate) { %>
+      <% if (nextHoliday.startDate === nextHoliday.endDate) { %>
         <span class="text-blue-600"><%= slimDateTime(nextHoliday.startDate) %></span>
       <% } else { %>
         from <span class="text-blue-600"><%= slimDateTime(nextHoliday.startDate) %></span><br />
