@@ -161,15 +161,21 @@ module.exports = {
   },
   holidayDismissal: {
     title: 'Dismissed Holidays',
-    description: 'dismissed dolidays',
+    description: {
+      manage: 'Manage company holidays'
+    },
     linkField: 'uuid',
     sortField: 'dismissedAt',
     sortOrder: 1,
     department: ['human-resources'],
+    deny: ['c','u'],
   },
   holidayCustom: {
     title: 'Company Holidays',
-    description: 'company holidays',
+    description: {
+      create: 'Create a company holiday',
+      manage: 'Manage company holidays'
+    },
     linkField: 'title',
     sortField: 'title',
     sortOrder: 1,
