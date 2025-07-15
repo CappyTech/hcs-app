@@ -15,15 +15,24 @@ const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.incl
 const getDashboardModels = (department) => {
   return Object.entries(listConfig)
     .filter(([_, config]) =>
-      config.department?.includes(department) &&
+      config?.department?.includes(department) &&
       !denyGuard(config, 'l')
     )
-    .map(([model, config]) => ({
-      model,
-      title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
-      description: config.description?.manage || `Manage ${model}s.`,
-      link: config.listPath || `/${model}s`
-    }));
+    .map(([model, config]) => {
+      const desc =
+        typeof config.description === 'object'
+          ? config.description.manage
+          : typeof config.description === 'string'
+          ? config.description
+          : null;
+
+      return {
+        model,
+        title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
+        description: desc || `Manage ${model}s.`,
+        link: config.listPath || `/${model}s`
+      };
+    });
 };
 
 // Helper to get all creatable models
