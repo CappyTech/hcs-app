@@ -1,5 +1,5 @@
 const axios = require('axios');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const mdb = require('./mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 
