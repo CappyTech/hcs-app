@@ -27,8 +27,8 @@ function getTaxYearStartEnd(year) {
     const startOfTaxYear = moment.tz({ year, month: 3, day: 6 }, 'Europe/London'); // 6th April of the specified year
     const endOfTaxYear = startOfTaxYear.clone().add(1, 'years').subtract(1, 'days'); // 5th April of the next year
     return {
-        start: startOfTaxYear.format('Do MMMM YYYY'),
-        end: endOfTaxYear.format('Do MMMM YYYY')
+        start: startOfTaxYear.toDate(),
+        end: endOfTaxYear.toDate()
     };
 }
 
@@ -60,14 +60,16 @@ function getCurrentMonthlyReturn(year, month) {
     const hmrcUpdateDateInDays = hmrcUpdateDate.diff(today, 'days');
 
     return {
-        periodStart: startOfPeriod.format('YYYY-MM-DD'),
-        periodEnd: endOfPeriod.format('YYYY-MM-DD'),
+        periodStart: startOfPeriod.toDate(),
+        periodEnd: endOfPeriod.toDate(),
         periodStartDisplay: startOfPeriod.format('Do MMMM YYYY'),
         periodEndDisplay: endOfPeriod.format('Do MMMM YYYY'),
         submissionDeadline: submissionDeadline.format('Do MMMM YYYY'),
         hmrcUpdateDate: hmrcUpdateDate.format('Do MMMM YYYY'),
         submissionDeadlineInDays,
-        hmrcUpdateDateInDays
+        hmrcUpdateDateInDays,
+        isDST: startOfPeriod.isDST(),
+        isEndDST: endOfPeriod.isDST(),
     };
 }
 
