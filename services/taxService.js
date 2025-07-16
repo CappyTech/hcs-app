@@ -1,3 +1,4 @@
+const { start } = require('@popperjs/core');
 const moment = require('moment-timezone');
 
 /**
@@ -28,7 +29,7 @@ function getTaxYearStartEnd(year) {
     const endOfTaxYear = startOfTaxYear.clone().add(1, 'years').subtract(1, 'days'); // 5th April of the next year
     return {
         start: startOfTaxYear.toDate(),
-        end: endOfTaxYear.toDate()
+        end: endOfTaxYear.toDate(),
     };
 }
 
@@ -47,6 +48,8 @@ function getTaxYearStartEnd(year) {
  *   - hmrcUpdateDate: The HMRC update date (Do MMMM YYYY).
  *   - submissionDeadlineInDays: The number of days until the submission deadline.
  *   - hmrcUpdateDateInDays: The number of days until the HMRC update date.
+ *   - isDST: Whether the period start date is in Daylight Saving Time.
+ *   - isEndDST: Whether the period end date is in Daylight Saving Time.
  */
 function getCurrentMonthlyReturn(year, month) {
     const startOfTaxYear = moment.tz({ year, month: 3, day: 6 }, 'Europe/London');
@@ -62,10 +65,8 @@ function getCurrentMonthlyReturn(year, month) {
     return {
         periodStart: startOfPeriod.toDate(),
         periodEnd: endOfPeriod.toDate(),
-        periodStartDisplay: startOfPeriod.format('Do MMMM YYYY'),
-        periodEndDisplay: endOfPeriod.format('Do MMMM YYYY'),
-        submissionDeadline: submissionDeadline.format('Do MMMM YYYY'),
-        hmrcUpdateDate: hmrcUpdateDate.format('Do MMMM YYYY'),
+        submissionDeadline: submissionDeadline.toDate(),
+        hmrcUpdateDate: hmrcUpdateDate.toDate(),
         submissionDeadlineInDays,
         hmrcUpdateDateInDays,
         isDST: startOfPeriod.isDST(),
