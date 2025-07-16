@@ -88,9 +88,9 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const nextMonth = specifiedMonth === 12 ? 1 : specifiedMonth + 1;
     const nextYear = specifiedMonth === 12 ? specifiedYear + 1 : specifiedYear;
 
-    const periodEndMoment = moment(currentMonthlyReturn.periodEndDisplay, 'Do MMMM YYYY');
-    const submissionStartDate = periodEndMoment.clone().date(7).format('Do MMMM YYYY');
-    const submissionEndDate = periodEndMoment.clone().date(11).format('Do MMMM YYYY');
+    const periodEndMoment = moment(currentMonthlyReturn.periodEnd).tz('Europe/London');
+    const submissionStartDate = periodEndMoment.clone().date(7);
+    const submissionEndDate = periodEndMoment.clone().date(11);
 
     res.render(path.join('tailwindcss', 'cis', 'cis'), {
       title: 'CIS Submission Dashboard',
