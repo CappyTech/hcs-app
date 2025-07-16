@@ -28,8 +28,8 @@
       <% if (startDate === endDate) { %>
         <span class="text-blue-600"><%= slimDateTime(startDate) %></span>
       <% } else { %>
-        from <span class="text-blue-600"><%= slimDateTime(startDate, true) %></span><br />
-        to <span class="text-blue-600"><%= slimDateTime(endDate, true) %></span>
+        from <span class="text-blue-600"><%= slimDateTime(startDate, ['includeTime']) %></span><br />
+        to <span class="text-blue-600"><%= slimDateTime(endDate, ['includeTime']) %></span>
       <% } %>
     </p>
     <p class="text-gray-600 text-lg">

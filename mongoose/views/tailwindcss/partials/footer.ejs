@@ -2,7 +2,7 @@
   <div class="flex justify-center items-center gap-4 mt-2">
     <small
       class="cursor-default"
-      title="<%= lastfetched ? slimDateTime(lastfetched.lastFetchedAt,true) : 'Never' %>">
+      title="<%= lastfetched ? slimDateTime(lastfetched.lastFetchedAt, ['includeTime']) : 'Never' %>">
       v<%= package %>
     </small>
     <small>

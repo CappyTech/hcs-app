@@ -19,8 +19,8 @@ const holidayService = {
         return {
           isHoliday: true,
           reason: holiday.title,
-          startDate: holiday.date,
-          endDate: holiday.date,
+          startDate: holiday.date.format('Do MMMM YYYY'),
+          endDate: holiday.date.format('Do MMMM YYYY'),
           type: 'Bank Holiday'
         };
       }
@@ -34,8 +34,8 @@ const holidayService = {
         return {
           isHoliday: true,
           reason: customHoliday.title,
-          startDate: customHoliday.startDate,
-          endDate: customHoliday.endDate,
+          startDate: customHoliday.startDate.format('Do MMMM YYYY'),
+          endDate: customHoliday.endDate.format('Do MMMM YYYY'),
           type: 'Company Holiday'
         };
       }
@@ -75,12 +75,12 @@ const holidayService = {
   },
 
   isTodayHoliday: async () => {
-    const today = moment().format('YYYY-MM-DD');
+    const today = moment().format('Do MMMM YYYY');
     return await holidayService.isDateHoliday(today);
   },
 
   getTodayHolidayDetails: async () => {
-    const today = moment().format('YYYY-MM-DD');
+    const today = moment().format('Do MMMM YYYY');
     return await holidayService.getHolidayDetailsForDate(today);
   },
 

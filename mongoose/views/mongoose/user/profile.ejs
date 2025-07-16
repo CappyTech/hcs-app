@@ -13,10 +13,10 @@
                   Role: <span class="hcs-green-text text-capitalize"><%= user.role %></span>
                 </p>
                 <p class="">
-                  Account Created: <%= slimDateTime(user.createdAt, true) %>
+                  Account Created: <%= slimDateTime(user.createdAt, ['includeTime']) %>
                 </p>
                 <p class="">
-                  Last Login: <%= slimDateTime(user.lastLogin, true) %>
+                  Last Login: <%= slimDateTime(user.lastLogin, ['includeTime']) %>
                 </p>
               </div>
   
@@ -69,7 +69,7 @@
                     <strong>Hourly Rate:</strong> £<%= employee.hourlyRate || 'N/A' %>
                   </li>
                   <li class="list-group-item">
-                    <strong>Hire Date:</strong> <%= slimDateTime(employee.hireDate, true) %>
+                    <strong>Hire Date:</strong> <%= slimDateTime(employee.hireDate, ['includeTime']) %>
                   </li>
                 </ul>
                 <% } %>

@@ -3,7 +3,7 @@
   <div class="d-flex justify-content-center align-items-center gap-3 mt-2">
     <small
       data-bs-toggle="tooltip"
-      title="<%= lastfetched ? slimDateTime(lastfetched.lastFetchedAt,true) : 'Never' %>">
+      title="<%= lastfetched ? slimDateTime(lastfetched.lastFetchedAt, ['includeTime']) : 'Never' %>">
       v<%= package %>
     </small>
     <small>&copy; <%= copyrightyearstart %>–<%= copyrightyear %></small>

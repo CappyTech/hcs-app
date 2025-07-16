@@ -21,7 +21,7 @@
             <span class="fw-light">Reason:</span><br><%= reason %>
         </p>
         <p class="fw-bold fs-5">
-            <span class="fw-light">Period:</span><br>from <span class="text-primary"><%= slimDateTime(startDate, true) %></span><br>to <span class="text-primary"><%= slimDateTime(endDate, true) %></span>
+            <span class="fw-light">Period:</span><br>from <span class="text-primary"><%= slimDateTime(startDate, ['includeTime']) %></span><br>to <span class="text-primary"><%= slimDateTime(endDate, ['includeTime']) %></span>
         </p>
         <p class="text-secondary">
             We’ll be back on <span class="text-success fw-bold"><%= slimDateTime(endDate) %></span>. Thank you for your patience!

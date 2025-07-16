@@ -131,9 +131,9 @@
               <td class="px-4 py-2"><%= session.ip %></td>
               <td class="px-4 py-2"><%= session.browser %></td>
               <td class="px-4 py-2"><%= session.platform.replace(/['"]+/g, '') || 'Unknown' %></td>
-              <td class="px-4 py-2"><%= slimDateTime(session.loginTime, true) %></td>
+              <td class="px-4 py-2"><%= slimDateTime(session.loginTime, ['includeTime']) %></td>
               <td class="px-4 py-2">
-                <%= slimDateTime(session.expires, true) %><br>
+                <%= slimDateTime(session.expires, ['includeTime']) %><br>
                 (<%= session.timeUntilExpiry %>)
               </td>
               <td class="px-4 py-2 font-medium <%= session.secure ? 'text-green-600' : 'text-red-600' %>">

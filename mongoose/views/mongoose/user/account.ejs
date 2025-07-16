@@ -115,8 +115,8 @@
                 <td><%= session.browser %></td>
                 <td><%= session.platform.replace(/['"]+/g, '') || 'Unknown' %></td>
 
-                <td><%= slimDateTime(session.loginTime, true) %></td>
-                <td><%= slimDateTime(session.expires,true) %><br> (<%= session.timeUntilExpiry %>)</td>
+                <td><%= slimDateTime(session.loginTime, ['includeTime']) %></td>
+                <td><%= slimDateTime(session.expires, ['includeTime']) %><br> (<%= session.timeUntilExpiry %>)</td>
                 <td class="<%= session.secure ? 'secure-yes' : 'secure-no' %>">
                     <%= session.secure ? 'Yes' : 'No' %>
                 </td>
