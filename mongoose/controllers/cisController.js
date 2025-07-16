@@ -19,15 +19,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     logger.info(`Rendering CIS Dashboard for Year: ${specifiedYear}, Month: ${specifiedMonth}`);
 
-    const receipts = await mdb.receipt.find({
-      Payments: {
-        $elemMatch: {
-          PayDate: {
-            $gte: new Date(currentMonthlyReturn.periodStart),
-            $lte: new Date(currentMonthlyReturn.periodEnd),
-          },
-        },
-      },
+    const allReceipts = await mdb.receipt.find({
       Lines: {
         $all: [
           { $elemMatch: { ChargeType: 18685897 } },
@@ -35,6 +27,28 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         ]
       }
     }).lean();
+
+    const periodStart = moment.tz(currentMonthlyReturn.periodStart, 'Europe/London').startOf('day');
+    const periodEnd = moment.tz(currentMonthlyReturn.periodEnd, 'Europe/London').endOf('day');
+
+    const receipts = allReceipts.filter(receipt => {
+      return (receipt.Payments || []).some(payment => {
+        const payMoment = moment.tz(payment.PayDate, 'Europe/London');
+        return payMoment.isBetween(periodStart, periodEnd, null, '[]');
+      });
+    });
+
+    receipts.forEach(receipt => {
+      const pay = receipt.Payments?.[0]?.PayDate;
+      if (pay) {
+        const payMoment = moment.tz(pay, 'Europe/London');
+        receipt.timeZoneTag = payMoment.isDST() ? 'BST' : 'GMT';
+        receipt.payDateDisplay = payMoment.format('YYYY-MM-DD HH:mm');
+      } else {
+        receipt.timeZoneTag = 'N/A';
+        receipt.payDateDisplay = 'N/A';
+      }
+    });
 
     const supplierIDs = [...new Set(receipts.map(r => r.CustomerID))];
     const suppliers = await mdb.supplier.find({ SupplierID: { $in: supplierIDs } }).sort({ Name: 1 }).lean();
@@ -52,7 +66,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       };
 
       for (const line of receipt.Lines) {
-        const value = parseFloat(line.Rate * line.Quantity || 0);
+        const value = parseFloat((line.Rate || 0) * (line.Quantity || 0));
         if (line.ChargeType === 18685896) supplierTotals[customerId].materialsCost += value;
         if (line.ChargeType === 18685897) supplierTotals[customerId].labourCost += value;
         if (line.ChargeType === 18685964) supplierTotals[customerId].cisDeductions += value;
@@ -74,9 +88,9 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const nextMonth = specifiedMonth === 12 ? 1 : specifiedMonth + 1;
     const nextYear = specifiedMonth === 12 ? specifiedYear + 1 : specifiedYear;
 
-    const periodEnd = moment(currentMonthlyReturn.periodEndDisplay, 'Do MMMM YYYY');
-    const submissionStartDate = periodEnd.clone().date(7).format('Do MMMM YYYY');
-    const submissionEndDate = periodEnd.clone().date(11).format('Do MMMM YYYY');
+    const periodEndMoment = moment(currentMonthlyReturn.periodEndDisplay, 'Do MMMM YYYY');
+    const submissionStartDate = periodEndMoment.clone().date(7).format('Do MMMM YYYY');
+    const submissionEndDate = periodEndMoment.clone().date(11).format('Do MMMM YYYY');
 
     res.render(path.join('tailwindcss', 'cis', 'cis'), {
       title: 'CIS Submission Dashboard',
