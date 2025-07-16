@@ -8,7 +8,7 @@
           &laquo; Previous<br> Month <%= previousMonth %>, <%= previousYear %>
         </a>
         <h1 class="text-2xl font-semibold text-center flex-1 mx-4">
-          Month <%= specifiedMonth %> | <%= currentMonthlyReturn.periodStartDisplay %> - <%= currentMonthlyReturn.periodEndDisplay %>
+          Month <%= specifiedMonth %> | <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>
         </h1>
         <a href="/CIS/<%= nextYear %>/<%= nextMonth %>" 
            class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded text-center text-sm leading-tight">
@@ -30,12 +30,12 @@
 
       <% if (!allReceiptsSubmitted || receipts.length === 0) { %>
       <div class="mb-6 bg-yellow-300 text-yellow-900 rounded text-center p-4 font-semibold">
-        This month should be submitted between <span class="font-bold"><%= submissionStartDate %></span> and <span class="font-bold"><%= submissionEndDate %></span>.
+        This month should be submitted between <span class="font-bold"><%= slimDateTime(submissionStartDate, ['displayFormat']) %></span> and <span class="font-bold"><%= slimDateTime(submissionEndDate, ['displayFormat']) %></span>.
       </div>
       <% } else if (submissionDate) { %>
       <div class="mb-6 bg-green-600 text-white rounded text-center p-6">
         <h4 class="text-xl font-semibold mb-2">Submitted On:</h4>
-        <p class="text-2xl font-semibold"><%= slimDateTime(submissionDate) %></p>
+        <p class="text-2xl font-semibold"><%= slimDateTime(submissionDate, ['displayFormat']) %></p>
       </div>
       <% } %>
 
@@ -43,21 +43,21 @@
         <div>
           <div class="bg-white rounded shadow p-6 mb-6">
             <h4 class="text-lg font-semibold mb-1">Tax Year</h4>
-            <p><%= taxYear.start %> - <%= taxYear.end %></p>
+            <p><%= slimDateTime(taxYear.start, ['displayFormat']) %> - <%= slimDateTime(taxYear.end, ['displayFormat']) %></p>
           </div>
           <div class="bg-white rounded shadow p-6">
             <h4 class="text-lg font-semibold mb-1">Monthly Return</h4>
-            <p><%= currentMonthlyReturn.periodStartDisplay %> - <%= currentMonthlyReturn.periodEndDisplay %></p>
+            <p><%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %></p>
           </div>
         </div>
         <div>
           <div class="bg-white rounded shadow p-6 mb-6">
             <h4 class="text-lg font-semibold mb-1">Submission Deadline</h4>
-            <p><%= currentMonthlyReturn.submissionDeadline %> (<%= currentMonthlyReturn.submissionDeadlineInDays %> days left)</p>
+            <p><%= slimDateTime(currentMonthlyReturn.submissionDeadline, ['displayFormat']) %> (<%= currentMonthlyReturn.submissionDeadlineInDays %> days left)</p>
           </div>
           <div class="bg-white rounded shadow p-6">
             <h4 class="text-lg font-semibold mb-1">HMRC Update Date</h4>
-            <p><%= currentMonthlyReturn.hmrcUpdateDate %> (<%= currentMonthlyReturn.hmrcUpdateDateInDays %> days left)</p>
+            <p><%= slimDateTime(currentMonthlyReturn.hmrcUpdateDate, ['displayFormat']) %> (<%= currentMonthlyReturn.hmrcUpdateDateInDays %> days left)</p>
           </div>
         </div>
       </div>
