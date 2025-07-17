@@ -105,7 +105,8 @@ for (const modelName of Object.keys(mdb)) {
         query: searchQuery,
         limit,
         page,
-        totalPages
+        totalPages,
+        fieldLinks: config.fieldLinks || {},
       });
     } catch (err) {
       logger.error(`Error listing ${modelName}:`, err);

@@ -1,36 +1,22 @@
-<div class="text-center pb-4 text-sm text-gray-600 dark:text-gray-400">
-  <div class="flex justify-center items-center gap-4 mt-2">
-    <small
-      class="cursor-default"
-      title="<%= lastfetched ? slimDateTime(lastfetched.lastFetchedAt, ['includeTime']) : 'Never' %>">
-      v<%= package %>
-    </small>
-    <small>
-      &copy; <%= copyrightyearstart %>–<%= copyrightyear %>
-    </small>
-  </div>
-
-  <div class="flex justify-center items-center gap-2 mt-2">
-    <img src="/resources/images/HCS-Logo-v4-Icon32.png" alt="Logo" width="32" height="32">
-    <a href="https://www.heroncs.co.uk"
-       class="hcs-green-text dark:text-green-400 hover:underline">
-      Heron Constructive Solutions LTD
-    </a>
-  </div>
-
-  <div class="mt-1">
-    <small>
-      VAT:
-      <a href="https://beta.companieshouse.gov.uk/company/09276951"
-         class="hcs-green-text dark:text-green-400 hover:underline">
-        252295994
+<footer class="w-full text-xs text-gray-600 dark:text-neutral-200 px-4 py-2 border-t border-gray-300 dark:border-neutral-700 bg-gray-200 dark:bg-neutral-900">
+  <div class="flex flex-wrap justify-between items-center gap-x-4 gap-y-1 text-[0.75rem] leading-snug">
+    <div>
+      <small class="cursor-default" title="<%= lastfetched ? slimDateTime(lastfetched.lastFetchedAt, ['includeTime']) : 'Never' %>">
+        v<%= package %>
+      </small>
+    </div>
+    <div class="flex items-center space-x-2">
+      <small>&copy; <%= copyrightyearstart %>–<%= copyrightyear %></small>
+      <img src="/resources/images/HCS-Logo-v4-Icon32.png" alt="Logo" class="w-4 h-4" />
+      <a href="https://www.heroncs.co.uk" class="text-green-600 hover:underline whitespace-nowrap">
+        Heron Constructive Solutions LTD
       </a>
-      |
-      Company:
-      <a href="https://beta.companieshouse.gov.uk/company/09276951"
-         class="hcs-green-text dark:text-green-400 hover:underline">
-        09276951
-      </a>
-    </small>
+    </div>
+    <div>
+      <small>
+        VAT: <a href="https://beta.companieshouse.gov.uk/company/09276951" class="text-green-600 hover:underline">252295994</a> Company: <a href="https://beta.companieshouse.gov.uk/company/09276951" class="text-green-600 hover:underline">09276951</a>
+      </small>
+    </div>
+    
   </div>
-</div>
+</footer>

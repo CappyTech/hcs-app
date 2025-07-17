@@ -33,29 +33,29 @@
       <div class="flex justify-around text-center py-2">
         <a href="/construction-industry-scheme" class="text-sm hover:text-green-600">
           <i class="bi bi-building fs-5"></i><br>
-          <div>Construction Industry Scheme</div>
+          <small>Construction Industry Scheme</small>
         </a>
         <a href="/management" class="text-sm hover:text-green-600">
           <i class="bi bi-folder2-open fs-5"></i><br>
-          <div>Management</div>
+          <small>Management</small>
         </a>
         <a href="/payroll" class="text-sm hover:text-green-600">
           <i class="bi bi-cash-coin fs-5"></i><br>
-          <div>Payroll</div>
+          <small>Payroll</small>
         </a>
         <% if (isAdmin) { %>
           <a href="/human-resources" class="text-sm hover:text-green-600">
             <i class="bi bi-people fs-5"></i><br>
-            <div>Human Resources</div>
+            <small>Human Resources</small>
           </a>
           <% } %>
             <a href="/kashflow" class="text-sm hover:text-green-600">
               <i class="bi bi-graph-up fs-5"></i><br>
-              <div>Kashflow</div>
+              <small>Kashflow</small>
             </a>
             <a href="/create" class="text-sm text-green-600 hover:text-green-800">
               <i class="bi bi-plus fs-5"></i><br>
-              <div>Create</div>
+              <small>Create</small>
             </a>
       </div>
     </nav>
@@ -63,9 +63,8 @@
 
       <main id="main-content" class="flex-grow container mx-auto pt-24 pb-24 px-4">
         <%- include('./partials/successAlert.ejs') %>
-          <%- include('./partials/errorAlert.ejs') %>
-            <%- body %>
-              <%- include('./partials/footer.ejs') %>
+        <%- include('./partials/errorAlert.ejs') %>
+        <%- body %>
       </main>
 
       <% if (isAuthenticated) { %>
@@ -74,17 +73,17 @@
           <div class="flex justify-around text-center py-2">
             <a href="/user/profile" class="text-sm hover:text-green-600">
               <i class="bi bi-person fs-5"></i><br>
-              <div>Profile</div>
+              <small>Profile</small>
             </a>
             <% if (isAdmin) { %>
               <a href="/logs" class="text-sm hover:text-green-600">
                 <i class="bi bi-journal-text fs-5"></i><br>
-                <div>Logs</div>
+                <small>Logs</small>
               </a>
               <% } %>
                 <a href="/user/account" class="text-sm hover:text-green-600">
                   <i class="bi bi-sliders fs-5"></i><br>
-                  <div>Settings</div>
+                  <small>Settings</small>
                 </a>
                 <a id="theme-toggle" class="text-sm hover:text-green-600">
                   <i id="theme-icon" class="bi bi-moon-stars fs-5"></i><br>
@@ -92,9 +91,10 @@
                 </a>
                 <a href="/user/logout" class="text-sm text-red-500 hover:text-red-600">
                   <i class="bi bi-box-arrow-right fs-5"></i><br>
-                  <div>Logout</div>
+                  <small>Logout</small>
                 </a>
           </div>
+                        <%- include('./partials/footer.ejs') %>
         </nav>
         <% } %>
 

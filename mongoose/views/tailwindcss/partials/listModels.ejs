@@ -15,8 +15,7 @@
               <%= model.description %>
             </p>
           </div>
-          <a href="<%= model.link %>"
-             class="mt-4 inline-block bg-green-700 text-white text-sm px-5 py-2 rounded hover:bg-green-800 transition">
+          <a href="<%= model.link %>" class="mt-4 inline-block <%= model.buttonClass || 'bg-green-700 hover:bg-green-800' %> text-white text-sm px-5 py-2 rounded transition">
             <%= model.title %>
           </a>
         </div>

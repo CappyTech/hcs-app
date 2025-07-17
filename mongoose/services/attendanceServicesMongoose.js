@@ -34,6 +34,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
         })
         .populate('employeeId')
         .populate('locationId')
+        .populate('contractAssignmentId')
         .sort({ date: 1 }),
 
       mdb.employee.find({ status: 'active' }),
@@ -158,7 +159,8 @@ const groupAttendanceByPerson = (
       location: record.locationId || null,
       type: record.type,
       hoursWorked,
-      weeklyPay: calculatedPay
+      weeklyPay: calculatedPay,
+      contractAssignmentId: record.contractAssignmentId || null,
     };
 
     groupedAttendance[name].totalHoursWorked += hoursWorked;

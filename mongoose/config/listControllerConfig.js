@@ -35,7 +35,8 @@ module.exports = {
   customer: {
     title: 'Customers',
     linkField: 'Name',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid','Discount','CountryName','Created', 'Updated','Website','Notes','CustomerID','Code'],
+    fieldOrder: ['Name'],
     sortField: 'Name',
     sortOrder: 1,
     department: ['kashflow'],
@@ -61,7 +62,7 @@ module.exports = {
   invoice: {
     title: 'Invoices',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid','InvoiceDBID'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer','SuppressTotal'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
@@ -88,17 +89,18 @@ module.exports = {
   },
   project: {
     title: 'Projects',
-    linkField: 'ID',
-    sortField: 'ID',
+    linkField: 'Number',
+    sortField: 'Number',
     sortOrder: 1,
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','ID','Date1','Date2'],
     department: ['kashflow'],
     deny: ['c','d'],
   },
   quote: {
     title: 'Quotes',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID','SuppressTotal','DueDate','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer'],
+    fieldOrder: ['InvoiceNumber', 'InvoiceDate', 'CustomerName', 'NetAmount', 'VATAmount', 'AmountPaid'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
@@ -107,7 +109,8 @@ module.exports = {
   receipt: {
     title: 'Receipts',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer'],
+    fieldOrder: ['InvoiceNumber', 'InvoiceDate', 'CustomerName', 'NetAmount', 'VATAmount', 'AmountPaid'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
@@ -123,13 +126,16 @@ module.exports = {
     fieldOrder: ['Name', 'Subcontractor', 'CISRate', 'CISNumber'],
     sortField: 'Name',
     sortOrder: 1,
-    department: ['kashflow'],
+    department: ['kashflow','construction-industry-scheme'],
     deny: ['c','d'],
     actions: [{
       label: 'Change',
       class: 'warning',
       href: row => `/supplier/change/${row.uuid}`
-    }]
+    }],
+    description: {
+      manage: 'Manage suppliers and subcontractors.',
+    },
   },
   task: {
     title: 'Tasks',

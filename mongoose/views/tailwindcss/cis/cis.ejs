@@ -115,10 +115,6 @@
             <li>
               <a href="/receipt/read/<%= receipt.uuid %>" 
                  class="block px-4 py-3 hover:bg-gray-50 flex items-center justify-between text-gray-700">
-                <span>
-                  <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
-                  <small class="block text-xs text-gray-500">Paid: <%= receipt.payDateDisplay %> (<%= receipt.timeZoneTag %>)</small>
-                </span>
                 <span class="flex items-center space-x-2 text-sm">
                   <i class="bi bi-pencil-square text-gray-500"></i>
                   <% if (receipt.SubmissionDate) { %>
@@ -126,6 +122,10 @@
                   <% } else { %>
                     <i class="bi bi-x text-red-600"></i>
                   <% } %>
+                </span>
+                <span>
+                  <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
+                  <small class="block text-xs text-gray-500">Paid: <%= receipt.payDateDisplay %> (<%= receipt.timeZoneTag %>)</small>
                 </span>
               </a>
             </li>
@@ -136,10 +136,6 @@
             <li>
               <a href="/receipt/read/<%= receipt.uuid %>" 
                  class="block px-4 py-3 hover:bg-gray-50 flex items-center justify-between text-gray-700">
-                <span>
-                  <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
-                  <small class="block text-xs text-gray-500">Paid: <%= receipt.payDateDisplay %> (<%= receipt.timeZoneTag %>)</small>
-                </span>
                 <span class="flex items-center space-x-2 text-sm">
                   <i class="bi bi-pencil-square text-gray-500"></i>
                   <% if (receipt.SubmissionDate) { %>
@@ -147,6 +143,10 @@
                   <% } else { %>
                     <i class="bi bi-x text-red-600"></i>
                   <% } %>
+                </span>
+                <span>
+                  <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
+                  <small class="block text-xs text-gray-500">Paid: <%= receipt.payDateDisplay %> (<%= receipt.timeZoneTag %>)</small>
                 </span>
               </a>
             </li>

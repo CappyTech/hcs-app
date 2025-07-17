@@ -1,19 +1,16 @@
 const path = require('path');
 const listConfig = require('../config/listControllerConfig');
+const customTiles = require('../config/dashboardTilesConfig'); // <-- New
 const taskService = require('../services/taskServiceMongoose');
-const {
-  endOfToday,
-  endOfWeek,
-  endOfMonth
-} = require('date-fns');
 const holidayService = require('../services/holidayServiceMongoose');
-const moment = require('moment-timezone')
+const { endOfToday, endOfWeek, endOfMonth } = require('date-fns');
+const moment = require('moment-timezone');
 
 const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 
-// Helper to get all visible listable models for a department
+// Helper: get all visible listable models for a department
 const getDashboardModels = (department) => {
-  return Object.entries(listConfig)
+  const standardModels = Object.entries(listConfig)
     .filter(([_, config]) =>
       config?.department?.includes(department) &&
       !denyGuard(config, 'l')
@@ -33,9 +30,15 @@ const getDashboardModels = (department) => {
         link: config.listPath || `/${model}s`
       };
     });
+
+  const extraTiles = Object.values(customTiles).filter(tile =>
+    tile.department?.includes(department)
+  );
+
+  return [...standardModels, ...extraTiles];
 };
 
-// Helper to get all creatable models
+// Helper: get all creatable models
 const getCreateModels = () => {
   return Object.entries(listConfig)
     .filter(([_, config]) => !denyGuard(config, 'c'))
@@ -64,7 +67,7 @@ exports.renderIndex = async (req, res, next) => {
       const allTasks = await taskService.getPendingTasksForUser(req.user._id);
       const now = new Date();
       const todayEnd = endOfToday();
-      const weekEnd = endOfWeek(now, { weekStartsOn: 6 }); // Saturday to Friday
+      const weekEnd = endOfWeek(now, { weekStartsOn: 6 });
       const monthEnd = endOfMonth(now);
 
       tasks.recurring = allTasks.filter(t => t.recurrence && t.recurrence !== 'none');
@@ -86,6 +89,7 @@ exports.renderIndex = async (req, res, next) => {
     next(err);
   }
 };
+
 const departments = [
   ['renderConstructionIndustryScheme', 'Construction Industry Scheme', 'construction-industry-scheme'],
   ['renderManagement', 'Management', 'management'],
@@ -104,12 +108,6 @@ departments.forEach(([exportName, title, department]) => {
         models: createModels
       });
     };
-  } else if (exportName === 'renderConstructionIndustryScheme') {
-    exports[exportName] = (req, res, next) => {
-      res.render(path.join('tailwindcss', 'header', department), {
-        title
-      });
-    };
   } else {
     exports[exportName] = (req, res, next) => {
       const dashboardModels = getDashboardModels(department);
@@ -120,4 +118,3 @@ departments.forEach(([exportName, title, department]) => {
     };
   }
 });
-

@@ -1,51 +1,67 @@
 <% const hasActions = typeof actions !== 'undefined' && Array.isArray(actions) && actions.length > 0; %>
-
 <div class="w-full my-10 px-4">
-  <!-- Header: Title + Search + Limit Dropdown -->
-  <div class="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6">
+  <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6 mb-6">
+
     <h1 class="text-2xl font-bold text-center lg:text-left"><%= title || 'Data Table' %></h1>
+    <div class="flex flex-wrap items-center gap-4">
+      <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+        <nav>
+          <ul class="flex justify-center flex-wrap gap-2">
+            <% const range = 2; %>
+            <% for (let i = 1; i <= totalPages; i++) { %>
+              <% if (
+                i === 1 || 
+                i === totalPages || 
+                Math.abs(i - page) <= range
+              ) { %>
+                <li>
+                  <a href="?page=<%= i %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %>"
+                    class="px-2.5 py-0.5 rounded border text-xs
+                    <%= i === page
+                      ? 'bg-green-700 text-white'
+                      : 'bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700'
+                    %> transition">
+                    <%= i %>
+                  </a>
+                </li>
+              <% } else if (
+                (i === page - range - 1 || i === page + range + 1)
+              ) { %>
+                <li>
+                  <span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">…</span>
+                </li>
+              <% } %>
+            <% } %>
+          </ul>
+        </nav>
+      <% } %>
 
-    <form id="list-controls" method="GET" action="" class="flex flex-wrap gap-2 items-center">
-      <!-- Limit Dropdown -->
-      <label for="limitSelect" class="text-sm font-medium text-gray-700 dark:text-gray-200">Show</label>
-      <select id="limitSelect" name="limit"
-              class="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
-        <% [10, 50, 100].forEach(opt => { %>
-          <option value="<%= opt %>" <%= limit == opt ? 'selected' : '' %>><%= opt %></option>
-        <% }) %>
-      </select>
+      <form id="list-controls" method="GET" action="" class="flex flex-wrap gap-2 items-center">
+        <!-- Limit Dropdown -->
+        <label for="limitSelect" class="text-sm font-medium text-gray-700 dark:text-gray-200">Show</label>
+        <select id="limitSelect" name="limit"
+                class="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
+          <% [10, 50, 100].forEach(opt => { %>
+            <option value="<%= opt %>" <%= limit == opt ? 'selected' : '' %>><%= opt %></option>
+          <% }) %>
+        </select>
 
-      <input type="hidden" name="page" value="1">
+        <input type="hidden" name="page" value="1">
 
-      <!-- Search Field -->
-      <input type="text"
-             name="search"
-             placeholder="Search..."
-             value="<%= query || '' %>"
-             class="text-sm border rounded px-3 py-1 w-48 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
+        <!-- Search Field -->
+        <input type="text"
+              name="search"
+              placeholder="Search..."
+              value="<%= query || '' %>"
+              class="text-sm border rounded px-3 py-1 w-48 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
 
-      <button type="submit"
-              class="text-sm bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition">
-        Apply
-      </button>
-    </form>
+        <button type="submit"
+                class="text-sm bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition">
+          Apply
+        </button>
+      </form>
+    </div>
   </div>
-
-  <!-- Pagination -->
-  <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
-    <nav class="mb-4">
-      <ul class="flex justify-center flex-wrap gap-2">
-        <% for (let i = 1; i <= totalPages; i++) { %>
-          <li>
-            <a href="?page=<%= i %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %>"
-               class="px-3 py-1 rounded border text-sm <%= i === page ? 'bg-green-700 text-white' : 'bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600' %> hover:bg-green-600 hover:text-white transition">
-              <%= i %>
-            </a>
-          </li>
-        <% } %>
-      </ul>
-    </nav>
-  <% } %>
 
   <!-- No Data -->
   <% if (!rows || rows.length === 0) { %>
@@ -60,7 +76,7 @@
         <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
           <tr>
             <% headers.forEach(h => { %>
-              <th class="px-3 py-2 border-b dark:border-gray-600 text-left font-medium">
+              <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">
                 <%= h.label %>
               </th>
             <% }) %>
@@ -73,39 +89,42 @@
           <% rows.forEach(row => { %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
               <% headers.forEach(h => { %>
-                <td class="px-3 py-2 border-b dark:border-gray-700 <%= model === 'supplier' && h.key === 'Name' && row.IsSubcontractor ? 'bg-yellow-50 dark:bg-yellow-900' : '' %>">
-                  <% 
-                    const val = row[h.key];
-                    const isDate = val instanceof Date;
-                    const isLink = h.key === linkField && row.uuid;
-                  %>
-                  <% if (isLink) { %>
-                    <a href="/<%= basePath %>/read/<%= row.uuid %>" class="text-blue-600 dark:text-blue-400 hover:underline">
-                      <%= val %>
+                <% 
+                  const val = row[h.key];
+                  const isOwnLink = h.key === linkField && row.uuid;
+                  const externalHref = fieldLinks?.[h.key]?.(row);
+                  const href = externalHref || (isOwnLink ? `/${model}s/read/${row.uuid}` : null);
+                %>
+
+                <td class="px-3 py-2 border-b dark:border-gray-700">
+                  <% if (href) { %>
+                    <a href="<%= href %>" class="text-blue-600 dark:text-blue-400 hover:underline">
+                      <% if (val instanceof Date) { %>
+                        <%= slimDateTime(val) %>
+                      <% } else { %>
+                        <%= val %>
+                      <% } %>
                     </a>
-                  <% } else if (isDate) { %>
-                    <%= slimDateTime(val) %>
-                  <% } else if (typeof val === 'boolean') { %>
-                    <span class="inline-block px-2 py-1 text-xs rounded-full <%= val ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>">
-                      <%= val ? 'Yes' : 'No' %>
-                    </span>
-                  <% } else if (typeof val === 'string' && val.trim() === '') { %>
-                    &mdash;
-                  <% } else if (val !== null && val !== undefined) { %>
-                    <% if (Array.isArray(val)) { %>
-                      <%= `${val.length} ${h.key.toLowerCase()}` %>
-                    <% } else if (typeof val === 'object') { %>
-                      <%= val?.name || val?.title || '[Object]' %>
-                    <% } else { %>
-                      <%= val %>
-                    <% } %>
-                    <% if (model === 'supplier' && h.key === 'Name' && row.IsSubcontractor) { %>
-                      <span class="ml-2 px-2 py-0.5 text-xs rounded bg-yellow-300 text-black dark:bg-yellow-600 dark:text-white">
-                        Subcontractor
-                      </span>
-                    <% } %>
                   <% } else { %>
-                    &mdash;
+                    <% if (val instanceof Date) { %>
+                      <%= slimDateTime(val) %>
+                    <% } else if (typeof val === 'boolean') { %>
+                      <span class="inline-block px-2 py-1 text-xs rounded-full <%= val ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>">
+                        <%= val ? 'Yes' : 'No' %>
+                      </span>
+                    <% } else if (typeof val === 'string' && val.trim() === '') { %>
+                      &mdash;
+                    <% } else if (val !== null && val !== undefined) { %>
+                      <% if (Array.isArray(val)) { %>
+                        <%= `${val.length} ${h.key.toLowerCase()}` %>
+                      <% } else if (typeof val === 'object') { %>
+                        <%= val?.name || val?.title || '[Object]' %>
+                      <% } else { %>
+                        <%= val %>
+                      <% } %>
+                    <% } else { %>
+                      &mdash;
+                    <% } %>
                   <% } %>
                 </td>
               <% }) %>
