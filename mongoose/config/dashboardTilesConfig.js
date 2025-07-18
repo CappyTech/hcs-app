@@ -24,7 +24,7 @@ module.exports = {
     MonthlyReturns: {
         title: 'CIS Returns Reports',
         description: 'View Monthly and Yearly Returns',
-        link: '/monthly/returns/form',
+        link: '/CIS/returns/form',
         department: ['construction-industry-scheme'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },

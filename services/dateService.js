@@ -19,6 +19,9 @@ function slimDateTime(dateString, options = [], timezone = 'Europe/London') {
   }
 
   if (options.includes('displayFormat')) {
+    if (options.includes('includeTime')) {
+      return date.format('Do MMMM YYYY HH:mm');
+    }
     return date.format('Do MMMM YYYY');
   }
 

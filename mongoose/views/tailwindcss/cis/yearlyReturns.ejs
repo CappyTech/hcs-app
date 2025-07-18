@@ -1,11 +1,11 @@
 <div class="flex flex-wrap gap-2 print:hidden p-4 border-b border-gray-200">
-  <!-- PDF Button -->
+  <!-- PDF Button
   <button class="btn-hcs-green px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed" data-bs-toggle="modal" data-bs-target="#pdfModal" disabled>
     Download as PDF
   </button>
-
-  <!-- CSV Button -->
-  <form action="/kashflow/yearly/download-csv" method="POST" class="m-0">
+ -->
+  <!-- CSV Button
+  <form action="/yearly/download-csv" method="POST" class="m-0">
     <input type="hidden" name="year" value="<%= year %>">
     <input type="hidden" name="uuid" value="<%= supplier.uuid %>">
     <input type="hidden" name="filename"
@@ -14,9 +14,9 @@
       Download as CSV
     </button>
   </form>
-
-  <!-- XLSX Button -->
-  <form action="/kashflow/yearly/download-xlsx" method="POST" class="m-0">
+-->
+  <!-- XLSX Button
+  <form action="/yearly/download-xlsx" method="POST" class="m-0">
     <input type="hidden" name="year" value="<%= year %>">
     <input type="hidden" name="uuid" value="<%= supplier.uuid %>">
     <input type="hidden" name="filename"
@@ -24,7 +24,7 @@
     <button type="submit" class="btn-hcs-green px-4 py-2 rounded">
       Download as Excel
     </button>
-  </form>
+  </form> -->
 </div>
 
 <div class="page-number py-3 text-center text-gray-600 font-semibold">
@@ -126,11 +126,11 @@
             <td class="border border-gray-300 px-3 py-1"><%= slimDateTime(receipt.SubmissionDate) %></td>
           </tr>
           <% 
-            totalGross += receipt.GrossAmount;
-            totalLabour += receipt.LabourCost;
-            totalMaterial += receipt.MaterialCost;
-            totalCIS += receipt.CISAmount;
-            totalNet += receipt.NetAmount;
+            totalGross += receipt.Gross;
+            totalLabour += receipt.Labour;
+            totalMaterial += receipt.Material;
+            totalCIS += receipt.CIS;
+            totalNet += receipt.Net;
           %>
         <% }) %>
         <tr class="font-semibold bg-gray-200">

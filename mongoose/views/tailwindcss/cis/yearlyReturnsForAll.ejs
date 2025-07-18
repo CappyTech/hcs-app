@@ -1,84 +1,65 @@
-<div class="text-center mt-10 max-w-5xl mx-auto px-4">
-  <h1 class="text-3xl font-semibold mb-6">Month <%= month %> Report</h1>
+<div class="text-center mt-10 max-w-6xl mx-auto px-4">
+  <h1 class="text-3xl font-semibold mb-6">CIS Yearly Returns - <%= year %></h1>
 
   <% subcontractors.forEach(sub => { %>
     <div class="mb-10 text-left">
-      <!-- Subcontractor Info -->
+      <!-- Subcontractor Header -->
       <div class="mb-2 text-lg font-medium">
         <% if (sub.name) { %>
-        | <%= sub.name %> 
+          | <%= sub.name %>
         <% } %>
         <% if (sub.company) { %>
-        | <%= sub.company %>
+          | <%= sub.company %>
         <% } %>
         <% if (sub.deduction === 0.0) { %>
-        | 0%
+          | 0%
         <% } else if (sub.deduction === 0.2) { %>
-        | 20%
+          | 20%
         <% } else if (sub.deduction === 0.3) { %>
-        | 30%
+          | 30%
         <% } %>
         <% if (sub.isGross) { %>
-        | GROSS
+          | GROSS
         <% } %>
         <% if (sub.cisNumber) { %>
-        | <%= sub.cisNumber %>
+          | <%= sub.cisNumber %>
         <% } %>
         <% if (sub.isReverseCharge) { %>
-        | <%= sub.isReverseCharge ? 'Reverse Charge' : 'Standard' %>
+          | Reverse Charge
         <% } %>
-      </div>
-      <div class="mb-4 text-sm text-gray-600">
-        <%= sub.cisNumber %>
       </div>
 
       <% if (sub.invoices.length > 0) { %>
         <div class="overflow-x-auto">
           <table class="min-w-full border border-gray-300 text-sm">
-            <caption class="caption-top text-left mb-2 font-semibold">
-              Month <%= month %>
-            </caption>
             <thead class="bg-gray-100">
               <tr>
-                <% const headers = [
-                  ['Invoice', 'Inv'],
-                  ['Kashflow', 'KF'],
-                  ['Invoiced', 'Invoiced'],
-                  ['Paid', 'Paid'],
-                  ['Gross', 'Gross'],
-                  ['Labour', 'Labour'],
-                  ['Material', 'Material'],
-                  [`CIS @ ${sub.deduction * 100}%`, 'CIS'],
-                  ['Net', 'Net'],
-                  ...(sub.isReverseCharge ? [['Reverse Charge', 'RC']] : []),
-                  ['Month', 'Month'],
-                  ['Year', 'Year'],
-                  ['Submission Date', 'Submission']
-                ]; %>
-                <% headers.forEach(([label, short]) => { %>
-                  <th class="border px-2 py-1 hidden md:table-cell"><%= label %></th>
-                  <th class="border px-2 py-1 md:hidden"><%= short %></th>
-                <% }); %>
+                <th class="border px-2 py-1">Inv</th>
+                <th class="border px-2 py-1">KF</th>
+                <th class="border px-2 py-1">Invoiced</th>
+                <th class="border px-2 py-1">Paid</th>
+                <th class="border px-2 py-1 text-right">Gross</th>
+                <th class="border px-2 py-1 text-right">Labour</th>
+                <th class="border px-2 py-1 text-right">Material</th>
+                <th class="border px-2 py-1 text-right">CIS</th>
+                <th class="border px-2 py-1 text-right">Net</th>
+                <% if (sub.isReverseCharge) { %>
+                  <th class="border px-2 py-1 text-right">RC</th>
+                <% } %>
+                <th class="border px-2 py-1 text-center">Month</th>
+                <th class="border px-2 py-1 text-center">Year</th>
+                <th class="border px-2 py-1">Submission</th>
               </tr>
             </thead>
             <tbody>
-              <% 
-                let total = {
-                  gross: 0,
-                  labour: 0,
-                  material: 0,
-                  cis: 0,
-                  net: 0,
-                  rc: 0
-                };
-
-                sub.invoices.forEach(inv => {
-                  total.gross += inv.grossAmount;
-                  total.labour += inv.labourCost;
-                  total.material += inv.materialCost;
-                  total.cis += inv.cisAmount;
-                  total.net += inv.netAmount;
-                  total.rc += inv.reverseCharge || 0;
+              <% let total = { gross: 0, labour: 0, material: 0, cis: 0, net: 0, rc: 0 }; %>
+              <% sub.invoices.forEach(inv => {
+                   total.gross += inv.grossAmount;
+                   total.labour += inv.labourCost;
+                   total.material += inv.materialCost;
+                   total.cis += inv.cisAmount;
+                   total.net += inv.netAmount;
+                   total.rc += inv.reverseCharge || 0;
               %>
                 <tr class="border-b hover:bg-gray-50">
                   <td class="border px-2 py-1"><%= inv.invoiceNumber %></td>
@@ -98,8 +79,7 @@
                   <td class="border px-2 py-1"><%= slimDateTime(inv.submissionDate) %></td>
                 </tr>
               <% }); %>
-
-              <!-- Totals Row -->
+              <!-- Totals -->
               <tr class="bg-gray-200 font-semibold">
                 <td colspan="4" class="border px-2 py-1 text-right">Total:</td>
                 <td class="border px-2 py-1 text-right"><%= formatCurrency(total.gross) %></td>
@@ -116,7 +96,7 @@
           </table>
         </div>
       <% } else { %>
-        <p class="text-gray-500 italic text-center">No invoices available for the selected month and year.</p>
+        <p class="text-gray-500 italic text-center">No invoices available for <%= sub.name %>.</p>
       <% } %>
     </div>
   <% }); %>

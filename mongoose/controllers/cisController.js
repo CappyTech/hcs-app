@@ -4,6 +4,7 @@ const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const moment = require('moment-timezone');
 const taxService = require('../../services/taxService');
+const { slimDateTime } = require('../../services/dateService');
 
 exports.renderCISDashboardMongo = async (req, res, next) => {
   try {
@@ -43,10 +44,10 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       if (pay) {
         const payMoment = moment.tz(pay, 'Europe/London');
         receipt.timeZoneTag = payMoment.isDST() ? 'BST' : 'GMT';
-        receipt.payDateDisplay = payMoment.format('YYYY-MM-DD HH:mm');
+        receipt.payDate = slimDateTime(payMoment, ['displayFormat', 'includeTime']);
       } else {
         receipt.timeZoneTag = 'N/A';
-        receipt.payDateDisplay = 'N/A';
+        receipt.payDate = 'N/A';
       }
     });
 

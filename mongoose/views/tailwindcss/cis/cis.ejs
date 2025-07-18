@@ -5,14 +5,17 @@
       <div class="flex justify-between items-center mb-4">
         <a href="/CIS/<%= previousYear %>/<%= previousMonth %>" 
            class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded text-center text-sm leading-tight">
-          &laquo; Previous<br> Month <%= previousMonth %>, <%= previousYear %>
+          <i class="bi bi-chevron-left"></i> Previous<br> <h3 class="text-2xl"><%= previousMonth %>, <%= previousYear %></h3>
         </a>
-        <h1 class="text-2xl font-semibold text-center flex-1 mx-4">
-          Month <%= specifiedMonth %> | <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>
+        <h1 class="text-4xl font-semibold text-center flex-1 mx-4">
+          <%= specifiedMonth %>, <%= specifiedYear %>
         </h1>
+        <h2 class="text-xl font-semibold text-center flex-1 mx-4">
+          <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>
+        </h2>
         <a href="/CIS/<%= nextYear %>/<%= nextMonth %>" 
            class="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded text-center text-sm leading-tight">
-          Next &raquo;<br> Month <%= nextMonth %>, <%= nextYear %>
+          Next <i class="bi bi-chevron-right"></i><br><h3 class="text-2xl"><%= nextMonth %>, <%= nextYear %></h3>
         </a>
       </div>
 
@@ -20,11 +23,11 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div class="bg-white rounded shadow p-6 text-center">
           <h4 class="text-lg font-semibold mb-2">Total Suppliers</h4>
-          <p class="text-4xl font-bold"><%= supplierCount %></p>
+          <p class="text-3xl font-bold"><%= supplierCount %></p>
         </div>
         <div class="bg-white rounded shadow p-6 text-center">
           <h4 class="text-lg font-semibold mb-2">Total Receipts</h4>
-          <p class="text-4xl font-bold"><%= receiptCount %></p>
+          <p class="text-3xl font-bold"><%= receiptCount %></p>
         </div>
       </div>
 
@@ -42,18 +45,36 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
           <div class="bg-white rounded shadow p-6 mb-6">
-            <h4 class="text-lg font-semibold mb-1">Tax Year</h4>
-            <p><%= slimDateTime(taxYear.start, ['displayFormat']) %> - <%= slimDateTime(taxYear.end, ['displayFormat']) %></p>
+            <h4 class="text-lg font-semibold mb-1">
+              Tax Year
+            </h4>  
+            <p>
+              <%= slimDateTime(taxYear.start, ['displayFormat']) %> - <%= slimDateTime(taxYear.end, ['displayFormat']) %>
+            </p>
+            <small>
+              <a href="/CIS/returns/yearly/<%= specifiedYear %>" class="text-green-600 hover:underline">
+                Print-out of this Year's returns
+              </a>
+            </small>
           </div>
           <div class="bg-white rounded shadow p-6">
-            <h4 class="text-lg font-semibold mb-1">Monthly Return</h4>
-            <p><%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %></p>
+            <h4 class="text-lg font-semibold mb-1">Submission Deadline</h4>
+            <p><%= slimDateTime(currentMonthlyReturn.submissionDeadline, ['displayFormat']) %> (<%= currentMonthlyReturn.submissionDeadlineInDays %> days left)</p>
           </div>
         </div>
         <div>
           <div class="bg-white rounded shadow p-6 mb-6">
-            <h4 class="text-lg font-semibold mb-1">Submission Deadline</h4>
-            <p><%= slimDateTime(currentMonthlyReturn.submissionDeadline, ['displayFormat']) %> (<%= currentMonthlyReturn.submissionDeadlineInDays %> days left)</p>
+            <h4 class="text-lg font-semibold mb-1">
+              Monthly Return
+            </h4>
+            <p>
+              <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>
+            </p>
+            <small>
+              <a href="/CIS/returns/<%= specifiedMonth %>/<%= specifiedYear %>" class="text-green-600 hover:underline">
+                Print-out of this Month's Returns
+              </a>
+            </small>
           </div>
           <div class="bg-white rounded shadow p-6">
             <h4 class="text-lg font-semibold mb-1">HMRC Update Date</h4>
@@ -62,31 +83,31 @@
         </div>
       </div>
 
-      <!-- Suppliers Table -->
-      <div class="mb-8">
-        <h3 class="text-center text-xl font-semibold mb-4">Suppliers</h3>
+      <!-- Subcontractors Table -->
+      <div class="mb-12">
+        <h3 class="text-center text-2xl font-bold mb-6">Subcontractors</h3>
         <div class="overflow-x-auto">
           <table class="min-w-full border-collapse border border-gray-300">
             <thead>
               <tr class="bg-gray-200">
-                <th class="border border-gray-300 px-4 py-2 text-left">Supplier</th>
-                <th class="border border-gray-300 px-4 py-2 text-right">Gross Total</th>
-                <th class="border border-gray-300 px-4 py-2 text-right">Labour Total</th>
-                <th class="border border-gray-300 px-4 py-2 text-right">Materials Total</th>
-                <th class="border border-gray-300 px-4 py-2 text-right">CIS Total</th>
-                <th class="border border-gray-300 px-4 py-2 text-right">Reverse Charge Total</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Name</th>
+                <th class="border border-gray-300 px-4 py-2 text-right">Gross</th>
+                <th class="border border-gray-300 px-4 py-2 text-right">Labour</th>
+                <th class="border border-gray-300 px-4 py-2 text-right">Materials</th>
+                <th class="border border-gray-300 px-4 py-2 text-right">CIS</th>
+                <th class="border border-gray-300 px-4 py-2 text-right">Reverse Charge</th>
               </tr>
             </thead>
             <tbody>
               <% if (suppliers.length === 0) { %>
               <tr>
-                <td colspan="6" class="border border-gray-300 text-center py-6">No receipts that cover this period.</td>
+                <td colspan="6" class="border border-gray-300 text-center py-6">No receipts that cover <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>.</td>
               </tr>
               <% } else { %>
                 <% suppliers.forEach(supplier => { %>
                 <tr class="hover:bg-gray-50">
                   <td class="border border-gray-300 px-4 py-2">
-                    <a href="/supplier/read/<%= supplier.uuid %>" class="text-blue-600 hover:underline"><%= supplier.Name %></a>
+                    <a href="/supplier/read/<%= supplier.uuid %>" class="text-green-600 hover:underline"><%= supplier.Name %></a>
                   </td>
                   <% if (supplierTotals[String(supplier.SupplierID)]) { %>
                   <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.SupplierID)].grossAmount) %></td>
@@ -101,62 +122,50 @@
                 <% }); %>
               <% } %>
             </tbody>
+            <tfoot class="bg-gray-50 font-semibold">
+              <tr>
+                <td class="border px-2 py-1 text-center" colspan="6">Totals</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
 
       <!-- Receipts Lists -->
-      <div class="mb-8">
-        <% const midIndex = Math.ceil(receipts.length / 2); %>
-        <h3 class="text-center text-xl font-semibold mb-4">Receipts</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ul class="divide-y divide-gray-300 border rounded shadow overflow-hidden">
-            <% receipts.slice(0, midIndex).forEach(receipt => { %>
-            <li>
-              <a href="/receipt/read/<%= receipt.uuid %>" 
-                 class="block px-4 py-3 hover:bg-gray-50 flex items-center justify-between text-gray-700">
-                <span class="flex items-center space-x-2 text-sm">
-                  <i class="bi bi-pencil-square text-gray-500"></i>
-                  <% if (receipt.SubmissionDate) { %>
-                    <i class="bi bi-check text-green-600"></i>
-                  <% } else { %>
-                    <i class="bi bi-x text-red-600"></i>
-                  <% } %>
-                </span>
-                <span>
-                  <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
-                  <small class="block text-xs text-gray-500">Paid: <%= receipt.payDateDisplay %> (<%= receipt.timeZoneTag %>)</small>
-                </span>
-              </a>
-            </li>
-            <% }); %>
-          </ul>
-          <ul class="divide-y divide-gray-300 border rounded shadow overflow-hidden">
-            <% receipts.slice(midIndex).forEach(receipt => { %>
-            <li>
-              <a href="/receipt/read/<%= receipt.uuid %>" 
-                 class="block px-4 py-3 hover:bg-gray-50 flex items-center justify-between text-gray-700">
-                <span class="flex items-center space-x-2 text-sm">
-                  <i class="bi bi-pencil-square text-gray-500"></i>
-                  <% if (receipt.SubmissionDate) { %>
-                    <i class="bi bi-check text-green-600"></i>
-                  <% } else { %>
-                    <i class="bi bi-x text-red-600"></i>
-                  <% } %>
-                </span>
-                <span>
-                  <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %>
-                  <small class="block text-xs text-gray-500">Paid: <%= receipt.payDateDisplay %> (<%= receipt.timeZoneTag %>)</small>
-                </span>
-              </a>
-            </li>
-            <% }); %>
-          </ul>
-        </div>
-      </div>
+      <% if (suppliers.length === 0) { %><% } else { %>
+        <div class="mb-12">
+          <% const midIndex = Math.ceil(receipts.length / 2); %>
+          <h3 class="text-center text-2xl font-bold mb-6">Receipts</h3>
 
-      <% if (!allReceiptsSubmitted || receipts.length === 0) { %>
-      <hr class="my-8 border-gray-300">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <% [receipts.slice(0, midIndex), receipts.slice(midIndex)].forEach((group) => { %>
+              <ul class="border rounded-lg shadow-sm overflow-hidden bg-white">
+                <% group.forEach(receipt => { %>
+                  <li>
+                    <a href="/receipt/read/<%= receipt.uuid %>"
+                      class="flex justify-between items-center px-4 py-3 hover:bg-gray-50 text-gray-700 border-b border-gray-200">
+                      <span class="flex items-center gap-2 text-sm">
+                        <i class="bi bi-pencil-square text-gray-500"></i>
+                        <% if (receipt.SubmissionDate) { %>
+                          <i class="bi bi-check text-green-600"></i>
+                        <% } else { %>
+                          <i class="bi bi-x text-red-600"></i>
+                        <% } %>
+                      </span>
+                      <span class="text-sm text-right">
+                        <div><%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %></div>
+                        <small class="block text-xs text-gray-500"><%= receipt.payDate %> (<%= receipt.timeZoneTag %>)</small>
+                      </span>
+                    </a>
+                  </li>
+                <% }); %>
+              </ul>
+            <% }); %>
+          </div>
+        </div>
+      <% } %>
+      <% if (!allReceiptsSubmitted) { %>
+      <hr class="my-8 border-gray-300 dark:border-gray-600">
       <div class="mb-8">
         <h4 class="text-center text-lg font-semibold mb-4">Update Submission Date for Selected Receipts</h4>
         <form action="/receipt/change" method="POST" class="max-w-xl mx-auto">
@@ -164,31 +173,57 @@
           <div class="mb-4">
             <label for="submissionDate" class="block mb-1 font-medium text-gray-700">Submission Date</label>
             <input type="date" id="submissionDate" name="submissionDate" required
-              class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-hcs-green">
+              class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-hcs-green">
           </div>
-          <fieldset class="mb-6 max-h-96 overflow-auto border rounded border-gray-300 p-4">
+          <fieldset class="mb-6 max-h-96 overflow-auto border rounded border-gray-300 dark:border-gray-600 p-4">
             <legend class="font-semibold mb-2">Select Receipts</legend>
             <% receipts.forEach(receipt => { %>
             <div class="mb-2 flex items-center space-x-3">
               <input type="checkbox" id="receipt-<%= receipt.uuid %>" name="uuids" value="<%= receipt.uuid %>" 
-                     class="h-4 w-4 rounded border-gray-300 text-hcs-green focus:ring-hcs-green">
+                     class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-hcs-green focus:ring-hcs-green">
               <label for="receipt-<%= receipt.uuid %>" class="text-gray-700 cursor-pointer">
                 <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %>
               </label>
             </div>
             <% }); %>
           </fieldset>
-          <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3 rounded transition">
+          <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black dark:text-whitefont-semibold py-3 rounded transition">
             Update Selected Receipts
           </button>
         </form>
       </div>
-      <% } else { %>
-      <hr class="my-8 border-gray-300">
+      <% } else if (receipts.length > 0) { %>
+      <hr class="my-8 border-gray-300 dark:border-gray-600">
       <div>
         <h4 class="text-center text-lg font-semibold">All Receipts Submitted</h4>
       </div>
       <% } %>
     </div>
+
+<div class="p-6 mx-auto max-w-3xl">
+  <div class="bg-green-50 border-l-4 border-green-400 text-green-800 rounded-lg shadow-sm p-5">
+    <div class="flex flex-row mb-2">
+      <h2 class="text-lg font-semibold"><i class="bi bi-info-circle text-xl mt-0.5"></i> Reminder</h2>
+    </div>
+    <div class="flex flex-col divide-y divide-black">
+      <div>
+        <p>
+          Please ensure that <span class="font-medium">Due Dates</span> are correctly set for <span
+            class="font-medium">All Receipts</span>.
+        </p>
+      </div>
+      <div class="text-center">
+        <p class="text-sm">
+          This helps maintain accurate CIS reporting and payment timelines.
+        </p>
+        <p class="text-sm">
+          If you need to change the submission date for any receipts, please use the form above.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
   </div>
 </div>

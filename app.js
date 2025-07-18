@@ -123,10 +123,10 @@ const main = async () => {
     app.use('/', require('./mongoose/routes/fileSystemProjects'));
     app.use('/', require('./mongoose/routes/indexRoutes'));
     app.use('/', require('./mongoose/routes/listRoutes'));
-    app.use('/', require('./mongoose/routes/logger'));
-    app.use('/', require('./mongoose/routes/returns'));
-    app.use('/', require('./mongoose/routes/settings'));
-    app.use('/', require('./mongoose/routes/twoFA'));
+    app.use('/', require('./mongoose/routes/loggerRoutes'));
+    app.use('/', require('./mongoose/routes/returnsRoutes'));
+    app.use('/', require('./mongoose/routes/settingsRoutes'));
+    app.use('/', require('./mongoose/routes/twoFARoutes'));
     app.use('/', require('./mongoose/routes/subcontractorRoutes'));
     app.use('/', require('./mongoose/routes/submissionRoutes'));
     app.use('/', require('./mongoose/routes/holidayRoutes'));

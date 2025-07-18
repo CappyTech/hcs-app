@@ -9,7 +9,7 @@ const mdb = require('../services/mongooseDatabaseService');
 const getReceiptsForSupplier = require('../../kashflowAPI/getReceiptsForSupplier');
 const getReceiptPayment = require('../../kashflowAPI/getReceiptPayment');
 const getReceiptNotes = require('../../kashflowAPI/getReceiptNotes');
-const normalizePayments = require('../../services/kashflowNormalizer').normalizePayments;
+const normalizePayments = require('../../services/kashflowNormalizer');
 const ChargeTypes = require('../../kashflowAPI/chargeTypes.json');
 
 function reportProgress(log) {
