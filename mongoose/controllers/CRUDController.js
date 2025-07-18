@@ -93,9 +93,8 @@ for (const modelName of Object.keys(mdb)) {
         if (config.handlesDocuments) {
           const fs = require('fs').promises;
           const sanitize = require('sanitize-filename');
-
-          const dirName = sanitize((item.Number || item.uuid || '').toString());
-          const dirPath = path.join(__dirname, '../../', baseName, dirName);
+          const dirName = sanitize(item.uuid.toString());
+          const dirPath = path.join(__dirname, '../../public', modelName, dirName);
 
           try {
             const allFiles = await fs.readdir(dirPath);
@@ -103,9 +102,10 @@ for (const modelName of Object.keys(mdb)) {
               .filter(name => !name.startsWith('.'))
               .map(name => ({
                 name,
-                url: `/${modelName}/${encodeURIComponent(item.uuid)}/${encodeURIComponent(dirName)}/download/${encodeURIComponent(name)}`
+                url: `/${modelName}/${encodeURIComponent(item.uuid)}/view/${encodeURIComponent(name)}`
               }));
           } catch (err) {
+            logger.warn(`⚠️ No documents found for ${modelName}/${dirName}`);
             item.documents = [];
           }
         }

@@ -50,9 +50,16 @@
     <h2 class="text-xl font-medium mb-2">Documents</h2>
 
     <% if (item.documents?.length) { %>
-      <ul class="list-disc pl-6 text-blue-600 space-y-1">
+      <ul>
         <% item.documents.forEach(doc => { %>
-          <li><a href="<%= doc.url %>" class="hover:underline" download><%= doc.name %></a></li>
+          <li>
+            <%= doc.name %>
+            <% if (doc.name.match(/\.(pdf|jpg|jpeg|png|webp|gif)$/i)) { %>
+              <a href="<%= doc.url %>" class="text-green-600 underline ml-2">View</a>
+            <% } else { %>
+              <a href="/<%= basePath %>/download/<%= item.uuid %>/<%= encodeURIComponent(doc.name) %>" class="text-green-600 underline ml-2">Download</a>
+            <% } %>
+          </li>
         <% }) %>
       </ul>
     <% } else { %>

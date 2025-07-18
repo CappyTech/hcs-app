@@ -92,10 +92,26 @@ module.exports = {
     linkField: 'Number',
     sortField: 'Number',
     sortOrder: 1,
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','ID','Date1','Date2'],
+    hideFields: ['__v','_id','createdAt','updatedAt','uuid','ID','Date1','Date2','FieldLinks'],
     department: ['kashflow'],
     deny: ['c','d'],
     handlesDocuments: true,
+    labelOverrides: {
+      CustomerID: 'Customer Name',
+    },
+    fieldTransforms: {
+      CustomerID: {
+        fromModel: 'customer',
+        matchField: 'CustomerID',
+        returnField: 'Name',
+      }
+    },
+    tabsby: 'Status',
+    tabsValues: [
+      { value: '0', label: 'Pending' },
+      { value: '1', label: 'In Progress' },
+      { value: '2', label: 'Completed' }
+    ],
   },
   quote: {
     title: 'Quotes',

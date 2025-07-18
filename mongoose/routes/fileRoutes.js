@@ -19,6 +19,13 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 
+router.get('/:model/:uuid/view/:filename',
+  authService.ensureAuthenticated,
+  authService.ensureRole('admin'),
+  ensureHandlesDocuments,
+  fileController.viewFile
+);
+
 router.get('/:model/upload/:uuid',
   authService.ensureAuthenticated,
   authService.ensureRole('admin'),

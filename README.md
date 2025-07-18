@@ -69,3 +69,9 @@ Swagger UI is available at `/api-docs` once the server is running.
 ## License
 
 This project is released under the license specified in `package.json`.
+
+
+## Known Issues
+
+Task show wrong date.
+Yearly Returns Totals are NaN.

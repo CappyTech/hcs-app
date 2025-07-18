@@ -17,7 +17,7 @@ const getMergedConfig = (modelName, overrides = {}) => ({
 // Generate table headers
 const generateHeaders = (firstDoc, config = {}) => {
   let keys = Object.keys(firstDoc).filter(
-    k => !(config.hideFields || []).includes(k)
+    k => !((config.hideFields || []).includes(k) || k.startsWith('_'))
   );
 
   if (Array.isArray(config.fieldOrder)) {
@@ -94,8 +94,39 @@ for (const [modelName, model] of Object.entries(mdb)) {
         };
       }
 
+      let tabs = [];
+      let activeTab = null;
+
+      if (config.tabsby) {
+        const tabsby = config.tabsby;
+        const tabsValues = Array.isArray(config.tabsValues) ? config.tabsValues : [];
+
+        // Only filter by tab if req.query.tab matches one of the tabsValues values
+        if (req.query.tab && tabsValues.some(tab => tab.value === req.query.tab)) {
+          query[tabsby] = req.query.tab;
+          activeTab = req.query.tab;
+        }
+
+        // Build tabs from config.tabsValues always (even if no data)
+        if (tabsValues.length) {
+          tabs = tabsValues.map(tab => ({
+            value: tab.value,
+            label: tab.label,
+            isActive: tab.value === activeTab,
+          }));
+        } else {
+          // fallback: create tabs from distinct values in data if no tabsValues configured
+          // We'll handle this after fetching items
+        }
+
+        // Always exclude tab field from headers
+        config.hideFields = [...(config.hideFields || []), tabsby];
+      }
+
+      // Count total documents matching current query (including tab filter)
       const totalCount = await model.countDocuments(query);
       const totalPages = Math.ceil(totalCount / limit);
+
       let queryExec = model.find(query)
         .sort({ [sortField]: sortOrder })
         .skip(skip)
@@ -124,6 +155,61 @@ for (const [modelName, model] of Object.entries(mdb)) {
 
       const items = await queryExec.lean();
 
+      // If tabsValues is empty, fallback: build tabs from distinct values in the data for the tabsby field
+      if (config.tabsby && (!tabs.length || tabs.length === 0)) {
+        const distinctMap = {};
+        for (const item of items) {
+          const rawValue = item[config.tabsby];
+          if (rawValue == null) continue;
+          const label = typeof rawValue === 'string'
+            ? rawValue
+            : rawValue?.name || rawValue?.title || rawValue?.label || String(rawValue);
+          distinctMap[String(rawValue)] = label;
+        }
+        tabs = Object.entries(distinctMap).map(([value, label]) => ({
+          value,
+          label,
+          isActive: value === req.query.tab,
+        }));
+        activeTab = req.query.tab;
+      }
+
+      // Apply fieldTransforms from config
+      if (config.fieldTransforms) {
+        for (const [fieldKey, transform] of Object.entries(config.fieldTransforms)) {
+          const { fromModel, matchField, returnField } = transform;
+          if (!fromModel || !matchField || !returnField) continue;
+
+          const matchValues = [...new Set(items.map(i => i[fieldKey]).filter(Boolean))];
+          const refModel = mdb[fromModel];
+          if (!refModel) continue;
+
+          const docs = await refModel.find({ [matchField]: { $in: matchValues } }).lean();
+          const map = Object.fromEntries(
+            docs.map(d => [d[matchField], { label: d[returnField], uuid: d.uuid }])
+          );
+
+          for (const item of items) {
+            const matched = map[item[fieldKey]];
+            if (matched) {
+              item[fieldKey] = matched.label;
+              if (!item._fieldLinks) item._fieldLinks = {};
+              item._fieldLinks[fieldKey] = `/customer/read/${matched.uuid}`;
+            }
+          }
+        }
+      }
+
+      const fieldLinks = { ...(config.fieldLinks || {}) };
+
+      if (config.fieldTransforms) {
+        for (const [fieldKey, transform] of Object.entries(config.fieldTransforms)) {
+          if (typeof transform.linkTo === 'function') {
+            fieldLinks[fieldKey] = transform.linkTo;
+          }
+        }
+      }
+
       const headers = items.length ? generateHeaders(items[0], config) : [];
 
       // Sanitize rows before sending to EJS
@@ -147,7 +233,9 @@ for (const [modelName, model] of Object.entries(mdb)) {
         limit,
         page,
         totalPages,
-        fieldLinks: config.fieldLinks || {},
+        fieldLinks: row => row._fieldLinks || {},
+        tabs,
+        activeTab,
       });
     } catch (err) {
       logger.error(`Error listing ${modelName}:`, err);

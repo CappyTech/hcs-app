@@ -1,43 +1,35 @@
 <% const hasActions = typeof actions !== 'undefined' && Array.isArray(actions) && actions.length > 0; %>
 <div class="w-full my-10 px-4">
   <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6 mb-6">
-
     <h1 class="text-2xl font-bold text-center lg:text-left"><%= title || 'Data Table' %></h1>
     <div class="flex flex-wrap items-center gap-4">
       <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+        <!-- Pagination -->
         <nav>
           <ul class="flex justify-center flex-wrap gap-2">
             <% const range = 2; %>
             <% for (let i = 1; i <= totalPages; i++) { %>
-              <% if (
-                i === 1 || 
-                i === totalPages || 
-                Math.abs(i - page) <= range
-              ) { %>
+              <% if (i === 1 || i === totalPages || Math.abs(i - page) <= range) { %>
                 <li>
-                  <a href="?page=<%= i %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %>"
-                    class="px-2.5 py-0.5 rounded border text-xs
-                    <%= i === page
-                      ? 'bg-green-700 text-white'
-                      : 'bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700'
-                    %> transition">
+                  <a href="?page=<%= i %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %><%= activeTab ? '&tab=' + encodeURIComponent(activeTab) : '' %>"
+                     class="px-2.5 py-0.5 rounded border text-xs
+                     <%= i === page
+                       ? 'bg-green-700 text-white'
+                       : 'bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700'
+                     %> transition">
                     <%= i %>
                   </a>
                 </li>
-              <% } else if (
-                (i === page - range - 1 || i === page + range + 1)
-              ) { %>
-                <li>
-                  <span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">…</span>
-                </li>
+              <% } else if (i === page - range - 1 || i === page + range + 1) { %>
+                <li><span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">…</span></li>
               <% } %>
             <% } %>
           </ul>
         </nav>
       <% } %>
 
+      <!-- Controls -->
       <form id="list-controls" method="GET" action="" class="flex flex-wrap gap-2 items-center">
-        <!-- Limit Dropdown -->
         <label for="limitSelect" class="text-sm font-medium text-gray-700 dark:text-gray-200">Show</label>
         <select id="limitSelect" name="limit"
                 class="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
@@ -47,8 +39,10 @@
         </select>
 
         <input type="hidden" name="page" value="1">
+        <% if (activeTab) { %>
+          <input type="hidden" name="tab" value="<%= activeTab %>">
+        <% } %>
 
-        <!-- Search Field -->
         <input type="text"
               name="search"
               placeholder="Search..."
@@ -63,7 +57,22 @@
     </div>
   </div>
 
-  <!-- No Data -->
+  <!-- Tab Buttons -->
+  <% if (Array.isArray(tabs) && tabs.length > 0) { %>
+    <div class="mb-4 flex flex-wrap gap-2">
+      <% tabs.forEach(tab => { %>
+        <a href="?tab=<%= encodeURIComponent(tab.value) %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %>"
+           class="px-4 py-1 rounded-full text-sm border transition
+                  <%= tab.isActive
+                    ? 'bg-green-700 text-white border-green-700'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-green-100 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-green-800 dark:hover:text-white'
+                  %>">
+          <%= tab.label %>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+
   <% if (!rows || rows.length === 0) { %>
     <div class="bg-blue-100 text-green-800 p-4 rounded text-sm border border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700">
       No records found.
@@ -76,9 +85,7 @@
         <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
           <tr>
             <% headers.forEach(h => { %>
-              <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">
-                <%= h.label %>
-              </th>
+              <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium"><%= h.label %></th>
             <% }) %>
             <% if (hasActions) { %>
               <th class="px-3 py-2 border-b dark:border-gray-600 font-medium">Actions</th>
@@ -89,23 +96,19 @@
           <% rows.forEach(row => { %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
               <% headers.forEach(h => { %>
-                <% 
+                <%
                   const val = row[h.key];
+                  const links = typeof fieldLinks === 'function' ? fieldLinks(row) : fieldLinks;
+                  const fieldHref = links?.[h.key];
                   const isOwnLink = h.key === linkField && row.uuid;
-                  const externalHref = fieldLinks?.[h.key]?.(row);
-                  const href = externalHref || (isOwnLink ? `/${modelName}/read/${row.uuid}` : null);
+                  const href = fieldHref || (isOwnLink ? `/${modelName}/read/${row.uuid}` : null);
                 %>
-
                 <td class="px-3 py-2 border-b dark:border-gray-700">
                   <% if (href) { %>
                     <a href="<%= href %>" class="text-green-600 dark:text-green-400 hover:underline">
-                      <% if (val instanceof Date) { %>
-                        <%= slimDateTime(val) %>
-                      <% } else if (typeof val === 'object') { %>
-                        <%= val?.name || val?.title || val?.Number || '[Object]' %>
-                      <% } else { %>
-                        <%= val ?? '—' %>
-                      <% } %>
+                      <%= val instanceof Date ? slimDateTime(val)
+                          : typeof val === 'object' ? val?.name || val?.title || val?.Number || '[Object]'
+                          : val ?? '—' %>
                     </a>
                   <% } else { %>
                     <% if (val instanceof Date) { %>
@@ -121,11 +124,7 @@
                         <%= `${val.length} ${h.key.toLowerCase()}` %>
                       <% } else if (val && val._bsontype === 'Decimal128') { %>
                         <% const num = parseFloat(val.toString()); %>
-                        <% if (['payrate', 'dayrate'].includes(h.key.toLowerCase())) { %>
-                          <%= formatCurrency(num) %>
-                        <% } else { %>
-                          <%= num.toFixed(2) %>
-                        <% } %>
+                        <%= ['payrate', 'dayrate'].includes(h.key.toLowerCase()) ? formatCurrency(num) : num.toFixed(2) %>
                       <% } else if (typeof val === 'object') { %>
                         <%= val?.name || val?.title || val?.Number || '[Object]' %>
                       <% } else { %>
@@ -155,7 +154,6 @@
         </tbody>
       </table>
     </div>
-
   <% } %>
 </div>
 
@@ -163,13 +161,10 @@
   document.addEventListener('DOMContentLoaded', function () {
     const limitSelect = document.getElementById('limitSelect');
     const form = document.getElementById('list-controls');
-
     if (limitSelect && form) {
-      limitSelect.addEventListener('change', function () {
+      limitSelect.addEventListener('change', () => {
         const pageInput = form.querySelector('input[name="page"]');
-        if (pageInput) {
-          pageInput.value = '1'; // reset to page 1
-        }
+        if (pageInput) pageInput.value = '1';
         form.submit();
       });
     }
