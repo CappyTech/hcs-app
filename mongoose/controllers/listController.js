@@ -96,11 +96,33 @@ for (const [modelName, model] of Object.entries(mdb)) {
 
       const totalCount = await model.countDocuments(query);
       const totalPages = Math.ceil(totalCount / limit);
-      const items = await model.find(query)
+      let queryExec = model.find(query)
         .sort({ [sortField]: sortOrder })
         .skip(skip)
-        .limit(limit)
-        .lean();
+        .limit(limit);
+
+      // Dynamically populate all ref fields using model's linkField as default select
+      const refPaths = Object.entries(model.schema.paths).filter(
+        ([, schemaType]) => schemaType.options && schemaType.options.ref
+      );
+
+      for (const [pathKey, schemaType] of refPaths) {
+        const refModelName = schemaType.options.ref;
+        const refModel = mdb[refModelName];
+
+        let selectField = null;
+
+        // Try using linkField from the referenced model
+        const refConfig = listControllerConfig?.[refModelName];
+        if (refConfig?.linkField) {
+          const refFieldExists = refModel?.schema?.paths?.[refConfig.linkField];
+          if (refFieldExists) selectField = refConfig.linkField;
+        }
+
+        queryExec = queryExec.populate(pathKey, selectField || '');
+      }
+
+      const items = await queryExec.lean();
 
       const headers = items.length ? generateHeaders(items[0], config) : [];
 

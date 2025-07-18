@@ -41,12 +41,12 @@ exports.getWeeklyAttendance = async (req, res, next) => {
     } = await attendanceService.getAttendanceForWeek(yearParam, weekParam);
 
     const employeeEntries = Object.entries(groupedAttendance)
-    .filter(([_, v]) => v.type === 'employee')
-    .map(([name, v]) => ({ name, ...v }));  
+      .filter(([_, v]) => v.type === 'employee')
+      .map(([uuid, v]) => [uuid, { ...v }]);
 
     const subcontractorEntries = Object.entries(groupedAttendance)
       .filter(([_, v]) => v.type === 'subcontractor')
-      .map(([name, v]) => ({ name, ...v }));
+      .map(([uuid, v]) => [uuid, { ...v }]);
 
     res.render(path.join('tailwindcss', 'attendance', 'weekly'), {
       moment,

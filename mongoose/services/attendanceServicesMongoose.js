@@ -39,7 +39,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
 
       mdb.employee.find({ status: 'active' }),
 
-      mdb.supplier.find({ Subcontractor: true }),
+      mdb.supplier.find({ IsSubcontractor: true }),
 
       mdb.receipt.find({
         Paid: true,
@@ -48,7 +48,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
           $gte: payrollWeekStart.format('YYYY-MM-DD'),
           $lte: endDate.format('YYYY-MM-DD')
         }
-      }).populate('CustomerID')
+      })
     ]);
 
     return {
@@ -80,9 +80,12 @@ const groupAttendanceByPerson = (
   let totalEmployeeHours = 0;
   let totalSubcontractorPay = 0;
 
+  const supplierMap = new Map(allSubcontractors.map(s => [s.SupplierID, s]));
+
   // Init employees
   allEmployees.forEach(emp => {
-    groupedAttendance[emp.name] = {
+    groupedAttendance[emp.uuid] = {
+      name: emp.name,
       employeeId: emp.uuid,
       subcontractorId: null,
       totalHoursWorked: 0,
@@ -94,17 +97,22 @@ const groupAttendanceByPerson = (
 
   // Add subcontractors from receipts
   paidReceipts.forEach(receipt => {
-    const supplier = receipt.CustomerID;
-    if (!supplier) return;
+    const supplier = supplierMap.get(receipt.CustomerID);
+    if (!supplier) {
+      logger.warn(`No supplier found for receipt with CustomerID ${receipt.CustomerID}`);
+      return;
+    }
 
-    const name = supplier.Name;
+    const subcontractorKey = supplier.uuid;
+    const displayName = supplier.Name || supplier.Code || `Subcontractor ${subcontractorKey}`;
     const dateKey = moment(receipt.InvoiceDate).format('YYYY-MM-DD');
     const amount = parseFloat(receipt.AmountPaid || 0);
 
-    if (!groupedAttendance[name]) {
-      groupedAttendance[name] = {
+    if (!groupedAttendance[subcontractorKey]) {
+      groupedAttendance[subcontractorKey] = {
+        name: displayName,
         employeeId: null,
-        subcontractorId: supplier.uuid,
+        subcontractorId: subcontractorKey,
         totalHoursWorked: 0,
         weeklyPay: 0,
         dailyRecords: {},
@@ -112,15 +120,16 @@ const groupAttendanceByPerson = (
       };
     }
 
-    groupedAttendance[name].weeklyPay += amount;
+    groupedAttendance[subcontractorKey].weeklyPay += amount;
 
-    if (!groupedAttendance[name].dailyRecords[dateKey]) {
-      groupedAttendance[name].dailyRecords[dateKey] = {};
+    if (!groupedAttendance[subcontractorKey].dailyRecords[dateKey]) {
+      groupedAttendance[subcontractorKey].dailyRecords[dateKey] = {};
     }
 
-    groupedAttendance[name].dailyRecords[dateKey][`receipt-${receipt._id}`] = {
+    groupedAttendance[subcontractorKey].dailyRecords[dateKey][`receipt-${receipt.uuid || receipt._id.toString()}`] = {
       location: null,
       type: 'Receipt',
+      number: receipt.InvoiceNumber || null,
       hoursWorked: null,
       weeklyPay: amount
     };
@@ -133,38 +142,39 @@ const groupAttendanceByPerson = (
     const employee = record.employeeId;
     if (!employee) return;
 
-    const name = employee.name;
+    const employeeKey = employee.uuid;
     const dateKey = moment(record.date).format('YYYY-MM-DD');
     const hoursWorked = parseFloat(record.hoursWorked || 0);
     const hourlyRate = parseFloat(employee.hourlyRate || 0);
     const calculatedPay = hoursWorked * hourlyRate;
 
-    if (!groupedAttendance[name]) {
-      groupedAttendance[name] = {
+    if (!groupedAttendance[employeeKey]) {
+      groupedAttendance[employeeKey] = {
+        name: employee.name,
         employeeId: employee.uuid,
         subcontractorId: null,
         totalHoursWorked: 0,
         weeklyPay: 0,
         dailyRecords: {},
         type: 'employee',
-        status: emp.status
+        status: employee.status
       };
     }
 
-    if (!groupedAttendance[name].dailyRecords[dateKey]) {
-      groupedAttendance[name].dailyRecords[dateKey] = {};
+    if (!groupedAttendance[employeeKey].dailyRecords[dateKey]) {
+      groupedAttendance[employeeKey].dailyRecords[dateKey] = {};
     }
 
-    groupedAttendance[name].dailyRecords[dateKey][record._id] = {
+    groupedAttendance[employeeKey].dailyRecords[dateKey][record._id] = {
       location: record.locationId || null,
       type: record.type,
       hoursWorked,
       weeklyPay: calculatedPay,
-      contractAssignmentId: record.contractAssignmentId || null,
+      contractAssignmentId: record.contractAssignmentId || null
     };
 
-    groupedAttendance[name].totalHoursWorked += hoursWorked;
-    groupedAttendance[name].weeklyPay += calculatedPay;
+    groupedAttendance[employeeKey].totalHoursWorked += hoursWorked;
+    groupedAttendance[employeeKey].weeklyPay += calculatedPay;
     totalEmployeeHours += hoursWorked;
   });
 

@@ -3,12 +3,12 @@
     <tr class="bg-gray-100">
       <th class="text-center font-normal border border-gray-300 px-3 py-2">Name</th>
       <% daysOfWeek.forEach(day => { %>
-      <th class="text-center text-xs font-normal border border-gray-300 px-3 py-2">
-        <a href="/daily/<%= day %>" class="hover:underline">
-          <%= moment(day).format('DD/MM/YYYY') %>
-        </a><br>
-        <span class="text-gray-600"><%= moment(day).format('dddd') %></span>
-      </th>
+        <th class="text-center text-xs font-normal border border-gray-300 px-3 py-2">
+          <a href="/daily/<%= day %>" class="hover:underline">
+            <%= moment(day).format('DD/MM/YYYY') %>
+          </a><br>
+          <span class="text-gray-600"><%= moment(day).format('dddd') %></span>
+        </th>
       <% }); %>
       <th class="text-center font-normal border border-gray-300 px-3 py-2">
         Weekly Pay <br> / Total Hours
@@ -16,16 +16,16 @@
     </tr>
   </thead>
   <tbody>
-    <% entries.forEach(([person, details]) => { %>
+    <% entries.forEach(([, details]) => { %>
       <tr class="font-light border-b border-gray-200 hover:bg-gray-50">
         <td class="border border-gray-300 px-3 py-2">
           <% if (details.employeeId) { %>
-            <a href="/employee/read/<%= details.employeeId %>" class="text-blue-600 hover:underline">
-              <%= person %>
+            <a href="/employee/read/<%= details.employeeId %>" class="text-green-900 hover:underline">
+              <%= details.name || 'Unnamed Employee' %>
             </a>
           <% } else { %>
-            <a href="/supplier/read/<%= details.subcontractorId %>" class="text-blue-600 hover:underline">
-              <%= person %>
+            <a href="/supplier/read/<%= details.subcontractorId %>" class="text-green-900 hover:underline">
+              <%= details.name || 'Unnamed Subcontractor' %>
             </a>
           <% } %>
         </td>
@@ -37,14 +37,17 @@
               <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
                 <% const isReceipt = recordId.startsWith('receipt-'); %>
                 <% const href = isReceipt ? `/receipt/read/${recordId.split('receipt-')[1]}` : `/attendance/read/${recordId}`; %>
-                <% if (record.contractAssignmentId && record.contractAssignmentId.title) { %>
-                  <div class="text-indigo-600 text-xs font-semibold">
+
+                <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
+                  <a 
+                    href="/assignment/read/<%= record.contractAssignmentId.uuid %>" 
+                    class="text-green-600 text-xs font-semibold hover:underline block">
                     <%= record.contractAssignmentId.title %>
-                  </div>
+                  </a>
                 <% } %>
 
-                <a href="<%= href %>" class="block text-blue-600 hover:underline text-sm">
-                  <%= record.location?.name || record.type %>
+                <a href="<%= href %>" class="block text-green-900 hover:underline text-sm">
+                  Receipt: <%= record.Number %> – £<%= record.weeklyPay.toFixed(2) %>
                 </a>
 
                 <% if (record.hoursWorked) { %>
@@ -53,12 +56,10 @@
                   </a>
                 <% } %>
               <% }); %>
-            <% } else { %>
-              <% if (details.type === 'employee') { %>
-                <a href="/attendance/create?date=<%= day %>&uuid=<%= details.employeeId %>" class="text-gray-400 text-xs hover:text-gray-600 hover:underline">
-                  Add Attendance
-                </a>
-              <% } %>
+            <% } else if (details.type === 'employee') { %>
+              <a href="/attendance/create?date=<%= day %>&uuid=<%= details.employeeId %>" class="text-gray-400 text-xs hover:text-gray-600 hover:underline">
+                Add Attendance
+              </a>
             <% } %>
           </td>
         <% }); %>

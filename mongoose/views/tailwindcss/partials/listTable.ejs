@@ -119,8 +119,15 @@
                     <% } else if (val !== null && val !== undefined) { %>
                       <% if (Array.isArray(val)) { %>
                         <%= `${val.length} ${h.key.toLowerCase()}` %>
+                      <% } else if (val && val._bsontype === 'Decimal128') { %>
+                        <% const num = parseFloat(val.toString()); %>
+                        <% if (['payrate', 'dayrate'].includes(h.key.toLowerCase())) { %>
+                          <%= formatCurrency(num) %>
+                        <% } else { %>
+                          <%= num.toFixed(2) %>
+                        <% } %>
                       <% } else if (typeof val === 'object') { %>
-                        <%= val?.name || val?.title || '[Object]' %>
+                        <%= val?.name || val?.title || val?.Number || '[Object]' %>
                       <% } else { %>
                         <%= val %>
                       <% } %>
