@@ -8,6 +8,13 @@ const listController = {};
 
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 
+// Merge config overrides safely
+const getMergedConfig = (modelName, overrides = {}) => ({
+  ...overrides,
+  ...(listControllerConfig?.[modelName] || {})
+});
+
+// Generate table headers
 const generateHeaders = (firstDoc, config = {}) => {
   let keys = Object.keys(firstDoc).filter(
     k => !(config.hideFields || []).includes(k)
@@ -28,11 +35,15 @@ const generateHeaders = (firstDoc, config = {}) => {
   }));
 };
 
-for (const modelName of Object.keys(mdb)) {
-  const model = mdb[modelName];
-  if (typeof model?.find !== 'function') continue;
+// Generate list controllers dynamically for each model
+for (const [modelName, model] of Object.entries(mdb)) {
+  if (typeof modelName !== 'string') continue;
+  if (!model?.schema || typeof model.find !== 'function') continue;
 
-  const config = listControllerConfig[modelName] || {};
+  const Model = model;
+  const baseName = capitalize(modelName);
+  const config = getMergedConfig(modelName, listControllerConfig[modelName] || {});
+
   if (denyGuard(config, 'l')) continue;
 
   const functionName = `list${capitalize(modelName)}`;
@@ -76,7 +87,7 @@ for (const modelName of Object.keys(mdb)) {
               } else if (type === 'Number' && !isNaN(searchQuery)) {
                 return { [field]: Number(searchQuery) };
               } else {
-                return null; // Skip unsupported types
+                return null;
               }
             })
             .filter(Boolean)
@@ -93,15 +104,23 @@ for (const modelName of Object.keys(mdb)) {
 
       const headers = items.length ? generateHeaders(items[0], config) : [];
 
+      // Sanitize rows before sending to EJS
+      const rows = items.map(item => {
+        if (item.uuid && typeof item.uuid !== 'string') {
+          item.uuid = String(item.uuid);
+        }
+        return item;
+      });
+
       return res.render(path.join('tailwindcss', 'partials', 'listTable'), {
         title: config.title || capitalize(modelName) + 's',
         headers,
-        rows: items,
+        rows,
         basePath: modelName,
         linkField: config.linkField || 'title',
         actions: config.actions || [],
         hasActions: !!(config.actions?.length),
-        model,
+        modelName,
         query: searchQuery,
         limit,
         page,

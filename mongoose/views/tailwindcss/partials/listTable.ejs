@@ -65,7 +65,7 @@
 
   <!-- No Data -->
   <% if (!rows || rows.length === 0) { %>
-    <div class="bg-blue-100 text-blue-800 p-4 rounded text-sm border border-blue-300 dark:bg-blue-900 dark:text-blue-100 dark:border-blue-700">
+    <div class="bg-blue-100 text-green-800 p-4 rounded text-sm border border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700">
       No records found.
     </div>
   <% } else { %>
@@ -93,16 +93,18 @@
                   const val = row[h.key];
                   const isOwnLink = h.key === linkField && row.uuid;
                   const externalHref = fieldLinks?.[h.key]?.(row);
-                  const href = externalHref || (isOwnLink ? `/${model}s/read/${row.uuid}` : null);
+                  const href = externalHref || (isOwnLink ? `/${modelName}/read/${row.uuid}` : null);
                 %>
 
                 <td class="px-3 py-2 border-b dark:border-gray-700">
                   <% if (href) { %>
-                    <a href="<%= href %>" class="text-blue-600 dark:text-blue-400 hover:underline">
+                    <a href="<%= href %>" class="text-green-600 dark:text-green-400 hover:underline">
                       <% if (val instanceof Date) { %>
                         <%= slimDateTime(val) %>
+                      <% } else if (typeof val === 'object') { %>
+                        <%= val?.name || val?.title || val?.Number || '[Object]' %>
                       <% } else { %>
-                        <%= val %>
+                        <%= val ?? '—' %>
                       <% } %>
                     </a>
                   <% } else { %>

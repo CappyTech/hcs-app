@@ -130,6 +130,7 @@ const main = async () => {
     app.use('/', require('./mongoose/routes/subcontractorRoutes'));
     app.use('/', require('./mongoose/routes/submissionRoutes'));
     app.use('/', require('./mongoose/routes/holidayRoutes'));
+    app.use('/', require('./mongoose/routes/fileRoutes'));
 
     // Catch-all 404
     app.use((req, res, next) => {

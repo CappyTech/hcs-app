@@ -1,8 +1,8 @@
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
-const listConfig = require('../config/listControllerConfig');
-const crudConfig = require('../config/CRUDControllerConfig');
+const listControllerConfig = require('../config/listControllerConfig');
+const CRUDControllerConfig = require('../config/CRUDControllerConfig');
 const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 const crudController = {};
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
@@ -10,8 +10,8 @@ const mongoose = require('mongoose');
 
 // Merge list and CRUD configs
 const getMergedConfig = (modelName) => ({
-  ...(listConfig[modelName] || {}),
-  ...(crudConfig[modelName] || {})
+  ...(listControllerConfig[modelName] || {}),
+  ...(CRUDControllerConfig[modelName] || {})
 });
 
 // Extract schema from Mongoose model and config
@@ -89,13 +89,34 @@ for (const modelName of Object.keys(mdb)) {
         const schema = extractSchema(Model, config);
         const referenceData = await fetchReferenceData(schema);
 
+        // 🔽 Inject documents if the model config says it handles them
+        if (config.handlesDocuments) {
+          const fs = require('fs').promises;
+          const sanitize = require('sanitize-filename');
+
+          const dirName = sanitize((item.Number || item.uuid || '').toString());
+          const dirPath = path.join(__dirname, '../../', baseName, dirName);
+
+          try {
+            const allFiles = await fs.readdir(dirPath);
+            item.documents = allFiles
+              .filter(name => !name.startsWith('.'))
+              .map(name => ({
+                name,
+                url: `/${modelName}/${encodeURIComponent(item.uuid)}/${encodeURIComponent(dirName)}/download/${encodeURIComponent(name)}`
+              }));
+          } catch (err) {
+            item.documents = [];
+          }
+        }
+
         res.render(path.join('tailwindcss', 'partials', 'form-read'), {
           title: `${config.title || baseName} Details`,
           item,
           schema,
           basePath: modelName,
           referenceData,
-          listControllerConfig: listConfig[modelName] || {},
+          config,
         });
       } catch (err) {
         logger.error(`❌ Error reading ${modelName}: ${err.message}`);
@@ -146,7 +167,7 @@ for (const modelName of Object.keys(mdb)) {
           referenceData,
           formAction: `/${modelName}`,
           basePath: modelName,
-          listControllerConfig: listConfig[modelName] || {},
+          config
         });
       }
 

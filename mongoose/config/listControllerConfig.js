@@ -95,6 +95,7 @@ module.exports = {
     hideFields: ['__v','_id','createdAt','updatedAt','uuid','ID','Date1','Date2'],
     department: ['kashflow'],
     deny: ['c','d'],
+    handlesDocuments: true,
   },
   quote: {
     title: 'Quotes',

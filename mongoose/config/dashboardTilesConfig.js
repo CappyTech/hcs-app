@@ -4,14 +4,14 @@ module.exports = {
         description: 'View weekly attendance records',
         link: '/weekly',
         department: ['payroll', 'human-resources'],
-        buttonClass: 'bg-indigo-600 hover:bg-indigo-700',
+        buttonClass: 'bg-green-700 hover:bg-green-800',
     },
     DailyAttendance: {
         title: 'Daily Attendance',
         description: 'View daily attendance records',
         link: '/daily',
         department: ['payroll', 'human-resources'],
-        buttonClass: 'bg-indigo-600 hover:bg-indigo-700',
+        buttonClass: 'bg-green-700 hover:bg-green-800',
     },
     CISDashboard: {
         title: 'CIS Dashboard',

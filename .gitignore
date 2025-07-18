@@ -1,16 +1,22 @@
+# Environment & sensitive files
 .env
+
+# Node modules
 /node_modules/
+
+# Build outputs
 /config/
 /dist/
+
+# Logs
 app.log
-*.zip
 /logs/
-/logs
-logs/customers.txt
-logs/invoices.txt
-logs/quotes.txt
-logs/receipts.txt
-logs/customers.txt
-logs/quotes.txt
-/Projects
+
+# Project files
+/Projects/
+
+# Archives
+*.zip
+
+# Test output
 test/routes_test.log

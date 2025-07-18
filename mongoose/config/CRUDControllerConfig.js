@@ -160,7 +160,7 @@ module.exports = {
       create: ['ensureRole:admin', 'ensureAuthenticated'],
       update: ['ensureRole:admin', 'ensureAuthenticated'],
       delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+    },
   },
   quote: {
     readOnly: ['uuid', 'createdAt'],
