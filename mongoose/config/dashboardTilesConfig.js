@@ -28,12 +28,56 @@ module.exports = {
         department: ['construction-industry-scheme'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
-
+    KF_Customers: {
+        title: 'KF Customers',
+        description: 'View KF Customers',
+        link: 'https://app.kashflow.com/#customers',
+        department: ['kashflow'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
     KF_Invoices: {
         title: 'KF Invoices',
         description: 'View KF Invoices',
-        link: '/KF/invoices',
+        link: 'https://app.kashflow.com/#invoices',
         department: ['kashflow'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    KF_Projects: {
+        title: 'KF Projects',
+        description: 'View KF Projects',
+        link: 'https://app.kashflow.com/#projects',
+        department: ['kashflow'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    KF_Purchases: {
+        title: 'KF Purchases ',
+        description: 'View KF Purchases',
+        link: 'https://app.kashflow.com/#purchases',
+        department: ['kashflow'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+
+    KF_Quotes: {
+        title: 'KF Quotes',
+        description: 'View KF Quotes',
+        link: 'https://app.kashflow.com/#quotes',
+        department: ['kashflow'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+
+    KF_Receipts: {
+        title: 'KF Receipts',
+        description: 'View KF Receipts',
+        link: 'https://app.kashflow.com/#receipts',
+        department: ['kashflow'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+
+    KF_Suppliers: {
+        title: 'KF Suppliers',
+        description: 'View KF Suppliers',
+        link: 'https://app.kashflow.com/#suppliers',
+        department: ['kashflow'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
 }
