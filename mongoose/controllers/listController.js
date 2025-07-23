@@ -41,11 +41,8 @@ for (const [modelName, model] of Object.entries(mdb)) {
   if (!model?.schema || typeof model.find !== 'function') continue;
 
   const Model = model;
-  let baseName = capitalize(modelName);
+  const baseName = capitalize(modelName);
   const config = getMergedConfig(modelName, listControllerConfig[modelName] || {});
-  if (config.modelRename) {
-    baseName = capitalize(config.modelRename);
-  }
 
   if (denyGuard(config, 'l')) continue;
 
@@ -223,18 +220,16 @@ for (const [modelName, model] of Object.entries(mdb)) {
         return item;
       });
 
-      const routeModel = (config.modelRename || modelName).toLowerCase();
-      const pluralBasePath = `${routeModel}s`;
 
       return res.render(path.join('tailwindcss', 'partials', 'listTable'), {
-        title: config.title || baseName + 's',
+        title: config.title || modelName + 's',
         headers,
         rows,
-        basePath: pluralBasePath,
+        basePath: modelName,
         linkField: config.linkField || 'title',
         actions: config.actions || [],
         hasActions: !!(config.actions?.length),
-        modelName: baseName,
+        modelName,
         query: searchQuery,
         queryParams: req.query,
         sortField,
