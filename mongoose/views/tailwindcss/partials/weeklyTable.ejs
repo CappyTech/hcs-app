@@ -47,7 +47,7 @@
                 <% } %>
 
                 <a href="<%= href %>" class="block text-green-900 hover:underline text-sm">
-                  <%= record.location %> - <%= record.type %> – £<%= record.weeklyPay.toFixed(2) %>
+                  <%= record.location.name %> - <%= record.type %> – £<%= record.weeklyPay.toFixed(2) %>
                 </a>
 
                 <% if (record.hoursWorked) { %>
