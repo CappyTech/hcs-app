@@ -46,7 +46,7 @@
         <input type="text"
               name="search"
               placeholder="Search..."
-              value="<%= query || '' %>"
+              value="<%= typeof query === 'string' ? query : '' %>"
               class="text-sm border rounded px-3 py-1 w-48 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
 
         <button type="submit"
@@ -84,8 +84,22 @@
       <table class="min-w-full text-sm border border-gray-300 dark:border-gray-600">
         <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
           <tr>
-            <% headers.forEach(h => { %>
-              <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium"><%= h.label %></th>
+            <% headers.forEach(h => { 
+                const isSorted = query.sort === h.key;
+                const isAsc = query.order === 'asc';
+                const newOrder = isSorted && isAsc ? 'desc' : 'asc';
+                const url = new URLSearchParams(query);
+                url.set('sort', h.key);
+                url.set('order', newOrder);
+            %>
+              <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">
+                <a href="?<%= url.toString() %>" class="flex items-center gap-1 hover:underline">
+                  <span><%= h.label %></span>
+                  <% if (isSorted) { %>
+                    <span><%= isAsc ? '▲' : '▼' %></span>
+                  <% } %>
+                </a>
+              </th>
             <% }) %>
             <% if (hasActions) { %>
               <th class="px-3 py-2 border-b dark:border-gray-600 font-medium">Actions</th>

@@ -250,7 +250,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     daysOfWeek
   } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidReceipts);
 
-  const activeJobs = await mdb.job.find({
+  const activeJobs = await mdb.contract.find({
     startDate: { $lte: endDate.toDate() },
     $or: [{ endDate: null }, { endDate: { $gte: payrollWeekStart.toDate() } }],
     status: { $ne: 'archived' }

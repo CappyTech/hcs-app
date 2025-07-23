@@ -213,7 +213,7 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
         SubmissionDate: receipt.SubmissionDate
       });
     });
-    res.render(path.join('tailwindcss', 'cis', 'monthlyReturnsForOneSubcontractor'), {
+    res.render(path.join('tailwindcss', 'cis', 'monthlyReturns'), {
       title: 'Subcontractor Monthly Returns',
       month,
       year,

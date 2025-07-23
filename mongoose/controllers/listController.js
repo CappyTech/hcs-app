@@ -48,8 +48,8 @@ for (const [modelName, model] of Object.entries(mdb)) {
 
   const functionName = `list${capitalize(modelName)}`;
   listController[functionName] = async (req, res, next) => {
-    const sortField = config.sortField || 'createdAt';
-    const sortOrder = config.sortOrder ?? -1;
+    const sortField = req.query.sort || config.sortField || 'createdAt';
+    const sortOrder = req.query.order === 'asc' ? 1 : -1;
 
     const searchQuery = req.query.search || '';
     const limit = parseInt(req.query.limit) || 100;
@@ -199,7 +199,7 @@ for (const [modelName, model] of Object.entries(mdb)) {
           }
         }
       }
-
+      
       const fieldLinks = { ...(config.fieldLinks || {}) };
 
       if (config.fieldTransforms) {
@@ -230,6 +230,9 @@ for (const [modelName, model] of Object.entries(mdb)) {
         hasActions: !!(config.actions?.length),
         modelName,
         query: searchQuery,
+        queryParams: req.query,
+        sortField,
+        sortOrder,
         limit,
         page,
         totalPages,

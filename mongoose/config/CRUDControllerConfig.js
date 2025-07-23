@@ -106,21 +106,6 @@ module.exports = {
       delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
-  job: {
-    readOnly: ['uuid', 'createdAt'],
-    validators: {
-      title: value => typeof value === 'string' && value.length > 0,
-      description: value => typeof value === 'string' && value.length > 0,
-      location: value => typeof value === 'string' && value.length > 0,
-      salary: value => typeof value === 'number' && value >= 0,
-    },
-    middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
-  },
   location: {
     readOnly: ['uuid', 'createdAt'],
     validators: {

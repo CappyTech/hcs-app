@@ -9,13 +9,13 @@
     <div class="w-full md:w-1/2 text-center">
       <p class="text-3xl font-semibold mb-2">Subcontractor</p>
       <p><%= supplier.Name %></p>
-      <p>CIS: <%= supplier.CISNumber %></p>
-      <p>VAT: <%= supplier.VATNumber %></p>
+      <% if (supplier.CISNumber) { %><p>CIS: <%= supplier.CISNumber %></p><% } %>
+      <% if (supplier.VATNumber) { %><p>VAT: <%= supplier.VATNumber %></p><% } %>
       <address class="not-italic mt-2 leading-relaxed">
-        <%= supplier.Address1 %>, <br>
-        <%= supplier.Address2 %>, <br>
-        <%= supplier.Address3 %>, <br>
-        <%= supplier.PostCode %>
+        <% if (supplier.Address1) { %><%= supplier.Address1 %>, <br><% } %>
+        <% if (supplier.Address2) { %><%= supplier.Address2 %>, <br><% } %>
+        <% if (supplier.Address3) { %><%= supplier.Address3 %>, <br><% } %>
+        <% if (supplier.PostCode) { %><%= supplier.PostCode %>.<% } %>
       </address>
     </div>
 
@@ -25,7 +25,11 @@
       <p>Company: 09276951</p>
       <p>VAT: 252295994</p>
       <address class="not-italic mt-2 leading-relaxed">
-        103 Herondale Road, Mossley Hill, Liverpool, Merseyside, L18 1JZ.
+        103 Herondale Road, <br>
+        Mossley Hill, <br>
+        Liverpool, <br>
+        Merseyside, <br>
+        L18 1JZ.
       </address>
     </div>
   </div>

@@ -52,7 +52,7 @@
               <%= slimDateTime(taxYear.start, ['displayFormat']) %> - <%= slimDateTime(taxYear.end, ['displayFormat']) %>
             </p>
             <small>
-              <a href="/CIS/returns/yearly/<%= specifiedYear %>" class="text-green-600 hover:underline">
+              <a href="/CIS/returns/all/<%= specifiedYear %>" class="text-green-600 hover:underline">
                 Print-out of this Year's returns
               </a>
             </small>
@@ -71,7 +71,7 @@
               <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>
             </p>
             <small>
-              <a href="/CIS/returns/<%= specifiedMonth %>/<%= specifiedYear %>" class="text-green-600 hover:underline">
+              <a href="/CIS/returns/all/<%= specifiedYear %>/<%= specifiedMonth %>" class="text-green-600 hover:underline">
                 Print-out of this Month's Returns
               </a>
             </small>

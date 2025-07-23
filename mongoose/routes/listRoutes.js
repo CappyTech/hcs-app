@@ -10,7 +10,10 @@ for (const [functionName, handler] of Object.entries(listController)) {
   if (!match) continue;
 
   const modelName = match[1];
-  const pluralPath = `${modelName.charAt(0).toLowerCase()}${modelName.slice(1)}s`;
+  const originalModel = modelName.charAt(0).toLowerCase() + modelName.slice(1);
+  const listConfig = require('../config/listControllerConfig')[originalModel] || {};
+  const routeModel = (listConfig.modelRename || originalModel).toLowerCase();
+  const pluralPath = `${routeModel}s`;
 
   // Register route: e.g. GET /contracts
   router.get(`/${pluralPath}`, authService.ensureRole(), authService.ensureAuthenticated, handler);

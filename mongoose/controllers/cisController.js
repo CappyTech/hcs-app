@@ -123,5 +123,5 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
 exports.redirectCIS = (req, res, next) => {
   const { taxYear, taxMonth } = taxService.calculateTaxYearAndMonth(moment());
-  return res.redirect(`/CIS/${taxYear}/${taxMonth}`);
+  return res.redirect(`/CIS/Dashboard/${taxYear}/${taxMonth}`);
 };

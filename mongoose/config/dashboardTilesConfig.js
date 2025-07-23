@@ -28,4 +28,12 @@ module.exports = {
         department: ['construction-industry-scheme'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+
+    KF_Invoices: {
+        title: 'KF Invoices',
+        description: 'View KF Invoices',
+        link: '/KF/invoices',
+        department: ['kashflow'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
 }

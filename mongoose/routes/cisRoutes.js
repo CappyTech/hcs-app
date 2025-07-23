@@ -3,7 +3,7 @@ const router = express.Router();
 const authService = require('../../services/authService');
 const ctrl = require('../controllers/cisController');
 
-router.get('/CIS/:year/:month', authService.ensureRole(), ctrl.renderCISDashboardMongo);
-router.get('/CIS', authService.ensureRole(), ctrl.redirectCIS);
+router.get('/CIS/Dashboard/:year/:month', authService.ensureRole(), ctrl.renderCISDashboardMongo);
+router.get('/CIS/Dashboard/', authService.ensureRole(), ctrl.redirectCIS);
 
 module.exports = router;

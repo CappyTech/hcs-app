@@ -76,8 +76,11 @@ for (const modelName of Object.keys(mdb)) {
   if (typeof model?.find !== 'function') continue;
 
   const Model = model;
-  const baseName = capitalize(modelName);
+  let baseName = capitalize(modelName);
   const config = getMergedConfig(modelName);
+  if (config.modelRename) {
+    baseName = capitalize(config.modelRename);
+  }
 
   if (!denyGuard(config, 'r')) {
     // READ

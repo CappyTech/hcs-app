@@ -20,7 +20,7 @@ const assignmentSchema = new mongoose.Schema({
 
   weekStart: {
     type: Date,
-    required: true // this should always be a Monday
+    required: true
   },
 
   assignedEmployees: [{

@@ -3,6 +3,7 @@ const router = express.Router();
 const authService = require('../../services/authService');
 const index = require('../controllers/indexController');
 const fetch = require('../kashflowAPI/fetchKashFlowDataMongoose');
+const holidayService = require('../services/holidayServiceMongoose');
 
 router.get('/', authService.ensureRole('none'), index.renderIndex);
 router.get('/construction-industry-scheme', authService.ensureRole(), index.renderConstructionIndustryScheme);
@@ -14,7 +15,7 @@ router.get('/create', authService.ensureRole(), index.renderCreate);
 
 const logger = require('../../services/loggerService');
 
-router.get('/fetch-kashflow-data-mongoose', async (req, res) => {
+router.get('/fetch-kashflow-data-mongoose', async (req, res, next) => {
     const token = req.query.token;
     const validToken = process.env.FETCH_API_TOKEN;
 
@@ -42,6 +43,42 @@ router.get('/fetch-kashflow-data-mongoose', async (req, res) => {
     } catch (err) {
         logger.error(`Mongoose fetch error: ${err.message}`);
         sendUpdate(`❌ Error: ${err.message}`);
+        next(err);
+    } finally {
+        res.end();
+    }
+});
+
+router.get('/fetch-holidays', async (req, res, next) => {
+    const token = req.query.token;
+    const validToken = process.env.FETCH_API_TOKEN;
+
+    if (!token || token !== validToken) {
+        err = new Error('Forbidden: Invalid token');
+        return next(err);
+    }
+
+    // Streaming headers
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.flushHeaders();
+
+    // Stream function
+    const sendUpdate = (msg) => {
+        const line = typeof msg === 'string' ? msg : JSON.stringify(msg);
+        res.write(`${line}\n`);
+    };
+
+    try {
+        sendUpdate('⏳ Starting Mongoose-based holiday fetch...');
+        await holidayService.fetchBankHolidays();
+        sendUpdate('✅ Mongoose fetch complete.');
+    } catch (err) {
+        logger.error(`Mongoose fetch error: ${err.message}`);
+        sendUpdate(`❌ Error: ${err.message}`);
+        next(err);
     } finally {
         res.end();
     }

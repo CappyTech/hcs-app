@@ -27,12 +27,16 @@ for (const [key, handler] of Object.entries(crudController)) {
   if (!match) continue;
 
   const [_, action, modelName] = match;
-  const model = modelName.charAt(0).toLowerCase() + modelName.slice(1);
-  const routePath = `/${model}`;
+  const originalModel = modelName.charAt(0).toLowerCase() + modelName.slice(1);
+  const config = crudConfig[originalModel] || {};
+  const listConfig = require('../config/listControllerConfig')[originalModel] || {};
+  const mergedConfig = { ...listConfig, ...config };
+
+  const routeModel = (mergedConfig.modelRename || originalModel).toLowerCase();
+  const routePath = `/${routeModel}`;
   const uuidPath = `${routePath}/:uuid`;
 
-  const config = crudConfig[model] || {};
-  const middlewares = config.middleware?.[action] || [];
+  const middlewares = mergedConfig.middleware?.[action] || [];
 
   const resolvedMiddleware = middlewares.map(resolveMiddleware).filter(Boolean);
 

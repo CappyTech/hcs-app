@@ -37,7 +37,17 @@ const contractSchema = new mongoose.Schema({
 
   notes: {
     type: String
-  }
+  },
+
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'project'
+  },
+  
+  locationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'location'
+  },
 
 }, {
   timestamps: true

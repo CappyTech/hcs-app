@@ -5,13 +5,17 @@ const ctrl = require('../controllers/returnsController');
 
 // Monthly returns selection form
 router.get('/CIS/returns/form', authService.ensureRole(), ctrl.renderMonthlyReturnsForm);
+
 // All subcontractors: Full yearly CIS return
-router.get('/CIS/returns/yearly/:year', authService.ensureRole(), ctrl.renderYearlyReturnsForAll);
-// Single subcontractor: Single month
-router.get('/CIS/returns/:month/:year/:uuid', authService.ensureRole(), ctrl.renderMonthlyReturns);
-// Single subcontractor: Full yearly CIS return
-router.get('/CIS/returns/:year/:uuid', authService.ensureRole(), ctrl.renderYearlyReturns);
+router.get('/CIS/returns/all/:year', authService.ensureRole(), ctrl.renderYearlyReturnsForAll);
+
 // All subcontractors: One specific month
-router.get('/CIS/returns/:month/:year', authService.ensureRole(), ctrl.renderMonthlyReturnsForAll);
+router.get('/CIS/returns/all/:year/:month', authService.ensureRole(), ctrl.renderMonthlyReturnsForAll);
+
+// Single subcontractor: Full yearly CIS return
+router.get('/CIS/returns/:uuid/yearly/:year', authService.ensureRole(), ctrl.renderYearlyReturns);
+
+// Single subcontractor: Single month
+router.get('/CIS/returns/:uuid/:year/:month', authService.ensureRole(), ctrl.renderMonthlyReturns);
 
 module.exports = router;

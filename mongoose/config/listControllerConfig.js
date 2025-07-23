@@ -2,7 +2,7 @@ module.exports = {
   assignment: {
     title: 'Assignments',
     linkField: 'title',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['_id','createdAt', 'updatedAt','uuid'],
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
@@ -10,7 +10,7 @@ module.exports = {
   attendance: {
     title: 'Attendances',
     linkField: 'date',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['_id','createdAt', 'updatedAt','uuid'],
     fieldOrder: ['date', 'type', 'employeeId', 'subcontractorId', 'hoursWorked', 'payRate', 'dayRate', 'locationId', 'projectId'],
     sortField: 'date',
     sortOrder: 1,
@@ -21,13 +21,13 @@ module.exports = {
     linkField: 'title',
     labelOverrides: {
       uuid: 'Contract ID',
-      title: 'Title',
+      title: 'Name',
       location: 'Site Location',
       status: 'Current Status',
       startDate: 'Start Date',
       endDate: 'End Date',
     },
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['_id','createdAt', 'updatedAt','uuid'],
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
@@ -35,7 +35,7 @@ module.exports = {
   customer: {
     title: 'Customers',
     linkField: 'Name',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid','Discount','CountryName','Created', 'Updated','Website','Notes','CustomerID','Code'],
+    hideFields: ['_id','createdAt', 'updatedAt','uuid','Discount','CountryName','Created', 'Updated','Website','Notes','CustomerID','Code'],
     fieldOrder: ['Name'],
     sortField: 'Name',
     sortOrder: 1,
@@ -45,41 +45,56 @@ module.exports = {
   employee: {
     title: 'Employees',
     linkField: 'name',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['_id','createdAt', 'updatedAt','uuid'],
     fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type','dailyRate', 'hourlyRate', 'hireDate', 'managerId'],
     sortField: 'name',
     sortOrder: 1,
     department: ['payroll','human-resources'],
+    handlesDocuments: true,
+    tabsby: 'status',
+    tabsValues: [
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' },
+    ],
+    labelOverrides: {
+      phoneNumber: 'Number',
+    },
   },
   holiday: {
-    title: 'Holidays',
+    title: ' Government Holidays',
+    hideFields: ['_id','createdAt', 'updatedAt','uuid'],
+    fieldOrder: ['title', 'date', 'bunting','notes'],
     linkField: 'title',
     sortField: 'title',
     sortOrder: 1,
     department: ['human-resources'],
-    deny: ['c','r','u','d'],
+    deny: ['c','u','d'],
+    description: {
+      manage: 'Read government holidays.',
+    },
+    tabsby: 'division',
+    tabsValues: [
+      { value: 'scotland', label: 'Scotland' },
+      { value: 'england-and-wales', label: 'England and Wales' },
+      { value: 'northern-ireland', label: 'Northern Ireland' }
+    ],
   },
   invoice: {
     title: 'Invoices',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer','SuppressTotal'],
+    hideFields: ['_id','createdAt','updatedAt','uuid','InvoiceDBID','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer','SuppressTotal'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c','d'],
-  },
-  job: {
-    title: 'Jobs',
-    linkField: 'JobRef',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
-    sortField: 'JobRef',
-    sortOrder: 1,
-    department: ['management'],
+    labelOverrides: {
+      InvoiceNumber: 'KashFlow Number',
+    },
   },
   location: {
     title: 'Locations',
     linkField: 'name',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['_id','createdAt', 'updatedAt','uuid'],
     sortField: 'name',
     sortOrder: 1,
     department: ['management'],
@@ -88,16 +103,18 @@ module.exports = {
     deny: ['c','r','u','d','l'],
   },
   project: {
-    title: 'Projects',
+    modelRename: 'job',
+    title: 'Jobs',
     linkField: 'Number',
     sortField: 'Number',
     sortOrder: 1,
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','ID','Date1','Date2','FieldLinks'],
+    hideFields: ['_id','createdAt','updatedAt','uuid','ID','Date1','Date2','FieldLinks'],
     department: ['kashflow'],
     deny: ['c','d'],
     handlesDocuments: true,
     labelOverrides: {
       CustomerID: 'Customer Name',
+      Number: 'Job Ref',
     },
     fieldTransforms: {
       CustomerID: {
@@ -112,26 +129,35 @@ module.exports = {
       { value: '1', label: 'In Progress' },
       { value: '2', label: 'Completed' }
     ],
+    description: {
+      manage: 'Manage projects and their documents.',
+    },
   },
   quote: {
     title: 'Quotes',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID','SuppressTotal','DueDate','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer'],
+    hideFields: ['_id','createdAt','updatedAt','uuid','InvoiceDBID','SuppressTotal','DueDate','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer'],
     fieldOrder: ['InvoiceNumber', 'InvoiceDate', 'CustomerName', 'NetAmount', 'VATAmount', 'AmountPaid'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c','d'],
+    labelOverrides: {
+      InvoiceNumber: 'Quote Ref',
+    },
   },
   receipt: {
     title: 'Receipts',
     linkField: 'InvoiceNumber',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','InvoiceDBID','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer'],
+    hideFields: ['_id','createdAt','updatedAt','uuid','InvoiceDBID','DeliveryAddress','CurrencyCode','ExchangeRate','PermaLink','UseCustomDeliveryAddress','ReadableString','EstimateCategory','CustomerID','Paid','CISRCNetAmount','CISRCVatAmount','IsCISReverseCharge','Customer'],
     fieldOrder: ['InvoiceNumber', 'InvoiceDate', 'CustomerName', 'NetAmount', 'VATAmount', 'AmountPaid'],
     sortField: 'InvoiceNumber',
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c','d'],
+    labelOverrides: {
+      InvoiceNumber: 'KashFlow Number',
+    },
   },
   session: {
     deny: ['c','r','u','d','l'],
@@ -139,7 +165,7 @@ module.exports = {
   supplier: {
     title: 'Suppliers',
     linkField: 'Name',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','Created','Updated','SupplierID','EC','TradeBorderType','Contact','ContactTitle','ContactFirstName','ContactLastName','Telephone','Fax','Mobile','Website','CurrencyID','PaymentTerms'],
+    hideFields: ['_id','createdAt','updatedAt','uuid','Created','Updated','SupplierID','EC','TradeBorderType','Contact','ContactTitle','ContactFirstName','ContactLastName','Telephone','Fax','Mobile','Website','CurrencyID','PaymentTerms'],
     fieldOrder: ['Name', 'Subcontractor', 'CISRate', 'CISNumber'],
     sortField: 'Name',
     sortOrder: 1,
@@ -157,7 +183,7 @@ module.exports = {
   task: {
     title: 'Tasks',
     linkField: 'title',
-    hideFields: ['__v','_id','createdAt','updatedAt','uuid','password'],
+    hideFields: ['_id','createdAt','updatedAt','uuid','password'],
     sortField: 'title',
     sortOrder: 1,
     department: ['human-resources'],
@@ -165,7 +191,7 @@ module.exports = {
   user: {
     title: 'Users',
     linkField: 'username',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid', 'password', 'totpSecret', 'totpEnabled'],
+    hideFields: ['_id','createdAt', 'updatedAt','uuid', 'password', 'totpSecret', 'totpEnabled'],
     fieldOrder: ['username', 'email', 'role', 'status', 'lastLogin'],
     sortField: 'username',
     sortOrder: 1,
@@ -174,7 +200,7 @@ module.exports = {
   vehicle: {
     title: 'Vehicles',
     linkField: 'registrationNumber',
-    hideFields: ['__v', '_id','createdAt', 'updatedAt','uuid'],
+    hideFields: ['_id','createdAt', 'updatedAt','uuid'],
     sortField: 'registrationNumber',
     sortOrder: 1,
     department: ['management'],
@@ -196,6 +222,7 @@ module.exports = {
       create: 'Create a company holiday',
       manage: 'Manage company holidays'
     },
+    hideFields: ['_id','createdAt', 'updatedAt','uuid'],
     linkField: 'title',
     sortField: 'title',
     sortOrder: 1,

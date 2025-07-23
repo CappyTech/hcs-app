@@ -7,7 +7,10 @@
     </p>
     <% if (nextHoliday) { %>
       <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-xl shadow mb-6 p-6 text-center max-w-xl mx-auto">
-        <h2 class="text-1xl font-semibold mb-2">Next Holiday</h2>
+        <h2 class="text-1xl font-semibold mb-2">Next holiday 
+          <%= nextHoliday.division === 'england-and-wales' ? 'for England and Wales' : '' %>
+          <%= nextHoliday.division === 'scotland' ? 'for Scotland' : '' %>
+          <%= nextHoliday.division === 'northern-ireland' ? 'for Northern Ireland' : '' %></h2>
         <p class="text-lg text-gray-700 dark:text-gray-300 mb-1">
           <strong><%= nextHoliday.reason %></strong>
         </p>

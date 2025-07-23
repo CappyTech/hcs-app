@@ -2,7 +2,7 @@ const axios = require('axios');
 const moment = require('moment-timezone');
 const mdb = require('./mongooseDatabaseService');
 const logger = require('../../services/loggerService');
-
+const { v4: uuidv4 } = require('uuid');
 const HOLIDAY_API_URL = 'https://www.gov.uk/bank-holidays.json';
 
 // Custom holidays are still in memory for now
@@ -16,13 +16,25 @@ const holidayService = {
       // Check Bank Holidays (Mongo)
       const holiday = await mdb.holiday.findOne({ date });
       if (holiday) {
-        return {
-          isHoliday: true,
-          reason: holiday.title,
-          startDate: holiday.date.format('Do MMMM YYYY'),
-          endDate: holiday.date.format('Do MMMM YYYY'),
-          type: 'Bank Holiday'
-        };
+        if (holiday.division === 'england-and-wales') {
+          return {
+            isHoliday: true,
+            reason: holiday.title,
+            startDate: holiday.date.format('Do MMMM YYYY'),
+            endDate: holiday.date.format('Do MMMM YYYY'),
+            type: 'Government Holiday',
+            division: holiday.division
+          };
+        } else {
+          return {
+            isHoliday: false,
+            reason: null,
+            startDate: null,
+            endDate: null,
+            type: null,
+            division: holiday.division
+          };
+        }
       }
 
       // Check custom holidays
@@ -59,29 +71,10 @@ const holidayService = {
     }
   },
 
-  getHolidayDetailsForDate: async (date) => {
-    try {
-      const holiday = await mdb.holiday.findOne({ date });
-
-      const customHoliday = customHolidays.find(h =>
-        moment(date).isBetween(h.startDate, h.endDate, null, '[]')
-      );
-
-      return holiday || customHoliday || null;
-    } catch (error) {
-      logger.error('Error fetching holiday details for date: ' + error.message);
-      return null;
-    }
-  },
 
   isTodayHoliday: async () => {
     const today = moment().format('Do MMMM YYYY');
     return await holidayService.isDateHoliday(today);
-  },
-
-  getTodayHolidayDetails: async () => {
-    const today = moment().format('Do MMMM YYYY');
-    return await holidayService.getHolidayDetailsForDate(today);
   },
 
   addCustomHoliday: (startDate, endDate, title) => {
@@ -99,54 +92,15 @@ const holidayService = {
     return customHolidays;
   },
 
-  syncBankHolidays: async () => {
-    try {
-      const response = await axios.get(HOLIDAY_API_URL);
-      const data = response.data;
-
-      const events = [];
-      for (const division in data) {
-        for (const event of data[division].events) {
-          events.push({
-            title: event.title,
-            date: event.date,
-            notes: event.notes,
-            bunting: event.bunting,
-            division
-          });
-        }
-      }
-
-      const existing = await mdb.holiday.find();
-      const hasChanged = events.some(e => {
-        return !existing.some(ex =>
-          ex.title === e.title &&
-          ex.date === e.date &&
-          ex.notes === e.notes &&
-          ex.bunting === e.bunting &&
-          ex.division === e.division
-        );
-      });
-
-      if (hasChanged) {
-        await mdb.holiday.deleteMany({});
-        await mdb.holiday.insertMany(events);
-        logger.info('Bank holidays updated.');
-      }
-    } catch (error) {
-      logger.error('Error syncing bank holidays: ' + error.message);
-    }
-  },
-
-  getNextHoliday: async () => {
+  getNextHoliday: async (division) => {
     const today = moment().startOf('day');
-
+    if (!division) division = 'england-and-wales';
     try {
       // Fetch all bank holidays from DB, filter future dates
       const allHolidays = await mdb.holiday.find();
 
       // Filter bank holidays on or after today
-      const futureBankHolidays = allHolidays.filter(h => moment(h.date).isSameOrAfter(today));
+      const futureBankHolidays = allHolidays.filter(h => moment(h.date).isSameOrAfter(today) && h.division === division);
 
       // Map to unified format with startDate and endDate same for bank holidays
       const bankHolidayObjs = futureBankHolidays.map(h => ({
@@ -154,7 +108,8 @@ const holidayService = {
         startDate: h.date,
         endDate: h.date,
         type: 'Bank Holiday',
-        _id: h._id
+        _id: h._id,
+        division: h.division
       }));
 
       // Filter custom holidays on or after today (by startDate)
@@ -174,6 +129,57 @@ const holidayService = {
       logger.error('Error fetching next holiday: ' + error.message);
       return null;
     }
+  },
+
+  syncBankHolidays: async () => {
+    try {
+      const response = await axios.get(HOLIDAY_API_URL);
+      const data = response.data;
+
+      const bulkOps = [];
+
+      for (const division in data) {
+        for (const event of data[division].events) {
+          bulkOps.push({
+            updateOne: {
+              filter: {
+                title: event.title,
+                date: event.date,
+                division,
+                notes: event.notes || '',
+                bunting: event.bunting
+              },
+              update: {
+                $setOnInsert: {
+                  uuid: uuidv4()
+                }
+              },
+              upsert: true
+            }
+          });
+        }
+      }
+
+      const totalEvents = bulkOps.length;
+
+      if (totalEvents > 0) {
+        const result = await mdb.holiday.bulkWrite(bulkOps);
+        const upserts = result.upsertedCount || 0;
+        const modified = result.modifiedCount || 0;
+        const unchanged = totalEvents - upserts - modified;
+
+        logger.info(`Bank holidays synced. Events: ${totalEvents}, Unchanged: ${unchanged}, Upserts: ${upserts}, Modified: ${modified}`);
+      } else {
+        logger.info('No holidays to sync.');
+      }
+    } catch (error) {
+      logger.error('Error syncing bank holidays: ' + error.message);
+    }
+  },
+
+  fetchBankHolidays: async () => {
+    logger.info('Manual holiday sync triggered.');
+    return await holidayService.syncBankHolidays();
   }
 
 };
