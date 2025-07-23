@@ -103,8 +103,7 @@ module.exports = {
     deny: ['c','r','u','d','l'],
   },
   project: {
-    modelRename: 'job',
-    title: 'Jobs',
+    title: 'Projects',
     linkField: 'Number',
     sortField: 'Number',
     sortOrder: 1,
