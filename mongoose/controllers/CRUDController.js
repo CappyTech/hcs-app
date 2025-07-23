@@ -76,11 +76,9 @@ for (const modelName of Object.keys(mdb)) {
   if (typeof model?.find !== 'function') continue;
 
   const Model = model;
-  let baseName = capitalize(modelName);
+  const baseName = capitalize(modelName);
   const config = getMergedConfig(modelName);
-  if (config.modelRename) {
-    baseName = capitalize(config.modelRename);
-  }
+
 
   if (!denyGuard(config, 'r')) {
     // READ
@@ -163,16 +161,13 @@ for (const modelName of Object.keys(mdb)) {
           }
         }
 
-        const routeModel = (config.modelRename || modelName).toLowerCase();
-        const pluralBasePath = `${routeModel}s`;
-
         return res.render(path.join('tailwindcss', 'partials', 'form-create'), {
           title: `Create ${config.title || baseName}`,
           formData,
           schema,
           referenceData,
-          formAction: `/${pluralBasePath}`,
-          basePath: pluralBasePath,
+          formAction: `/${modelName}`,
+          basePath: modelName,
           config
         });
       }
@@ -204,16 +199,13 @@ for (const modelName of Object.keys(mdb)) {
           const schema = extractSchema(Model, config);
           const referenceData = await fetchReferenceData(schema);
 
-          const routeModel = (config.modelRename || modelName).toLowerCase();
-          const pluralBasePath = `${routeModel}s`;
-
           return res.render(path.join('tailwindcss', 'partials', 'form-update'), {
             title: `Update ${config.title || baseName}`,
             formData: item,
             schema,
             referenceData,
-            formAction: `/${pluralBasePath}/${item.uuid}`,
-            basePath: pluralBasePath,
+            formAction: `/${modelName}/${item.uuid}`,
+            basePath: modelName,
             listControllerConfig: listConfig[modelName] || {},
           });
         } catch (err) {
@@ -274,14 +266,11 @@ for (const modelName of Object.keys(mdb)) {
           const item = await Model.findOne({ uuid: req.params.uuid }).lean();
           if (!item) return res.status(404).render(path.join('mongoose', 'error'));
 
-          const routeModel = (config.modelRename || modelName).toLowerCase();
-          const pluralBasePath = `${routeModel}s`;
-
           return res.render(path.join('tailwindcss', 'partials', 'form-delete'), {
             title: `Delete ${config.title || baseName}`,
             item,
-            cancelUrl: `/${pluralBasePath}s`,
-            formAction: `/${pluralBasePath}/${item.uuid}/delete`,
+            cancelUrl: `/${modelName}s`,
+            formAction: `/${modelName}/${item.uuid}/delete`,
             listControllerConfig: listConfig[modelName] || {},
           });
         } catch (err) {
