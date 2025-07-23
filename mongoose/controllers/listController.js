@@ -41,12 +41,15 @@ for (const [modelName, model] of Object.entries(mdb)) {
   if (!model?.schema || typeof model.find !== 'function') continue;
 
   const Model = model;
-  const baseName = capitalize(modelName);
+  let baseName = capitalize(modelName);
   const config = getMergedConfig(modelName, listControllerConfig[modelName] || {});
+  if (config.modelRename) {
+    baseName = capitalize(config.modelRename);
+  }
 
   if (denyGuard(config, 'l')) continue;
 
-  const functionName = `list${capitalize(modelName)}`;
+  const functionName = `list${baseName}`;
   listController[functionName] = async (req, res, next) => {
     const sortField = req.query.sort || config.sortField || 'createdAt';
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
@@ -220,15 +223,18 @@ for (const [modelName, model] of Object.entries(mdb)) {
         return item;
       });
 
+      const routeModel = (config.modelRename || modelName).toLowerCase();
+      const pluralBasePath = `${routeModel}s`;
+
       return res.render(path.join('tailwindcss', 'partials', 'listTable'), {
-        title: config.title || capitalize(modelName) + 's',
+        title: config.title || baseName + 's',
         headers,
         rows,
-        basePath: modelName,
+        basePath: pluralBasePath,
         linkField: config.linkField || 'title',
         actions: config.actions || [],
         hasActions: !!(config.actions?.length),
-        modelName,
+        modelName: baseName,
         query: searchQuery,
         queryParams: req.query,
         sortField,
