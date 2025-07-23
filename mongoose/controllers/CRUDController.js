@@ -163,13 +163,16 @@ for (const modelName of Object.keys(mdb)) {
           }
         }
 
+        const routeModel = (config.modelRename || modelName).toLowerCase();
+        const pluralBasePath = `${routeModel}s`;
+
         return res.render(path.join('tailwindcss', 'partials', 'form-create'), {
           title: `Create ${config.title || baseName}`,
           formData,
           schema,
           referenceData,
-          formAction: `/${modelName}`,
-          basePath: modelName,
+          formAction: `/${pluralBasePath}`,
+          basePath: pluralBasePath,
           config
         });
       }
@@ -201,13 +204,16 @@ for (const modelName of Object.keys(mdb)) {
           const schema = extractSchema(Model, config);
           const referenceData = await fetchReferenceData(schema);
 
+          const routeModel = (config.modelRename || modelName).toLowerCase();
+          const pluralBasePath = `${routeModel}s`;
+
           return res.render(path.join('tailwindcss', 'partials', 'form-update'), {
             title: `Update ${config.title || baseName}`,
             formData: item,
             schema,
             referenceData,
-            formAction: `/${modelName}/${item.uuid}`,
-            basePath: modelName,
+            formAction: `/${pluralBasePath}/${item.uuid}`,
+            basePath: pluralBasePath,
             listControllerConfig: listConfig[modelName] || {},
           });
         } catch (err) {
@@ -268,11 +274,14 @@ for (const modelName of Object.keys(mdb)) {
           const item = await Model.findOne({ uuid: req.params.uuid }).lean();
           if (!item) return res.status(404).render(path.join('mongoose', 'error'));
 
+          const routeModel = (config.modelRename || modelName).toLowerCase();
+          const pluralBasePath = `${routeModel}s`;
+
           return res.render(path.join('tailwindcss', 'partials', 'form-delete'), {
             title: `Delete ${config.title || baseName}`,
             item,
-            cancelUrl: `/${modelName}s`,
-            formAction: `/${modelName}/${item.uuid}/delete`,
+            cancelUrl: `/${pluralBasePath}s`,
+            formAction: `/${pluralBasePath}/${item.uuid}/delete`,
             listControllerConfig: listConfig[modelName] || {},
           });
         } catch (err) {
