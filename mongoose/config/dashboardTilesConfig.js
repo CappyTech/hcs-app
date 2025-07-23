@@ -45,7 +45,7 @@ module.exports = {
     KF_Projects: {
         title: 'KF Projects',
         description: 'View KF Projects',
-        link: 'https://app.kashflow.com/#projects',
+        link: 'https://app.kashflow.com/projects.asp',
         department: ['kashflow'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
