@@ -206,7 +206,7 @@ for (const modelName of Object.keys(mdb)) {
             referenceData,
             formAction: `/${modelName}/${item.uuid}`,
             basePath: modelName,
-            listControllerConfig: listConfig[modelName] || {},
+            listControllerConfig: listControllerConfig[modelName] || {},
           });
         } catch (err) {
           logger.error(`❌ Error fetching ${modelName} for update: ${err.message}`);
