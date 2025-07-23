@@ -126,7 +126,7 @@ const groupAttendanceByPerson = (
       groupedAttendance[subcontractorKey].dailyRecords[dateKey] = {};
     }
 
-    groupedAttendance[subcontractorKey].dailyRecords[dateKey][`receipt-${receipt.uuid || receipt._id.toString()}`] = {
+    groupedAttendance[subcontractorKey].dailyRecords[dateKey][`receipt-${receipt.uuid}`] = {
       location: null,
       type: 'Receipt',
       number: receipt.InvoiceNumber || null,
@@ -165,7 +165,8 @@ const groupAttendanceByPerson = (
       groupedAttendance[employeeKey].dailyRecords[dateKey] = {};
     }
 
-    groupedAttendance[employeeKey].dailyRecords[dateKey][record._id] = {
+    groupedAttendance[employeeKey].dailyRecords[dateKey][record.uuid] = {
+      uuid: record.uuid,
       location: record.locationId || null,
       type: record.type,
       hoursWorked,
