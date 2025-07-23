@@ -16,7 +16,7 @@ module.exports = {
     CISDashboard: {
         title: 'CIS Dashboard',
         description: 'Submit CIS returns.',
-        link: '/CIS',
+        link: '/CIS/Dashboard/',
         department: ['construction-industry-scheme'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
