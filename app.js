@@ -118,7 +118,6 @@ const main = async () => {
     app.use('/', require('./mongoose/routes/attendanceRoutes'));
     app.use('/', require('./mongoose/routes/cisRoutes'));
     app.use('/', require('./mongoose/routes/CRUDRoutes'));
-    app.use('/', require('./mongoose/routes/fileSystemProjects'));
     app.use('/', require('./mongoose/routes/indexRoutes'));
     app.use('/', require('./mongoose/routes/listRoutes'));
     app.use('/', require('./mongoose/routes/loggerRoutes'));
