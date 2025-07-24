@@ -74,4 +74,5 @@ This project is released under the license specified in `package.json`.
 ## Known Issues
 
 Task show wrong date.
-Yearly Returns Totals are NaN.
+
+npx @tailwindcss/cli -i ./public/styles.css -o ./public/output.css --watch
