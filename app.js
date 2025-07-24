@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 const logger = require('./services/loggerService');
 const packageJson = require('./package.json');
 const crypto = require('crypto');
+const authService = require('./services/authService')
 
 const mdb = require('./mongoose/services/mongooseDatabaseService');
 
@@ -36,17 +37,15 @@ const main = async () => {
     app.use(sessionService);
 
     // Static assets
-    app.use('/resources', express.static(path.join(__dirname, 'public')));
-    ['bootstrap', 'bootstrap-icons', '@popperjs/core'].forEach(pkg => {
-      app.use(`/resources/${pkg}`, express.static(path.join(__dirname, `node_modules/${pkg}`)));
+    app.use('/resources', authService.ensureAuthenticated, express.static(path.join(__dirname, 'public')));
+    ['bootstrap-icons'].forEach(pkg => {
+      app.use(`/resources/${pkg}`, authService.ensureAuthenticated, express.static(path.join(__dirname, `node_modules/${pkg}`)));
     });
 
     // Serve favicon to avoid 404 errors
     app.get('/favicon.ico', (req, res) => {
       res.sendFile(path.join(__dirname, 'public', 'images', 'favicon.ico'));
     });
-
-    const authService = require('./services/authService')
 
     // Core middleware
     app.use(useragent.express());
