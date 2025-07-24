@@ -55,8 +55,6 @@ const main = async () => {
     app.use(authService.ensureAuthenticated);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
-    const startCronJobs = require('./mongoose/services/cronServiceMongoose');
-    startCronJobs();
 
     // Attach user info to templates
     app.use((req, res, next) => {

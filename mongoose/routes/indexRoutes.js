@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authService = require('../../services/authService');
 const index = require('../controllers/indexController');
-const fetch = require('../kashflowAPI/fetchKashFlowDataMongoose');
-const holidayService = require('../services/holidayServiceMongoose');
+const logger = require('../../services/loggerService');
 
 router.get('/', authService.ensureRole('none'), index.renderIndex);
 router.get('/construction-industry-scheme', authService.ensureRole(), index.renderConstructionIndustryScheme);
@@ -12,9 +11,8 @@ router.get('/payroll', authService.ensureRole(), index.renderPayroll);
 router.get('/human-resources', authService.ensureRole(), index.renderHumanResources);
 router.get('/kashflow', authService.ensureRole(), index.renderKashflow);
 router.get('/create', authService.ensureRole(), index.renderCreate);
-
-const logger = require('../../services/loggerService');
-
+/*
+const fetch = require('../kashflowAPI/fetchKashFlowDataMongoose');
 router.get('/fetch-kashflow-data-mongoose', async (req, res, next) => {
     const token = req.query.token;
     const validToken = process.env.FETCH_API_TOKEN;
@@ -49,6 +47,7 @@ router.get('/fetch-kashflow-data-mongoose', async (req, res, next) => {
     }
 });
 
+const holidayService = require('../services/holidayServiceMongoose');
 router.get('/fetch-holidays', async (req, res, next) => {
     const token = req.query.token;
     const validToken = process.env.FETCH_API_TOKEN;
@@ -83,5 +82,5 @@ router.get('/fetch-holidays', async (req, res, next) => {
         res.end();
     }
 });
-
+*/
 module.exports = router;
