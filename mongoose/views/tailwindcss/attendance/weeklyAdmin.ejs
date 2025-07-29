@@ -1,21 +1,5 @@
 <div class="container mx-auto py-4 px-4">
 
-  <!-- Navigation Tabs -->
-  <ul class="flex justify-center space-x-6 mb-4 border-b">
-    <li>
-      <a href="/daily" class="pb-2 text-sm font-medium border-b-2
-         <%= currentTab === 'daily' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' %>">
-        Daily
-      </a>
-    </li>
-    <li>
-      <a href="/weekly" class="pb-2 text-sm font-medium border-b-2
-         <%= currentTab === 'weekly' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' %>">
-        Weekly
-      </a>
-    </li>
-  </ul>
-
   <!-- Week Navigation -->
   <div class="flex justify-between items-center mb-4 print:hidden">
     <a href="/weekly/<%= previousYear %>/<%= previousWeek %>" class="inline-block bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2">
@@ -85,7 +69,8 @@
       daysOfWeek,
       startDate,
       endDate,
-      moment
+      moment,
+      isManagementView: false
     }) %>
   </div>
 
@@ -97,7 +82,8 @@
       daysOfWeek,
       startDate,
       endDate,
-      moment
+      moment,
+      isManagementView: false
     }) %>
   </div>
 </div>

@@ -1,28 +1,5 @@
 <div class="container mx-auto py-4 px-4">
   <div class="mb-4 bg-gray-100 rounded-lg">
-    <!-- Tabs -->
-    <ul class="flex justify-center space-x-4 mb-4 border-b">
-      <li>
-        <button
-          class="pb-2 text-sm font-medium border-b-2 transition-colors duration-300 focus:outline-none"
-          data-tab="daily"
-          aria-current="<%= currentTab === 'daily' ? 'page' : 'false' %>"
-          :class="currentTab === 'daily' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-        >
-          Daily
-        </button>
-      </li>
-      <li>
-        <button
-          class="pb-2 text-sm font-medium border-b-2 transition-colors duration-300 focus:outline-none"
-          data-tab="weekly"
-          aria-current="<%= currentTab === 'weekly' ? 'page' : 'false' %>"
-          :class="currentTab === 'weekly' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-        >
-          Weekly
-        </button>
-      </li>
-    </ul>
 
     <div class="container mx-auto py-5">
       <h1 class="text-4xl font-extrabold text-center mb-8">

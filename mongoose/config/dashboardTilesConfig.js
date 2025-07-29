@@ -49,14 +49,6 @@ module.exports = {
         department: ['kashflow'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
-    KF_Purchases: {
-        title: 'KF Purchases ',
-        description: 'View KF Purchases',
-        link: 'https://app.kashflow.com/#purchases',
-        department: ['kashflow'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
-    },
-
     KF_Quotes: {
         title: 'KF Quotes',
         description: 'View KF Quotes',
@@ -64,7 +56,6 @@ module.exports = {
         department: ['kashflow'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
-
     KF_Receipts: {
         title: 'KF Receipts',
         description: 'View KF Receipts',
@@ -72,7 +63,6 @@ module.exports = {
         department: ['kashflow'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
-
     KF_Suppliers: {
         title: 'KF Suppliers',
         description: 'View KF Suppliers',

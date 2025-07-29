@@ -180,26 +180,42 @@ for (const [modelName, model] of Object.entries(mdb)) {
           const { fromModel, matchField, returnField } = transform;
           if (!fromModel || !matchField || !returnField) continue;
 
-          const matchValues = [...new Set(items.map(i => i[fieldKey]).filter(Boolean))];
+          const matchValues = [...new Set(
+            items.map(i => {
+              const val = i[fieldKey];
+              if (!val) return null;
+              if (typeof val === 'object' && val._id) return String(val._id);
+              return String(val);
+            }).filter(Boolean)
+          )];
           const refModel = mdb[fromModel];
           if (!refModel) continue;
 
+          // Convert ObjectIds to strings for reliable matching
           const docs = await refModel.find({ [matchField]: { $in: matchValues } }).lean();
           const map = Object.fromEntries(
-            docs.map(d => [d[matchField], { label: d[returnField], uuid: d.uuid }])
+            docs.map(d => [String(d[matchField]), { label: d[returnField], uuid: d.uuid }])
           );
 
           for (const item of items) {
-            const matched = map[item[fieldKey]];
+            const rawVal = item[fieldKey];
+            const key = typeof rawVal === 'object' && rawVal._id ? String(rawVal._id) : String(rawVal);
+            const matched = map[key];
+
             if (matched) {
               item[fieldKey] = matched.label;
+
               if (!item._fieldLinks) item._fieldLinks = {};
-              item._fieldLinks[fieldKey] = `/customer/read/${matched.uuid}`;
+
+              item._fieldLinks[fieldKey] =
+                typeof transform.linkTo === 'function'
+                  ? transform.linkTo(matched, item)
+                  : `/${fromModel}/read/${matched.uuid}`;
             }
           }
         }
       }
-      
+
       const fieldLinks = { ...(config.fieldLinks || {}) };
 
       if (config.fieldTransforms) {

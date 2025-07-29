@@ -10,9 +10,11 @@
           <span class="text-gray-600"><%= moment(day).format('dddd') %></span>
         </th>
       <% }); %>
-      <th class="text-center font-normal border border-gray-300 px-3 py-2">
-        Weekly Pay <br> / Total Hours
-      </th>
+      <% if (!isManagementView) { %>
+        <th class="text-center font-normal border border-gray-300 px-3 py-2">
+          Weekly Pay <br> / Total Hours
+        </th>
+      <% } else {} %>
     </tr>
   </thead>
   <tbody>
@@ -47,7 +49,10 @@
                 <% } %>
 
                 <a href="<%= href %>" class="block text-green-900 hover:underline text-sm">
-                  <%= record.location?.name %> - <%= record.type %> – £<%= record.weeklyPay.toFixed(2) %>
+                  <%= record.location?.name %> - <%= record.type %>
+                  <% if (!isManagementView && record.weeklyPay) { %>
+                    – £<%= record.weeklyPay.toFixed(2) %>
+                  <% } %>
                 </a>
 
                 <% if (record.hoursWorked) { %>
@@ -64,10 +69,12 @@
           </td>
         <% }); %>
 
-        <td class="border border-gray-300 text-center px-3 py-2 font-semibold">
-          £<%= details.weeklyPay.toFixed(2) %><br>
-          <span class="text-sm font-normal"><%= details.totalHoursWorked %> hours</span>
-        </td>
+        <% if (!isManagementView) { %>
+          <td class="border border-gray-300 text-center px-3 py-2 font-semibold">
+            £<%= details.weeklyPay.toFixed(2) %><br>
+            <span class="text-sm font-normal"><%= details.totalHoursWorked %> hours</span>
+          </td>
+        <% } else {} %>
       </tr>
     <% }); %>
   </tbody>

@@ -120,7 +120,8 @@
                 <td class="px-3 py-2 border-b dark:border-gray-700">
                   <% if (href) { %>
                     <a href="<%= href %>" class="text-green-600 dark:text-green-400 hover:underline">
-                      <%= val instanceof Date ? slimDateTime(val)
+                      <%= (typeof val === 'string' || typeof val === 'number') ? val
+                          : val instanceof Date ? slimDateTime(val)
                           : typeof val === 'object' ? val?.name || val?.title || val?.Number || '[Object]'
                           : val ?? '—' %>
                     </a>

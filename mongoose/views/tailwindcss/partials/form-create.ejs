@@ -1,13 +1,45 @@
-<div class="max-w-3xl mx-auto my-10 px-4">
+<div class="max-w-3xl mx-auto my-10 px-4"> 
   <h1 class="text-2xl font-bold mb-6">
     <%= title %>
   </h1>
 
   <form action="<%= formAction %>" method="POST" class="space-y-6">
+    <%
+      const xorGroups = config?.xorGroups || [];
+      const xorGroupMap = {};
+      xorGroups.forEach((group, i) => group.forEach(field => xorGroupMap[field] = i));
 
-    <% for (const key in schema) { %>
-      <%- include('../partials/_formField', { key, field: schema[key], formData, referenceData, readOnly: false, showTips: true }) %>
+      let currentGroup = null;
+      const renderedFields = new Set();
+      const keys = Object.keys(schema);
+    %>
+
+    <% keys.forEach((key, index) => {
+      const field = schema[key];
+      const groupIndex = xorGroupMap[key];
+      const isInGroup = groupIndex != null;
+      const isNewGroup = isInGroup && currentGroup !== groupIndex;
+      const isEndGroup = isInGroup && (
+        index === keys.length - 1 || xorGroupMap[keys[index + 1]] !== groupIndex
+      );
+
+      if (renderedFields.has(key)) return;
+      if (isNewGroup) {
+        currentGroup = groupIndex;
+    %>
+        <div class="mb-6 border-2 border-cyan-300 border-opacity-40 bg-cyan-50 bg-opacity-40 p-4 rounded">
+          <p class="text-sm text-cyan-700 italic mb-4">Select only one of the following:</p>
     <% } %>
+
+    <%- include('../partials/_formField', { key, field, formData, referenceData, readOnly: false, showTips: true, config }) %>
+    <% renderedFields.add(key); %>
+
+    <% if (isEndGroup) { currentGroup = null; %>
+        </div>
+    <% } %>
+
+    <% if (!isInGroup) { currentGroup = null; } %>
+    <% }) %>
 
     <p class="text-gray-500 text-sm mb-4"><span class="text-red-600">*</span> Required fields</p>
 
@@ -15,4 +47,12 @@
       Create
     </button>
   </form>
+
+  <% if (errors?.length) { %>
+    <div class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">
+      <% errors.forEach(error => { %>
+        <p><%= error %></p>
+      <% }) %>
+    </div>
+  <% } %>
 </div>

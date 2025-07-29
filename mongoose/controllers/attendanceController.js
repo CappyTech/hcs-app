@@ -9,8 +9,7 @@ exports.getDailyAttendance = async (req,res,next)=>{
     res.render(path.join('tailwindcss', 'attendance', 'daily'), {
       moment,
       attendance,
-      date,
-      currentTab:'daily'
+      date
     });
   }catch(err){
     next(err);
@@ -40,17 +39,20 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       activeJobs
     } = await attendanceService.getAttendanceForWeek(yearParam, weekParam);
 
+    const isManagementView = req.isManagementView === true;
+
     const employeeEntries = Object.entries(groupedAttendance)
       .filter(([_, v]) => v.type === 'employee')
-      .map(([uuid, v]) => [uuid, { ...v }]);
+      .map(([uuid, v]) => [uuid, isManagementView ? stripPayroll(v) : v]);
 
     const subcontractorEntries = Object.entries(groupedAttendance)
       .filter(([_, v]) => v.type === 'subcontractor')
-      .map(([uuid, v]) => [uuid, { ...v }]);
+      .map(([uuid, v]) => [uuid, isManagementView ? stripPayroll(v) : v]);
 
-    res.render(path.join('tailwindcss', 'attendance', 'weekly'), {
+    const viewFile = isManagementView ? 'weeklyManagement' : 'weeklyAdmin';
+    res.render(path.join('tailwindcss', 'attendance', viewFile), {
       moment,
-      groupedAttendance,
+      groupedAttendance: groupedAttendance, // prevent table reuse
       startDate: payrollWeekStart.format('YYYY-MM-DD'),
       endDate: endDate.format('YYYY-MM-DD'),
       previousYear,
@@ -59,18 +61,28 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       nextWeek,
       employeeCount,
       subcontractorCount,
-      totalEmployeePay,
-      totalEmployeeHours,
-      totalSubcontractorPay,
-      totalSubcontractorDays,
-      currentTab: 'weekly',
+      totalEmployeePay: isManagementView ? null : totalEmployeePay,
+      totalEmployeeHours: isManagementView ? null : totalEmployeeHours,
+      totalSubcontractorPay: isManagementView ? null : totalSubcontractorPay,
+      totalSubcontractorDays: isManagementView ? null : totalSubcontractorDays,
       daysOfWeek,
       activeJobs,
       employeeEntries,
-      subcontractorEntries
+      subcontractorEntries,
+      isManagementView
     });
   } catch (err) {
     next(err);
   }
 };
 
+function stripPayroll(record) {
+  const clone = { ...record };
+  delete clone.totalPay;
+  delete clone.hoursWorked;
+  delete clone.payRate;
+  delete clone.totalHours;
+  delete clone.daysWorked;
+  delete clone.cisDeductions;
+  return clone;
+}

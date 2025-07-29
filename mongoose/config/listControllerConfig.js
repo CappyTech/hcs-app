@@ -11,10 +11,24 @@ module.exports = {
     title: 'Attendances',
     linkField: 'date',
     hideFields: ['_id','createdAt', 'updatedAt','uuid'],
-    fieldOrder: ['date', 'type', 'employeeId', 'subcontractorId', 'hoursWorked', 'payRate', 'dayRate', 'locationId', 'projectId'],
+    fieldOrder: ['date', 'type', 'employeeId', 'subcontractorId', 'hoursWorked', 'dayRate', 'payRate', 'locationId', 'projectId'],
     sortField: 'date',
     sortOrder: 1,
     department: ['management'],
+    fieldTransforms: {
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      projectId: {
+        fromModel: 'project',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/project/read/${matched.uuid}`
+      }
+    }
   },
   contract: {
     title: 'Contracts',
@@ -120,6 +134,7 @@ module.exports = {
         fromModel: 'customer',
         matchField: 'CustomerID',
         returnField: 'Name',
+        linkTo: (row) => `/customer/${row.CustomerID}`,
       }
     },
     tabsby: 'Status',

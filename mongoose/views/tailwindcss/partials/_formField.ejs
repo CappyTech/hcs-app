@@ -109,7 +109,16 @@
         <option value="" <%= !field.isArray ? '' : 'disabled' %>>-- Select --</option>
         <% referenceData[key].forEach(refItem => {
             const value = isUuid ? refItem.uuid : refItem._id;
-            const label = refItem.name || refItem.Name || refItem.InvoiceNumber || refItem.username || refItem.JobRef || refItem.title || value;
+            let label;
+            if (config?.referenceLabelFormat?.[key]) {
+              try {
+                label = config.referenceLabelFormat[key](refItem);
+              } catch (err) {
+                label = '[Invalid Format]';
+              }
+            } else {
+              label = refItem.name || refItem.Name || refItem.InvoiceNumber || refItem.username || refItem.JobRef || refItem.title || value;
+            }
             const selected = field.isArray
               ? (selectedValue || []).map(String).includes(String(value))
               : String(selectedValue) === String(value);

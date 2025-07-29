@@ -26,9 +26,33 @@ module.exports = {
       ['employeeId', 'subcontractorId'],
       ['locationId', 'projectId'],
       ['hoursWorked', 'dayRate']
-    ]
-  },
+    ],
+    referenceFilters: {
+      subcontractorId: { IsSubcontractor: true },
+      employeeId: { status: 'active' },
+      projectId: { $or: [{ Status: 0 }, { Status: 2 }] }
+    },
+    referenceLabelFormat: {
+      // Projects: Show number, name, and status label
+      projectId: (project) => {
+        const statusLabel = {
+          0: 'Pending',
+          1: 'In Progress',
+          2: 'Completed'
+        }[project.Status] || 'NothingisFuckingSet';
 
+        const projectReference = project.Number ?? 'NothingisFuckingSet';
+        const projectName = project.Name ?? 'NothingisFuckingSet';
+        return `#${projectReference} – ${projectName} (${statusLabel})`;
+      },
+
+      // Subcontractors: Show name, postcode, and CIS rate
+      subcontractorId: (supplier) => {
+        const name = supplier.Name ?? '';
+        return `${name}`;
+      }
+    }
+  },
   contract: {
     readOnly: ['uuid', 'createdAt'],
     validators: {

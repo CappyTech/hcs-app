@@ -7,6 +7,7 @@ const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.incl
 const crudController = {};
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 const mongoose = require('mongoose');
+const e = require('express');
 
 // Merge list and CRUD configs
 const getMergedConfig = (modelName) => ({
@@ -55,20 +56,38 @@ const extractSchema = (model, config = {}) => {
 };
 
 // Fetch reference data (for fields with .ref)
-const fetchReferenceData = async (schema) => {
+const fetchReferenceData = async (schema, config = {}) => {
   const referenceData = {};
 
   for (const [key, field] of Object.entries(schema)) {
     if (field.ref && mdb[field.ref]) {
+      const filter = config.referenceFilters?.[key] || {};
       referenceData[key] = await mdb[field.ref]
-        .find()
-        .select('uuid name Name InvoiceNumber Customer jobRef title username')
+        .find(filter)
+        .select('uuid name Name InvoiceNumber Customer jobRef title username Number Status status')
         .lean();
     }
   }
 
   return referenceData;
 };
+
+function validateXorGroups(data, xorGroups) {
+  const errors = [];
+
+  xorGroups.forEach(group => {
+    const filled = group.filter(field => {
+      const val = data[field];
+      return val !== undefined && val !== null && val !== '' && !(Array.isArray(val) && val.length === 0);
+    });
+
+    if (filled.length > 1) {
+      errors.push(`Only one of [${group.join(', ')}] can be filled. Currently filled: ${filled.join(', ')}`);
+    }
+  });
+
+  return errors;
+}
 
 // Register handlers for each Mongoose model
 for (const modelName of Object.keys(mdb)) {
@@ -88,7 +107,7 @@ for (const modelName of Object.keys(mdb)) {
         if (!item) return res.status(404).render(path.join('mongoose', 'error'));
 
         const schema = extractSchema(Model, config);
-        const referenceData = await fetchReferenceData(schema);
+        const referenceData = await fetchReferenceData(schema, config);
 
         // 🔽 Inject documents if the model config says it handles them
         if (config.handlesDocuments) {
@@ -130,7 +149,7 @@ for (const modelName of Object.keys(mdb)) {
     crudController[`create${baseName}`] = async (req, res, next) => {
       if (req.method === 'GET') {
         const schema = extractSchema(Model, config);
-        const referenceData = await fetchReferenceData(schema);
+        const referenceData = await fetchReferenceData(schema, config);
 
         let formData = { ...req.query };
 
@@ -168,17 +187,36 @@ for (const modelName of Object.keys(mdb)) {
           referenceData,
           formAction: `/${modelName}`,
           basePath: modelName,
-          config
+          config,
+          errors: [], // ✅ Now safe
         });
       }
 
       try {
+        if (config?.xorGroups) {
+          const xorErrors = validateXorGroups(req.body, config.xorGroups);
+          if (xorErrors.length > 0) {
+            const schema = extractSchema(Model, config);
+            const referenceData = await fetchReferenceData(schema, config);
+
+            return res.status(400).render(path.join('tailwindcss', 'partials', 'form-update'), {
+              title: `Create ${config.title || baseName}`,
+              formData: req.body,
+              schema,
+              referenceData,
+              formAction: `/${modelName}/${req.params.uuid}`,
+              basePath: modelName,
+              listControllerConfig: listControllerConfig[modelName] || {},
+              config,
+              errors: xorErrors, // ✅ Now safe
+            });
+          }
+        }
         // Clean up submitted data: convert empty strings to undefined
         const cleanedData = {};
         for (const [key, value] of Object.entries(req.body)) {
           cleanedData[key] = value === '' ? undefined : value;
         }
-
         const doc = new Model(cleanedData);
         await doc.save();
         res.redirect(`/${modelName}s`);
@@ -197,7 +235,7 @@ for (const modelName of Object.keys(mdb)) {
           if (!item) return res.status(404).render('mongoose/notFound');
 
           const schema = extractSchema(Model, config);
-          const referenceData = await fetchReferenceData(schema);
+          const referenceData = await fetchReferenceData(schema, config);
 
           return res.render(path.join('tailwindcss', 'partials', 'form-update'), {
             title: `Update ${config.title || baseName}`,
@@ -207,6 +245,8 @@ for (const modelName of Object.keys(mdb)) {
             formAction: `/${modelName}/${item.uuid}`,
             basePath: modelName,
             listControllerConfig: listControllerConfig[modelName] || {},
+            config,
+            errors: [], // ✅ Now safe
           });
         } catch (err) {
           logger.error(`❌ Error fetching ${modelName} for update: ${err.message}`);
@@ -215,6 +255,25 @@ for (const modelName of Object.keys(mdb)) {
       }
 
       try {
+        if (config?.xorGroups) {
+          const xorErrors = validateXorGroups(req.body, config.xorGroups);
+          if (xorErrors.length > 0) {
+            const schema = extractSchema(Model, config);
+            const referenceData = await fetchReferenceData(schema, config);
+
+            return res.status(400).render(path.join('tailwindcss', 'partials', 'form-update'), {
+              title: `Update ${config.title || baseName}`,
+              formData: req.body,
+              schema,
+              referenceData,
+              formAction: `/${modelName}/${req.params.uuid}`,
+              basePath: modelName,
+              listControllerConfig: listControllerConfig[modelName] || {},
+              config,
+              errors: xorErrors, // ✅ Now safe
+            });
+          }
+        }
         // 1) pull down your schema so you know which fields are .ref
         const schema = extractSchema(Model, config);
 
