@@ -48,7 +48,9 @@ for (const [modelName, model] of Object.entries(mdb)) {
 
   const functionName = `list${baseName}`;
   listController[functionName] = async (req, res, next) => {
-    const sortField = req.query.sort || config.sortField || 'createdAt';
+    // Clone config per request to avoid mutating shared object (hideFields, tabs modifications)
+    const runtimeConfig = JSON.parse(JSON.stringify(config || {}));
+  const sortField = req.query.sort || runtimeConfig.sortField || 'createdAt';
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
 
     const searchQuery = req.query.search || '';
@@ -60,16 +62,16 @@ for (const [modelName, model] of Object.entries(mdb)) {
 
     try {
       // Search filtering
-      if (searchQuery && typeof searchQuery === 'string') {
+  if (searchQuery && typeof searchQuery === 'string') {
         const regex = new RegExp(searchQuery, 'i');
 
         let searchFields = [];
-        if (Array.isArray(config.search) && config.search.length > 0) {
-          searchFields = config.search;
-        } else if (Array.isArray(config.fieldOrder) && config.fieldOrder.length > 0) {
-          searchFields = config.fieldOrder;
+        if (Array.isArray(runtimeConfig.search) && runtimeConfig.search.length > 0) {
+          searchFields = runtimeConfig.search;
+        } else if (Array.isArray(runtimeConfig.fieldOrder) && runtimeConfig.fieldOrder.length > 0) {
+          searchFields = runtimeConfig.fieldOrder;
         } else {
-          searchFields = [config.linkField, config.sortField].filter(Boolean);
+          searchFields = [runtimeConfig.linkField, runtimeConfig.sortField].filter(Boolean);
         }
 
         const schemaPaths = model.schema.paths;
@@ -97,9 +99,9 @@ for (const [modelName, model] of Object.entries(mdb)) {
       let tabs = [];
       let activeTab = null;
 
-      if (config.tabsby) {
-        const tabsby = config.tabsby;
-        const tabsValues = Array.isArray(config.tabsValues) ? config.tabsValues : [];
+      if (runtimeConfig.tabsby) {
+        const tabsby = runtimeConfig.tabsby;
+        const tabsValues = Array.isArray(runtimeConfig.tabsValues) ? runtimeConfig.tabsValues : [];
 
         // Only filter by tab if req.query.tab matches one of the tabsValues values
         if (req.query.tab && tabsValues.some(tab => tab.value === req.query.tab)) {
@@ -108,7 +110,7 @@ for (const [modelName, model] of Object.entries(mdb)) {
         }
 
         // Build tabs from config.tabsValues always (even if no data)
-        if (tabsValues.length) {
+  if (tabsValues.length) {
           tabs = tabsValues.map(tab => ({
             value: tab.value,
             label: tab.label,
@@ -120,7 +122,7 @@ for (const [modelName, model] of Object.entries(mdb)) {
         }
 
         // Always exclude tab field from headers
-        config.hideFields = [...(config.hideFields || []), tabsby];
+  runtimeConfig.hideFields = [...(runtimeConfig.hideFields || []), tabsby];
       }
 
       // Count total documents matching current query (including tab filter)
@@ -175,8 +177,8 @@ for (const [modelName, model] of Object.entries(mdb)) {
       }
 
       // Apply fieldTransforms from config
-      if (config.fieldTransforms) {
-        for (const [fieldKey, transform] of Object.entries(config.fieldTransforms)) {
+      if (runtimeConfig.fieldTransforms) {
+        for (const [fieldKey, transform] of Object.entries(runtimeConfig.fieldTransforms)) {
           const { fromModel, matchField, returnField } = transform;
           if (!fromModel || !matchField || !returnField) continue;
 
@@ -216,17 +218,17 @@ for (const [modelName, model] of Object.entries(mdb)) {
         }
       }
 
-      const fieldLinks = { ...(config.fieldLinks || {}) };
+  const fieldLinks = { ...(runtimeConfig.fieldLinks || {}) };
 
-      if (config.fieldTransforms) {
-        for (const [fieldKey, transform] of Object.entries(config.fieldTransforms)) {
+      if (runtimeConfig.fieldTransforms) {
+        for (const [fieldKey, transform] of Object.entries(runtimeConfig.fieldTransforms)) {
           if (typeof transform.linkTo === 'function') {
             fieldLinks[fieldKey] = transform.linkTo;
           }
         }
       }
 
-      const headers = items.length ? generateHeaders(items[0], config) : [];
+  const headers = items.length ? generateHeaders(items[0], runtimeConfig) : [];
 
       // Sanitize rows before sending to EJS
       const rows = items.map(item => {
@@ -238,13 +240,13 @@ for (const [modelName, model] of Object.entries(mdb)) {
 
 
       return res.render(path.join('tailwindcss', 'partials', 'listTable'), {
-        title: config.title || modelName + 's',
+        title: runtimeConfig.title || modelName + 's',
         headers,
         rows,
         basePath: modelName,
-        linkField: config.linkField || 'title',
-        actions: config.actions || [],
-        hasActions: !!(config.actions?.length),
+        linkField: runtimeConfig.linkField || 'title',
+        actions: runtimeConfig.actions || [],
+        hasActions: !!(runtimeConfig.actions?.length),
         modelName,
         query: searchQuery,
         queryParams: req.query,
