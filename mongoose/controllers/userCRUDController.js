@@ -13,7 +13,7 @@ exports.renderRegistrationForm = (req, res, next) => {
 
 exports.registerUser = async (req, res, next) => {
     try {
-        const { username, email, password, role } = req.body;
+  const { username, email, password } = req.body;
         const token = req.body['cf-turnstile-response'];
         const ip = req.ip;
 
@@ -48,7 +48,12 @@ exports.registerUser = async (req, res, next) => {
             return res.redirect('/user/register');
         }
 
-        const assignedRole = role || 'subcontractor';
+    // Enforce default role; ignore any client-supplied role attempt
+    const DEFAULT_ROLE = 'subcontractor';
+    if (req.body.role && req.body.role !== DEFAULT_ROLE) {
+      logger.warn(`Registration role override attempt ignored. Requested='${req.body.role}' enforced='${DEFAULT_ROLE}' user='${username}'`);
+    }
+    const assignedRole = DEFAULT_ROLE;
         const newUser = new mdb.user({
             username,
             email,
