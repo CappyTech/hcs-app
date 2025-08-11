@@ -39,13 +39,18 @@ function getTaxYearStartEnd(year) {
  * @param {number} month - The month (1-12).
  * @returns {Object} - An object containing the start and end dates of the period, 
  *   submission deadline, HMRC update date, and the number of days until these dates.
- *   - periodStart: The start date of the period (YYYY-MM-DD).
- *   - periodEnd: The end date of the period (YYYY-MM-DD).
+ *   - periodStart: Date object for the start of the period.
+ *   - periodEnd: Date object for the end of the period.
  *   - periodStartDisplay: The start date of the period (Do MMMM YYYY).
  *   - periodEndDisplay: The end date of the period (Do MMMM YYYY).
- *   - submissionDeadline: The submission deadline date (Do MMMM YYYY).
- *   - hmrcUpdateDate: The HMRC update date (Do MMMM YYYY).
+ *   - submissionOpenDate: Date object when submissions open (typically the 7th following period end).
+ *   - submissionOpenDateDisplay: Display string (Do MMMM YYYY).
+ *   - submissionOpenDateInDays: Days from today until submissions open (can be negative if passed).
+ *   - submissionDeadline: Date object for the submission deadline (typically the 11th following period end).
+ *   - submissionDeadlineDisplay: Display string (Do MMMM YYYY).
  *   - submissionDeadlineInDays: The number of days until the submission deadline.
+ *   - hmrcUpdateDate: Date object for HMRC update (typically the 16th following period end).
+ *   - hmrcUpdateDateDisplay: Display string (Do MMMM YYYY).
  *   - hmrcUpdateDateInDays: The number of days until the HMRC update date.
  *   - isDST: Whether the period start date is in Daylight Saving Time.
  *   - isEndDST: Whether the period end date is in Daylight Saving Time.
@@ -56,16 +61,27 @@ function getCurrentMonthlyReturn(year, month) {
     const endOfPeriod = startOfPeriod.clone().add(1, 'months').subtract(1, 'days');
     const today = moment.tz('Europe/London');
 
+    // CIS submission window is typically 7th–11th following the period end (which is the 5th)
+    const submissionOpenDate = endOfPeriod.clone().add(2, 'days'); // 7th of the next month
     const submissionDeadline = endOfPeriod.clone().add(6, 'days'); // 11th of the next month
     const hmrcUpdateDate = endOfPeriod.clone().add(11, 'days'); // 16th of the next month
+
+    const submissionOpenDateInDays = submissionOpenDate.diff(today, 'days');
     const submissionDeadlineInDays = submissionDeadline.diff(today, 'days');
     const hmrcUpdateDateInDays = hmrcUpdateDate.diff(today, 'days');
 
     return {
         periodStart: startOfPeriod.toDate(),
         periodEnd: endOfPeriod.toDate(),
+        periodStartDisplay: startOfPeriod.format('Do MMMM YYYY'),
+        periodEndDisplay: endOfPeriod.format('Do MMMM YYYY'),
+        submissionOpenDate: submissionOpenDate.toDate(),
+        submissionOpenDateDisplay: submissionOpenDate.format('Do MMMM YYYY'),
+        submissionOpenDateInDays,
         submissionDeadline: submissionDeadline.toDate(),
+        submissionDeadlineDisplay: submissionDeadline.format('Do MMMM YYYY'),
         hmrcUpdateDate: hmrcUpdateDate.toDate(),
+        hmrcUpdateDateDisplay: hmrcUpdateDate.format('Do MMMM YYYY'),
         submissionDeadlineInDays,
         hmrcUpdateDateInDays,
         isDST: startOfPeriod.isDST(),

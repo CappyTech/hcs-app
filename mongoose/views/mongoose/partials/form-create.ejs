@@ -36,7 +36,7 @@
         <option value="">-- Select --</option>
         <% referenceData[key].forEach(refItem => {
             const value = isUuid ? refItem.uuid : refItem._id;
-            const label = refItem.name || refItem.Name || refItem.InvoiceNumber || refItem.username || refItem.JobRef || refItem.title || value;
+            const label = refItem.name || refItem.Name || refItem.Number || refItem.username || refItem.title || value;
             const selected = selectedValue?.toString() === value?.toString() ? 'selected' : '';
         %>
             <option value="<%= value %>" <%= selected %>><%= label %></option>

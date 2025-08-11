@@ -54,7 +54,7 @@ module.exports = {
     sortField: 'Name',
     sortOrder: 1,
     department: ['kashflow'],
-    deny: ['c', 'd'],
+    deny: ['c', 'u', 'd'],
   },
   employee: {
     title: 'Employees',
@@ -96,9 +96,9 @@ module.exports = {
   invoice: {
     fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerReference', 'Currency', 'NetAmount', 'GrossAmount', 'VATAmount', 'AmountPaid', 'TotalPaidAmount', 'Paid', 'IssuedDate', 'DueDate', 'PaidDate', 'LastPaymentDate', 'Status', 'LineItems', 'PaymentLines', 'DeliveryAddress', 'Address', 'UseCustomDeliveryAddress', 'Permalink', 'PackingSlipPermalink', 'ReminderLetters', 'PreviousNumber', 'NextNumber', 'OverdueDays', 'AutomaticCreditControlEnabled', 'CustomerDiscount', 'EmailCount', 'InvoiceInECMemberState', 'InvoiceOutsideECMemberState', 'SuppressNumber', 'UpdateCustomerAddress'],
     title: 'Invoices',
-    linkField: 'InvoiceNumber',
+    linkField: 'Number',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'InvoiceDBID', 'DeliveryAddress', 'CurrencyCode', 'ExchangeRate', 'PermaLink', 'UseCustomDeliveryAddress', 'ReadableString', 'EstimateCategory', 'CustomerID', 'Paid', 'CISRCNetAmount', 'CISRCVatAmount', 'IsCISReverseCharge', 'Customer', 'SuppressTotal'],
-    sortField: 'InvoiceNumber',
+    sortField: 'Number',
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c', 'd'],
@@ -125,7 +125,7 @@ module.exports = {
     sortOrder: 1,
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ID', 'Date1', 'Date2', 'FieldLinks'],
     department: ['kashflow'],
-    deny: ['c', 'd'],
+    deny: ['c', 'u', 'd'],
     handlesDocuments: true,
     labelOverrides: {
       CustomerID: 'Customer Name',
@@ -151,26 +151,26 @@ module.exports = {
   },
   quote: {
     title: 'Quotes',
-    linkField: 'InvoiceNumber',
+    linkField: 'Number',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'InvoiceDBID', 'SuppressTotal', 'DueDate', 'DeliveryAddress', 'CurrencyCode', 'ExchangeRate', 'PermaLink', 'UseCustomDeliveryAddress', 'ReadableString', 'EstimateCategory', 'CustomerID', 'Paid', 'CISRCNetAmount', 'CISRCVatAmount', 'IsCISReverseCharge', 'Customer'],
     fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'Date', 'GrossAmount', 'NetAmount', 'VATAmount', 'CustomerReference', 'LineItems', 'Permalink', 'PreviousNumber', 'NextNumber', 'Status', 'Category', 'Currency', 'CustomerCode'],
-    sortField: 'InvoiceNumber',
+    sortField: 'Number',
     sortOrder: 1,
     department: ['kashflow'],
-    deny: ['c', 'd'],
+    deny: ['c', 'u', 'd'],
     labelOverrides: {
       InvoiceNumber: 'Quote Ref',
     },
   },
   purchase: {
     title: 'Purchases',
-    linkField: 'InvoiceNumber',
+    linkField: 'Number',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'InvoiceDBID', 'DeliveryAddress', 'CurrencyCode', 'ExchangeRate', 'PermaLink', 'UseCustomDeliveryAddress', 'ReadableString', 'EstimateCategory', 'CustomerID', 'Paid', 'CISRCNetAmount', 'CISRCVatAmount', 'IsCISReverseCharge', 'Customer'],
     fieldOrder: ['Number', 'SupplierId', 'SupplierCode', 'SupplierName', 'SupplierReference', 'Currency', 'DueDate', 'GrossAmount', 'HomeCurrencyGrossAmount', 'IssuedDate', 'FileCount', 'LineItems', 'NetAmount', 'NextNumber', 'OverdueDays', 'PaidDate', 'PaymentLines', 'Permalink', 'PreviousNumber', 'PurchaseInECMemberState', 'Status', 'StockManagementApplicable', 'TotalPaidAmount', 'VATAmount', 'AdditionalFieldValue', 'IsWhtDeductionToBeApplied', 'ReadableString', 'SubmissionDate', 'TaxMonth', 'TaxYear'],
-    sortField: 'InvoiceNumber',
+    sortField: 'Number',
     sortOrder: 1,
     department: ['kashflow'],
-    deny: ['c', 'd'],
+    deny: ['c', 'u', 'd'],
     labelOverrides: {
       InvoiceNumber: 'KashFlow Number',
     },
@@ -181,17 +181,20 @@ module.exports = {
   supplier: {
     title: 'Suppliers',
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Created', 'Updated', 'SupplierID', 'EC', 'TradeBorderType', 'Contact', 'ContactTitle', 'ContactFirstName', 'ContactLastName', 'Telephone', 'Fax', 'Mobile', 'Website', 'CurrencyID', 'PaymentTerms'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'Created', 'Updated', 'SupplierID', 'EC', 'TradeBorderType', 'Contact', 'ContactTitle', 'ContactFirstName', 'ContactLastName', 'Telephone', 'Fax', 'Mobile', 'Website', 'CurrencyID', 'PaymentTerms'],
     fieldOrder: ['Name', 'Id', 'Code', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstPurchaseDate', 'LastPurchaseDate', 'OutstandingBalance', 'TotalPaidAmount', 'DefaultNominalCode', 'VATNumber', 'IsRegisteredInEC', 'IsArchived', 'PaymentTerms', 'Currency', 'Contacts', 'Address', 'DeliveryAddresses', 'DefaultPdfTheme', 'PaymentMethod', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull', 'UniqueEntityNumber', 'VatNumber', 'WithholdingTaxRate', 'WithholdingTaxReferences'],
     sortField: 'Name',
     sortOrder: 1,
     department: ['kashflow', 'construction-industry-scheme'],
-    deny: ['c', 'd'],
-    actions: [{
-      label: 'Change',
-      class: 'warning',
-      href: row => `/supplier/change/${row.uuid}`
-    }],
+    deny: ['c', 'u', 'd'],
+    actions: [
+      {
+        label: 'Change',
+        class: 'warning',
+        href: row => `/supplier/change/${row.uuid}`,
+        icon: 'bi-pencil-square'
+      }
+    ],
     description: {
       manage: 'Manage suppliers and subcontractors.',
     },

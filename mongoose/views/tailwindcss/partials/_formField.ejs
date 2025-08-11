@@ -117,7 +117,7 @@
                 label = '[Invalid Format]';
               }
             } else {
-              label = refItem.name || refItem.Name || refItem.InvoiceNumber || refItem.username || refItem.JobRef || refItem.title || value;
+              label = refItem.name || refItem.Name || refItem.Number || refItem.username || refItem.title || value;
             }
             const selected = field.isArray
               ? (selectedValue || []).map(String).includes(String(value))

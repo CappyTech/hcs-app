@@ -138,6 +138,7 @@ for (const namespace of ['REST', 'INTERNAL']) {
             basePath: modelName,
             referenceData,
             config,
+            actions: config.actions || [],
           });
         } catch (err) {
           logger.error(`❌ Error reading ${modelName}: ${err.message}`);

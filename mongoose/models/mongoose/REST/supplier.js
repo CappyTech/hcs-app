@@ -29,7 +29,12 @@ const supplierSchema = new mongoose.Schema({
   UniqueEntityNumber: String,
   VatNumber: String,
   WithholdingTaxRate: Number,
-  WithholdingTaxReferences: mongoose.Schema.Types.Mixed
+  WithholdingTaxReferences: mongoose.Schema.Types.Mixed,
+  // CIS fields
+  Subcontractor: { type: Boolean, default: false },
+  IsSubcontractor: { type: Boolean, default: false },
+  CISRate: { type: Number, enum: [null, 0, 0.2, 0.3], default: null },
+  CISNumber: { type: String, default: null }
 }, { timestamps: true });
 
 module.exports = {

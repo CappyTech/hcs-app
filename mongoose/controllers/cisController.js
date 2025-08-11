@@ -15,32 +15,44 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       return res.status(400).send('Invalid year or month.');
     }
 
-    const taxYear = taxService.getTaxYearStartEnd(specifiedYear);
-    const currentMonthlyReturn = taxService.getCurrentMonthlyReturn(specifiedYear, specifiedMonth);
+  const taxYear = taxService.getTaxYearStartEnd(specifiedYear);
+  const currentMonthlyReturn = taxService.getCurrentMonthlyReturn(specifiedYear, specifiedMonth);
 
     logger.info(`Rendering CIS Dashboard for Year: ${specifiedYear}, Month: ${specifiedMonth}`);
-
-    const allPurchases = await mdb.REST.purchase.find({
-      Lines: {
-        $all: [
-          { $elemMatch: { ChargeType: 18685897 } },
-          { $elemMatch: { ChargeType: 18685964 } }
-        ]
-      }
-    }).lean();
 
     const periodStart = moment.tz(currentMonthlyReturn.periodStart, 'Europe/London').startOf('day');
     const periodEnd = moment.tz(currentMonthlyReturn.periodEnd, 'Europe/London').endOf('day');
 
-    const purchases = allPurchases.filter(purchase => {
-      return (purchase.Payments || []).some(payment => {
-        const payMoment = moment.tz(payment.PayDate, 'Europe/London');
-        return payMoment.isBetween(periodStart, periodEnd, null, '[]');
-      });
+    // Only include suppliers flagged as subcontractors, fetch CISRate too
+    const subcontractors = await mdb.REST.supplier
+      .find({ $or: [{ IsSubcontractor: true }, { Subcontractor: true }] })
+      .select('Id Name CISRate')
+      .lean();
+    const subcontractorIdSet = new Set(subcontractors.map(s => String(s.Id)));
+
+    // Pull purchases for the specified tax period, matching either stored TaxYear/TaxMonth
+    // or by PaidDate/IssuedDate falling within the period window.
+    const candidatePurchases = await mdb.REST.purchase.find({
+      SupplierId: { $in: Array.from(subcontractorIdSet) },
+      $or: [
+        { TaxYear: specifiedYear, TaxMonth: specifiedMonth },
+        { PaidDate: { $gte: periodStart.toDate(), $lte: periodEnd.toDate() } },
+        { IssuedDate: { $gte: periodStart.toDate(), $lte: periodEnd.toDate() } }
+      ]
+    }).lean();
+
+    // Filter within bounds using PaidDate first, then IssuedDate fallback
+    const purchases = candidatePurchases.filter(purchase => {
+      const date = purchase.PaidDate || purchase.IssuedDate;
+      if (!date) return false;
+      const d = moment.tz(date, 'Europe/London');
+      const inPeriod = d.isBetween(periodStart, periodEnd, null, '[]');
+      const isSubcontractor = subcontractorIdSet.has(String(purchase.SupplierId));
+      return inPeriod && isSubcontractor;
     });
 
     purchases.forEach(purchase => {
-      const pay = purchase.Payments?.[0]?.PayDate;
+      const pay = purchase.PaidDate || purchase.IssuedDate || null;
       if (pay) {
         const payMoment = moment.tz(pay, 'Europe/London');
         purchase.timeZoneTag = payMoment.isDST() ? 'BST' : 'GMT';
@@ -50,33 +62,46 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         purchase.payDate = 'N/A';
       }
     });
-
-    const supplierIDs = [...new Set(purchases.map(p => p.CustomerID))];
-    const suppliers = await mdb.REST.supplier.find({ SupplierID: { $in: supplierIDs } }).sort({ Name: 1 }).lean();
+  const supplierIDs = [...new Set(purchases.map(p => String(p.SupplierId)))];
+  // Limit the suppliers list to subcontractors who have purchases in this period
+  const suppliers = subcontractors
+    .filter(s => supplierIDs.includes(String(s.Id)))
+    .sort((a, b) => (a.Name || '').localeCompare(b.Name || ''));
 
     const supplierTotals = {};
+    // Build a lookup for CISRate by supplierId
+    const cisRateBySupplierId = {};
+    subcontractors.forEach(s => {
+      cisRateBySupplierId[String(s.Id)] = typeof s.CISRate === 'number' ? s.CISRate : 0.2;
+    });
+
     for (const purchase of purchases) {
-      const customerId = String(purchase.CustomerID);
-      supplierTotals[customerId] ??= {
+      const supplierId = String(purchase.SupplierId);
+      supplierTotals[supplierId] ??= {
         grossAmount: 0,
         materialsCost: 0,
         cisDeductions: 0,
         labourCost: 0,
         reverseChargeVAT: 0,
         reverseChargeNet: 0,
+        calculatedCISDeduction: 0,
       };
 
-      for (const line of purchase.Lines) {
+      for (const line of purchase.LineItems || []) {
         const value = parseFloat((line.Rate || 0) * (line.Quantity || 0));
-        if (line.ChargeType === 18685896) supplierTotals[customerId].materialsCost += value;
-        if (line.ChargeType === 18685897) supplierTotals[customerId].labourCost += value;
-        if (line.ChargeType === 18685964) supplierTotals[customerId].cisDeductions += value;
+        if (line.ChargeType === 18685896) supplierTotals[supplierId].materialsCost += value;
+        if (line.ChargeType === 18685897) supplierTotals[supplierId].labourCost += value;
+        if (line.ChargeType === 18685964) supplierTotals[supplierId].cisDeductions += value;
       }
 
-      supplierTotals[customerId].reverseChargeVAT += parseFloat(receipt.CISRCVatAmount || 0);
-      supplierTotals[customerId].reverseChargeNet += parseFloat(receipt.CISRCNetAmount || 0);
-      supplierTotals[customerId].grossAmount =
-        supplierTotals[customerId].materialsCost + supplierTotals[customerId].labourCost;
+      supplierTotals[supplierId].reverseChargeVAT += parseFloat(purchase.CISRCVatAmount || 0);
+      supplierTotals[supplierId].reverseChargeNet += parseFloat(purchase.CISRCNetAmount || 0);
+      supplierTotals[supplierId].grossAmount =
+        supplierTotals[supplierId].materialsCost + supplierTotals[supplierId].labourCost;
+
+      // Calculate CIS deduction using supplier CISRate
+      const cisRate = cisRateBySupplierId[supplierId] ?? 0.2;
+      supplierTotals[supplierId].calculatedCISDeduction = supplierTotals[supplierId].labourCost * cisRate;
     }
 
     const allPurchasesSubmitted = purchases.every(

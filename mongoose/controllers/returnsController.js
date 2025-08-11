@@ -8,35 +8,43 @@ const monthNames = [
   'October','November','December','January','February','March'
 ];
 
-exports.renderMonthlyReturnsForm = async (req,res,next)=>{
+exports.renderMonthlyReturnsForm = async (req, res, next) => {
   try {
-  const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).select('Id Name').lean();
+    const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).select('Id Name').lean();
     const suppliersWithMonths = [];
+
     for (const supplier of suppliers) {
-      const recs = await mdb.receipt.find({ CustomerID: supplier.SupplierID })
-        .select('TaxYear TaxMonth')
+      const purchases = await mdb.REST.purchase
+        .find({ SupplierId: supplier.Id })
+        .select('TaxYear TaxMonth IssuedDate PaidDate')
         .lean();
+
       const receiptsByYear = {};
-      recs.forEach(r=>{
-        if(!r.TaxYear || !r.TaxMonth) return;
-        if(!receiptsByYear[r.TaxYear]) receiptsByYear[r.TaxYear]=[];
-        if(!receiptsByYear[r.TaxYear].includes(r.TaxMonth)) {
-          receiptsByYear[r.TaxYear].push(r.TaxMonth);
-          receiptsByYear[r.TaxYear].sort((a,b)=>monthNames.indexOf(monthNames[a-1]) - monthNames.indexOf(monthNames[b-1]));
+      purchases.forEach(p => {
+        // Prefer explicit tax fields; fallback to PaidDate then IssuedDate
+        const year = p.TaxYear || (p.PaidDate ? moment(p.PaidDate).year() : (p.IssuedDate ? moment(p.IssuedDate).year() : null));
+        const month = p.TaxMonth || (p.PaidDate ? moment(p.PaidDate).month() + 1 : (p.IssuedDate ? moment(p.IssuedDate).month() + 1 : null));
+        if (!year || !month) return;
+        if (!receiptsByYear[year]) receiptsByYear[year] = [];
+        if (!receiptsByYear[year].includes(month)) {
+          receiptsByYear[year].push(month);
+          receiptsByYear[year].sort((a, b) => a - b);
         }
       });
+
       suppliersWithMonths.push({
         supplier,
-        years:Object.keys(receiptsByYear).sort((a,b)=>b-a),
+        years: Object.keys(receiptsByYear).sort((a, b) => b - a),
         receiptsByYear
       });
     }
-    res.render(path.join('tailwindcss', 'cis','monthlyReturnsForm'),{
-      title:'Monthly Returns Form',
+
+    res.render(path.join('tailwindcss', 'cis', 'monthlyReturnsForm'), {
+      title: 'Monthly Returns Form',
       suppliersWithMonths,
       monthNames
     });
-  }catch(err){
+  } catch (err) {
     next(err);
   }
 };
@@ -46,46 +54,40 @@ exports.renderMonthlyReturnsForOne = async (req, res, next) => {
     const { year, uuid } = req.params;
     if (!year || !uuid) return res.status(400).send('Year and Supplier UUID required');
 
-  const supplier = await mdb.REST.supplier.findOne({ uuid }).select('Id Name').lean();
+    const supplier = await mdb.REST.supplier.findOne({ uuid }).select('Id Name').lean();
     if (!supplier) return res.status(404).send('Subcontractor not found');
 
-    const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID, TaxYear: year }).sort({ InvoiceNumber: 1 }).lean();
+    const purchases = await mdb.REST.purchase.find({ SupplierId: supplier.Id, TaxYear: year }).sort({ Number: 1 }).lean();
     const receiptsByMonth = {};
 
-    receipts.forEach(receipt => {
-      const month = receipt.TaxMonth || moment(receipt.InvoiceDate).month() + 1;
+    purchases.forEach(purchase => {
+      const month = purchase.TaxMonth || (purchase.PaidDate ? moment(purchase.PaidDate).month() + 1 : (purchase.IssuedDate ? moment(purchase.IssuedDate).month() + 1 : null));
+      if (!month) return;
       if (!receiptsByMonth[month]) receiptsByMonth[month] = [];
 
-      const lines = Array.isArray(receipt.Lines)
-        ? receipt.Lines
-        : (receipt.Lines?.Line
-            ? Array.isArray(receipt.Lines.Line) ? receipt.Lines.Line : [receipt.Lines.Line]
-            : []);
-
-      const payments = normalizePayments(receipt.Payments);
-      const payDates = payments.map(p => p.PayDate);
-      const payDate = payDates.length > 0 ? payDates[0] : null;
-
-      const labourCost = lines.filter(l => l.ChargeType === 18685897).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0);
-      const materialCost = lines.filter(l => l.ChargeType === 18685896).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0);
-      const cisAmount = Math.abs(lines.filter(l => l.ChargeType === 18685964).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0));
+      const lines = Array.isArray(purchase.LineItems) ? purchase.LineItems : [];
+      const labourCost = lines.filter(l => l.ChargeType === 18685897).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0);
+      const materialCost = lines.filter(l => l.ChargeType === 18685896).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0);
+      const cisAmount = Math.abs(lines.filter(l => l.ChargeType === 18685964).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0));
       const grossAmount = labourCost + materialCost;
       const netAmount = grossAmount - cisAmount;
 
+      const payDate = purchase.PaidDate || null;
+
       receiptsByMonth[month].push({
-        InvoiceNumber: receipt.CustomerReference,
-        KashflowNumber: receipt.InvoiceNumber,
-        InvoiceDate: receipt.InvoiceDate,
+        InvoiceNumber: purchase.Number,
+        KashflowNumber: purchase.Number,
+        InvoiceDate: purchase.IssuedDate,
         PayDate: payDate,
         GrossAmount: grossAmount,
         LabourCost: labourCost,
         MaterialCost: materialCost,
         CISAmount: cisAmount,
         NetAmount: netAmount,
-        SubmissionDate: receipt.SubmissionDate,
-        TaxMonth: receipt.TaxMonth,
-        TaxYear: receipt.TaxYear,
-        ReverseCharge: receipt.ReverseCharge || 0
+        SubmissionDate: purchase.SubmissionDate,
+        TaxMonth: purchase.TaxMonth,
+        TaxYear: purchase.TaxYear,
+        ReverseCharge: purchase.CISRCVatAmount || 0
       });
     });
 
@@ -107,48 +109,42 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
     const { month, year } = req.params;
     if (!month || !year) return res.status(400).send('Month and Year required');
 
-  const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).lean();
+    const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).lean();
     const subcontractors = [];
 
     for (const supplier of suppliers) {
-      const receipts = await mdb.receipt.find({
-        CustomerID: supplier.SupplierID,
+      const purchases = await mdb.REST.purchase.find({
+        SupplierId: supplier.Id,
         TaxYear: year,
         TaxMonth: +month
-      }).sort({ InvoiceNumber: 1 }).lean();
+      }).sort({ Number: 1 }).lean();
 
-      if (receipts.length === 0) continue;
+      if (purchases.length === 0) continue;
 
-      const invoices = receipts.map(receipt => {
-        const lines = Array.isArray(receipt.Lines)
-          ? receipt.Lines
-          : (receipt.Lines?.Line
-              ? Array.isArray(receipt.Lines.Line) ? receipt.Lines.Line : [receipt.Lines.Line]
-              : []);
+      const invoices = purchases.map(purchase => {
+        const lines = Array.isArray(purchase.LineItems) ? purchase.LineItems : [];
+        const payDate = purchase.PaidDate || null;
 
-        const payments = normalizePayments(receipt.Payments);
-        const payDate = payments.length > 0 ? payments[0].PayDate : null;
-
-        const labourCost = lines.filter(l => l.ChargeType === 18685897).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0);
-        const materialCost = lines.filter(l => l.ChargeType === 18685896).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0);
-        const cisAmount = Math.abs(lines.filter(l => l.ChargeType === 18685964).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0));
+        const labourCost = lines.filter(l => l.ChargeType === 18685897).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0);
+        const materialCost = lines.filter(l => l.ChargeType === 18685896).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0);
+        const cisAmount = Math.abs(lines.filter(l => l.ChargeType === 18685964).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0));
         const grossAmount = labourCost + materialCost;
         const netAmount = grossAmount - cisAmount;
 
         return {
-          invoiceNumber: receipt.CustomerReference,
-          kashflowNumber: receipt.InvoiceNumber,
-          invoiceDate: receipt.InvoiceDate,
+          invoiceNumber: purchase.Number,
+          kashflowNumber: purchase.Number,
+          invoiceDate: purchase.IssuedDate,
           remittanceDate: payDate,
           grossAmount,
           labourCost,
           materialCost,
           cisAmount,
           netAmount,
-          reverseCharge: receipt.ReverseCharge || 0,
-          submissionDate: receipt.SubmissionDate,
-          month: receipt.TaxMonth,
-          year: receipt.TaxYear
+          reverseCharge: purchase.CISRCVatAmount || 0,
+          submissionDate: purchase.SubmissionDate,
+          month: purchase.TaxMonth,
+          year: purchase.TaxYear
         };
       });
 
@@ -176,33 +172,32 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
   }
 };
 
-exports.renderMonthlyReturns = async (req,res,next)=>{
+exports.renderMonthlyReturns = async (req, res, next) => {
   try {
     const { month, year, uuid } = req.params;
-    if(!month || !year || !uuid) return res.status(400).send('Month, Year and Supplier UUID required');
-  const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
-    if(!supplier) {
+    if (!month || !year || !uuid) return res.status(400).send('Month, Year and Supplier UUID required');
+    const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
+    if (!supplier) {
       req.flash('error', 'Supplier not found.');
       return res.redirect('/suppliers');
     }
-    const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID, TaxYear: year, TaxMonth: month }).sort({ InvoiceNumber: 1 }).lean();
+    const receipts = await mdb.REST.purchase.find({ SupplierId: supplier.Id, TaxYear: year, TaxMonth: +month }).sort({ Number: 1 }).lean();
     const receiptsByMonth = {};
-    receipts.forEach(receipt=>{
-      const m = receipt.TaxMonth || moment(receipt.InvoiceDate).month()+1;
+    receipts.forEach(receipt => {
+      const m = receipt.TaxMonth || (receipt.PaidDate ? moment(receipt.PaidDate).month() + 1 : (receipt.IssuedDate ? moment(receipt.IssuedDate).month() + 1 : null));
       if(!receiptsByMonth[m]) receiptsByMonth[m]=[];
-      const lines = Array.isArray(receipt.Lines) ? receipt.Lines : (receipt.Lines?.Line ? (Array.isArray(receipt.Lines.Line)?receipt.Lines.Line:[receipt.Lines.Line]) : []);
-      const payments = normalizePayments(receipt.Payments);
-      const labourCost = lines.filter(l=>l.ChargeType===18685897).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0);
-      const materialCost = lines.filter(l=>l.ChargeType===18685896).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0);
-      const cisAmount = Math.abs(lines.filter(l=>l.ChargeType===18685964).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0));
+      const lines = Array.isArray(receipt.LineItems) ? receipt.LineItems : [];
+      const labourCost = lines.filter(l => l.ChargeType === 18685897).reduce((s, l) => s + (((+l.Rate) * (+l.Quantity)) || 0), 0);
+      const materialCost = lines.filter(l => l.ChargeType === 18685896).reduce((s, l) => s + (((+l.Rate) * (+l.Quantity)) || 0), 0);
+      const cisAmount = Math.abs(lines.filter(l => l.ChargeType === 18685964).reduce((s, l) => s + (((+l.Rate) * (+l.Quantity)) || 0), 0));
       const grossAmount = labourCost + materialCost;
       const netAmount = grossAmount - cisAmount;
-      const payDates = payments.map(p => p.PayDate);
+      const payDates = receipt.PaidDate ? [receipt.PaidDate] : [];
       const payDate = payDates.length > 0 ? payDates[0] : null;
       receiptsByMonth[m].push({
-        InvoiceNumber: receipt.CustomerReference,
-        KashflowNumber: receipt.InvoiceNumber,
-        InvoiceDate: receipt.InvoiceDate,
+        InvoiceNumber: receipt.Number,
+        KashflowNumber: receipt.Number,
+        InvoiceDate: receipt.IssuedDate,
         PayDates: payDates,
         PayDate: payDate,
         GrossAmount: grossAmount,
@@ -227,30 +222,29 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
   }
 };
 
-exports.renderYearlyReturns = async (req,res,next)=>{
+exports.renderYearlyReturns = async (req, res, next) => {
   try {
     const { year, uuid } = req.params;
-    if(!year || !uuid) return res.status(400).send('Year and Supplier UUID required');
-  const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
-    if(!supplier) return res.status(404).send('Supplier not found');
-    const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID, TaxYear: year }).sort({ InvoiceNumber:1 }).lean();
+    if (!year || !uuid) return res.status(400).send('Year and Supplier UUID required');
+    const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
+    if (!supplier) return res.status(404).send('Supplier not found');
+    const receipts = await mdb.REST.purchase.find({ SupplierId: supplier.Id, TaxYear: year }).sort({ Number: 1 }).lean();
     const receiptsByMonth = {};
-    receipts.forEach(receipt=>{
-      const m = receipt.TaxMonth || moment(receipt.InvoiceDate).month()+1;
+    receipts.forEach(receipt => {
+      const m = receipt.TaxMonth || (receipt.PaidDate ? moment(receipt.PaidDate).month() + 1 : (receipt.IssuedDate ? moment(receipt.IssuedDate).month() + 1 : null));
       if(!receiptsByMonth[m]) receiptsByMonth[m]=[];
-      const lines = Array.isArray(receipt.Lines)?receipt.Lines:(receipt.Lines?.Line?(Array.isArray(receipt.Lines.Line)?receipt.Lines.Line:[receipt.Lines.Line]):[]);
-      const payments = normalizePayments(receipt.Payments);
-      const labourCost = lines.filter(l=>l.ChargeType===18685897).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0);
-      const materialCost = lines.filter(l=>l.ChargeType===18685896).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0);
-      const cisAmount = Math.abs(lines.filter(l=>l.ChargeType===18685964).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0));
+      const lines = Array.isArray(receipt.LineItems) ? receipt.LineItems : [];
+      const labourCost = lines.filter(l => l.ChargeType === 18685897).reduce((s, l) => s + (((+l.Rate) * (+l.Quantity)) || 0), 0);
+      const materialCost = lines.filter(l => l.ChargeType === 18685896).reduce((s, l) => s + (((+l.Rate) * (+l.Quantity)) || 0), 0);
+      const cisAmount = Math.abs(lines.filter(l => l.ChargeType === 18685964).reduce((s, l) => s + (((+l.Rate) * (+l.Quantity)) || 0), 0));
       const grossAmount = labourCost + materialCost;
       const netAmount = grossAmount - cisAmount;
-      const payDates = payments.map(p => p.PayDate);
+      const payDates = receipt.PaidDate ? [receipt.PaidDate] : [];
       const payDate = payDates.length > 0 ? payDates[0] : null;
       receiptsByMonth[m].push({
-        InvoiceNumber: receipt.CustomerReference,
-        KashflowNumber: receipt.InvoiceNumber,
-        InvoiceDate: receipt.InvoiceDate,
+        InvoiceNumber: receipt.Number,
+        KashflowNumber: receipt.Number,
+        InvoiceDate: receipt.IssuedDate,
         PayDates: payDates,
         PayDate: payDate,
         Gross: grossAmount,
@@ -279,47 +273,41 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
     const { year } = req.params;
     if (!year) return res.status(400).send('Year required');
 
-  const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).lean();
+    const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).lean();
     const subcontractors = [];
 
     for (const supplier of suppliers) {
-      const receipts = await mdb.receipt.find({
-        CustomerID: supplier.SupplierID,
+      const purchases = await mdb.REST.purchase.find({
+        SupplierId: supplier.Id,
         TaxYear: year
-      }).sort({ InvoiceNumber: 1 }).lean();
+      }).sort({ Number: 1 }).lean();
 
-      if (receipts.length === 0) continue;
+      if (purchases.length === 0) continue;
 
-      const invoices = receipts.map(receipt => {
-        const lines = Array.isArray(receipt.Lines)
-          ? receipt.Lines
-          : (receipt.Lines?.Line
-              ? Array.isArray(receipt.Lines.Line) ? receipt.Lines.Line : [receipt.Lines.Line]
-              : []);
+      const invoices = purchases.map(purchase => {
+        const lines = Array.isArray(purchase.LineItems) ? purchase.LineItems : [];
+        const payDate = purchase.PaidDate || null;
 
-        const payments = normalizePayments(receipt.Payments);
-        const payDate = payments.length > 0 ? payments[0].PayDate : null;
-
-        const labourCost = lines.filter(l => l.ChargeType === 18685897).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0);
-        const materialCost = lines.filter(l => l.ChargeType === 18685896).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0);
-        const cisAmount = Math.abs(lines.filter(l => l.ChargeType === 18685964).reduce((s, l) => s + (+l.Rate * +l.Quantity || 0), 0));
+        const labourCost = lines.filter(l => l.ChargeType === 18685897).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0);
+        const materialCost = lines.filter(l => l.ChargeType === 18685896).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0);
+        const cisAmount = Math.abs(lines.filter(l => l.ChargeType === 18685964).reduce((s, l) => s + ((+l.Rate) * (+l.Quantity) || 0), 0));
         const grossAmount = labourCost + materialCost;
         const netAmount = grossAmount - cisAmount;
 
         return {
-          invoiceNumber: receipt.CustomerReference,
-          kashflowNumber: receipt.InvoiceNumber,
-          invoiceDate: receipt.InvoiceDate,
+          invoiceNumber: purchase.Number,
+          kashflowNumber: purchase.Number,
+          invoiceDate: purchase.IssuedDate,
           remittanceDate: payDate,
           grossAmount,
           labourCost,
           materialCost,
           cisAmount,
           netAmount,
-          reverseCharge: receipt.ReverseCharge || 0,
-          submissionDate: receipt.SubmissionDate,
-          month: receipt.TaxMonth,
-          year: receipt.TaxYear
+          reverseCharge: purchase.CISRCVatAmount || 0,
+          submissionDate: purchase.SubmissionDate,
+          month: purchase.TaxMonth,
+          year: purchase.TaxYear
         };
       });
 
@@ -335,7 +323,7 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
       });
     }
 
-    res.render(path.join('tailwindcss', 'cis', 'yearlyReturnsForAll'), {
+  res.render(path.join('tailwindcss', 'cis', 'yearlyReturnsForAll'), {
       title: `Yearly Returns for ${year}`,
       year,
       subcontractors,

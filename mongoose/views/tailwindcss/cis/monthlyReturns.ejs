@@ -37,9 +37,9 @@
   <% for (let monthIndex = 1; monthIndex <= 12; monthIndex++) { %>
     <% 
       const monthKey = monthIndex.toString(); 
-      let receipts = receiptsByMonth[monthKey] || []; 
-      receipts = receipts.sort((a, b) => new Date(a.PayDate) - new Date(b.PayDate));
-      const hasReceipts = receipts.length > 0; 
+  let receipts = receiptsByMonth[monthKey] || []; 
+  receipts = receipts.sort((a, b) => new Date(a.PayDate) - new Date(b.PayDate));
+  const hasReceipts = receipts.length > 0; 
     %>
     <% if (hasReceipts) { %>
       <table class="min-w-full border-collapse border border-gray-300 mb-10 print:table <%= pageBreakMonths.includes(monthIndex) ? 'print:break-after-page' : '' %>">
@@ -74,9 +74,9 @@
             receipts.forEach(receipt => { 
           %>
           <tr class="even:bg-gray-50">
-            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.InvoiceNumber %></td>
-            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.KashflowNumber %></td>
-            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= slimDateTime(receipt.InvoiceDate) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.InvoiceNumber || receipt.Number %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.KashflowNumber || receipt.Number %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= slimDateTime(receipt.InvoiceDate || receipt.IssuedDate) %></td>
             <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= slimDateTime(receipt.PayDate) %></td>
             <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.GrossAmount) %></td>
             <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.LabourCost) %></td>

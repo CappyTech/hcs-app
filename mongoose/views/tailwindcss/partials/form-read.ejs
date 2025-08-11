@@ -6,26 +6,36 @@
 
     <% if (isAuthenticated && isAdmin) { %>
       <div class="flex space-x-2">
-        <% if (!config?.deny?.includes('u')) { %>
-          <a href="/<%= basePath %>/update/<%= item.uuid %>" 
-            class="inline-flex items-center justify-center rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 transition">
-            <i class="bi bi-arrow-clockwise"></i>
-            <span class="ml-1 hidden sm:inline">Update</span>
-          </a>
-        <% } %>
-        <% if (!config?.deny?.includes('d')) { %>
-          <a href="/<%= basePath %>/delete/<%= item.uuid %>" 
-            class="inline-flex items-center justify-center rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 transition">
-            <i class="bi bi-trash-fill"></i>
-            <span class="ml-1 hidden sm:inline">Delete</span>
-          </a>
-        <% } %>
-        <% if (config?.handlesDocuments) { %>
-          <a href="/<%= basePath %>/upload/<%= item.uuid %>" 
-            class="inline-flex items-center justify-center rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 transition">
-            <i class="bi bi-upload"></i>
-            <span class="ml-1 hidden sm:inline">Upload Documents</span>
-          </a>
+        <% if (Array.isArray(actions) && actions.length > 0) { %>
+          <% actions.forEach(action => { %>
+            <a href="<%= typeof action.href === 'function' ? action.href(item) : action.href %>"
+              class="inline-flex items-center justify-center rounded bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-600 px-3 py-1 text-sm text-white hover:bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-700 transition">
+              <% if (action.icon) { %><i class="bi <%= action.icon %>"></i><% } %>
+              <span class="ml-1 hidden sm:inline"><%= action.label %></span>
+            </a>
+          <% }) %>
+        <% } else { %>
+          <% if (!config?.deny?.includes('u')) { %>
+            <a href="/<%= basePath %>/update/<%= item.uuid %>" 
+              class="inline-flex items-center justify-center rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 transition">
+              <i class="bi bi-arrow-clockwise"></i>
+              <span class="ml-1 hidden sm:inline">Update</span>
+            </a>
+          <% } %>
+          <% if (!config?.deny?.includes('d')) { %>
+            <a href="/<%= basePath %>/delete/<%= item.uuid %>" 
+              class="inline-flex items-center justify-center rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 transition">
+              <i class="bi bi-trash-fill"></i>
+              <span class="ml-1 hidden sm:inline">Delete</span>
+            </a>
+          <% } %>
+          <% if (config?.handlesDocuments) { %>
+            <a href="/<%= basePath %>/upload/<%= item.uuid %>" 
+              class="inline-flex items-center justify-center rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 transition">
+              <i class="bi bi-upload"></i>
+              <span class="ml-1 hidden sm:inline">Upload Documents</span>
+            </a>
+          <% } %>
         <% } %>
       </div>
     <% } %>

@@ -38,7 +38,7 @@
             <% if (Object.keys(dailyRecords).length > 0) { %>
               <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
                 <% const isReceipt = recordId.startsWith('receipt-'); %>
-                <% const href = isReceipt ? `/receipt/read/${recordId.split('receipt-')[1]}` : `/attendance/read/${record.uuid}`; %>
+                <% const href = isReceipt ? `/purchase/read/${recordId.split('receipt-')[1]}` : `/attendance/read/${record.uuid}`; %>
 
                 <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
                   <a 
