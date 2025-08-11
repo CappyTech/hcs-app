@@ -8,7 +8,7 @@ const taxService = require('../../services/taxService');
  */
 const getAttendanceForDay = async (date) => {
   try {
-    return await mdb.attendance
+    return await mdb.INTERNAL.attendance
       .find({ date })
       .populate('employeeId')
       .populate('locationId')
@@ -25,7 +25,7 @@ const getAttendanceForDay = async (date) => {
 const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
   try {
     const [attendanceRecords, allEmployees, allSubcontractors, paidReceipts] = await Promise.all([
-      mdb.attendance
+      mdb.INTERNAL.attendance
         .find({
           date: {
             $gte: payrollWeekStart.format('YYYY-MM-DD'),
@@ -37,11 +37,11 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
         .populate('contractAssignmentId')
         .sort({ date: 1 }),
 
-      mdb.employee.find({ status: 'active' }),
+      mdb.INTERNAL.employee.find({ status: 'active' }),
 
-      mdb.supplier.find({ IsSubcontractor: true }),
+      mdb.REST.supplier.find({ IsSubcontractor: true }),
 
-      mdb.receipt.find({
+      mdb.REST.purchase.find({
         Paid: true,
         AmountPaid: { $gt: 0 },
         InvoiceDate: {
@@ -251,7 +251,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     daysOfWeek
   } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidReceipts);
 
-  const activeJobs = await mdb.contract.find({
+  const activeJobs = await mdb.INTERNAL.contract.find({
     startDate: { $lte: endDate.toDate() },
     $or: [{ endDate: null }, { endDate: { $gte: payrollWeekStart.toDate() } }],
     status: { $ne: 'archived' }

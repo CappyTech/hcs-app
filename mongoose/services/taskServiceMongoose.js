@@ -1,7 +1,7 @@
 const mdb = require('./mongooseDatabaseService');
 
 async function createTask({ title, description, userId, jobId = null, dueDate = null, recurrence = 'none' }) {
-  const task = new mdb.task({ title, description, userId, jobId, dueDate, recurrence });
+  const task = new mdb.INTERNAL.task({ title, description, userId, jobId, dueDate, recurrence });
   await task.save();
   return task;
 }
@@ -16,13 +16,13 @@ function advanceDate(date, recurrence) {
 
 async function getPendingTasksForUser(userId) {
   if (!userId) return [];
-  const tasks = await mdb.task.find({ userId, completed: false }).sort({ dueDate: 1 });
+  const tasks = await mdb.INTERNAL.task.find({ userId, completed: false }).sort({ dueDate: 1 });
   return tasks.map(t => t.toObject());
 }
 
 async function processRecurringTasks() {
   const now = new Date();
-  const recurringTasks = await mdb.task.find({
+  const recurringTasks = await mdb.INTERNAL.task.find({
     recurrence: { $ne: 'none' },
     dueDate: { $lt: now },
     completed: false
@@ -32,7 +32,7 @@ async function processRecurringTasks() {
     const nextDate = advanceDate(task.dueDate, task.recurrence);
 
     // Check if a future task already exists
-    const existing = await mdb.task.findOne({
+  const existing = await mdb.INTERNAL.task.findOne({
       userId: task.userId,
       title: task.title,
       dueDate: { $gte: nextDate },

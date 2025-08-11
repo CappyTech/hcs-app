@@ -34,4 +34,7 @@ employeeSchema.pre('validate', function (next) {
   next();
 });
 
-module.exports = mongoose.model('employee', employeeSchema);
+module.exports = {
+  modelName: 'employee',
+  schema: employeeSchema
+};

@@ -10,7 +10,7 @@ const monthNames = [
 
 exports.renderMonthlyReturnsForm = async (req,res,next)=>{
   try {
-    const suppliers = await mdb.supplier.find({ IsSubcontractor: true }).lean();
+  const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).select('Id Name').lean();
     const suppliersWithMonths = [];
     for (const supplier of suppliers) {
       const recs = await mdb.receipt.find({ CustomerID: supplier.SupplierID })
@@ -46,7 +46,7 @@ exports.renderMonthlyReturnsForOne = async (req, res, next) => {
     const { year, uuid } = req.params;
     if (!year || !uuid) return res.status(400).send('Year and Supplier UUID required');
 
-    const supplier = await mdb.supplier.findOne({ uuid }).lean();
+  const supplier = await mdb.REST.supplier.findOne({ uuid }).select('Id Name').lean();
     if (!supplier) return res.status(404).send('Subcontractor not found');
 
     const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID, TaxYear: year }).sort({ InvoiceNumber: 1 }).lean();
@@ -107,7 +107,7 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
     const { month, year } = req.params;
     if (!month || !year) return res.status(400).send('Month and Year required');
 
-    const suppliers = await mdb.supplier.find({ IsSubcontractor: true }).lean();
+  const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).lean();
     const subcontractors = [];
 
     for (const supplier of suppliers) {
@@ -180,7 +180,7 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
   try {
     const { month, year, uuid } = req.params;
     if(!month || !year || !uuid) return res.status(400).send('Month, Year and Supplier UUID required');
-    const supplier = await mdb.supplier.findOne({ uuid }).lean();
+  const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
     if(!supplier) {
       req.flash('error', 'Supplier not found.');
       return res.redirect('/suppliers');
@@ -231,7 +231,7 @@ exports.renderYearlyReturns = async (req,res,next)=>{
   try {
     const { year, uuid } = req.params;
     if(!year || !uuid) return res.status(400).send('Year and Supplier UUID required');
-    const supplier = await mdb.supplier.findOne({ uuid }).lean();
+  const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
     if(!supplier) return res.status(404).send('Supplier not found');
     const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID, TaxYear: year }).sort({ InvoiceNumber:1 }).lean();
     const receiptsByMonth = {};
@@ -279,7 +279,7 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
     const { year } = req.params;
     if (!year) return res.status(400).send('Year required');
 
-    const suppliers = await mdb.supplier.find({ IsSubcontractor: true }).lean();
+  const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).lean();
     const subcontractors = [];
 
     for (const supplier of suppliers) {

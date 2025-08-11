@@ -89,263 +89,269 @@ function validateXorGroups(data, xorGroups) {
   return errors;
 }
 
-// Register handlers for each Mongoose model
-for (const modelName of Object.keys(mdb)) {
-  const model = mdb[modelName];
-  if (typeof model?.find !== 'function') continue;
+// Register handlers for both REST and INTERNAL namespaces
+for (const namespace of ['REST', 'INTERNAL']) {
+  if (!mdb[namespace]) continue;
+  for (const modelName of Object.keys(mdb[namespace])) {
+    const model = mdb[namespace][modelName];
+    if (typeof model?.find !== 'function') continue;
 
-  const Model = model;
-  const baseName = capitalize(modelName);
-  const config = getMergedConfig(modelName);
+    const Model = model;
+    const baseName = capitalize(modelName);
+    const config = getMergedConfig(modelName);
 
-
-  if (!denyGuard(config, 'r')) {
-    // READ
-    crudController[`read${baseName}`] = async (req, res, next) => {
-      try {
-        const item = await Model.findOne({ uuid: req.params.uuid }).lean();
-        if (!item) return res.status(404).render(path.join('mongoose', 'error'));
-
-        const schema = extractSchema(Model, config);
-        const referenceData = await fetchReferenceData(schema, config);
-
-        // 🔽 Inject documents if the model config says it handles them
-        if (config.handlesDocuments) {
-          const fs = require('fs').promises;
-          const sanitize = require('sanitize-filename');
-          const dirName = sanitize(item.uuid.toString());
-          const dirPath = path.join(__dirname, '../../public', modelName, dirName);
-
-          try {
-            const allFiles = await fs.readdir(dirPath);
-            item.documents = allFiles
-              .filter(name => !name.startsWith('.'))
-              .map(name => ({
-                name,
-                url: `/${modelName}/${encodeURIComponent(item.uuid)}/view/${encodeURIComponent(name)}`
-              }));
-          } catch (err) {
-            logger.warn(`⚠️ No documents found for ${modelName}/${dirName}`);
-            item.documents = [];
-          }
-        }
-
-        res.render(path.join('tailwindcss', 'partials', 'form-read'), {
-          title: `${config.title || baseName} Details`,
-          item,
-          schema,
-          basePath: modelName,
-          referenceData,
-          config,
-        });
-      } catch (err) {
-        logger.error(`❌ Error reading ${modelName}: ${err.message}`);
-        next(err);
-      }
-    };
-  }
-  if (!denyGuard(config, 'c')) {
-    // CREATE
-    crudController[`create${baseName}`] = async (req, res, next) => {
-      if (req.method === 'GET') {
-        const schema = extractSchema(Model, config);
-        const referenceData = await fetchReferenceData(schema, config);
-
-        let formData = { ...req.query };
-
-        // 1. Attempt direct UUID → ObjectId mapping for any known .ref fields
-        for (const key of Object.keys(formData)) {
-          const refField = schema[key];
-          if (refField?.ref && mdb[refField.ref]) {
-            const candidate = await mdb[refField.ref]
-              .findOne({ uuid: formData[key] })
-              .select('_id')
-              .lean();
-
-            if (candidate) {
-              formData[key] = candidate._id.toString();
-            }
-          }
-        }
-
-        // 2. Fallback: if just ?uuid=... is passed, try matching it to employee/supplier
-        if (req.query.uuid) {
-          const employee = await mdb.employee.findOne({ uuid: req.query.uuid }).select('_id').lean();
-          const subcontractor = await mdb.supplier.findOne({ uuid: req.query.uuid }).select('_id').lean();
-
-          if (employee && !formData.employeeId) {
-            formData.employeeId = employee._id.toString();
-          } else if (subcontractor && !formData.subcontractorId) {
-            formData.subcontractorId = subcontractor._id.toString();
-          }
-        }
-
-        return res.render(path.join('tailwindcss', 'partials', 'form-create'), {
-          title: `Create ${config.title || baseName}`,
-          formData,
-          schema,
-          referenceData,
-          formAction: `/${modelName}`,
-          basePath: modelName,
-          config,
-          errors: [], // ✅ Now safe
-        });
-      }
-
-      try {
-        if (config?.xorGroups) {
-          const xorErrors = validateXorGroups(req.body, config.xorGroups);
-          if (xorErrors.length > 0) {
-            const schema = extractSchema(Model, config);
-            const referenceData = await fetchReferenceData(schema, config);
-
-            return res.status(400).render(path.join('tailwindcss', 'partials', 'form-update'), {
-              title: `Create ${config.title || baseName}`,
-              formData: req.body,
-              schema,
-              referenceData,
-              formAction: `/${modelName}/${req.params.uuid}`,
-              basePath: modelName,
-              listControllerConfig: listControllerConfig[modelName] || {},
-              config,
-              errors: xorErrors, // ✅ Now safe
-            });
-          }
-        }
-        // Clean up submitted data: convert empty strings to undefined
-        const cleanedData = {};
-        for (const [key, value] of Object.entries(req.body)) {
-          cleanedData[key] = value === '' ? undefined : value;
-        }
-        const doc = new Model(cleanedData);
-        await doc.save();
-        res.redirect(`/${modelName}s`);
-      } catch (err) {
-        logger.error(`❌ Error creating ${modelName}: ${err.message}`);
-        next(err);
-      }
-    };
-  }
-  if (!denyGuard(config, 'u')) {
-    // UPDATE
-    crudController[`update${baseName}`] = async (req, res, next) => {
-      if (req.method === 'GET') {
-        try {
-          const item = await Model.findOne({ uuid: req.params.uuid }).lean();
-          if (!item) return res.status(404).render('mongoose/notFound');
-
-          const schema = extractSchema(Model, config);
-          const referenceData = await fetchReferenceData(schema, config);
-
-          return res.render(path.join('tailwindcss', 'partials', 'form-update'), {
-            title: `Update ${config.title || baseName}`,
-            formData: item,
-            schema,
-            referenceData,
-            formAction: `/${modelName}/${item.uuid}`,
-            basePath: modelName,
-            listControllerConfig: listControllerConfig[modelName] || {},
-            config,
-            errors: [], // ✅ Now safe
-          });
-        } catch (err) {
-          logger.error(`❌ Error fetching ${modelName} for update: ${err.message}`);
-          return next(err);
-        }
-      }
-
-      try {
-        if (config?.xorGroups) {
-          const xorErrors = validateXorGroups(req.body, config.xorGroups);
-          if (xorErrors.length > 0) {
-            const schema = extractSchema(Model, config);
-            const referenceData = await fetchReferenceData(schema, config);
-
-            return res.status(400).render(path.join('tailwindcss', 'partials', 'form-update'), {
-              title: `Update ${config.title || baseName}`,
-              formData: req.body,
-              schema,
-              referenceData,
-              formAction: `/${modelName}/${req.params.uuid}`,
-              basePath: modelName,
-              listControllerConfig: listControllerConfig[modelName] || {},
-              config,
-              errors: xorErrors, // ✅ Now safe
-            });
-          }
-        }
-        // 1) pull down your schema so you know which fields are .ref
-        const schema = extractSchema(Model, config);
-
-        // 2) clean + map
-        const cleaned = {};
-        for (const [key, val] of Object.entries(req.body)) {
-          // drop empty strings
-          if (val === '') continue;
-
-          // if this field is a ref, and it's not already a valid ObjectId…
-          if (
-            schema[key]?.ref &&
-            typeof val === 'string' &&
-            !mongoose.Types.ObjectId.isValid(val)
-          ) {
-            // try to find the doc by UUID
-            const candidate = await mdb[schema[key].ref]
-              .findOne({ uuid: val })
-              .select('_id')
-              .lean();
-            if (candidate) {
-              cleaned[key] = candidate._id;
-              continue;
-            }
-          }
-
-          // otherwise just use it as-is
-          cleaned[key] = val;
-        }
-
-        // 3) actually update, dropping any undefined keys
-        await Model.findOneAndUpdate(
-          { uuid: req.params.uuid },
-          cleaned,
-          { new: true, runValidators: true, omitUndefined: true }
-        );
-        res.redirect(`/${modelName}s`);
-      } catch (err) {
-        logger.error(`❌ Error updating ${modelName}: ${err.message}`);
-        next(err);
-      }
-    };
-  }
-  if (!denyGuard(config, 'd')) {
-    // DELETE
-    crudController[`delete${baseName}`] = async (req, res, next) => {
-      if (req.method === 'GET') {
+    if (!denyGuard(config, 'r')) {
+      // READ
+      crudController[`read${baseName}`] = async (req, res, next) => {
         try {
           const item = await Model.findOne({ uuid: req.params.uuid }).lean();
           if (!item) return res.status(404).render(path.join('mongoose', 'error'));
 
-          return res.render(path.join('tailwindcss', 'partials', 'form-delete'), {
-            title: `Delete ${config.title || baseName}`,
+          const schema = extractSchema(Model, config);
+          const referenceData = await fetchReferenceData(schema, config);
+
+          // 🔽 Inject documents if the model config says it handles them
+          if (config.handlesDocuments) {
+            const fs = require('fs').promises;
+            const sanitize = require('sanitize-filename');
+            const dirName = sanitize(item.uuid.toString());
+            const dirPath = path.join(__dirname, '../../public', modelName, dirName);
+
+            try {
+              const allFiles = await fs.readdir(dirPath);
+              item.documents = allFiles
+                .filter(name => !name.startsWith('.'))
+                .map(name => ({
+                  name,
+                  url: `/${modelName}/${encodeURIComponent(item.uuid)}/view/${encodeURIComponent(name)}`
+                }));
+            } catch (err) {
+              logger.warn(`⚠️ No documents found for ${modelName}/${dirName}`);
+              item.documents = [];
+            }
+          }
+
+          res.render(path.join('tailwindcss', 'partials', 'form-read'), {
+            title: `${config.title || baseName} Details`,
             item,
-            cancelUrl: `/${modelName}s`,
-            formAction: `/${modelName}/${item.uuid}/delete`,
-            listControllerConfig: listConfig[modelName] || {},
+            schema,
+            basePath: modelName,
+            referenceData,
+            config,
           });
         } catch (err) {
-          logger.error(`❌ Error preparing delete for ${modelName}: ${err.message}`);
-          return next(err);
+          logger.error(`❌ Error reading ${modelName}: ${err.message}`);
+          next(err);
         }
-      }
+      };
+    }
+    if (!denyGuard(config, 'c')) {
+      // CREATE
+      crudController[`create${baseName}`] = async (req, res, next) => {
+        if (req.method === 'GET') {
+          const schema = extractSchema(Model, config);
+          const referenceData = await fetchReferenceData(schema, config);
 
-      try {
-        await Model.findOneAndDelete({ uuid: req.params.uuid });
-        res.redirect(`/${modelName}s`);
-      } catch (err) {
-        logger.error(`❌ Error deleting ${modelName}: ${err.message}`);
-        next(err);
-      }
-    };
+          let formData = { ...req.query };
+
+          // 1. Attempt direct UUID → ObjectId mapping for any known .ref fields
+          for (const key of Object.keys(formData)) {
+            const refField = schema[key];
+            // Try both namespaces for refField
+            const refModel = (mdb.REST?.[refField?.ref] || mdb.INTERNAL?.[refField?.ref]);
+            if (refField?.ref && refModel) {
+              const candidate = await refModel
+                .findOne({ uuid: formData[key] })
+                .select('_id')
+                .lean();
+
+              if (candidate) {
+                formData[key] = candidate._id.toString();
+              }
+            }
+          }
+
+          // 2. Fallback: if just ?uuid=... is passed, try matching it to employee/supplier
+          if (req.query.uuid) {
+            const employee = mdb.INTERNAL?.employee?.findOne({ uuid: req.query.uuid }).select('_id').lean();
+            const subcontractor = mdb.REST?.supplier?.findOne({ uuid: req.query.uuid }).select('Id Name').lean();
+
+            if (employee && !formData.employeeId) {
+              formData.employeeId = (await employee)?._id?.toString();
+            } else if (subcontractor && !formData.subcontractorId) {
+              formData.subcontractorId = (await subcontractor)?.Id;
+            }
+          }
+
+          return res.render(path.join('tailwindcss', 'partials', 'form-create'), {
+            title: `Create ${config.title || baseName}`,
+            formData,
+            schema,
+            referenceData,
+            formAction: `/${modelName}`,
+            basePath: modelName,
+            config,
+            errors: [], // ✅ Now safe
+          });
+        }
+
+        try {
+          if (config?.xorGroups) {
+            const xorErrors = validateXorGroups(req.body, config.xorGroups);
+            if (xorErrors.length > 0) {
+              const schema = extractSchema(Model, config);
+              const referenceData = await fetchReferenceData(schema, config);
+
+              return res.status(400).render(path.join('tailwindcss', 'partials', 'form-update'), {
+                title: `Create ${config.title || baseName}`,
+                formData: req.body,
+                schema,
+                referenceData,
+                formAction: `/${modelName}/${req.params.uuid}`,
+                basePath: modelName,
+                listControllerConfig: listControllerConfig[modelName] || {},
+                config,
+                errors: xorErrors, // ✅ Now safe
+              });
+            }
+          }
+          // Clean up submitted data: convert empty strings to undefined
+          const cleanedData = {};
+          for (const [key, value] of Object.entries(req.body)) {
+            cleanedData[key] = value === '' ? undefined : value;
+          }
+          const doc = new Model(cleanedData);
+          await doc.save();
+          res.redirect(`/${modelName}s`);
+        } catch (err) {
+          logger.error(`❌ Error creating ${modelName}: ${err.message}`);
+          next(err);
+        }
+      };
+    }
+    if (!denyGuard(config, 'u')) {
+      // UPDATE
+      crudController[`update${baseName}`] = async (req, res, next) => {
+        if (req.method === 'GET') {
+          try {
+            const item = await Model.findOne({ uuid: req.params.uuid }).lean();
+            if (!item) return res.status(404).render('mongoose/notFound');
+
+            const schema = extractSchema(Model, config);
+            const referenceData = await fetchReferenceData(schema, config);
+
+            return res.render(path.join('tailwindcss', 'partials', 'form-update'), {
+              title: `Update ${config.title || baseName}`,
+              formData: item,
+              schema,
+              referenceData,
+              formAction: `/${modelName}/${item.uuid}`,
+              basePath: modelName,
+              listControllerConfig: listControllerConfig[modelName] || {},
+              config,
+              errors: [], // ✅ Now safe
+            });
+          } catch (err) {
+            logger.error(`❌ Error fetching ${modelName} for update: ${err.message}`);
+            return next(err);
+          }
+        }
+
+        try {
+          if (config?.xorGroups) {
+            const xorErrors = validateXorGroups(req.body, config.xorGroups);
+            if (xorErrors.length > 0) {
+              const schema = extractSchema(Model, config);
+              const referenceData = await fetchReferenceData(schema, config);
+
+              return res.status(400).render(path.join('tailwindcss', 'partials', 'form-update'), {
+                title: `Update ${config.title || baseName}`,
+                formData: req.body,
+                schema,
+                referenceData,
+                formAction: `/${modelName}/${req.params.uuid}`,
+                basePath: modelName,
+                listControllerConfig: listControllerConfig[modelName] || {},
+                config,
+                errors: xorErrors, // ✅ Now safe
+              });
+            }
+          }
+          // 1) pull down your schema so you know which fields are .ref
+          const schema = extractSchema(Model, config);
+
+          // 2) clean + map
+          const cleaned = {};
+          for (const [key, val] of Object.entries(req.body)) {
+            // drop empty strings
+            if (val === '') continue;
+
+            // if this field is a ref, and it's not already a valid ObjectId…
+            // Try both namespaces for refModel
+            const refModel = (mdb.REST?.[schema[key]?.ref] || mdb.INTERNAL?.[schema[key]?.ref]);
+            if (
+              schema[key]?.ref &&
+              typeof val === 'string' &&
+              !mongoose.Types.ObjectId.isValid(val)
+            ) {
+              // try to find the doc by UUID
+              const candidate = await refModel
+                .findOne({ uuid: val })
+                .select('_id')
+                .lean();
+              if (candidate) {
+                cleaned[key] = candidate._id;
+                continue;
+              }
+            }
+
+            // otherwise just use it as-is
+            cleaned[key] = val;
+          }
+
+          // 3) actually update, dropping any undefined keys
+          await Model.findOneAndUpdate(
+            { uuid: req.params.uuid },
+            cleaned,
+            { new: true, runValidators: true, omitUndefined: true }
+          );
+          res.redirect(`/${modelName}s`);
+        } catch (err) {
+          logger.error(`❌ Error updating ${modelName}: ${err.message}`);
+          next(err);
+        }
+      };
+    }
+    if (!denyGuard(config, 'd')) {
+      // DELETE
+      crudController[`delete${baseName}`] = async (req, res, next) => {
+        if (req.method === 'GET') {
+          try {
+            const item = await Model.findOne({ uuid: req.params.uuid }).lean();
+            if (!item) return res.status(404).render(path.join('mongoose', 'error'));
+
+            return res.render(path.join('tailwindcss', 'partials', 'form-delete'), {
+              title: `Delete ${config.title || baseName}`,
+              item,
+              cancelUrl: `/${modelName}s`,
+              formAction: `/${modelName}/${item.uuid}/delete`,
+              listControllerConfig: listControllerConfig[modelName] || {},
+            });
+          } catch (err) {
+            logger.error(`❌ Error preparing delete for ${modelName}: ${err.message}`);
+            return next(err);
+          }
+        }
+
+        try {
+          await Model.findOneAndDelete({ uuid: req.params.uuid });
+          res.redirect(`/${modelName}s`);
+        } catch (err) {
+          logger.error(`❌ Error deleting ${modelName}: ${err.message}`);
+          next(err);
+        }
+      };
+    }
   }
 }
 

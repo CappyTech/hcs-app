@@ -14,4 +14,7 @@ const holidaySchema = new mongoose.Schema({
 
 holidaySchema.index({ title: 1, date: 1, division: 1 }, { unique: true });
 
-module.exports = mongoose.model('holiday', holidaySchema);
+module.exports = {
+  modelName: 'holiday',
+  schema: holidaySchema
+};

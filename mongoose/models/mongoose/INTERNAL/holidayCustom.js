@@ -10,4 +10,7 @@ const holidayCustomSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('holidayCustom', holidayCustomSchema);
+module.exports = {
+  modelName: 'holidayCustom',
+  schema: holidayCustomSchema
+};

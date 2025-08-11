@@ -155,8 +155,8 @@
               <% if (hasActions) { %>
                 <td class="px-3 py-2 border-b dark:border-gray-700">
                   <div class="flex flex-wrap gap-2">
-                    <% actions.forEach(action => { %>
-                      <a href="<%= action.href(row) %>"
+                    <% (row._actions || []).forEach(action => { %>
+                      <a href="<%= action.href %>"
                          class="text-xs px-3 py-1 rounded text-white bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-600 hover:bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-700 transition">
                         <%= action.label %>
                       </a>

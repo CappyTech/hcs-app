@@ -9,10 +9,10 @@ const { validationResult, body } = require('express-validator');
 
 exports.getProfilePage = async (req, res, next) => {
   try {
-    const user = await mdb.user.findById(req.session.user.id);
-    const employee = user.employeeId ? await mdb.employee.findById(user.employeeId) : null;
-    const subcontractor = user.subcontractorId ? await mdb.subcontractor.findById(user.subcontractorId) : null;
-    const client = user.clientId ? await mdb.client.findById(user.clientId) : null;
+    const user = await mdb.INTERNAL.user.findById(req.session.user.id);
+    const employee = user.employeeId ? await mdb.INTERNAL.employee.findById(user.employeeId) : null;
+    const subcontractor = user.subcontractorId ? await mdb.INTERNAL.subcontractor.findById(user.subcontractorId) : null;
+    const client = user.clientId ? await mdb.INTERNAL.client.findById(user.clientId) : null;
 
     res.render(path.join('tailwindcss', 'user', 'profile'), {
       title: 'Profile',
@@ -30,7 +30,7 @@ exports.getProfilePage = async (req, res, next) => {
 
 exports.getAccountPage = async (req, res, next) => {
   try {
-    const user = await mdb.user.findById(req.session.user.id);
+    const user = await mdb.INTERNAL.user.findById(req.session.user.id);
     if (!user) {
       req.flash('error', 'User not found');
       return next();
@@ -44,7 +44,7 @@ exports.getAccountPage = async (req, res, next) => {
 
     logger.info(`[SESSION DEBUG] getAccountPage userId=${req.session.user.id} attempting session backfill for sid=${req.sessionID}`);
     try {
-      const backfill = await mdb.session.updateOne({ _id: req.sessionID, userId: { $exists: false } }, { $set: { userId: req.session.user.id } });
+      const backfill = await mdb.INTERNAL.session.updateOne({ _id: req.sessionID, userId: { $exists: false } }, { $set: { userId: req.session.user.id } });
       if (backfill.modifiedCount) {
         logger.info(`[SESSION DEBUG] Backfilled userId on current session sid=${req.sessionID}`);
       }
@@ -53,11 +53,11 @@ exports.getAccountPage = async (req, res, next) => {
     }
 
     // Query sessions belonging to this user (via denormalized userId)
-    let rawSessions = await mdb.session.find({ userId: req.session.user.id }).lean();
+    let rawSessions = await mdb.INTERNAL.session.find({ userId: req.session.user.id }).lean();
     logger.info(`[SESSION DEBUG] primary query returned ${rawSessions.length} sessions for userId`);
     // Fallback: legacy sessions without userId (parse JSON and filter)
     if (rawSessions.length === 0) {
-      const legacyCandidates = await mdb.session.find({ userId: { $exists: false } }).lean();
+      const legacyCandidates = await mdb.INTERNAL.session.find({ userId: { $exists: false } }).lean();
       rawSessions = legacyCandidates.filter(doc => {
         let payload = doc.session;
         if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch { payload = {}; } }
@@ -72,7 +72,7 @@ exports.getAccountPage = async (req, res, next) => {
       const expiresMoment = moment(doc.expires);
       // Purge if expired
       if (expiresMoment.isBefore(moment())) {
-        await mdb.session.deleteOne({ _id: doc._id });
+        await mdb.INTERNAL.session.deleteOne({ _id: doc._id });
         continue;
       }
       const isCurrent = doc._id === currentSid;
@@ -118,7 +118,7 @@ exports.updateAccountSettings = async (req, res) => {
   }
 
   try {
-    const user = await mdb.user.findById(req.session.user.id);
+    const user = await mdb.INTERNAL.user.findById(req.session.user.id);
     if (!user) {
       req.flash('error', 'User not found');
       return res.redirect('/user/account');
@@ -146,7 +146,7 @@ exports.logoutSession = async (req, res, next) => {
       return res.redirect('/user/account/');
     }
 
-    await mdb.session.deleteOne({ _id: sessionId });
+    await mdb.INTERNAL.session.deleteOne({ _id: sessionId });
 
     logger.info(`Session ${sessionId} logged out successfully`);
     req.flash('success', 'Session logged out successfully.');

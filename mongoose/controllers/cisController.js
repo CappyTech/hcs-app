@@ -20,7 +20,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     logger.info(`Rendering CIS Dashboard for Year: ${specifiedYear}, Month: ${specifiedMonth}`);
 
-    const allReceipts = await mdb.receipt.find({
+    const allPurchases = await mdb.REST.purchase.find({
       Lines: {
         $all: [
           { $elemMatch: { ChargeType: 18685897 } },
@@ -32,31 +32,31 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const periodStart = moment.tz(currentMonthlyReturn.periodStart, 'Europe/London').startOf('day');
     const periodEnd = moment.tz(currentMonthlyReturn.periodEnd, 'Europe/London').endOf('day');
 
-    const receipts = allReceipts.filter(receipt => {
-      return (receipt.Payments || []).some(payment => {
+    const purchases = allPurchases.filter(purchase => {
+      return (purchase.Payments || []).some(payment => {
         const payMoment = moment.tz(payment.PayDate, 'Europe/London');
         return payMoment.isBetween(periodStart, periodEnd, null, '[]');
       });
     });
 
-    receipts.forEach(receipt => {
-      const pay = receipt.Payments?.[0]?.PayDate;
+    purchases.forEach(purchase => {
+      const pay = purchase.Payments?.[0]?.PayDate;
       if (pay) {
         const payMoment = moment.tz(pay, 'Europe/London');
-        receipt.timeZoneTag = payMoment.isDST() ? 'BST' : 'GMT';
-        receipt.payDate = slimDateTime(payMoment, ['displayFormat', 'includeTime']);
+        purchase.timeZoneTag = payMoment.isDST() ? 'BST' : 'GMT';
+        purchase.payDate = slimDateTime(payMoment, ['displayFormat', 'includeTime']);
       } else {
-        receipt.timeZoneTag = 'N/A';
-        receipt.payDate = 'N/A';
+        purchase.timeZoneTag = 'N/A';
+        purchase.payDate = 'N/A';
       }
     });
 
-    const supplierIDs = [...new Set(receipts.map(r => r.CustomerID))];
-    const suppliers = await mdb.supplier.find({ SupplierID: { $in: supplierIDs } }).sort({ Name: 1 }).lean();
+    const supplierIDs = [...new Set(purchases.map(p => p.CustomerID))];
+    const suppliers = await mdb.REST.supplier.find({ SupplierID: { $in: supplierIDs } }).sort({ Name: 1 }).lean();
 
     const supplierTotals = {};
-    for (const receipt of receipts) {
-      const customerId = String(receipt.CustomerID);
+    for (const purchase of purchases) {
+      const customerId = String(purchase.CustomerID);
       supplierTotals[customerId] ??= {
         grossAmount: 0,
         materialsCost: 0,
@@ -66,7 +66,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         reverseChargeNet: 0,
       };
 
-      for (const line of receipt.Lines) {
+      for (const line of purchase.Lines) {
         const value = parseFloat((line.Rate || 0) * (line.Quantity || 0));
         if (line.ChargeType === 18685896) supplierTotals[customerId].materialsCost += value;
         if (line.ChargeType === 18685897) supplierTotals[customerId].labourCost += value;
@@ -79,10 +79,10 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         supplierTotals[customerId].materialsCost + supplierTotals[customerId].labourCost;
     }
 
-    const allReceiptsSubmitted = receipts.every(
-      r => r.SubmissionDate && r.SubmissionDate !== '0000-00-00 00:00:00'
+    const allPurchasesSubmitted = purchases.every(
+      p => p.SubmissionDate && p.SubmissionDate !== '0000-00-00 00:00:00'
     );
-    const submissionDate = allReceiptsSubmitted && receipts.length > 0 ? receipts[0].SubmissionDate : null;
+    const submissionDate = allPurchasesSubmitted && purchases.length > 0 ? purchases[0].SubmissionDate : null;
 
     const previousMonth = specifiedMonth === 1 ? 12 : specifiedMonth - 1;
     const previousYear = specifiedMonth === 1 ? specifiedYear - 1 : specifiedYear;
@@ -96,12 +96,12 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     res.render(path.join('tailwindcss', 'cis', 'cis'), {
       title: 'CIS Submission Dashboard',
       supplierCount: suppliers.length,
-      receiptCount: receipts.length,
+      purchaseCount: purchases.length,
       suppliers,
-      receipts,
+      purchases,
       taxYear,
       taxMonth: specifiedMonth,
-      allReceiptsSubmitted,
+      allPurchasesSubmitted,
       submissionDate,
       supplierTotals,
       currentMonthlyReturn,

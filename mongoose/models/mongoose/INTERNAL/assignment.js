@@ -48,4 +48,7 @@ const assignmentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('assignment', assignmentSchema);
+module.exports = {
+  modelName: 'assignment',
+  schema: assignmentSchema
+};

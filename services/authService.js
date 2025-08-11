@@ -5,7 +5,7 @@ async function ensureAuthenticated(req, res, next) {
   if (!req.session || !req.session.user) return next();
 
   try {
-    const user = await mdb.user.findById(req.session.user.id);
+  const user = await mdb.INTERNAL.user.findById(req.session.user.id);
     if (user) {
       req.user = user;
     } else {

@@ -52,4 +52,7 @@ locationSchema.pre('validate', function (next) {
   next();
 });
 
-module.exports = mongoose.model('location', locationSchema);
+module.exports = {
+  modelName: 'location',
+  schema: locationSchema
+};

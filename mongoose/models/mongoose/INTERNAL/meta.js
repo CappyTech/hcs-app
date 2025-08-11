@@ -28,4 +28,7 @@ const metaSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('meta', metaSchema);
+module.exports = {
+  modelName: 'meta',
+  schema: metaSchema
+};

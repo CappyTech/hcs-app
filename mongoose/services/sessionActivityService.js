@@ -9,7 +9,7 @@ module.exports.touchSessionActivity = async function touchSessionActivity(req, r
     // Only update if >60s since last update to reduce writes
     if (!req.session._lastActivityTouch || (now - req.session._lastActivityTouch) > 60000) {
       req.session._lastActivityTouch = now;
-      mdb.session.updateOne({ _id: req.sessionID }, { $set: { lastActivity: now } }).catch(()=>{});
+  mdb.INTERNAL.session.updateOne({ _id: req.sessionID }, { $set: { lastActivity: now } }).catch(()=>{});
     }
   } catch (e) {
     logger.warn('Session activity touch failed: ' + e.message);

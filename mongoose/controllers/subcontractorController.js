@@ -3,7 +3,7 @@ const mdb = require('../services/mongooseDatabaseService');
 
 exports.renderChangeSupplierForm = async (req, res, next) => {
   try {
-    const supplier = await mdb.supplier.findOne({ uuid: req.params.uuid }).lean();
+  const supplier = await mdb.REST.supplier.findOne({ uuid: req.params.uuid }).lean();
     if (!supplier) {
       req.flash('error', 'Supplier not found.');
       return res.redirect('/suppliers');
@@ -21,7 +21,7 @@ exports.changeSupplier = async (req, res, next) => {
   try {
     const { subcontractor, cisRate, cisNumber } = req.body;
 
-    await mdb.supplier.updateOne(
+  await mdb.REST.supplier.updateOne(
       { uuid: req.params.uuid },
       {
         $set: {

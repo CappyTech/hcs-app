@@ -20,7 +20,11 @@ const main = async () => {
     const app = express();
     const http = require('http');
     const { initSocket } = require('./services/socketService');
-    const sessionService = require('./mongoose/services/sessionServiceMongoose');
+
+    // Get INTERNAL connection's client for session store
+    const internalClient = mdb.INTERNAL.connection.client;
+    const createSessionService = require('./mongoose/services/sessionServiceMongoose');
+    const sessionService = createSessionService(internalClient);
 
     app.set('trust proxy', 1);
     app.set('view engine', 'ejs');
@@ -35,8 +39,8 @@ const main = async () => {
     // Cookie parser and session handling
     app.use(cookieParser());
     app.use(sessionService);
-  // CSRF protection (transitional mode). Set STRICT_MODE=true to enforce rejection.
-  app.use(require('./services/csrfService'));
+    // CSRF protection (transitional mode). Set STRICT_MODE=true to enforce rejection.
+    app.use(require('./services/csrfService'));
 
     // Static assets
     app.use('/resources', authService.ensureAuthenticated, express.static(path.join(__dirname, 'public')));
@@ -56,8 +60,8 @@ const main = async () => {
     app.use(authService.ensureAuthenticated);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
-  // Session activity tracking (after auth)
-  app.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
+    // Session activity tracking (after auth)
+    app.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
 
     // Attach user info to templates
     app.use((req, res, next) => {
@@ -90,7 +94,7 @@ const main = async () => {
     // App-wide meta info (Mongo)
     app.use(async (req, res, next) => {
       try {
-        res.locals.lastfetched = await mdb.meta.findOne().sort({ lastFetchedAt: -1 }) || null;
+        res.locals.lastfetched = await mdb.INTERNAL.meta.findOne().sort({ lastFetchedAt: -1 }) || null;
       } catch (err) {
         logger.error('Error fetching meta: ' + err.message);
       }
@@ -165,8 +169,8 @@ const main = async () => {
     const { setupWebSocket } = require('./mongoose/services/webSocketServiceMongoose');
     setupWebSocket(io, sessionService);
 
-  // Start periodic session cleanup
-  try { require('./mongoose/services/sessionCleanupService').start(); } catch (e) { logger.warn('Session cleanup start failed: ' + e.message); }
+    // Start periodic session cleanup
+    try { require('./mongoose/services/sessionCleanupService').start(); } catch (e) { logger.warn('Session cleanup start failed: ' + e.message); }
 
   } catch (err) {
     logger.error('❌ Failed to start application: ' + err + err.stack);

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
-const logger = require('../../../services/loggerService')
+const logger = require('../../../../services/loggerService')
 
 const attendanceSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: uuidv4 },
@@ -38,4 +38,7 @@ attendanceSchema.pre('validate', function (next) {
     next();
 });
 
-module.exports = mongoose.model('attendance', attendanceSchema);
+module.exports = {
+    modelName: 'attendance',
+    schema: attendanceSchema
+};

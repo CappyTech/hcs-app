@@ -6,7 +6,7 @@ let intervalHandle = null;
 async function cleanupOnce() {
   try {
     const now = new Date();
-    const result = await mdb.session.deleteMany({ expires: { $lte: now } });
+  const result = await mdb.INTERNAL.session.deleteMany({ expires: { $lte: now } });
     if (result.deletedCount) {
       logger.info(`[SESSION CLEANUP] Removed ${result.deletedCount} expired sessions`);
     }

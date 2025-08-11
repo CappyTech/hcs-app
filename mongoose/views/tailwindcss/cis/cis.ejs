@@ -26,12 +26,12 @@
           <p class="text-3xl font-bold"><%= supplierCount %></p>
         </div>
         <div class="bg-white rounded shadow p-6 text-center">
-          <h4 class="text-lg font-semibold mb-2">Total Receipts</h4>
-          <p class="text-3xl font-bold"><%= receiptCount %></p>
+          <h4 class="text-lg font-semibold mb-2">Total Purchases</h4>
+          <p class="text-3xl font-bold"><%= purchaseCount %></p>
         </div>
       </div>
 
-      <% if (!allReceiptsSubmitted || receipts.length === 0) { %>
+      <% if (!allPurchasesSubmitted || purchases.length === 0) { %>
       <div class="mb-6 bg-yellow-300 text-yellow-900 rounded text-center p-4 font-semibold">
         This month should be submitted between <span class="font-bold"><%= slimDateTime(submissionStartDate, ['displayFormat']) %></span> and <span class="font-bold"><%= slimDateTime(submissionEndDate, ['displayFormat']) %></span>.
       </div>
@@ -131,30 +131,30 @@
         </div>
       </div>
 
-      <!-- Receipts Lists -->
+      <!-- Purchase Lists -->
       <% if (suppliers.length === 0) { %><% } else { %>
         <div class="mb-12">
-          <% const midIndex = Math.ceil(receipts.length / 2); %>
-          <h3 class="text-center text-2xl font-bold mb-6">Receipts</h3>
+          <% const midIndex = Math.ceil(purchases.length / 2); %>
+          <h3 class="text-center text-2xl font-bold mb-6">Purchases</h3>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <% [receipts.slice(0, midIndex), receipts.slice(midIndex)].forEach((group) => { %>
+            <% [purchases.slice(0, midIndex), purchases.slice(midIndex)].forEach((group) => { %>
               <ul class="border rounded-lg shadow-sm overflow-hidden bg-white">
-                <% group.forEach(receipt => { %>
+                <% group.forEach(purchase => { %>
                   <li>
-                    <a href="/receipt/read/<%= receipt.uuid %>"
+                    <a href="/receipt/read/<%= purchase.uuid %>"
                       class="flex justify-between items-center px-4 py-3 hover:bg-gray-50 text-gray-700 border-b border-gray-200">
                       <span class="flex items-center gap-2 text-sm">
                         <i class="bi bi-pencil-square text-gray-500"></i>
-                        <% if (receipt.SubmissionDate) { %>
+                        <% if (purchase.SubmissionDate) { %>
                           <i class="bi bi-check text-green-600"></i>
                         <% } else { %>
                           <i class="bi bi-x text-red-600"></i>
                         <% } %>
                       </span>
                       <span class="text-sm text-right">
-                        <div><%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %> | <%= receipt.CustomerReference %></div>
-                        <small class="block text-xs text-gray-500"><%= receipt.payDate %> (<%= receipt.timeZoneTag %>)</small>
+                        <div><%= purchase.InvoiceNumber %> | <%= purchase.CustomerName %> | <%= purchase.CustomerReference %></div>
+                        <small class="block text-xs text-gray-500"><%= purchase.payDate %> (<%= purchase.timeZoneTag %>)</small>
                       </span>
                     </a>
                   </li>
@@ -164,11 +164,11 @@
           </div>
         </div>
       <% } %>
-      <% if (!allReceiptsSubmitted) { %>
+      <% if (!allPurchasesSubmitted) { %>
       <hr class="my-8 border-gray-300 dark:border-gray-600">
       <div class="mb-8">
-        <h4 class="text-center text-lg font-semibold mb-4">Update Submission Date for Selected Receipts</h4>
-        <form action="/receipt/change" method="POST" class="max-w-xl mx-auto">
+        <h4 class="text-center text-lg font-semibold mb-4">Update Submission Date for Selected Purchases</h4>
+        <form action="/purchase/change" method="POST" class="max-w-xl mx-auto">
           <%- include('../partials/csrfHidden.ejs') %>
           <input type="hidden" name="redirectPath" value="/mdb/CIS/<%= specifiedYear %>/<%= specifiedMonth %>">
           <div class="mb-4">
@@ -177,26 +177,26 @@
               class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-hcs-green">
           </div>
           <fieldset class="mb-6 max-h-96 overflow-auto border rounded border-gray-300 dark:border-gray-600 p-4">
-            <legend class="font-semibold mb-2">Select Receipts</legend>
-            <% receipts.forEach(receipt => { %>
+            <legend class="font-semibold mb-2">Select Purchases</legend>
+            <% purchases.forEach(purchase => { %>
             <div class="mb-2 flex items-center space-x-3">
-              <input type="checkbox" id="receipt-<%= receipt.uuid %>" name="uuids" value="<%= receipt.uuid %>" 
+              <input type="checkbox" id="purchase-<%= purchase.uuid %>" name="uuids" value="<%= purchase.uuid %>" 
                      class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-hcs-green focus:ring-hcs-green">
-              <label for="receipt-<%= receipt.uuid %>" class="text-gray-700 cursor-pointer">
-                <%= receipt.InvoiceNumber %> | <%= receipt.CustomerName %>
+              <label for="purchase-<%= purchase.uuid %>" class="text-gray-700 cursor-pointer">
+                <%= purchase.InvoiceNumber %> | <%= purchase.CustomerName %>
               </label>
             </div>
             <% }); %>
           </fieldset>
           <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black dark:text-whitefont-semibold py-3 rounded transition">
-            Update Selected Receipts
+            Update Selected Purchases
           </button>
         </form>
       </div>
-      <% } else if (receipts.length > 0) { %>
+      <% } else if (purchases.length > 0) { %>
       <hr class="my-8 border-gray-300 dark:border-gray-600">
       <div>
-        <h4 class="text-center text-lg font-semibold">All Receipts Submitted</h4>
+        <h4 class="text-center text-lg font-semibold">All Purchases Submitted</h4>
       </div>
       <% } %>
     </div>

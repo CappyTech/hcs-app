@@ -12,7 +12,7 @@ function setupWebSocket(io, sessionService) {
     const session = socket.handshake.session;
     if (!session?.user?.id) return next(new Error('Not authenticated'));
 
-    const user = await mdb.user.findById(session.user.id);
+  const user = await mdb.INTERNAL.user.findById(session.user.id);
     if (!user) return next(new Error('User not found'));
 
     socket.user = user;

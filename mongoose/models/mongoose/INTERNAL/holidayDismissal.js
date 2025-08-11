@@ -12,4 +12,7 @@ const holidayDismissalSchema = new mongoose.Schema({
 
 holidayDismissalSchema.index({ userId: 1, holidayId: 1 }, { unique: true });
 
-module.exports = mongoose.model('holidayDismissal', holidayDismissalSchema);
+module.exports = {
+    modelName: 'holidayDismissal',
+    schema: holidayDismissalSchema
+};
