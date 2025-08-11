@@ -28,6 +28,7 @@ const loadModels = () => {
         logger.info(`Model loaded: ${model.modelName}`);
       }
     });
+  // (Removed plural alias for session model; using singular mdb.session consistently)
 };
 
 mdb.connect = async () => {

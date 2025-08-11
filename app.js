@@ -56,6 +56,8 @@ const main = async () => {
     app.use(authService.ensureAuthenticated);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
+  // Session activity tracking (after auth)
+  app.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
 
     // Attach user info to templates
     app.use((req, res, next) => {
@@ -162,6 +164,9 @@ const main = async () => {
     // Setup WebSocket with working sessionService
     const { setupWebSocket } = require('./mongoose/services/webSocketServiceMongoose');
     setupWebSocket(io, sessionService);
+
+  // Start periodic session cleanup
+  try { require('./mongoose/services/sessionCleanupService').start(); } catch (e) { logger.warn('Session cleanup start failed: ' + e.message); }
 
   } catch (err) {
     logger.error('❌ Failed to start application: ' + err + err.stack);

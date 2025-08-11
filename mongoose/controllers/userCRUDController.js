@@ -138,11 +138,37 @@ exports.loginUser = async (req, res) => {
       return res.redirect('/user/2fa');
     }
 
+    // Prevent session fixation: regenerate before setting authenticated identity
+    await new Promise((resolve, reject) => {
+      req.session.regenerate(err => (err ? reject(err) : resolve()));
+    });
     req.session.user = sessionData;
-
     await new Promise((resolve, reject) => {
       req.session.save(err => (err ? reject(err) : resolve()));
     });
+
+    // Persist denormalized user fields on session document for efficient lookup (no need to parse/ decrypt session blob)
+    try {
+      if (mdb.session) {
+        const update = await mdb.session.updateOne(
+          { _id: req.sessionID },
+          { $set: {
+              userId: sessionData.id,
+              username: sessionData.username,
+              email: sessionData.email,
+              role: sessionData.role,
+              ip: sessionData.ip,
+              uaBrowser: sessionData.userAgent.browser,
+              uaVersion: sessionData.userAgent.version,
+              uaOS: sessionData.userAgent.os,
+              loginTime: new Date(sessionData.loginTime)
+            }
+          },
+          { upsert: true }
+        );
+        logger.info(`[SESSION DENORM LOGIN] matched=${update.matchedCount} modified=${update.modifiedCount} upserted=${update.upsertedCount||0} sid=${req.sessionID}`);
+      }
+    } catch (_) { /* non-fatal */ }
 
     logger.info(`${user.username} successfully logged in.`);
     req.flash('success', `${user.username}, you're logged in.`);
@@ -162,7 +188,7 @@ exports.logoutUser = (req, res) => {
       req.flash('error', 'An error occurred while logging out.');
       return res.redirect('/');
     }
-    res.clearCookie('connect.sid');
+    res.clearCookie('hms.sid');
     req.flash('success', 'You have been logged out.');
     return res.redirect('/user/login');
   });

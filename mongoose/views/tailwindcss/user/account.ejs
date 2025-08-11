@@ -120,6 +120,8 @@
             <th class="px-4 py-2">Browser</th>
             <th class="px-4 py-2">Platform</th>
             <th class="px-4 py-2">Login Time</th>
+            <th class="px-4 py-2">Last Activity</th>
+            <th class="px-4 py-2">Idle</th>
             <th class="px-4 py-2">Session Expiration</th>
             <th class="px-4 py-2">Secure</th>
             <th class="px-4 py-2">Actions</th>
@@ -127,14 +129,21 @@
         </thead>
         <tbody class="bg-white dark:bg-gray-800">
           <% sessions.forEach(session => { %>
-            <tr class="border-t border-gray-200 dark:border-gray-700">
-              <td class="px-4 py-2"><%= session.username %></td>
+            <tr class="border-t border-gray-200 dark:border-gray-700 <%= session.isCurrent ? 'bg-yellow-50 dark:bg-yellow-900/20' : '' %>">
+              <td class="px-4 py-2 font-medium <%= session.isCurrent ? 'text-blue-700 dark:text-blue-300' : '' %>">
+                <%= session.username %>
+                <% if (session.isCurrent) { %>
+                  <span class="ml-2 inline-block text-xs bg-blue-600 text-white px-2 py-0.5 rounded">This device</span>
+                <% } %>
+              </td>
               <td class="px-4 py-2"><%= session.email %></td>
               <td class="px-4 py-2"><%= session.role %></td>
               <td class="px-4 py-2"><%= session.ip %></td>
               <td class="px-4 py-2"><%= session.browser %></td>
               <td class="px-4 py-2"><%= session.platform.replace(/['"]+/g, '') || 'Unknown' %></td>
-              <td class="px-4 py-2"><%= slimDateTime(session.loginTime, ['includeTime']) %></td>
+              <td class="px-4 py-2"><%= session.loginTime ? slimDateTime(session.loginTime, ['includeTime']) : (session.isCurrent ? 'Just now' : '—') %></td>
+              <td class="px-4 py-2"><%= session.lastActivity ? slimDateTime(session.lastActivity, ['includeTime']) : '—' %></td>
+              <td class="px-4 py-2"><%= session.idleFor %></td>
               <td class="px-4 py-2">
                 <%= slimDateTime(session.expires, ['includeTime']) %><br>
                 (<%= session.timeUntilExpiry %>)

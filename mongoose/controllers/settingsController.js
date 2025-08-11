@@ -42,26 +42,58 @@ exports.getAccountPage = async (req, res, next) => {
 
     const qrCodeUrl = await totpService.generateQRCode(secret, user);
 
-    const sessions = await mdb.session.find({
-      _id: req.session.user.id
-    });
+    logger.info(`[SESSION DEBUG] getAccountPage userId=${req.session.user.id} attempting session backfill for sid=${req.sessionID}`);
+    try {
+      const backfill = await mdb.session.updateOne({ _id: req.sessionID, userId: { $exists: false } }, { $set: { userId: req.session.user.id } });
+      if (backfill.modifiedCount) {
+        logger.info(`[SESSION DEBUG] Backfilled userId on current session sid=${req.sessionID}`);
+      }
+    } catch (e) {
+      logger.warn('[SESSION DEBUG] Backfill error: ' + e.message);
+    }
 
-    const activeSessions = sessions.map(session => {
-      const sessionData = session.user || {};
-      return {
-        sessionId: session.sid,
-        username: sessionData.username,
-        email: sessionData.email,
-        role: sessionData.role,
-        ip: sessionData.ip,
-        browser: sessionData.userAgent?.browser || 'Unknown',
-        version: sessionData.userAgent?.version || 'Unknown',
-        platform: sessionData.userAgent?.os || 'Unknown OS',
-        loginTime: sessionData.loginTime || 'Unknown',
-        expires: moment(session.expires),
-        timeUntilExpiry: moment(session.expires).fromNow(),
-      };
-    });
+    // Query sessions belonging to this user (via denormalized userId)
+    let rawSessions = await mdb.session.find({ userId: req.session.user.id }).lean();
+    logger.info(`[SESSION DEBUG] primary query returned ${rawSessions.length} sessions for userId`);
+    // Fallback: legacy sessions without userId (parse JSON and filter)
+    if (rawSessions.length === 0) {
+      const legacyCandidates = await mdb.session.find({ userId: { $exists: false } }).lean();
+      rawSessions = legacyCandidates.filter(doc => {
+        let payload = doc.session;
+        if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch { payload = {}; } }
+        return payload?.user?.id === req.session.user.id;
+      });
+      logger.info(`[SESSION DEBUG] legacy fallback yielded ${rawSessions.length} sessions (candidates scanned=${legacyCandidates.length})`);
+    }
+
+    const activeSessions = [];
+    const currentSid = req.sessionID;
+    for (const doc of rawSessions) {
+      const expiresMoment = moment(doc.expires);
+      // Purge if expired
+      if (expiresMoment.isBefore(moment())) {
+        await mdb.session.deleteOne({ _id: doc._id });
+        continue;
+      }
+      const isCurrent = doc._id === currentSid;
+      activeSessions.push({
+        sessionId: doc._id,
+        username: doc.username || '—',
+        email: doc.email || '—',
+        role: doc.role || '—',
+        ip: doc.ip || '—',
+        browser: doc.uaBrowser || 'Unknown',
+        version: doc.uaVersion || 'Unknown',
+        platform: doc.uaOS || 'Unknown OS',
+        loginTime: doc.loginTime || null,
+        lastActivity: doc.lastActivity || doc.loginTime || null,
+        idleFor: doc.lastActivity ? moment(doc.lastActivity).fromNow() : '—',
+        expires: expiresMoment,
+        timeUntilExpiry: expiresMoment.fromNow(),
+        secure: true, // session cookies configured secure in production; omit per-doc flag
+        isCurrent,
+      });
+    }
 
     res.render(path.join('tailwindcss', 'user', 'account'), {
       title: 'Set up Two-Factor Authentication',
@@ -114,7 +146,7 @@ exports.logoutSession = async (req, res, next) => {
       return res.redirect('/user/account/');
     }
 
-    await mdb.session.deleteOne({ sid: sessionId });
+    await mdb.session.deleteOne({ _id: sessionId });
 
     logger.info(`Session ${sessionId} logged out successfully`);
     req.flash('success', 'Session logged out successfully.');

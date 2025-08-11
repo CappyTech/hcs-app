@@ -49,6 +49,11 @@ exports.verify2FA = async (req, res) => {
     const agent = req.useragent || {};
     const ip = req.ip;
 
+    // Regenerate session to mitigate fixation at 2FA completion stage
+    await new Promise((resolve, reject) => {
+      req.session.regenerate(err => (err ? reject(err) : resolve()));
+    });
+
     req.session.user = {
       id: user._id.toString(),
       uuid: user.uuid,
@@ -72,6 +77,29 @@ exports.verify2FA = async (req, res) => {
     });
 
     req.flash('success', 'Successfully logged in.');
+
+    // Denormalize user fields for querying sessions list
+    try {
+      if (mdb.session) {
+        const upd = await mdb.session.updateOne(
+          { _id: req.sessionID },
+          { $set: {
+              userId: user._id.toString(),
+              username: user.username,
+              email: user.email,
+              role: user.role,
+              ip,
+              uaBrowser: req.session.user.userAgent.browser,
+              uaVersion: req.session.user.userAgent.version,
+              uaOS: req.session.user.userAgent.os,
+              loginTime: new Date(req.session.user.loginTime)
+            }
+          },
+          { upsert: true }
+        );
+        logger.info(`[SESSION DENORM 2FA] matched=${upd.matchedCount} modified=${upd.modifiedCount} upserted=${upd.upsertedCount||0} sid=${req.sessionID}`);
+      }
+    } catch (_) { /* ignore */ }
     return res.redirect('/');
   } catch (error) {
     logger.error('2FA verification error: ' + error.message);
