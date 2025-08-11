@@ -6,6 +6,7 @@
  -->
   <!-- CSV Button
   <form action="/yearly/download-csv" method="POST" class="m-0">
+    <%- include('../partials/csrfHidden.ejs') %>
     <input type="hidden" name="year" value="<%= year %>">
     <input type="hidden" name="uuid" value="<%= supplier.uuid %>">
     <input type="hidden" name="filename"
@@ -17,6 +18,7 @@
 -->
   <!-- XLSX Button
   <form action="/yearly/download-xlsx" method="POST" class="m-0">
+    <%- include('../partials/csrfHidden.ejs') %>
     <input type="hidden" name="year" value="<%= year %>">
     <input type="hidden" name="uuid" value="<%= supplier.uuid %>">
     <input type="hidden" name="filename"

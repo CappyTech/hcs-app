@@ -3,6 +3,7 @@
     <div class="container-fluid py-5">
       <h1 class="display-5 fw-bold text-center">Two-Factor Authentication</h1>
       <form action="/user/2fa" method="POST">
+        <%- include('../partials/csrfHidden.ejs') %>
         <div class="form-floating mb-3">
           <input type="text" id="totpToken" name="totpToken" class="form-control" required>
           <label for="totpToken" class="form-label">Authentication Code</label>

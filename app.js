@@ -35,6 +35,8 @@ const main = async () => {
     // Cookie parser and session handling
     app.use(cookieParser());
     app.use(sessionService);
+  // CSRF protection (transitional mode). Set STRICT_MODE=true to enforce rejection.
+  app.use(require('./services/csrfService'));
 
     // Static assets
     app.use('/resources', authService.ensureAuthenticated, express.static(path.join(__dirname, 'public')));
@@ -72,6 +74,9 @@ const main = async () => {
       res.locals.slimDateTime = require('./services/dateService').slimDateTime;
       res.locals.formatCurrency = require('./services/currencyService').formatCurrency;
       res.locals.rounding = require('./services/currencyService').rounding;
+      if (!res.locals.csrfToken && req.session?.csrfToken) {
+        res.locals.csrfToken = req.session.csrfToken;
+      }
       res.locals.contactEmail = process.env.SUPPORTEMAIL;
       res.locals.lastfetched = null;
       res.locals.session = null;

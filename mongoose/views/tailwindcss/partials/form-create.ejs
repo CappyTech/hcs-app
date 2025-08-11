@@ -4,6 +4,7 @@
   </h1>
 
   <form action="<%= formAction %>" method="POST" class="space-y-6">
+    <%- include('./csrfHidden.ejs') %>
     <%
       const xorGroups = config?.xorGroups || [];
       const xorGroupMap = {};

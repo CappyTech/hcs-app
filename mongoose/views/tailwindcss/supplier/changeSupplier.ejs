@@ -1,6 +1,7 @@
 <div class="container mx-auto mt-10 max-w-xl px-4">
   <h2 class="text-2xl font-semibold mb-6">Change <%= supplier.Name %> Details</h2>
   <form action="/supplier/change/<%= supplier.uuid %>" method="POST" novalidate>
+    <%- include('../partials/csrfHidden.ejs') %>
 
     <!-- Subcontractor Checkbox -->
     <div class="mb-6 flex items-start space-x-3">
