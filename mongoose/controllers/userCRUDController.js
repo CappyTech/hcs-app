@@ -124,11 +124,37 @@ exports.loginUser = async (req, res) => {
       return res.redirect('/user/login');
     }
 
-    const user = await mdb.INTERNAL.user.findOne({
-      $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }]
+    const rawInput = usernameOrEmail;
+    const trimmedInput = (rawInput || '').trim();
+    const normalizedEmailCandidate = trimmedInput.toLowerCase();
+
+    // Primary exact lookup
+    let user = await mdb.INTERNAL.user.findOne({
+      $or: [{ username: trimmedInput }, { email: normalizedEmailCandidate }]
     });
+
     if (!user) {
-      logger.warn(`[LOGIN ${reqId}] user not found supplied='${usernameOrEmail}'`);
+      // Diagnostics: char codes, counts, case-insensitive search
+      const charCodes = trimmedInput.split('').map(c => c.charCodeAt(0));
+      const userCount = await mdb.INTERNAL.user.countDocuments();
+      const ciUser = await mdb.INTERNAL.user.findOne({ username: new RegExp(`^${trimmedInput}$`, 'i') });
+      const ciEmail = await mdb.INTERNAL.user.findOne({ email: new RegExp(`^${normalizedEmailCandidate}$`, 'i') });
+      logger.warn(`[` + `LOGIN ${reqId}` + `] user not found supplied='${trimmedInput}' codes=${JSON.stringify(charCodes)} totalUsers=${userCount} ciUsernameMatch=${!!ciUser} ciEmailMatch=${!!ciEmail} collection='${mdb.INTERNAL.user.collection.name}'`);
+
+      // Fallback: adopt case-insensitive match if unique
+      if (ciUser && !ciEmail) {
+        user = ciUser;
+        logger.warn(`[LOGIN ${reqId}] proceeding with case-insensitive username match '${ciUser.username}'`);
+      } else if (!ciUser && ciEmail) {
+        user = ciEmail;
+        logger.warn(`[LOGIN ${reqId}] proceeding with case-insensitive email match '${ciEmail.email}'`);
+      } else if (ciUser && ciEmail && ciUser.id === ciEmail.id) {
+        user = ciUser;
+        logger.warn(`[LOGIN ${reqId}] proceeding with unified case-insensitive match user='${ciUser.username}'`);
+      }
+    }
+
+    if (!user) {
       req.flash('error', 'Invalid username or password.');
       return res.redirect('/user/login');
     }
