@@ -10,7 +10,7 @@ exports.changeReceipts = async (req, res, next) => {
       return res.redirect(redirectPath || '/mdb/CIS');
     }
 
-    await mdb.receipt.updateMany(
+    await mdb.REST.purchase.updateMany(
       { uuid: { $in: targetUUIDs } },
       { $set: { SubmissionDate: submissionDate ? new Date(submissionDate) : null } }
     );
@@ -32,7 +32,7 @@ exports.changePurchases = async (req, res, next) => {
 
     if (targetUUIDs.length === 0) {
       req.flash('error', 'No purchases selected.');
-      return res.redirect(redirectPath || '/CIS');
+      return res.redirect(redirectPath || '/CIS/Dashboard/');
     }
 
     await mdb.REST.purchase.updateMany(

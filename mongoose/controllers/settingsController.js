@@ -11,8 +11,8 @@ exports.getProfilePage = async (req, res, next) => {
   try {
     const user = await mdb.INTERNAL.user.findById(req.session.user.id);
     const employee = user.employeeId ? await mdb.INTERNAL.employee.findById(user.employeeId) : null;
-    const subcontractor = user.subcontractorId ? await mdb.INTERNAL.subcontractor.findById(user.subcontractorId) : null;
-    const client = user.clientId ? await mdb.INTERNAL.client.findById(user.clientId) : null;
+    const subcontractor = user.subcontractorId ? await mdb.REST.supplier.findById(user.subcontractorId) : null;
+    const client = user.clientId ? await mdb.REST.customer.findById(user.clientId) : null;
 
     res.render(path.join('tailwindcss', 'user', 'profile'), {
       title: 'Profile',

@@ -12,7 +12,7 @@ async function checkHoliday(req, res, next) {
     try {
         const holidayDetails = await holidayService.isDateHoliday();
         if (holidayDetails?.isHoliday) {
-            const dismissed = await mdb.holidayDismissal.findOne({
+            const dismissed = await mdb.INTERNAL.holidayDismissal.findOne({
                 userId: req.user._id,
                 holidayId: holidayDetails._id
             });
@@ -44,7 +44,7 @@ async function dismissHoliday(req, res, next) {
             return next();
         }
 
-        await mdb.holidayDismissal.updateOne(
+        await mdb.INTERNAL.holidayDismissal.updateOne(
             {
                 userId: req.user._id,
                 holidayId: holidayDetails._id

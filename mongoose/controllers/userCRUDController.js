@@ -38,7 +38,7 @@ exports.registerUser = async (req, res, next) => {
             return res.redirect('/user/register');
         }
 
-        const existingUser = await mdb.user.findOne({
+        const existingUser = await mdb.INTERNAL.user.findOne({
             $or: [{ username }, { email }]
         });
 
@@ -54,7 +54,7 @@ exports.registerUser = async (req, res, next) => {
       logger.warn(`Registration role override attempt ignored. Requested='${req.body.role}' enforced='${DEFAULT_ROLE}' user='${username}'`);
     }
     const assignedRole = DEFAULT_ROLE;
-        const newUser = new mdb.user({
+        const newUser = new mdb.INTERNAL.user({
             username,
             email,
             password,
@@ -112,7 +112,7 @@ exports.loginUser = async (req, res) => {
       return res.redirect('/user/login');
     }
 
-    const user = await mdb.user.findOne({
+    const user = await mdb.INTERNAL.user.findOne({
       $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }]
     });
 
@@ -154,8 +154,8 @@ exports.loginUser = async (req, res) => {
 
     // Persist denormalized user fields on session document for efficient lookup (no need to parse/ decrypt session blob)
     try {
-      if (mdb.session) {
-        const update = await mdb.session.updateOne(
+      if (mdb.INTERNAL.session) {
+        const update = await mdb.INTERNAL.session.updateOne(
           { _id: req.sessionID },
           { $set: {
               userId: sessionData.id,

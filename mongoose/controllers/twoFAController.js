@@ -25,7 +25,7 @@ exports.verify2FA = async (req, res) => {
       return res.redirect('/user/login');
     }
 
-    const user = await mdb.user.findOne({ uuid: pending.uuid });
+    const user = await mdb.INTERNAL.user.findOne({ uuid: pending.uuid });
 
     if (!user || !user.totpSecret) {
       req.flash('error', 'User not found or 2FA not enabled.');
@@ -80,8 +80,8 @@ exports.verify2FA = async (req, res) => {
 
     // Denormalize user fields for querying sessions list
     try {
-      if (mdb.session) {
-        const upd = await mdb.session.updateOne(
+      if (mdb.INTERNAL.session) {
+        const upd = await mdb.INTERNAL.session.updateOne(
           { _id: req.sessionID },
           { $set: {
               userId: user._id.toString(),
