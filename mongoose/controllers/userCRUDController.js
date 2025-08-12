@@ -88,26 +88,38 @@ exports.loginUser = async (req, res) => {
     const ip = req.ip;
     const agent = req.useragent || {};
 
+    const reqId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const safeId = (v) => (v ? Buffer.from(v).toString('base64').slice(0, 8) : 'null');
+
+    logger.info(`[LOGIN ${reqId}] start ua.browser='${agent.browser||'Unknown'}' ip='${ip}' supplied='${usernameOrEmail||''}' len.pw='${password?password.length:0}'`);
+
     if (!token) {
+      logger.warn(`[LOGIN ${reqId}] missing CAPTCHA token`);
       req.flash('error', 'CAPTCHA token missing.');
       return res.redirect('/user/login');
     }
 
-    const verifyResponse = await axios.post(
-      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-      new URLSearchParams({
-        secret: process.env.TURNSTILE_SECRET_KEY,
-        response: token,
-        remoteip: ip
-      })
-    );
-
-    if (!verifyResponse.data.success) {
+    let verifyResponse;
+    try {
+      verifyResponse = await axios.post(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY, response: token, remoteip: ip })
+      );
+    } catch (e) {
+      logger.error(`[LOGIN ${reqId}] CAPTCHA verify network error: ${e.message}`);
       req.flash('error', 'CAPTCHA verification failed.');
       return res.redirect('/user/login');
     }
 
+    if (!verifyResponse.data.success) {
+      logger.warn(`[LOGIN ${reqId}] CAPTCHA failed codes=${JSON.stringify(verifyResponse.data['error-codes']||[])} `);
+      req.flash('error', 'CAPTCHA verification failed.');
+      return res.redirect('/user/login');
+    }
+    logger.info(`[LOGIN ${reqId}] CAPTCHA ok`);
+
     if (!usernameOrEmail || !password) {
+      logger.warn(`[LOGIN ${reqId}] missing credentials user='${usernameOrEmail}'`);
       req.flash('error', 'Username and password are required.');
       return res.redirect('/user/login');
     }
@@ -115,11 +127,25 @@ exports.loginUser = async (req, res) => {
     const user = await mdb.INTERNAL.user.findOne({
       $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }]
     });
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
+      logger.warn(`[LOGIN ${reqId}] user not found supplied='${usernameOrEmail}'`);
       req.flash('error', 'Invalid username or password.');
       return res.redirect('/user/login');
     }
+    logger.info(`[LOGIN ${reqId}] user record located uuid=${user.uuid}`);
+
+    let passwordOk = false;
+    try {
+      passwordOk = await bcrypt.compare(password, user.password);
+    } catch (e) {
+      logger.error(`[LOGIN ${reqId}] bcrypt compare failed: ${e.message}`);
+    }
+    if (!passwordOk) {
+      logger.warn(`[LOGIN ${reqId}] password mismatch user='${user.username}'`);
+      req.flash('error', 'Invalid username or password.');
+      return res.redirect('/user/login');
+    }
+    logger.info(`[LOGIN ${reqId}] password ok totpEnabled=${!!user.totpEnabled}`);
 
     const sessionData = {
       id: user._id.toString(),
@@ -137,22 +163,35 @@ exports.loginUser = async (req, res) => {
       },
     };
 
-    // If TOTP is enabled, stage login for /user/2fa
     if (user.totpEnabled) {
+      logger.info(`[LOGIN ${reqId}] staging 2FA user='${user.username}'`);
       req.session.userPending2FA = sessionData;
       return res.redirect('/user/2fa');
     }
 
-    // Prevent session fixation: regenerate before setting authenticated identity
-    await new Promise((resolve, reject) => {
-      req.session.regenerate(err => (err ? reject(err) : resolve()));
-    });
-    req.session.user = sessionData;
-    await new Promise((resolve, reject) => {
-      req.session.save(err => (err ? reject(err) : resolve()));
-    });
+    try {
+      await new Promise((resolve, reject) => {
+        req.session.regenerate(err => (err ? reject(err) : resolve()));
+      });
+      logger.info(`[LOGIN ${reqId}] session regenerated oldSID preserved? newSID=${req.sessionID}`);
+    } catch (e) {
+      logger.error(`[LOGIN ${reqId}] session regenerate failed: ${e.message}`);
+      req.flash('error', 'Session error. Try again.');
+      return res.redirect('/user/login');
+    }
 
-    // Persist denormalized user fields on session document for efficient lookup (no need to parse/ decrypt session blob)
+    req.session.user = sessionData;
+    try {
+      await new Promise((resolve, reject) => {
+        req.session.save(err => (err ? reject(err) : resolve()));
+      });
+      logger.info(`[LOGIN ${reqId}] session saved sid=${req.sessionID}`);
+    } catch (e) {
+      logger.error(`[LOGIN ${reqId}] session save failed: ${e.message}`);
+      req.flash('error', 'Session persistence error.');
+      return res.redirect('/user/login');
+    }
+
     try {
       if (mdb.INTERNAL.session) {
         const update = await mdb.INTERNAL.session.updateOne(
@@ -171,16 +210,18 @@ exports.loginUser = async (req, res) => {
           },
           { upsert: true }
         );
-        logger.info(`[SESSION DENORM LOGIN] matched=${update.matchedCount} modified=${update.modifiedCount} upserted=${update.upsertedCount||0} sid=${req.sessionID}`);
+        logger.info(`[LOGIN ${reqId}] session denorm matched=${update.matchedCount} modified=${update.modifiedCount} upserted=${update.upsertedCount||0}`);
       }
-    } catch (_) { /* non-fatal */ }
+    } catch (e) {
+      logger.warn(`[LOGIN ${reqId}] session denorm skipped error=${e.message}`);
+    }
 
-    logger.info(`${user.username} successfully logged in.`);
+    logger.info(`[LOGIN ${reqId}] success username='${user.username}' redirect=/`);
     req.flash('success', `${user.username}, you're logged in.`);
     return res.redirect('/');
 
   } catch (error) {
-    logger.error('Login error: ' + error.message);
+    logger.error(`[LOGIN FATAL] unexpected error=${error.message}`);
     req.flash('error', 'Login failed. Please try again.');
     return res.redirect('/user/login');
   }
