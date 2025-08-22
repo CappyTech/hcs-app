@@ -251,11 +251,35 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     daysOfWeek
   } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidReceipts);
 
+  // Fetch active contracts without populating projectId (project model lives in REST DB)
   const activeJobs = await mdb.INTERNAL.contract.find({
     startDate: { $lte: endDate.toDate() },
     $or: [{ endDate: null }, { endDate: { $gte: payrollWeekStart.toDate() } }],
     status: { $ne: 'archived' }
-  }).populate('projectId').populate('locationId').lean();
+  }).populate('locationId').lean();
+
+  // Manually join project documents from REST DB
+  const projectIdSet = new Set(
+    activeJobs
+      .filter(j => j.projectId)
+      .map(j => String(j.projectId))
+  );
+  let projectMap = {};
+  if (projectIdSet.size) {
+    const projects = await mdb.REST.project.find({ _id: { $in: Array.from(projectIdSet) } })
+      .select('Name Reference Number uuid')
+      .lean();
+    projectMap = Object.fromEntries(projects.map(p => [String(p._id), p]));
+  }
+  // Replace projectId ObjectId with the project doc (maintains template expectations job.projectId.Name)
+  activeJobs.forEach(job => {
+    if (job.projectId) {
+      const proj = projectMap[String(job.projectId)];
+      if (proj) {
+        job.projectId = proj; // preserve existing view field usage
+      }
+    }
+  });
 
   return {
     groupedAttendance,

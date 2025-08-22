@@ -143,18 +143,15 @@ for (const namespace of ['REST', 'INTERNAL']) {
 
         for (const [pathKey, schemaType] of refPaths) {
           const refModelName = schemaType.options.ref;
-          // Try both namespaces for refModel
-          const refModel = (mdb.REST?.[refModelName] || mdb.INTERNAL?.[refModelName]);
+          // Skip cross-namespace populate where model only exists in other DB (prevents MissingSchemaError)
+          const refModel = (mdb[namespace]?.[refModelName]) || null;
+          if (!refModel) continue; // manual join handled elsewhere if needed
 
           let selectField = null;
-
-          // Try using linkField from the referenced model
           const refConfig = listControllerConfig?.[refModelName];
-          if (refConfig?.linkField) {
-            const refFieldExists = refModel?.schema?.paths?.[refConfig.linkField];
-            if (refFieldExists) selectField = refConfig.linkField;
+          if (refConfig?.linkField && refModel?.schema?.paths?.[refConfig.linkField]) {
+            selectField = refConfig.linkField;
           }
-
           queryExec = queryExec.populate(pathKey, selectField || '');
         }
 
