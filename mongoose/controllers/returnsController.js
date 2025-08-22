@@ -10,7 +10,11 @@ const monthNames = [
 
 exports.renderMonthlyReturnsForm = async (req, res, next) => {
   try {
-    const suppliers = await mdb.REST.supplier.find({ IsSubcontractor: true }).select('Id Name').lean();
+    // Include CISRate (Number), isReverseCharge flag and uuid used by the view
+    const suppliers = await mdb.REST.supplier
+      .find({ IsSubcontractor: true })
+      .select('Id Name CISRate isReverseCharge uuid')
+      .lean();
     const suppliersWithMonths = [];
 
     for (const supplier of suppliers) {

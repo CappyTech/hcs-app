@@ -27,7 +27,8 @@
                           <%= years.length===1 ? 'Year' : 'Years' %>
                       </span>
                       <span class="inline-block bg-gray-300 text-gray-700 text-xs font-medium ml-2 px-2 py-0.5 rounded">
-                        <%= supplier.CISRate === '0' ? '0%' : supplier.CISRate === '0.2' ? '20%' : supplier.CISRate === '0.3' ? '30%' : 'Unknown' %>
+                        <% const rate = typeof supplier.CISRate === 'number' ? supplier.CISRate : (supplier.CISRate ? +supplier.CISRate : null); %>
+                        <%= rate === 0 ? '0%' : rate === 0.2 ? '20%' : rate === 0.3 ? '30%' : 'Unknown' %>
                       </span>
                       <% if (supplier.isReverseCharge) { %>
                         <span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium ml-2 px-2 py-0.5 rounded">
