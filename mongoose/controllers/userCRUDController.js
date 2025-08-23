@@ -5,48 +5,52 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 
 exports.renderRegistrationForm = (req, res, next) => {
-    res.render(path.join('tailwindcss', 'user', 'register'), {
-        title: 'Register',
-        siteKey: process.env.TURNSTILE_SITE_KEY,
-    });
+  res.render(path.join('tailwindcss', 'user', 'register'), {
+    title: 'Register',
+    siteKey: process.env.TURNSTILE_SITE_KEY,
+  });
 };
 
 exports.registerUser = async (req, res, next) => {
-    try {
-  const { username, email, password } = req.body;
-        const token = req.body['cf-turnstile-response'];
-        const ip = req.ip;
+  try {
+    const { username, email, password } = req.body;
+    const token = req.body['cf-turnstile-response'];
+    const ip = req.ip;
 
-        if (!token) {
-            logger.error('CAPTCHA verification failed (token missing).');
-            req.flash('error', 'CAPTCHA verification failed (token missing).');
-            return res.redirect('/user/register');
-        }
+    if (!token) {
+      logger.error('CAPTCHA verification failed (token missing).');
+      req.flash('error', 'CAPTCHA verification failed (token missing).');
+      return res.redirect('/user/register');
+    }
 
-        const verifyResponse = await axios.post(
-            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-            new URLSearchParams({
-                secret: process.env.TURNSTILE_SECRET_KEY,
-                response: token,
-                remoteip: ip
-            })
-        );
+    const verifyResponse = await axios.post(
+      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+      new URLSearchParams({
+        secret: process.env.TURNSTILE_SECRET_KEY,
+        response: token,
+        remoteip: ip
+      })
+    );
 
-        if (!verifyResponse.data.success) {
-            logger.error('CAPTCHA verification failed.');
-            req.flash('error', 'CAPTCHA verification failed.');
-            return res.redirect('/user/register');
-        }
+    if (!verifyResponse.data.success) {
+      logger.error('CAPTCHA verification failed.');
+      req.flash('error', 'CAPTCHA verification failed.');
+      return res.redirect('/user/register');
+    }
 
-        const existingUser = await mdb.INTERNAL.user.findOne({
-            $or: [{ username }, { email }]
-        });
+    const existingUser = await mdb.INTERNAL.user.findOne({
+      $or: [{ username }, { email }]
+    });
 
-        if (existingUser) {
-            logger.error('Username or email already exists');
-            req.flash('error', 'Username or email already exists');
-            return res.redirect('/user/register');
-        }
+    if (existingUser) {
+      logger.error('Username or email already exists');
+      req.flash('error', 'Username or email already exists');
+      return res.redirect('/user/register');
+    } else {
+      logger.error('Username or email already exists');
+      req.flash('error', 'Username or email already exists');
+      return res.redirect('/user/register');
+    }
 
     // Enforce default role; ignore any client-supplied role attempt
     const DEFAULT_ROLE = 'subcontractor';
@@ -54,24 +58,24 @@ exports.registerUser = async (req, res, next) => {
       logger.warn(`Registration role override attempt ignored. Requested='${req.body.role}' enforced='${DEFAULT_ROLE}' user='${username}'`);
     }
     const assignedRole = DEFAULT_ROLE;
-        const newUser = new mdb.INTERNAL.user({
-            username,
-            email,
-            password,
-            role: assignedRole,
-        });
+    const newUser = new mdb.INTERNAL.user({
+      username,
+      email,
+      password,
+      role: assignedRole,
+    });
 
-        await newUser.save();
+    await newUser.save();
 
-        logger.info('New User Created.');
-        req.flash('success', 'Account created. You can now log in.');
-        return res.redirect('/user/login');
+    logger.info('New User Created.');
+    req.flash('success', 'Account created. You can now log in.');
+    return res.redirect('/user/login');
 
-    } catch (error) {
-        logger.error('Error registering user: ' + error.message);
-        req.flash('error', 'Error registering user: ' + error.message);
-        return res.redirect('/user/register');
-    }
+  } catch (error) {
+    logger.error('Error registering user: ' + error.message);
+    req.flash('error', 'Error registering user: ' + error.message);
+    return res.redirect('/user/register');
+  }
 };
 
 exports.renderLoginForm = (req, res) => {
@@ -91,7 +95,7 @@ exports.loginUser = async (req, res) => {
     const reqId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     const safeId = (v) => (v ? Buffer.from(v).toString('base64').slice(0, 8) : 'null');
 
-    logger.info(`[LOGIN ${reqId}] start ua.browser='${agent.browser||'Unknown'}' ip='${ip}' supplied='${usernameOrEmail||''}' len.pw='${password?password.length:0}'`);
+    logger.info(`[LOGIN ${reqId}] start ua.browser='${agent.browser || 'Unknown'}' ip='${ip}' supplied='${usernameOrEmail || ''}' len.pw='${password ? password.length : 0}'`);
 
     if (!token) {
       logger.warn(`[LOGIN ${reqId}] missing CAPTCHA token`);
@@ -112,7 +116,7 @@ exports.loginUser = async (req, res) => {
     }
 
     if (!verifyResponse.data.success) {
-      logger.warn(`[LOGIN ${reqId}] CAPTCHA failed codes=${JSON.stringify(verifyResponse.data['error-codes']||[])} `);
+      logger.warn(`[LOGIN ${reqId}] CAPTCHA failed codes=${JSON.stringify(verifyResponse.data['error-codes'] || [])} `);
       req.flash('error', 'CAPTCHA verification failed.');
       return res.redirect('/user/login');
     }
@@ -222,7 +226,8 @@ exports.loginUser = async (req, res) => {
       if (mdb.INTERNAL.session) {
         const update = await mdb.INTERNAL.session.updateOne(
           { _id: req.sessionID },
-          { $set: {
+          {
+            $set: {
               userId: sessionData.id,
               username: sessionData.username,
               email: sessionData.email,
@@ -236,7 +241,7 @@ exports.loginUser = async (req, res) => {
           },
           { upsert: true }
         );
-        logger.info(`[LOGIN ${reqId}] session denorm matched=${update.matchedCount} modified=${update.modifiedCount} upserted=${update.upsertedCount||0}`);
+        logger.info(`[LOGIN ${reqId}] session denorm matched=${update.matchedCount} modified=${update.modifiedCount} upserted=${update.upsertedCount || 0}`);
       }
     } catch (e) {
       logger.warn(`[LOGIN ${reqId}] session denorm skipped error=${e.message}`);
