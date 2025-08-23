@@ -56,8 +56,8 @@
             <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Labour</th>
             <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Material</th>
             <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">
-              CIS @
-              <% if (supplier.CISRate === '0') { %>0%<% } else if (supplier.CISRate === '0.2') { %>20%<% } else if (supplier.CISRate === '0.3') { %>30%<% } %>
+              <% const cisRateVal = typeof supplier.CISRate === 'number' ? supplier.CISRate : (supplier.CISRate ? +supplier.CISRate : null); %>
+              CIS @ <%= cisRateVal === 0 ? '0%' : cisRateVal === 0.2 ? '20%' : cisRateVal === 0.3 ? '30%' : 'Unknown' %>
             </th>
             <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Net</th>
             <% if (supplier.isReverseCharge) { %>
@@ -104,6 +104,9 @@
             <td class="border border-gray-300 px-3 py-1 text-center"><%= formatCurrency(totalMaterial) %></td>
             <td class="border border-gray-300 px-3 py-1 text-center"><%= formatCurrency(totalCIS) %></td>
             <td class="border border-gray-300 px-3 py-1 text-center"><%= formatCurrency(totalNet) %></td>
+            <% if (supplier.isReverseCharge) { %>
+              <td></td>
+            <% } %>
             <td></td>
             <td></td>
             <td></td>
