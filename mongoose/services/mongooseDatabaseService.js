@@ -13,6 +13,27 @@ let sshServer = null;
 
 const isTunnelEnabled = process.env.SSH_TUNNEL_ENABLED === 'true';
 
+// Build a safe Mongo URI from a base URI and target db name
+function buildMongoUri(baseUri, dbName) {
+  if (!baseUri) {
+    throw new Error('MONGO_URI environment variable is not defined. Please set MONGO_URI in your .env file (e.g. MONGO_URI=mongodb://user:pass@host:27017/defaultDb?authSource=admin)');
+  }
+  // If URI already ends with /<db>? or /<db> use it, else replace first /{something}? pattern or append
+  try {
+    if (/\/[^/?]+\?/.test(baseUri)) {
+      return baseUri.replace(/\/([^/?]+)\?/, `/${dbName}?`);
+    }
+    // If ends with a slash add dbName
+    if (/\/$/.test(baseUri)) return `${baseUri}${dbName}`;
+    // If ends with db already, leave it
+    if (new RegExp(`/${dbName}($|\?)`).test(baseUri)) return baseUri;
+    // Otherwise append
+    return `${baseUri.replace(/\/?$/, '/')}${dbName}`;
+  } catch (e) {
+    throw new Error('Failed to construct Mongo URI: ' + e.message);
+  }
+}
+
 // Load models from each subfolder as a separate namespace
 const loadModels = () => {
   const modelsDirectory = path.join(__dirname, '..', 'models', 'mongoose');
@@ -48,7 +69,7 @@ mdb.connect = async () => {
       let uri;
       let connection;
       if (!isTunnelEnabled) {
-        uri = process.env.MONGO_URI.replace(/\/(\w+)\?/, `/${dbName}?`);
+  uri = buildMongoUri(process.env.MONGO_URI, dbName);
         connection = mongoose.createConnection(uri);
         await new Promise((resolve, reject) => {
           connection.once('open', resolve);
@@ -115,7 +136,7 @@ mdb.connect = async () => {
           logger.error(msg);
           throw new Error(msg);
         }
-        uri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${dbName}?authSource=admin`;
+  uri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${dbName}?authSource=admin`;
         await new Promise((resolve, reject) => {
           tunnel(sshConfig, (err, server) => {
             if (err) {
