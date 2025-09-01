@@ -6,6 +6,20 @@ module.exports = {
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
+    fieldTransforms: {
+      assignedEmployees: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      assignedSubcontractors: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
+      }
+    }
   },
   attendance: {
     title: 'Attendances',
