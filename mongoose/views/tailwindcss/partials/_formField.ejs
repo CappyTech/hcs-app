@@ -13,88 +13,89 @@
   const label = field.label + ' ' + labelSuffix;
 %>
 <% if (readOnlyField) { %>
-  <% if ((key === 'Payments' || key === 'Lines') && Array.isArray(selectedValue)) { %>
-  <% 
-    const tableData = selectedValue.map(row => {
-      const filtered = {};
-      if (key === 'Payments') {
-        ['PayDate', 'PayNote', 'PayAmount'].forEach(k => filtered[k] = row[k]);
-      } else if (key === 'Lines') {
-        ['Description', 'Rate', 'ChargeTypeName', 'VatAmount', 'ProjID'].forEach(k => filtered[k] = row[k]);
-      }
-      return filtered;
-    });
-    const firstRow = tableData[0] || {};
-  %>
+  <% /* 1) Special case: Assignments array pretty table */ %>
+  <% if (Array.isArray(selectedValue) && selectedValue.length > 0 && (selectedValue[0]?.contractId || selectedValue[0]?.weekStart || selectedValue[0]?.title)) { %>
+    <% const assignmentsTable = selectedValue.map(row => ({
+      Contract: (row.contractId && (row.contractId.Name || row.contractId.Reference || row.contractId.Number || row.contractId)) || '—',
+      Title: row.title || '—',
+      Description: row.description || '—',
+      'Week Start': row.weekStart ? slimDateTime(row.weekStart, ['displayFormat']) : '—',
+      'Assigned Employees': Array.isArray(row.assignedEmployees) ? (row.assignedEmployees.length === 0 ? '0' : (typeof row.assignedEmployees[0] === 'object' ? row.assignedEmployees.map(e => e.name || e.username || e.uuid || String(e)).join(', ') : String(row.assignedEmployees.length + ' assignedemployees'))) : '—',
+      'Assigned Subcontractors': Array.isArray(row.assignedSubcontractors) ? (row.assignedSubcontractors.length === 0 ? '0' : (typeof row.assignedSubcontractors[0] === 'object' ? row.assignedSubcontractors.map(s => s.Name || s.name || s.uuid || String(s)).join(', ') : String(row.assignedSubcontractors.length + ' assignedsubcontractors'))) : '—',
+      Status: row.status || '—',
+      'Estimated Hours': row.estimatedHours != null ? String(row.estimatedHours) : '—'
+    }));
+    const assignmentsFirstRow = assignmentsTable[0] || {}; %>
 
-  <div class="mt-4">
-    <label class="block text-sm font-medium text-gray-700 mb-1"><%= key %></label>
-    <table class="w-full text-xs text-left text-gray-700 border border-gray-200 table-fixed">
-      <thead class="bg-gray-100 text-gray-600">
-        <tr>
-          <% Object.keys(firstRow).forEach(col => { %>
-            <th class="px-2 py-1 border"><%= col %></th>
-          <% }) %>
-        </tr>
-      </thead>
-      <tbody>
-        <% tableData.forEach(row => { %>
-          <tr class="border-t">
-            <% Object.entries(row).forEach(([col, val]) => { %>
-              <td class="px-2 py-1 border max-w-[120px]">
-                <% if (col.toLowerCase().includes('date') && slimDateTime) { %>
-                  <%= slimDateTime(val, ['displayFormat']) %>
-                <% } else { %>
-                  <% } %>
-                  <% // Special-case: assignments array (readable table) %>
-                  <% if (Array.isArray(selectedValue) && selectedValue.length > 0 && (selectedValue[0].contractId || selectedValue[0].weekStart || selectedValue[0].title)) { %>
-                    <% const tableData = selectedValue.map(row => ({
-                      Contract: (row.contractId && (row.contractId.Name || row.contractId.Reference || row.contractId.Number || row.contractId)) || '—',
-                      Title: row.title || '—',
-                      Description: row.description || '—',
-                      'Week Start': row.weekStart ? slimDateTime(row.weekStart, ['displayFormat']) : '—',
-                      'Assigned Employees': Array.isArray(row.assignedEmployees) ? (row.assignedEmployees.length === 0 ? '0' : (typeof row.assignedEmployees[0] === 'object' ? row.assignedEmployees.map(e => e.name || e.username || e.uuid || String(e)).join(', ') : String(row.assignedEmployees.length + ' assignedemployees'))) : '—',
-                      'Assigned Subcontractors': Array.isArray(row.assignedSubcontractors) ? (row.assignedSubcontractors.length === 0 ? '0' : (typeof row.assignedSubcontractors[0] === 'object' ? row.assignedSubcontractors.map(s => s.Name || s.name || s.uuid || String(s)).join(', ') : String(row.assignedSubcontractors.length + ' assignedsubcontractors'))) : '—',
-                      Status: row.status || '—',
-                      'Estimated Hours': row.estimatedHours != null ? String(row.estimatedHours) : '—'
-                    }));
-                    const firstRow = tableData[0] || {};
-                    %>
-
-                    <div class="mt-4">
-                      <label class="block text-sm font-medium text-gray-700 mb-1"><%= key %></label>
-                      <table class="w-full text-xs text-left text-gray-700 border border-gray-200 table-fixed">
-                        <thead class="bg-gray-100 text-gray-600">
-                          <tr>
-                            <% Object.keys(firstRow).forEach(col => { %>
-                              <th class="px-2 py-1 border"><%= col %></th>
-                            <% }) %>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <% tableData.forEach(row => { %>
-                            <tr class="border-t">
-                              <% Object.entries(row).forEach(([col, val]) => { %>
-                                <td class="px-2 py-1 border max-w-[140px]">
-                                  <%= val ?? '—' %>
-                                </td>
-                              <% }) %>
-                            </tr>
-                          <% }) %>
-                        </tbody>
-                      </table>
-                    </div>
-                  <% } %>
-                  <%= val ?? '—' %>
-                <% } %>
-              </td>
+    <div class="mt-4">
+      <label class="block text-sm font-medium text-gray-700 mb-1"><%= key %></label>
+      <table class="w-full text-xs text-left text-gray-700 border border-gray-200 table-fixed">
+        <thead class="bg-gray-100 text-gray-600">
+          <tr>
+            <% Object.keys(assignmentsFirstRow).forEach(col => { %>
+              <th class="px-2 py-1 border"><%= col %></th>
             <% }) %>
           </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-<% } else { %>
+        </thead>
+        <tbody>
+          <% assignmentsTable.forEach(row => { %>
+            <tr class="border-t">
+              <% Object.entries(row).forEach(([col, val]) => { %>
+                <td class="px-2 py-1 border max-w-[140px]">
+                  <%= val ?? '—' %>
+                </td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+  <% /* 2) Payments/Lines tables */ %>
+  <% } else if ((key === 'Payments' || key === 'Lines') && Array.isArray(selectedValue)) { %>
+    <% 
+      const tableData = selectedValue.map(row => {
+        const filtered = {};
+        if (key === 'Payments') {
+          ['PayDate', 'PayNote', 'PayAmount'].forEach(k => filtered[k] = row[k]);
+        } else if (key === 'Lines') {
+          ['Description', 'Rate', 'ChargeTypeName', 'VatAmount', 'ProjID'].forEach(k => filtered[k] = row[k]);
+        }
+        return filtered;
+      });
+      const firstRow = tableData[0] || {};
+    %>
+
+    <div class="mt-4">
+      <label class="block text-sm font-medium text-gray-700 mb-1"><%= key %></label>
+      <table class="w-full text-xs text-left text-gray-700 border border-gray-200 table-fixed">
+        <thead class="bg-gray-100 text-gray-600">
+          <tr>
+            <% Object.keys(firstRow).forEach(col => { %>
+              <th class="px-2 py-1 border"><%= col %></th>
+            <% }) %>
+          </tr>
+        </thead>
+        <tbody>
+          <% tableData.forEach(row => { %>
+            <tr class="border-t">
+              <% Object.entries(row).forEach(([col, val]) => { %>
+                <td class="px-2 py-1 border max-w-[120px]">
+                  <% if (val && col.toLowerCase().includes('date') && typeof slimDateTime === 'function') { %>
+                    <%= slimDateTime(val, ['displayFormat']) %>
+                  <% } else { %>
+                    <%= val ?? '—' %>
+                  <% } %>
+                </td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+  <% /* 3) Default simple read-only field */ %>
+  <% } else { %>
     <% 
     const value = formData?.[key];
     let displayValue = '—';
@@ -119,7 +120,7 @@
       </span>
     </div>
   </div>
-<% } %>
+  <% } %>
 
 <% } else { %>
   <!-- Interactive field rendering -->

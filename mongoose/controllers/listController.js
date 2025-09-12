@@ -8,18 +8,12 @@ const listController = {};
 
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 
-// Merge config overrides safely
-const getMergedConfig = (modelName, overrides = {}) => ({
-  ...overrides,
-  ...(listControllerConfig?.[modelName] || {})
-});
-
-// Generate table headers
 const generateHeaders = (firstDoc, config = {}) => {
   let keys = Object.keys(firstDoc).filter(
-    k => !((config.hideFields || []).includes(k) || k.startsWith('_'))
+    k => !(config.hideFields || []).includes(k)
   );
 
+  // Reorder keys based on fieldOrder if provided
   if (Array.isArray(config.fieldOrder)) {
     const ordered = config.fieldOrder.filter(k => keys.includes(k));
     const extras = keys.filter(k => !ordered.includes(k));
@@ -30,252 +24,50 @@ const generateHeaders = (firstDoc, config = {}) => {
     key,
     label: config.labelOverrides?.[key] ||
       key.replace(/([a-z])([A-Z])/g, '$1 $2')
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase())
+         .replace(/_/g, ' ')
+         .replace(/\b\w/g, c => c.toUpperCase())
   }));
 };
 
-// Register list controllers for both REST and INTERNAL namespaces
-for (const namespace of ['REST', 'INTERNAL']) {
-  if (!mdb[namespace]) continue;
-  for (const [modelName, model] of Object.entries(mdb[namespace])) {
-    if (typeof modelName !== 'string') continue;
-    if (!model?.schema || typeof model.find !== 'function') continue;
+for (const modelName of Object.keys(mdb)) {
+  const model = mdb[modelName];
+  if (typeof model?.find !== 'function') continue;
 
-    const Model = model;
-    const baseName = capitalize(modelName);
-    const config = getMergedConfig(modelName, listControllerConfig[modelName] || {});
+  const config = listControllerConfig[modelName] || {};
+  if (denyGuard(config, 'l')) continue; // 👈 skip if list is denied
 
-    if (denyGuard(config, 'l')) continue;
+  const functionName = `list${capitalize(modelName)}`;
+  listController[functionName] = async (req, res, next) => {
+    const sortField = config.sortField || 'createdAt';
+    const sortOrder = config.sortOrder ?? -1;
 
-    const functionName = `list${baseName}`;
-    listController[functionName] = async (req, res, next) => {
-      // Clone config per request to avoid mutating shared object (hideFields, tabs modifications)
-      const runtimeConfig = JSON.parse(JSON.stringify(config || {}));
-      const sortField = req.query.sort || runtimeConfig.sortField || 'createdAt';
-      const sortOrder = req.query.order === 'asc' ? 1 : -1;
+    try {
+      const items = await model.find().sort({ [sortField]: sortOrder }).lean();
 
-      const searchQuery = req.query.search || '';
-      const limit = parseInt(req.query.limit) || 100;
-      const page = parseInt(req.query.page) || 1;
-      const skip = (page - 1) * limit;
-
-      let query = {};
-
-      try {
-        // Search filtering
-        if (searchQuery && typeof searchQuery === 'string') {
-          const regex = new RegExp(searchQuery, 'i');
-
-          let searchFields = [];
-          if (Array.isArray(runtimeConfig.search) && runtimeConfig.search.length > 0) {
-            searchFields = runtimeConfig.search;
-          } else if (Array.isArray(runtimeConfig.fieldOrder) && runtimeConfig.fieldOrder.length > 0) {
-            searchFields = runtimeConfig.fieldOrder;
-          } else {
-            searchFields = [runtimeConfig.linkField, runtimeConfig.sortField].filter(Boolean);
-          }
-
-          const schemaPaths = model.schema.paths;
-
-          query = {
-            $or: searchFields
-              .map(field => {
-                const path = schemaPaths[field];
-                if (!path) return null;
-
-                const type = path.instance;
-
-                if (type === 'String') {
-                  return { [field]: { $regex: regex } };
-                } else if (type === 'Number' && !isNaN(searchQuery)) {
-                  return { [field]: Number(searchQuery) };
-                } else {
-                  return null;
-                }
-              })
-              .filter(Boolean)
-          };
-        }
-
-        let tabs = [];
-        let activeTab = null;
-
-        if (runtimeConfig.tabsby) {
-          const tabsby = runtimeConfig.tabsby;
-          const tabsValues = Array.isArray(runtimeConfig.tabsValues) ? runtimeConfig.tabsValues : [];
-
-          // Only filter by tab if req.query.tab matches one of the tabsValues values
-          if (req.query.tab && tabsValues.some(tab => tab.value === req.query.tab)) {
-            query[tabsby] = req.query.tab;
-            activeTab = req.query.tab;
-          }
-
-          // Build tabs from config.tabsValues always (even if no data)
-          if (tabsValues.length) {
-            tabs = tabsValues.map(tab => ({
-              value: tab.value,
-              label: tab.label,
-              isActive: tab.value === activeTab,
-            }));
-          } else {
-            // fallback: create tabs from distinct values in data if no tabsValues configured
-            // We'll handle this after fetching items
-          }
-
-          // Always exclude tab field from headers
-          runtimeConfig.hideFields = [...(runtimeConfig.hideFields || []), tabsby];
-        }
-
-        // Count total documents matching current query (including tab filter)
-        const totalCount = await model.countDocuments(query);
-        const totalPages = Math.ceil(totalCount / limit);
-
-        let queryExec = model.find(query)
-          .sort({ [sortField]: sortOrder })
-          .skip(skip)
-          .limit(limit);
-
-        // Dynamically populate all ref fields using model's linkField as default select
-        const refPaths = Object.entries(model.schema.paths).filter(
-          ([, schemaType]) => schemaType.options && schemaType.options.ref
-        );
-
-        for (const [pathKey, schemaType] of refPaths) {
-          const refModelName = schemaType.options.ref;
-          // Skip cross-namespace populate where model only exists in other DB (prevents MissingSchemaError)
-          const refModel = (mdb[namespace]?.[refModelName]) || null;
-          if (!refModel) continue; // manual join handled elsewhere if needed
-
-          let selectField = null;
-          const refConfig = listControllerConfig?.[refModelName];
-          if (refConfig?.linkField && refModel?.schema?.paths?.[refConfig.linkField]) {
-            selectField = refConfig.linkField;
-          }
-          queryExec = queryExec.populate(pathKey, selectField || '');
-        }
-
-        const items = await queryExec.lean();
-
-        // If tabsValues is empty, fallback: build tabs from distinct values in the data for the tabsby field
-        if (config.tabsby && (!tabs.length || tabs.length === 0)) {
-          const distinctMap = {};
-          for (const item of items) {
-            const rawValue = item[config.tabsby];
-            if (rawValue == null) continue;
-            const label = typeof rawValue === 'string'
-              ? rawValue
-              : rawValue?.name || rawValue?.title || rawValue?.label || String(rawValue);
-            distinctMap[String(rawValue)] = label;
-          }
-          tabs = Object.entries(distinctMap).map(([value, label]) => ({
-            value,
-            label,
-            isActive: value === req.query.tab,
-          }));
-          activeTab = req.query.tab;
-        }
-
-        // Apply fieldTransforms from config
-        if (runtimeConfig.fieldTransforms) {
-          for (const [fieldKey, transform] of Object.entries(runtimeConfig.fieldTransforms)) {
-            const { fromModel, matchField, returnField } = transform;
-            if (!fromModel || !matchField || !returnField) continue;
-
-            const matchValues = [...new Set(
-              items.map(i => {
-                const val = i[fieldKey];
-                if (!val) return null;
-                if (typeof val === 'object' && val._id) return String(val._id);
-                return String(val);
-              }).filter(Boolean)
-            )];
-            // Try both namespaces for refModel
-            const refModel = (mdb.REST?.[fromModel] || mdb.INTERNAL?.[fromModel]);
-            if (!refModel) continue;
-
-            // Convert ObjectIds to strings for reliable matching
-            const docs = await refModel.find({ [matchField]: { $in: matchValues } }).lean();
-            const map = Object.fromEntries(
-              docs.map(d => [String(d[matchField]), { label: d[returnField], uuid: d.uuid }])
-            );
-
-            for (const item of items) {
-              const rawVal = item[fieldKey];
-              const key = typeof rawVal === 'object' && rawVal._id ? String(rawVal._id) : String(rawVal);
-              const matched = map[key];
-
-              if (matched) {
-                item[fieldKey] = matched.label;
-
-                if (!item._fieldLinks) item._fieldLinks = {};
-
-                item._fieldLinks[fieldKey] =
-                  typeof transform.linkTo === 'function'
-                    ? transform.linkTo(matched, item)
-                    : `/${fromModel}/read/${matched.uuid}`;
-              }
-            }
-          }
-        }
-
-        const fieldLinks = { ...(runtimeConfig.fieldLinks || {}) };
-
-        if (runtimeConfig.fieldTransforms) {
-          for (const [fieldKey, transform] of Object.entries(runtimeConfig.fieldTransforms)) {
-            if (typeof transform.linkTo === 'function') {
-              fieldLinks[fieldKey] = transform.linkTo;
-            }
-          }
-        }
-
-        const headers = items.length ? generateHeaders(items[0], runtimeConfig) : [];
-
-        // Sanitize rows before sending to EJS
-        const rows = items.map(item => {
-          if (item.uuid && typeof item.uuid !== 'string') {
-            item.uuid = String(item.uuid);
-          }
-          return item;
-        });
-
-        // Map actions for each row so href is a string, not a function
-        const mappedRows = rows.map(row => {
-          if (Array.isArray(runtimeConfig.actions)) {
-            row._actions = runtimeConfig.actions.map(action => {
-              let href = typeof action.href === 'function' ? action.href(row) : action.href;
-              return { ...action, href };
-            });
-          }
-          return row;
-        });
-
-        return res.render(path.join('tailwindcss', 'partials', 'listTable'), {
-          title: runtimeConfig.title || modelName + 's',
-          headers,
-          rows: mappedRows,
+      if (!items.length) {
+        return res.render(path.join('mongoose', 'partials', 'listTable'), {
+          title: config.title || capitalize(modelName) + 's',
+          headers: [],
+          rows: [],
           basePath: modelName,
-          linkField: runtimeConfig.linkField || 'title',
-          actions: runtimeConfig.actions || [],
-          hasActions: !!(runtimeConfig.actions?.length),
-          modelName,
-          query: searchQuery,
-          queryParams: req.query,
-          sortField,
-          sortOrder,
-          limit,
-          page,
-          totalPages,
-          fieldLinks: row => row._fieldLinks || {},
-          tabs,
-          activeTab,
+          linkField: config.linkField || 'title'
         });
-      } catch (err) {
-        logger.error(`Error listing ${modelName}:`, err);
-        next(err);
       }
-    };
-  }
+
+      const headers = generateHeaders(items[0], config);
+
+      res.render(path.join('mongoose', 'partials', 'listTable'), {
+        title: config.title || capitalize(modelName) + 's',
+        headers,
+        rows: items,
+        basePath: modelName,
+        linkField: config.linkField || 'title'
+      });
+    } catch (err) {
+      logger.error(`Error listing ${modelName}:`, err);
+      next(err);
+    }
+  };
 }
 
 module.exports = listController;

@@ -1,4 +1,4 @@
-const moment = require('moment-timezone');
+const moment = require('moment');
 const logger = require('../../services/loggerService');
 const mdb = require('./mongooseDatabaseService');
 const taxService = require('../../services/taxService');
@@ -8,7 +8,7 @@ const taxService = require('../../services/taxService');
  */
 const getAttendanceForDay = async (date) => {
   try {
-    return await mdb.INTERNAL.attendance
+    return await mdb.attendance
       .find({ date })
       .populate('employeeId')
       .populate('locationId')
@@ -25,7 +25,7 @@ const getAttendanceForDay = async (date) => {
 const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
   try {
     const [attendanceRecords, allEmployees, allSubcontractors, paidReceipts] = await Promise.all([
-      mdb.INTERNAL.attendance
+      mdb.attendance
         .find({
           date: {
             $gte: payrollWeekStart.format('YYYY-MM-DD'),
@@ -34,21 +34,20 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
         })
         .populate('employeeId')
         .populate('locationId')
-        .populate('contractAssignmentId')
         .sort({ date: 1 }),
 
-      mdb.INTERNAL.employee.find({ status: 'active' }),
+      mdb.employee.find({ status: 'active' }),
 
-      mdb.REST.supplier.find({ IsSubcontractor: true }),
+      mdb.supplier.find({ Subcontractor: true }),
 
-      mdb.REST.purchase.find({
+      mdb.receipt.find({
         Paid: true,
         AmountPaid: { $gt: 0 },
         InvoiceDate: {
           $gte: payrollWeekStart.format('YYYY-MM-DD'),
           $lte: endDate.format('YYYY-MM-DD')
         }
-      })
+      }).populate('CustomerID')
     ]);
 
     return {
@@ -80,12 +79,9 @@ const groupAttendanceByPerson = (
   let totalEmployeeHours = 0;
   let totalSubcontractorPay = 0;
 
-  const supplierMap = new Map(allSubcontractors.map(s => [s.SupplierID, s]));
-
   // Init employees
   allEmployees.forEach(emp => {
-    groupedAttendance[emp.uuid] = {
-      name: emp.name,
+    groupedAttendance[emp.name] = {
       employeeId: emp.uuid,
       subcontractorId: null,
       totalHoursWorked: 0,
@@ -97,22 +93,17 @@ const groupAttendanceByPerson = (
 
   // Add subcontractors from receipts
   paidReceipts.forEach(receipt => {
-    const supplier = supplierMap.get(receipt.CustomerID);
-    if (!supplier) {
-      logger.warn(`No supplier found for receipt with CustomerID ${receipt.CustomerID}`);
-      return;
-    }
+    const supplier = receipt.CustomerID;
+    if (!supplier) return;
 
-    const subcontractorKey = supplier.uuid;
-    const displayName = supplier.Name || supplier.Code || `Subcontractor ${subcontractorKey}`;
+    const name = supplier.Name;
     const dateKey = moment(receipt.InvoiceDate).format('YYYY-MM-DD');
     const amount = parseFloat(receipt.AmountPaid || 0);
 
-    if (!groupedAttendance[subcontractorKey]) {
-      groupedAttendance[subcontractorKey] = {
-        name: displayName,
+    if (!groupedAttendance[name]) {
+      groupedAttendance[name] = {
         employeeId: null,
-        subcontractorId: subcontractorKey,
+        subcontractorId: supplier.uuid,
         totalHoursWorked: 0,
         weeklyPay: 0,
         dailyRecords: {},
@@ -120,16 +111,15 @@ const groupAttendanceByPerson = (
       };
     }
 
-    groupedAttendance[subcontractorKey].weeklyPay += amount;
+    groupedAttendance[name].weeklyPay += amount;
 
-    if (!groupedAttendance[subcontractorKey].dailyRecords[dateKey]) {
-      groupedAttendance[subcontractorKey].dailyRecords[dateKey] = {};
+    if (!groupedAttendance[name].dailyRecords[dateKey]) {
+      groupedAttendance[name].dailyRecords[dateKey] = {};
     }
 
-    groupedAttendance[subcontractorKey].dailyRecords[dateKey][`receipt-${receipt.uuid}`] = {
+    groupedAttendance[name].dailyRecords[dateKey][`receipt-${receipt._id}`] = {
       location: null,
       type: 'Receipt',
-      number: receipt.InvoiceNumber || null,
       hoursWorked: null,
       weeklyPay: amount
     };
@@ -142,40 +132,37 @@ const groupAttendanceByPerson = (
     const employee = record.employeeId;
     if (!employee) return;
 
-    const employeeKey = employee.uuid;
+    const name = employee.name;
     const dateKey = moment(record.date).format('YYYY-MM-DD');
     const hoursWorked = parseFloat(record.hoursWorked || 0);
     const hourlyRate = parseFloat(employee.hourlyRate || 0);
     const calculatedPay = hoursWorked * hourlyRate;
 
-    if (!groupedAttendance[employeeKey]) {
-      groupedAttendance[employeeKey] = {
-        name: employee.name,
+    if (!groupedAttendance[name]) {
+      groupedAttendance[name] = {
         employeeId: employee.uuid,
         subcontractorId: null,
         totalHoursWorked: 0,
         weeklyPay: 0,
         dailyRecords: {},
         type: 'employee',
-        status: employee.status
+        status: emp.status
       };
     }
 
-    if (!groupedAttendance[employeeKey].dailyRecords[dateKey]) {
-      groupedAttendance[employeeKey].dailyRecords[dateKey] = {};
+    if (!groupedAttendance[name].dailyRecords[dateKey]) {
+      groupedAttendance[name].dailyRecords[dateKey] = {};
     }
 
-    groupedAttendance[employeeKey].dailyRecords[dateKey][record.uuid] = {
-      uuid: record.uuid,
+    groupedAttendance[name].dailyRecords[dateKey][record._id] = {
       location: record.locationId || null,
       type: record.type,
       hoursWorked,
-      weeklyPay: calculatedPay,
-      contractAssignmentId: record.contractAssignmentId || null
+      weeklyPay: calculatedPay
     };
 
-    groupedAttendance[employeeKey].totalHoursWorked += hoursWorked;
-    groupedAttendance[employeeKey].weeklyPay += calculatedPay;
+    groupedAttendance[name].totalHoursWorked += hoursWorked;
+    groupedAttendance[name].weeklyPay += calculatedPay;
     totalEmployeeHours += hoursWorked;
   });
 
@@ -251,35 +238,11 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     daysOfWeek
   } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidReceipts);
 
-  // Fetch active contracts without populating projectId (project model lives in REST DB)
-  const activeJobs = await mdb.INTERNAL.contract.find({
+  const activeJobs = await mdb.job.find({
     startDate: { $lte: endDate.toDate() },
     $or: [{ endDate: null }, { endDate: { $gte: payrollWeekStart.toDate() } }],
     status: { $ne: 'archived' }
-  }).populate('locationId').lean();
-
-  // Manually join project documents from REST DB
-  const projectIdSet = new Set(
-    activeJobs
-      .filter(j => j.projectId)
-      .map(j => String(j.projectId))
-  );
-  let projectMap = {};
-  if (projectIdSet.size) {
-    const projects = await mdb.REST.project.find({ _id: { $in: Array.from(projectIdSet) } })
-      .select('Name Reference Number uuid')
-      .lean();
-    projectMap = Object.fromEntries(projects.map(p => [String(p._id), p]));
-  }
-  // Replace projectId ObjectId with the project doc (maintains template expectations job.projectId.Name)
-  activeJobs.forEach(job => {
-    if (job.projectId) {
-      const proj = projectMap[String(job.projectId)];
-      if (proj) {
-        job.projectId = proj; // preserve existing view field usage
-      }
-    }
-  });
+  }).populate('projectId').populate('locationId').lean();
 
   return {
     groupedAttendance,

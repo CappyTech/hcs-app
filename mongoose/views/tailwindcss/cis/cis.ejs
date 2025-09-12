@@ -113,7 +113,8 @@
                   <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].grossAmount) %></td>
                   <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].labourCost) %></td>
                   <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].materialsCost) %></td>
-                  <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].cisDeductions) %></td>
+                  <% const st = supplierTotals[String(supplier.Id)]; %>
+                  <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency((st.cisDeductions && st.cisDeductions !== 0) ? st.cisDeductions : st.calculatedCISDeduction) %></td>
                   <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].reverseChargeVAT) %></td>
                   <% } else { %>
                   <td colspan="6" class="border border-gray-300 text-center py-6">No Data</td>
