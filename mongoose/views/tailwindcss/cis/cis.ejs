@@ -155,7 +155,12 @@
                       </span>
                       <span class="text-sm text-right">
                         <div><%= purchase.Number %> | <%= purchase.SupplierName %> | <%= purchase.SupplierReference %></div>
-                        <small class="block text-xs text-gray-500"><%= purchase.payDate %> (<%= purchase.timeZoneTag %>)</small>
+                        <small class="block text-xs text-gray-500">
+                          <%= purchase.displayDateLabel %>: <%= purchase.displayDate %> (<%= purchase.timeZoneTag %>)
+                          <% if (!purchase.isPaid && purchase.dueDateStr) { %>
+                            &nbsp;• Due: <%= purchase.dueDateStr %>
+                          <% } %>
+                        </small>
                       </span>
                     </a>
                   </li>

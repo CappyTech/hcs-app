@@ -29,8 +29,11 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       ]
     }).lean();
 
+    // Only paid purchases are allowed in CIS: consider paid if has PaymentLines or PaidDate present
+    const paidPurchases = purchases.filter(p => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate);
+
     // Suppliers for those purchases (only subcontractors)
-    const supplierIDs = [...new Set(purchases.map(p => p?.SupplierId).filter(id => id != null))];
+  const supplierIDs = [...new Set(paidPurchases.map(p => p?.SupplierId).filter(id => id != null))];
     const suppliers = await mdb.REST.supplier
       .find({
         Id: { $in: supplierIDs },
@@ -40,8 +43,8 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       .lean();
 
     // Restrict purchases to subcontractor suppliers only
-    const allowedSupplierIds = new Set(suppliers.map(s => String(s.Id)));
-    const filteredPurchases = purchases.filter(p => allowedSupplierIds.has(String(p.SupplierId)));
+  const allowedSupplierIds = new Set(suppliers.map(s => String(s.Id)));
+  const filteredPurchases = paidPurchases.filter(p => allowedSupplierIds.has(String(p.SupplierId)));
 
     // CIS rate map per supplier id
     const cisRateBySupplierId = new Map();
@@ -196,12 +199,17 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     // Decorate purchases for view list
   const purchasesForView = filteredPurchases.map(p => {
-      const payDate = p.PaidDate || p.IssuedDate || null;
-      const m = payDate ? moment.tz(payDate, 'Europe/London') : null;
+      const isPaid = (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate;
+      const displayDateRaw = isPaid ? (p.PaidDate || p.IssuedDate || null) : (p.IssuedDate || null);
+      const m = displayDateRaw ? moment.tz(displayDateRaw, 'Europe/London') : null;
+      const due = p.DueDate ? moment.tz(p.DueDate, 'Europe/London') : null;
       return {
         ...p,
-        payDate: m ? m.format('Do MMM YYYY') : '',
+        isPaid,
+        displayDateLabel: isPaid ? 'Paid' : 'Issued',
+        displayDate: m ? m.format('Do MMM YYYY') : '',
         timeZoneTag: m ? (m.isDST() ? 'BST' : 'GMT') : '',
+        dueDateStr: due ? due.format('Do MMM YYYY') : '',
       };
     });
 
