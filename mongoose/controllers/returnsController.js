@@ -1,38 +1,48 @@
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
+const taxService = require('../../services/taxService');
+const cisMappings = require('../config/cisMappings');
 const moment = require('moment-timezone');
-const normalizePayments = require('../../services/kashflowNormalizer').normalizePayments;
 
+// Tax month display names (April=1 .. March=12)
 const monthNames = [
   'April','May','June','July','August','September',
   'October','November','December','January','February','March'
 ];
 
+// Note: Month name mapping handled by CIS dashboard utilities; not needed here.
+
 exports.renderMonthlyReturnsForm = async (req,res,next)=>{
   try {
-    const suppliers = await mdb.supplier.find({ IsSubcontractor: true }).lean();
+    // Build suppliersWithMonths similar to legacy view but from REST purchases
+    const suppliers = await mdb.REST.supplier
+      .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+      .sort({ Name: 1 })
+      .lean();
+
     const suppliersWithMonths = [];
     for (const supplier of suppliers) {
-      const recs = await mdb.receipt.find({ CustomerID: supplier.SupplierID })
+      const recs = await mdb.REST.purchase.find({ SupplierId: supplier.Id })
         .select('TaxYear TaxMonth')
         .lean();
       const receiptsByYear = {};
-      recs.forEach(r=>{
-        if(!r.TaxYear || !r.TaxMonth) return;
-        if(!receiptsByYear[r.TaxYear]) receiptsByYear[r.TaxYear]=[];
-        if(!receiptsByYear[r.TaxYear].includes(r.TaxMonth)) {
+      recs.forEach(r => {
+        if (!r.TaxYear || !r.TaxMonth) return;
+        if (!receiptsByYear[r.TaxYear]) receiptsByYear[r.TaxYear] = [];
+        if (!receiptsByYear[r.TaxYear].includes(r.TaxMonth)) {
           receiptsByYear[r.TaxYear].push(r.TaxMonth);
-          receiptsByYear[r.TaxYear].sort((a,b)=>monthNames.indexOf(monthNames[a-1]) - monthNames.indexOf(monthNames[b-1]));
+          receiptsByYear[r.TaxYear].sort((a,b)=> monthNames.indexOf(monthNames[a-1]) - monthNames.indexOf(monthNames[b-1]));
         }
       });
       suppliersWithMonths.push({
         supplier,
-        years:Object.keys(receiptsByYear).sort((a,b)=>b-a),
+        years: Object.keys(receiptsByYear).sort((a,b)=> b - a),
         receiptsByYear
       });
     }
-    res.render(path.join('mongoose', 'cis','monthlyReturnsForm'),{
-      title:'Monthly Returns Form',
+
+    return res.render(path.join('tailwindcss', 'cis', 'monthlyReturnsForm'),{
+      title: 'Monthly Returns',
       suppliersWithMonths,
       monthNames
     });
@@ -44,48 +54,91 @@ exports.renderMonthlyReturnsForm = async (req,res,next)=>{
 exports.renderMonthlyReturns = async (req,res,next)=>{
   try {
     const { month, year, uuid } = req.params;
+    const debug = !!req.query.debug;
     if(!month || !year || !uuid) return res.status(400).send('Month, Year and Supplier UUID required');
-    const supplier = await mdb.supplier.findOne({ uuid }).lean();
+    const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
     if(!supplier) {
       req.flash('error', 'Supplier not found.');
       return res.redirect('/suppliers');
     }
-    const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID, TaxYear: year, TaxMonth: month }).sort({ InvoiceNumber: 1 }).lean();
-    const receiptsByMonth = {};
-    receipts.forEach(receipt=>{
-      const m = receipt.TaxMonth || moment(receipt.InvoiceDate).month()+1;
-      if(!receiptsByMonth[m]) receiptsByMonth[m]=[];
-      const lines = Array.isArray(receipt.Lines) ? receipt.Lines : (receipt.Lines?.Line ? (Array.isArray(receipt.Lines.Line)?receipt.Lines.Line:[receipt.Lines.Line]) : []);
-      const payments = normalizePayments(receipt.Payments, receipt.InvoiceNumber, receipt.CustomerID);
-      const labourCost = lines.filter(l=>l.ChargeType===18685897).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0);
-      const materialCost = lines.filter(l=>l.ChargeType===18685896).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0);
-      const cisAmount = Math.abs(lines.filter(l=>l.ChargeType===18685964).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0));
-      const grossAmount = labourCost + materialCost;
+
+    // Fetch purchases for supplier and period
+    const purchases = await mdb.REST.purchase.find({
+      SupplierId: supplier.Id,
+      TaxYear: +year,
+      TaxMonth: +month
+    }).sort({ Number: 1 }).lean();
+
+    // Paid-only filtering as per CIS policy
+    const paidPurchases = purchases.filter(p => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate);
+
+    // Helper to classify line items similar to cisController
+    const classifyPurchase = (p) => {
+      const hasLineItems = Array.isArray(p.LineItems) && p.LineItems.length > 0;
+      const hasLines = Array.isArray(p.Lines) && p.Lines.length > 0;
+      const lines = hasLineItems ? p.LineItems : hasLines ? p.Lines : [];
+      let labourCost = 0, materialsCost = 0, cisAmount = 0;
+      for (const line of lines) {
+        if (!line) continue;
+        const chargeType = line.ChargeType != null ? Number(line.ChargeType) : null;
+        const qty = Number(line.Quantity) || 0;
+        const rate = Number(line.Rate) || 0;
+        const amount = line.Amount != null ? Number(line.Amount) : (rate * qty);
+        if (chargeType === 18685896) { materialsCost += amount; continue; }
+        if (chargeType === 18685897) { labourCost += amount; continue; }
+        if (chargeType === 18685964) { cisAmount += Math.abs(amount); continue; }
+        const nc = Number(line.NominalCode) || null;
+        const nn = (line.NominalName || line.Description || '').toString().toLowerCase();
+        if (nc && cisMappings.materialsNominalCodes.includes(nc)) { materialsCost += amount; continue; }
+        if (nc && cisMappings.labourNominalCodes.includes(nc)) { labourCost += amount; continue; }
+        if (nc && Array.isArray(cisMappings.cisDeductionNominalCodes) && cisMappings.cisDeductionNominalCodes.includes(nc)) { cisAmount += Math.abs(amount); continue; }
+        if (nn.includes('material')) { materialsCost += amount; continue; }
+        if (nn.includes('labour') || nn.includes('labor') || nn.includes('subcontract')) { labourCost += amount; continue; }
+      }
+      const grossAmount = labourCost + materialsCost;
       const netAmount = grossAmount - cisAmount;
-      const payDates = payments?.Payment?.Payment?.map(p=>p.PayDate) || [];
-      const payDate = payDates.length>0 ? payDates[0] : 'N/A';
-      receiptsByMonth[m].push({
-        InvoiceNumber: receipt.CustomerReference,
-        KashflowNumber: receipt.InvoiceNumber,
-        InvoiceDate: receipt.InvoiceDate,
-        PayDates: payDates,
-        PayDate: payDate,
-        GrossAmount: grossAmount,
-        LabourCost: labourCost,
-        MaterialCost: materialCost,
-        CISAmount: cisAmount,
-        NetAmount: netAmount,
-        SubmissionDate: receipt.SubmissionDate
-      });
+      const payDates = Array.isArray(p.PaymentLines) ? p.PaymentLines.map(pl => pl.PayDate || pl.Date).filter(Boolean) : [];
+      const payDate = p.PaidDate || (payDates.length ? payDates[0] : null);
+      return { labourCost, materialsCost, cisAmount, grossAmount, netAmount, payDates, payDate };
+    };
+
+    const rows = paidPurchases.map(p => {
+      const c = classifyPurchase(p);
+      return {
+        Number: p.Number,
+        IssuedDate: p.IssuedDate,
+        PaidDate: c.payDate,
+        LabourCost: c.labourCost,
+        MaterialCost: c.materialsCost,
+        CISAmount: c.cisAmount,
+        GrossAmount: c.grossAmount,
+        NetAmount: c.netAmount,
+        SubmissionDate: p.SubmissionDate
+      };
     });
-    res.render(path.join('mongoose', 'cis', 'monthlyReturnsForOneSubcontractor'), {
-      title: 'Subcontractor Monthly Returns',
-      month,
-      year,
+
+    // Totals
+    const totals = rows.reduce((acc, r) => ({
+      LabourCost: acc.LabourCost + (r.LabourCost || 0),
+      MaterialCost: acc.MaterialCost + (r.MaterialCost || 0),
+      CISAmount: acc.CISAmount + (r.CISAmount || 0),
+      GrossAmount: acc.GrossAmount + (r.GrossAmount || 0),
+      NetAmount: acc.NetAmount + (r.NetAmount || 0),
+    }), { LabourCost: 0, MaterialCost: 0, CISAmount: 0, GrossAmount: 0, NetAmount: 0 });
+
+    const monthName = moment.tz({ year: +year, month: 3, day: 6 }, 'Europe/London').add(+month - 1, 'months').format('MMMM');
+
+    const nextYearShortM = (Number(year) + 1).toString().slice(-2);
+    const dynamicTitleM = `${supplier.Name} | Heron Constructive Solutions LTD | ${year}-${nextYearShortM} CIS Returns — ${monthName}`;
+    return res.render(path.join('tailwindcss', 'cis', 'monthlyReturnsForOneSubcontractor'), {
+      title: dynamicTitleM,
       supplier,
-      receiptsByMonth,
-      monthNames,
-      pageBreakMonths:[]
+      year: +year,
+      month: +month,
+      monthName,
+      rows,
+      totals,
+      debug
     });
   }catch(err){
     next(err);
@@ -95,42 +148,86 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
 exports.renderYearlyReturns = async (req,res,next)=>{
   try {
     const { year, uuid } = req.params;
+    const debug = !!req.query.debug;
     if(!year || !uuid) return res.status(400).send('Year and Supplier UUID required');
-    const supplier = await mdb.supplier.findOne({ uuid }).lean();
-    if(!supplier) return res.status(404).send('Supplier not found');
-    const receipts = await mdb.receipt.find({ CustomerID: supplier.SupplierID, TaxYear: year }).sort({ InvoiceNumber:1 }).lean();
+    const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
+    if(!supplier) {
+      req.flash('error', 'Supplier not found.');
+      return res.redirect('/suppliers');
+    }
+    const purchases = await mdb.REST.purchase.find({
+      SupplierId: supplier.Id,
+      TaxYear: +year
+    }).sort({ TaxMonth: 1, Number: 1 }).lean();
+
+    // Paid-only filtering as per CIS policy
+    const paidPurchases = purchases.filter(p => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate);
+
+    // Build receiptsByMonth compatible with existing template
     const receiptsByMonth = {};
-    receipts.forEach(receipt=>{
-      const m = receipt.TaxMonth || moment(receipt.InvoiceDate).month()+1;
-      if(!receiptsByMonth[m]) receiptsByMonth[m]=[];
-      const lines = Array.isArray(receipt.Lines)?receipt.Lines:(receipt.Lines?.Line?(Array.isArray(receipt.Lines.Line)?receipt.Lines.Line:[receipt.Lines.Line]):[]);
-      const payments = normalizePayments(receipt.Payments, receipt.InvoiceNumber, receipt.CustomerID);
-      const labourCost = lines.filter(l=>l.ChargeType===18685897).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0);
-      const materialCost = lines.filter(l=>l.ChargeType===18685896).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0);
-      const cisAmount = Math.abs(lines.filter(l=>l.ChargeType===18685964).reduce((s,l)=>s+((+l.Rate)*(+l.Quantity)||0),0));
-      const grossAmount = labourCost + materialCost;
+    const classifyPurchase = (p) => {
+      const hasLineItems = Array.isArray(p.LineItems) && p.LineItems.length > 0;
+      const hasLines = Array.isArray(p.Lines) && p.Lines.length > 0;
+      const lines = hasLineItems ? p.LineItems : hasLines ? p.Lines : [];
+      let labourCost = 0, materialsCost = 0, cisAmount = 0;
+      for (const line of lines) {
+        if (!line) continue;
+        const chargeType = line.ChargeType != null ? Number(line.ChargeType) : null;
+        const qty = Number(line.Quantity) || 0;
+        const rate = Number(line.Rate) || 0;
+        const amount = line.Amount != null ? Number(line.Amount) : (rate * qty);
+        if (chargeType === 18685896) { materialsCost += amount; continue; }
+        if (chargeType === 18685897) { labourCost += amount; continue; }
+        if (chargeType === 18685964) { cisAmount += Math.abs(amount); continue; }
+        const nc = Number(line.NominalCode) || null;
+        const nn = (line.NominalName || line.Description || '').toString().toLowerCase();
+        if (nc && cisMappings.materialsNominalCodes.includes(nc)) { materialsCost += amount; continue; }
+        if (nc && cisMappings.labourNominalCodes.includes(nc)) { labourCost += amount; continue; }
+        if (nc && Array.isArray(cisMappings.cisDeductionNominalCodes) && cisMappings.cisDeductionNominalCodes.includes(nc)) { cisAmount += Math.abs(amount); continue; }
+        if (nn.includes('material')) { materialsCost += amount; continue; }
+        if (nn.includes('labour') || nn.includes('labor') || nn.includes('subcontract')) { labourCost += amount; continue; }
+      }
+      const grossAmount = labourCost + materialsCost;
       const netAmount = grossAmount - cisAmount;
-      const payDates = payments?.Payment?.Payment?.map(p=>p.PayDate) || [];
+      const payDates = Array.isArray(p.PaymentLines) ? p.PaymentLines.map(pl => pl.PayDate || pl.Date).filter(Boolean) : [];
+      const payDate = p.PaidDate || (payDates.length ? payDates[0] : null);
+      return { labourCost, materialsCost, cisAmount, grossAmount, netAmount, payDate };
+    };
+
+    for (const p of paidPurchases) {
+      const m = (p.TaxMonth || 1).toString();
+      if (!receiptsByMonth[m]) receiptsByMonth[m] = [];
+      const c = classifyPurchase(p);
       receiptsByMonth[m].push({
-        InvoiceNumber: receipt.CustomerReference,
-        KashflowNumber: receipt.InvoiceNumber,
-        InvoiceDate: receipt.InvoiceDate,
-        PayDate: payDates[0] || 'N/A',
-        Gross: grossAmount,
-        Labour: labourCost,
-        Material: materialCost,
-        CIS: cisAmount,
-        Net: netAmount,
-        Submission: receipt.SubmissionDate
+        InvoiceNumber: p.SupplierReference || p.Number,
+        KashflowNumber: p.Number,
+        InvoiceDate: p.IssuedDate,
+        PayDate: c.payDate,
+        Gross: c.grossAmount,
+        Labour: c.labourCost,
+        Material: c.materialsCost,
+        CIS: c.cisAmount,
+        Net: c.netAmount,
+        SubmissionDate: p.SubmissionDate
       });
-    });
-    res.render(path.join('mongoose', 'cis', 'yearlyReturns'),{
-      title:'Subcontractor Yearly Returns',
-      year,
+    }
+
+    // Provide helpers for formatting if not globally defined
+    const slimDateTime = (d) => d ? moment.tz(d, 'Europe/London').format('DD/MM/YYYY') : '';
+    const formatCurrency = (n) => `£${(Number(n||0)).toFixed(2)}`;
+
+    const nextYearShort = (Number(year) + 1).toString().slice(-2);
+    const dynamicTitle = `${supplier.Name} | Heron Constructive Solutions LTD | ${year}-${nextYearShort} CIS Returns`;
+    return res.render(path.join('tailwindcss', 'cis', 'yearlyReturns'),{
+      title: dynamicTitle,
+      year: +year,
       supplier,
       receiptsByMonth,
       monthNames,
-      pageBreakMonths:[]
+      pageBreakMonths: [],
+      slimDateTime,
+      formatCurrency,
+      debug
     });
   }catch(err){
     next(err);

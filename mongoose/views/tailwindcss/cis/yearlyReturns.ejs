@@ -1,55 +1,65 @@
-<div class="flex flex-wrap gap-2 print:hidden p-4 border-b border-gray-200">
-  <!-- PDF Button
-  <button class="btn-hcs-green px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed" data-bs-toggle="modal" data-bs-target="#pdfModal" disabled>
-    Download as PDF
-  </button>
- -->
-  <!-- CSV Button
-  <form action="/yearly/download-csv" method="POST" class="m-0">
-    <%- include('../partials/csrfHidden.ejs') %>
-    <input type="hidden" name="year" value="<%= year %>">
-    <input type="hidden" name="uuid" value="<%= supplier.uuid %>">
-    <input type="hidden" name="filename"
-      value="<%= supplier.Name.replace(/\\s+/g, '_') %>_<%= year %>-<%= (parseInt(year) + 1).toString().slice(-2) %>_CIS_Returns.csv">
-    <button type="submit" class="btn-hcs-green px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-      Download as CSV
-    </button>
-  </form>
--->
-  <!-- XLSX Button
-  <form action="/yearly/download-xlsx" method="POST" class="m-0">
-    <%- include('../partials/csrfHidden.ejs') %>
-    <input type="hidden" name="year" value="<%= year %>">
-    <input type="hidden" name="uuid" value="<%= supplier.uuid %>">
-    <input type="hidden" name="filename"
-      value="<%= supplier.Name.replace(/\\s+/g, '_') %>_<%= year %>-<%= (parseInt(year) + 1).toString().slice(-2) %>_CIS_Returns.xlsx">
-    <button type="submit" class="btn-hcs-green px-4 py-2 rounded">
-      Download as Excel
-    </button>
-  </form> -->
-</div>
-
-<div class="page-number py-3 text-center text-gray-600 font-semibold">
-  <%= supplier.Name %> | Heron Constructive Solutions LTD | <%= year %>-<%= (parseInt(year) + 1).toString().slice(-2) %> CIS Returns
-</div>
-
-<div class="mt-4">
-  <h1 class="mb-4 text-center text-4xl font-extrabold">
-    <%= year %>-<%= (parseInt(year) + 1).toString().slice(-2) %> Returns
+<div class="">
+  <h1 class="mb-4 text-center font-extrabold">
+    <%= year %>-<%= (parseInt(year) + 1).toString().slice(-2) %> Construction Industry Scheme Returns
   </h1>
 
-  <div class="flex flex-wrap justify-evenly gap-8 text-center">
-    <div class="w-full md:w-1/2">
-      <p class="text-3xl font-semibold mb-2">Subcontractor</p>
+  <div class="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-8 text-center">
+    <div>
+      <p class="font-semibold mb-2">Subcontractor</p>
       <p>
-        <%= supplier.Name %><br>
-        <%= [supplier.Address1, supplier.Address2, supplier.Address3, supplier.Address4, supplier.PostCode].filter(Boolean).join(', ') %>
+        <%= supplier.Name %><br><br>
+        <% 
+          // Address is consistently shaped as:
+          // { Line1, Line2, Line3, Line4, PostCode, CountryName, CountryCode, CountryId }
+          const A = supplier.Address || {};
+          const line1 = (A.Line1 || '').trim();
+          const line2 = (A.Line2 || '').trim();
+          const line3 = (A.Line3 || '').trim();
+          const line4 = (A.Line4 || '').trim();
+          const postCode = (A.PostCode || '').trim();
+          const slots = [line1, line2, line3, line4, postCode];
+        %>
+        <% if (typeof debug !== 'undefined' && debug) { %>
+          <details class="mt-2 mb-2 p-2 border border-yellow-300 bg-yellow-50 text-xs rounded print:hidden">
+            <summary class="cursor-pointer font-semibold">Debug: address slots</summary>
+            <div class="mt-2">
+              <div><span class="font-medium">typeof supplier.Address:</span> <%= typeof supplier.Address %></div>
+              <div class="mt-1"><span class="font-medium">Raw supplier.Address:</span></div>
+              <pre class="whitespace-pre-wrap break-words"><%- JSON.stringify(supplier.Address, null, 2) %></pre>
+              <div class="mt-1"><span class="font-medium">Computed slots:</span></div>
+              <pre class="whitespace-pre-wrap break-words"><%- JSON.stringify(slots, null, 2) %></pre>
+            </div>
+          </details>
+        <% } %>
+        <% 
+          const nonEmptyIdx = slots.map((s,i)=> (s && s.trim()) ? i : -1).filter(i=>i!==-1);
+          const lastIdx = nonEmptyIdx.length ? nonEmptyIdx[nonEmptyIdx.length-1] : -1;
+          for (let i = 0; i < slots.length; i++) {
+            const raw = slots[i] || '';
+            const trimmed = raw.trim();
+            const isEmpty = !trimmed;
+            const isLast = i === lastIdx;
+        %>
+          <span>
+            <% if (!isEmpty) { 
+                 const endsWithPunct = /[.,]$/.test(trimmed);
+                 let out = trimmed;
+                 if (!endsWithPunct) {
+                   out = trimmed + (isLast ? '.' : ',');
+                 }
+            %>
+              <%= out %>
+            <% } else { %>
+              <%- '&nbsp;' %>
+            <% } %>
+          </span><br>
+        <% } %>
       </p>
     </div>
-    <div class="w-full md:w-1/2">
-      <p class="text-3xl font-semibold mb-2">Contractor</p>
+    <div>
+      <p class="font-semibold mb-2">Contractor</p>
       <p>
-        Heron Constructive Solutions LTD<br>
+        Heron Constructive Solutions LTD<br><br>
         103 Herondale Road,<br>
         Mossley Hill,<br>
         Liverpool,<br>
@@ -60,14 +70,17 @@
   </div>
 </div>
 
+<div class="page-break"></div>
+
 <% for (let monthIndex = 1; monthIndex <= 12; monthIndex++) { %>
   <% const monthKey = monthIndex.toString(); %>
   <% let receipts = receiptsByMonth[monthKey] || []; %>
   <% receipts = receipts.sort((a, b) => new Date(a.PayDate) - new Date(b.PayDate)); %>
   <% const hasReceipts = receipts.length > 0; %>
   <% if (hasReceipts) { %>
-    <% const tableClasses = pageBreakMonths.includes(monthIndex) ? 'page-break d-print-table' : 'd-print-table'; %>
-    <table class="min-w-full border border-gray-300 rounded-lg overflow-hidden text-left text-sm mb-6 <%= tableClasses %>">
+  <% const tableClasses = pageBreakMonths.includes(monthIndex) ? 'page-break d-print-table' : 'd-print-table'; %>
+  <div class="avoid-page-break">
+  <table class="min-w-full border border-gray-300 rounded-lg overflow-hidden text-left text-xs leading-tight mb-4 condensed-table <%= tableClasses %>">
       <caption class="text-center font-semibold p-2 text-gray-700">Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= year %>)</caption>
       <thead class="bg-gray-100">
         <tr>
@@ -136,7 +149,7 @@
           %>
         <% }) %>
         <tr class="font-semibold bg-gray-200">
-          <td colspan="4" class="border border-gray-300 px-3 py-1">Total for Month <%= monthKey %>:</td>
+          <td colspan="4" class="border border-gray-300 px-3 py-1">Totals for Month <%= monthKey %>:</td>
           <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalGross) %></td>
           <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalLabour) %></td>
           <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalMaterial) %></td>
@@ -145,8 +158,51 @@
           <td class="border border-gray-300 px-3 py-1"></td>
         </tr>
       </tbody>
-    </table>
+  </table>
+  </div>
   <% } %>
 <% } %>
+
+
+<style>
+  @media print {
+    /* Preserve colors for header rows, etc. */
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Hide UI-only elements */
+    .print\:hidden { display: none !important; }
+
+    /* Make tables paginate cleanly */
+    table { page-break-inside: auto; border-collapse: collapse; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    caption { caption-side: top; }
+
+    /* Keep each table together on one page when possible */
+  .avoid-page-break { page-break-inside: avoid; break-inside: avoid; }
+  .avoid-page-break table { page-break-inside: avoid !important; break-inside: avoid !important; }
+
+    /* Utility classes used in template */
+    .page-break { page-break-before: always; break-before: page; }
+    .d-print-table { display: table !important; width: 100% !important; }
+    .d-print-table th, .d-print-table td { padding: 6px 8px !important; }
+  }
+  /* Ensure borders render crisply both on screen and print */
+  .d-print-table, .d-print-table th, .d-print-table td { border-color: #d1d5db; }
+</style>
+
+<style>
+  /* Condensed table utility for yearly returns */
+  .condensed-table { font-size: 0.75rem; line-height: 1.2; }
+  .condensed-table th, .condensed-table td { padding: 2px 4px; }
+  .condensed-table caption { padding: 4px 0; }
+
+  @media print {
+    .condensed-table { font-size: 10px !important; }
+    /* Override earlier print padding rules to be tighter */
+    .condensed-table.d-print-table th, .condensed-table.d-print-table td { padding: 2px 4px !important; }
+    .condensed-table caption { padding: 2px 0 !important; }
+  }
+</style>
 
 

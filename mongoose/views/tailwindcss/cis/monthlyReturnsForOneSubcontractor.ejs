@@ -1,0 +1,67 @@
+<div class="max-w-6xl mx-auto p-6 print:p-0">
+  <div class="flex items-center justify-between mb-6 print:hidden">
+    <h1 class="text-2xl font-semibold">Monthly CIS Returns - <%= supplier.Name %> (<%= monthName %> <%= year %>)</h1>
+    <button onclick="window.print()" class="bg-hcs-green text-white px-4 py-2 rounded">Print</button>
+  </div>
+  <div class="mb-4 text-sm text-gray-600">
+    Supplier Code: <span class="font-medium"><%= supplier.Code || '—' %></span>
+  </div>
+  <% if (typeof debug !== 'undefined' && debug) { %>
+    <details class="mb-4 p-3 border border-yellow-300 bg-yellow-50 rounded text-xs">
+      <summary class="cursor-pointer font-semibold">Debug: rows and totals</summary>
+      <div class="mt-2">
+        <div class="font-medium">rows:</div>
+        <pre class="whitespace-pre-wrap break-words"><%- JSON.stringify(rows, null, 2) %></pre>
+        <div class="font-medium mt-2">totals:</div>
+        <pre class="whitespace-pre-wrap break-words"><%- JSON.stringify(totals, null, 2) %></pre>
+      </div>
+    </details>
+  <% } %>
+  <table class="w-full text-sm border border-gray-300">
+    <thead class="bg-gray-100">
+      <tr>
+        <th class="p-2 border">Number</th>
+        <th class="p-2 border">Issued</th>
+        <th class="p-2 border">Paid</th>
+        <th class="p-2 border">Labour</th>
+        <th class="p-2 border">Materials</th>
+        <th class="p-2 border">CIS</th>
+        <th class="p-2 border">Gross</th>
+        <th class="p-2 border">Net</th>
+        <th class="p-2 border">Submission</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% rows.forEach(r => { %>
+        <tr>
+          <td class="p-2 border"><%= r.Number %></td>
+          <td class="p-2 border"><%= r.IssuedDate ? new Date(r.IssuedDate).toLocaleDateString('en-GB') : '' %></td>
+          <td class="p-2 border"><%= r.PaidDate ? new Date(r.PaidDate).toLocaleDateString('en-GB') : '' %></td>
+          <td class="p-2 border text-right">£<%= (r.LabourCost || 0).toFixed(2) %></td>
+          <td class="p-2 border text-right">£<%= (r.MaterialCost || 0).toFixed(2) %></td>
+          <td class="p-2 border text-right">£<%= (r.CISAmount || 0).toFixed(2) %></td>
+          <td class="p-2 border text-right">£<%= (r.GrossAmount || 0).toFixed(2) %></td>
+          <td class="p-2 border text-right">£<%= (r.NetAmount || 0).toFixed(2) %></td>
+          <td class="p-2 border"><%= r.SubmissionDate ? new Date(r.SubmissionDate).toLocaleDateString('en-GB') : '' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+    <tfoot class="bg-gray-50">
+      <tr>
+        <td class="p-2 border font-medium" colspan="3">Totals</td>
+        <td class="p-2 border text-right">£<%= totals.LabourCost.toFixed(2) %></td>
+        <td class="p-2 border text-right">£<%= totals.MaterialCost.toFixed(2) %></td>
+        <td class="p-2 border text-right">£<%= totals.CISAmount.toFixed(2) %></td>
+        <td class="p-2 border text-right">£<%= totals.GrossAmount.toFixed(2) %></td>
+        <td class="p-2 border text-right">£<%= totals.NetAmount.toFixed(2) %></td>
+        <td class="p-2 border"></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<style>
+  @media print {
+    .print\:hidden { display: none; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>

@@ -40,7 +40,7 @@
 
   <% if (isAuthenticated) { %>
     <!-- Top Nav -->
-    <nav class="fixed top-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50">
+    <nav class="fixed top-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50 print:hidden">
       <div class="flex justify-around text-center py-2">
         <a href="/construction-industry-scheme" class="text-sm hover:text-green-600">
           <i class="bi bi-building fs-5"></i><br>
@@ -80,7 +80,7 @@
 
       <% if (isAuthenticated) { %>
         <!-- Bottom Nav -->
-        <nav class="fixed bottom-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50">
+        <nav class="fixed bottom-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50 print:hidden">
           <div class="flex justify-around text-center py-2">
             <a id="theme-toggle" class="text-sm hover:text-green-600">
               <i id="theme-icon" class="bi bi-moon-stars fs-5"></i><br>
@@ -109,7 +109,7 @@
         </nav>
         <% } else { %>
           <!-- Bottom Nav -->
-          <nav class="fixed bottom-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50">
+          <nav class="fixed bottom-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50 print:hidden">
             <div class="flex justify-around text-center py-2">
               <a id="theme-toggle" class="text-sm hover:text-green-600">
                 <i id="theme-icon" class="bi bi-moon-stars fs-5"></i><br>

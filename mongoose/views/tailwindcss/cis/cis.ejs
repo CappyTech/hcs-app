@@ -110,11 +110,11 @@
                     <a href="/supplier/read/<%= supplier.uuid %>" class="text-green-600 hover:underline"><%= supplier.Name %></a>
                   </td>
                   <% if (supplierTotals[String(supplier.Id)]) { %>
-                  <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].grossAmount) %></td>
+                  <td class="border border-gray-300 px-4 py-2 text-right font-bold"><%= formatCurrency(supplierTotals[String(supplier.Id)].grossAmount) %></td>
                   <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].labourCost) %></td>
-                  <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].materialsCost) %></td>
+                  <td class="border border-gray-300 px-4 py-2 text-right font-bold"><%= formatCurrency(supplierTotals[String(supplier.Id)].materialsCost) %></td>
                   <% const st = supplierTotals[String(supplier.Id)]; %>
-                  <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency((st.cisDeductions && st.cisDeductions !== 0) ? st.cisDeductions : st.calculatedCISDeduction) %></td>
+                  <td class="border border-gray-300 px-4 py-2 text-right font-bold"><%= formatCurrency((st.cisDeductions && st.cisDeductions !== 0) ? st.cisDeductions : st.calculatedCISDeduction) %></td>
                   <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].reverseChargeVAT) %></td>
                   <% } else { %>
                   <td colspan="6" class="border border-gray-300 text-center py-6">No Data</td>
@@ -215,8 +215,8 @@
     <div class="flex flex-col divide-y divide-black">
       <div>
         <p>
-          Please ensure that <span class="font-medium">Due Dates</span> are correctly set for <span
-            class="font-medium">All Purchases</span>.
+          This dashboard shows <span class="font-medium">paid purchases only</span>. Please ensure that
+          <span class="font-medium">Paid Dates</span> are correctly set for all purchases you expect to appear here.
         </p>
       </div>
       <div class="text-center">
@@ -224,7 +224,7 @@
           This helps maintain accurate CIS reporting and payment timelines.
         </p>
         <p class="text-sm">
-          If you need to change the submission date for any purchases, please use the form above.
+          If you need to update the <span class="font-medium">Submission Date</span> for any purchases, please use the form above.
         </p>
       </div>
     </div>
