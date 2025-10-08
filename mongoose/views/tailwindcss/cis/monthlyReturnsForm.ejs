@@ -1,9 +1,9 @@
 <div class="container mx-auto py-4 px-4 max-w-6xl">
-  <div class="p-6 mb-6 bg-gray-100 rounded-lg">
-    <h1 class="text-4xl font-semibold mb-6">Monthly Returns</h1>
+  <div class="p-6 mb-6 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+    <h1 class="text-4xl font-semibold mb-6 text-gray-900 dark:text-gray-100">Monthly Returns</h1>
 
     <% if (suppliersWithMonths.length===0) { %>
-      <div class="bg-yellow-200 text-yellow-900 px-4 py-3 rounded mb-6" role="alert">
+      <div class="bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 px-4 py-3 rounded mb-6" role="alert">
         No subcontractor return data found.
       </div>
       <% } %>
@@ -14,34 +14,34 @@
             const years = data.years;
             const receiptsByYear = data.receiptsByYear;
             %>
-            <div class="border border-gray-300 rounded shadow-sm">
+            <div class="border border-gray-300 dark:border-gray-700 rounded shadow-sm">
               <h2>
                 <button type="button"
                   class="accordion-toggle w-full px-4 py-3 text-left flex justify-between items-center focus:outline-none focus:ring focus:ring-green-500"
                   aria-expanded="false" aria-controls="collapse-<%= supplier.uuid %>"
                   id="heading-<%= supplier.uuid %>">
-                  <span class="font-semibold text-lg">
+                  <span class="font-semibold text-lg text-gray-900 dark:text-gray-100">
                     <%= supplier.Name %>
-                      <span class="inline-block bg-gray-300 text-gray-700 text-xs font-medium ml-2 px-2 py-0.5 rounded">
+                      <span class="inline-block bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-100 text-xs font-medium ml-2 px-2 py-0.5 rounded">
                         <%= years.length %>
                           <%= years.length===1 ? 'Year' : 'Years' %>
                       </span>
-                      <span class="inline-block bg-gray-300 text-gray-700 text-xs font-medium ml-2 px-2 py-0.5 rounded">
+                      <span class="inline-block bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-100 text-xs font-medium ml-2 px-2 py-0.5 rounded">
                         <% const rate = typeof supplier.CISRate === 'number' ? supplier.CISRate : (supplier.CISRate ? +supplier.CISRate : null); %>
                         <%= rate === 0 ? '0%' : rate === 0.2 ? '20%' : rate === 0.3 ? '30%' : 'Unknown' %>
                       </span>
                       <% if (supplier.isReverseCharge) { %>
-                        <span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium ml-2 px-2 py-0.5 rounded">
+                        <span class="inline-block bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-medium ml-2 px-2 py-0.5 rounded">
                           Reverse Charge
                         </span>
                       <% } %>
                     <a href="/supplier/change/<%= supplier.uuid %>"
                        onclick="event.stopPropagation();"
-                       class="inline-block bg-green-500 hover:bg-green-600 text-white text-xs font-medium ml-2 px-2 py-0.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+                       class="inline-block bg-green-600 hover:bg-green-700 text-white text-xs font-medium ml-2 px-2 py-0.5 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
                       Change
                     </a>
                   </span>
-                  <svg class="w-5 h-5 text-gray-500 transition-transform duration-200"
+                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200"
                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                     aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -53,18 +53,18 @@
                 class="hidden px-4 pb-4 mt-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <% years.forEach(year=> { %>
-                    <div class="bg-gray-200 p-4 rounded h-full flex flex-col">
+                    <div class="bg-gray-200 dark:bg-gray-700 p-4 rounded h-full flex flex-col">
                       <h3 class="text-2xl font-semibold mb-2">
                         <%= year %>
                       </h3>
                       <ul class="flex flex-col space-y-1 flex-grow">
-                        <li class="bg-white rounded px-3 py-2 shadow-sm hover:bg-indigo-50 relative">
+                        <li class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded px-3 py-2 shadow-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 relative">
                           <a href="/CIS/returns/<%= supplier.uuid %>/yearly/<%= year %>" class="block w-full h-full">
                             Yearly Report
                           </a>
                         </li>
                         <% receiptsByYear[year].forEach(month=> { %>
-                          <li class="bg-white rounded px-3 py-2 shadow-sm hover:bg-indigo-50 relative">
+                          <li class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded px-3 py-2 shadow-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 relative">
                             <a href="/CIS/returns/<%= supplier.uuid %>/<%= year %>/<%= month %>"
                               class="block w-full h-full">
                               <%= monthNames[month - 1] %>

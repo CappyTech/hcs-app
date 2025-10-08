@@ -75,9 +75,10 @@ const generateHeaders = (firstDoc, config = {}) => {
       const tabsBy = config.tabsby || null; // field name to filter by
       const tabsValues = Array.isArray(config.tabsValues) ? config.tabsValues : [];
       const requestedTab = req.query.tab || null;
-      const activeTab = requestedTab && tabsValues.some(tv => String(tv.value) === String(requestedTab))
-        ? requestedTab
-        : null;
+      // activeTab is the tab shown as active in UI; allow 'all' to function even if not listed
+      const activeTab = requestedTab && (
+        String(requestedTab).toLowerCase() === 'all' || tabsValues.some(tv => String(tv.value) === String(requestedTab))
+      ) ? requestedTab : null;
 
       let mongoFilter = {};
       if (query) {
@@ -90,7 +91,36 @@ const generateHeaders = (firstDoc, config = {}) => {
       }
 
       if (tabsBy && activeTab) {
-        mongoFilter[tabsBy] = activeTab;
+        // Special case: a tab value of 'all' should clear the filter but remain selectable
+        if (String(activeTab).toLowerCase() === 'all') {
+          // Do not modify mongoFilter
+        } else {
+          const orConds = [];
+          const tabsPath = model?.schema?.path?.(tabsBy) || null;
+          const tabsType = tabsPath ? tabsPath.instance : null; // 'Number', 'String', etc.
+          const nameField = `${tabsBy}Name`;
+          const hasNameField = !!(model?.schema?.path?.(nameField));
+
+          const numVal = Number(activeTab);
+          if (tabsType === 'Number' && !Number.isNaN(numVal)) {
+            orConds.push({ [tabsBy]: numVal });
+          }
+          if (tabsType === 'String') {
+            orConds.push({ [tabsBy]: activeTab });
+          }
+          if (hasNameField) {
+            orConds.push({ [nameField]: activeTab });
+          }
+
+          if (orConds.length) {
+            const tabsFilter = orConds.length === 1 ? orConds[0] : { $or: orConds };
+            if (Object.keys(mongoFilter).length > 0) {
+              mongoFilter = { $and: [mongoFilter, tabsFilter] };
+            } else {
+              mongoFilter = tabsFilter;
+            }
+          }
+        }
       }
 
       try {
@@ -136,40 +166,118 @@ const generateHeaders = (firstDoc, config = {}) => {
           });
         }
 
-  const headers = generateHeaders(items[0], config);
+        const headers = generateHeaders(items[0], config);
 
         // Hidden management
-  const defaultHidden = ['_id', '__v'];
-  const autoHideUnderscore = config.autoHideUnderscore !== false;
-  const hidden = new Set([...(config.hideFields || []), ...defaultHidden]);
-  if (config.linkField) hidden.delete(config.linkField);
-  const allowedKeys = new Set(headers.map(h => h.key)); // already filtered
+        const defaultHidden = ['_id', '__v'];
+        const autoHideUnderscore = config.autoHideUnderscore !== false;
+        const hidden = new Set([...(config.hideFields || []), ...defaultHidden]);
+        if (config.linkField) hidden.delete(config.linkField);
+        const allowedKeys = new Set(headers.map(h => h.key)); // already filtered
 
         // Optional field transforms (resolve references, map arrays, etc.)
         const transforms = config.fieldTransforms || {};
 
+        // First pass: build cleaned rows and collect values to resolve for transforms
+        const pendingLookups = {}; // field -> { keys:Set<string>, originals: Map<string, any> }
         items = items.map(row => {
           const cleaned = {};
           for (const key of allowedKeys) cleaned[key] = row[key];
-          // Defensive: ensure no auto-hidden underscore field sneaks in
           if (autoHideUnderscore) {
             for (const k in cleaned) {
               if (k.startsWith('_') && !allowedKeys.has(k)) delete cleaned[k];
             }
           }
-          // Preserve uuid internally for link building even if hidden; not rendered because no header for it
           if (row.uuid) cleaned.uuid = row.uuid;
-          // Apply transforms after initial filter so we only work on displayed fields
-          // Each transform config: { fromModel, matchField, returnField, linkTo }
+
           for (const [field, tConf] of Object.entries(transforms)) {
-            if (!allowedKeys.has(field)) continue; // only transform if field displayed
-            const value = row[field];
-            // Defer heavy lookups for now; placeholder for future population caching.
-            // If value is an array of ObjectIds or objects, leave as count (already handled in view).
-            cleaned[field] = value;
+            if (!allowedKeys.has(field)) continue;
+            const v = row[field];
+            const ensureBucket = () => {
+              if (!pendingLookups[field]) pendingLookups[field] = { keys: new Set(), originals: new Map() };
+              return pendingLookups[field];
+            };
+            const addVal = (val) => {
+              if (val === null || val === undefined) return;
+              const key = String(val && val._id ? val._id : val);
+              const bucket = ensureBucket();
+              bucket.keys.add(key);
+              if (!bucket.originals.has(key)) bucket.originals.set(key, val);
+            };
+            if (Array.isArray(v)) v.forEach(addVal); else addVal(v);
           }
           return cleaned;
         });
+
+        // Resolve lookups per transform (one query per field)
+        const resolvedMaps = {}; // field -> Map<string, matchedDoc>
+        for (const [field, tConf] of Object.entries(transforms)) {
+          try {
+            const bucket = pendingLookups[field];
+            if (!bucket || bucket.keys.size === 0) continue;
+            const { keys, originals } = bucket;
+            const fromModelName = tConf.fromModel;
+            const matchFields = Array.isArray(tConf.matchField) ? tConf.matchField : [tConf.matchField || '_id'];
+            const returnField = tConf.returnField || 'name';
+            const fromModel = (mdb.INTERNAL && mdb.INTERNAL[fromModelName]) || (mdb.REST && mdb.REST[fromModelName]);
+            if (!fromModel || typeof fromModel.find !== 'function') continue;
+            // Prepare values array with proper types (use originals to preserve ObjectId type when needed)
+            const values = Array.from(keys).map(k => originals.get(k));
+            const or = matchFields.map(f => ({ [f]: { $in: values } }));
+            const filter = or.length === 1 ? or[0] : { $or: or };
+            const docs = await fromModel.find(filter).lean();
+            const index = new Map();
+            docs.forEach(d => {
+              matchFields.forEach(f => {
+                if (typeof d[f] !== 'undefined' && d[f] !== null) {
+                  const k = String(d[f]);
+                  if (!index.has(k)) index.set(k, d);
+                }
+              });
+            });
+            resolvedMaps[field] = { index, returnField, linkTo: tConf.linkTo, matchFields };
+          } catch (e) {
+            logger.warn && logger.warn(`[listController] transform lookup failed for field '${field}': ${e.message}`);
+          }
+        }
+
+        // Second pass: apply resolved display values and dynamic links per row
+        items = items.map(row => {
+          if (!row) return row;
+          const links = {};
+          for (const [field, resolved] of Object.entries(resolvedMaps)) {
+            if (!(field in row)) continue;
+            const value = row[field];
+            const { index, returnField, linkTo } = resolved;
+            const resolveOne = (val) => {
+              const key = String(val && val._id ? val._id : val);
+              const matched = index.get(key);
+              return matched ? matched[returnField] : (typeof val === 'string' ? val : '—');
+            };
+            if (Array.isArray(value)) {
+              // Join display names; skip linking for arrays to avoid ambiguity
+              row[field] = value.map(resolveOne).filter(Boolean).join(', ');
+            } else {
+              const key = String(value && value._id ? value._id : value);
+              const matched = index.get(key);
+              row[field] = resolveOne(value);
+              if (matched && typeof linkTo === 'function') {
+                try { links[field] = linkTo(matched); } catch (_) { }
+              } else if (matched && typeof linkTo === 'string') {
+                links[field] = linkTo;
+              }
+            }
+          }
+          if (Object.keys(links).length) row.__links = links;
+          return row;
+        });
+
+        // Combine static fieldLinks from config with dynamic links from transforms
+        const dynamicFieldLinks = (row) => {
+          const fromConfig = typeof config.fieldLinks === 'function' ? config.fieldLinks(row) : config.fieldLinks;
+          const dynamic = row && row.__links ? row.__links : null;
+          return { ...(fromConfig || {}), ...(dynamic || {}) };
+        };
 
         res.render(path.join('tailwindcss', 'partials', 'listTable'), {
           title: config.title || capitalize(modelName) + 's',
@@ -184,7 +292,7 @@ const generateHeaders = (firstDoc, config = {}) => {
           query,
           model: modelName,
           actions: config.actions || [],
-          fieldLinks: config.fieldLinks || null,
+          fieldLinks: dynamicFieldLinks,
           activeTab,
           tabsValues,
           tabsBy,

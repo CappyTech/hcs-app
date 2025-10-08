@@ -1,25 +1,25 @@
 <div class="container mx-auto my-5 px-4">
-  <h1 class="text-2xl font-semibold mb-4">
+  <h1 class="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
     <%= title %> for <a href="/<%= basePath %>/read/<%= item.uuid %>" class="text-green-600 hover:underline"><%= item?.Name || item?.Number || item?.uuid %></a>
   </h1>
 
   <!-- Allowed types & size -->
-  <p class="text-sm text-gray-500 mb-4">
+  <p class="text-sm text-gray-500 dark:text-gray-300 mb-4">
     Allowed file types: <strong>.jpg, .jpeg, .png, .pdf, .doc, .docx</strong>. Max size: <strong>5MB</strong> per file.
   </p>
 
   <!-- Drag-and-drop file area -->
-  <form id="uploadForm" method="POST" enctype="multipart/form-data" action="/<%= basePath %>/upload/<%= item.uuid %>">
+  <form id="uploadForm" method="POST" enctype="multipart/form-data" action="/<%= basePath %>/upload/<%= item.uuid %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
     <%- include('./csrfHidden.ejs') %>
     <div id="drop-area"
-      class="border-2 border-dashed border-gray-300 p-6 rounded-lg text-center cursor-pointer hover:bg-gray-50 transition">
-      <p class="text-sm text-gray-600 mb-2">Drag & drop files here or click to browse</p>
+      class="border-2 border-dashed border-gray-300 dark:border-gray-700 p-6 rounded-lg text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">Drag & drop files here or click to browse</p>
       <input id="files" name="files" type="file" multiple class="hidden" />
       <button type="button" id="browseBtn"
-        class="inline-block bg-green-500 text-white text-sm px-3 py-1 rounded hover:bg-green-600">Browse Files</button>
+        class="inline-block bg-green-600 text-white text-sm px-3 py-1 rounded hover:bg-green-700">Browse Files</button>
     </div>
 
-    <div id="fileList" class="mt-4 text-sm text-gray-700"></div>
+    <div id="fileList" class="mt-4 text-sm text-gray-700 dark:text-gray-200"></div>
 
     <button type="submit"
       class="mt-6 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition">Upload</button>

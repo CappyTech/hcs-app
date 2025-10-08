@@ -28,21 +28,21 @@
     const assignmentsFirstRow = assignmentsTable[0] || {}; %>
 
     <div class="mt-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1"><%= key %></label>
-      <table class="w-full text-xs text-left text-gray-700 border border-gray-200 table-fixed">
-        <thead class="bg-gray-100 text-gray-600">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"><%= key %></label>
+      <table class="w-full text-xs text-left text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-700 table-fixed">
+        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
             <% Object.keys(assignmentsFirstRow).forEach(col => { %>
-              <th class="px-2 py-1 border"><%= col %></th>
+              <th class="px-2 py-1 border border-gray-200 dark:border-gray-700"><%= col %></th>
             <% }) %>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="bg-white dark:bg-gray-900">
           <% assignmentsTable.forEach(row => { %>
-            <tr class="border-t">
+            <tr class="border-t border-gray-200 dark:border-gray-700">
               <% Object.entries(row).forEach(([col, val]) => { %>
-                <td class="px-2 py-1 border max-w-[140px]">
-                  <%= val ?? '—' %>
+                <td class="px-2 py-1 border border-gray-200 dark:border-gray-700 max-w-[140px]">
+                  <%= val ?? '\u2014' %>
                 </td>
               <% }) %>
             </tr>
@@ -77,24 +77,24 @@
     %>
 
     <div class="mt-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1"><%= key %></label>
-      <table class="w-full text-xs text-left text-gray-700 border border-gray-200 table-fixed">
-        <thead class="bg-gray-100 text-gray-600">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"><%= key %></label>
+      <table class="w-full text-xs text-left text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-700 table-fixed">
+        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
             <% Object.keys(firstRow).forEach(col => { %>
-              <th class="px-2 py-1 border"><%= col %></th>
+              <th class="px-2 py-1 border border-gray-200 dark:border-gray-700"><%= col %></th>
             <% }) %>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="bg-white dark:bg-gray-900">
           <% tableData.forEach(row => { %>
-            <tr class="border-t">
+            <tr class="border-t border-gray-200 dark:border-gray-700">
               <% Object.entries(row).forEach(([col, val]) => { %>
-                <td class="px-2 py-1 border max-w-[120px]">
+                <td class="px-2 py-1 border border-gray-200 dark:border-gray-700 max-w-[120px]">
                   <% if (val && col.toLowerCase().includes('date') && typeof slimDateTime === 'function') { %>
                     <%= slimDateTime(val, ['displayFormat']) %>
                   <% } else { %>
-                    <%= val ?? '—' %>
+                    <%= val ?? '\u2014' %>
                   <% } %>
                 </td>
               <% }) %>
@@ -120,12 +120,12 @@
       displayValue = value || '—';
     }
   %>
-  <div class="mb-2 border-b border-gray-200 last:border-none">
-    <div class="flex justify-between items-center px-2 py-2 hover:bg-gray-50 rounded">
-      <span class="text-sm text-gray-500 font-medium pr-4">
+  <div class="mb-2 border-b border-gray-200 dark:border-gray-700 last:border-none">
+    <div class="flex justify-between items-center px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded">
+      <span class="text-sm text-gray-500 dark:text-gray-300 font-medium pr-4">
         <%- label %>
       </span>
-      <span class="text-sm text-gray-800 text-right max-w-[60%] break-words">
+      <span class="text-sm text-gray-800 dark:text-gray-100 text-right max-w-[60%] break-words">
         <%= displayValue %>
       </span>
     </div>
@@ -141,7 +141,7 @@
 
     <% if (field.enum) { %>
       <!-- Enum -->
-      <select id="<%= key %>" name="<%= key %>" class="w-full border rounded px-3 py-2">
+      <select id="<%= key %>" name="<%= key %>" class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
         <option value="">-- Select --</option>
         <% field.enum.forEach(option => { %>
           <option value="<%= option %>" <%= selectedValue == option ? 'selected' : '' %>><%= option %></option>
@@ -155,7 +155,7 @@
         id="<%= key %>"
         name="<%= key %><%= field.isArray ? '[]' : '' %>"
         <%= field.isArray ? 'multiple' : '' %>
-        class="w-full border rounded px-3 py-2"
+        class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
       >
         <option value="" <%= !field.isArray ? '' : 'disabled' %>>-- Select --</option>
         <% referenceData[key].forEach(refItem => {
@@ -183,7 +183,7 @@
 
     <% } else if (field.type === 'Boolean') { %>
       <!-- Boolean -->
-      <select id="<%= key %>" name="<%= key %>" class="w-full border rounded px-3 py-2">
+      <select id="<%= key %>" name="<%= key %>" class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
         <option value="">-- Select --</option>
         <option value="true" <%= selectedValue === true || selectedValue === 'true' ? 'selected' : '' %>>True</option>
         <option value="false" <%= selectedValue === false || selectedValue === 'false' ? 'selected' : '' %>>False</option>
@@ -196,7 +196,7 @@
         id="<%= key %>"
         name="<%= key %>"
         value="<%= selectedValue ? new Date(selectedValue).toISOString().split('T')[0] : '' %>"
-        class="w-full border rounded px-3 py-2"
+        class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
       >
 
     <% } else { %>
@@ -207,7 +207,7 @@
         name="<%= key %>"
         value="<%= selectedValue || '' %>"
         placeholder="<%= field.default ? `Default: ${field.default}` : '' %>"
-        class="w-full border rounded px-3 py-2"
+        class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
       >
     <% } %>
   </div>

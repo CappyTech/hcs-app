@@ -1,5 +1,5 @@
 <div class="container mx-auto py-10 max-w-7xl px-4">
-  <div class="mb-8 bg-gray-100 rounded-lg">
+  <div class="mb-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
     <div class="py-12 px-4">
       <!-- Navigation -->
       <div class="flex justify-between items-center mb-4">
@@ -21,22 +21,22 @@
 
       <!-- Summary Cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div class="bg-white rounded shadow p-6 text-center">
+        <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded shadow p-6 text-center">
           <h4 class="text-lg font-semibold mb-2">Total Suppliers</h4>
           <p class="text-3xl font-bold"><%= supplierCount %></p>
         </div>
-        <div class="bg-white rounded shadow p-6 text-center">
+        <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded shadow p-6 text-center">
           <h4 class="text-lg font-semibold mb-2">Total Purchases</h4>
           <p class="text-3xl font-bold"><%= purchaseCount %></p>
         </div>
       </div>
 
       <% if (!allPurchasesSubmitted || purchases.length === 0) { %>
-      <div class="mb-6 bg-yellow-300 text-yellow-900 rounded text-center p-4 font-semibold">
+      <div class="mb-6 bg-yellow-300 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 rounded text-center p-4 font-semibold">
         This month should be submitted between <span class="font-bold"><%= slimDateTime(submissionStartDate, ['displayFormat']) %></span> and <span class="font-bold"><%= slimDateTime(submissionEndDate, ['displayFormat']) %></span>.
       </div>
       <% } else if (submissionDate) { %>
-      <div class="mb-6 bg-green-600 text-white rounded text-center p-6">
+      <div class="mb-6 bg-green-600 dark:bg-green-700 text-white rounded text-center p-6">
         <h4 class="text-xl font-semibold mb-2">Submitted On:</h4>
         <p class="text-2xl font-semibold"><%= slimDateTime(submissionDate, ['displayFormat']) %></p>
       </div>
@@ -44,7 +44,7 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
-          <div class="bg-white rounded shadow p-6 mb-6">
+          <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded shadow p-6 mb-6">
             <h4 class="text-lg font-semibold mb-1">
               Tax Year
             </h4>  
@@ -57,13 +57,13 @@
               </a>
             </small>
           </div>
-          <div class="bg-white rounded shadow p-6">
+          <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded shadow p-6">
             <h4 class="text-lg font-semibold mb-1">Submission Deadline</h4>
             <p><%= slimDateTime(currentMonthlyReturn.submissionDeadline, ['displayFormat']) %> (<%= currentMonthlyReturn.submissionDeadlineInDays %> days left)</p>
           </div>
         </div>
         <div>
-          <div class="bg-white rounded shadow p-6 mb-6">
+          <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded shadow p-6 mb-6">
             <h4 class="text-lg font-semibold mb-1">
               Monthly Return
             </h4>
@@ -76,7 +76,7 @@
               </a>
             </small>
           </div>
-          <div class="bg-white rounded shadow p-6">
+          <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded shadow p-6">
             <h4 class="text-lg font-semibold mb-1">HMRC Update Date</h4>
             <p><%= slimDateTime(currentMonthlyReturn.hmrcUpdateDate, ['displayFormat']) %> (<%= currentMonthlyReturn.hmrcUpdateDateInDays %> days left)</p>
           </div>
@@ -87,10 +87,10 @@
       <div class="mb-12">
         <h3 class="text-center text-2xl font-bold mb-6">Subcontractors</h3>
         <div class="overflow-x-auto">
-          <table class="min-w-full border-collapse border border-gray-300">
-            <thead>
-              <tr class="bg-gray-200">
-                <th class="border border-gray-300 px-4 py-2 text-left">Name</th>
+          <table class="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
+            <thead class="bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+              <tr>
+                <th class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-left">Name</th>
                 <th class="border border-gray-300 px-4 py-2 text-right">Gross</th>
                 <th class="border border-gray-300 px-4 py-2 text-right">Labour</th>
                 <th class="border border-gray-300 px-4 py-2 text-right">Materials</th>
@@ -98,32 +98,32 @@
                 <th class="border border-gray-300 px-4 py-2 text-right">Reverse Charge</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
               <% if (suppliers.length === 0) { %>
               <tr>
                 <td colspan="6" class="border border-gray-300 text-center py-6">No purchases that cover <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>.</td>
               </tr>
               <% } else { %>
                 <% suppliers.forEach(supplier => { %>
-                <tr class="hover:bg-gray-50">
-                  <td class="border border-gray-300 px-4 py-2">
-                    <a href="/supplier/read/<%= supplier.uuid %>" class="text-green-600 hover:underline"><%= supplier.Name %></a>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td class="border border-gray-300 dark:border-gray-700 px-4 py-2">
+                    <a href="/supplier/read/<%= supplier.uuid %>" class="text-green-600 dark:text-green-400 hover:underline"><%= supplier.Name %></a>
                   </td>
                   <% if (supplierTotals[String(supplier.Id)]) { %>
-                  <td class="border border-gray-300 px-4 py-2 text-right font-bold"><%= formatCurrency(supplierTotals[String(supplier.Id)].grossAmount) %></td>
-                  <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].labourCost) %></td>
-                  <td class="border border-gray-300 px-4 py-2 text-right font-bold"><%= formatCurrency(supplierTotals[String(supplier.Id)].materialsCost) %></td>
+                  <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency(supplierTotals[String(supplier.Id)].grossAmount) %></td>
+                  <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].labourCost) %></td>
+                  <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency(supplierTotals[String(supplier.Id)].materialsCost) %></td>
                   <% const st = supplierTotals[String(supplier.Id)]; %>
-                  <td class="border border-gray-300 px-4 py-2 text-right font-bold"><%= formatCurrency((st.cisDeductions && st.cisDeductions !== 0) ? st.cisDeductions : st.calculatedCISDeduction) %></td>
-                  <td class="border border-gray-300 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].reverseChargeVAT) %></td>
+                  <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency((st.cisDeductions && st.cisDeductions !== 0) ? st.cisDeductions : st.calculatedCISDeduction) %></td>
+                  <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].reverseChargeVAT) %></td>
                   <% } else { %>
-                  <td colspan="6" class="border border-gray-300 text-center py-6">No Data</td>
+                  <td colspan="6" class="border border-gray-300 dark:border-gray-700 text-center py-6">No Data</td>
                   <% } %>
                 </tr>
                 <% }); %>
               <% } %>
             </tbody>
-            <tfoot class="bg-gray-50 font-semibold">
+            <tfoot class="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-semibold">
               <tr>
                 <td class="border px-2 py-1 text-center" colspan="6">Totals</td>
               </tr>

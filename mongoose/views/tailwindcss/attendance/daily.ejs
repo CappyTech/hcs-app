@@ -1,53 +1,53 @@
 <div class="container mx-auto py-4 px-4">
-  <div class="mb-4 bg-gray-100 rounded-lg">
+  <div class="mb-4 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
 
     <div class="container mx-auto py-5">
-      <h1 class="text-4xl font-extrabold text-center mb-8">
+      <h1 class="text-4xl font-extrabold text-center mb-8 text-gray-900 dark:text-gray-100">
         Daily Attendance for <%= moment(date).format('Do MMMM YYYY') %>
       </h1>
 
-      <table class="min-w-full table-auto border border-gray-300 rounded-lg overflow-hidden">
-        <thead class="bg-gray-200">
+      <table class="min-w-full table-auto border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden">
+        <thead class="bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
           <tr>
-            <th class="px-4 py-2 border-r border-gray-300 text-left">Location</th>
-            <th class="px-4 py-2 border-r border-gray-300 text-left">Person</th>
-            <th class="px-4 py-2 border-r border-gray-300 text-left">Type</th>
-            <th class="px-4 py-2 border-r border-gray-300 text-left">Hours Worked</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Location</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Person</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Type</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Hours Worked</th>
             <th class="px-4 py-2 text-center">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
           <% if (attendance.length > 0) { %>
             <% attendance.forEach(record => { %>
-              <tr class="even:bg-white odd:bg-gray-50">
-                <td class="px-4 py-2 border-r border-gray-300">
+              <tr class="even:bg-white odd:bg-gray-50 dark:even:bg-gray-900 dark:odd:bg-gray-800">
+                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
                   <% if (record.Location) { %>
-                    <a href="/location/read/<%= record.Location.id %>" class="text-blue-600 hover:underline">
+                    <a href="/location/read/<%= record.Location.id %>" class="text-green-700 dark:text-green-400 hover:underline">
                       <%= record.Location.name || `${record.Location.address}, ${record.Location.city}, ${record.Location.postalCode}` %>
                     </a>
                   <% } else { %>
-                    <span class="text-gray-400">N/A</span>
+                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
                   <% } %>
                 </td>
-                <td class="px-4 py-2 border-r border-gray-300">
+                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
                   <% if (record.Employee) { %>
-                    <a href="/employee/read/<%= record.Employee.id %>" class="text-blue-600 hover:underline">
+                    <a href="/employee/read/<%= record.Employee.id %>" class="text-green-700 dark:text-green-400 hover:underline">
                       <%= record.Employee.name %>
                     </a>
                   <% } else if (record.Subcontractor) { %>
-                    <a href="/subcontractor/read/<%= record.Subcontractor.id %>" class="text-blue-600 hover:underline">
+                    <a href="/subcontractor/read/<%= record.Subcontractor.id %>" class="text-green-700 dark:text-green-400 hover:underline">
                       <%= record.Subcontractor.company %>
                     </a>
                   <% } else { %>
-                    <span class="text-gray-400">N/A</span>
+                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
                   <% } %>
                 </td>
-                <td class="px-4 py-2 border-r border-gray-300"><%= record.type || 'N/A' %></td>
-                <td class="px-4 py-2 border-r border-gray-300">
+                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700"><%= record.type || 'N/A' %></td>
+                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
                   <% if (record.hoursWorked) { %>
                     <%= record.hoursWorked %> hours
                   <% } else { %>
-                    <span class="text-gray-400">N/A</span>
+                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
                   <% } %>
                 </td>
                 <td class="px-4 py-2 text-center space-x-2">
@@ -62,7 +62,7 @@
             <% }); %>
           <% } else { %>
             <tr>
-              <td colspan="5" class="px-4 py-6 text-center text-gray-500">No attendance records found for this day.</td>
+              <td colspan="5" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No attendance records found for this day.</td>
             </tr>
           <% } %>
           <tr class="font-light">

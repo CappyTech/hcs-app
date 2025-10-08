@@ -1,8 +1,8 @@
 <div class="container mx-auto my-5 px-4">
-  <a href="/<%= basePath %>s" class="text-green-600 hover:underline"><i class="bi bi-arrow-left"></i> Go Back</a>
+  <a href="/<%= basePath %>s" class="text-green-600 dark:text-green-400 hover:underline"><i class="bi bi-arrow-left"></i> Go Back</a>
   <!-- Header: Title + Update/Delete buttons -->
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-semibold"><%= title %></h1>
+    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100"><%= title %></h1>
 
     <% if (isAuthenticated && isAdmin) { %>
       <div class="flex space-x-2">
@@ -57,23 +57,23 @@
 
 <% if (config?.handlesDocuments) { %>
   <div class="mt-8">
-    <h2 class="text-xl font-medium mb-2">Documents</h2>
+    <h2 class="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">Documents</h2>
 
     <% if (item.documents?.length) { %>
       <ul>
         <% item.documents.forEach(doc => { %>
-          <li>
+          <li class="text-gray-800 dark:text-gray-200">
             <%= doc.name %>
             <% if (doc.name.match(/\.(pdf|jpg|jpeg|png|webp|gif)$/i)) { %>
-              <a href="<%= doc.url %>" class="text-green-600 underline ml-2">View</a>
+              <a href="<%= doc.url %>" class="text-green-600 dark:text-green-400 underline ml-2">View</a>
             <% } else { %>
-              <a href="/<%= basePath %>/download/<%= item.uuid %>/<%= encodeURIComponent(doc.name) %>" class="text-green-600 underline ml-2">Download</a>
+              <a href="/<%= basePath %>/download/<%= item.uuid %>/<%= encodeURIComponent(doc.name) %>" class="text-green-600 dark:text-green-400 underline ml-2">Download</a>
             <% } %>
           </li>
         <% }) %>
       </ul>
     <% } else { %>
-      <p class="text-gray-500 italic">No documents uploaded yet.</p>
+  <p class="text-gray-500 dark:text-gray-300 italic">No documents uploaded yet.</p>
     <% } %>
   </div>
 <% } %>

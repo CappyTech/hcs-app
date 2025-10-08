@@ -1,9 +1,9 @@
 <div class="max-w-3xl mx-auto my-10 px-4"> 
-  <h1 class="text-2xl font-bold mb-6">
+  <h1 class="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">
     <%= title %>
   </h1>
 
-  <form action="<%= formAction %>" method="POST" class="space-y-6">
+  <form action="<%= formAction %>" method="POST" class="space-y-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
     <%- include('./csrfHidden.ejs') %>
     <%
       const xorGroups = config?.xorGroups || [];
@@ -28,8 +28,8 @@
       if (isNewGroup) {
         currentGroup = groupIndex;
     %>
-        <div class="mb-6 border-2 border-cyan-300 border-opacity-40 bg-cyan-50 bg-opacity-40 p-4 rounded">
-          <p class="text-sm text-cyan-700 italic mb-4">Select only one of the following:</p>
+        <div class="mb-6 border-2 border-cyan-300 border-opacity-40 bg-cyan-50 bg-opacity-40 p-4 rounded dark:border-cyan-700 dark:bg-cyan-900/20">
+          <p class="text-sm text-cyan-700 dark:text-cyan-300 italic mb-4">Select only one of the following:</p>
     <% } %>
 
     <%- include('../partials/_formField', { key, field, formData, referenceData, readOnly: false, showTips: true, config }) %>
@@ -42,7 +42,7 @@
     <% if (!isInGroup) { currentGroup = null; } %>
     <% }) %>
 
-    <p class="text-gray-500 text-sm mb-4"><span class="text-red-600">*</span> Required fields</p>
+    <p class="text-gray-500 dark:text-gray-300 text-sm mb-4"><span class="text-red-600">*</span> Required fields</p>
 
     <button type="submit" class="bg-green-700 text-white px-6 py-2 rounded hover:bg-green-800 transition">
       Create
@@ -50,7 +50,7 @@
   </form>
 
   <% if (errors?.length) { %>
-    <div class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">
+    <div class="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-3 rounded mb-4 text-sm border border-red-200 dark:border-red-800">
       <% errors.forEach(error => { %>
         <p><%= error %></p>
       <% }) %>

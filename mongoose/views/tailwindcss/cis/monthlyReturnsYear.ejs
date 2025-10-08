@@ -15,9 +15,9 @@
       <div class="max-w-full overflow-x-auto">
         <% const hasInvoices = subcontractor.invoices.length > 0; %>
         <% if (hasInvoices) { %>
-          <table class="min-w-full border border-gray-300 rounded-lg overflow-hidden text-left text-sm">
-            <caption class="text-left font-semibold p-2 text-gray-700">Year <%= year %></caption>
-            <thead class="bg-gray-100">
+          <table class="min-w-full border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden text-left text-sm">
+            <caption class="text-left font-semibold p-2 text-gray-700 dark:text-gray-300">Year <%= year %></caption>
+            <thead class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
               <tr>
                 <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Invoice</th>
                 <th class="px-3 py-2 border border-gray-300 md:hidden">Inv</th>
@@ -61,7 +61,7 @@
                 <th class="px-3 py-2 border border-gray-300 md:hidden">Submission</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
               <% 
                 let totalGross = 0;
                 let totalLabourCost = 0;
@@ -97,7 +97,7 @@
                 totalReverseCharge += invoice.reverseCharge;
               %>
               <% }); %>
-              <tr class="font-semibold bg-gray-200">
+              <tr class="font-semibold bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                 <td colspan="2" class="border border-gray-300 px-3 py-1">Total:</td>
                 <td class="border border-gray-300 px-3 py-1"></td>
                 <td class="border border-gray-300 px-3 py-1"></td>

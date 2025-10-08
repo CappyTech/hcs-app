@@ -6,7 +6,17 @@ module.exports = {
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
+    labelOverrides: {
+      contractId: 'Contract'
+    },
+    fieldOrder: ['title', 'contractId', 'weekStart', 'status', 'estimatedHours', 'assignedEmployees', 'assignedSubcontractors'],
     fieldTransforms: {
+      contractId: {
+        fromModel: 'contract',
+        matchField: '_id',
+        returnField: 'title',
+        linkTo: (matched) => `/contract/read/${matched.uuid}`
+      },
       assignedEmployees: {
         fromModel: 'employee',
         matchField: '_id',
@@ -29,6 +39,23 @@ module.exports = {
     sortField: 'date',
     sortOrder: 1,
     department: ['management'],
+    // Add tabs for common attendance categories with an 'All' option
+    tabsby: 'type',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'work', label: 'Work' },
+      { value: 'off', label: 'Off' },
+      { value: 'holiday', label: 'Holiday' },
+      { value: 'sick', label: 'Sick' },
+      { value: 'training', label: 'Training' },
+      { value: 'leave', label: 'Leave' }
+    ],
+    labelOverrides: {
+      employeeId: 'Employee',
+      subcontractorId: 'Subcontractor',
+      locationId: 'Location',
+      projectId: 'Project'
+    },
     fieldTransforms: {
       employeeId: {
         fromModel: 'employee',
@@ -36,9 +63,21 @@ module.exports = {
         returnField: 'name',
         linkTo: (matched) => `/employee/read/${matched.uuid}`
       },
+      subcontractorId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
+      },
+      locationId: {
+        fromModel: 'location',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/location/read/${matched.uuid}`
+      },
       projectId: {
         fromModel: 'project',
-        matchField: '_id',
+        matchField: ['_id', 'Id'],
         returnField: 'Name',
         linkTo: (matched) => `/project/read/${matched.uuid}`
       }
@@ -54,16 +93,32 @@ module.exports = {
       status: 'Current Status',
       startDate: 'Start Date',
       endDate: 'End Date',
+      projectId: 'Project',
+      locationId: 'Location'
     },
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
+    fieldTransforms: {
+      projectId: {
+        fromModel: 'project',
+        matchField: ['_id', 'Id'],
+        returnField: 'Name',
+        linkTo: (matched) => `/project/read/${matched.uuid}`
+      },
+      locationId: {
+        fromModel: 'location',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/location/read/${matched.uuid}`
+      }
+    }
   },
   customer: {
     title: 'Customers',
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Discount', 'CountryName', 'Created', 'Updated', 'Website', 'Notes', 'CustomerID', 'Code'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Website'],
     fieldOrder: ['Name', 'Code', 'DisplayName', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstInvoiceDate', 'LastInvoiceDate', 'InvoiceCount', 'InvoicedNetAmount', 'InvoicedVATAmount', 'OutstandingBalance', 'TotalPaidAmount', 'DiscountRate', 'DefaultNominalCode', 'DefaultCustomerReference', 'VATNumber', 'IsRegisteredInEC', 'IsRegisteredOutsideEC', 'IsArchived', 'ReceivesWholesalePricing', 'ApplyWHT', 'WHTRate', 'PaymentTerms', 'Currency', 'Contacts', 'Addresses', 'DeliveryAddresses', 'CustomCheckBoxes', 'CustomTextBoxes', 'Email', 'EmailTemplateNumber', 'FaxNumber', 'MobileNumber'],
     sortField: 'Name',
     sortOrder: 1,
@@ -81,11 +136,21 @@ module.exports = {
     handlesDocuments: true,
     tabsby: 'status',
     tabsValues: [
+      { value: 'all', label: 'All' },
       { value: 'active', label: 'Active' },
       { value: 'inactive', label: 'Inactive' },
     ],
     labelOverrides: {
       phoneNumber: 'Number',
+      managerId: 'Manager'
+    },
+    fieldTransforms: {
+      managerId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      }
     },
   },
   holiday: {
@@ -102,6 +167,7 @@ module.exports = {
     },
     tabsby: 'division',
     tabsValues: [
+      { value: 'all', label: 'All' },
       { value: 'scotland', label: 'Scotland' },
       { value: 'england-and-wales', label: 'England and Wales' },
       { value: 'northern-ireland', label: 'Northern Ireland' }
@@ -111,19 +177,35 @@ module.exports = {
     fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerReference', 'Currency', 'NetAmount', 'GrossAmount', 'VATAmount', 'AmountPaid', 'TotalPaidAmount', 'Paid', 'IssuedDate', 'DueDate', 'PaidDate', 'LastPaymentDate', 'Status', 'LineItems', 'PaymentLines', 'DeliveryAddress', 'Address', 'UseCustomDeliveryAddress', 'Permalink', 'PackingSlipPermalink', 'ReminderLetters', 'PreviousNumber', 'NextNumber', 'OverdueDays', 'AutomaticCreditControlEnabled', 'CustomerDiscount', 'EmailCount', 'InvoiceInECMemberState', 'InvoiceOutsideECMemberState', 'SuppressNumber', 'UpdateCustomerAddress'],
     title: 'Invoices',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'InvoiceDBID', 'DeliveryAddress', 'CurrencyCode', 'ExchangeRate', 'PermaLink', 'UseCustomDeliveryAddress', 'ReadableString', 'EstimateCategory', 'CustomerID', 'Paid', 'CISRCNetAmount', 'CISRCVatAmount', 'IsCISReverseCharge', 'Customer', 'SuppressTotal'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'DeliveryAddress', 'UseCustomDeliveryAddress', 'Paid'],
     sortField: 'Number',
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c', 'd'],
     labelOverrides: {
-      InvoiceNumber: 'KashFlow Number',
+      Number: 'KashFlow Number',
+      CustomerId: 'Customer'
+    },
+    fieldTransforms: {
+      CustomerId: {
+        fromModel: 'customer',
+        matchField: 'Id',
+        returnField: 'Name',
+        linkTo: (matched) => `/customer/read/${matched.uuid}`
+      },
+      Number: {
+        fromModel: 'invoice',
+        matchField: 'Number',
+        returnField: 'Number',
+        linkTo: (matched) => `/invoice/read/${matched.uuid}`
+      },
     },
   },
   location: {
     title: 'Locations',
     linkField: 'name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    fieldOrder: ['name', 'address', 'city', 'postalCode', 'country', 'latitude', 'longitude'],
     sortField: 'name',
     sortOrder: 1,
     department: ['management'],
@@ -132,32 +214,33 @@ module.exports = {
     deny: ['c', 'r', 'u', 'd', 'l'],
   },
   project: {
-    fieldOrder: ['Number', 'Id', 'Name', 'Description', 'Reference', 'CustomerCode', 'CustomerName', 'StartDate', 'EndDate', 'Status', 'StatusName', 'Note', 'ActualJournalsAmount', 'ActualPurchasesAmount', 'ActualSalesAmount', 'TargetPurchasesAmount', 'TargetSalesAmount', 'ActualPurchasesVATAmount', 'ActualSalesVATAmount', 'WorkInProgressAmount', 'ExcludeVAT', 'AssociatedQuotesCount'],
+    fieldOrder: ['Number', 'Id', 'Name', 'Description', 'Reference', 'CustomerCode', 'Status', 'Note'],
     title: 'Projects',
     linkField: 'Number',
     sortField: 'Number',
     sortOrder: 1,
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ID', 'Date1', 'Date2', 'FieldLinks'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'deletedAt', 'lastSeenRun'],
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
     handlesDocuments: true,
     labelOverrides: {
-      CustomerID: 'Customer Name',
+      CustomerCode: 'Customer',
       Number: 'Job Ref',
     },
     fieldTransforms: {
-      CustomerID: {
+      CustomerCode: {
         fromModel: 'customer',
-        matchField: 'CustomerID',
+        matchField: 'Code',
         returnField: 'Name',
-        linkTo: (row) => `/customer/${row.CustomerID}`,
+        linkTo: (matched) => `/customer/read/${matched.uuid}`,
       }
     },
     tabsby: 'Status',
     tabsValues: [
-      { value: '0', label: 'Pending' },
-      { value: '1', label: 'In Progress' },
-      { value: '2', label: 'Completed' }
+      { value: 'all', label: 'All' },
+      { value: 'Active', label: 'Active' },
+      { value: 'Archived', label: 'Archived' },
+      { value: 'Completed', label: 'Completed' }
     ],
     description: {
       manage: 'Manage projects and their documents.',
@@ -166,29 +249,47 @@ module.exports = {
   quote: {
     title: 'Quotes',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'InvoiceDBID', 'SuppressTotal', 'DueDate', 'DeliveryAddress', 'CurrencyCode', 'ExchangeRate', 'PermaLink', 'UseCustomDeliveryAddress', 'ReadableString', 'EstimateCategory', 'CustomerID', 'Paid', 'CISRCNetAmount', 'CISRCVatAmount', 'IsCISReverseCharge', 'Customer'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
     fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'Date', 'GrossAmount', 'NetAmount', 'VATAmount', 'CustomerReference', 'LineItems', 'Permalink', 'PreviousNumber', 'NextNumber', 'Status', 'Category', 'Currency', 'CustomerCode'],
     sortField: 'Number',
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
     labelOverrides: {
-      InvoiceNumber: 'Quote Ref',
+      Number: 'Quote Ref',
+      CustomerId: 'Customer'
+    },
+    fieldTransforms: {
+      CustomerId: {
+        fromModel: 'customer',
+        matchField: 'Id',
+        returnField: 'Name',
+        linkTo: (matched) => `/customer/read/${matched.uuid}`
+      }
     },
   },
   purchase: {
     title: 'Purchases',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'InvoiceDBID', 'DeliveryAddress', 'CurrencyCode', 'ExchangeRate', 'PermaLink', 'UseCustomDeliveryAddress', 'ReadableString', 'EstimateCategory', 'CustomerID', 'Paid', 'CISRCNetAmount', 'CISRCVatAmount', 'IsCISReverseCharge', 'Customer'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ReadableString'],
     fieldOrder: ['Number', 'SupplierId', 'SupplierCode', 'SupplierName', 'SupplierReference', 'Currency', 'DueDate', 'GrossAmount', 'HomeCurrencyGrossAmount', 'IssuedDate', 'FileCount', 'LineItems', 'NetAmount', 'NextNumber', 'OverdueDays', 'PaidDate', 'PaymentLines', 'Permalink', 'PreviousNumber', 'PurchaseInECMemberState', 'Status', 'StockManagementApplicable', 'TotalPaidAmount', 'VATAmount', 'AdditionalFieldValue', 'IsWhtDeductionToBeApplied', 'ReadableString', 'SubmissionDate', 'TaxMonth', 'TaxYear'],
     sortField: 'Number',
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
     labelOverrides: {
-      InvoiceNumber: 'KashFlow Number',
+      Number: 'KashFlow Number',
       LineItems: 'Line Items',
-      PaymentLines: 'Payments'
+      PaymentLines: 'Payments',
+      SupplierId: 'Supplier'
+    },
+    fieldTransforms: {
+      SupplierId: {
+        fromModel: 'supplier',
+        matchField: 'Id',
+        returnField: 'Name',
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
+      }
     },
   },
   session: {
@@ -197,7 +298,7 @@ module.exports = {
   supplier: {
     title: 'Suppliers',
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'Created', 'Updated', 'SupplierID', 'EC', 'TradeBorderType', 'Contact', 'ContactTitle', 'ContactFirstName', 'ContactLastName', 'Telephone', 'Fax', 'Mobile', 'Website', 'CurrencyID', 'PaymentTerms'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms'],
     fieldOrder: ['Name', 'Id', 'Code', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstPurchaseDate', 'LastPurchaseDate', 'OutstandingBalance', 'TotalPaidAmount', 'DefaultNominalCode', 'VATNumber', 'IsRegisteredInEC', 'IsArchived', 'PaymentTerms', 'Currency', 'Contacts', 'Address', 'DeliveryAddresses', 'DefaultPdfTheme', 'PaymentMethod', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull', 'UniqueEntityNumber', 'VatNumber', 'WithholdingTaxRate', 'WithholdingTaxReferences'],
     sortField: 'Name',
     sortOrder: 1,
@@ -219,10 +320,35 @@ module.exports = {
     title: 'Users',
     linkField: 'username',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'password', 'totpSecret', 'totpEnabled'],
-    fieldOrder: ['username', 'email', 'role', 'status', 'lastLogin'],
+    fieldOrder: ['username', 'email', 'role', 'employeeId', 'subcontractorId', 'clientId'],
     sortField: 'username',
     sortOrder: 1,
     department: ['human-resources'],
+    labelOverrides: {
+      employeeId: 'Employee',
+      subcontractorId: 'Subcontractor',
+      clientId: 'Client'
+    },
+    fieldTransforms: {
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
+      },
+      clientId: {
+        fromModel: 'customer',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/customer/read/${matched.uuid}`
+      }
+    }
   },
   vehicle: {
     title: 'Vehicles',

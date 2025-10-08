@@ -331,12 +331,20 @@ for (const namespace of ['REST', 'INTERNAL']) {
             const item = await Model.findOne({ uuid: req.params.uuid }).lean();
             if (!item) return res.status(404).render(path.join('mongoose', 'error'));
 
+            // Build schema and reference data for read-only field rendering
+            const schema = extractSchema(Model, config);
+            const referenceData = await fetchReferenceData(schema, config);
+
             return res.render(path.join('tailwindcss', 'partials', 'form-delete'), {
               title: `Delete ${config.title || baseName}`,
               item,
+              schema,
+              referenceData,
+              basePath: modelName,
               cancelUrl: `/${modelName}s`,
               formAction: `/${modelName}/${item.uuid}/delete`,
               listControllerConfig: listControllerConfig[modelName] || {},
+              config,
             });
           } catch (err) {
             logger.error(`❌ Error preparing delete for ${modelName}: ${err.message}`);

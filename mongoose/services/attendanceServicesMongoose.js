@@ -8,8 +8,11 @@ const taxService = require('../../services/taxService');
  */
 const getAttendanceForDay = async (date) => {
   try {
-    return await mdb.attendance
-      .find({ date })
+    // Normalize date to day boundaries
+    const start = moment(date).startOf('day').toDate();
+    const end = moment(date).endOf('day').toDate();
+    return await mdb.INTERNAL.attendance
+      .find({ date: { $gte: start, $lte: end } })
       .populate('employeeId')
       .populate('locationId')
       .sort({ date: 1 });
@@ -24,31 +27,74 @@ const getAttendanceForDay = async (date) => {
  */
 const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
   try {
-    const [attendanceRecords, allEmployees, allSubcontractors, paidReceipts] = await Promise.all([
-      mdb.attendance
-        .find({
-          date: {
-            $gte: payrollWeekStart.format('YYYY-MM-DD'),
-            $lte: endDate.format('YYYY-MM-DD')
-          }
-        })
-        .populate('employeeId')
-        .populate('locationId')
-        .sort({ date: 1 }),
+    const start = payrollWeekStart.clone().startOf('day').toDate();
+    const end = endDate.clone().endOf('day').toDate();
 
-      mdb.employee.find({ status: 'active' }),
+    // Fetch internal attendance records for the week
+    const attendancePromise = mdb.INTERNAL.attendance
+      .find({ date: { $gte: start, $lte: end } })
+      .populate('employeeId')
+      .populate('locationId')
+      .populate('contractAssignmentId')
+      .sort({ date: 1 });
 
-      mdb.supplier.find({ Subcontractor: true }),
+    // Active employees (INTERNAL)
+    const activeEmployeesPromise = mdb.INTERNAL.employee.find({ status: 'active' });
 
-      mdb.receipt.find({
-        Paid: true,
-        AmountPaid: { $gt: 0 },
-        InvoiceDate: {
-          $gte: payrollWeekStart.format('YYYY-MM-DD'),
-          $lte: endDate.format('YYYY-MM-DD')
-        }
-      }).populate('CustomerID')
+    // Subcontractors (REST)
+    const subcontractorsPromise = mdb.REST.supplier.find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] });
+
+    // Purchases with payments within the week (REST)
+    const purchasesPromise = mdb.REST.purchase.find({
+      TotalPaidAmount: { $gt: 0 },
+      $or: [
+        { PaidDate: { $gte: start, $lte: end } },
+        { PaymentLines: { $elemMatch: { $or: [ { PayDate: { $gte: start, $lte: end } }, { Date: { $gte: start, $lte: end } } ] } } }
+      ]
+    }).select('SupplierId SupplierName TotalPaidAmount PaidDate PaymentLines');
+
+    const [attendanceRecords, allEmployees, allSubcontractors, purchases] = await Promise.all([
+      attendancePromise,
+      activeEmployeesPromise,
+      subcontractorsPromise,
+      purchasesPromise
     ]);
+
+    // Map suppliers by Id for quick lookup
+    const supplierIds = [...new Set(purchases.map(p => p.SupplierId).filter(id => id != null))];
+    const suppliers = supplierIds.length
+      ? await mdb.REST.supplier.find({ Id: { $in: supplierIds } }).select('Id Name uuid').lean()
+      : [];
+    const supplierById = new Map(suppliers.map(s => [s.Id, s]));
+
+    // Derive paid receipts as payment events within the week
+    const paidReceipts = [];
+    for (const p of purchases) {
+      const supplierDoc = supplierById.get(p.SupplierId) || { Name: p.SupplierName, uuid: null };
+      const lines = Array.isArray(p.PaymentLines) ? p.PaymentLines : [];
+      const eventsFromLines = lines
+        .filter(pl => {
+          const d = pl.PayDate || pl.Date;
+          return d && (new Date(d) >= start) && (new Date(d) <= end);
+        })
+        .map(pl => ({
+          _id: `${p._id}-pl-${(pl._id || Math.random()).toString()}`,
+          CustomerID: supplierDoc,
+          InvoiceDate: pl.PayDate || pl.Date,
+          AmountPaid: Number(pl.Amount || pl.Value || 0)
+        }));
+
+      if (eventsFromLines.length) {
+        paidReceipts.push(...eventsFromLines);
+      } else if (p.PaidDate && p.TotalPaidAmount > 0 && p.PaidDate >= start && p.PaidDate <= end) {
+        paidReceipts.push({
+          _id: p._id,
+          CustomerID: supplierDoc,
+          InvoiceDate: p.PaidDate,
+          AmountPaid: Number(p.TotalPaidAmount || 0)
+        });
+      }
+    }
 
     return {
       attendanceRecords,
@@ -82,6 +128,7 @@ const groupAttendanceByPerson = (
   // Init employees
   allEmployees.forEach(emp => {
     groupedAttendance[emp.name] = {
+      name: emp.name,
       employeeId: emp.uuid,
       subcontractorId: null,
       totalHoursWorked: 0,
@@ -102,6 +149,7 @@ const groupAttendanceByPerson = (
 
     if (!groupedAttendance[name]) {
       groupedAttendance[name] = {
+        name,
         employeeId: null,
         subcontractorId: supplier.uuid,
         totalHoursWorked: 0,
@@ -117,9 +165,9 @@ const groupAttendanceByPerson = (
       groupedAttendance[name].dailyRecords[dateKey] = {};
     }
 
-    groupedAttendance[name].dailyRecords[dateKey][`receipt-${receipt._id}`] = {
+    groupedAttendance[name].dailyRecords[dateKey][`purchase-${receipt._id}`] = {
       location: null,
-      type: 'Receipt',
+      type: 'Purchase',
       hoursWorked: null,
       weeklyPay: amount
     };
@@ -146,7 +194,7 @@ const groupAttendanceByPerson = (
         weeklyPay: 0,
         dailyRecords: {},
         type: 'employee',
-        status: emp.status
+        status: employee.status
       };
     }
 
@@ -155,10 +203,12 @@ const groupAttendanceByPerson = (
     }
 
     groupedAttendance[name].dailyRecords[dateKey][record._id] = {
+      uuid: record.uuid,
       location: record.locationId || null,
       type: record.type,
       hoursWorked,
-      weeklyPay: calculatedPay
+      weeklyPay: calculatedPay,
+      contractAssignmentId: record.contractAssignmentId || null
     };
 
     groupedAttendance[name].totalHoursWorked += hoursWorked;
@@ -238,11 +288,24 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     daysOfWeek
   } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidReceipts);
 
-  const activeJobs = await mdb.job.find({
-    startDate: { $lte: endDate.toDate() },
-    $or: [{ endDate: null }, { endDate: { $gte: payrollWeekStart.toDate() } }],
-    status: { $ne: 'archived' }
-  }).populate('projectId').populate('locationId').lean();
+  // INTERNAL.job was replaced with REST.project — surface "active jobs" from active REST projects
+  let activeJobs = [];
+  try {
+    const projects = await mdb.REST.project.find({
+      deletedAt: null,
+      Status: { $in: ['Active', 'In Progress', 'Pending'] }
+    }).select('Number Name Reference Status').sort({ Number: 1 }).lean();
+
+    // Shape to match the existing view expectations: jobRef, projectId, locationId
+    activeJobs = projects.map(p => ({
+      jobRef: p.Number || p.Reference || p.Name,
+      projectId: p, // view reads projectId.Name || projectId.Reference
+      locationId: null
+    }));
+  } catch (e) {
+    logger.warn('Active projects lookup skipped: ' + e.message);
+    activeJobs = [];
+  }
 
   return {
     groupedAttendance,

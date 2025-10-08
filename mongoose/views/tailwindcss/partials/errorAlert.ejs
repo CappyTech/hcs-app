@@ -1,13 +1,13 @@
 <% if (flash.error && flash.error.length > 0) { %>
   <div class="fixed top-4 right-4 space-y-4 z-50">
     <% flash.error.forEach(function(message, index) { %>
-      <div id="errorToast<%= index %>" 
-           class="relative flex items-start bg-red-600 text-white rounded-lg shadow-lg px-4 py-3 max-w-xs animate-slide-in">
+   <div id="errorToast<%= index %>" 
+     class="relative flex items-start bg-red-600 dark:bg-red-700 text-white rounded-lg shadow-lg px-4 py-3 max-w-xs animate-slide-in">
         <div class="flex-1 pr-6">
           <p class="text-sm"><%= message %></p>
         </div>
         <button
-          class="absolute top-2 right-2 text-white hover:text-red-300 focus:outline-none"
+          class="absolute top-2 right-2 text-white hover:text-red-200 dark:hover:text-red-300 focus:outline-none"
           onclick="document.getElementById('errorToast<%= index %>').remove()"
           aria-label="Close">
           <i class="bi bi-x-lg"></i>

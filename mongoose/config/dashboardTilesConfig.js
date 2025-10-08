@@ -6,6 +6,13 @@ module.exports = {
         department: ['payroll', 'human-resources'],
         buttonClass: 'bg-green-700 hover:bg-green-800',
     },
+    WeeklyAttendanceManagement: {
+        title: 'Weekly Attendance',
+        description: 'View weekly attendance records',
+        link: '/weekly-management',
+        department: ['management'],
+        buttonClass: 'bg-green-700 hover:bg-green-800',
+    },
     DailyAttendance: {
         title: 'Daily Attendance',
         description: 'View daily attendance records',
