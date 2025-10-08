@@ -31,8 +31,9 @@
       <!-- Controls -->
       <form id="list-controls" method="GET" action="" class="flex flex-wrap gap-2 items-center">
         <label for="limitSelect" class="text-sm font-medium text-gray-700 dark:text-gray-200">Show</label>
-        <select id="limitSelect" name="limit"
-                class="text-sm border rounded px-2 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
+  <select id="limitSelect" name="limit"
+    class="text-sm border rounded pl-2 pr-6 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600 appearance-none focus:outline-none focus:ring-1 focus:ring-green-600"
+    style="background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 14px) calc(50% - 3px),calc(100% - 10px) calc(50% - 3px);background-size:4px 4px,4px 4px;background-repeat:no-repeat;">
           <% [10, 50, 100].forEach(opt => { %>
             <option value="<%= opt %>" <%= limit == opt ? 'selected' : '' %>><%= opt %></option>
           <% }) %>
@@ -136,7 +137,25 @@
                       &mdash;
                     <% } else if (val !== null && val !== undefined) { %>
                       <% if (Array.isArray(val)) { %>
-                        <%= `${val.length} ${h.key.toLowerCase()}` %>
+                        <% if (h.key === 'LineItems') { %>
+                          <span class="inline-flex items-center gap-2">
+                            <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700"><%= val.length %> items</span>
+                            <% if (row.uuid) { %>
+                              <a href="/<%= modelName %>/read/<%= row.uuid %>#LineItems" class="text-xs text-green-600 dark:text-green-400 hover:underline">View</a>
+                            <% } %>
+                          </span>
+                        <% } else if (h.key === 'PaymentLines') { %>
+                          <% const totalPaid = val.reduce((s, p) => s + (Number(p?.Amount) || 0), 0); %>
+                          <span class="inline-flex items-center gap-2">
+                            <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700"><%= val.length %> payments</span>
+                            <span class="text-xs text-gray-600 dark:text-gray-300">£<%= Number(totalPaid).toFixed(2) %></span>
+                            <% if (row.uuid) { %>
+                              <a href="/<%= modelName %>/read/<%= row.uuid %>#PaymentLines" class="text-xs text-green-600 dark:text-green-400 hover:underline">View</a>
+                            <% } %>
+                          </span>
+                        <% } else { %>
+                          <%= `${val.length} ${h.key.toLowerCase()}` %>
+                        <% } %>
                       <% } else if (val && val._bsontype === 'Decimal128') { %>
                         <% const num = parseFloat(val.toString()); %>
                         <%= ['payrate', 'dayrate'].includes(h.key.toLowerCase()) ? formatCurrency(num) : num.toFixed(2) %>
@@ -151,19 +170,6 @@
                   <% } %>
                 </td>
               <% }) %>
-
-              <% if (hasActions) { %>
-                <td class="px-3 py-2 border-b dark:border-gray-700">
-                  <div class="flex flex-wrap gap-2">
-                    <% (row._actions || []).forEach(action => { %>
-                      <a href="<%= action.href %>"
-                         class="text-xs px-3 py-1 rounded text-white bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-600 hover:bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-700 transition">
-                        <%= action.label %>
-                      </a>
-                    <% }) %>
-                  </div>
-                </td>
-              <% } %>
             </tr>
           <% }) %>
         </tbody>

@@ -5,4 +5,7 @@
 - Run the unit tests with `npm test` before committing.
 - If you modify files in the `e2e/` folder, run the end-to-end tests with `npx playwright test`.
 - Ensure `git status` reports a clean working tree before you finish.
-
+- Use git bash as terminal
+- trace from app.js that the file is included at some point, or is a child of another file that is included in the app.js file
+- do not use \mongoose\views\mongoose
+- do use \mongoose\views\tailwindcss

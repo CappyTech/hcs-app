@@ -4,6 +4,7 @@ const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const moment = require('moment-timezone');
 const taxService = require('../../services/taxService');
+const cisMappings = require('../config/cisMappings');
 
 exports.renderCISDashboardMongo = async (req, res, next) => {
   try {
@@ -49,8 +50,13 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       cisRateBySupplierId.set(String(s.Id), rate);
     }
 
-    // Totals per supplier
-    const supplierTotals = {};
+  // Totals per supplier
+  const supplierTotals = {};
+  const cisDebug = process.env.CIS_DEBUG_NOMINALS === 'true';
+  const nominalCodeCounts = new Map();
+  const nominalNameCounts = new Map();
+  const debugStats = { usedLineItems: 0, usedLines: 0, emptyLines: 0 };
+  const debugSamples = [];
   for (const purchase of filteredPurchases) {
       const supplierId = String(purchase.SupplierId);
       supplierTotals[supplierId] ??= {
@@ -63,19 +69,101 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         reverseChargeNet: 0,
       };
 
-      const lines = Array.isArray(purchase.LineItems) && purchase.LineItems.length
-        ? purchase.LineItems
-        : Array.isArray(purchase.Lines) ? purchase.Lines : [];
+      const hasLineItems = Array.isArray(purchase.LineItems) && purchase.LineItems.length > 0;
+      const hasLines = Array.isArray(purchase.Lines) && purchase.Lines.length > 0;
+      const lines = hasLineItems ? purchase.LineItems : hasLines ? purchase.Lines : [];
+      if (cisDebug) {
+        if (hasLineItems) debugStats.usedLineItems++;
+        else if (hasLines) debugStats.usedLines++;
+        else debugStats.emptyLines++;
+        if (debugSamples.length < 5) {
+          const sample = {
+            purchaseId: purchase.Id || purchase.uuid || purchase.Number,
+            hasLineItems,
+            hasLines,
+            lineItemsLen: hasLineItems ? purchase.LineItems.length : 0,
+            linesLen: hasLines ? purchase.Lines.length : 0,
+            firstLineKeys: lines[0] ? Object.keys(lines[0]) : []
+          };
+          debugSamples.push(sample);
+        }
+      }
 
       for (const line of lines) {
         if (!line) continue;
-        const chargeType = Number(line.ChargeType);
+        if (cisDebug) {
+          if (line.NominalCode != null) {
+            const code = Number(line.NominalCode);
+            nominalCodeCounts.set(code, (nominalCodeCounts.get(code) || 0) + 1);
+          }
+          if (line.NominalName) {
+            const name = String(line.NominalName).trim();
+            if (name) nominalNameCounts.set(name, (nominalNameCounts.get(name) || 0) + 1);
+          }
+        }
+        const chargeType = line.ChargeType != null ? Number(line.ChargeType) : null;
         const qty = Number(line.Quantity) || 0;
         const rate = Number(line.Rate) || 0;
         const amount = line.Amount != null ? Number(line.Amount) : (rate * qty);
-        if (chargeType === 18685896) supplierTotals[supplierId].materialsCost += amount;
-        if (chargeType === 18685897) supplierTotals[supplierId].labourCost += amount;
-        if (chargeType === 18685964) supplierTotals[supplierId].cisDeductions += Math.abs(amount);
+
+        // Primary: SOAP charge types if present
+        if (chargeType === 18685896) { supplierTotals[supplierId].materialsCost += amount; continue; }
+        if (chargeType === 18685897) { supplierTotals[supplierId].labourCost += amount; continue; }
+        if (chargeType === 18685964) { supplierTotals[supplierId].cisDeductions += Math.abs(amount); continue; }
+
+        // REST heuristic classification
+        const nc = Number(line.NominalCode) || null;
+        const nn = (line.NominalName || line.Description || '').toString().toLowerCase();
+        if (nc && cisMappings.materialsNominalCodes.includes(nc)) {
+          supplierTotals[supplierId].materialsCost += amount;
+          continue;
+        }
+        if (nc && cisMappings.labourNominalCodes.includes(nc)) {
+          supplierTotals[supplierId].labourCost += amount;
+          continue;
+        }
+        if (nc && Array.isArray(cisMappings.cisDeductionNominalCodes) && cisMappings.cisDeductionNominalCodes.includes(nc)) {
+          supplierTotals[supplierId].cisDeductions += Math.abs(amount);
+          continue;
+        }
+        // Fallback by name hints
+        if (nn.includes('material')) {
+          supplierTotals[supplierId].materialsCost += amount;
+          continue;
+        }
+        if (nn.includes('labour') || nn.includes('labor') || nn.includes('subcontract')) {
+          supplierTotals[supplierId].labourCost += amount;
+          continue;
+        }
+
+      }
+
+      // Emit debug log if enabled
+      if (cisDebug) {
+        const codesSorted = Array.from(nominalCodeCounts.entries()).sort((a,b)=>b[1]-a[1]).map(([code,count])=>({ code, count }));
+        const namesSorted = Array.from(nominalNameCounts.entries()).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({ name, count }));
+        const summary = {
+          year: specifiedYear,
+          month: specifiedMonth,
+          suppliersConsidered: suppliers.length,
+          purchasesConsidered: filteredPurchases.length,
+          topNominalCodes: codesSorted.slice(0, 20),
+          topNominalNames: namesSorted.slice(0, 20),
+          usedLineItems: debugStats.usedLineItems,
+          usedLines: debugStats.usedLines,
+          emptyLines: debugStats.emptyLines,
+          samples: debugSamples
+        };
+        // File transport keeps meta; console prints the message only, so include JSON in message too
+        logger.info('[CIS_DEBUG_NOMINALS] ' + JSON.stringify(summary));
+        logger.info('[CIS_DEBUG_NOMINALS] Distinct NominalCodes and NominalNames (full)', {
+          year: summary.year,
+          month: summary.month,
+          suppliersConsidered: summary.suppliersConsidered,
+          purchasesConsidered: summary.purchasesConsidered,
+          nominalCodes: codesSorted.slice(0, 100),
+          nominalNames: namesSorted.slice(0, 100)
+        });
       }
 
       // Reverse charge may not be present on purchases model; keep zero if absent
@@ -101,9 +189,10 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const nextMonth = specifiedMonth === 12 ? 1 : specifiedMonth + 1;
     const nextYear = specifiedMonth === 12 ? specifiedYear + 1 : specifiedYear;
 
-    const periodEnd = moment(currentMonthlyReturn.periodEndDisplay, 'Do MMMM YYYY');
-    const submissionStartDate = periodEnd.clone().date(7).format('Do MMMM YYYY');
-    const submissionEndDate = periodEnd.clone().date(11).format('Do MMMM YYYY');
+  // Use the actual Date for periodEnd to avoid double-formatting and preserve type for slimDateTime
+  const periodEnd = moment(currentMonthlyReturn.periodEnd);
+  const submissionStartDate = periodEnd.clone().date(7).toDate();
+  const submissionEndDate = periodEnd.clone().date(11).toDate();
 
     // Decorate purchases for view list
   const purchasesForView = filteredPurchases.map(p => {

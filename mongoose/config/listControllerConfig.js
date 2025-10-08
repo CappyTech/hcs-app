@@ -187,6 +187,8 @@ module.exports = {
     deny: ['c', 'u', 'd'],
     labelOverrides: {
       InvoiceNumber: 'KashFlow Number',
+      LineItems: 'Line Items',
+      PaymentLines: 'Payments'
     },
   },
   session: {
@@ -201,14 +203,6 @@ module.exports = {
     sortOrder: 1,
     department: ['kashflow', 'construction-industry-scheme'],
     deny: ['c', 'u', 'd'],
-    actions: [
-      {
-        label: 'Change',
-        class: 'warning',
-        href: row => `/supplier/change/${row.uuid}`,
-        icon: 'bi-pencil-square'
-      }
-    ],
     description: {
       manage: 'Manage suppliers and subcontractors.',
     },

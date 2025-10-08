@@ -51,15 +51,25 @@
       </table>
     </div>
 
-  <% /* 2) Payments/Lines tables */ %>
-  <% } else if ((key === 'Payments' || key === 'Lines') && Array.isArray(selectedValue)) { %>
+  <% /* 2) Payments/Lines tables (supports SOAP + REST) */ %>
+  <% } else if ((key === 'Payments' || key === 'PaymentLines' || key === 'Lines' || key === 'LineItems') && Array.isArray(selectedValue)) { %>
     <% 
       const tableData = selectedValue.map(row => {
         const filtered = {};
         if (key === 'Payments') {
           ['PayDate', 'PayNote', 'PayAmount'].forEach(k => filtered[k] = row[k]);
+        } else if (key === 'PaymentLines') {
+          // REST payments
+          ['Date', 'Amount', 'Method', 'Note'].forEach(k => filtered[k] = row[k]);
         } else if (key === 'Lines') {
           ['Description', 'Rate', 'ChargeTypeName', 'VatAmount', 'ProjID'].forEach(k => filtered[k] = row[k]);
+        } else if (key === 'LineItems') {
+          // REST line items
+          const cols = ['Description', 'Quantity', 'Rate', 'VATAmount'];
+          cols.forEach(k => filtered[k] = row[k]);
+          // Prefer ProjectNumber then NominalCode for extra context
+          filtered['ProjectNumber'] = row['ProjectNumber'] ?? undefined;
+          filtered['NominalCode'] = row['NominalCode'] ?? undefined;
         }
         return filtered;
       });

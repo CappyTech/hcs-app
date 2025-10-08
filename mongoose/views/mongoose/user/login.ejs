@@ -16,6 +16,10 @@
                 <div class="mb-3">
                     <div class="cf-turnstile" data-sitekey="<%= siteKey %>"></div>
                 </div>
+                <!-- CSRF token field -->
+                <% if (typeof csrfToken !== 'undefined' && csrfToken) { %>
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <% } %>
                 <div class="d-grid gap-2 mt-4">
                     <button class="btn btn-hcs-green btn-lg" type="submit"><i class="bi bi-box-arrow-in-right"></i> Sign in</button>
                     <a class="btn btn-tertiary btn-sm" type="button" href="/user/register"><i class="bi bi-book"></i> Create an account</a>

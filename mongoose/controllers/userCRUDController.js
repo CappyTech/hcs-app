@@ -38,7 +38,7 @@ exports.registerUser = async (req, res, next) => {
             return res.redirect('/user/register');
         }
 
-        const existingUser = await mdb.user.findOne({
+        const existingUser = await mdb.INTERNAL.user.findOne({
             $or: [{ username }, { email }]
         });
 
@@ -48,8 +48,14 @@ exports.registerUser = async (req, res, next) => {
             return res.redirect('/user/register');
         }
 
-        const assignedRole = role || 'subcontractor';
-        const newUser = new mdb.user({
+    const assignedRole = role || 'subcontractor';
+    const UserModel = mdb.INTERNAL?.user;
+    if(!UserModel){
+      logger.error('User model not loaded (INTERNAL.user missing)');
+      req.flash('error', 'User model unavailable. Please try again later.');
+      return res.redirect('/user/register');
+    }
+    const newUser = new UserModel({
             username,
             email,
             password,
@@ -70,7 +76,8 @@ exports.registerUser = async (req, res, next) => {
 };
 
 exports.renderLoginForm = (req, res) => {
-  res.render(path.join('mongoose', 'user', 'login'), {
+  // Render TailwindCSS version of login template
+  res.render(path.join('tailwindcss', 'user', 'login'), {
     title: 'Log In',
     siteKey: process.env.TURNSTILE_SITE_KEY,
   });
@@ -107,7 +114,7 @@ exports.loginUser = async (req, res) => {
       return res.redirect('/user/login');
     }
 
-    const user = await mdb.user.findOne({
+    const user = await mdb.INTERNAL.user.findOne({
       $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }]
     });
 
