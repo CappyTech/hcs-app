@@ -1,0 +1,41 @@
+<div class="p-4 max-w-5xl mx-auto">
+  <a href="/paperless/ocr" class="text-sm underline">← Back to list</a>
+  <h1 class="text-2xl font-semibold mt-2 mb-4"><%= title %></h1>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="border rounded-xl p-4">
+      <h2 class="font-semibold mb-2">Document</h2>
+      <div class="text-sm space-y-1">
+        <div><span class="font-medium">Paperless ID:</span> #<%= doc.paperlessId %></div>
+        <div><span class="font-medium">Correspondent:</span> <%= doc.correspondent?.name || '-' %></div>
+        <div><span class="font-medium">Type:</span> <%= doc.documentType?.name || '-' %></div>
+        <div><span class="font-medium">Created:</span> <%= doc.created ? new Date(doc.created).toLocaleString() : '-' %></div>
+        <div><span class="font-medium">Modified:</span> <%= doc.modified ? new Date(doc.modified).toLocaleString() : '-' %></div>
+        <div><span class="font-medium">Files:</span> <%= doc.originalFileName || doc.archivedFileName || '-' %></div>
+        <div><span class="font-medium">Tags:</span> <%= (doc.tags||[]).map(t=>t.name).join(', ') || '-' %></div>
+      </div>
+    </div>
+
+    <div class="border rounded-xl p-4">
+      <h2 class="font-semibold mb-2">Ingest</h2>
+      <% if (ingest) { %>
+        <div class="text-sm space-y-1">
+          <div><span class="font-medium">Status:</span> <%= ingest.status %></div>
+          <div><span class="font-medium">Last Modified:</span> <%= ingest.lastModified ? new Date(ingest.lastModified).toLocaleString() : '-' %></div>
+          <div><span class="font-medium">Last Fetched At:</span> <%= ingest.lastFetchedAt ? new Date(ingest.lastFetchedAt).toLocaleString() : '-' %></div>
+          <div><span class="font-medium">Hash:</span> <code class="break-all"><%= ingest.lastContentHash %></code></div>
+          <% if (ingest.error) { %>
+            <div class="text-red-600">Error: <%= ingest.error %></div>
+          <% } %>
+        </div>
+      <% } else { %>
+        <div class="text-sm">No ingest record yet.</div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="border rounded-xl p-4 mt-4">
+    <h2 class="font-semibold mb-2">OCR Text</h2>
+    <pre class="whitespace-pre-wrap text-sm max-h-[60vh] overflow-auto p-3 bg-neutral-50 dark:bg-neutral-900 rounded-md"><%= (doc.ocrText||'').trim() %></pre>
+  </div>
+</div>

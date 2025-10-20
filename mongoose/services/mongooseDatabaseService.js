@@ -7,7 +7,8 @@ const tunnel = require('tunnel-ssh');
 const mongoose = require('mongoose');
 const logger = require('../../services/loggerService');
 
-const mdb = { REST: {}, INTERNAL: {} };
+const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {} };
+let isConnected = false;
 let sshServer = null;
 
 const isTunnelEnabled = process.env.SSH_TUNNEL_ENABLED === 'true';
@@ -26,6 +27,8 @@ function getUriWithDb(baseUri, dbName) {
 async function createNamespace(ns, connection) {
   const baseDir = path.join(__dirname, '..', 'models', 'mongoose', ns);
   const files = fs.existsSync(baseDir) ? fs.readdirSync(baseDir) : [];
+  // Ensure namespace bucket exists
+  if (!mdb[ns]) mdb[ns] = {};
   for (const file of files) {
     if (!file.endsWith('.js')) continue;
     const { modelName, schema } = require(path.join(baseDir, file));
@@ -42,6 +45,9 @@ async function createNamespace(ns, connection) {
 
 mdb.connect = async () => {
   try {
+    if (isConnected && mdb.REST.connection && mdb.INTERNAL.connection && mdb.PAPERLESS.connection) {
+      return mdb;
+    }
     let localPort = null;
     if (isTunnelEnabled) {
       const getPort = (await import('get-port')).default;
@@ -82,39 +88,48 @@ mdb.connect = async () => {
     }
 
     // Build URIs per namespace
-    let restUri, internalUri;
     const restDb = process.env.MONGO_DBNAME_REST || process.env.MONGO_DBNAME || 'rest';
     const internalDb = process.env.MONGO_DBNAME_INTERNAL || process.env.MONGO_DBNAME || 'internal';
+    const paperlessDb= process.env.MONGO_DBNAME_PAPERLESS || 'paperless';
+
+    let restUri, internalUri, paperlessUri;
 
     if (isTunnelEnabled) {
       restUri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${restDb}?authSource=admin`;
       internalUri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${internalDb}?authSource=admin`;
+      paperlessUri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${paperlessDb}?authSource=admin`;
       if (process.env.DEBUG) logger.info('✅ Connected to MongoDB via SSH tunnel');
     } else {
       const baseUri = process.env.MONGO_URI;
       if (!baseUri) throw new Error('MONGO_URI not set');
       restUri = getUriWithDb(baseUri, restDb);
       internalUri = getUriWithDb(baseUri, internalDb);
+      paperlessUri = getUriWithDb(baseUri, paperlessDb);
       if (process.env.DEBUG) logger.info('✅ Connecting to MongoDB via MONGO_URI');
     }
 
     const restConn = mongoose.createConnection(restUri);
     const internalConn = mongoose.createConnection(internalUri);
+    const paperlessConn = mongoose.createConnection(paperlessUri);
 
     await Promise.all([
       new Promise((res, rej) => { restConn.once('open', res); restConn.on('error', rej); }),
-      new Promise((res, rej) => { internalConn.once('open', res); internalConn.on('error', rej); })
+      new Promise((res, rej) => { internalConn.once('open', res); internalConn.on('error', rej); }),
+      new Promise((res, rej) => { paperlessConn.once('open', res); paperlessConn.on('error', rej); })
     ]);
 
     if (process.env.DEBUG) {
       logger.info('✅ REST connection open');
       logger.info('✅ INTERNAL connection open');
+      logger.info('✅ PAPERLESS connection open');
     }
 
     // Load models into each namespace
     await createNamespace('REST', restConn);
     await createNamespace('INTERNAL', internalConn);
+    await createNamespace('PAPERLESS', paperlessConn);
 
+    isConnected = true;
     return mdb;
   } catch (err) {
     logger.error('❌ Database connection setup failed: ' + err.message);
@@ -127,6 +142,7 @@ const cleanup = async () => {
   try {
     try { await mdb.REST?.connection?.close(); } catch {}
     try { await mdb.INTERNAL?.connection?.close(); } catch {}
+    try { await mdb.PAPERLESS?.connection?.close(); } catch {}
 
     if (sshServer && sshServer.close) {
       sshServer.close();

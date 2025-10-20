@@ -1,0 +1,50 @@
+<div class="p-4 max-w-7xl mx-auto">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-semibold"><%= title %></h1>
+    <a href="/paperless/ingest" class="underline">Ingest tracker</a>
+  </div>
+
+  <form method="get" class="mb-4 flex gap-2">
+    <input name="q" value="<%= q %>" placeholder="Search title/OCR/correspondent/type" class="w-full rounded-md border px-3 py-2 dark:bg-neutral-900" />
+    <button class="rounded-md px-4 py-2 border hover:bg-neutral-50 dark:hover:bg-neutral-800">Search</button>
+  </form>
+
+  <div class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">Total: <%= total %></div>
+
+  <div class="overflow-x-auto border rounded-xl">
+    <table class="min-w-full text-sm">
+      <thead class="bg-neutral-50 dark:bg-neutral-900">
+        <tr>
+          <th class="text-left p-3">Paperless ID</th>
+          <th class="text-left p-3">Title</th>
+          <th class="text-left p-3">Correspondent</th>
+          <th class="text-left p-3">Type</th>
+          <th class="text-left p-3">Modified</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach(it => { %>
+          <tr class="border-t hover:bg-neutral-50 dark:hover:bg-neutral-900">
+            <td class="p-3"><a class="text-blue-600 underline" href="/paperless/ocr/<%= it.paperlessId %>">#<%= it.paperlessId %></a></td>
+            <td class="p-3"><%= it.title || '-' %></td>
+            <td class="p-3"><%= it.correspondent?.name || '-' %></td>
+            <td class="p-3"><%= it.documentType?.name || '-' %></td>
+            <td class="p-3"><%= it.modified ? new Date(it.modified).toLocaleString() : '-' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="flex items-center justify-between mt-4 text-sm">
+    <div>Page <%= page %> of <%= pages %></div>
+    <div class="flex gap-2">
+      <% if (page > 1) { %>
+        <a class="px-3 py-1 border rounded" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %>">Prev</a>
+      <% } %>
+      <% if (page < pages) { %>
+        <a class="px-3 py-1 border rounded" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %>">Next</a>
+      <% } %>
+    </div>
+  </div>
+</div>

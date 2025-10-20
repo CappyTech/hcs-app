@@ -138,6 +138,7 @@ const main = async () => {
     app.use('/', require('./mongoose/routes/submissionRoutes'));
     app.use('/', require('./mongoose/routes/holidayRoutes'));
     app.use('/', require('./mongoose/routes/fileRoutes'));
+    app.use('/', require('./mongoose/routes/paperlessRoutes'));
 
     // Catch-all 404
     app.use((req, res, next) => {

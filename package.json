@@ -1,6 +1,6 @@
 {
   "name": "hms",
-  "version": "5.6.0",
+  "version": "5.7.0",
   "description": "HMS, developed by Heron CS LTD, is a comprehensive web-based application designed to streamline the management of subcontractors in construction projects. It facilitates efficient data entry, automates monthly returns for CIS/HMRC compliance, tracks payments, manages deductions, and enables subcontractor verification. SMS ensures accurate record-keeping, regulatory compliance, and effective communication among project stakeholders, enhancing overall subcontractor management efficiency and transparency.",
   "main": "app.js",
   "scripts": {
@@ -44,6 +44,7 @@
     "mongoose": "^8.15.2",
     "multer": "^2.0.1",
     "node-cron": "^3.0.3",
+    "p-limit": "^7.2.0",
     "promise-limit": "^2.7.0",
     "puppeteer": "^24.6.1",
     "qrcode": "^1.5.4",
@@ -59,6 +60,5 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
-
   }
 }
