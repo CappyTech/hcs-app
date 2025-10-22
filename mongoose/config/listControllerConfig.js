@@ -380,5 +380,19 @@ module.exports = {
     sortField: 'title',
     sortOrder: 1,
     department: ['human-resources'],
+  },
+  OcrDocument: {
+    title: 'OCR Documents',
+    description: {
+      manage: 'Manage OCR documents imported from Paperless-ngx.'
+    },
+    pathOverride: '/paperless',
+    linkField: 'title',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'contentHash', 'fetchedAt', 'error', 'paperlessId', 'archivedFileName', 'originalFileName','ocrText'],
+    fieldOrder: ['title', 'documentType','modified', 'fetchedAt', 'error'],
+    sortField: 'modified',
+    sortOrder: -1,
+    department: ['paperless'],
+    deny: ['c', 'u', 'd'],
   }
 };

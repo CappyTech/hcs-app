@@ -2,7 +2,9 @@
 const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
+const axios = require('axios');
 const { grabPaperlessOCR } = require('../services/grabServicePaperless');
+const { buildPurchaseDraftById, buildKashFlowPayloadFromDraft, defaultMap } = require('../services/paperless/purchaseDraftService');
 
 // Helpers
 
@@ -108,4 +110,146 @@ exports.triggerGrab = async (req, res, next) => {
     if (req.flash) req.flash('error', `Grab failed: ${err.message}`);
     res.redirect('/paperless/ingest');
   }
+};
+
+/** Render the draft page for creating a purchase from an OCR document */
+exports.getPurchaseDraft = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    const { OcrDocument } = mdb.PAPERLESS;
+    const Supplier = mdb.REST && mdb.REST.supplier;
+    const doc = await OcrDocument.findOne({ paperlessId }).lean();
+    if (!doc) return res.status(404).render('error', { message: 'OCR document not found.' });
+    const draft = await buildPurchaseDraftById(paperlessId);
+
+    // Determine source field names for key draft values to aid debugging/visibility
+    const norm = (s) => String(s || '').trim().toLowerCase();
+    const cf = Array.isArray(doc?.customFields) ? doc.customFields : [];
+    const cfNameSet = new Map(); // normalized name -> original name
+    for (const c of cf) {
+      if (c && c.fieldName) cfNameSet.set(norm(c.fieldName), String(c.fieldName));
+    }
+    const pickSource = (names) => {
+      for (const n of (names || [])) {
+        const key = norm(n);
+        if (cfNameSet.has(key)) return cfNameSet.get(key);
+      }
+      return null;
+    };
+    const sources = {
+      SupplierReferenceSource: pickSource(defaultMap.SupplierReference),
+      IssuedDateSource: pickSource(defaultMap.IssuedDate),
+      NetAmountSource: pickSource(defaultMap.NetAmount),
+      VATAmountSource: pickSource(defaultMap.VATAmount),
+      GrossAmountSource: pickSource(defaultMap.GrossAmount),
+    };
+
+    // Supplier suggestions (prefill) and best guess
+    let suppliers = [];
+    let selectedSupplier = null;
+    if (Supplier) {
+      const qName = (draft.SupplierName || doc?.correspondent?.name || '').trim();
+      if (qName) {
+        const safe = qName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        suppliers = await Supplier.find({
+          $or: [
+            { Name: new RegExp(safe, 'i') },
+            { Code: new RegExp(safe, 'i') },
+          ],
+        }).select('uuid Id Code Name IsArchived DefaultNominalCode').limit(10).lean();
+        // exact case-insensitive match preference
+        const nameLower = qName.toLowerCase();
+        selectedSupplier = suppliers.find(s => (s.Name||'').toLowerCase() === nameLower || (s.Code||'').toLowerCase() === nameLower) || null;
+      } else {
+        suppliers = await Supplier.find({}).select('uuid Id Code Name IsArchived DefaultNominalCode').sort({ updatedAt: -1 }).limit(10).lean();
+      }
+    }
+    const payloadPreview = (() => {
+      try { return buildKashFlowPayloadFromDraft(draft); } catch (_) { return null; }
+    })();
+    res.render(path.join('tailwindcss', 'paperless', 'draft'), {
+      title: `Purchase Draft • #${paperlessId}`,
+      paperlessId,
+      doc,
+      draft,
+      suppliers,
+      selectedSupplier,
+      payloadPreview,
+      sources,
+    });
+  } catch (err) {
+    logger.error('getPurchaseDraft error:', err);
+    next(err);
+  }
+};
+
+/** Handle POST to send the draft to KashFlow (placeholder – external integration lives elsewhere) */
+exports.sendDraftToKashflow = async (req, res, next) => {
+  try {
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    const dryRun = String(req.body?.dryRun ?? 'true').toLowerCase() === 'true';
+    // Rebuild draft server-side to avoid trusting client payload
+    const draft = await buildPurchaseDraftById(paperlessId);
+    // If a supplier is selected, merge its identifiers
+    const supplierUuid = (req.body && req.body.supplierUuid) ? String(req.body.supplierUuid).trim() : '';
+    if (supplierUuid) {
+      const Supplier = mdb.REST && mdb.REST.supplier;
+      if (Supplier) {
+        const s = await Supplier.findOne({ uuid: supplierUuid }).lean();
+        if (s) {
+          draft.SupplierId = typeof s.Id === 'number' ? s.Id : undefined;
+          draft.SupplierCode = s.Code || draft.SupplierCode;
+          draft.SupplierName = s.Name || draft.SupplierName;
+          if (typeof s.DefaultNominalCode === 'number') {
+            draft.DefaultNominalCode = s.DefaultNominalCode;
+          }
+        }
+      }
+    }
+    const payload = buildKashFlowPayloadFromDraft(draft);
+    const webhookUrl = process.env.KASHFLOW_CREATOR_WEBHOOK_URL;
+    const webhookToken = process.env.KASHFLOW_CREATOR_WEBHOOK_TOKEN;
+
+    if (dryRun || !webhookUrl) {
+      // Simulated send (or not configured) – log payload and inform user
+      logger.info(`[kashflow] DRY-RUN create Purchase for paperlessId=${paperlessId}${!webhookUrl ? ' (no webhook configured)' : ''}`, { payload });
+      if (req.flash) req.flash('success', `Dry run only${!webhookUrl ? ' (webhook not configured)' : ''}. No data sent.`);
+    } else {
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (webhookToken) headers['Authorization'] = `Bearer ${webhookToken}`;
+        const resp = await axios.post(webhookUrl, { type: 'purchase.create', paperlessId, payload }, { headers, timeout: 15000 });
+        logger.info(`[kashflow] Sent create Purchase for paperlessId=${paperlessId}. status=${resp.status}`);
+        if (req.flash) req.flash('success', 'Draft sent to KashFlow creator webhook.');
+      } catch (sendErr) {
+        logger.error(`[kashflow] Send failed for paperlessId=${paperlessId}: ${sendErr.message}`);
+        if (req.flash) req.flash('error', `Send failed: ${sendErr.message}`);
+      }
+    }
+    res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+  } catch (err) {
+    logger.error('sendDraftToKashflow error:', err);
+    if (req.flash) req.flash('error', `Send failed: ${err.message}`);
+    res.redirect('back');
+  }
+};
+
+/** JSON supplier search: GET /paperless/suppliers?q=&limit= */
+exports.searchSuppliers = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const Supplier = mdb.REST && mdb.REST.supplier;
+    if (!Supplier) return res.status(501).json({ error: 'Supplier model unavailable' });
+    const q = String(req.query.q || '').trim();
+    const limit = Math.min(25, Math.max(1, parseInt(req.query.limit || '10', 10)));
+    const filter = q ? {
+      $or: [
+        { Name: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+        { Code: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+      ],
+    } : {};
+  const docs = await Supplier.find(filter).select('uuid Id Code Name IsArchived DefaultNominalCode').limit(limit).lean();
+    res.json({ items: docs });
+  } catch (err) { next(err); }
 };

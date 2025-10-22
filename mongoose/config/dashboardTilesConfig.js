@@ -77,4 +77,11 @@ module.exports = {
         department: ['kashflow'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
-}
+    Paperlessngx: {
+        title: 'Document Management',
+        description: 'Manage OCR documents imported from Paperless-ngx.',
+        link: '/paperless/ocr',
+        department: ['paperless'],
+        buttonClass: 'bg-purple-700 hover:bg-purple-800'
+    },
+};

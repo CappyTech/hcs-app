@@ -96,7 +96,8 @@ const departments = [
   ['renderPayroll', 'Payroll', 'payroll'],
   ['renderHumanResources', 'Human Resources','human-resources'],
   ['renderKashflow', 'Kashflow', 'kashflow'],
-  ['renderCreate', 'Create', 'create']
+  ['renderCreate', 'Create', 'create'],
+  ['renderPaperless', 'Paperless OCR Documents', 'paperless'],
 ];
 
 departments.forEach(([exportName, title, department]) => {

@@ -38,9 +38,24 @@ function makeClient() {
       }
       return data;
     },
+    async getDocument(id, { expand } = {}) {
+      if (!id) throw new Error('getDocument requires id');
+      const params = {};
+      if (expand) {
+        // Accept string or array of expand tokens; join with comma
+        params.expand = Array.isArray(expand) ? expand.join(',') : expand;
+      }
+      const { data } = await api.get(`/documents/${id}/`, { params });
+      return data;
+    },
     async getCorrespondent(id) { if (!id) return null; return (await api.get(`/correspondents/${id}/`)).data; },
     async getDocumentType(id) { if (!id) return null; return (await api.get(`/document_types/${id}/`)).data; },
     async getTag(id) { if (!id) return null; return (await api.get(`/tags/${id}/`)).data; },
+    async listCustomFields({ page = 1, pageSize = 100, ordering = 'name' } = {}) {
+      const params = { page, page_size: pageSize, ordering };
+      const { data } = await api.get('/custom_fields/', { params });
+      return data;
+    },
   };
 }
 

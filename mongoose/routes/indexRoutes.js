@@ -2,15 +2,15 @@ const express = require('express');
 const router = express.Router();
 const authService = require('../../services/authService');
 const index = require('../controllers/indexController');
-const logger = require('../../services/loggerService');
 
 router.get('/', authService.ensureRole('none'), index.renderIndex);
-router.get('/construction-industry-scheme', authService.ensureRole(), index.renderConstructionIndustryScheme);
-router.get('/management', authService.ensureRole(), index.renderManagement);
-router.get('/payroll', authService.ensureRole(), index.renderPayroll);
-router.get('/human-resources', authService.ensureRole(), index.renderHumanResources);
-router.get('/kashflow', authService.ensureRole(), index.renderKashflow);
-router.get('/create', authService.ensureRole(), index.renderCreate);
+router.get('/construction-industry-scheme', authService.ensureRole(), authService.ensureAuthenticated, index.renderConstructionIndustryScheme);
+router.get('/management', authService.ensureRole(), authService.ensureAuthenticated, index.renderManagement);
+router.get('/payroll', authService.ensureRole(), authService.ensureAuthenticated, index.renderPayroll);
+router.get('/human-resources', authService.ensureRole(), authService.ensureAuthenticated, index.renderHumanResources);
+router.get('/kashflow', authService.ensureRole(), authService.ensureAuthenticated, index.renderKashflow);
+router.get('/create', authService.ensureRole(), authService.ensureAuthenticated, index.renderCreate);
+router.get('/paperless', authService.ensureRole(), authService.ensureAuthenticated, index.renderPaperless);
 /*
 const fetch = require('../kashflowAPI/fetchKashFlowDataMongoose');
 router.get('/fetch-kashflow-data-mongoose', async (req, res, next) => {

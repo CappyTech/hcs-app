@@ -1,20 +1,20 @@
-<div class="p-4 max-w-7xl mx-auto">
-  <div class="flex items-center justify-between mb-4">
-    <h1 class="text-2xl font-semibold"><%= title %></h1>
-    <a href="/paperless/ocr" class="underline">OCR documents</a>
+<div class="w-full my-10">
+  <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6 mb-6">
+    <h1 class="text-2xl font-bold text-center lg:text-left"><%= title %></h1>
+    <a href="/paperless/ocr" class="text-sm text-green-700 dark:text-green-400 hover:underline">OCR documents</a>
   </div>
 
-  <form method="get" class="mb-4 flex gap-2 items-end">
+  <form method="get" class="mb-4 flex flex-wrap gap-3 items-end" id="list-controls">
     <div>
       <label class="block text-sm mb-1">Status</label>
-      <select name="status" class="rounded-md border px-3 py-2 dark:bg-neutral-900">
+      <select name="status" class="text-sm border rounded px-3 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600">
         <option value="" <%= !status ? 'selected' : '' %>>All</option>
         <option value="fetched" <%= status==='fetched'?'selected':'' %>>Fetched</option>
         <option value="skipped" <%= status==='skipped'?'selected':'' %>>Skipped</option>
         <option value="error" <%= status==='error'?'selected':'' %>>Error</option>
       </select>
     </div>
-    <button class="h-[38px] rounded-md px-4 py-2 border hover:bg-neutral-50 dark:hover:bg-neutral-800">Filter</button>
+    <button class="h-[34px] text-sm bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition">Filter</button>
   </form>
 
   <form method="post" action="/paperless/ingest/trigger" class="mb-6 border rounded-xl p-4">
@@ -23,49 +23,49 @@
     <div class="grid md:grid-cols-4 gap-3">
       <div>
         <label class="block text-sm mb-1">Since (ISO-8601)</label>
-        <input name="since" placeholder="2025-01-01T00:00:00Z" class="w-full rounded-md border px-3 py-2 dark:bg-neutral-900"/>
+        <input name="since" placeholder="2025-01-01T00:00:00Z" class="w-full text-sm border rounded px-3 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"/>
       </div>
       <div>
         <label class="block text-sm mb-1">Query (Paperless search)</label>
-        <input name="query" placeholder="document_type:Invoice" class="w-full rounded-md border px-3 py-2 dark:bg-neutral-900"/>
+        <input name="query" placeholder="document_type:Invoice" class="w-full text-sm border rounded px-3 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"/>
       </div>
       <div>
         <label class="block text-sm mb-1">Page size</label>
-        <input name="pageSize" type="number" min="1" max="500" value="50" class="w-full rounded-md border px-3 py-2 dark:bg-neutral-900"/>
+        <input name="pageSize" type="number" min="1" max="500" value="50" class="w-full text-sm border rounded px-3 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"/>
       </div>
       <div>
         <label class="block text-sm mb-1">Concurrency</label>
-        <input name="concurrency" type="number" min="1" max="20" value="5" class="w-full rounded-md border px-3 py-2 dark:bg-neutral-900"/>
+        <input name="concurrency" type="number" min="1" max="20" value="5" class="w-full text-sm border rounded px-3 py-1 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"/>
       </div>
     </div>
     <div class="mt-3">
-      <button class="rounded-md px-4 py-2 border hover:bg-neutral-50 dark:hover:bg-neutral-800">Run grab</button>
+      <button class="text-sm bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition">Run grab</button>
     </div>
   </form>
 
-  <div class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">Total: <%= total %></div>
+  <div class="text-sm text-gray-600 dark:text-gray-300 mb-2">Total: <%= total %></div>
 
   <div class="overflow-x-auto border rounded-xl">
-    <table class="min-w-full text-sm">
-      <thead class="bg-neutral-50 dark:bg-neutral-900">
+    <table class="min-w-full text-sm border border-gray-300 dark:border-gray-600">
+      <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
         <tr>
-          <th class="text-left p-3">Paperless ID</th>
-          <th class="text-left p-3">Status</th>
-          <th class="text-left p-3">Last Modified</th>
-          <th class="text-left p-3">Last Fetched</th>
-          <th class="text-left p-3">Hash</th>
-          <th class="text-left p-3">Open</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Paperless ID</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Status</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Last Modified</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Last Fetched</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Hash</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Open</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
         <% items.forEach(it => { %>
-          <tr class="border-t hover:bg-neutral-50 dark:hover:bg-neutral-900">
-            <td class="p-3">#<%= it.paperlessId %></td>
-            <td class="p-3"><%= it.status %></td>
-            <td class="p-3"><%= it.lastModified ? new Date(it.lastModified).toLocaleString() : '-' %></td>
-            <td class="p-3"><%= it.lastFetchedAt ? new Date(it.lastFetchedAt).toLocaleString() : '-' %></td>
-            <td class="p-3 max-w-[220px]"><code class="break-all"><%= it.lastContentHash %></code></td>
-            <td class="p-3"><a class="text-blue-600 underline" href="/paperless/ocr/<%= it.paperlessId %>">Open</a></td>
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+            <td class="px-3 py-2 border-b dark:border-gray-700">#<%= it.paperlessId %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.status %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.lastModified ? new Date(it.lastModified).toLocaleString() : '-' %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.lastFetchedAt ? new Date(it.lastFetchedAt).toLocaleString() : '-' %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700 max-w-[220px]"><code class="break-all"><%= it.lastContentHash %></code></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><a class="text-green-600 dark:text-green-400 hover:underline" href="/paperless/ocr/<%= it.paperlessId %>">Open</a></td>
           </tr>
         <% }) %>
       </tbody>
@@ -76,10 +76,10 @@
     <div>Page <%= page %> of <%= pages %></div>
     <div class="flex gap-2">
       <% if (page > 1) { %>
-        <a class="px-3 py-1 border rounded" href="?status=<%= encodeURIComponent(status) %>&page=<%= page-1 %>&pageSize=<%= pageSize %>">Prev</a>
+        <a class="px-3 py-1 rounded border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition" href="?status=<%= encodeURIComponent(status) %>&page=<%= page-1 %>&pageSize=<%= pageSize %>">Prev</a>
       <% } %>
       <% if (page < pages) { %>
-        <a class="px-3 py-1 border rounded" href="?status=<%= encodeURIComponent(status) %>&page=<%= page+1 %>&pageSize=<%= pageSize %>">Next</a>
+        <a class="px-3 py-1 rounded border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition" href="?status=<%= encodeURIComponent(status) %>&page=<%= page+1 %>&pageSize=<%= pageSize %>">Next</a>
       <% } %>
     </div>
   </div>

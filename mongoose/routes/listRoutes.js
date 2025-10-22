@@ -13,10 +13,19 @@ for (const [functionName, handler] of Object.entries(listController)) {
   const originalModel = modelName.charAt(0).toLowerCase() + modelName.slice(1);
   const listConfig = require('../config/listControllerConfig')[originalModel] || {};
   const routeModel = (listConfig.modelRename || originalModel).toLowerCase();
-  const pluralPath = `${routeModel}s`;
+  let routePath;
+  if (listConfig.pathOverride) {
+    routePath = listConfig.pathOverride.startsWith('/') ? listConfig.pathOverride : `/${listConfig.pathOverride}`;
+  } else {
+    // Support nested paths in modelRename, e.g., 'paperless/ocrdocument' -> '/paperless/ocrdocuments'
+    const parts = routeModel.split('/').filter(Boolean);
+    const last = parts.pop();
+    const pluralLast = `${last}s`;
+    routePath = `/${[...parts, pluralLast].join('/')}`;
+  }
 
   // Register route: e.g. GET /contracts
-  router.get(`/${pluralPath}`, authService.ensureRole(), authService.ensureAuthenticated, handler);
+  router.get(routePath, authService.ensureRole(), authService.ensureAuthenticated, handler);
 }
 
 module.exports = router;

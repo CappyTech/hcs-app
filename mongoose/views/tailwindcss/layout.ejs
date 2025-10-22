@@ -11,6 +11,30 @@
   <link rel="icon" href="/resources/images/favicon.ico" type="image/x-icon">
   <link rel="manifest" href="/resources/manifest/manifest.json">
 
+  <!-- Prevent theme flash: set initial theme class and base background before CSS loads -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var enableDark = stored ? (stored === 'dark') : prefersDark;
+        var root = document.documentElement;
+        if (enableDark) {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+      } catch (e) {
+        // noop
+      }
+    })();
+  </script>
+  <style>
+    /* Base background to avoid white flash before Tailwind loads */
+    html { background-color: #f9fafb; }
+    html.dark { background-color: #374151; }
+  </style>
+
   <!-- Tailwind CSS (pinned version + plugins). For production consider compiling locally instead of CDN. -->
   <script src="https://cdn.tailwindcss.com/3.4.9?plugins=forms,typography"></script>
 
@@ -58,6 +82,10 @@
           <a href="/human-resources" class="text-sm hover:text-green-600">
             <i class="bi bi-people fs-5"></i><br>
             <small>Human Resources</small>
+          </a>
+          <a href="/paperless" class="text-sm hover:text-green-600">
+            <i class="bi bi-file-earmark-text fs-5"></i><br>
+            <small>Documents</small>
           </a>
           <% } %>
             <a href="/kashflow" class="text-sm hover:text-green-600">

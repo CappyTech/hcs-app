@@ -1,35 +1,38 @@
-<div class="p-4 max-w-7xl mx-auto">
-  <div class="flex items-center justify-between mb-4">
-    <h1 class="text-2xl font-semibold"><%= title %></h1>
-    <a href="/paperless/ingest" class="underline">Ingest tracker</a>
+<div class="w-full my-10">
+  <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6 mb-6">
+    <h1 class="text-2xl font-bold text-center lg:text-left"><%= title %></h1>
+    <div class="flex items-center gap-3">
+      <a href="/paperless/ingest" class="text-sm text-green-700 dark:text-green-400 hover:underline">Ingest tracker</a>
+    </div>
   </div>
 
-  <form method="get" class="mb-4 flex gap-2">
-    <input name="q" value="<%= q %>" placeholder="Search title/OCR/correspondent/type" class="w-full rounded-md border px-3 py-2 dark:bg-neutral-900" />
-    <button class="rounded-md px-4 py-2 border hover:bg-neutral-50 dark:hover:bg-neutral-800">Search</button>
+  <form method="get" class="mb-4 flex flex-wrap gap-2 items-center" id="list-controls">
+    <input name="q" value="<%= q %>" placeholder="Search title/OCR/correspondent/type"
+           class="text-sm border rounded px-3 py-1 w-64 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600" />
+    <button class="text-sm bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition">Search</button>
   </form>
 
-  <div class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">Total: <%= total %></div>
+  <div class="text-sm text-gray-600 dark:text-gray-300 mb-2">Total: <%= total %></div>
 
   <div class="overflow-x-auto border rounded-xl">
-    <table class="min-w-full text-sm">
-      <thead class="bg-neutral-50 dark:bg-neutral-900">
+    <table class="min-w-full text-sm border border-gray-300 dark:border-gray-600">
+      <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
         <tr>
-          <th class="text-left p-3">Paperless ID</th>
-          <th class="text-left p-3">Title</th>
-          <th class="text-left p-3">Correspondent</th>
-          <th class="text-left p-3">Type</th>
-          <th class="text-left p-3">Modified</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Paperless ID</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Title</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Correspondent</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Type</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Modified</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
         <% items.forEach(it => { %>
-          <tr class="border-t hover:bg-neutral-50 dark:hover:bg-neutral-900">
-            <td class="p-3"><a class="text-blue-600 underline" href="/paperless/ocr/<%= it.paperlessId %>">#<%= it.paperlessId %></a></td>
-            <td class="p-3"><%= it.title || '-' %></td>
-            <td class="p-3"><%= it.correspondent?.name || '-' %></td>
-            <td class="p-3"><%= it.documentType?.name || '-' %></td>
-            <td class="p-3"><%= it.modified ? new Date(it.modified).toLocaleString() : '-' %></td>
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+            <td class="px-3 py-2 border-b dark:border-gray-700"><a class="text-green-600 dark:text-green-400 hover:underline" href="/paperless/ocr/<%= it.paperlessId %>">#<%= it.paperlessId %></a></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.title || '-' %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.correspondent?.name || '-' %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.documentType?.name || '-' %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.modified ? new Date(it.modified).toLocaleString() : '-' %></td>
           </tr>
         <% }) %>
       </tbody>
@@ -40,10 +43,10 @@
     <div>Page <%= page %> of <%= pages %></div>
     <div class="flex gap-2">
       <% if (page > 1) { %>
-        <a class="px-3 py-1 border rounded" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %>">Prev</a>
+        <a class="px-3 py-1 rounded border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %>">Prev</a>
       <% } %>
       <% if (page < pages) { %>
-        <a class="px-3 py-1 border rounded" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %>">Next</a>
+        <a class="px-3 py-1 rounded border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %>">Next</a>
       <% } %>
     </div>
   </div>

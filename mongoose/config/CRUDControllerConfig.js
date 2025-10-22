@@ -1,3 +1,5 @@
+const { OcrDocument } = require("./listControllerConfig");
+
 module.exports = {
   default: {
     middleware: {
@@ -259,4 +261,10 @@ module.exports = {
       delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
+  OcrDocument: {
+    readOnly: ['uuid', 'createdAt', 'paperlessId', 'ocrText', 'fetchedAt', 'error'],
+    middleware: {
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+    }
+  }
 }

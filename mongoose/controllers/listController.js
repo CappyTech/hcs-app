@@ -44,8 +44,8 @@ const generateHeaders = (firstDoc, config = {}) => {
   }));
 };
 
-// Iterate over both REST and INTERNAL namespaces to expose list routes for their models.
-['REST', 'INTERNAL'].forEach(ns => {
+// Iterate over REST, INTERNAL and PAPERLESS namespaces to expose list routes for their models.
+['REST', 'INTERNAL', 'PAPERLESS'].forEach(ns => {
   const namespace = mdb[ns];
   if (!namespace) return;
   for (const modelName of Object.keys(namespace)) {

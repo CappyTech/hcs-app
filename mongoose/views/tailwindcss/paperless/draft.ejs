@@ -1,0 +1,269 @@
+<div class="w-full my-10 max-w-6xl mx-auto">
+	<a href="/paperless/ocr/<%= paperlessId %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Back to document</a>
+	<h1 class="text-2xl font-bold mt-2 mb-6"><%= title %></h1>
+	<% /* Derived checks and helper values */ %>
+	<% const hasSupplier = !!(selectedSupplier || draft.SupplierId || draft.SupplierName); %>
+	<% const supplierDefaultNominal = (selectedSupplier && typeof selectedSupplier.DefaultNominalCode === 'number') ? selectedSupplier.DefaultNominalCode : (typeof draft.DefaultNominalCode === 'number' ? draft.DefaultNominalCode : null); %>
+	<% const lineItems = Array.isArray(draft.LineItems) ? draft.LineItems : []; %>
+	<% const hasLineItems = lineItems.length > 0; %>
+	<% const hasNominalPerLine = hasLineItems && (lineItems.every(li => typeof li.NominalCode === 'number') || typeof supplierDefaultNominal === 'number'); %>
+	<% const net = draft.NetAmount, vat = draft.VATAmount, gross = draft.GrossAmount; %>
+	<% const totalsConsistent = (net != null && vat != null && gross != null) ? Math.abs((net + vat) - gross) < 0.01 : true; %>
+	<% const hasCurrency = !!draft.Currency; %>
+	<% const hasSupplierRef = !!draft.SupplierReference; %>
+	<% const hasIssuedDate = !!draft.IssuedDate; %>
+	<% const canSend = hasSupplier && hasLineItems && hasNominalPerLine && hasCurrency && totalsConsistent; %>
+
+	<div class="grid lg:grid-cols-2 gap-6">
+		<!-- Left: Purchase Invoice -->
+		<div class="space-y-4">
+			<div class="border rounded-xl p-4">
+				<h2 class="font-semibold mb-2">Purchase Invoice</h2>
+				<div class="text-sm space-y-1">
+					<div><span class="font-medium">Supplier Name:</span> <span id="supplier-name-display"><%= draft.SupplierName || (selectedSupplier && selectedSupplier.Name) || '-' %></span></div>
+					<div><span class="font-medium">Supplier Code:</span> <span id="supplier-code-display"><%= draft.SupplierCode || (selectedSupplier && selectedSupplier.Code) || '-' %></span></div>
+					<div><span class="font-medium">Supplier Reference:</span> <%= draft.SupplierReference || '-' %>
+						<% if (sources && sources.SupplierReferenceSource) { %>
+							<span class="text-xs text-slate-500">(from <%= sources.SupplierReferenceSource %>)</span>
+						<% } %>
+					</div>
+					<div><span class="font-medium">Additional Ref (Link):</span> <%= draft.AdditionalFieldValue || '-' %></div>
+					<div><span class="font-medium">Issued Date:</span> <%= draft.IssuedDate ? new Date(draft.IssuedDate).toLocaleDateString() : '-' %>
+						<% if (sources && sources.IssuedDateSource) { %>
+							<span class="text-xs text-slate-500">(from <%= sources.IssuedDateSource %>)</span>
+						<% } %>
+					</div>
+					<div><span class="font-medium">Due Date:</span> <%= draft.DueDate ? new Date(draft.DueDate).toLocaleDateString() : '-' %></div>
+					<div><span class="font-medium">Currency:</span> <%= draft.Currency || '-' %></div>
+				</div>
+			</div>
+
+			<div class="border rounded-xl p-4">
+				<h2 class="font-semibold mb-2">Amounts</h2>
+				<div class="text-sm space-y-1">
+					<div><span class="font-medium">Net:</span> <%= (draft.NetAmount ?? '-') %>
+						<% if (sources && sources.NetAmountSource) { %>
+							<span class="text-xs text-slate-500">(from <%= sources.NetAmountSource %>)</span>
+						<% } %>
+					</div>
+					<div><span class="font-medium">VAT:</span> <%= (draft.VATAmount ?? '-') %>
+						<% if (sources && sources.VATAmountSource) { %>
+							<span class="text-xs text-slate-500">(from <%= sources.VATAmountSource %>)</span>
+						<% } %>
+					</div>
+					<div><span class="font-medium">Gross:</span> <%= (draft.GrossAmount ?? '-') %>
+						<% if (sources && sources.GrossAmountSource) { %>
+							<span class="text-xs text-slate-500">(from <%= sources.GrossAmountSource %>)</span>
+						<% } %>
+					</div>
+					<% if (net != null && vat != null && gross != null) { %>
+						<div class="text-xs <%= totalsConsistent ? 'text-green-600' : 'text-red-600' %>">
+							<i class="bi <%= totalsConsistent ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill' %>"></i>
+							<%= totalsConsistent ? 'Totals look consistent' : 'Net + VAT does not equal Gross' %>
+						</div>
+					<% } %>
+				</div>
+			</div>
+
+			<div class="border rounded-xl p-4">
+				<h2 class="font-semibold mb-2">Line Items</h2>
+				<div class="overflow-x-auto">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="text-left border-b">
+								<th class="p-2">#</th>
+								<th class="p-2">Description</th>
+								<th class="p-2">Qty</th>
+								<th class="p-2">Unit Price</th>
+								<th class="p-2">Net</th>
+								<th class="p-2">VAT</th>
+								<th class="p-2">Gross</th>
+								<th class="p-2">Nominal</th>
+							</tr>
+						</thead>
+						<tbody>
+							<% lineItems.forEach((li, idx) => { %>
+								<tr class="border-b last:border-0">
+									<td class="p-2"><%= idx + 1 %></td>
+									<td class="p-2"><%= li.Description || '-' %></td>
+									<td class="p-2"><%= li.Quantity ?? 1 %></td>
+									<td class="p-2"><%= li.UnitPrice ?? '-' %></td>
+									<td class="p-2"><%= li.NetAmount ?? '-' %></td>
+									<td class="p-2"><%= li.VATAmount ?? '-' %></td>
+									<td class="p-2"><%= li.GrossAmount ?? '-' %></td>
+									<td class="p-2 nominal-cell" data-explicit="<%= (typeof li.NominalCode === 'number') ? 'true' : 'false' %>"><%= (typeof li.NominalCode === 'number') ? li.NominalCode : (supplierDefaultNominal ?? '-') %></td>
+								</tr>
+							<% }) %>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div class="border rounded-xl p-4">
+				<h2 class="font-semibold mb-2">Notes</h2>
+				<div class="text-sm whitespace-pre-wrap">This purchase invoice was created automatically, with manual oversight and checks.</div>
+			</div>
+
+			<form id="send-form" method="post" action="/paperless/ocr/<%= paperlessId %>/send" class="mt-2 space-y-3">
+				<input type="hidden" name="_csrf" value="<%= csrfToken %>">
+				<!-- Hidden supplier value populated by the selector on the right -->
+				<input type="hidden" id="supplier-uuid" name="supplierUuid" value="<%= selectedSupplier ? selectedSupplier.uuid : '' %>">
+				<label class="inline-flex items-center gap-2 text-sm">
+					<input type="checkbox" name="dryRun" value="true" checked class="rounded border-slate-300 accent-green-600 dark:border-gray-600 dark:bg-gray-800">
+					Dry run (don’t send – just log)
+				</label>
+				<div>
+					<button type="submit" class="inline-flex items-center px-4 py-2 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed bg-green-700 hover:bg-green-800" <%= canSend ? '' : 'disabled' %>>
+						Send to KashFlow (Create a Purchase Invoice)
+					</button>
+					<% if (!canSend) { %>
+						<div class="text-xs text-red-600 mt-1">Complete the items on the right to enable sending.</div>
+					<% } %>
+					<div class="text-xs text-slate-500 mt-1">
+						Tip: Uncheck “Dry run” to send via webhook if configured (KASHFLOW_CREATOR_WEBHOOK_URL).
+					</div>
+				</div>
+			</form>
+		</div>
+
+		<!-- Right: Required info and setup -->
+		<div class="space-y-4">
+			<div class="border rounded-xl p-4">
+				<h2 class="font-semibold mb-2">Before sending</h2>
+				<ul class="text-sm space-y-2">
+					<li class="flex items-start gap-2">
+						<i class="bi <%= hasSupplier ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span>Supplier selected or present (<%= hasSupplier ? 'OK' : 'Select a supplier' %>)</span>
+					</li>
+					<li class="flex items-start gap-2">
+						<i class="bi <%= hasLineItems ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span>At least one line item</span>
+					</li>
+					<li class="flex items-start gap-2">
+						<i class="bi <%= hasNominalPerLine ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span>Nominal code for items (<%= hasNominalPerLine ? (supplierDefaultNominal ? 'from supplier default if missing' : 'set per line') : 'set per line or choose supplier with default' %>)</span>
+					</li>
+					<li class="flex items-start gap-2">
+						<i class="bi <%= hasCurrency ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span>Currency <%= hasCurrency ? '(' + draft.Currency + ')' : '' %></span>
+					</li>
+					<li class="flex items-start gap-2">
+						<i class="bi <%= totalsConsistent ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span>Net + VAT equals Gross</span>
+					</li>
+					<li class="flex items-start gap-2">
+						<i class="bi <%= hasSupplierRef ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-yellow-500' %>"></i>
+						<span>Supplier reference <%= hasSupplierRef ? '' : '(recommended)' %></span>
+					</li>
+					<li class="flex items-start gap-2">
+						<i class="bi <%= hasIssuedDate ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-yellow-500' %>"></i>
+						<span>Issued date <%= hasIssuedDate ? '' : '(recommended)' %></span>
+					</li>
+				</ul>
+			</div>
+
+			<div class="border rounded-xl p-4">
+				<h2 class="font-semibold mb-2">Supplier</h2>
+				<div class="text-sm space-y-2">
+					<div>
+						<label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Search supplier</label>
+						<input id="supplier-search" type="text" placeholder="Type name or code..." class="w-full rounded border px-2 py-1 bg-white text-gray-900 border-gray-300 placeholder-gray-400 focus:ring-green-600 focus:border-green-600 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-green-500 dark:focus:border-green-500" />
+					</div>
+					<div>
+						<label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Select supplier</label>
+						<select id="supplier-select" class="w-full rounded border px-2 py-1 bg-white text-gray-900 border-gray-300 focus:ring-green-600 focus:border-green-600 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:focus:ring-green-500 dark:focus:border-green-500">
+							<option value="">— Not selected —</option>
+							<% (suppliers || []).forEach(s => { %>
+								<option value="<%= s.uuid %>" data-name="<%= s.Name || '' %>" data-code="<%= s.Code || '' %>" data-default-nominal="<%= (s.DefaultNominalCode!=null && s.DefaultNominalCode!=='') ? s.DefaultNominalCode : '' %>" <%= (selectedSupplier && selectedSupplier.uuid===s.uuid)?'selected':'' %>>
+									<%= s.Name || '(no name)' %><% if (s.Code) { %> — <%= s.Code %><% } %>
+								</option>
+							<% }) %>
+						</select>
+						<div class="text-xs text-slate-500 mt-1">Auto-match tries to use the document’s correspondent or draft SupplierName. You can override it here.</div>
+						<div class="text-xs text-slate-500 mt-1">Default nominal code: <span id="supplier-default-nominal" class="font-semibold"><%= supplierDefaultNominal != null ? supplierDefaultNominal : '-' %></span></div>
+					</div>
+				</div>
+			</div>
+
+			<details class="border rounded-xl p-4">
+				<summary class="cursor-pointer font-semibold">KashFlow payload (debug)</summary>
+				<pre class="mt-2 text-xs bg-neutral-50 dark:bg-neutral-900 p-3 rounded overflow-auto"><%= JSON.stringify(payloadPreview || { error: 'payload build failed' }, null, 2) %></pre>
+			</details>
+
+			<details class="border rounded-xl p-4">
+				<summary class="cursor-pointer font-semibold">Raw draft (debug)</summary>
+				<pre class="mt-2 text-xs bg-neutral-50 dark:bg-neutral-900 p-3 rounded overflow-auto"><%= JSON.stringify(draft, null, 2) %></pre>
+			</details>
+		</div>
+	</div>
+
+	<script>
+	(function(){
+	  const $search = document.getElementById('supplier-search');
+	  const $select = document.getElementById('supplier-select');
+			const $hidden = document.getElementById('supplier-uuid');
+			const $defNom = document.getElementById('supplier-default-nominal');
+			const $nameDisp = document.getElementById('supplier-name-display');
+			const $codeDisp = document.getElementById('supplier-code-display');
+			if ($select && $hidden) {
+				$select.addEventListener('change', () => {
+					$hidden.value = $select.value || '';
+					const opt = $select.selectedOptions && $select.selectedOptions[0];
+					const defAttr = opt ? (opt.getAttribute('data-default-nominal') || '').trim() : '';
+					const hasDef = defAttr !== '' && defAttr != null;
+					if ($defNom) {
+						$defNom.textContent = hasDef ? defAttr : '-';
+					}
+					// Update displayed supplier name/code on the left
+					if (opt) {
+						const nm = opt.getAttribute('data-name') || '';
+						const cd = opt.getAttribute('data-code') || '';
+						if ($nameDisp) $nameDisp.textContent = nm || '-';
+						if ($codeDisp) $codeDisp.textContent = cd || '-';
+					}
+					// If we have a default nominal, populate any non-explicit nominal cells to reflect fallback
+					if (hasDef) {
+						const cells = document.querySelectorAll('td.nominal-cell');
+						cells.forEach(td => {
+							const isExplicit = (td.getAttribute('data-explicit') || '').toLowerCase() === 'true';
+							if (!isExplicit) {
+								td.textContent = defAttr;
+							}
+						});
+					}
+				});
+	  }
+	  if ($search && $select && $hidden) {
+		let timer = null;
+		$search.addEventListener('input', () => {
+		  const q = $search.value.trim();
+		  clearTimeout(timer);
+		  timer = setTimeout(async () => {
+			try {
+			  const res = await fetch(`/paperless/suppliers?q=${encodeURIComponent(q)}`);
+			  if (!res.ok) return;
+			  const data = await res.json();
+			  const items = Array.isArray(data.items) ? data.items : [];
+			  // Rebuild options; preserve current selection if still present
+			  const current = $hidden.value;
+			  const opts = [new Option('— Not selected —', '')];
+							for (const s of items) {
+				const label = `${s.Name || '(no name)'}${s.Code ? ' — ' + s.Code : ''}`;
+								const opt = new Option(label, s.uuid, false, s.uuid === current);
+								if (s.Name) opt.setAttribute('data-name', s.Name);
+								if (s.Code) opt.setAttribute('data-code', s.Code);
+								if (s.DefaultNominalCode != null && s.DefaultNominalCode !== '') {
+									opt.setAttribute('data-default-nominal', s.DefaultNominalCode);
+								}
+				opts.push(opt);
+			  }
+			  // Replace existing options
+			  $select.innerHTML = '';
+			  for (const opt of opts) $select.add(opt);
+			} catch (_) { /* ignore */ }
+		  }, 250);
+		});
+	  }
+	})();
+	</script>
+</div>
