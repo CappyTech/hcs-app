@@ -113,7 +113,7 @@
 					Dry run (don’t send – just log)
 				</label>
 				<div>
-					<button type="submit" class="inline-flex items-center px-4 py-2 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed bg-green-700 hover:bg-green-800" <%= canSend ? '' : 'disabled' %>>
+					<button id="send-button" type="submit" class="inline-flex items-center px-4 py-2 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed bg-green-700 hover:bg-green-800" <%= canSend ? '' : 'disabled' %>>
 						Send to KashFlow (Create a Purchase Invoice)
 					</button>
 					<% if (!canSend) { %>
@@ -139,9 +139,9 @@
 						<i class="bi <%= hasLineItems ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
 						<span>At least one line item</span>
 					</li>
-					<li class="flex items-start gap-2">
-						<i class="bi <%= hasNominalPerLine ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
-						<span>Nominal code for items (<%= hasNominalPerLine ? (supplierDefaultNominal ? 'from supplier default if missing' : 'set per line') : 'set per line or choose supplier with default' %>)</span>
+					<li class="flex items-start gap-2" id="check-nominal">
+						<i id="check-nominal-icon" class="bi <%= hasNominalPerLine ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span id="check-nominal-text">Nominal code for items (<%= hasNominalPerLine ? (supplierDefaultNominal ? 'from supplier default if missing' : 'set per line') : 'set per line or choose supplier with default' %>)</span>
 					</li>
 					<li class="flex items-start gap-2">
 						<i class="bi <%= hasCurrency ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
@@ -205,6 +205,52 @@
 			const $defNom = document.getElementById('supplier-default-nominal');
 			const $nameDisp = document.getElementById('supplier-name-display');
 			const $codeDisp = document.getElementById('supplier-code-display');
+			const $sendBtn = document.getElementById('send-button');
+			const $nominalIcon = document.getElementById('check-nominal-icon');
+			const $nominalText = document.getElementById('check-nominal-text');
+
+			function getSelectedDefaultNominal() {
+				if (!$select) return '';
+				const opt = $select.selectedOptions && $select.selectedOptions[0];
+				return opt ? (opt.getAttribute('data-default-nominal') || '').trim() : '';
+			}
+
+			function updateNominalChecklist() {
+				const defAttr = getSelectedDefaultNominal();
+				const hasDef = defAttr !== '' && defAttr != null;
+				// if def present, nominal coverage is satisfied; otherwise all lines must be explicit
+				let allExplicit = true;
+				document.querySelectorAll('td.nominal-cell').forEach(td => {
+					const isExplicit = (td.getAttribute('data-explicit') || '').toLowerCase() === 'true';
+					if (!isExplicit) allExplicit = false;
+				});
+				const ok = hasDef || allExplicit;
+				if ($nominalIcon) {
+					$nominalIcon.classList.remove('bi-check-circle-fill','text-green-600','bi-exclamation-triangle-fill','text-red-600');
+					if (ok) {
+						$nominalIcon.classList.add('bi-check-circle-fill','text-green-600');
+					} else {
+						$nominalIcon.classList.add('bi-exclamation-triangle-fill','text-red-600');
+					}
+				}
+				if ($nominalText) {
+					$nominalText.textContent = `Nominal code for items (${ok ? (hasDef ? 'from supplier default if missing' : 'set per line') : 'set per line or choose supplier with default'})`;
+				}
+				return ok;
+			}
+
+			function recomputeCanSend() {
+				const hasSupplier = !!(($hidden && $hidden.value) || ($nameDisp && ($nameDisp.textContent || '').trim() !== '-'));
+				const hasLineItems = document.querySelectorAll('tbody tr').length > 0;
+				const hasCurrency = true; // currency doesn't change client-side
+				const totalsConsistent = true; // totals unchanged by supplier nominal
+				const hasNominalPerLine = updateNominalChecklist();
+				const canSend = hasSupplier && hasLineItems && hasNominalPerLine && hasCurrency && totalsConsistent;
+				if ($sendBtn) {
+					$sendBtn.disabled = !canSend;
+				}
+				return canSend;
+			}
 			if ($select && $hidden) {
 				$select.addEventListener('change', () => {
 					$hidden.value = $select.value || '';
@@ -231,6 +277,7 @@
 							}
 						});
 					}
+					recomputeCanSend();
 				});
 	  }
 	  if ($search && $select && $hidden) {
