@@ -394,5 +394,17 @@ module.exports = {
     sortOrder: -1,
     department: ['paperless'],
     deny: ['c', 'u', 'd'],
+  },
+  nominal: {
+    title: 'Nominal Accounts',
+    description: {
+      manage: 'Manage nominal accounts (chart of accounts).'
+    },
+    linkField: 'Name',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    sortField: 'Code',
+    sortOrder: 1,
+    department: ['finance'],
+    deny: ['c', 'u', 'd'],
   }
 };

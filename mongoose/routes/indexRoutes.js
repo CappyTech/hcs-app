@@ -11,6 +11,7 @@ router.get('/human-resources', authService.ensureRole(), authService.ensureAuthe
 router.get('/kashflow', authService.ensureRole(), authService.ensureAuthenticated, index.renderKashflow);
 router.get('/create', authService.ensureRole(), authService.ensureAuthenticated, index.renderCreate);
 router.get('/paperless', authService.ensureRole(), authService.ensureAuthenticated, index.renderPaperless);
+router.get('/finance', authService.ensureRole(), authService.ensureAuthenticated, index.renderFinance);
 /*
 const fetch = require('../kashflowAPI/fetchKashFlowDataMongoose');
 router.get('/fetch-kashflow-data-mongoose', async (req, res, next) => {

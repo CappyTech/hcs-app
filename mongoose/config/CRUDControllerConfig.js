@@ -266,5 +266,11 @@ module.exports = {
     middleware: {
       read: ['ensureRole:admin', 'ensureAuthenticated'],
     }
+  },
+  nominal: {
+    readOnly: ['uuid', 'createdAt'],
+    middleware: {
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+    }
   }
 }
