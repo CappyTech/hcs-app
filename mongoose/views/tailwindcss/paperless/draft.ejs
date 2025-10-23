@@ -13,10 +13,18 @@
 	<% const hasSupplierRef = !!draft.SupplierReference; %>
 	<% const hasIssuedDate = !!draft.IssuedDate; %>
 	<% const canSend = hasSupplier && hasLineItems && hasNominalPerLine && hasCurrency && totalsConsistent; %>
+	<% const usedCustomFieldLines = (draft.Debug && Array.isArray(draft.Debug.EnumeratedLineItems) && draft.Debug.EnumeratedLineItems.length > 0); %>
+	<% const sumNet = +lineItems.reduce((a,li)=>a + (typeof li.NetAmount === 'number' ? li.NetAmount : 0), 0).toFixed(2); %>
+	<% const sumVAT = +lineItems.reduce((a,li)=>a + (typeof li.VATAmount === 'number' ? li.VATAmount : 0), 0).toFixed(2); %>
+	<% const sumGross = +lineItems.reduce((a,li)=>a + (typeof li.GrossAmount === 'number' ? li.GrossAmount : 0), 0).toFixed(2); %>
+	<% const sumGrossDerived = +((sumNet + sumVAT)).toFixed(2); %>
+	<% const headerVsLinesNetOk = (draft.NetAmount == null) || Math.abs((draft.NetAmount) - sumNet) < 0.01; %>
+	<% const headerVsLinesVatOk = (draft.VATAmount == null) || Math.abs((draft.VATAmount) - sumVAT) < 0.01; %>
+	<% const headerVsLinesGrossOk = (draft.GrossAmount == null) || Math.abs((draft.GrossAmount) - sumGrossDerived) < 0.01; %>
 
-	<div class="grid lg:grid-cols-2 gap-6">
+	<div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
 		<!-- Left: Purchase Invoice -->
-		<div class="space-y-4">
+		<div class="space-y-4 min-w-0">
 			<div class="border rounded-xl p-4">
 				<h2 class="font-semibold mb-2">Purchase Invoice</h2>
 				<div class="text-sm space-y-1">
@@ -62,11 +70,18 @@
 							<%= totalsConsistent ? 'Totals look consistent' : 'Net + VAT does not equal Gross' %>
 						</div>
 					<% } %>
+					
 				</div>
 			</div>
 
 			<div class="border rounded-xl p-4">
-				<h2 class="font-semibold mb-2">Line Items</h2>
+				<h2 class="font-semibold mb-2 flex items-center gap-2">Line Items
+					<% if (usedCustomFieldLines) { %>
+						<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">Source: Custom fields</span>
+					<% } else { %>
+						<span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300">Source: Amounts</span>
+					<% } %>
+				</h2>
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
@@ -85,17 +100,96 @@
 							<% lineItems.forEach((li, idx) => { %>
 								<tr class="border-b last:border-0">
 									<td class="p-2"><%= idx + 1 %></td>
-									<td class="p-2"><%= li.Description || '-' %></td>
+									<% const __rowCode = (typeof li.NominalCode === 'number') ? li.NominalCode : (supplierDefaultNominal ?? null); %>
+									<% const __nomInfo = (__rowCode != null && nominalMap) ? nominalMap[__rowCode] : null; %>
+									<% const __descFromNominal = __nomInfo ? (__nomInfo.Description || __nomInfo.Name || null) : null; %>
+									<td class="p-2 desc-cell" data-has-desc="<%= (li.Description && String(li.Description).trim() !== '') ? 'true' : 'false' %>"><%= li.Description || __descFromNominal || '-' %></td>
 									<td class="p-2"><%= li.Quantity ?? 1 %></td>
 									<td class="p-2"><%= li.UnitPrice ?? '-' %></td>
 									<td class="p-2"><%= li.NetAmount ?? '-' %></td>
 									<td class="p-2"><%= li.VATAmount ?? '-' %></td>
-									<td class="p-2"><%= li.GrossAmount ?? '-' %></td>
-									<td class="p-2 nominal-cell" data-explicit="<%= (typeof li.NominalCode === 'number') ? 'true' : 'false' %>"><%= (typeof li.NominalCode === 'number') ? li.NominalCode : (supplierDefaultNominal ?? '-') %></td>
+									<% 
+									  const __qty = (typeof li.Quantity === 'number') ? li.Quantity : null;
+									  const __rate = (typeof li.UnitPrice === 'number') ? li.UnitPrice : (typeof li.Rate === 'number' ? li.Rate : null);
+									  const __net = (typeof li.NetAmount === 'number') ? li.NetAmount : null;
+									  const __vat = (typeof li.VATAmount === 'number') ? li.VATAmount : null;
+									  const __gross = (typeof li.GrossAmount === 'number') ? li.GrossAmount : null;
+									  const __netExpected = (__qty!=null && __rate!=null) ? +(__qty * __rate).toFixed(2) : null;
+									  const __netOk = (__netExpected==null || __net==null) ? true : Math.abs(__net - __netExpected) < 0.01;
+									  // If VAT is provided as a percent (e.g., 20 for 20%), convert to a monetary value for consistency checks
+									  let __vatForCheck = __vat;
+									  const __looksLikePercent = (__vat!=null && __vat >= 0 && __vat <= 100 && Number.isInteger(__vat));
+									  if (__net!=null && __looksLikePercent) {
+									    const __vatFromPercent = +(__net * (__vat/100)).toFixed(2);
+									    if (__gross!=null) {
+									      // Prefer the interpretation that best matches the provided gross
+									      const diffMonetary = Math.abs((__net + (__vat||0)) - __gross);
+									      const diffPercent = Math.abs((__net + __vatFromPercent) - __gross);
+									      if (diffPercent + 1e-9 < diffMonetary) {
+									        __vatForCheck = __vatFromPercent;
+									      }
+									    } else {
+									      __vatForCheck = __vatFromPercent;
+									    }
+									  }
+									  const __grossExpected = (__net!=null && __vatForCheck!=null) ? +(__net + __vatForCheck).toFixed(2) : null;
+									  // Display gross as derived when provided gross is missing or inconsistent
+									  const __useDerivedGross = (__grossExpected!=null) && (__gross==null || Math.abs(__gross - __grossExpected) >= 0.01);
+									  const __grossDisplay = __useDerivedGross ? __grossExpected : __gross;
+									  const __grossOk = (__grossExpected==null || __grossDisplay==null) ? true : Math.abs(__grossDisplay - __grossExpected) < 0.01;
+									  const __rowOk = __netOk && __grossOk;
+									%>
+									<td class="p-2">
+										<%= (__grossDisplay!=null ? __grossDisplay : '-') %>
+										<% if (__useDerivedGross) { %>
+											<span class="text-[10px] text-slate-500" title="Derived from Net + VAT">(calc)</span>
+										<% } %>
+										<i title="Row consistency" class="bi <%= __rowOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+									</td>
+									<td class="p-2 nominal-cell" data-explicit="<%= (typeof li.NominalCode === 'number') ? 'true' : 'false' %>">
+										<select class="nominal-select w-full rounded border px-1 py-1 bg-white text-gray-900 border-gray-300 focus:ring-green-600 focus:border-green-600 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:focus:ring-green-500 dark:focus:border-green-500">
+											<option value="">— Choose nominal —</option>
+											<%
+											  const __codes = Object.keys(nominalMap || {}).sort((a,b)=>Number(a)-Number(b));
+											  const __currentNominal = (typeof li.NominalCode === 'number') ? String(li.NominalCode) : (supplierDefaultNominal != null ? String(supplierDefaultNominal) : '');
+											  __codes.forEach(code => {
+											    const info = nominalMap[code] || {};
+											%>
+											  <option value="<%= code %>" <%= (__currentNominal && __currentNominal==String(code)) ? 'selected' : '' %>><%= code %><%= info.Name ? ' — ' + info.Name : (info.Description ? ' — ' + info.Description : '') %></option>
+											<% }); %>
+										</select>
+									</td>
 								</tr>
 							<% }) %>
 						</tbody>
 					</table>
+						<tfoot>
+							<tr class="border-t font-medium">
+								<td class="p-2 text-right text-slate-500" colspan="4">Totals</td>
+								<td class="p-2">
+									<%= sumNet.toFixed(2) %>
+									<i class="bi <%= headerVsLinesNetOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+									<% if (!headerVsLinesNetOk && draft.NetAmount != null) { %>
+										<span class="text-red-600">(Δ <%= (draft.NetAmount - sumNet).toFixed(2) %>)</span>
+									<% } %>
+								</td>
+								<td class="p-2">
+									<%= sumVAT.toFixed(2) %>
+									<i class="bi <%= headerVsLinesVatOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+									<% if (!headerVsLinesVatOk && draft.VATAmount != null) { %>
+										<span class="text-red-600">(Δ <%= (draft.VATAmount - sumVAT).toFixed(2) %>)</span>
+									<% } %>
+								</td>
+								<td class="p-2">
+									<%= sumGrossDerived.toFixed(2) %>
+									<i class="bi <%= headerVsLinesGrossOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+									<% if (!headerVsLinesGrossOk && draft.GrossAmount != null) { %>
+										<span class="text-red-600">(Δ <%= (draft.GrossAmount - sumGrossDerived).toFixed(2) %>)</span>
+									<% } %>
+								</td>
+								<td class="p-2"></td>
+							</tr>
+						</tfoot>
 				</div>
 			</div>
 
@@ -127,7 +221,7 @@
 		</div>
 
 		<!-- Right: Required info and setup -->
-		<div class="space-y-4">
+		<div class="space-y-4 w-full lg:w-[360px] lg:max-w-[420px] lg:justify-self-end">
 			<div class="border rounded-xl p-4">
 				<h2 class="font-semibold mb-2">Before sending</h2>
 				<ul class="text-sm space-y-2">
@@ -186,8 +280,79 @@
 			</div>
 
 			<details class="border rounded-xl p-4">
+				<summary class="cursor-pointer font-semibold">Legend & troubleshooting</summary>
+				<div class="mt-2 text-sm space-y-4">
+					<div>
+						<div class="font-medium mb-1">Status icons</div>
+						<ul class="list-disc pl-5 space-y-1">
+							<li><i class="bi bi-check-circle-fill text-green-600"></i> Green check = OK, consistent, or complete.</li>
+							<li><i class="bi bi-exclamation-triangle-fill text-red-600"></i> Red triangle = required item missing or inconsistent. Fix before sending.</li>
+							<li><i class="bi bi-exclamation-triangle-fill text-yellow-500"></i> Yellow triangle = recommended but optional (e.g., Supplier reference, Issued date).</li>
+						</ul>
+					</div>
+
+					<div>
+						<div class="font-medium mb-1">Line items source badge</div>
+						<ul class="list-disc pl-5 space-y-1">
+							<li><span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs">Source: Custom fields</span> Lines were built from fields like Description_Line1, Qty_Line1, Price/UnitPrice_Line1, Net_Line1, VAT_Line1, Gross_Line1, Nominal_Line1.</li>
+							<li><span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300 text-xs">Source: Amounts</span> No enumerated fields found; a single line is created from Net/VAT/Gross.</li>
+						</ul>
+						<div class="text-xs text-slate-500 mt-1">Fix at source: in Paperless, add/rename custom fields using any of these patterns: “Description_Line1”, “Description 1”, “Line1_Description”, “1_Description”, etc. See “Parsed line items (debug)” to verify detection.</div>
+					</div>
+
+					<div>
+						<div class="font-medium mb-1">Amounts consistency</div>
+						<ul class="list-disc pl-5 space-y-1">
+							<li>Header check: “Net + VAT equals Gross” should show a green check.</li>
+							<li>Lines total vs header: the “Lines total” section shows sums of Net/VAT/Gross across all lines with a check/delta. If you see a red delta, the header values differ from the sum of the lines.</li>
+						</ul>
+						<div class="text-xs text-slate-500 mt-1">How to fix: update the Net/VAT/Gross custom fields on the document or correct the per-line values (Qty/Price/Net/VAT/Gross). Removing a conflicting number lets the system derive it from the others.</div>
+					</div>
+
+					<div>
+						<div class="font-medium mb-1">Row consistency (per line)</div>
+						<ul class="list-disc pl-5 space-y-1">
+							<li>Each line shows a small icon in the Gross column. It turns red if either check fails: Net ≈ Qty × Unit Price, or Gross ≈ Net + VAT.</li>
+						</ul>
+						<div class="text-xs text-slate-500 mt-1">How to fix: edit the specific LineN fields (e.g., Qty_LineN, Price/UnitPrice_LineN, Net_LineN, VAT_LineN, Gross_LineN). Prefer providing two of the three and let the third be derived.</div>
+					</div>
+
+					<div>
+						<div class="font-medium mb-1">Nominal coverage</div>
+						<ul class="list-disc pl-5 space-y-1">
+							<li>Green = every line has a NominalCode or a supplier with a default nominal is selected.</li>
+							<li>Red = set Nominal_LineN on each line or choose a supplier that has a DefaultNominalCode.</li>
+						</ul>
+						<div class="text-xs text-slate-500 mt-1">Where to fix: pick a supplier on the right (to apply a default) or add Nominal_LineN in Paperless custom fields. To change the description shown, provide Description_LineN or adjust the nominal in your chart of accounts.</div>
+					</div>
+
+					<div>
+						<div class="font-medium mb-1">Recommended fields</div>
+						<ul class="list-disc pl-5 space-y-1">
+							<li>Supplier reference (Invoice Number) and Issued date are recommended. If missing, they show a yellow triangle.</li>
+						</ul>
+						<div class="text-xs text-slate-500 mt-1">Where to fix: add custom fields named like “Invoice Number” and “Invoice Date” (or the mapped variants) in Paperless.</div>
+					</div>
+				</div>
+			</details>
+
+			<details class="border rounded-xl p-4">
 				<summary class="cursor-pointer font-semibold">KashFlow payload (debug)</summary>
 				<pre class="mt-2 text-xs bg-neutral-50 dark:bg-neutral-900 p-3 rounded overflow-auto"><%= JSON.stringify(payloadPreview || { error: 'payload build failed' }, null, 2) %></pre>
+			</details>
+
+			<details class="border rounded-xl p-4">
+				<summary class="cursor-pointer font-semibold">Parsed line items (debug)</summary>
+				<div class="mt-2 grid md:grid-cols-2 gap-3">
+					<div>
+						<div class="text-xs font-medium mb-1">From custom fields (_LineN)</div>
+						<pre class="text-xs bg-neutral-50 dark:bg-neutral-900 p-3 rounded overflow-auto"><%= JSON.stringify((draft.Debug && draft.Debug.EnumeratedLineItems) ? draft.Debug.EnumeratedLineItems : [], null, 2) %></pre>
+					</div>
+					<div>
+						<div class="text-xs font-medium mb-1">Final LineItems (used)</div>
+						<pre class="text-xs bg-neutral-50 dark:bg-neutral-900 p-3 rounded overflow-auto"><%= JSON.stringify(draft.LineItems || [], null, 2) %></pre>
+					</div>
+				</div>
 			</details>
 
 			<details class="border rounded-xl p-4">
@@ -208,6 +373,13 @@
 			const $sendBtn = document.getElementById('send-button');
 			const $nominalIcon = document.getElementById('check-nominal-icon');
 			const $nominalText = document.getElementById('check-nominal-text');
+
+			// Nominal map for client-side fallback of descriptions when supplier default applies
+			let nominalMap = {};
+			try {
+				const txt = document.getElementById('nominal-map-json')?.textContent || '{}';
+				nominalMap = JSON.parse(txt);
+			} catch(_) { nominalMap = {}; }
 
 			function getSelectedDefaultNominal() {
 				if (!$select) return '';
@@ -267,19 +439,63 @@
 						if ($nameDisp) $nameDisp.textContent = nm || '-';
 						if ($codeDisp) $codeDisp.textContent = cd || '-';
 					}
-					// If we have a default nominal, populate any non-explicit nominal cells to reflect fallback
-					if (hasDef) {
-						const cells = document.querySelectorAll('td.nominal-cell');
-						cells.forEach(td => {
-							const isExplicit = (td.getAttribute('data-explicit') || '').toLowerCase() === 'true';
-							if (!isExplicit) {
-								td.textContent = defAttr;
-							}
-						});
-					}
+						// If we have a default nominal, populate any non-explicit nominal selects to reflect fallback
+					const rows = document.querySelectorAll('tbody tr');
+					rows.forEach(tr => {
+						const tdNom = tr.querySelector('td.nominal-cell');
+						if (!tdNom) return;
+						const isExplicit = (tdNom.getAttribute('data-explicit') || '').toLowerCase() === 'true';
+						const sel = tdNom.querySelector('select.nominal-select');
+						let codeText = (sel && sel.value) ? sel.value.trim() : '';
+						if (!isExplicit && defAttr && sel) {
+							codeText = defAttr;
+							sel.value = defAttr;
+						}
+						// Update description from nominal map if we have a code
+						const tdDesc = tr.querySelector('td.desc-cell');
+						const hasExplicitDesc = (tdDesc && (tdDesc.getAttribute('data-has-desc') || '').toLowerCase() === 'true');
+						if (tdDesc && codeText && !hasExplicitDesc) {
+							const info = nominalMap && (nominalMap[codeText] || nominalMap[String(codeText)] || nominalMap[Number(codeText)]) || null;
+							if (info) tdDesc.textContent = info.Description || info.Name || tdDesc.textContent || '-';
+						}
+					});
 					recomputeCanSend();
 				});
 	  }
+
+		  // Update checklist and description when a nominal is manually changed
+		  document.querySelectorAll('select.nominal-select').forEach(sel => {
+		  	sel.addEventListener('change', (e) => {
+		  		const tr = sel.closest('tr');
+		  		const tdDesc = tr && tr.querySelector('td.desc-cell');
+		  		const hasExplicitDesc = tdDesc && (tdDesc.getAttribute('data-has-desc') || '').toLowerCase() === 'true';
+		  		const code = sel.value;
+		  		if (tdDesc && code && !hasExplicitDesc) {
+		  			const info = nominalMap && (nominalMap[code] || nominalMap[String(code)] || nominalMap[Number(code)]) || null;
+		  			if (info) tdDesc.textContent = info.Description || info.Name || tdDesc.textContent || '-';
+		  		}
+		  		updateNominalChecklist();
+		  	});
+		  });
+
+		  // On submit, copy selected nominal codes into hidden inputs inside the form
+		  const $form = document.getElementById('send-form');
+		  if ($form) {
+		  	$form.addEventListener('submit', () => {
+		  		// remove previous ones
+		  		$form.querySelectorAll('input[name="nominalCodes[]"]').forEach(n => n.remove());
+		  		const rows = document.querySelectorAll('tbody tr');
+		  		rows.forEach((tr) => {
+		  			const sel = tr.querySelector('select.nominal-select');
+		  			const val = sel ? (sel.value || '').trim() : '';
+		  			const hid = document.createElement('input');
+		  			hid.type = 'hidden';
+		  			hid.name = 'nominalCodes[]';
+		  			hid.value = val;
+		  			$form.appendChild(hid);
+		  		});
+		  	});
+		  }
 	  if ($search && $select && $hidden) {
 		let timer = null;
 		$search.addEventListener('input', () => {
@@ -313,4 +529,5 @@
 	  }
 	})();
 	</script>
+	<script type="application/json" id="nominal-map-json"><%= JSON.stringify(nominalMap || {}) %></script>
 </div>

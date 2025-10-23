@@ -43,4 +43,35 @@
     <h2 class="font-semibold mb-2">OCR Text</h2>
     <pre class="whitespace-pre-wrap text-sm max-h-[60vh] overflow-auto p-3 bg-gray-50 dark:bg-gray-900 rounded-md"><%= (doc.ocrText||'').trim() %></pre>
   </div>
+
+  <div class="border rounded-xl p-4 mt-4">
+    <h2 class="font-semibold mb-2">Custom Fields</h2>
+    <% const _cfs = Array.isArray(doc.customFields) ? doc.customFields : []; %>
+    <% if (_cfs.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left border-b">
+              <th class="p-2">Field</th>
+              <th class="p-2">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% _cfs.forEach(cf => { %>
+              <tr class="border-b last:border-0 align-top">
+                <td class="p-2 font-medium"><%= cf.fieldName || '-' %></td>
+                <td class="p-2">
+                  <div class="whitespace-pre-wrap break-words max-w-full">
+                    <%= (typeof cf.value === 'object') ? JSON.stringify(cf.value, null, 2) : (cf.value ?? '') %>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="text-sm text-slate-600 dark:text-slate-300">No custom fields found.</div>
+    <% } %>
+  </div>
 </div>

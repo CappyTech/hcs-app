@@ -165,6 +165,25 @@ exports.getPurchaseDraft = async (req, res, next) => {
         suppliers = await Supplier.find({}).select('uuid Id Code Name IsArchived DefaultNominalCode').sort({ updatedAt: -1 }).limit(10).lean();
       }
     }
+    // Build a Nominal map by Code for display (description/name) in draft view
+    const Nominal = mdb.REST && mdb.REST.nominal;
+    let nominalMap = {};
+    if (Nominal) {
+      // Fetch only nominals classified as "Purchases" so the per-line dropdown shows valid purchase accounts
+      try {
+        const docs = await Nominal.find({ Classification: 'Purchases' })
+          .select('Code Name Description Classification')
+          .sort({ Code: 1 })
+          .lean();
+        nominalMap = (docs || []).reduce((acc, n) => {
+          if (n && typeof n.Code === 'number') acc[n.Code] = { Name: n.Name || null, Description: n.Description || null };
+          return acc;
+        }, {});
+      } catch (e) {
+        logger.warn('Failed to load nominal map for draft view: ' + e.message);
+      }
+    }
+
     const payloadPreview = (() => {
       try { return buildKashFlowPayloadFromDraft(draft); } catch (_) { return null; }
     })();
@@ -177,6 +196,7 @@ exports.getPurchaseDraft = async (req, res, next) => {
       selectedSupplier,
       payloadPreview,
       sources,
+      nominalMap,
     });
   } catch (err) {
     logger.error('getPurchaseDraft error:', err);
@@ -205,6 +225,44 @@ exports.sendDraftToKashflow = async (req, res, next) => {
             draft.DefaultNominalCode = s.DefaultNominalCode;
           }
         }
+      }
+    }
+    // Load allowed nominal codes (Classification: 'Purchases') to validate selections
+    let allowedNominalCodes = null;
+    try {
+      const Nominal = mdb.REST && mdb.REST.nominal;
+      if (Nominal) {
+        const allowed = await Nominal.find({ Classification: 'Purchases' }).select('Code').lean();
+        allowedNominalCodes = new Set((allowed || []).map(n => n && typeof n.Code === 'number' ? n.Code : undefined).filter(v => v !== undefined));
+      }
+    } catch (e) {
+      logger.warn('Failed to load allowed nominal codes for send validation: ' + e.message);
+    }
+    // Apply per-line nominal codes posted from the draft view (nominalCodes[])
+    // Accept both nominalCodes[] and nominalCodes to be robust to body parsers
+    const postedNominalRaw = (req.body && (req.body['nominalCodes[]'] ?? req.body.nominalCodes)) ?? [];
+    const postedNominals = Array.isArray(postedNominalRaw)
+      ? postedNominalRaw
+      : (typeof postedNominalRaw === 'string' ? [postedNominalRaw] : []);
+    if (Array.isArray(draft.LineItems) && draft.LineItems.length > 0 && postedNominals.length > 0) {
+      for (let i = 0; i < draft.LineItems.length && i < postedNominals.length; i++) {
+        const li = draft.LineItems[i] || {};
+        const raw = postedNominals[i];
+        if (raw == null) continue; // nothing provided for this line
+        const txt = String(raw).trim();
+        if (txt === '') {
+          // Explicit empty => remove per-line nominal so supplier default (if any) applies
+          if ('NominalCode' in li) delete li.NominalCode;
+          continue;
+        }
+        const code = parseInt(txt, 10);
+        if (Number.isFinite(code) && (!allowedNominalCodes || allowedNominalCodes.has(code))) {
+          li.NominalCode = code;
+        } else {
+          // Invalid value -> clear to allow default fallback
+          if ('NominalCode' in li) delete li.NominalCode;
+        }
+        draft.LineItems[i] = li;
       }
     }
     const payload = buildKashFlowPayloadFromDraft(draft);

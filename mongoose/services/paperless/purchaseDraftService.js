@@ -134,6 +134,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
   // Line items: try to read as JSON; else single-line fallback
   let lineItemsRaw = findCustomField(cf, mapping.LineItems);
   let lineItems = undefined;
+  let enumeratedItems = undefined; // debug capture of _LineN parsing
   if (lineItemsRaw != null) {
     if (Array.isArray(lineItemsRaw)) {
       lineItems = lineItemsRaw;
@@ -141,6 +142,186 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
       try { lineItems = JSON.parse(lineItemsRaw); } catch (_) { /* ignore */ }
     }
   }
+
+  // Parse enumerated custom fields like Description_Line1, Qty_Line1, Price_Line1, Net_Line1, VAT_Line1, Gross_Line1, Nominal_Line1
+  // Any suffix _LineN (or variations like _line N) will be grouped by N into line items.
+  const lineGroups = new Map(); // index -> partial line object
+  const toKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const num = (v) => {
+    if (v == null || v === '') return undefined;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+    const n = parseMoney(String(v));
+    return Number.isFinite(n) ? n : undefined;
+  };
+  for (const c of cf) {
+    if (!c || !c.fieldName) continue;
+    const name = String(c.fieldName).trim();
+    // Support various patterns:
+    // 1) Description_Line1  => base: Description, idx: 1
+    // 2) Description 1      => base: Description, idx: 1
+    // 3) Description_line_1 => base: Description, idx: 1
+    // 4) Description_1      => base: Description, idx: 1
+    // 5) Line1_Description  => base: Description, idx: 1
+    // 6) line 1 description => base: description, idx: 1
+    let baseRaw = null; let idx = null;
+    let m = name.match(/(.+?)[_\s-]*line\s*(\d+)\s*$/i); // base + 'lineN'
+    if (!m) m = name.match(/(.+?)[_\s-]*(\d+)\s*$/i);    // base + 'N'
+    if (m) {
+      baseRaw = m[1];
+      idx = parseInt(m[2], 10);
+    } else {
+      // Try 'lineN_base'
+      let m2 = name.match(/^line\s*(\d+)[_\s-]*(.+)$/i);
+      if (!m2) m2 = name.match(/^(\d+)[_\s-]+(.+)$/i); // 'N_base'
+      if (m2) {
+        idx = parseInt(m2[1], 10);
+        baseRaw = m2[2];
+      }
+    }
+    if (!Number.isFinite(idx) || idx <= 0 || !baseRaw) continue;
+    const base = toKey(baseRaw);
+    if (!lineGroups.has(idx)) lineGroups.set(idx, {});
+    const entry = lineGroups.get(idx);
+    // Map base tokens to fields
+    if (base === 'description' || base === 'desc') entry.Description = String(c.value ?? '').toString();
+    else if (base === 'qty' || base === 'quantity') entry.Quantity = num(c.value);
+    else if (base === 'price' || base === 'unitprice' || base === 'rate') entry.UnitPrice = num(c.value);
+    else if (base === 'net' || base === 'netamount' || base === 'subtotal' || base === 'totalgoods') entry.NetAmount = num(c.value);
+    else if (base === 'vat' || base === 'vatamount' || base === 'tax' || base === 'taxamount' || base === 'totalvat') {
+      // Capture original string to detect percentage intent (e.g., "20%" or integer 20)
+      const raw = c.value;
+      entry.__VATOrig = raw;
+      entry.__VATHasDecimal = typeof raw === 'string' ? /[.,]/.test(raw) : false;
+      entry.__VATHasPercentSymbol = typeof raw === 'string' ? /%/.test(raw) : false;
+      entry.VATAmount = num(raw);
+    }
+    // For enumerated lines, fields named "Total_LineN" typically represent the line NET total.
+    // Map ambiguous 'total' to NetAmount here to respect provided per-line totals
+    // and avoid discrepancies from qty*price rounding. Reserve 'gross' tokens for GrossAmount.
+    else if (base === 'total' || base === 'totalamount') {
+      entry.NetAmount = num(c.value);
+      entry.__NetCameFromTotalField = true;
+    }
+    else if (base === 'gross' || base === 'grossamount' || base === 'invoicetotal') {
+      entry.GrossAmount = num(c.value);
+    }
+    else if (base === 'nominal' || base === 'nominalcode') {
+      const n = num(c.value);
+      entry.NominalCode = Number.isFinite(n) ? Number(n) : undefined;
+    }
+  }
+  if (lineGroups.size > 0) {
+    // Compose sorted line items
+    const items = [];
+    const indices = Array.from(lineGroups.keys()).sort((a,b)=>a-b);
+    for (const i of indices) {
+      const li = lineGroups.get(i) || {};
+      // If VAT is provided as a percent, convert to monetary amount
+      const maybePercent = (v, hasDecimal, hasPct) => {
+        if (hasPct) return true;
+        if (v == null) return false;
+        if (typeof v !== 'number' || !Number.isFinite(v)) return false;
+        if (hasDecimal) return false; // likely a monetary value, not integer percent
+        // Treat whole numbers in [0,100] as percent
+        return v >= 0 && v <= 100 && Math.floor(v) === v;
+      };
+      const asMoney = (x) => Number.isFinite(x) ? +x.toFixed(2) : undefined;
+      if (maybePercent(li.VATAmount, !!li.__VATHasDecimal, !!li.__VATHasPercentSymbol)) {
+        const pct = li.VATAmount / 100;
+        // Prefer Net to compute VAT; derive Net first when possible
+        let netBase = li.NetAmount;
+        if (netBase == null && li.Quantity != null && li.UnitPrice != null) {
+          netBase = asMoney(li.Quantity * li.UnitPrice);
+          if (netBase != null) li.NetAmount = netBase;
+        }
+        if (netBase != null) {
+          li.VATAmount = asMoney(netBase * pct);
+          if (li.GrossAmount == null) li.GrossAmount = asMoney(netBase + li.VATAmount);
+        } else if (li.GrossAmount != null) {
+          // If only Gross present, back-compute Net from percentage
+          const netFromGross = asMoney(li.GrossAmount / (1 + pct));
+          if (netFromGross != null) {
+            li.NetAmount = netFromGross;
+            li.VATAmount = asMoney(li.GrossAmount - netFromGross);
+          }
+        }
+      }
+      // Compute derived amounts if possible
+      if (li.NetAmount == null && li.Quantity != null && li.UnitPrice != null) {
+        const n = +(li.Quantity * li.UnitPrice).toFixed(2);
+        if (Number.isFinite(n)) li.NetAmount = n;
+      }
+      if (li.GrossAmount == null && li.NetAmount != null && li.VATAmount != null) {
+        const g = +(li.NetAmount + li.VATAmount).toFixed(2);
+        if (Number.isFinite(g)) li.GrossAmount = g;
+      }
+      if (li.VATAmount == null && li.NetAmount != null && li.GrossAmount != null) {
+        const v = +(li.GrossAmount - li.NetAmount).toFixed(2);
+        if (Number.isFinite(v)) li.VATAmount = v;
+      }
+      // Only include lines that have at least a description or a numeric amount/qty
+      const hasContent = (
+        (li.Description && String(li.Description).trim() !== '') ||
+        [li.Quantity, li.UnitPrice, li.NetAmount, li.VATAmount, li.GrossAmount, li.NominalCode]
+          .some(v => v != null && v !== '')
+      );
+      if (hasContent) {
+        items.push({
+          Description: li.Description || undefined,
+          Quantity: li.Quantity != null ? li.Quantity : undefined,
+          UnitPrice: li.UnitPrice != null ? li.UnitPrice : undefined,
+          NetAmount: li.NetAmount != null ? li.NetAmount : undefined,
+          VATAmount: li.VATAmount != null ? li.VATAmount : undefined,
+          GrossAmount: li.GrossAmount != null ? li.GrossAmount : undefined,
+          NominalCode: li.NominalCode != null ? li.NominalCode : undefined,
+        });
+      }
+    }
+    if (items.length > 0) {
+      lineItems = items;
+      enumeratedItems = items;
+      // If header totals are missing, derive them from line sums
+      const sums = items.reduce((acc, it) => {
+        acc.net += typeof it.NetAmount === 'number' ? it.NetAmount : 0;
+        acc.vat += typeof it.VATAmount === 'number' ? it.VATAmount : 0;
+        acc.gross += typeof it.GrossAmount === 'number' ? it.GrossAmount : 0;
+        return acc;
+      }, { net: 0, vat: 0, gross: 0 });
+      sums.net = +sums.net.toFixed(2);
+      sums.vat = +sums.vat.toFixed(2);
+      sums.gross = +sums.gross.toFixed(2);
+      if (netAmount == null) netAmount = sums.net;
+      if (vatAmount == null) vatAmount = sums.vat;
+      if (grossAmount == null) grossAmount = sums.gross;
+
+      // Reconcile small rounding drift between header VAT and sum of line VATs by nudging a single line
+      // This addresses cases like 5 lines at 20% where per-line rounding leads to a 0.01 difference
+      if (typeof vatAmount === 'number') {
+        const sumVat = sums.vat;
+        const drift = +(vatAmount - sumVat).toFixed(2);
+        // Only attempt to adjust when the drift is a single penny (or very small)
+        if (Math.abs(drift) >= 0.005 && Math.abs(drift) <= 0.02) {
+          // Pick the last line that has a numeric VATAmount (common accounting practice)
+          let adjustIdx = -1;
+          for (let k = items.length - 1; k >= 0; k--) {
+            if (typeof items[k].VATAmount === 'number') { adjustIdx = k; break; }
+          }
+          if (adjustIdx >= 0) {
+            const li = items[adjustIdx];
+            li.VATAmount = +(((li.VATAmount || 0) + drift).toFixed(2));
+            if (typeof li.NetAmount === 'number') {
+              li.GrossAmount = +((li.NetAmount + li.VATAmount).toFixed(2));
+            } else if (typeof li.GrossAmount === 'number') {
+              li.NetAmount = +((li.GrossAmount - li.VATAmount).toFixed(2));
+            }
+            // mark debug for UI/traceability
+            var __ROUND_ADJUST__ = { LineAdjusted: adjustIdx + 1, Field: 'VATAmount', Drift: drift };
+          }
+        }
+      }
+    }
+  }
+
   if (!Array.isArray(lineItems) || lineItems.length === 0) {
     // Fallback single line item based on amounts
     lineItems = [{
@@ -152,8 +333,43 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
       GrossAmount: grossAmount,
     }];
   }
+  
+  // Final safety: if we have line items, align header totals to the sum of lines
+  if (Array.isArray(lineItems) && lineItems.length > 0) {
+    const sums = lineItems.reduce((acc, it) => {
+      acc.net += (typeof it.NetAmount === 'number') ? it.NetAmount : 0;
+      acc.vat += (typeof it.VATAmount === 'number') ? it.VATAmount : 0;
+      acc.gross += (typeof it.GrossAmount === 'number') ? it.GrossAmount : 0;
+      return acc;
+    }, { net: 0, vat: 0, gross: 0 });
+    sums.net = +sums.net.toFixed(2);
+    sums.vat = +sums.vat.toFixed(2);
+    sums.gross = +sums.gross.toFixed(2);
+    const deltas = {
+      net: (netAmount != null) ? +(netAmount - sums.net).toFixed(2) : null,
+      vat: (vatAmount != null) ? +(vatAmount - sums.vat).toFixed(2) : null,
+      gross: (grossAmount != null) ? +(grossAmount - sums.gross).toFixed(2) : null,
+    };
+    const differs = (v) => v != null && Math.abs(v) > 0.01;
+    if (differs(deltas.net) || differs(deltas.vat) || differs(deltas.gross)) {
+      // Preserve originals in debug, then align to sums for correctness
+      const original = {
+        NetAmount: netAmount,
+        VATAmount: vatAmount,
+        GrossAmount: grossAmount,
+      };
+      netAmount = sums.net;
+      vatAmount = sums.vat;
+      grossAmount = sums.gross;
+      // Stash debug note
+      const adj = { FromLines: { Net: sums.net, VAT: sums.vat, Gross: sums.gross }, Original: original, Delta: deltas };
+      if (!enumeratedItems) enumeratedItems = []; // ensure Debug object creation below
+      // We'll attach to Debug below together with any existing info
+      var __HEADER_ALIGNED_FROM_LINES__ = adj; // sentinel to pick up later
+    }
+  }
 
-  const notes = findCustomField(cf, mapping.Notes) || ocr.title;
+  // Notes not required for draft view; omit ReadableString population
   const paperlessToken = `PAPERLESS:${ocr.paperlessId}`;
 
   const draft = {
@@ -173,9 +389,8 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     VATAmount: vatAmount,
     GrossAmount: grossAmount,
 
-    // Details
-    ReadableString: notes || undefined,
-    LineItems: lineItems,
+  // Details (omit ReadableString on draft)
+  LineItems: lineItems,
 
     // Optional helpful extras
     Paperless: {
@@ -188,6 +403,28 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
       ArchivedFileName: ocr.archivedFileName || null,
     }
   };
+
+  // Attach debug info if enumerated custom fields were parsed
+  if ((Array.isArray(enumeratedItems) && enumeratedItems.length > 0) || typeof __HEADER_ALIGNED_FROM_LINES__ === 'object') {
+    // Provide helpful totals for the UI to compare
+    let sums;
+    if (Array.isArray(enumeratedItems) && enumeratedItems.length > 0) {
+      sums = enumeratedItems.reduce((acc, it) => {
+        acc.Net += typeof it.NetAmount === 'number' ? it.NetAmount : 0;
+        acc.VAT += typeof it.VATAmount === 'number' ? it.VATAmount : 0;
+        acc.Gross += typeof it.GrossAmount === 'number' ? it.GrossAmount : 0;
+        return acc;
+      }, { Net: 0, VAT: 0, Gross: 0 });
+      sums.Net = +sums.Net.toFixed(2);
+      sums.VAT = +sums.VAT.toFixed(2);
+      sums.Gross = +sums.Gross.toFixed(2);
+    }
+    draft.Debug = { ...(draft.Debug || {}),
+      ...(Array.isArray(enumeratedItems) && enumeratedItems.length > 0 ? { EnumeratedLineItems: enumeratedItems, TotalsFromLines: sums } : {}),
+      ...(__HEADER_ALIGNED_FROM_LINES__ ? { HeaderAlignedFromLines: __HEADER_ALIGNED_FROM_LINES__ } : {}),
+      ...(typeof __ROUND_ADJUST__ === 'object' ? { RoundingAdjustment: __ROUND_ADJUST__ } : {})
+    };
+  }
 
   return draft;
 }
