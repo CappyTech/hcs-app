@@ -22,10 +22,18 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     // Fetch purchases for the period. Prefer TaxYear/TaxMonth match; fall back to PaidDate/IssuedDate window.
     const purchases = await mdb.REST.purchase.find({
-      $or: [
-        { TaxYear: specifiedYear, TaxMonth: specifiedMonth },
-        { PaidDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
-        { IssuedDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
+      $and: [
+        { $or: [
+          { deletedAt: null },
+          { deletedAt: { $exists: false } },
+          { deletedAt: '' },
+          { deletedAt: '0000-00-00 00:00:00' }
+        ] },
+        { $or: [
+          { TaxYear: specifiedYear, TaxMonth: specifiedMonth },
+          { PaidDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
+          { IssuedDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
+        ] }
       ]
     }).lean();
 

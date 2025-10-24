@@ -81,6 +81,17 @@ mdb.connect = async () => {
             return reject(err);
           }
           sshServer = server;
+          // Prevent unhandled 'error' events from crashing the process (e.g., ECONNRESET during shutdown)
+          server.on('error', (e) => {
+            const code = e?.code || e?.errno;
+            const level = e?.level;
+            if (code === 'ECONNRESET' || code === 'EPIPE' || level === 'client-socket') {
+              logger.warn('⚠️ SSH tunnel socket error ignored:', code || level);
+              return;
+            }
+            logger.error('❌ SSH tunnel server error:', e);
+          });
+          server.on('close', () => logger.info('🧵 SSH tunnel server closed'));
           logger.info(`🔐 SSH tunnel established on port ${localPort}`);
           resolve();
         });

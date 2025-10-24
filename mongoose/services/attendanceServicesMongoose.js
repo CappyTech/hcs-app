@@ -23,7 +23,7 @@ const getAttendanceForDay = async (date) => {
 };
 
 /**
- * Low-level: Fetch attendance + receipts between two dates
+ * Low-level: Fetch attendance + purchases between two dates
  */
 const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
   try {
@@ -42,16 +42,15 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
     const activeEmployeesPromise = mdb.INTERNAL.employee.find({ status: 'active' });
 
     // Subcontractors (REST)
-    const subcontractorsPromise = mdb.REST.supplier.find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] });
+  const subcontractorsPromise = mdb.REST.supplier.find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] });
 
     // Purchases with payments within the week (REST)
     const purchasesPromise = mdb.REST.purchase.find({
-      TotalPaidAmount: { $gt: 0 },
       $or: [
         { PaidDate: { $gte: start, $lte: end } },
-        { PaymentLines: { $elemMatch: { $or: [ { PayDate: { $gte: start, $lte: end } }, { Date: { $gte: start, $lte: end } } ] } } }
+        { PaymentLines: { $elemMatch: { $or: [{ PayDate: { $gte: start, $lte: end } }, { Date: { $gte: start, $lte: end } }] } } }
       ]
-    }).select('SupplierId SupplierName TotalPaidAmount PaidDate PaymentLines');
+    }).select('uuid SupplierId SupplierName SupplierReference Number TotalPaidAmount PaidDate PaymentLines deletedAt');
 
     const [attendanceRecords, allEmployees, allSubcontractors, purchases] = await Promise.all([
       attendancePromise,
@@ -60,49 +59,85 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
       purchasesPromise
     ]);
 
-    // Map suppliers by Id for quick lookup
-    const supplierIds = [...new Set(purchases.map(p => p.SupplierId).filter(id => id != null))];
-    const suppliers = supplierIds.length
-      ? await mdb.REST.supplier.find({ Id: { $in: supplierIds } }).select('Id Name uuid').lean()
-      : [];
-    const supplierById = new Map(suppliers.map(s => [s.Id, s]));
+    // Limit purchases to suppliers that are subcontractors
+    // and exclude soft-deleted ones with a robust check
+    const isSoftDeleted = (doc) => {
+      const d = doc && doc.deletedAt;
+      if (d === undefined || d === null) return false;
+      if (typeof d === 'string' && (d.trim() === '' || d.trim() === '0000-00-00 00:00:00')) return false;
+      return !!d;
+    };
 
-    // Derive paid receipts as payment events within the week
-    const paidReceipts = [];
-    for (const p of purchases) {
-      const supplierDoc = supplierById.get(p.SupplierId) || { Name: p.SupplierName, uuid: null };
+    const purchasesNotDeleted = (purchases || []).filter(p => !isSoftDeleted(p));
+    if (process.env.DEBUG) {
+      logger.info(`[weekly] purchases fetched=${(purchases||[]).length}, notDeleted=${purchasesNotDeleted.length}`);
+    }
+      // Collect supplierIds from purchases first
+      const supplierIds = [...new Set(purchasesNotDeleted.map(p => p.SupplierId).filter(id => id != null))];
+      const suppliers = supplierIds.length
+        ? await mdb.REST.supplier.find({ Id: { $in: supplierIds } }).select('Id Name uuid Subcontractor IsSubcontractor').lean()
+        : [];
+      // Build allowed subcontractor id set using tolerant truthiness
+      const isSubbie = (s) => s && (s.Subcontractor === true || s.IsSubcontractor === true || s.Subcontractor === 1 || s.IsSubcontractor === 1 || s.Subcontractor === 'true' || s.IsSubcontractor === 'true');
+      const allowedSubcontractorIds = new Set(suppliers.filter(isSubbie).map(s => s.Id));
+      const filteredPurchases = purchasesNotDeleted.filter(p => p && allowedSubcontractorIds.has(p.SupplierId));
+      if (process.env.DEBUG) {
+        logger.info(`[weekly] subcontractors=${allowedSubcontractorIds.size}, filteredPurchases=${filteredPurchases.length}`);
+      }
+      const supplierById = new Map(suppliers.map(s => [s.Id, s]));
+
+    // Derive paid purchases as payment events within the week
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+    const inRange = (dateLike) => {
+      if (!dateLike) return false;
+      const t = new Date(dateLike).getTime();
+      return !isNaN(t) && t >= startMs && t <= endMs;
+    };
+
+    const buildEventsForPurchase = (p, supplierDoc) => {
       const lines = Array.isArray(p.PaymentLines) ? p.PaymentLines : [];
-      const eventsFromLines = lines
-        .filter(pl => {
-          const d = pl.PayDate || pl.Date;
-          return d && (new Date(d) >= start) && (new Date(d) <= end);
-        })
-        .map(pl => ({
-          _id: `${p._id}-pl-${(pl._id || Math.random()).toString()}`,
+      const lineEvents = lines
+        .map((pl, idx) => ({ pl, idx }))
+        .filter(({ pl }) => inRange(pl.PayDate || pl.Date))
+        .map(({ pl, idx }) => ({
+          _id: `${p.uuid}-pl-${idx}`,
           CustomerID: supplierDoc,
           InvoiceDate: pl.PayDate || pl.Date,
-          AmountPaid: Number(pl.Amount || pl.Value || 0)
+          AmountPaid: Number(pl.Amount || pl.Value || 0),
+          InvoiceNumber: p.Number,
+          SupplierReference: p.SupplierReference || null,
+          PurchaseUuid: p.uuid || null
         }));
-
-      if (eventsFromLines.length) {
-        paidReceipts.push(...eventsFromLines);
-      } else if (p.PaidDate && p.TotalPaidAmount > 0 && p.PaidDate >= start && p.PaidDate <= end) {
-        paidReceipts.push({
-          _id: p._id,
+      if (lineEvents.length) return lineEvents;
+      if (inRange(p.PaidDate) && (p.TotalPaidAmount || 0) > 0) {
+        return [{
+          _id: `${p.uuid}-hdr`,
           CustomerID: supplierDoc,
           InvoiceDate: p.PaidDate,
-          AmountPaid: Number(p.TotalPaidAmount || 0)
-        });
+          AmountPaid: Number(p.TotalPaidAmount || 0),
+          InvoiceNumber: p.Number,
+          SupplierReference: p.SupplierReference || null,
+          PurchaseUuid: p.uuid || null
+        }];
       }
-    }
+      return [];
+    };
+
+    const paidPurchases = filteredPurchases.reduce((acc, p) => {
+      const supplierDoc = supplierById.get(p.SupplierId) || { Name: p.SupplierName, uuid: null };
+      acc.push(...buildEventsForPurchase(p, supplierDoc));
+      return acc;
+    }, []);
+    if (process.env.DEBUG) logger.info(`[weekly] paidPurchases events=${paidPurchases.length}`);
 
     return {
       attendanceRecords,
       employeeCount: allEmployees.length,
-      subcontractorCount: allSubcontractors.length,
+        subcontractorCount: allowedSubcontractorIds.size,
       allEmployees,
-      allSubcontractors,
-      paidReceipts
+        allSubcontractors: suppliers.filter(isSubbie),
+      paidPurchases
     };
   } catch (error) {
     logger.error('Error fetching attendance week data: ' + error.message);
@@ -111,7 +146,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
 };
 
 /**
- * Group attendance and receipts by person
+ * Group attendance and purchases by person
  */
 const groupAttendanceByPerson = (
   attendanceRecords,
@@ -119,7 +154,7 @@ const groupAttendanceByPerson = (
   endDate,
   allEmployees,
   allSubcontractors,
-  paidReceipts = []
+  paidPurchases = []
 ) => {
   const groupedAttendance = {};
   let totalEmployeeHours = 0;
@@ -138,21 +173,21 @@ const groupAttendanceByPerson = (
     };
   });
 
-  // Add subcontractors from receipts
-  paidReceipts.forEach(receipt => {
-    const supplier = receipt.CustomerID;
+  // Add subcontractors from purchases
+  paidPurchases.forEach(purchase => {
+    const supplier = purchase.CustomerID;
     if (!supplier) return;
 
     const name = supplier.Name;
-    const dateKey = moment(receipt.InvoiceDate).format('YYYY-MM-DD');
-    const amount = parseFloat(receipt.AmountPaid || 0);
+    const dateKey = moment(purchase.InvoiceDate).format('YYYY-MM-DD');
+    const amount = parseFloat(purchase.AmountPaid || 0);
 
     if (!groupedAttendance[name]) {
       groupedAttendance[name] = {
         name,
         employeeId: null,
         subcontractorId: supplier.uuid,
-        totalHoursWorked: 0,
+        totalDaysWorked: 0,
         weeklyPay: 0,
         dailyRecords: {},
         type: 'subcontractor'
@@ -165,11 +200,14 @@ const groupAttendanceByPerson = (
       groupedAttendance[name].dailyRecords[dateKey] = {};
     }
 
-    groupedAttendance[name].dailyRecords[dateKey][`purchase-${receipt._id}`] = {
+    groupedAttendance[name].dailyRecords[dateKey][`purchase-${purchase._id}`] = {
       location: null,
       type: 'Purchase',
       hoursWorked: null,
-      weeklyPay: amount
+      weeklyPay: amount,
+      invoiceNumber: purchase.InvoiceNumber || null,
+      supplierReference: purchase.SupplierReference || null,
+      purchaseUuid: purchase.PurchaseUuid || null
     };
 
     totalSubcontractorPay += amount;
@@ -276,7 +314,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     subcontractorCount,
     allEmployees,
     allSubcontractors,
-    paidReceipts
+    paidPurchases
   } = await fetchAttendanceForWeek(payrollWeekStart, endDate);
 
   const {
@@ -286,7 +324,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     totalSubcontractorPay,
     totalSubcontractorDays,
     daysOfWeek
-  } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidReceipts);
+  } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidPurchases);
 
   // INTERNAL.job was replaced with REST.project — surface "active jobs" from active REST projects
   let activeJobs = [];

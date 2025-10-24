@@ -12,7 +12,7 @@
       <% }); %>
       <% if (!isManagementView) { %>
         <th class="text-center font-normal border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">
-          Weekly Pay <br> / Total Hours
+          Weekly Pay <br> 
         </th>
       <% } else {} %>
     </tr>
@@ -38,7 +38,9 @@
             <% if (Object.keys(dailyRecords).length > 0) { %>
               <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
                 <% const isPurchase = recordId.startsWith('purchase-'); %>
-                <% const href = isPurchase ? `/purchase/read/${recordId.split('purchase-')[1]}` : `/attendance/read/${record.uuid}`; %>
+                <% const href = isPurchase
+                  ? `/purchase/read/${record.purchaseUuid}`
+                  : `/attendance/read/${record.uuid}`; %>
 
                 <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
                   <a 
@@ -49,13 +51,20 @@
                 <% } %>
 
                 <a href="<%= href %>" class="block text-green-900 dark:text-green-400 hover:underline text-sm">
-                  <%= record.location?.name %> - <%= record.type %>
-                  <% if (!isManagementView && record.weeklyPay) { %>
-                    – £<%= record.weeklyPay.toFixed(2) %>
+                  <% if (isPurchase) { %>
+                    KF#: <%= record.invoiceNumber || '—' %> SF#: <%= record.supplierReference || '—' %>
+                    <% if (!isManagementView && record.weeklyPay) { %>
+                      – £<%= record.weeklyPay.toFixed(2) %>
+                    <% } %>
+                  <% } else { %>
+                    <%= record.location?.name %> - <%= record.type %>
+                    <% if (!isManagementView && record.weeklyPay) { %>
+                      – £<%= record.weeklyPay.toFixed(2) %>
+                    <% } %>
                   <% } %>
                 </a>
 
-                <% if (record.hoursWorked) { %>
+                <% if (record.hoursWorked > 0) { %>
                   <a href="<%= href %>" class="block text-gray-700 dark:text-gray-300 text-xs">
                     <%= record.hoursWorked %> hours
                   </a>
@@ -72,7 +81,9 @@
         <% if (!isManagementView) { %>
           <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 font-semibold">
             £<%= details.weeklyPay.toFixed(2) %><br>
+            <% if (details.totalHoursWorked > 0) { %>
             <span class="text-sm font-normal text-gray-700 dark:text-gray-300"><%= details.totalHoursWorked %> hours</span>
+            <% } %>
           </td>
         <% } else {} %>
       </tr>

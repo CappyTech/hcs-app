@@ -22,7 +22,15 @@ exports.renderMonthlyReturnsForm = async (req,res,next)=>{
 
     const suppliersWithMonths = [];
     for (const supplier of suppliers) {
-      const recs = await mdb.REST.purchase.find({ SupplierId: supplier.Id })
+      const recs = await mdb.REST.purchase.find({
+        SupplierId: supplier.Id,
+        $or: [
+          { deletedAt: null },
+          { deletedAt: { $exists: false } },
+          { deletedAt: '' },
+          { deletedAt: '0000-00-00 00:00:00' }
+        ]
+      })
         .select('TaxYear TaxMonth')
         .lean();
       const receiptsByYear = {};
@@ -66,7 +74,13 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
     const purchases = await mdb.REST.purchase.find({
       SupplierId: supplier.Id,
       TaxYear: +year,
-      TaxMonth: +month
+      TaxMonth: +month,
+      $or: [
+        { deletedAt: null },
+        { deletedAt: { $exists: false } },
+        { deletedAt: '' },
+        { deletedAt: '0000-00-00 00:00:00' }
+      ]
     }).sort({ Number: 1 }).lean();
 
     // Paid-only filtering as per CIS policy
@@ -157,7 +171,13 @@ exports.renderYearlyReturns = async (req,res,next)=>{
     }
     const purchases = await mdb.REST.purchase.find({
       SupplierId: supplier.Id,
-      TaxYear: +year
+      TaxYear: +year,
+      $or: [
+        { deletedAt: null },
+        { deletedAt: { $exists: false } },
+        { deletedAt: '' },
+        { deletedAt: '0000-00-00 00:00:00' }
+      ]
     }).sort({ TaxMonth: 1, Number: 1 }).lean();
 
     // Paid-only filtering as per CIS policy

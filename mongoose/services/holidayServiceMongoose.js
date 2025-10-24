@@ -14,7 +14,7 @@ const holidayService = {
   isDateHoliday: async (date = moment().format('YYYY-MM-DD')) => {
     try {
       // Check Bank Holidays (Mongo)
-  const holiday = await mdb.INTERNAL.holiday.findOne({ date });
+      const holiday = await mdb.INTERNAL.holiday.findOne({ date });
       if (holiday) {
         if (holiday.division === 'england-and-wales') {
           return {
@@ -97,7 +97,7 @@ const holidayService = {
     if (!division) division = 'england-and-wales';
     try {
       // Fetch all bank holidays from DB, filter future dates
-  const allHolidays = await mdb.INTERNAL.holiday.find();
+      const allHolidays = await mdb.INTERNAL.holiday.find();
 
       // Filter bank holidays on or after today
       const futureBankHolidays = allHolidays.filter(h => moment(h.date).isSameOrAfter(today) && h.division === division);
@@ -163,7 +163,7 @@ const holidayService = {
       const totalEvents = bulkOps.length;
 
       if (totalEvents > 0) {
-  const result = await mdb.INTERNAL.holiday.bulkWrite(bulkOps);
+        const result = await mdb.INTERNAL.holiday.bulkWrite(bulkOps);
         const upserts = result.upsertedCount || 0;
         const modified = result.modifiedCount || 0;
         const unchanged = totalEvents - upserts - modified;
