@@ -72,6 +72,7 @@ jobs:
           platforms: linux/amd64
           tags: |
             ${{ env.IMAGE_NAME }}:ci-${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:ci-latest
 
       - name: Publish image reference
         shell: bash
@@ -79,6 +80,7 @@ jobs:
           echo "Image published to:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "${{ env.IMAGE_NAME }}:ci-${GITHUB_SHA}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.IMAGE_NAME }}:ci-latest" >> $GITHUB_STEP_SUMMARY
 
       # Optional visibility without failing:
       - name: Security audit report (all deps; non-blocking)
