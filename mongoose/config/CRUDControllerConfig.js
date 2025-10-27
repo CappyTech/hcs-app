@@ -246,6 +246,26 @@ module.exports = {
       delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   },
+  employeeHoliday: {
+    readOnly: ['uuid', 'createdAt'],
+    validators: {
+      employeeId: v => typeof v === 'string' && v.length > 0,
+      periodStart: v => !isNaN(Date.parse(v)),
+      periodEnd: v => !isNaN(Date.parse(v)),
+      entitlementDays: v => v == null || (typeof v === 'number' && v >= 0),
+      entitlementHours: v => v == null || (typeof v === 'number' && v >= 0),
+      accrualPercent: v => v == null || (typeof v === 'number' && v >= 0 && v <= 100)
+    },
+    middleware: {
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+    },
+    referenceFilters: {
+      employeeId: { status: 'active' }
+    }
+  },
   vehicle: {
     readOnly: ['uuid', 'createdAt'],
     validators: {

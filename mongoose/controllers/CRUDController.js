@@ -8,6 +8,7 @@ const crudController = {};
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 const mongoose = require('mongoose');
 const e = require('express');
+const holidayAccrualService = require('../services/holidayAccrualService');
 
 // Merge list and CRUD configs
 const getMergedConfig = (modelName) => ({
@@ -223,6 +224,10 @@ for (const namespace of ['REST', 'INTERNAL']) {
           }
           const doc = new Model(cleanedData);
           await doc.save();
+          // Hook: update holiday accruals when creating attendance for an employee
+          if (modelName === 'attendance') {
+            await holidayAccrualService.updateAccrualFromAttendance(doc);
+          }
           res.redirect(`/${modelName}s`);
         } catch (err) {
           logger.error(`❌ Error creating ${modelName}: ${err.message}`);
@@ -311,11 +316,15 @@ for (const namespace of ['REST', 'INTERNAL']) {
           }
 
           // 3) actually update, dropping any undefined keys
-          await Model.findOneAndUpdate(
+          const updated = await Model.findOneAndUpdate(
             { uuid: req.params.uuid },
             cleaned,
             { new: true, runValidators: true, omitUndefined: true }
           );
+          // Hook: update holiday accruals when updating attendance for an employee
+          if (modelName === 'attendance' && updated) {
+            await holidayAccrualService.updateAccrualFromAttendance(updated);
+          }
           res.redirect(`/${modelName}s`);
         } catch (err) {
           logger.error(`❌ Error updating ${modelName}: ${err.message}`);

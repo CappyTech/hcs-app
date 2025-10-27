@@ -6,21 +6,24 @@ let sshServer = null;
 let localPort = null;
 
 function makeClient() {
-  let baseURL = process.env.PAPERLESS_BASE_URL; // e.g. http://host:8000/api
+  const useSsh = process.env.PAPERLESS_SSH_TUNNEL_ENABLED === 'true';
+  let baseURL = process.env.PAPERLESS_BASE_URL
+    ? 'http://' + process.env.PAPERLESS_BASE_URL + ':' + (process.env.PAPERLESS_PORT || '8000')
+    : null;
   const token = process.env.PAPERLESS_TOKEN;
   const accept = process.env.PAPERLESS_ACCEPT || 'application/json; version=6';
   const verbose = process.env.PAPERLESS_VERBOSE === 'true' || process.env.DEBUG;
 
-  if (!baseURL || !token) {
-    throw new Error('PAPERLESS_BASE_URL and PAPERLESS_TOKEN are required');
+  if (!token) {
+    throw new Error('PAPERLESS_TOKEN is required');
   }
-
-  // Ensure baseURL includes /api to hit the Paperless REST endpoints
-  if (!/\/api(\/|$)/.test(baseURL)) {
-    baseURL = baseURL.replace(/\/+$/, '') + '/api';
+  // If not using SSH tunnel, a baseURL must be provided
+  if (!useSsh) {
+    if (!baseURL) throw new Error('PAPERLESS_BASE_URL is required when PAPERLESS_SSH_TUNNEL_ENABLED is not true');
+    if (!/\/api(\/|$)/.test(baseURL)) {
+      baseURL = baseURL.replace(/\/+$/, '') + '/api';
+    }
   }
-
-  const useSsh = process.env.PAPERLESS_SSH_TUNNEL_ENABLED === 'true';
 
   const ensureTunnel = async () => {
     if (!useSsh) return null;
@@ -55,6 +58,16 @@ function makeClient() {
       tunnel(sshConfig, (err, server) => {
         if (err) return reject(err);
         sshServer = server;
+        // Swallow expected client socket resets so the app doesn't crash on network blips
+        server.on('error', (e) => {
+          const code = e?.code || e?.errno;
+          const level = e?.level;
+          if (code === 'ECONNRESET' || code === 'EPIPE' || level === 'client-socket') {
+            if (verbose) console.warn('[paperlessClient] tunnel socket error ignored:', code || level);
+            return;
+          }
+          console.error('[paperlessClient] tunnel server error:', e);
+        });
         if (verbose) console.log(`[paperlessClient] 🔐 SSH tunnel established on ${sshConfig.localHost}:${localPort} → ${sshConfig.dstHost}:${sshConfig.dstPort}`);
         resolve();
       });
@@ -67,6 +80,8 @@ function makeClient() {
     if (useSsh) {
       const port = await ensureTunnel();
       baseURL = `http://127.0.0.1:${port}/api`;
+    } else {
+      // baseURL already validated/normalized above
     }
     const api = axios.create({
       baseURL,

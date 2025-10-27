@@ -1,3 +1,5 @@
+const { create } = require("connect-mongo");
+
 module.exports = {
   assignment: {
     title: 'Assignments',
@@ -349,6 +351,52 @@ module.exports = {
         linkTo: (matched) => `/customer/read/${matched.uuid}`
       }
     }
+  },
+  employeeHoliday: {
+    title: 'Employee Holiday',
+    // Show periodStart as the clickable link into the record
+    linkField: 'periodStart',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    fieldOrder: [
+      'employeeId',
+      'periodStart', 'periodEnd',
+      'entitlementType', 'entitlementDays', 'entitlementHours',
+      'carryOverDays', 'carryOverHours',
+      'accrualMethod', 'accrualPercent',
+      'accruedDays', 'accruedHours',
+      'takenDays', 'takenHours',
+      'bankHolidaysCounted',
+      'notes'
+    ],
+    sortField: 'periodStart',
+    sortOrder: -1,
+    department: ['human-resources', 'payroll'],
+    labelOverrides: {
+      employeeId: 'Employee',
+      entitlementDays: 'Entitlement (Days)',
+      entitlementHours: 'Entitlement (Hours)',
+      carryOverDays: 'Carry Over (Days)',
+      carryOverHours: 'Carry Over (Hours)',
+      accrualMethod: 'Accrual Method',
+      accrualPercent: 'Accrual %',
+      accruedDays: 'Accrued (Days)',
+      accruedHours: 'Accrued (Hours)',
+      takenDays: 'Taken (Days)',
+      takenHours: 'Taken (Hours)',
+      bankHolidaysCounted: 'Includes Bank Holidays'
+    },
+    fieldTransforms: {
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      }
+    },
+    description: {
+      create: 'Create a new employee holiday entitlement/accrual record.',
+      manage: 'Manage employee holiday entitlement and accrual records.',
+    },
   },
   vehicle: {
     title: 'Vehicles',

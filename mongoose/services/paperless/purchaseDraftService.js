@@ -469,53 +469,42 @@ function formatKFDate(d) {
 
 function buildKashFlowPayloadFromDraft(draft, opts = {}) {
   if (!draft || typeof draft !== 'object') throw new Error('draft required');
+  // Per Purchase_Create request model, send a minimal, request-safe payload
   const currencyCode = draft.Currency || opts.currencyDefault || process.env.DEFAULT_CURRENCY || 'GBP';
   const defaultNominal = typeof draft.DefaultNominalCode === 'number' ? draft.DefaultNominalCode : undefined;
 
   const payload = {
-    // Header
+    // Header (request fields only)
     Number: typeof draft.Number === 'number' ? draft.Number : undefined,
-    SupplierName: draft.SupplierName,
     SupplierCode: draft.SupplierCode,
     SupplierReference: draft.SupplierReference,
-    SupplierId: typeof draft.SupplierId === 'number' ? draft.SupplierId : undefined,
     AdditionalFieldValue: draft.AdditionalFieldValue,
     IssuedDate: formatKFDate(draft.IssuedDate),
     DueDate: formatKFDate(draft.DueDate),
-    PaidDate: formatKFDate(draft.PaidDate),
-    NetAmount: draft.NetAmount,
-    VATAmount: draft.VATAmount,
-    GrossAmount: draft.GrossAmount,
-    HomeCurrencyGrossAmount: draft.HomeCurrencyGrossAmount,
-    TotalPaidAmount: draft.TotalPaidAmount,
-    Status: draft.Status,
     ProjectNumber: typeof draft.ProjectNumber === 'number' ? draft.ProjectNumber : undefined,
-    PurchaseInECMemberState: typeof draft.PurchaseInECMemberState === 'boolean' ? draft.PurchaseInECMemberState : undefined,
-    IsWhtDeductionToBeApplied: typeof draft.IsWhtDeductionToBeApplied === 'boolean' ? draft.IsWhtDeductionToBeApplied : undefined,
+    // Optional request fields if present on draft
+    IsCISReverseCharge: typeof draft.IsCISReverseCharge === 'boolean' ? draft.IsCISReverseCharge : undefined,
+    Type: typeof draft.Type === 'string' ? draft.Type : undefined,
     Currency: {
       Code: currencyCode,
-      Name: opts.currencyName || undefined,
+      // Only ExchangeRate is part of request model; others are response-only
       ExchangeRate: typeof opts.exchangeRate === 'number' ? opts.exchangeRate : undefined,
-      Symbol: opts.currencySymbol || undefined,
-      DisplaySymbolOnRight: typeof opts.displaySymbolOnRight === 'boolean' ? opts.displaySymbolOnRight : undefined,
     },
     LineItems: Array.isArray(draft.LineItems) ? draft.LineItems.map((li, idx) => ({
       Number: idx + 1,
       Description: li.Description,
       Quantity: li.Quantity ?? 1,
+      // KashFlow expects Rate (unit price). If only NetAmount was provided, fallback to that.
       Rate: li.UnitPrice ?? li.Rate ?? li.NetAmount ?? 0,
       VATAmount: li.VATAmount,
+      VATExempt: typeof li.VATExempt === 'boolean' ? li.VATExempt : undefined,
       TaxCode: li.TaxCode,
       NominalCode: (typeof li.NominalCode === 'number' ? li.NominalCode : defaultNominal),
       ProductCode: li.ProductCode,
-      ProductName: li.ProductName,
+      // Optional request fields
+      Disallowed: typeof li.Disallowed === 'boolean' ? li.Disallowed : undefined,
+      StockInfo: li.StockInfo,
       ProjectNumber: li.ProjectNumber,
-      ProjectName: li.ProjectName,
-      VATExempt: typeof li.VATExempt === 'boolean' ? li.VATExempt : undefined,
-      // VATLevel is read-only per docs; omit on POST
-      HomeCurrencyRate: li.HomeCurrencyRate,
-      HomeCurrencyVATAmount: li.HomeCurrencyVATAmount,
-      NominalName: li.NominalName,
     })) : [],
     PaymentLines: Array.isArray(draft.PaymentLines) ? draft.PaymentLines.map(pl => ({
       AccountId: pl.AccountId,
@@ -524,9 +513,11 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
       Method: pl.Method,
       Note: pl.Note,
       BankTransactionId: pl.BankTransactionId,
-      // Id/Permalink/BulkId/BulkPaymentNumber are server-managed; omit on POST
+      // Support optional request fields if supplied upstream
+      BulkId: pl.BulkId,
+      BFSTransactionId: pl.BFSTransactionId,
+      PaymentProcessor: pl.PaymentProcessor,
     })) : undefined,
-    ReadableString: draft.ReadableString,
   };
 
   // Remove undefined keys recursively to keep payload tidy
