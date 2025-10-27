@@ -20,3 +20,4 @@ app.log
 
 # Test output
 test/routes_test.log
+compose.env
