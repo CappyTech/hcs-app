@@ -89,7 +89,7 @@ services:
       - DEBUG=${DEBUG:-true}
       - FETCH_API_TOKEN=${FETCH_API_TOKEN:-}
     depends_on:
-      mongo:
+      mongodb:
         condition: service_healthy
     ports:
       - "3000:3000"
