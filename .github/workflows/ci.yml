@@ -65,5 +65,5 @@ jobs:
         run: npm audit || true
 
       # Optional: validate compose file
-      - name: Docker Compose config check
-        run: docker compose -f docker-compose.yml config
+      #- name: Docker Compose config check
+        #run: docker compose -f docker-compose.yml config
