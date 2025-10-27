@@ -1,6 +1,6 @@
 # Environment & sensitive files
 .env
-
+compose.env
 # Node modules
 /node_modules/
 

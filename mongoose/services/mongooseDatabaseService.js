@@ -14,14 +14,47 @@ let sshServer = null;
 const isTunnelEnabled = process.env.SSH_TUNNEL_ENABLED === 'true';
 
 function getUriWithDb(baseUri, dbName) {
-  // If full URI is provided, replace/append db segment before query
+  // Replace or append the db segment before query string, robust to URIs without a path
   if (!baseUri) return '';
   const [left, query = ''] = baseUri.split('?');
-  const trimmed = left.replace(/\/$/, '');
-  const newLeft = trimmed.includes('mongodb://')
-    ? `${trimmed.substring(0, trimmed.lastIndexOf('/'))}/${dbName}`
-    : `${trimmed}/${dbName}`;
+  const trimmed = left.replace(/\/+$/, '');
+  const protoMatch = /^mongodb(\+srv)?:\/\//.test(trimmed);
+  if (protoMatch) {
+    // afterHost: portion after protocol+host (may be empty or like '/admin')
+    const afterHost = trimmed.replace(/^mongodb(\+srv)?:\/\/[^/]+/, '');
+    let newLeft;
+    if (afterHost) {
+      // Replace last path segment with dbName
+      newLeft = trimmed.replace(/\/(?:[^/]*)$/, `/${dbName}`);
+    } else {
+      // No path present; append '/dbName'
+      newLeft = `${trimmed}/${dbName}`;
+    }
+    return query ? `${newLeft}?${query}` : newLeft;
+  }
+  const newLeft = `${trimmed}/${dbName}`;
   return query ? `${newLeft}?${query}` : newLeft;
+}
+
+function buildBaseMongoUriFromParts() {
+  // Build a base Mongo URI from discrete env vars when MONGO_URI is not provided
+  const host = (process.env.MONGO_HOST || 'localhost').trim();
+  const port = parseInt(process.env.MONGO_PORT || '27017', 10);
+  const user = process.env.MONGO_USER ? String(process.env.MONGO_USER) : '';
+  const pass = process.env.MONGO_PASS ? String(process.env.MONGO_PASS) : '';
+  const authSource = (process.env.MONGO_AUTH_SOURCE || 'admin').trim();
+
+  let left;
+  if (user && pass) {
+    // Encode credentials to support special characters
+    const encUser = encodeURIComponent(user);
+    const encPass = encodeURIComponent(pass);
+    left = `mongodb://${encUser}:${encPass}@${host}:${port}`;
+    return `${left}?authSource=${encodeURIComponent(authSource)}`;
+  }
+  // No auth
+  left = `mongodb://${host}:${port}`;
+  return left;
 }
 
 async function createNamespace(ns, connection) {
@@ -89,7 +122,7 @@ mdb.connect = async () => {
               logger.warn('⚠️ SSH tunnel socket error ignored: ' + (code || level));
               return;
             }
-            logger.error('❌ SSH tunnel server error:', e);
+            logger.error('❌ SSH tunnel server error: ' + e);
           });
           server.on('close', () => logger.info('🧵 SSH tunnel server closed'));
           logger.info(`🔐 SSH tunnel established on port ${localPort}`);
@@ -111,12 +144,12 @@ mdb.connect = async () => {
       paperlessUri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${paperlessDb}?authSource=admin`;
       if (process.env.DEBUG) logger.info('✅ Connected to MongoDB via SSH tunnel');
     } else {
-      const baseUri = process.env.MONGO_URI;
-      if (!baseUri) throw new Error('MONGO_URI not set');
+      // Prefer explicit MONGO_URI; otherwise build from parts (MONGO_HOST/PORT/USER/PASS)
+      const baseUri = (process.env.MONGO_URI && process.env.MONGO_URI.trim()) || buildBaseMongoUriFromParts();
       restUri = getUriWithDb(baseUri, restDb);
       internalUri = getUriWithDb(baseUri, internalDb);
       paperlessUri = getUriWithDb(baseUri, paperlessDb);
-      if (process.env.DEBUG) logger.info('✅ Connecting to MongoDB via MONGO_URI');
+      if (process.env.DEBUG) logger.info('✅ Connecting to MongoDB via ' + (process.env.MONGO_URI ? 'MONGO_URI' : 'MONGO_HOST/PORT/USER/PASS'));
     }
 
     const restConn = mongoose.createConnection(restUri);

@@ -53,6 +53,33 @@ const main = async () => {
       res.sendFile(path.join(__dirname, 'public', 'images', 'favicon.ico'));
     });
 
+    // Health check endpoint (unauthenticated, local-only)
+    app.get('/healthz', async (req, res) => {
+      // Restrict to local connections only (bypass trust proxy)
+      const ra = (req.socket && req.socket.remoteAddress) || '';
+      const isLocal = ra === '127.0.0.1' || ra === '::1' || ra === '::ffff:127.0.0.1' || ra.startsWith('127.');
+      if (!isLocal) {
+        return res.status(403).json({ ok: false, error: 'forbidden' });
+      }
+      try {
+        const restReady = mdb.REST?.connection?.readyState === 1;
+        const internalReady = mdb.INTERNAL?.connection?.readyState === 1;
+        const paperlessReady = mdb.PAPERLESS?.connection?.readyState === 1;
+        const ok = restReady && internalReady && paperlessReady;
+        res.status(ok ? 200 : 503).json({
+          ok,
+          uptime: process.uptime(),
+          db: {
+            REST: restReady,
+            INTERNAL: internalReady,
+            PAPERLESS: paperlessReady
+          }
+        });
+      } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+      }
+    });
+
     // Core middleware
     app.use(useragent.express());
     app.use(require('./services/securityService'));
@@ -153,11 +180,9 @@ const main = async () => {
     // Create HTTP server from Express app
     const server = http.createServer(app);
 
-    // Choose port/host
-    const port = process.env.NODE_ENV === 'server2' ? 3000
-      : process.env.NODE_ENV === 'development' ? 80
-        : 443;
-    const host = process.env.NODE_ENV === 'development' ? 'localhost' : '0.0.0.0';
+    // Choose port/host (container-friendly defaults)
+    const port = Number(process.env.PORT) || 3000;
+    const host = process.env.HOST || '0.0.0.0';
 
     // Start server
     server.listen(port, host, () => {

@@ -1,0 +1,180 @@
+services:
+  # mongo:
+  #   image: mongo:6
+  #   container_name: mongo
+  #   restart: unless-stopped
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongo-data:/data/db
+  #   command: ["--bind_ip_all"]
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand({ ping: 1 }).ok' --quiet | grep 1 >/dev/null || exit 1"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   networks:
+  #     - sms-net
+
+  mongodb:
+    image: mongo:8.0
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: hcsadmin
+      MONGO_INITDB_ROOT_PASSWORD: strongpassword123
+    volumes:
+      - mongodb-data:/data/db
+      - ./mongod.conf:/etc/mongo/mongod.conf:ro
+    command: ["mongod", "--config", "/etc/mongo/mongod.conf"]
+    networks:
+      - sms-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sms-app
+    restart: unless-stopped
+    # Load environment variables from compose.env (create it from compose.env.example)
+    env_file:
+      - compose.env
+    environment:
+      # App basics
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
+      - HOST=${HOST:-0.0.0.0}
+      # Sessions
+      - SESSION_SECRET=${SESSION_SECRET:-change-me}
+      # Mongo (no SSH tunnel in compose)
+      - SSH_TUNNEL_ENABLED=false
+      # Use host Mongo by default in Docker Desktop; override via .env if needed
+      #- MONGO_HOST=${MONGO_HOST:-host.docker.internal}
+      - MONGO_PORT=${MONGO_PORT:-27017}
+      - MONGO_USER=${MONGO_USER:-}
+      - MONGO_PASS=${MONGO_PASS:-}
+      - MONGO_AUTH_SOURCE=${MONGO_AUTH_SOURCE:-admin}
+      # If you enable the local MongoDB service above, use this instead:
+      - MONGO_HOST=mongo
+      - MONGO_DBNAME_REST=${MONGO_DBNAME_REST:-rest}
+      - MONGO_DBNAME_INTERNAL=${MONGO_DBNAME_INTERNAL:-internal}
+      - MONGO_DBNAME_PAPERLESS=${MONGO_DBNAME_PAPERLESS:-paperless}
+      # Paperless (optional; uncomment when used)
+      - PAPERLESS_BASE_URL=${PAPERLESS_BASE_URL:-}
+      - PAPERLESS_TOKEN=${PAPERLESS_TOKEN:-}
+      - PAPERLESS_SSH_TUNNEL_ENABLED=${PAPERLESS_SSH_TUNNEL_ENABLED:-false}
+      # Security (optional)
+      #- CSRF_EXEMPT_PATHS=${CSRF_EXEMPT_PATHS}
+      #- STRICT_MODE=${STRICT_MODE}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - JWT_SECRET=${JWT_SECRET:-}
+      # KashFlow (optional)
+      - DEFAULT_CURRENCY=${DEFAULT_CURRENCY:-}
+      - KASHFLOW_API_BASE_URL=${KASHFLOW_API_BASE_URL:-}
+      - KASHFLOW_API_PASSWORD=${KASHFLOW_API_PASSWORD:-}
+      - KASHFLOW_API_USERNAME=${KASHFLOW_API_USERNAME:-}
+      - KASHFLOW_DEBUG_SESSION=${KASHFLOW_DEBUG_SESSION:-1}
+      - KASHFLOW_DEFER_DEFAULTS=${KASHFLOW_DEFER_DEFAULTS:-true}
+      - KASHFLOW_MEMORABLE=${KASHFLOW_MEMORABLE:-}
+      - KASHFLOW_OMIT_HEADER_FIELDS=${KASHFLOW_OMIT_HEADER_FIELDS:-}
+      - KASHFLOW_OMIT_LINE_FIELDS=${KASHFLOW_OMIT_LINE_FIELDS:-}
+      - KASHFLOW_SESSION_TOKEN=${KASHFLOW_SESSION_TOKEN:-}
+      # Turnstile (optional)
+      - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY:-}
+      - TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY:-}
+      # Misc (optional)
+      - DEBUG=${DEBUG:-true}
+      - FETCH_API_TOKEN=${FETCH_API_TOKEN:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/usr/src/app/uploads
+      - ./logs:/usr/src/app/logs
+    # Uncomment if you want live editing (not recommended for prod)
+    #   - ./:/usr/src/app
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    networks:
+      - sms-net
+
+  paperless-db:
+    image: postgres:16-alpine
+    container_name: pldb
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: paperless
+    volumes:
+      - paperless-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperless -d paperless"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sms-net
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: plredis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    volumes:
+      - paperless-redis:/data
+    networks:
+      - sms-net
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless
+    depends_on:
+      paperless-db:
+        condition: service_healthy
+      paperless-redis:
+        condition: service_started
+    ports:
+      - "8000:8000"         # http://localhost:8000
+    environment:
+      PAPERLESS_REDIS: redis://paperless-redis:6379
+      PAPERLESS_DBHOST: paperless-db
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: paperless
+      PAPERLESS_URL: http://localhost:8000
+      PAPERLESS_TIME_ZONE: Europe/London
+      PAPERLESS_OCR_LANGUAGE: eng
+      PAPERLESS_OCR_MODE: skip
+      PAPERLESS_CONSUMER_POLLING: 60
+      PAPERLESS_ENABLE_COMPRESSION: "true"
+      # create admin on first run:
+      PAPERLESS_ADMIN_USER: admin
+      PAPERLESS_ADMIN_PASSWORD: admin123
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - paperless-export:/usr/src/paperless/export
+      - ./consume:/usr/src/paperless/consume  # drop PDFs here to auto-ingest
+    restart: unless-stopped
+    networks:
+      - sms-net
+
+volumes:
+  mongo-data:
+  mongodb-data:
+  paperless-data:
+  paperless-media:
+  paperless-db:
+  paperless-redis:
+  paperless-export:
+
+networks:
+  sms-net:
