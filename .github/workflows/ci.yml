@@ -35,6 +35,11 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
+      - name: Security audit (prod deps; fail on high+)
+        shell: bash
+        run: |
+          npm audit --omit=dev --audit-level=high
+
       - name: Optional tests (skip if undefined)
         shell: bash
         run: |
@@ -55,6 +60,10 @@ jobs:
           tags: |
             sms/app:ci-${{ github.sha }}
 
-      # Uncomment to validate compose file rendering (optional)
-      # - name: Docker Compose config check
-      #   run: docker compose -f docker-compose.yml config
+      # Optional visibility without failing:
+      - name: Security audit report (all deps; non-blocking)
+        run: npm audit || true
+
+      # Optional: validate compose file
+      - name: Docker Compose config check
+        run: docker compose -f docker-compose.yml config

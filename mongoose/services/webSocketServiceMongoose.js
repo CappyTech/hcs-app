@@ -1,4 +1,3 @@
-const sharedSession = require('express-socket.io-session');
 const mdb = require('./mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const { setSocketInstance } = require('../../services/loggerService');
@@ -6,10 +5,13 @@ const { setSocketInstance } = require('../../services/loggerService');
 function setupWebSocket(io, sessionService) {
   setSocketInstance(io);
 
-  io.use(sharedSession(sessionService, { autoSave: true }));
+  // Share Express session with Socket.IO
+  io.use((socket, next) => {
+    sessionService(socket.request, {}, next);
+  });
 
   io.use(async (socket, next) => {
-    const session = socket.handshake.session;
+    const session = socket.request.session;
     if (!session?.user?.id) return next(new Error('Not authenticated'));
 
   const user = await mdb.INTERNAL.user.findById(session.user.id);
