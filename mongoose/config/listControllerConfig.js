@@ -273,8 +273,8 @@ module.exports = {
   purchase: {
     title: 'Purchases',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ReadableString'],
-    fieldOrder: ['Number', 'SupplierId', 'SupplierCode', 'SupplierName', 'SupplierReference', 'Currency', 'DueDate', 'GrossAmount', 'HomeCurrencyGrossAmount', 'IssuedDate', 'FileCount', 'LineItems', 'NetAmount', 'NextNumber', 'OverdueDays', 'PaidDate', 'PaymentLines', 'Permalink', 'PreviousNumber', 'PurchaseInECMemberState', 'Status', 'StockManagementApplicable', 'TotalPaidAmount', 'VATAmount', 'AdditionalFieldValue', 'IsWhtDeductionToBeApplied', 'ReadableString', 'SubmissionDate', 'TaxMonth', 'TaxYear'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ReadableString','CISRCNetAmount', 'CISRCVatAmount','Permalink', 'PreviousNumber','IsCISReverseCharge','Type','SupplierCode', 'NextNumber', 'StockManagementApplicable', 'ProjectName','ProjectNumber', 'AdditionalFieldValue','SupplierId','FileCount', 'HomeCurrencyGrossAmount','IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent', 'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId', 'deletedAt', 'lastSeenRun', 'Currency'],
+    fieldOrder: ['Number', 'SupplierName', 'SupplierReference','GrossAmount', 'NetAmount', 'VATAmount', 'Status', 'TotalPaidAmount', 'IssuedDate','DueAmount', 'DueDate'],
     sortField: 'Number',
     sortOrder: 1,
     department: ['kashflow'],
