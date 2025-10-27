@@ -121,10 +121,96 @@ function makeClient() {
     async getCorrespondent(id) { if (!id) return null; const api = await createApi(); return (await api.get(`/correspondents/${id}/`)).data; },
     async getDocumentType(id) { if (!id) return null; const api = await createApi(); return (await api.get(`/document_types/${id}/`)).data; },
     async getTag(id) { if (!id) return null; const api = await createApi(); return (await api.get(`/tags/${id}/`)).data; },
+    async listTags({ page = 1, pageSize = 100, ordering = 'name' } = {}) {
+      const api = await createApi();
+      const params = { page, page_size: pageSize, ordering };
+      const { data } = await api.get('/tags/', { params });
+      return data;
+    },
+    async createTag({ name, slug = undefined, color = undefined } = {}) {
+      if (!name) throw new Error('createTag requires name');
+      const api = await createApi();
+      const payload = { name };
+      if (slug) payload.slug = slug;
+      if (color) payload.color = color;
+      const { data } = await api.post('/tags/', payload);
+      return data;
+    },
     async listCustomFields({ page = 1, pageSize = 100, ordering = 'name' } = {}) {
       const api = await createApi();
       const params = { page, page_size: pageSize, ordering };
       const { data } = await api.get('/custom_fields/', { params });
+      return data;
+    },
+    async createCustomField({ name, data_type = 'string', slug = undefined } = {}) {
+      const api = await createApi();
+      if (!name) throw new Error('createCustomField requires name');
+      const payload = { name, data_type };
+      if (slug) payload.slug = slug;
+      const { data } = await api.post('/custom_fields/', payload);
+      return data;
+    },
+    async updateDocumentCustomFields(documentId, nameValuePairs) {
+      if (!documentId) throw new Error('updateDocumentCustomFields requires documentId');
+      const api = await createApi();
+      // Build a map of existing custom fields on the document
+      const doc = await this.getDocument(documentId, { expand: ['custom_fields', 'custom_fields__field'] });
+      const existing = new Map(); // fieldId -> value
+      const existingByName = new Map(); // lower(name) -> fieldId
+      const rawCf = doc && (doc.custom_fields || doc.customFields) || [];
+      for (const entry of rawCf) {
+        const fid = typeof entry?.field === 'object' ? entry.field?.id : (typeof entry?.field === 'number' ? entry.field : undefined);
+        const fname = (typeof entry?.field === 'object' && entry.field?.name) ? String(entry.field.name) : undefined;
+        if (fid != null) existing.set(Number(fid), entry?.value);
+        if (fid != null && fname) existingByName.set(fname.trim().toLowerCase(), Number(fid));
+      }
+
+      // Fetch all custom field definitions to resolve names to ids
+      const allDefs = await this.listCustomFields({ page: 1, pageSize: 1000, ordering: 'name' });
+      const defs = Array.isArray(allDefs?.results) ? allDefs.results : [];
+      const idByName = new Map();
+      for (const d of defs) {
+        if (d?.name && typeof d.id === 'number') idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
+      }
+
+      // Resolve names to ids; create if missing
+      const resolveFieldId = async (name) => {
+        const key = String(name).trim().toLowerCase();
+        if (idByName.has(key)) return idByName.get(key);
+        // Try to create the custom field (string type)
+        try {
+          const created = await this.createCustomField({ name, data_type: 'string' });
+          if (created && typeof created.id === 'number') {
+            idByName.set(key, Number(created.id));
+            return Number(created.id);
+          }
+        } catch (_) {
+          // Ignore create failures; we'll skip setting this field
+        }
+        return null;
+      };
+
+      // Merge updates into existing map
+      for (const [name, value] of Object.entries(nameValuePairs || {})) {
+        if (value == null) continue;
+        const key = String(name).trim().toLowerCase();
+        let fid = idByName.get(key) || existingByName.get(key) || null;
+        if (fid == null) fid = await resolveFieldId(name);
+        if (fid != null) existing.set(Number(fid), String(value));
+      }
+
+      // Build payload array
+      const custom_fields = Array.from(existing.entries()).map(([fid, val]) => ({ field: Number(fid), value: val }));
+      const payload = { custom_fields };
+      const { data } = await api.patch(`/documents/${documentId}/`, payload);
+      return data;
+    },
+    async updateDocumentTags(documentId, tagIds) {
+      if (!documentId) throw new Error('updateDocumentTags requires documentId');
+      const api = await createApi();
+      const ids = (tagIds || []).map((t) => Number(t)).filter((n) => Number.isFinite(n));
+      const payload = { tags: ids };
+      const { data } = await api.patch(`/documents/${documentId}/`, payload);
       return data;
     },
   };

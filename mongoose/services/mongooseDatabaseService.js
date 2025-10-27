@@ -86,7 +86,7 @@ mdb.connect = async () => {
             const code = e?.code || e?.errno;
             const level = e?.level;
             if (code === 'ECONNRESET' || code === 'EPIPE' || level === 'client-socket') {
-              logger.warn('⚠️ SSH tunnel socket error ignored:', code || level);
+              logger.warn('⚠️ SSH tunnel socket error ignored: ' + (code || level));
               return;
             }
             logger.error('❌ SSH tunnel server error:', e);

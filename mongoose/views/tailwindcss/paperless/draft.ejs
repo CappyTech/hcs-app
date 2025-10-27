@@ -35,7 +35,6 @@
 							<span class="text-xs text-slate-500">(from <%= sources.SupplierReferenceSource %>)</span>
 						<% } %>
 					</div>
-					<div><span class="font-medium">Additional Ref (Link):</span> <%= draft.AdditionalFieldValue || '-' %></div>
 					<div><span class="font-medium">Issued Date:</span> <%= draft.IssuedDate ? new Date(draft.IssuedDate).toLocaleDateString() : '-' %>
 						<% if (sources && sources.IssuedDateSource) { %>
 							<span class="text-xs text-slate-500">(from <%= sources.IssuedDateSource %>)</span>
@@ -214,7 +213,13 @@
 						<div class="text-xs text-red-600 mt-1">Complete the items on the right to enable sending.</div>
 					<% } %>
 					<div class="text-xs text-slate-500 mt-1">
-						Tip: Uncheck “Dry run” to send via webhook if configured (KASHFLOW_CREATOR_WEBHOOK_URL).
+						<% if (sendDirectEnabled) { %>
+							Current mode: Direct to KashFlow (KfToken). Uncheck “Dry run” to send to <%= kashflowApiBaseUrl %>/purchases.
+						<% } else if (sendWebhookEnabled) { %>
+							Current mode: Webhook. Uncheck “Dry run” to send via KASHFLOW_CREATOR_WEBHOOK_URL.
+						<% } else { %>
+							No sender is configured. Even if you uncheck “Dry run”, nothing will be sent. Configure either session-based direct auth (KASHFLOW_API_USERNAME/PASSWORD + KASHFLOW_MEMORABLE, or KASHFLOW_EXTERNAL_TOKEN) or set KASHFLOW_CREATOR_WEBHOOK_URL.
+						<% } %>
 					</div>
 				</div>
 			</form>

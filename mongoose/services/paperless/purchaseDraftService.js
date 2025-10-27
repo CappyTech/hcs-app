@@ -216,7 +216,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     const indices = Array.from(lineGroups.keys()).sort((a,b)=>a-b);
     for (const i of indices) {
       const li = lineGroups.get(i) || {};
-      // If VAT is provided as a percent, convert to monetary amount
+      // If VAT is provided as a percent, convert to monetary amount and carry VATLevel
       const maybePercent = (v, hasDecimal, hasPct) => {
         if (hasPct) return true;
         if (v == null) return false;
@@ -226,8 +226,13 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
         return v >= 0 && v <= 100 && Math.floor(v) === v;
       };
       const asMoney = (x) => Number.isFinite(x) ? +x.toFixed(2) : undefined;
-      if (maybePercent(li.VATAmount, !!li.__VATHasDecimal, !!li.__VATHasPercentSymbol)) {
-        const pct = li.VATAmount / 100;
+      const origVATNumeric = li.VATAmount;
+      if (maybePercent(origVATNumeric, !!li.__VATHasDecimal, !!li.__VATHasPercentSymbol)) {
+        // Preserve the VAT percentage as VATLevel for KashFlow payload
+        if (typeof origVATNumeric === 'number' && Number.isFinite(origVATNumeric)) {
+          li.VATLevel = +origVATNumeric.toFixed(4);
+        }
+        const pct = origVATNumeric / 100;
         // Prefer Net to compute VAT; derive Net first when possible
         let netBase = li.NetAmount;
         if (netBase == null && li.Quantity != null && li.UnitPrice != null) {
@@ -272,6 +277,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
           UnitPrice: li.UnitPrice != null ? li.UnitPrice : undefined,
           NetAmount: li.NetAmount != null ? li.NetAmount : undefined,
           VATAmount: li.VATAmount != null ? li.VATAmount : undefined,
+          VATLevel: li.VATLevel != null ? li.VATLevel : undefined,
           GrossAmount: li.GrossAmount != null ? li.GrossAmount : undefined,
           NominalCode: li.NominalCode != null ? li.NominalCode : undefined,
         });
@@ -334,6 +340,16 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     }];
   }
   
+  // Sanitize line items: drop fields we don't want to carry forward
+  if (Array.isArray(lineItems) && lineItems.length > 0) {
+    lineItems = lineItems.map(li => {
+      if (!li || typeof li !== 'object') return li;
+      // Explicitly remove Disallowed and product-related fields
+      const { Disallowed, Product, ProductCode, ProductName, StockInfo, ...rest } = li;
+      return rest;
+    });
+  }
+  
   // Final safety: if we have line items, align header totals to the sum of lines
   if (Array.isArray(lineItems) && lineItems.length > 0) {
     const sums = lineItems.reduce((acc, it) => {
@@ -377,7 +393,6 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     SupplierName: supplierName || undefined,
     SupplierCode: supplierCode || undefined,
     SupplierReference: (supplierRef != null && !(typeof supplierRef === 'string' && supplierRef.trim() === '')) ? supplierRef : undefined,
-    AdditionalFieldValue: paperlessToken, // critical for linking back
 
     // Dates
     IssuedDate: issuedDate || undefined,
@@ -450,7 +465,7 @@ module.exports = {
  * - Shapes Currency as an object (Code, Name optional, ExchangeRate optional)
  * - Converts LineItems to use Rate (unit price) and adds sequential Number
  * - Formats dates as ISO strings acceptable by API (server may accept ISO)
- * - Carries Supplier fields and AdditionalFieldValue through
+ * - Carries Supplier fields through
  */
 function formatKFDate(d) {
   if (!d) return undefined;
@@ -475,10 +490,10 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
 
   const payload = {
     // Header (request fields only)
-    Number: typeof draft.Number === 'number' ? draft.Number : undefined,
     SupplierCode: draft.SupplierCode,
+    // Prefer SupplierCode; include SupplierId if available for robustness
+    SupplierId: typeof draft.SupplierId === 'number' ? draft.SupplierId : undefined,
     SupplierReference: draft.SupplierReference,
-    AdditionalFieldValue: draft.AdditionalFieldValue,
     IssuedDate: formatKFDate(draft.IssuedDate),
     DueDate: formatKFDate(draft.DueDate),
     ProjectNumber: typeof draft.ProjectNumber === 'number' ? draft.ProjectNumber : undefined,
@@ -490,20 +505,16 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
       // Only ExchangeRate is part of request model; others are response-only
       ExchangeRate: typeof opts.exchangeRate === 'number' ? opts.exchangeRate : undefined,
     },
-    LineItems: Array.isArray(draft.LineItems) ? draft.LineItems.map((li, idx) => ({
-      Number: idx + 1,
+    LineItems: Array.isArray(draft.LineItems) ? draft.LineItems.map((li) => ({
       Description: li.Description,
       Quantity: li.Quantity ?? 1,
       // KashFlow expects Rate (unit price). If only NetAmount was provided, fallback to that.
       Rate: li.UnitPrice ?? li.Rate ?? li.NetAmount ?? 0,
+      VATLevel: li.VATLevel,
       VATAmount: li.VATAmount,
       VATExempt: typeof li.VATExempt === 'boolean' ? li.VATExempt : undefined,
-      TaxCode: li.TaxCode,
       NominalCode: (typeof li.NominalCode === 'number' ? li.NominalCode : defaultNominal),
-      ProductCode: li.ProductCode,
       // Optional request fields
-      Disallowed: typeof li.Disallowed === 'boolean' ? li.Disallowed : undefined,
-      StockInfo: li.StockInfo,
       ProjectNumber: li.ProjectNumber,
     })) : [],
     PaymentLines: Array.isArray(draft.PaymentLines) ? draft.PaymentLines.map(pl => ({
@@ -519,6 +530,50 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
       PaymentProcessor: pl.PaymentProcessor,
     })) : undefined,
   };
+
+  // Optionally omit fields so the KashFlow API can apply its own defaults
+  // Configure via env:
+  // - KASHFLOW_OMIT_HEADER_FIELDS: comma-separated list of root payload keys to remove
+  // - KASHFLOW_OMIT_LINE_FIELDS: comma-separated list of LineItems keys to remove
+  // - KASHFLOW_DEFER_DEFAULTS=true: drop common defaultable fields when they are zero/falsey
+  try {
+    const omitHeader = (process.env.KASHFLOW_OMIT_HEADER_FIELDS || '')
+      .split(',').map(s => s.trim()).filter(Boolean);
+    const omitLine = (process.env.KASHFLOW_OMIT_LINE_FIELDS || '')
+      .split(',').map(s => s.trim()).filter(Boolean);
+    const deferDefaults = process.env.KASHFLOW_DEFER_DEFAULTS === 'true';
+
+    // Header omissions
+    for (const k of omitHeader) {
+      if (k in payload) delete payload[k];
+    }
+    if (deferDefaults) {
+      // Let API decide header defaults where safe
+      if (payload.ProjectNumber === 0) delete payload.ProjectNumber;
+      if (payload.IsCISReverseCharge === false) delete payload.IsCISReverseCharge;
+    }
+
+    // Line omissions and default deferrals
+    if (Array.isArray(payload.LineItems)) {
+      payload.LineItems = payload.LineItems.map(li => {
+        if (!li || typeof li !== 'object') return li;
+        // explicit omissions
+        for (const k of omitLine) {
+          if (k in li) delete li[k];
+        }
+        if (deferDefaults) {
+          // Common defaultable fields: let API decide
+          if (li.VATExempt === false) delete li.VATExempt;
+          if (li.VATLevel === 0) delete li.VATLevel; // avoid sending 0; let API choose default rate
+          if (li.ProjectNumber === 0) delete li.ProjectNumber;
+          if (li.GrossAmount === 0) delete li.GrossAmount;
+          if (li.ProductCode === 0) delete li.ProductCode;
+          if (li.ProductName === '') delete li.ProductName;
+        }
+        return li;
+      });
+    }
+  } catch (_) { /* ignore filtering issues */ }
 
   // Remove undefined keys recursively to keep payload tidy
   const prune = (obj) => {

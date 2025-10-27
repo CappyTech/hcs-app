@@ -27,6 +27,13 @@ const OcrDocumentSchema = new mongoose.Schema({
   originalFileName: String,
   archivedFileName: String,
   customFields: [CustomFieldSchema],
+  // Optional linkage to a created KashFlow Purchase (post-send enrichment)
+  kashflowPurchaseId: { type: Number, default: null },
+  kashflowPurchaseNumber: { type: Number, default: null },
+  kashflowPermalink: { type: String, default: null },
+  lastSentAt: { type: Date, default: null },
+  lastSendMode: { type: String, enum: ['direct', 'webhook', null], default: null },
+  lastSendStatus: { type: Number, default: null },
   fetchedAt: { type: Date, default: () => new Date() },
   error: { type: String, default: null },
 }, { timestamps: true });

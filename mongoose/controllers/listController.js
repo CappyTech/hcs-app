@@ -87,7 +87,23 @@ const generateHeaders = (firstDoc, config = {}) => {
           : [config.linkField || 'title'];
         const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(escaped, 'i');
-        mongoFilter.$or = searchFields.map(f => ({ [f]: regex }));
+        const orConds = [];
+        for (const f of searchFields) {
+          // Type-aware search: use numeric equality for number fields, regex for strings
+          const pathInfo = model?.schema?.path?.(f) || null;
+          const instance = pathInfo ? pathInfo.instance : null; // 'Number', 'String', etc.
+          if (instance === 'Number') {
+            const n = Number(query);
+            if (!Number.isNaN(n)) {
+              orConds.push({ [f]: n });
+            }
+            // Skip non-numeric queries for numeric fields to avoid cast errors
+          } else if (instance === 'String' || instance === 'Mixed' || !instance) {
+            // Default to regex for strings or unknown types
+            orConds.push({ [f]: regex });
+          }
+        }
+        if (orConds.length) mongoFilter.$or = orConds;
       }
 
       if (tabsBy && activeTab) {
