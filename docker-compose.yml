@@ -1,36 +1,42 @@
 services:
-
-  app:
+  hcs-app:
     # Published image from CI (override via compose.env):
-    image: ${APP_IMAGE:-ghcr.io/cappytech/sms}:${APP_IMAGE_TAG:-ci-latest}
+    image: ${APP_IMAGE:-ghcr.io/cappytech/hcs-app}:${APP_IMAGE_TAG:-ci-latest}
     pull_policy: always
-    container_name: sms-app
+    container_name: hcs-app
     restart: unless-stopped
     # Load environment variables from compose.env (create it from compose.env.example)
     env_file:
       - compose.env
-    # Only set container-specific overrides here; all other variables come from env_file: compose.env
-    environment:
-      - SSH_TUNNEL_ENABLED=false
-      - MONGO_HOST=hcs-mongo
-      # Keep Node's listen port aligned with port mapping
-      - PORT=${APP_PORT:-9000}
-    ports:
-      - "${FORWARD_PORT:-9000}:${PORT:-9000}"
     volumes:
       - ./uploads:/uploads
       - ./logs:/logs
-    # Uncomment if you want live editing (not recommended for prod)
-      - ./:/app
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:${PORT:-9000}/healthz || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:${PORT}/healthz || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 20s
     networks:
       - hcs-net
-
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # certificates & CA
+      - caddy_config:/config
+    networks:
+      - hcs-net
+    depends_on:
+      - hcs-app
 networks:
   hcs-net:
     external: true
+volumes:
+  caddy_data:
+  caddy_config:
