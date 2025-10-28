@@ -15,7 +15,13 @@ module.exports = function createSessionService(mongoClient) {
             process.env.SESSION_SECRET = require('crypto').randomBytes(32).toString('hex');
         }
     }
-    return session({
+        const cookieSecure = (process.env.COOKIE_SECURE || '').toLowerCase() === 'true'
+            ? true
+            : (process.env.COOKIE_SECURE || '').toLowerCase() === 'false'
+                ? false
+                : process.env.NODE_ENV === 'production';
+
+        return session({
         name: COOKIE_NAME,
         key: COOKIE_NAME,
         secret: process.env.SESSION_SECRET,
@@ -31,7 +37,7 @@ module.exports = function createSessionService(mongoClient) {
             crypto: { secret: process.env.SESSION_SECRET }
         }),
         cookie: {
-            secure: process.env.NODE_ENV === 'production',
+            secure: cookieSecure,
             httpOnly: true,
             maxAge: 1000 * 60 * 60 * 8,
             sameSite: 'strict',

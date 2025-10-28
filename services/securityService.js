@@ -66,11 +66,17 @@ if (isDev) {
   cspDirectives.connectSrc.push("wss://app.heroncs.co.uk");
 }
 
+// Enable HSTS only in production by default; allow explicit override via ENABLE_HSTS
+// Set ENABLE_HSTS=false in local/dev to avoid browsers forcing HTTPS for your domain.
+const enableHsts = (process.env.ENABLE_HSTS || '').toLowerCase() === 'true'
+  || (process.env.ENABLE_HSTS === undefined && !isDev);
+
 const securityService = [
   helmet({
     contentSecurityPolicy: { directives: cspDirectives },
     referrerPolicy: { policy: 'no-referrer' },
     crossOriginEmbedderPolicy: false, // adjust if you need COEP
+    hsts: enableHsts ? { maxAge: 15552000 } : false,
   }),
   xss()
 ];

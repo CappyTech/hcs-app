@@ -4,7 +4,7 @@
 FROM node:20-alpine
 
 # Set working directory
-WORKDIR /usr/src/app
+WORKDIR /mnt/data/hcs/app
 
 # Install OS deps if needed (bash, openssl), keep minimal
 RUN apk add --no-cache dumb-init curl
@@ -28,8 +28,8 @@ COPY . .
 # Build step (if any). Currently none.
 
 # Expose app port
-ENV PORT=3000
-EXPOSE 3000
+ENV PORT=5000
+EXPOSE 5000
 
 # Non-root user for security (optional)
 # RUN addgroup -S app && adduser -S app -G app
