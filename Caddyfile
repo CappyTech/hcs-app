@@ -1,0 +1,14 @@
+:80 {
+  redir hcs-app:5000
+}
+hcs.local {
+  tls internal
+  encode zstd gzip
+
+  header {
+    Cross-Origin-Opener-Policy "same-origin"
+    Origin-Agent-Cluster "?1"
+  }
+
+  reverse_proxy hcs-app:5000
+}
