@@ -7,9 +7,22 @@ let localPort = null;
 
 function makeClient() {
   const useSsh = process.env.PAPERLESS_SSH_TUNNEL_ENABLED === 'true';
-  let baseURL = process.env.PAPERLESS_BASE_URL
-    ? 'http://' + process.env.PAPERLESS_BASE_URL + ':' + (process.env.PAPERLESS_PORT || '8000')
-    : null;
+  // Build a robust baseURL that accepts either a hostname/IP (with optional port)
+  // OR a full http(s) URL (with or without trailing /api)
+  const buildBaseURL = () => {
+    const raw = (process.env.PAPERLESS_BASE_URL || '').trim();
+    if (!raw) return null;
+    let url = raw;
+    if (!/^https?:\/\//i.test(url)) {
+      // Treat as host or host:port; compose with scheme and optional env port
+      const port = (process.env.PAPERLESS_PORT || '8000').toString();
+      url = `http://${url}${/:[0-9]+$/.test(url) ? '' : `:${port}`}`;
+    }
+    // Ensure trailing /api
+    if (!/\/api(\/|$)/i.test(url)) url = url.replace(/\/+$/, '') + '/api';
+    return url;
+  };
+  let baseURL = buildBaseURL();
   const token = process.env.PAPERLESS_TOKEN;
   const accept = process.env.PAPERLESS_ACCEPT || 'application/json; version=6';
   const verbose = process.env.PAPERLESS_VERBOSE === 'true' || process.env.DEBUG;
@@ -20,9 +33,6 @@ function makeClient() {
   // If not using SSH tunnel, a baseURL must be provided
   if (!useSsh) {
     if (!baseURL) throw new Error('PAPERLESS_BASE_URL is required when PAPERLESS_SSH_TUNNEL_ENABLED is not true');
-    if (!/\/api(\/|$)/.test(baseURL)) {
-      baseURL = baseURL.replace(/\/+$/, '') + '/api';
-    }
   }
 
   const ensureTunnel = async () => {
@@ -80,9 +90,7 @@ function makeClient() {
     if (useSsh) {
       const port = await ensureTunnel();
       baseURL = `http://127.0.0.1:${port}/api`;
-    } else {
-      // baseURL already validated/normalized above
-    }
+    } // else: baseURL already validated/normalized above
     const api = axios.create({
       baseURL,
       timeout: 20000,
