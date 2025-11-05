@@ -6,9 +6,13 @@
     </div>
   </div>
 
-  <form method="get" class="mb-4 flex flex-wrap gap-2 items-center" id="list-controls">
+  <form method="get" class="mb-4 flex flex-wrap gap-3 items-center" id="list-controls">
     <input name="q" value="<%= q %>" placeholder="Search title/OCR/correspondent/type"
            class="text-sm border rounded px-3 py-1 w-64 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600" />
+    <label class="inline-flex items-center gap-2 text-sm">
+      <input type="checkbox" name="done" value="1" <%= done ? 'checked' : '' %> class="rounded border-slate-300 dark:border-gray-600 dark:bg-gray-800 accent-green-600" />
+      Only data-entry-done
+    </label>
     <button class="text-sm bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition">Search</button>
   </form>
 
@@ -22,6 +26,7 @@
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Title</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Correspondent</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Type</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Tags</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Modified</th>
         </tr>
       </thead>
@@ -32,6 +37,18 @@
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.title || '-' %></td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.correspondent?.name || '-' %></td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.documentType?.name || '-' %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700">
+              <% const _tags = Array.isArray(it.tags) ? it.tags : []; const _tagNames = _tags.map(t => (t && (t.name || t.Name)) || (typeof t === 'string' ? t : null)).filter(Boolean); %>
+              <% if (_tagNames.length === 0) { %>
+                <span class="text-slate-400">-</span>
+              <% } else { %>
+                <div class="flex flex-wrap gap-1">
+                  <% _tagNames.forEach(n => { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700"><%= n %></span>
+                  <% }) %>
+                </div>
+              <% } %>
+            </td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.modified ? new Date(it.modified).toLocaleString() : '-' %></td>
           </tr>
         <% }) %>
@@ -43,10 +60,10 @@
     <div>Page <%= page %> of <%= pages %></div>
     <div class="flex gap-2">
       <% if (page > 1) { %>
-        <a class="px-3 py-1 rounded border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %>">Prev</a>
+        <a class="px-3 py-1 rounded border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %>">Prev</a>
       <% } %>
       <% if (page < pages) { %>
-        <a class="px-3 py-1 rounded border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %>">Next</a>
+        <a class="px-3 py-1 rounded border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %>">Next</a>
       <% } %>
     </div>
   </div>

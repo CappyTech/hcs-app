@@ -7,20 +7,24 @@
 	<% const lineItems = Array.isArray(draft.LineItems) ? draft.LineItems : []; %>
 	<% const hasLineItems = lineItems.length > 0; %>
 	<% const hasNominalPerLine = hasLineItems && (lineItems.every(li => typeof li.NominalCode === 'number') || typeof supplierDefaultNominal === 'number'); %>
+	<% /* Coerce numeric strings to numbers for robust calculations (handles 0.5, 1.5, etc.) */ %>
+	<% const toNum = (v) => { if (v == null || v === '') return null; const n = (typeof v === 'number') ? v : parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; }; %>
 	<% const net = draft.NetAmount, vat = draft.VATAmount, gross = draft.GrossAmount; %>
-	<% const totalsConsistent = (net != null && vat != null && gross != null) ? Math.abs((net + vat) - gross) < 0.01 : true; %>
+	<% /* Use numeric-coerced copies for arithmetic consistency checks */ %>
+	<% const _netH = toNum(draft.NetAmount), _vatH = toNum(draft.VATAmount), _grossH = toNum(draft.GrossAmount); %>
+	<% const totalsConsistent = (_netH != null && _vatH != null && _grossH != null) ? Math.abs((_netH + _vatH) - _grossH) < 0.01 : true; %>
 	<% const hasCurrency = !!draft.Currency; %>
 	<% const hasSupplierRef = !!draft.SupplierReference; %>
 	<% const hasIssuedDate = !!draft.IssuedDate; %>
 	<% const canSend = hasSupplier && hasLineItems && hasNominalPerLine && hasCurrency && totalsConsistent; %>
 	<% const usedCustomFieldLines = (draft.Debug && Array.isArray(draft.Debug.EnumeratedLineItems) && draft.Debug.EnumeratedLineItems.length > 0); %>
-	<% const sumNet = +lineItems.reduce((a,li)=>a + (typeof li.NetAmount === 'number' ? li.NetAmount : 0), 0).toFixed(2); %>
-	<% const sumVAT = +lineItems.reduce((a,li)=>a + (typeof li.VATAmount === 'number' ? li.VATAmount : 0), 0).toFixed(2); %>
-	<% const sumGross = +lineItems.reduce((a,li)=>a + (typeof li.GrossAmount === 'number' ? li.GrossAmount : 0), 0).toFixed(2); %>
+	<% const sumNet = +lineItems.reduce((a,li)=>{ const n = toNum(li.NetAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
+	<% const sumVAT = +lineItems.reduce((a,li)=>{ const n = toNum(li.VATAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
+	<% const sumGross = +lineItems.reduce((a,li)=>{ const n = toNum(li.GrossAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
 	<% const sumGrossDerived = +((sumNet + sumVAT)).toFixed(2); %>
-	<% const headerVsLinesNetOk = (draft.NetAmount == null) || Math.abs((draft.NetAmount) - sumNet) < 0.01; %>
-	<% const headerVsLinesVatOk = (draft.VATAmount == null) || Math.abs((draft.VATAmount) - sumVAT) < 0.01; %>
-	<% const headerVsLinesGrossOk = (draft.GrossAmount == null) || Math.abs((draft.GrossAmount) - sumGrossDerived) < 0.01; %>
+	<% const headerVsLinesNetOk = (_netH == null) || Math.abs(_netH - sumNet) < 0.01; %>
+	<% const headerVsLinesVatOk = (_vatH == null) || Math.abs(_vatH - sumVAT) < 0.01; %>
+	<% const headerVsLinesGrossOk = (_grossH == null) || Math.abs(_grossH - sumGrossDerived) < 0.01; %>
 
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
 		<!-- Left: Purchase Invoice -->
@@ -103,16 +107,19 @@
 									<% const __nomInfo = (__rowCode != null && nominalMap) ? nominalMap[__rowCode] : null; %>
 									<% const __descFromNominal = __nomInfo ? (__nomInfo.Description || __nomInfo.Name || null) : null; %>
 									<td class="p-2 desc-cell" data-has-desc="<%= (li.Description && String(li.Description).trim() !== '') ? 'true' : 'false' %>"><%= li.Description || __descFromNominal || '-' %></td>
-									<td class="p-2"><%= li.Quantity ?? 1 %></td>
-									<td class="p-2"><%= li.UnitPrice ?? '-' %></td>
-									<td class="p-2"><%= li.NetAmount ?? '-' %></td>
-									<td class="p-2"><%= li.VATAmount ?? '-' %></td>
+									<td class="p-2"><% const __qty = toNum(li.Quantity); %><%= (__qty != null ? __qty : (li.Quantity ?? 1)) %></td>
+									<td class="p-2"><% const __unit = toNum(li.UnitPrice) ?? toNum(li.Rate); %><%= (__unit != null ? __unit.toFixed(2) : (li.UnitPrice ?? '-')) %></td>
+									<td class="p-2"><% const __net = toNum(li.NetAmount); %>
+										<%= (__net != null ? __net.toFixed(2) : (li.NetAmount ?? '-')) %>
+										<% if (__net != null && __qty != null && __unit != null) { const __netExp = +(__qty * __unit).toFixed(2); if (Math.abs(__net - __netExp) >= 0.01) { %>
+											<span class="ml-1 text-[10px] text-red-600" title="Expected Qty × Unit Price">exp <%= __netExp.toFixed(2) %></span>
+										<% } } %>
+									</td>
+									<td class="p-2"><% const __vatCell = toNum(li.VATAmount); %><%= (__vatCell != null ? __vatCell.toFixed(2) : (li.VATAmount ?? '-')) %></td>
 									<% 
-									  const __qty = (typeof li.Quantity === 'number') ? li.Quantity : null;
-									  const __rate = (typeof li.UnitPrice === 'number') ? li.UnitPrice : (typeof li.Rate === 'number' ? li.Rate : null);
-									  const __net = (typeof li.NetAmount === 'number') ? li.NetAmount : null;
-									  const __vat = (typeof li.VATAmount === 'number') ? li.VATAmount : null;
-									  const __gross = (typeof li.GrossAmount === 'number') ? li.GrossAmount : null;
+									  const __rate = toNum(li.UnitPrice) ?? toNum(li.Rate);
+									  const __vat = toNum(li.VATAmount);
+									  const __gross = toNum(li.GrossAmount);
 									  const __netExpected = (__qty!=null && __rate!=null) ? +(__qty * __rate).toFixed(2) : null;
 									  const __netOk = (__netExpected==null || __net==null) ? true : Math.abs(__net - __netExpected) < 0.01;
 									  // If VAT is provided as a percent (e.g., 20 for 20%), convert to a monetary value for consistency checks
@@ -139,7 +146,7 @@
 									  const __rowOk = __netOk && __grossOk;
 									%>
 									<td class="p-2">
-										<%= (__grossDisplay!=null ? __grossDisplay : '-') %>
+										<%= (__grossDisplay!=null ? __grossDisplay.toFixed(2) : '-') %>
 										<% if (__useDerivedGross) { %>
 											<span class="text-[10px] text-slate-500" title="Derived from Net + VAT">(calc)</span>
 										<% } %>

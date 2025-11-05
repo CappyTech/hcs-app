@@ -19,15 +19,31 @@ exports.listOcr = async (req, res, next) => {
     const q = (req.query.q || '').trim();
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
     const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || '25', 10), 1), 200);
+    const tagParam = String(req.query.tag || '').trim().toLowerCase();
+    const onlyDone = ['1','true','on','yes'].includes(String(req.query.done || '').toLowerCase()) || tagParam === 'data-entry-done';
 
     const filter = {};
     if (q) {
+      const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { title: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-        { ocrText: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+        { title: new RegExp(safe, 'i') },
+        { ocrText: new RegExp(safe, 'i') },
         { 'correspondent.name': new RegExp(q, 'i') },
         { 'documentType.name': new RegExp(q, 'i') },
       ];
+    }
+
+    // Optional filter: only documents tagged as data-entry-done
+    if (onlyDone) {
+      const r = new RegExp('^\\s*data[-_\\s]?entry[-_\\s]?done\\s*$', 'i');
+      const tagCond = { $or: [
+        { 'tags.name': r },
+        { 'tags.Name': r },
+        // For string tags array
+        { tags: { $elemMatch: { $regex: r } } },
+      ] };
+      filter.$and = filter.$and || [];
+      filter.$and.push(tagCond);
     }
 
     const total = await OcrDocument.countDocuments(filter);
@@ -40,6 +56,7 @@ exports.listOcr = async (req, res, next) => {
     res.render(path.join('tailwindcss', 'paperless',  'list'), {
       title: 'Paperless OCR Documents',
       q, page, pageSize, total,
+      done: onlyDone,
       items,
       pages: Math.max(1, Math.ceil(total / pageSize)),
     });

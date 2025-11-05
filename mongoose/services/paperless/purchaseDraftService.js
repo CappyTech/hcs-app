@@ -135,6 +135,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
   let lineItemsRaw = findCustomField(cf, mapping.LineItems);
   let lineItems = undefined;
   let enumeratedItems = undefined; // debug capture of _LineN parsing
+  let corrections = []; // debug capture of auto-corrections applied to lines
   if (lineItemsRaw != null) {
     if (Array.isArray(lineItemsRaw)) {
       lineItems = lineItemsRaw;
@@ -256,6 +257,14 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
         const n = +(li.Quantity * li.UnitPrice).toFixed(2);
         if (Number.isFinite(n)) li.NetAmount = n;
       }
+      // If NetAmount is present but inconsistent with Qty×UnitPrice, correct it
+      if (li.Quantity != null && li.UnitPrice != null && typeof li.NetAmount === 'number' && Number.isFinite(li.NetAmount)) {
+        const expectedNet = +((li.Quantity * li.UnitPrice)).toFixed(2);
+        if (Number.isFinite(expectedNet) && Math.abs(li.NetAmount - expectedNet) >= 0.01) {
+          corrections.push({ Line: i, Field: 'NetAmount', From: li.NetAmount, To: expectedNet, Reason: 'Qty×UnitPrice' });
+          li.NetAmount = expectedNet;
+        }
+      }
       if (li.GrossAmount == null && li.NetAmount != null && li.VATAmount != null) {
         const g = +(li.NetAmount + li.VATAmount).toFixed(2);
         if (Number.isFinite(g)) li.GrossAmount = g;
@@ -263,6 +272,34 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
       if (li.VATAmount == null && li.NetAmount != null && li.GrossAmount != null) {
         const v = +(li.GrossAmount - li.NetAmount).toFixed(2);
         if (Number.isFinite(v)) li.VATAmount = v;
+      }
+      // If NetAmount changed or exists, ensure dependent fields are consistent
+      if (typeof li.NetAmount === 'number' && Number.isFinite(li.NetAmount)) {
+        if (typeof li.VATLevel === 'number' && Number.isFinite(li.VATLevel)) {
+          const pct = li.VATLevel / 100;
+          const newVat = +((li.NetAmount) * pct).toFixed(2);
+          if (li.VATAmount == null || Math.abs((li.VATAmount) - newVat) >= 0.01) {
+            corrections.push({ Line: i, Field: 'VATAmount', From: li.VATAmount ?? null, To: newVat, Reason: 'VATLevel% of Net' });
+            li.VATAmount = newVat;
+          }
+          const newGross = +((li.NetAmount) + (li.VATAmount || 0)).toFixed(2);
+          if (li.GrossAmount == null || Math.abs((li.GrossAmount) - newGross) >= 0.01) {
+            corrections.push({ Line: i, Field: 'GrossAmount', From: li.GrossAmount ?? null, To: newGross, Reason: 'Net + VAT' });
+            li.GrossAmount = newGross;
+          }
+        } else if (li.VATAmount != null && typeof li.VATAmount === 'number' && Number.isFinite(li.VATAmount)) {
+          const newGross = +((li.NetAmount) + (li.VATAmount)).toFixed(2);
+          if (li.GrossAmount == null || Math.abs((li.GrossAmount) - newGross) >= 0.01) {
+            corrections.push({ Line: i, Field: 'GrossAmount', From: li.GrossAmount ?? null, To: newGross, Reason: 'Net + VAT' });
+            li.GrossAmount = newGross;
+          }
+        } else if (li.GrossAmount != null && typeof li.GrossAmount === 'number' && Number.isFinite(li.GrossAmount)) {
+          const newVat = +((li.GrossAmount) - (li.NetAmount)).toFixed(2);
+          if (li.VATAmount == null || Math.abs((li.VATAmount) - newVat) >= 0.01) {
+            corrections.push({ Line: i, Field: 'VATAmount', From: li.VATAmount ?? null, To: newVat, Reason: 'Gross - Net' });
+            li.VATAmount = newVat;
+          }
+        }
       }
       // Only include lines that have at least a description or a numeric amount/qty
       const hasContent = (
@@ -420,7 +457,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
   };
 
   // Attach debug info if enumerated custom fields were parsed
-  if ((Array.isArray(enumeratedItems) && enumeratedItems.length > 0) || typeof __HEADER_ALIGNED_FROM_LINES__ === 'object') {
+  if ((Array.isArray(enumeratedItems) && enumeratedItems.length > 0) || typeof __HEADER_ALIGNED_FROM_LINES__ === 'object' || (Array.isArray(corrections) && corrections.length > 0)) {
     // Provide helpful totals for the UI to compare
     let sums;
     if (Array.isArray(enumeratedItems) && enumeratedItems.length > 0) {
@@ -437,7 +474,8 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     draft.Debug = { ...(draft.Debug || {}),
       ...(Array.isArray(enumeratedItems) && enumeratedItems.length > 0 ? { EnumeratedLineItems: enumeratedItems, TotalsFromLines: sums } : {}),
       ...(__HEADER_ALIGNED_FROM_LINES__ ? { HeaderAlignedFromLines: __HEADER_ALIGNED_FROM_LINES__ } : {}),
-      ...(typeof __ROUND_ADJUST__ === 'object' ? { RoundingAdjustment: __ROUND_ADJUST__ } : {})
+      ...(typeof __ROUND_ADJUST__ === 'object' ? { RoundingAdjustment: __ROUND_ADJUST__ } : {}),
+      ...(Array.isArray(corrections) && corrections.length > 0 ? { Corrections: corrections } : {})
     };
   }
 
