@@ -3,7 +3,7 @@ const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const axios = require('axios');
-const { grabPaperlessOCR } = require('../services/grabServicePaperless');
+const { grabPaperlessOCR, ingestOnePaperlessDoc } = require('../services/grabServicePaperless');
 const { buildPurchaseDraftById, buildKashFlowPayloadFromDraft, defaultMap } = require('../services/paperless/purchaseDraftService');
 const { updatePaperlessWithKashFlowInfo, updatePaperlessDocumentTags } = require('../services/paperless/paperlessUpdateService');
 
@@ -48,7 +48,7 @@ exports.listOcr = async (req, res, next) => {
 
     const total = await OcrDocument.countDocuments(filter);
     const items = await OcrDocument.find(filter)
-      .sort({ modified: -1, _id: -1 })
+      .sort({ paperlessId: -1, _id: -1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .lean();
@@ -362,6 +362,13 @@ exports.sendDraftToKashflow = async (req, res, next) => {
           logger.warn(`Async updatePaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`);
         });
 
+        // Immediately ingest the same file back into our database so UI reflects latest tags/fields
+        try {
+          await ingestOnePaperlessDoc(paperlessId);
+        } catch (e) {
+          logger.warn(`Post-send ingest failed for paperlessId=${paperlessId}: ${e.message}`);
+        }
+
       } catch (sendErr) {
         const status = sendErr?.response?.status;
         const data = sendErr?.response?.data;
@@ -427,6 +434,13 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         updatePaperlessWithKashFlowInfo(paperlessId, resp.data, resp.status).catch((e) => {
           logger.warn(`Async updatePaperlessWithKashFlowInfo (webhook) failed for paperlessId=${paperlessId}: ${e.message}`);
         });
+
+        // Ingest latest state back into Mongo immediately
+        try {
+          await ingestOnePaperlessDoc(paperlessId);
+        } catch (e) {
+          logger.warn(`Post-webhook ingest failed for paperlessId=${paperlessId}: ${e.message}`);
+        }
       } catch (sendErr) {
         const status = sendErr?.response?.status;
         const detail = sendErr?.response?.data || { error: sendErr.message };

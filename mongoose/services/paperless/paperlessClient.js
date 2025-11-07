@@ -15,8 +15,20 @@ function makeClient() {
     let url = raw;
     if (!/^https?:\/\//i.test(url)) {
       // Treat as host or host:port; compose with scheme and optional env port
+      const noPort = String(process.env.NO_PORT || '').toLowerCase() === 'true';
+      const scheme = (process.env.PAPERLESS_SCHEME || process.env.PAPERLESS_PROTOCOL || (noPort ? 'https' : 'http')).toString();
+      const hasExplicitPort = /:[0-9]+$/.test(url);
       const port = (process.env.PAPERLESS_PORT || '8000').toString();
-      url = `http://${url}${/:[0-9]+$/.test(url) ? '' : `:${port}`}`;
+      url = `${scheme}://${url}${(noPort || hasExplicitPort) ? '' : `:${port}`}`;
+    }
+    // If NO_PORT is true, strip any explicit port from the URL (use standard 80/443 via reverse proxy)
+    const noPort = String(process.env.NO_PORT || '').toLowerCase() === 'true';
+    if (noPort) {
+      try {
+        const u = new URL(url);
+        u.port = '';
+        url = u.origin + u.pathname + u.search + u.hash;
+      } catch (_) { /* ignore parse issues; keep url as-is */ }
     }
     // Ensure trailing /api
     if (!/\/api(\/|$)/i.test(url)) url = url.replace(/\/+$/, '') + '/api';

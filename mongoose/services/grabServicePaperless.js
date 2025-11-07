@@ -255,4 +255,83 @@ async function grabPaperlessOCR(options = {}) {
   return { processed, skipped, failed };
 }
 
-module.exports = { grabPaperlessOCR };
+// Ingest a single Paperless document by ID and upsert into Mongo
+async function ingestOnePaperlessDoc(paperlessId) {
+  if (!Number.isFinite(Number(paperlessId))) throw new Error('paperlessId must be a number');
+  await mdb.connect();
+  const api = makeClient();
+  const { OcrDocument, OcrDocumentIngest } = mdb.PAPERLESS;
+  if (!OcrDocument || !OcrDocumentIngest) {
+    throw new Error('PAPERLESS models not loaded. Ensure OcrDocument and OcrDocumentIngest exist.');
+  }
+
+  // Fetch full document with expansions so we can resolve custom fields cleanly
+  const doc = await api.getDocument(Number(paperlessId), { expand: ['custom_fields', 'custom_fields__field'] });
+  if (!doc || typeof doc.id !== 'number') throw new Error('Paperless document not found');
+
+  const [correspondent, docType, tagsResolved] = await Promise.all([
+    api.getCorrespondent(doc.correspondent).catch(() => null),
+    api.getDocumentType(doc.document_type).catch(() => null),
+    Promise.all((doc.tags || []).map((id) => api.getTag(id).catch(() => null))).then((a) => a.filter(Boolean)),
+  ]);
+
+  const mapCF = (entry) => {
+    const fieldObj = entry && typeof entry.field === 'object' ? entry.field : null;
+    const fieldId = fieldObj ? Number(fieldObj.id) : (typeof entry.field === 'number' ? Number(entry.field) : Number(entry.fieldId || entry.field_id || entry.id));
+    const fieldName = fieldObj && fieldObj.name ? String(fieldObj.name) : String(entry.name || entry.fieldName || entry.field_name || '');
+    const value = typeof entry.value !== 'undefined' ? entry.value : entry.val ?? null;
+    return { fieldId: Number.isFinite(fieldId) ? fieldId : undefined, fieldName: fieldName || undefined, value };
+  };
+  const customFieldsRaw = doc.custom_fields || doc.customFields || [];
+  const customFields = Array.isArray(customFieldsRaw) ? customFieldsRaw.map(mapCF).filter((x) => (x.fieldId || x.fieldName || typeof x.value !== 'undefined')) : [];
+
+  const modified = doc.modified ? new Date(doc.modified) : null;
+  const record = {
+    paperlessId: doc.id,
+    title: doc.title || null,
+    ocrText: doc.content || '',
+    correspondent: correspondent ? { id: correspondent.id, name: correspondent.name } : undefined,
+    documentType: docType ? { id: docType.id, name: docType.name } : undefined,
+    tags: (tagsResolved || []).map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
+    created: doc.created ? new Date(doc.created) : undefined,
+    added: doc.added ? new Date(doc.added) : undefined,
+    modified,
+    archiveSerialNumber: doc.archive_serial_number || null,
+    originalFileName: doc.original_file_name || null,
+    archivedFileName: doc.archived_file_name || null,
+    customFields,
+  };
+
+  const normForHash = {
+    ...record,
+    tags: (record.tags || []).slice().sort((a, b) => (a.id - b.id) || String(a.name).localeCompare(String(b.name))),
+    customFields: (record.customFields || []).slice().sort((a, b) => (Number(a.fieldId || 0) - Number(b.fieldId || 0)) || String(a.fieldName || '').localeCompare(String(b.fieldName || ''))),
+  };
+  const contentHash = sha256(stableStringify(normForHash));
+
+  // Upsert document and tracker
+  await OcrDocument.updateOne(
+    { paperlessId: doc.id },
+    { $set: { ...record, fetchedAt: new Date(), error: null } },
+    { upsert: true }
+  );
+  await OcrDocumentIngest.updateOne(
+    { paperlessId: doc.id },
+    {
+      $set: {
+        paperlessId: doc.id,
+        lastModified: modified || null,
+        lastContentHash: contentHash,
+        lastFetchedAt: new Date(),
+        status: 'fetched',
+        error: null,
+      },
+    },
+    { upsert: true }
+  );
+
+  if (VERBOSE) logger.info(`[paperless] Ingested single doc paperlessId=${doc.id}`);
+  return { paperlessId: doc.id, status: 'fetched' };
+}
+
+module.exports = { grabPaperlessOCR, ingestOnePaperlessDoc };
