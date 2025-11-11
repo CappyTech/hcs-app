@@ -7,7 +7,7 @@
           <a href="/daily/<%= day %>" class="hover:underline hover:text-green-700 dark:hover:text-green-300">
             <%= moment(day).format('DD/MM/YYYY') %>
           </a><br>
-          <span class="text-gray-600 dark:text-gray-400"><%= moment(day).format('dddd') %></span>
+          <span class="text-gray-600 dark:text-gray-400 font-bold"><%= moment(day).format('dddd') %></span>
         </th>
       <% }); %>
       <% if (!isManagementView) { %>

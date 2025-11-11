@@ -112,6 +112,25 @@ function makeClient() {
       // eslint-disable-next-line no-console
       console.log(`[paperlessClient] baseURL=${baseURL} accept="${accept}"${useSsh ? ' (via SSH tunnel)' : ''}`);
     }
+    // Attach response interceptor to provide better diagnostics for 400-series errors
+    api.interceptors.response.use(
+      (resp) => resp,
+      async (error) => {
+        const status = error?.response?.status;
+        if (status === 400 && error?.config && !error.config.__acceptFallbackTried) {
+          // Some Paperless installs reject versioned Accept header; retry once without version
+          const cfg = { ...error.config, headers: { ...(error.config.headers || {}) } };
+          delete cfg.headers.Accept;
+          cfg.__acceptFallbackTried = true;
+          if (process.env.PAPERLESS_VERBOSE === 'true' || process.env.DEBUG) {
+            console.warn('[paperlessClient] 400 received; retrying without Accept header for', cfg.url || cfg.baseURL);
+          }
+          try { return await axios(cfg); } catch (e) { throw e; }
+        }
+        return Promise.reject(error);
+      }
+    );
+
     return api;
   };
 

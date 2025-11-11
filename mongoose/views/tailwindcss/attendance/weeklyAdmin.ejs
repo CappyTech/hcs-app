@@ -66,22 +66,22 @@
     }) %>
   </div>
 
-  <% if (activeJobs && activeJobs.length > 0) { %>
-  <h3 class="mt-5 mb-3 text-xl font-semibold text-gray-900 dark:text-gray-100">Scheduled Jobs</h3>
+  <% if (activeProjects && activeProjects.length > 0) { %>
+    <h3 class="mt-5 mb-3 text-xl font-semibold text-gray-900 dark:text-gray-100">
+      Scheduled Projects
+      <span class="ml-2 inline-flex items-center justify-center rounded-full bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 px-2 py-0.5 text-xs font-semibold">
+        <%= activeProjects.length %>
+      </span>
+      <span class="ml-2 text-xs text-gray-600 dark:text-gray-300">
+        (<%= (projectStatusFilter && projectStatusFilter.length ? projectStatusFilter.join(', ') : 'All') %>)
+      </span>
+    </h3>
   <ul class="divide-y divide-gray-200 dark:divide-gray-700 mb-5 border dark:border-gray-700 rounded-lg overflow-hidden">
-    <% activeJobs.forEach(job => { %>
+    <% activeProjects.forEach(project => { %>
       <li class="flex justify-between items-center px-4 py-3 bg-white dark:bg-gray-900">
-        <span class="text-gray-800 dark:text-gray-100">
-          <%= job.jobRef %>
-          <% if (job.projectId) { %>
-            (<%= job.projectId.Name || job.projectId.Reference %>)
-          <% } %>
-        </span>
-        <% if (job.locationId) { %>
-          <span class="inline-block bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-full px-3 py-1 text-sm font-medium">
-            <%= job.locationId.name || job.locationId.address %>
-          </span>
-        <% } %>
+        <a href="/project/read/<%= project.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">
+          <%= project.Name %>
+        </a>
       </li>
     <% }) %>
   </ul>

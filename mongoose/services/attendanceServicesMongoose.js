@@ -327,22 +327,20 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
   } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidPurchases);
 
   // INTERNAL.job was replaced with REST.project — surface "active jobs" from active REST projects
-  let activeJobs = [];
+  let activeProjects = [];
+  const projectStatusFilter = ['Active'];
   try {
-    const projects = await mdb.REST.project.find({
-      deletedAt: null,
-      Status: { $in: ['Active', 'In Progress', 'Pending'] }
-    }).select('Number Name Reference Status').sort({ Number: 1 }).lean();
-
-    // Shape to match the existing view expectations: jobRef, projectId, locationId
-    activeJobs = projects.map(p => ({
-      jobRef: p.Number || p.Reference || p.Name,
-      projectId: p, // view reads projectId.Name || projectId.Reference
-      locationId: null
-    }));
+    const projects = await mdb.REST.project
+      .find({
+        deletedAt: null,
+        Status: { $in: projectStatusFilter }
+      })
+      .sort({ Number: 1 })
+      .lean();
+    activeProjects = projects || [];
   } catch (e) {
     logger.warn('Active projects lookup skipped: ' + e.message);
-    activeJobs = [];
+    activeProjects = [];
   }
 
   return {
@@ -359,7 +357,8 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     totalEmployeeHours,
     totalSubcontractorPay,
     daysOfWeek,
-    activeJobs
+    activeProjects,
+    projectStatusFilter
   };
 };
 

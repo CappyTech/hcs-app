@@ -36,7 +36,8 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       totalSubcontractorPay,
       totalSubcontractorDays,
       daysOfWeek,
-      activeJobs
+      activeProjects,
+      projectStatusFilter
     } = await attendanceService.getAttendanceForWeek(yearParam, weekParam);
 
     const isManagementView = req.isManagementView === true;
@@ -66,7 +67,8 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       totalSubcontractorPay: isManagementView ? null : totalSubcontractorPay,
       totalSubcontractorDays: isManagementView ? null : totalSubcontractorDays,
       daysOfWeek,
-      activeJobs,
+      activeProjects,
+      projectStatusFilter,
       employeeEntries,
       subcontractorEntries,
       isManagementView
