@@ -117,6 +117,17 @@ function makeClient() {
       (resp) => resp,
       async (error) => {
         const status = error?.response?.status;
+        const dataSnippet = (() => {
+          try {
+            const d = error?.response?.data;
+            if (!d) return '';
+            if (typeof d === 'string') return ` body="${d.slice(0, 200)}"`;
+            return ` body=${JSON.stringify(d).slice(0, 200)}`;
+          } catch { return ''; }
+        })();
+        if ((process.env.PAPERLESS_VERBOSE === 'true' || process.env.DEBUG) && status) {
+          console.warn(`[paperlessClient] HTTP ${status} on ${error?.config?.method?.toUpperCase?.() || ''} ${error?.config?.url || ''}${dataSnippet}`);
+        }
         if (status === 400 && error?.config && !error.config.__acceptFallbackTried) {
           // Some Paperless installs reject versioned Accept header; retry once without version
           const cfg = { ...error.config, headers: { ...(error.config.headers || {}) } };

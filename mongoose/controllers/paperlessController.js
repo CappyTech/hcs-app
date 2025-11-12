@@ -115,7 +115,16 @@ exports.listIngest = async (req, res, next) => {
 /** Trigger a background grab (manual) */
 exports.triggerGrab = async (req, res, next) => {
   try {
-    const since = (req.body.since || '').trim() || null;
+    let since = (req.body.since || '').trim() || null;
+    // Normalize 'none'/'null'/'invalid' or non-date inputs to null to avoid 400s from API params
+    if (since) {
+      const s = since.toLowerCase();
+      const invalidTokens = new Set(['none', 'null', 'invalid', 'n/a', 'na']);
+      const asDate = Date.parse(since);
+      if (invalidTokens.has(s) || isNaN(asDate)) {
+        since = null;
+      }
+    }
     const query = (req.body.query || '').trim() || null;
     const pageSize = parseInt(req.body.pageSize || process.env.PAPERLESS_PAGE_SIZE || '50', 10);
     const concurrency = parseInt(req.body.concurrency || process.env.PAPERLESS_CONCURRENCY || '5', 10);

@@ -113,9 +113,13 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
           }
         }
         const chargeType = line.ChargeType != null ? Number(line.ChargeType) : null;
-        const qty = Number(line.Quantity) || 0;
-        const rate = Number(line.Rate) || 0;
-        const amount = line.Amount != null ? Number(line.Amount) : (rate * qty);
+        const qty = Number(line.Quantity ?? line.Qty) || 0;
+        const rate = Number(line.Rate ?? line.UnitPrice ?? line.Price ?? line.Unit) || 0;
+        const amount = (line.Amount != null && line.Amount !== '')
+          ? Number(line.Amount)
+          : (line.NetAmount != null && line.NetAmount !== ''
+            ? Number(line.NetAmount)
+            : (rate * qty));
 
         // Primary: SOAP charge types if present
         if (chargeType === 18685896) { supplierTotals[supplierId].materialsCost += amount; continue; }
