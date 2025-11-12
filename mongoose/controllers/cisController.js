@@ -21,26 +21,28 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     logger.info(`Rendering CIS Dashboard for Year: ${specifiedYear}, Month: ${specifiedMonth}`);
 
     // Fetch purchases for the period. Prefer TaxYear/TaxMonth match; also include PaidDate OR any PaymentLines within window; fallback to IssuedDate window.
-    const purchases = await mdb.REST.purchase.find({
-      $and: [
-        { $or: [
-          { deletedAt: null },
-          { deletedAt: { $exists: false } },
-          { deletedAt: '' },
-          { deletedAt: '0000-00-00 00:00:00' }
-        ] },
-        { $or: [
-          { TaxYear: specifiedYear, TaxMonth: specifiedMonth },
-          { PaidDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
-          // Any payment line in the window counts as paid in this tax month
-          { PaymentLines: { $elemMatch: { $or: [
-            { PayDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
-            { Date: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
-          ] } } },
-          { IssuedDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
-        ] }
+    // Note: Do NOT filter deletedAt at DB level — handle soft-deletes client-side to match weekly logic.
+    const purchasesRaw = await mdb.REST.purchase.find({
+      $or: [
+        { TaxYear: specifiedYear, TaxMonth: specifiedMonth },
+        { PaidDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
+        // Any payment line in the window counts as paid in this tax month
+        { PaymentLines: { $elemMatch: { $or: [
+          { PayDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
+          { Date: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
+        ] } } },
+        { IssuedDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
       ]
     }).lean();
+
+    // Exclude soft-deleted purchases with a tolerant check (align with weekly service)
+    const isSoftDeleted = (doc) => {
+      const d = doc && doc.deletedAt;
+      if (d === undefined || d === null) return false;
+      if (typeof d === 'string' && (d.trim() === '' || d.trim() === '0000-00-00 00:00:00')) return false;
+      return !!d;
+    };
+    const purchases = (purchasesRaw || []).filter(p => !isSoftDeleted(p));
 
     // Only paid purchases are allowed in CIS: consider paid if has PaymentLines or PaidDate present
   const paidPurchases = purchases.filter(p => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate);
@@ -231,7 +233,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     // Light diagnostics to help understand empty results in production (info-level)
     try {
-      logger.info(`[CIS] query: purchases=${purchases.length}, paid=${paidPurchases.length}, suppliers=${suppliers.length}, filtered=${filteredPurchases.length}`);
+      logger.info(`[CIS] query: purchasesRaw=${purchasesRaw.length}, notDeleted=${purchases.length}, paid=${paidPurchases.length}, suppliers=${suppliers.length}, filtered=${filteredPurchases.length}`);
     } catch(_) {}
 
     res.render(path.join('tailwindcss', 'cis', 'cis'), {
