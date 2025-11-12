@@ -13,6 +13,24 @@ const authService = require('./services/authService')
 
 const mdb = require('./mongoose/services/mongooseDatabaseService');
 
+// Process-level diagnostics for transient and unexpected errors
+process.on('unhandledRejection', (reason, promise) => {
+  try {
+    logger.error('[process] Unhandled Promise Rejection', {
+      reason: (reason && reason.message) || String(reason),
+      stack: reason && reason.stack ? reason.stack.split('\n')[0] : undefined
+    });
+  } catch (_) {}
+});
+process.on('uncaughtException', (err) => {
+  try {
+    logger.error('[process] Uncaught Exception', {
+      message: err && err.message,
+      stack: err && err.stack ? err.stack.split('\n')[0] : undefined
+    });
+  } catch (_) {}
+});
+
 const main = async () => {
   try {
     await mdb.connect(); // Wait for MongoDB/SSH tunnel
@@ -53,6 +71,12 @@ const main = async () => {
       res.sendFile(path.join(__dirname, 'public', 'images', 'favicon.ico'));
     });
 
+    // Serve robots.txt (unauthenticated)
+    app.get('/robots.txt', (req, res) => {
+      res.type('text/plain');
+      res.sendFile(path.join(__dirname, 'public', 'robots.txt'));
+    });
+
     // Health check endpoint (unauthenticated, local-only)
     app.get('/healthz', async (req, res) => {
       // Restrict to local connections only (bypass trust proxy)
@@ -87,6 +111,8 @@ const main = async () => {
     app.use(authService.ensureAuthenticated);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
+  // Maintenance/availability guard (friendly 503 when backing services are restarting)
+  app.use(require('./services/maintenanceService'));
     // Session activity tracking (after auth)
     app.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
 

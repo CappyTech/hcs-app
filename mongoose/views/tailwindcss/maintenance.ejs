@@ -1,0 +1,19 @@
+<%- include('tailwindcss/partials/head', { title: title || 'Service Unavailable' }) %>
+<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8 text-center">
+    <div>
+      <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
+      </svg>
+      <h1 class="mt-6 text-3xl font-extrabold text-gray-900 dark:text-gray-100">Service Unavailable</h1>
+      <p class="mt-2 text-sm text-gray-600 dark:text-gray-300"><%= message || 'The service is restarting. Please retry in a few seconds.' %></p>
+    </div>
+    <div class="mt-8">
+      <a href="/" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Go to home</a>
+    </div>
+    <div class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+      If this persists, contact support: <%= (typeof contactEmail !== 'undefined' && contactEmail) ? contactEmail : 'support@example.com' %>
+    </div>
+  </div>
+</div>
+<%- include('tailwindcss/partials/foot') %>

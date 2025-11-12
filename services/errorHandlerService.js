@@ -2,10 +2,31 @@ const logger = require('./loggerService');
 const path = require('path');
 
 const errorHandlerService = (error, req, res, next) => {
+    // Map transient infra errors (e.g., during Docker recreate) to 503 Service Unavailable
+    const isTransientInfraError = (err) => {
+        if (!err) return false;
+        const code = err.code || '';
+        const name = err.name || '';
+        const msg = (err.message || '').toLowerCase();
+        return (
+            code === 'ECONNREFUSED' ||
+            code === 'ECONNRESET' ||
+            code === 'ETIMEDOUT' ||
+            name === 'MongoNetworkError' ||
+            name === 'MongoServerSelectionError' ||
+            msg.includes('pool is closed') ||
+            msg.includes('failed to connect') ||
+            msg.includes('connection timed out') ||
+            msg.includes('socket hang up')
+        );
+    };
+
     // Determine the status code, title, and message
-    const statusCode = error.statusCode || 500; // Default to 500 if not set
+    const statusCode = isTransientInfraError(error) ? 503 : (error.statusCode || 500);
     const title = `${statusCode} - ${error.name || 'Error'}`;
-    const message = error.message || 'Something went wrong.';
+    const message = isTransientInfraError(error)
+        ? 'Service is temporarily unavailable while the system restarts. Please retry in a few seconds.'
+        : (error.message || 'Something went wrong.');
     const stack = error.stack ;
 
     // Log the error details
@@ -29,13 +50,20 @@ const errorHandlerService = (error, req, res, next) => {
         res.locals.successMessage ??= [];
         res.locals.errorMessage ??= [];
         res.locals.session ??= req.session || {};
+        if (statusCode === 503) {
+            // Use branded maintenance page for service unavailability
+            return res.render(path.join('tailwindcss', 'maintenance'), {
+                title: 'Service Unavailable',
+                message
+            });
+        }
         res.render(path.join('tailwindcss', 'error'), {
-            title,
-            error: {
-                title,
-                message,
-                stack,
-            },
+          title,
+          error: {
+              title,
+              message,
+              stack,
+          },
         });
     } catch (renderError) {
         // Fallback if res.render fails
