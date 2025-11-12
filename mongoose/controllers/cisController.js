@@ -45,23 +45,22 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     // Only paid purchases are allowed in CIS: consider paid if has PaymentLines or PaidDate present
   const paidPurchases = purchases.filter(p => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate);
 
-    // Suppliers for those purchases (only subcontractors)
-  const supplierIDs = [...new Set(paidPurchases.map(p => p?.SupplierId).filter(id => id != null))];
+    // Suppliers for those purchases (subcontractors with tolerant truthiness)
+    const supplierIDs = [...new Set(paidPurchases.map(p => p?.SupplierId).filter(id => id != null))];
     const suppliers = await mdb.REST.supplier
-      .find({
-        Id: { $in: supplierIDs },
-        $or: [{ Subcontractor: true }, { IsSubcontractor: true }]
-      })
+      .find({ Id: { $in: supplierIDs } })
       .sort({ Name: 1 })
       .lean();
 
-    // Restrict purchases to subcontractor suppliers only
-  const allowedSupplierIds = new Set(suppliers.map(s => String(s.Id)));
-  const filteredPurchases = paidPurchases.filter(p => allowedSupplierIds.has(String(p.SupplierId)));
+    // Build allowed subcontractor id set using tolerant truthiness, as used elsewhere
+    const isSubbie = (s) => s && (s.Subcontractor === true || s.IsSubcontractor === true || s.Subcontractor === 1 || s.IsSubcontractor === 1 || s.Subcontractor === 'true' || s.IsSubcontractor === 'true');
+    const subbieSuppliers = (suppliers || []).filter(isSubbie);
+    const allowedSupplierIds = new Set(subbieSuppliers.map(s => String(s.Id)));
+    const filteredPurchases = paidPurchases.filter(p => allowedSupplierIds.has(String(p.SupplierId)));
 
     // CIS rate map per supplier id
     const cisRateBySupplierId = new Map();
-    for (const s of suppliers) {
+    for (const s of subbieSuppliers) {
       const rate = typeof s.CISRate === 'number' ? s.CISRate : null; // null means unknown
       cisRateBySupplierId.set(String(s.Id), rate);
     }
@@ -237,9 +236,9 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     res.render(path.join('tailwindcss', 'cis', 'cis'), {
       title: 'CIS Submission Dashboard',
-  supplierCount: suppliers.length,
+    supplierCount: subbieSuppliers.length,
   purchaseCount: filteredPurchases.length,
-      suppliers,
+      suppliers: subbieSuppliers,
       purchases: purchasesForView,
       taxYear,
       taxMonth: specifiedMonth,
