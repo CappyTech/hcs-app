@@ -2,19 +2,45 @@ const logger = require('./loggerService');
 
 // Compile a list of patterns commonly used by scanners probing for PHP/WordPress/etc.
 const blockPatterns = [
+  // Executable/script extensions
   /\.(php|asp|aspx|cgi|pl)(\?.*)?$/i,
-  /^\/wp-(admin|login\.php|includes|content)\b/i,
+  // Common platform/app targets
+  /^\/(wp-(admin|login\.php|includes|content)|wp-json|xmlrpc\.php)\b/i,
   /^\/phpmyadmin\b/i,
+  /^\/(hudson|jenkins)\b/i,
+  /^\/cgi-bin\//i,
+  // VCS and secrets
+  /^\/(\.env(\..*)?|\.git|\.hg|\.bzr|\.svn)(?:\b|\/)$/i,
+  /^\/(\.env(\..*)?|\.git|\.hg|\.bzr|\.svn)\//i,
+  /^\/(\.htaccess|\.htpasswd)(\?.*)?$/i,
+  // Vendor, test harnesses
   /^\/vendor\//i,
-  /^\/\.env\b/i,
-  /^\/\.git\b/i,
-  /^\/\.svn\b/i,
+  /\/vendor\/phpunit\//i,
+  // Well-known but executable
   /^\/\.well-known\/.*\.(php|cgi|pl)$/i,
-  /^\/info\.php$/i,
-  /^\/shell\.php$/i,
-  /^\/hudson\b/i,
-  /^\/\.DS_Store$/i
+  // Sensitive configs and lockfiles at root
+  /^\/(composer\.(json|lock)|package(-lock)?\.json|yarn\.lock|pnpm-lock\.yaml)$/i,
+  // Backups and dumps
+  /\.(sql|tar|gz|zip|7z|rar|bak|old|swp|orig)(\?.*)?$/i,
+  /\/(backup|backups|dump|database|db|sql)\b/i,
+  // Specific known probe filenames
+  /^\/(info|shell|hudson|z|kk|x4|rsnu|ee|3|10|456|bless3)\.php$/i,
 ];
+
+// Query and path heuristics (simple WAF-like checks)
+const blockHeuristics = (req) => {
+  try {
+    const url = (req.originalUrl || req.url || '').toLowerCase();
+    // Directory traversal
+    if (url.includes('..') || url.includes('%2e%2e') || url.includes('%252e%252e')) return true;
+    // Basic SQLi/XSS probes
+    const qs = req.url.split('?')[1] || '';
+    const qsl = qs.toLowerCase();
+    const badFragments = ['union select', 'sleep(', 'benchmark(', 'load_file(', 'outfile', "or 1=1", '<script', 'onerror=', 'javascript:', 'data:text/html'];
+    if (badFragments.some(f => qsl.includes(f))) return true;
+    return false;
+  } catch (_) { return false; }
+};
 
 // Optional: allow comma-separated IPs to be blocked via env
 const parseList = (s) => (s || '')
@@ -24,25 +50,69 @@ const parseList = (s) => (s || '')
 
 const blockedIPs = new Set(parseList(process.env.BLOCKED_IPS));
 
+// Temporary autoban config
+const HIT_WINDOW_MS = Number(process.env.BLOCK_HIT_WINDOW_MS || 5 * 60 * 1000); // 5 minutes
+const HIT_THRESHOLD = Number(process.env.BLOCK_HIT_THRESHOLD || 10);
+const BAN_TTL_MS = Number(process.env.BLOCK_BAN_TTL_MS || 60 * 60 * 1000); // 1 hour
+
+// In-memory counters and bans
+const hitCounters = new Map(); // ip -> { firstTs, hits }
+const bans = new Map(); // ip -> untilTs
+
 module.exports = function requestBlocklistService(req, res, next) {
   try {
+    // Allow health probes through
+    if (req.path === '/healthz') return next();
+
     const p = (req.path || '').trim();
 
-    // IP-based blocklist (optional)
+    // IP resolution (from proxy), take first IP if a list, strip port if any
     const xf = req.headers['x-forwarded-for'] || '';
-    const remote = Array.isArray(xf) ? xf[0] : String(xf);
-    const ip = (remote || req.socket?.remoteAddress || '').replace(/^::ffff:/, '');
+    const remote = Array.isArray(xf) ? xf[0] : String(xf).split(',')[0];
+    const ipPort = (remote || req.socket?.remoteAddress || '').replace(/^::ffff:/, '').trim();
+    const ip = ipPort.includes(':') && ipPort.includes('.') ? ipPort.split(':')[0] : ipPort; // strip :port for IPv4:port
+
+    // Active ban?
+    const now = Date.now();
+    const banUntil = bans.get(ip);
+    if (banUntil && banUntil > now) {
+      logger.warn(`[blocklist] banned ip=${ip} path=${p}`);
+      return deny(res);
+    } else if (banUntil && banUntil <= now) {
+      bans.delete(ip);
+    }
+
+    // IP-based blocklist (static)
     if (ip && blockedIPs.has(ip)) {
       return deny(res);
     }
 
     // Path-based blocking
+    let matched = false;
     for (const rx of blockPatterns) {
-      if (rx.test(p)) {
-        // Log once per request at warn level
-        logger.warn(`[blocklist] blocked request path=${p} ip=${ip}`);
-        return deny(res);
+      if (rx.test(p)) { matched = true; break; }
+    }
+    if (!matched && blockHeuristics(req)) matched = true;
+
+    if (matched) {
+      logger.warn(`[blocklist] blocked request path=${p} ip=${ip}`);
+      // Update hit counters for autoban
+      if (ip) {
+        const entry = hitCounters.get(ip) || { firstTs: now, hits: 0 };
+        // Reset window if expired
+        if (now - entry.firstTs > HIT_WINDOW_MS) {
+          entry.firstTs = now; entry.hits = 0;
+        }
+        entry.hits += 1;
+        hitCounters.set(ip, entry);
+        if (entry.hits >= HIT_THRESHOLD) {
+          const until = now + BAN_TTL_MS;
+          bans.set(ip, until);
+          hitCounters.delete(ip);
+          logger.warn(`[blocklist] autoban applied ip=${ip} until=${new Date(until).toISOString()}`);
+        }
       }
+      return deny(res);
     }
 
     return next();

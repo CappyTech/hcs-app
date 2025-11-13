@@ -35,26 +35,35 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       ]
     }).lean();
 
-    // Exclude soft-deleted purchases with a tolerant check (align with weekly service)
-    const isSoftDeleted = (doc) => {
-      const d = doc && (doc.deletedAt ?? doc.DeletedAt ?? doc.deleted ?? doc.isDeleted);
-      if (d === undefined || d === null) return false;
-      if (d === false) return false;
+    // Period-aware deletion filter: treat records as deleted only if deletedAt <= periodEnd
+    const periodEndMsForDelete = new Date(currentMonthlyReturn.periodEnd).getTime();
+    const toDateDel = (d) => {
+      if (!d) return null;
+      if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+      if (typeof d === 'number') { const dt = new Date(d); return isNaN(dt.getTime()) ? null : dt; }
       if (typeof d === 'string') {
-        const s = d.trim().toLowerCase();
-        if (s === '' || s === 'null' || s === 'undefined') return false;
-        if (s.startsWith('0000-00-00')) return false;
-        const parsed = Date.parse(d);
-        if (isNaN(parsed)) return false; // Non-date strings are treated as not-deleted placeholders
-        return true; // Valid dated string implies deleted
+        const s = d.trim();
+        if (s === '' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return null;
+        if (s.startsWith('0000-00-00')) return null;
+        let dt = new Date(s);
+        if (!isNaN(dt.getTime())) return dt;
+        const hasSpaceDateTime = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?/.test(s);
+        if (hasSpaceDateTime) {
+          const m = moment.tz(s, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm'], 'Europe/London');
+          if (m.isValid()) return m.toDate();
+        }
+        const m2 = moment.tz(s, 'Europe/London');
+        return m2.isValid() ? m2.toDate() : null;
       }
-      if (d instanceof Date) {
-        return !isNaN(d.getTime()); // Any valid date implies deleted
-      }
-      if (typeof d === 'number') {
-        return d > 0; // 0 or NaN considered not deleted
-      }
-      return Boolean(d);
+      return null;
+    };
+    const isSoftDeleted = (doc) => {
+      if (!doc) return false;
+      // Ignore isDeleted/deleted boolean alone; only consider timestamp relative to period end
+      const d = doc.deletedAt ?? doc.DeletedAt;
+      const dt = toDateDel(d);
+      if (!dt) return false;
+      return dt.getTime() <= periodEndMsForDelete;
     };
     const purchases = (purchasesRaw || []).filter(p => !isSoftDeleted(p));
 
@@ -97,22 +106,47 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const paidPurchases = purchases.filter(p => inWindow(p.PaidDate) || hasPaymentLineInWindow(p));
 
     // Suppliers for those purchases (subcontractors with tolerant truthiness)
-    const supplierIDs = [...new Set(paidPurchases.map(p => p?.SupplierId).filter(id => id != null))];
+    // Normalize supplier IDs to numbers to avoid type-mismatch on lookup
+    const supplierIDs = [...new Set(
+      (paidPurchases || [])
+        .map(p => Number(p?.SupplierId))
+        .filter(n => Number.isFinite(n))
+    )];
     const suppliers = await mdb.REST.supplier
       .find({ Id: { $in: supplierIDs } })
       .sort({ Name: 1 })
       .lean();
 
-    // Build allowed subcontractor id set using tolerant truthiness, as used elsewhere
-    const isSubbie = (s) => s && (s.Subcontractor === true || s.IsSubcontractor === true || s.Subcontractor === 1 || s.IsSubcontractor === 1 || s.Subcontractor === 'true' || s.IsSubcontractor === 'true');
-    const subbieSuppliers = (suppliers || []).filter(isSubbie);
-    const allowedSupplierIds = new Set(subbieSuppliers.map(s => String(s.Id)));
-    const filteredPurchases = paidPurchases.filter(p => allowedSupplierIds.has(String(p.SupplierId)));
+    // If some supplier IDs didn't resolve to supplier docs, log a small sample
+    if (supplierIDs.length > 0 && suppliers.length < supplierIDs.length) {
+      const resolved = new Set(suppliers.map(s => Number(s.Id)));
+      const missing = supplierIDs.filter(id => !resolved.has(Number(id))).slice(0, 10);
+      logger.info(`[CIS] supplier lookup: missing ${supplierIDs.length - suppliers.length}/${supplierIDs.length} supplier docs; sample missing IDs: ${missing.join(', ')}`);
+    }
+
+    // Build allowed subcontractor id set using tolerant truthiness, expanded to common variants
+    const truthyish = (v) => {
+      if (v === true) return true;
+      const n = Number(v);
+      if (!Number.isNaN(n) && n === 1) return true;
+      if (typeof v === 'string') {
+        const s = v.trim().toLowerCase();
+        return s === 'true' || s === 'yes' || s === 'y' || s === 't' || s === '1' || s === 'on';
+      }
+      return false;
+    };
+    const isSubbie = (s) => s && (truthyish(s.Subcontractor) || truthyish(s.IsSubcontractor));
+  // Optional debugging escape hatch: include all suppliers if requested
+  const includeAllSuppliers = req.query.includeAll === '1' || req.query.includeNonSubcontractors === '1';
+  const subbieSuppliers = includeAllSuppliers ? (suppliers || []) : (suppliers || []).filter(isSubbie);
+  const allowedSupplierIds = new Set(subbieSuppliers.map(s => String(s.Id)));
+  const filteredPurchases = paidPurchases.filter(p => allowedSupplierIds.has(String(p.SupplierId)));
 
     // CIS rate map per supplier id
     const cisRateBySupplierId = new Map();
     for (const s of subbieSuppliers) {
-      const rate = typeof s.CISRate === 'number' ? s.CISRate : null; // null means unknown
+      let rate = s.CISRate != null ? Number(s.CISRate) : null; // parse numeric strings too
+      if (!Number.isFinite(rate)) rate = null; // null means unknown
       cisRateBySupplierId.set(String(s.Id), rate);
     }
 
@@ -295,7 +329,13 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         const sample = purchasesRaw.slice(0, 5).map(p => ({ id: p.Id, deletedAt: p.deletedAt, DeletedAt: p.DeletedAt, deleted: p.deleted, isDeleted: p.isDeleted }));
         logger.info(`[CIS] all filtered as deleted; sample deletedAt values: ${JSON.stringify(sample)}`);
       }
-      logger.info(`[CIS] query: purchasesRaw=${purchasesRaw.length}, notDeleted=${purchases.length}, paid=${paidPurchases.length}, suppliers=${suppliers.length}, filtered=${filteredPurchases.length}`);
+      if (paidPurchases.length > 0 && subbieSuppliers.length === 0) {
+        const ids = [...new Set(paidPurchases.map(p => p?.SupplierId).filter(x => x != null))].slice(0, 10);
+        const supplierProbe = (suppliers || []).filter(s => ids.map(String).includes(String(s.Id)))
+          .map(s => ({ Id: s.Id, Name: s.Name, Subcontractor: s.Subcontractor, IsSubcontractor: s.IsSubcontractor }));
+        logger.info(`[CIS] paid purchases exist but no subcontractors detected; sample suppliers: ${JSON.stringify(supplierProbe)}`);
+      }
+      logger.info(`[CIS] query: purchasesRaw=${purchasesRaw.length}, notDeleted=${purchases.length}, paid=${paidPurchases.length}, suppliers=${suppliers.length}, filtered=${filteredPurchases.length}, includeAllSuppliers=${includeAllSuppliers}`);
     } catch(_) {}
 
     res.render(path.join('tailwindcss', 'cis', 'cis'), {
