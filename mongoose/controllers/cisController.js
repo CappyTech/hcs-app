@@ -37,15 +37,64 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     // Exclude soft-deleted purchases with a tolerant check (align with weekly service)
     const isSoftDeleted = (doc) => {
-      const d = doc && doc.deletedAt;
+      const d = doc && (doc.deletedAt ?? doc.DeletedAt ?? doc.deleted ?? doc.isDeleted);
       if (d === undefined || d === null) return false;
-      if (typeof d === 'string' && (d.trim() === '' || d.trim() === '0000-00-00 00:00:00')) return false;
-      return !!d;
+      if (d === false) return false;
+      if (typeof d === 'string') {
+        const s = d.trim().toLowerCase();
+        if (s === '' || s === 'null' || s === 'undefined') return false;
+        if (s.startsWith('0000-00-00')) return false;
+        const parsed = Date.parse(d);
+        if (isNaN(parsed)) return false; // Non-date strings are treated as not-deleted placeholders
+        return true; // Valid dated string implies deleted
+      }
+      if (d instanceof Date) {
+        return !isNaN(d.getTime()); // Any valid date implies deleted
+      }
+      if (typeof d === 'number') {
+        return d > 0; // 0 or NaN considered not deleted
+      }
+      return Boolean(d);
     };
     const purchases = (purchasesRaw || []).filter(p => !isSoftDeleted(p));
 
-    // Only paid purchases are allowed in CIS: consider paid if has PaymentLines or PaidDate present
-  const paidPurchases = purchases.filter(p => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate);
+    // Only paid purchases are allowed in CIS, and they must be paid within the tax-month window
+    const start = new Date(currentMonthlyReturn.periodStart);
+    const end = new Date(currentMonthlyReturn.periodEnd);
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+    const toDate = (d) => {
+      if (!d) return null;
+      if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+      if (typeof d === 'number') {
+        const dt = new Date(d);
+        return isNaN(dt.getTime()) ? null : dt;
+      }
+      if (typeof d === 'string') {
+        // Fast path: native parse (works for ISO)
+        let dt = new Date(d);
+        if (!isNaN(dt.getTime())) return dt;
+        // Handle common non-ISO format "YYYY-MM-DD HH:mm:ss" (no T)
+        const trimmed = d.trim();
+        const hasSpaceDateTime = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?/.test(trimmed);
+        if (hasSpaceDateTime) {
+          const m = moment.tz(trimmed, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm'], 'Europe/London');
+          if (m.isValid()) return m.toDate();
+        }
+        // Try a more lenient moment parse in London tz as a last resort
+        const m2 = moment.tz(trimmed, 'Europe/London');
+        return m2.isValid() ? m2.toDate() : null;
+      }
+      return null;
+    };
+    const inWindow = (dLike) => {
+      const dt = toDate(dLike);
+      if (!dt) return false;
+      const t = dt.getTime();
+      return t >= startMs && t <= endMs;
+    };
+    const hasPaymentLineInWindow = (p) => Array.isArray(p.PaymentLines) && p.PaymentLines.some(pl => inWindow(pl?.PayDate || pl?.Date));
+    const paidPurchases = purchases.filter(p => inWindow(p.PaidDate) || hasPaymentLineInWindow(p));
 
     // Suppliers for those purchases (subcontractors with tolerant truthiness)
     const supplierIDs = [...new Set(paidPurchases.map(p => p?.SupplierId).filter(id => id != null))];
@@ -217,8 +266,17 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     // Decorate purchases for view list
   const purchasesForView = filteredPurchases.map(p => {
-      const isPaid = (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate;
-      const displayDateRaw = isPaid ? (p.PaidDate || p.IssuedDate || null) : (p.IssuedDate || null);
+      // Compute a display paid date preferring header PaidDate in-window, else first payment line in-window
+      let displayPaidDate = inWindow(p.PaidDate) ? toDate(p.PaidDate) : null;
+      if (!displayPaidDate && Array.isArray(p.PaymentLines)) {
+        const lineDates = p.PaymentLines
+          .map(pl => toDate(pl?.PayDate || pl?.Date))
+          .filter(dt => dt && dt.getTime() >= startMs && dt.getTime() <= endMs)
+          .sort((a,b) => a - b);
+        displayPaidDate = lineDates[0] || null;
+      }
+      const isPaid = !!displayPaidDate;
+      const displayDateRaw = isPaid ? displayPaidDate : (toDate(p.IssuedDate) || null);
       const m = displayDateRaw ? moment.tz(displayDateRaw, 'Europe/London') : null;
       const due = p.DueDate ? moment.tz(p.DueDate, 'Europe/London') : null;
       return {
@@ -233,6 +291,10 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     // Light diagnostics to help understand empty results in production (info-level)
     try {
+      if (purchasesRaw.length > 0 && purchases.length === 0) {
+        const sample = purchasesRaw.slice(0, 5).map(p => ({ id: p.Id, deletedAt: p.deletedAt, DeletedAt: p.DeletedAt, deleted: p.deleted, isDeleted: p.isDeleted }));
+        logger.info(`[CIS] all filtered as deleted; sample deletedAt values: ${JSON.stringify(sample)}`);
+      }
       logger.info(`[CIS] query: purchasesRaw=${purchasesRaw.length}, notDeleted=${purchases.length}, paid=${paidPurchases.length}, suppliers=${suppliers.length}, filtered=${filteredPurchases.length}`);
     } catch(_) {}
 
