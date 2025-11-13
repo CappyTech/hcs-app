@@ -77,6 +77,9 @@ const main = async () => {
       res.sendFile(path.join(__dirname, 'public', 'robots.txt'));
     });
 
+    // Early request blocklist for common scanner/probe paths
+    app.use(require('./services/requestBlocklistService'));
+
     // Health check endpoint (unauthenticated, local-only)
     app.get('/healthz', async (req, res) => {
       // Restrict to local connections only (bypass trust proxy)
