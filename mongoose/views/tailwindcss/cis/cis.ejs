@@ -182,6 +182,11 @@
             <input type="date" id="submissionDate" name="submissionDate" required
               class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-hcs-green bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
+          <!-- Select all toggle for purchases -->
+          <div class="mb-2 flex items-center justify-end">
+            <input type="checkbox" id="select-all-purchases" class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-hcs-green focus:ring-hcs-green">
+            <label for="select-all-purchases" class="ml-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">Select all</label>
+          </div>
           <fieldset class="purchase-scroll mb-6 max-h-96 overflow-y-auto border rounded border-gray-300 dark:border-gray-600 p-4 pr-2">
             <legend class="font-semibold mb-2 text-gray-800 dark:text-gray-200">Select Purchases</legend>
             <% purchases.forEach(purchase => { %>
@@ -194,6 +199,29 @@
             </div>
             <% }); %>
           </fieldset>
+          <script>
+            (function () {
+              const master = document.getElementById('select-all-purchases');
+              if (!master) return;
+              const scope = document.querySelector('fieldset.purchase-scroll');
+              if (!scope) return;
+              const getBoxes = () => Array.from(scope.querySelectorAll('input[type="checkbox"][name="uuids"]'));
+              const refreshMaster = () => {
+                const boxes = getBoxes();
+                const total = boxes.length;
+                const checked = boxes.filter(cb => cb.checked).length;
+                master.indeterminate = checked > 0 && checked < total;
+                master.checked = total > 0 && checked === total;
+              };
+              master.addEventListener('change', () => {
+                const boxes = getBoxes();
+                boxes.forEach(cb => { cb.checked = master.checked; });
+                refreshMaster();
+              });
+              getBoxes().forEach(cb => cb.addEventListener('change', refreshMaster));
+              refreshMaster();
+            })();
+          </script>
           <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black dark:text-white font-semibold py-3 rounded transition">
             Update Selected Purchases
           </button>
