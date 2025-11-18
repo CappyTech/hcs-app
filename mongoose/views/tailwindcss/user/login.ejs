@@ -3,6 +3,11 @@
 <div class="max-w-md mx-auto py-10 px-4">
     <div class="bg-gray-100 dark:bg-gray-800 rounded-xl p-8 shadow">
         <h1 class="text-3xl font-bold text-center mb-6">Log in</h1>
+                <% if (process.env.SKIP_TURNSTILE === 'true') { %>
+                    <div class="mb-4 p-3 rounded bg-yellow-200 dark:bg-yellow-700 text-yellow-900 dark:text-yellow-100 text-sm">
+                        CAPTCHA bypass is active (SKIP_TURNSTILE=true). Do not enable this in production.
+                    </div>
+                <% } %>
                 <form action="/user/login" method="POST" class="space-y-6">
                     <%- include('../partials/csrfHidden.ejs') %>
             
@@ -34,10 +39,14 @@
             >
             </div>
 
-            <!-- Turnstile -->
-            <div>
-            <div class="cf-turnstile" data-sitekey="<%= siteKey %>"></div>
-            </div>
+                        <!-- Turnstile (hidden when bypass active) -->
+                        <% if (process.env.SKIP_TURNSTILE === 'true') { %>
+                            <input type="hidden" name="cf-turnstile-response" value="bypassed" />
+                        <% } else { %>
+                        <div>
+                            <div class="cf-turnstile" data-sitekey="<%= siteKey %>"></div>
+                        </div>
+                        <% } %>
 
             <!-- Submit / Register Buttons -->
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4">

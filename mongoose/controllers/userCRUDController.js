@@ -55,12 +55,15 @@ exports.registerUser = async (req, res, next) => {
       req.flash('error', 'User model unavailable. Please try again later.');
       return res.redirect('/user/register');
     }
+    // Hash password before storing (was previously stored in plaintext)
+    const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
     const newUser = new UserModel({
-            username,
-            email,
-            password,
-            role: assignedRole,
-        });
+      username,
+      email,
+      password: hashedPassword,
+      role: assignedRole,
+    });
 
         await newUser.save();
 
@@ -89,27 +92,34 @@ exports.loginUser = async (req, res) => {
     const token = req.body['cf-turnstile-response'];
     const ip = req.ip;
     const agent = req.useragent || {};
+    const skipCaptcha = process.env.SKIP_TURNSTILE === 'true';
 
-    if (!token) {
+    if (!skipCaptcha && !token) {
+      logger.info('Login rejected: CAPTCHA token missing');
       req.flash('error', 'CAPTCHA token missing.');
       return res.redirect('/user/login');
     }
 
-    const verifyResponse = await axios.post(
-      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-      new URLSearchParams({
-        secret: process.env.TURNSTILE_SECRET_KEY,
-        response: token,
-        remoteip: ip
-      })
-    );
-
-    if (!verifyResponse.data.success) {
-      req.flash('error', 'CAPTCHA verification failed.');
-      return res.redirect('/user/login');
+    if (!skipCaptcha) {
+      const verifyResponse = await axios.post(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        new URLSearchParams({
+          secret: process.env.TURNSTILE_SECRET_KEY,
+          response: token,
+          remoteip: ip
+        })
+      );
+      if (!verifyResponse.data.success) {
+        logger.info('Login rejected: CAPTCHA verification failed');
+        req.flash('error', 'CAPTCHA verification failed.');
+        return res.redirect('/user/login');
+      }
+    } else {
+      logger.info('Login CAPTCHA bypass active (SKIP_TURNSTILE=true)');
     }
 
     if (!usernameOrEmail || !password) {
+      logger.info('Login rejected: missing credentials');
       req.flash('error', 'Username and password are required.');
       return res.redirect('/user/login');
     }
@@ -118,7 +128,36 @@ exports.loginUser = async (req, res) => {
       $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }]
     });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    let authOk = false;
+    if (!user) {
+      logger.info(`Login rejected: user not found for identifier "${usernameOrEmail}"`);
+      authOk = false;
+    } else {
+      const stored = user.password;
+      const looksHashed = typeof stored === 'string' && stored.startsWith('$2');
+      if (looksHashed) {
+        authOk = await bcrypt.compare(password, stored);
+        if (!authOk) logger.info(`Login rejected: bcrypt mismatch for user ${user.username}`);
+      } else {
+        // Legacy plaintext fallback: direct compare then upgrade to hashed
+        if (password === stored) {
+          try {
+            const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+            user.password = await bcrypt.hash(stored, saltRounds);
+            await user.save();
+            authOk = true;
+            logger.info(`Upgraded legacy plaintext password for user ${user.username}`);
+          } catch (e) {
+            logger.error(`Failed upgrading plaintext password for ${user.username}: ${e.message}`);
+            authOk = false;
+          }
+        } else {
+          logger.info(`Login rejected: plaintext mismatch for user ${user.username}`);
+          authOk = false;
+        }
+      }
+    }
+    if (!authOk) {
       req.flash('error', 'Invalid username or password.');
       return res.redirect('/user/login');
     }
@@ -142,6 +181,7 @@ exports.loginUser = async (req, res) => {
     // If TOTP is enabled, stage login for /user/2fa
     if (user.totpEnabled) {
       req.session.userPending2FA = sessionData;
+      logger.info(`Login staged for 2FA: ${user.username}`);
       return res.redirect('/user/2fa');
     }
 

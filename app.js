@@ -61,6 +61,9 @@ const main = async () => {
     app.use(require('./services/csrfService'));
 
     // Static assets
+    // Serve compiled Tailwind CSS publicly so the login page can load styles unauthenticated
+    app.use('/resources/css', express.static(path.join(__dirname, 'public', 'css')));
+    // Other static assets remain protected
     app.use('/resources', authService.ensureAuthenticated, express.static(path.join(__dirname, 'public')));
     ['bootstrap-icons'].forEach(pkg => {
       app.use(`/resources/${pkg}`, authService.ensureAuthenticated, express.static(path.join(__dirname, `node_modules/${pkg}`)));

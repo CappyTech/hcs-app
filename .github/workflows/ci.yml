@@ -48,6 +48,10 @@ jobs:
           && npm test \
           || echo "No test script defined; skipping tests."
 
+      - name: Build Tailwind CSS
+        shell: bash
+        run: npm run build:css
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
