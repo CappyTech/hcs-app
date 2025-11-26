@@ -454,5 +454,13 @@ module.exports = {
     sortOrder: 1,
     department: ['finance'],
     deny: ['c', 'u', 'd'],
-  }
+  },
+  note: {
+    title: 'Notes',
+    linkField: 'title',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    sortField: 'createdAt',
+    sortOrder: -1,
+    department: ['management'],
+  },
 };

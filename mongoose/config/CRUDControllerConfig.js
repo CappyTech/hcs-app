@@ -1,3 +1,4 @@
+const note = require("../models/mongoose/REST/note");
 const { OcrDocument } = require("./listControllerConfig");
 
 module.exports = {
@@ -291,6 +292,15 @@ module.exports = {
     readOnly: ['uuid', 'createdAt'],
     middleware: {
       read: ['ensureRole:admin', 'ensureAuthenticated'],
+    }
+  },
+  note: { 
+    readOnly: ['uuid', 'createdAt'],
+    middleware: {
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
     }
   }
 }

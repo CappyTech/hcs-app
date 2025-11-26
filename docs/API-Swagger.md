@@ -74,7 +74,7 @@ Table of Contents
 46. Mileage (Settings, Trips, Employees)
 47. Next Available Numbers
 48. Nominals [MODELED]
-49. Notes
+49. Notes [MODELED]
 50. OAuth / Signed URI
 51. OCR File
 52. Partner
@@ -359,6 +359,262 @@ List, details, SA103 mapping, create, update, delete, special/discount nominal.
 
 49. Notes
 CRUD `/{objectType}/{objectNumber}/notes`
+
+NoteShow/HideList OperationsExpand Operations
+get /{objectType}/{objectNumber}/notesGet a list of notes for an object, such as Customer or Supplier
+Response Class (Status 200)
+ModelModel Schema
+[
+  {
+    "Number": 0,
+    "Text": "string",
+    "Date": "string",
+    "LastModifiedBy": "string"
+  }
+]
+
+
+Response Content Type 
+application/json
+Parameters
+Parameter	Value	Description	Parameter Type	Data Type
+objectNumber	
+(required)
+Is the Number of the above Object Type, used to identify the above object
+
+path	string
+objectType	
+1
+Is the Type of Object i.e Invoice,Quote,Customer etc 1 = Customers, 2 = Suppliers, 3 = Invoices, 4 = Quotes, 5 = Purchases, 6 = PurchaseOrders
+
+path	integer
+Response Messages
+HTTP Status Code	Reason	Response Model	Headers
+400	Invalid parameters	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+401	Unauthorized Access	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+404	Entity not found	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+get /{objectType}/{objectNumber}/notes/{number}Get note details, by object and ID
+Response Class (Status 200)
+ModelModel Schema
+{
+  "Number": 0,
+  "Text": "string",
+  "Date": "string",
+  "LastModifiedBy": "string"
+}
+
+
+Response Content Type 
+application/json
+Parameters
+Parameter	Value	Description	Parameter Type	Data Type
+objectNumber	
+(required)
+Is the Number of the above Object Type, used to identify the above object
+
+path	string
+number	
+(required)
+Is the Number of the Note to be fetched
+
+path	integer
+objectType	
+1
+Is the type of Note object i.e Invoice,Quote,Customer etc 1 = Customers, 2 = Suppliers, 3 = Invoices, 4 = Quotes, 5 = Purchases, 6 = PurchaseOrders
+
+path	integer
+Response Messages
+HTTP Status Code	Reason	Response Model	Headers
+400	Invalid parameters	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+401	Unauthorized Access	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+404	No note found		
+post /{objectType}/{objectNumber}/notesCreate a note for an object, such as Customer or Supplier
+Response Class (Status 200)
+ModelModel Schema
+{}
+
+
+Response Content Type 
+application/json
+Parameters
+Parameter	Value	Description	Parameter Type	Data Type
+objectNumber	
+(required)
+Is the Number of the above Object Type, used to identify the above object
+
+path	string
+noteBase	
+(required)
+
+Parameter content type: 
+application/json
+Note details
+
+body	
+ModelModel Schema
+{
+  "Text": "string"
+}
+Click to set as parameter value
+objectType	
+1
+Is the Type of Object i.e Invoice,Quote,Customer etc 1 = Customers, 2 = Suppliers, 3 = Invoices, 4 = Quotes, 5 = Purchases, 6 = PurchaseOrders
+
+path	integer
+Response Messages
+HTTP Status Code	Reason	Response Model	Headers
+201	Created	
+ModelModel Schema
+{
+  "Number": 0,
+  "Text": "string",
+  "Date": "string",
+  "LastModifiedBy": "string"
+}
+400	Invalid parameters	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+401	Unauthorized Access	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+404	Entity not found	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+put /{objectType}/{objectNumber}/notes/{number}Update a note for an object, such as Customer or Supplier
+Response Class (Status 200)
+ModelModel Schema
+{
+  "Number": 0,
+  "Text": "string",
+  "Date": "string",
+  "LastModifiedBy": "string"
+}
+
+
+Response Content Type 
+application/json
+Parameters
+Parameter	Value	Description	Parameter Type	Data Type
+objectNumber	
+(required)
+Is the Number of the above Object Type, used to identify the above object
+
+path	string
+number	
+(required)
+Is the Number of the Note to be Updated
+
+path	integer
+noteRequest	
+(required)
+
+Parameter content type: 
+application/json
+Note details to be updated
+
+body	
+ModelModel Schema
+{
+  "Number": 0,
+  "Text": "string"
+}
+Click to set as parameter value
+objectType	
+1
+Is the Type of Object i.e Invoice,Quote,Customer etc 1 = Customers, 2 = Suppliers, 3 = Invoices, 4 = Quotes, 5 = Purchases, 6 = PurchaseOrders
+
+path	integer
+Response Messages
+HTTP Status Code	Reason	Response Model	Headers
+400	Invalid parameters	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+401	Unauthorized Access	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+404	No note found		
+delete /{objectType}/{objectNumber}/notes/{number}Delete a note for an object, such as Customer or Supplier
+Response Class (Status 200)
+ModelModel Schema
+{}
+
+
+Response Content Type 
+application/json
+Parameters
+Parameter	Value	Description	Parameter Type	Data Type
+objectNumber	
+(required)
+Is the Number of the above Object Type, used to identify the above object
+
+path	string
+number	
+(required)
+Is the Number of the Note to be Deleted
+
+path	integer
+objectType	
+1
+Is the Type of Object i.e Invoice,Quote,Customer etc
+
+path	integer
+Response Messages
+HTTP Status Code	Reason	Response Model	Headers
+204	Note deleted		
+400	Invalid parameters	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+401	Unauthorized Access	
+ModelModel Schema
+{
+  "Message": "string",
+  "Error": "string"
+}
+404	No note found		
+
 
 50. OAuth / Signed URI
 GET `/okta/oauth-url` ; GET `/irisoauth/accesstoken` ; GET `/oauthsigneduri`
