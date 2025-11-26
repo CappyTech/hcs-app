@@ -8,7 +8,8 @@
     "dev": "concurrently -k -n server,css -c green,cyan \"npm:dev:server\" \"npm:dev:css\"",
     "dev:server": "nodemon app.js",
     "build:css": "tailwindcss -c ./tailwind.config.js -i ./assets/tailwind.css -o ./public/css/tailwind.css --minify",
-    "dev:css": "tailwindcss -c ./tailwind.config.js -i ./assets/tailwind.css -o ./public/css/tailwind.css --watch"
+    "dev:css": "tailwindcss -c ./tailwind.config.js -i ./assets/tailwind.css -o ./public/css/tailwind.css --watch",
+    "gen:tailwind-safelist": "node scripts/generate-tailwind-safelist.js"
   },
   "keywords": [
     "HMS, developed, Heron CS LTD, comprehensive, web-based application, streamline, management, subcontractors, construction projects, efficient, data entry, automates, monthly returns, CIS/HMRC compliance, tracks payments, manages deductions, subcontractor verification, accurate record-keeping, regulatory compliance, effective communication, project stakeholders, subcontractor management efficiency, transparency"
@@ -67,7 +68,8 @@
     "autoprefixer": "^10.4.20",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/typography": "^0.5.13",
-    "concurrently": "^9.0.1"
+    "concurrently": "^9.0.1",
+    "fast-glob": "^3.3.2"
   },
   "overrides": {
     "form-data": "^4.0.4",
