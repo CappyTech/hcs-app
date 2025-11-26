@@ -26,6 +26,7 @@
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Title</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Correspondent</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Type</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Kashflow</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Tags</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Modified</th>
         </tr>
@@ -37,6 +38,13 @@
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.title || '-' %></td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.correspondent?.name || '-' %></td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.documentType?.name || '-' %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700">
+              <% if (typeof it.kashflowPurchaseNumber === 'number') { %>
+                <a href="https://app.kashflow.com/#purchases/<%= it.kashflowPurchaseNumber %>" target="_blank" class="text-green-600 dark:text-green-400 hover:underline">#<%= it.kashflowPurchaseNumber %></a>
+              <% } else { %>
+                <span class="text-slate-400">-</span>
+              <% } %>
+            </td>
             <td class="px-3 py-2 border-b dark:border-gray-700">
               <% const _tags = Array.isArray(it.tags) ? it.tags : []; const _tagNames = _tags.map(t => (t && (t.name || t.Name)) || (typeof t === 'string' ? t : null)).filter(Boolean); %>
               <% if (_tagNames.length === 0) { %>

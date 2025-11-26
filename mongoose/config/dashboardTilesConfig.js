@@ -27,7 +27,6 @@ module.exports = {
         department: ['construction-industry-scheme'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
-
     MonthlyReturns: {
         title: 'CIS Returns Reports',
         description: 'View Monthly and Yearly Returns',
@@ -82,6 +81,14 @@ module.exports = {
         description: 'Manage OCR documents imported from Paperless-ngx.',
         link: '/paperless/ocr',
         department: ['paperless'],
-        buttonClass: 'bg-purple-700 hover:bg-purple-800'
+        buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    ExternalPaperlessngx: {
+        title: 'External Document Management',
+        description: 'Access the external Paperless-ngx document management system.',
+        link: 'https://docs.heroncs.co.uk',
+        department: ['paperless'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+
+    }
 };

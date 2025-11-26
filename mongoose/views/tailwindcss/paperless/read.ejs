@@ -19,8 +19,10 @@
             <div class="text-sm">
               <% if (doc.kashflowPurchaseNumber) { %>Number: <%= doc.kashflowPurchaseNumber %><% } %>
               <% if (doc.kashflowPurchaseId) { %><span class="ml-2">Id: <%= doc.kashflowPurchaseId %></span><% } %>
-              <% if (doc.kashflowPermalink) { %>
-                <span class="ml-2"><a href="<%= doc.kashflowPermalink %>" target="_blank" class="underline hover:no-underline">Open in KashFlow</a></span>
+              <% if (doc.kashflowPurchaseNumber) { %>
+                <span class="ml-2"><a href="https://app.kashflow.com/#purchases/<%= doc.kashflowPurchaseNumber %>" target="_blank" class="underline hover:no-underline">Open in KashFlow</a></span>
+              <% } else if (doc.kashflowPermalink) { %>
+                <span class="ml-2"><a href="https://app.kashflow.com/#purchases" target="_blank" class="underline hover:no-underline">Open in KashFlow</a></span>
               <% } %>
             </div>
             <% if (doc.lastSentAt) { %>
