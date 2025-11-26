@@ -462,5 +462,6 @@ module.exports = {
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
+    deny: ['c', 'u', 'd'],
   },
 };

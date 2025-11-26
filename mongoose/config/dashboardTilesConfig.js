@@ -95,7 +95,7 @@ module.exports = {
         title: 'KashFlow Payroll',
         description: 'Access the external payroll management system.',
         link: 'https://go.kashflowpayroll.com/Users/SignIn',
-        department: ['payroll'],
+        department: ['finance', 'payroll'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     }
 };
