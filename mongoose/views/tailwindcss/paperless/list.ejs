@@ -29,12 +29,13 @@
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Kashflow</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Tags</th>
           <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Modified</th>
+          <th class="px-3 py-2 text-xs border-b dark:border-gray-600 text-left font-medium">Details</th>
         </tr>
       </thead>
       <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
         <% items.forEach(it => { %>
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
-            <td class="px-3 py-2 border-b dark:border-gray-700"><a class="text-green-600 dark:text-green-400 hover:underline" href="/paperless/ocr/<%= it.paperlessId %>">#<%= it.paperlessId %></a></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700"><a class="text-green-600 dark:text-green-400 hover:underline" target="_blank" href="/paperless/ocr/<%= it.paperlessId %>">#<%= it.paperlessId %></a></td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.title || '-' %></td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.correspondent?.name || '-' %></td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.documentType?.name || '-' %></td>
@@ -58,6 +59,9 @@
               <% } %>
             </td>
             <td class="px-3 py-2 border-b dark:border-gray-700"><%= it.modified ? new Date(it.modified).toLocaleString() : '-' %></td>
+            <td class="px-3 py-2 border-b dark:border-gray-700">
+              <a href="https://docs.heroncs.co.uk/documents/<%= it.paperlessId %>/details" target="_blank" class="text-green-600 dark:text-green-400 hover:underline" target="_blank">View Details</a>
+            </td>
           </tr>
         <% }) %>
       </tbody>
@@ -75,4 +79,33 @@
       <% } %>
     </div>
   </div>
+
+  <script>
+    (function(){
+      // Only poll if the server actually started a background ingest
+      const started = <%= startedBgIngest ? 'true' : 'false' %>;
+      if (!started) return;
+      let attempts = 0;
+      const maxAttempts = 60; // ~2 minutes
+      const timer = setInterval(async () => {
+        attempts++;
+        try {
+          const res = await fetch('/paperless/ingest?json=1');
+          if (!res.ok) throw new Error('status fetch failed');
+          const data = await res.json();
+          if (!data.running) {
+            clearInterval(timer);
+            // Reload once, with autoIngest disabled to avoid loops
+            const url = new URL(window.location.href);
+            url.searchParams.set('autoIngest', '0');
+            window.location.replace(url.toString());
+          } else if (attempts >= maxAttempts) {
+            clearInterval(timer);
+          }
+        } catch (_) {
+          if (attempts >= maxAttempts) clearInterval(timer);
+        }
+      }, 2000);
+    })();
+  </script>
 </div>

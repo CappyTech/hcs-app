@@ -22,6 +22,18 @@ exports.listOcr = async (req, res, next) => {
     const tagParam = String(req.query.tag || '').trim().toLowerCase();
     const onlyDone = ['1','true','on','yes'].includes(String(req.query.done || '').toLowerCase()) || tagParam === 'data-entry-done';
 
+    // Initial-entry redirect: append autoIngest=1 once to kick off background ingest
+    if (typeof req.query.autoIngest === 'undefined') {
+      const url = new URL(`${req.protocol}://${req.get('host')}${req.originalUrl}`);
+      url.searchParams.set('autoIngest', '1');
+      // Preserve existing filters
+      if (q) url.searchParams.set('q', q);
+      url.searchParams.set('page', String(page));
+      url.searchParams.set('pageSize', String(pageSize));
+      if (onlyDone) url.searchParams.set('done', '1');
+      return res.redirect(url.pathname + '?' + url.searchParams.toString());
+    }
+
     const filter = {};
     if (q) {
       const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -53,12 +65,29 @@ exports.listOcr = async (req, res, next) => {
       .limit(pageSize)
       .lean();
 
+    // Auto-ingest: trigger only when explicitly requested via query to avoid reload loops
+    const autoIngest = String(req.query.autoIngest || '').trim() === '1';
+    let startedBgIngest = false;
+    if (autoIngest) {
+      startedBgIngest = true;
+      (async () => {
+        try {
+          const ingestPageSize = parseInt(process.env.PAPERLESS_PAGE_SIZE || '25', 10);
+          const ingestConcurrency = parseInt(process.env.PAPERLESS_CONCURRENCY || '3', 10);
+          await grabPaperlessOCR({ since: null, query: q || null, pageSize: ingestPageSize, concurrency: ingestConcurrency });
+        } catch (e) {
+          logger.warn('Background grabPaperlessOCR (list page) failed: ' + e.message);
+        }
+      })();
+    }
+
     res.render(path.join('tailwindcss', 'paperless',  'list'), {
       title: 'Paperless OCR Documents',
       q, page, pageSize, total,
       done: onlyDone,
       items,
       pages: Math.max(1, Math.ceil(total / pageSize)),
+      startedBgIngest,
     });
   } catch (err) { next(err); }
 };
@@ -91,6 +120,7 @@ exports.listIngest = async (req, res, next) => {
     const status = (req.query.status || '').trim();
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
     const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || '25', 10), 1), 200);
+    const asJson = String(req.query.json || '').trim() === '1';
 
     const filter = {};
     if (status) filter.status = status;
@@ -102,6 +132,14 @@ exports.listIngest = async (req, res, next) => {
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .lean();
+
+    // Optional JSON mode for lightweight status polling
+    if (asJson) {
+      // Consider statuses that indicate work in progress
+      const runningStatuses = ['running', 'in-progress', 'working', 'grabbing'];
+      const runningCount = await OcrDocumentIngest.countDocuments({ status: { $in: runningStatuses } });
+      return res.json({ running: runningCount > 0, runningCount, total });
+    }
 
     res.render(path.join('tailwindcss', 'paperless',  'ingest'), {
       title: 'Paperless Ingest Tracker',
