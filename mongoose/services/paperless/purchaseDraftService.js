@@ -362,6 +362,65 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
           }
         }
       }
+
+      // Penny-balance net/gross to match consistent header when VAT already matches
+      //
+      // Rationale:
+      //  - When the header totals (Net/VAT/Gross) are present and internally consistent,
+      //    we treat them as the source of truth.
+      //  - Small rounding noise can leave the sum of line Net/Gross off by a penny or two
+      //    even when the sum of line VAT already matches the header VAT.
+      //  - In that specific, safe scenario, nudge a single line (the last one with NetAmount)
+      //    by the tiny drift so the lines sum exactly to the header, without altering VAT.
+      try {
+        // Compute current sums from the (possibly corrected) line items
+        const sums2 = items.reduce((acc, it) => {
+          acc.net += typeof it.NetAmount === 'number' ? it.NetAmount : 0;
+          acc.vat += typeof it.VATAmount === 'number' ? it.VATAmount : 0;
+          acc.gross += typeof it.GrossAmount === 'number' ? it.GrossAmount : 0;
+          return acc;
+        }, { net: 0, vat: 0, gross: 0 });
+        // Round to two decimals to emulate accounting precision
+        sums2.net = +sums2.net.toFixed(2);
+        sums2.vat = +sums2.vat.toFixed(2);
+        sums2.gross = +sums2.gross.toFixed(2);
+        // We only consider balancing when all header amounts exist and form a coherent total
+        const headerPresent = (typeof netAmount === 'number') && (typeof vatAmount === 'number') && (typeof grossAmount === 'number');
+        const headerConsistent = headerPresent && Math.abs((netAmount + vatAmount) - grossAmount) <= 0.01;
+        // Measure the drift between header totals and summed lines, per bucket
+        const netDrift = headerPresent ? +(netAmount - sums2.net).toFixed(2) : 0;
+        const vatDrift = headerPresent ? +(vatAmount - sums2.vat).toFixed(2) : 0;
+        const grossDrift = headerPresent ? +(grossAmount - sums2.gross).toFixed(2) : 0;
+        // Only act when:
+        //  - Header is internally consistent
+        //  - VAT already matches (within < 0.5p tolerance)
+        //  - Net/Gross differ by <= 2p (tiny drift), and by the same magnitude (within < 0.5p)
+        if (headerConsistent && Math.abs(vatDrift) < 0.005 && Math.abs(netDrift) > 0 && Math.abs(netDrift) <= 0.02 && Math.abs(Math.abs(netDrift) - Math.abs(grossDrift)) < 0.005) {
+          // Adjust the last line that has a NetAmount to absorb the small net/gross drift
+          let idx = -1;
+          for (let k = items.length - 1; k >= 0; k--) {
+            if (typeof items[k].NetAmount === 'number') { idx = k; break; }
+          }
+          if (idx >= 0) {
+            const li = items[idx];
+            // Apply the drift to that line's NetAmount, preserving two-decimal precision
+            const newNet = +((li.NetAmount || 0) + netDrift).toFixed(2);
+            // Safety: do not create negative Net for the adjusted line
+            if (newNet >= 0) {
+              li.NetAmount = newNet;
+              // Keep VAT unchanged; recompute Gross from Net + VAT if possible.
+              // If VAT is missing but Gross exists, nudge Gross directly to keep totals consistent.
+              if (typeof li.VATAmount === 'number') {
+                li.GrossAmount = +((li.NetAmount + li.VATAmount).toFixed(2));
+              } else if (typeof li.GrossAmount === 'number') {
+                li.GrossAmount = +((li.GrossAmount + netDrift).toFixed(2));
+              }
+              // Debug breadcrumb for traceability. Note: this sentinel is not attached to draft.Debug here.
+              var __PENNY_BALANCE__ = { LineAdjusted: idx + 1, Field: 'NetAmount', Drift: netDrift };
+            }
+          }
+        }
+      } catch(_) { /* ignore balancing errors */ }
     }
   }
 
