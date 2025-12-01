@@ -387,7 +387,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     });
   }
   
-  // Final safety: if we have line items, align header totals to the sum of lines
+  // Final safety: if we have line items, consider aligning header totals to the sum of lines
   if (Array.isArray(lineItems) && lineItems.length > 0) {
     const sums = lineItems.reduce((acc, it) => {
       acc.net += (typeof it.NetAmount === 'number') ? it.NetAmount : 0;
@@ -404,21 +404,29 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
       gross: (grossAmount != null) ? +(grossAmount - sums.gross).toFixed(2) : null,
     };
     const differs = (v) => v != null && Math.abs(v) > 0.01;
+    // If all three header totals are present and internally consistent, prefer header values
+    const headerHasAll = (netAmount != null && vatAmount != null && grossAmount != null);
+    const headerConsistent = headerHasAll ? Math.abs((netAmount + vatAmount) - grossAmount) <= 0.01 : false;
     if (differs(deltas.net) || differs(deltas.vat) || differs(deltas.gross)) {
-      // Preserve originals in debug, then align to sums for correctness
-      const original = {
-        NetAmount: netAmount,
-        VATAmount: vatAmount,
-        GrossAmount: grossAmount,
-      };
-      netAmount = sums.net;
-      vatAmount = sums.vat;
-      grossAmount = sums.gross;
-      // Stash debug note
-      const adj = { FromLines: { Net: sums.net, VAT: sums.vat, Gross: sums.gross }, Original: original, Delta: deltas };
-      if (!enumeratedItems) enumeratedItems = []; // ensure Debug object creation below
-      // We'll attach to Debug below together with any existing info
-      var __HEADER_ALIGNED_FROM_LINES__ = adj; // sentinel to pick up later
+      if (headerConsistent) {
+        // Keep header numbers; record the difference for UI/debugging
+        var __HEADER_PRESERVED_DIFF__ = { Header: { Net: netAmount, VAT: vatAmount, Gross: grossAmount }, FromLines: { Net: sums.net, VAT: sums.vat, Gross: sums.gross }, Delta: deltas };
+      } else {
+        // Preserve originals in debug, then align to sums for correctness
+        const original = {
+          NetAmount: netAmount,
+          VATAmount: vatAmount,
+          GrossAmount: grossAmount,
+        };
+        netAmount = sums.net;
+        vatAmount = sums.vat;
+        grossAmount = sums.gross;
+        // Stash debug note
+        const adj = { FromLines: { Net: sums.net, VAT: sums.vat, Gross: sums.gross }, Original: original, Delta: deltas };
+        if (!enumeratedItems) enumeratedItems = []; // ensure Debug object creation below
+        // We'll attach to Debug below together with any existing info
+        var __HEADER_ALIGNED_FROM_LINES__ = adj; // sentinel to pick up later
+      }
     }
   }
 
@@ -457,7 +465,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
   };
 
   // Attach debug info if enumerated custom fields were parsed
-  if ((Array.isArray(enumeratedItems) && enumeratedItems.length > 0) || typeof __HEADER_ALIGNED_FROM_LINES__ === 'object' || (Array.isArray(corrections) && corrections.length > 0)) {
+  if ((Array.isArray(enumeratedItems) && enumeratedItems.length > 0) || typeof __HEADER_ALIGNED_FROM_LINES__ === 'object' || typeof __HEADER_PRESERVED_DIFF__ === 'object' || (Array.isArray(corrections) && corrections.length > 0)) {
     // Provide helpful totals for the UI to compare
     let sums;
     if (Array.isArray(enumeratedItems) && enumeratedItems.length > 0) {
@@ -474,6 +482,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     draft.Debug = { ...(draft.Debug || {}),
       ...(Array.isArray(enumeratedItems) && enumeratedItems.length > 0 ? { EnumeratedLineItems: enumeratedItems, TotalsFromLines: sums } : {}),
       ...(__HEADER_ALIGNED_FROM_LINES__ ? { HeaderAlignedFromLines: __HEADER_ALIGNED_FROM_LINES__ } : {}),
+      ...(__HEADER_PRESERVED_DIFF__ ? { HeaderPreserved: __HEADER_PRESERVED_DIFF__ } : {}),
       ...(typeof __ROUND_ADJUST__ === 'object' ? { RoundingAdjustment: __ROUND_ADJUST__ } : {}),
       ...(Array.isArray(corrections) && corrections.length > 0 ? { Corrections: corrections } : {})
     };
