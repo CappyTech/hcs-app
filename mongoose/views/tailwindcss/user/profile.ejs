@@ -51,8 +51,13 @@
               <li class="py-2"><strong>Email:</strong> <%= employee.email || 'N/A' %></li>
               <li class="py-2"><strong>Position:</strong> <%= employee.position || 'N/A' %></li>
               <li class="py-2"><strong>Status:</strong> <%= employee.status %></li>
-              <li class="py-2"><strong>Hourly Rate:</strong> £<%= employee.hourlyRate || 'N/A' %></li>
-              <li class="py-2"><strong>Hire Date:</strong> <%= slimDateTime(employee.hireDate, ['includeTime']) %></li>
+              <li class="py-2"><strong>Defined Rate:</strong> <%= employee.definedRate || 'N/A' %></li>
+              <li class="py-2"><strong>Hourly Rate:</strong> £<%= employee.hourlyRate != null ? Number(employee.hourlyRate).toFixed(2) : 'N/A' %></li>
+              <li class="py-2"><strong>Daily Rate:</strong> £<%= employee.dailyRate != null ? Number(employee.dailyRate).toFixed(2) : 'N/A' %></li>
+              <li class="py-2"><strong>Weekly Rate:</strong> £<%= employee.weeklyRate != null ? Number(employee.weeklyRate).toFixed(2) : 'N/A' %></li>
+              <li class="py-2"><strong>Monthly Rate:</strong> £<%= employee.monthlyRate != null ? Number(employee.monthlyRate).toFixed(2) : 'N/A' %></li>
+              <li class="py-2"><strong>Yearly Rate:</strong> £<%= employee.yearlyRate != null ? Number(employee.yearlyRate).toFixed(2) : 'N/A' %></li>
+              <li class="py-2"><strong>Hire Date:</strong> <%= slimDateTime(employee.hireDate) %></li>
             </ul>
           <% } %>
         </div>
