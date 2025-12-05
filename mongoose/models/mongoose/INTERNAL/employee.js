@@ -21,8 +21,11 @@ const employeeSchema = new mongoose.Schema({
   },
   managerId: { type: mongoose.Schema.Types.ObjectId, ref: 'employee' },
   hireDate: { type: Date, default: Date.now },
-  hourlyRate: { type: mongoose.Decimal128 },
-  dailyRate: { type: mongoose.Decimal128 }
+  hourlyRate: { type: mongoose.Decimal128, default:0 },
+  dailyRate: { type: mongoose.Decimal128, default:0 },
+  weeklyRate: { type: mongoose.Decimal128, default:0 },
+  monthlyRate: { type: mongoose.Decimal128, default:0 },
+  yearlyRate: { type: mongoose.Decimal128, default:0 }
 }, {
   timestamps: true
 });
@@ -50,11 +53,137 @@ employeeSchema.add({
   }
 });
 
-employeeSchema.pre('validate', function (next) {
-  if (this.hourlyRate && this.dailyRate) {
-    return next(new Error('Employee should have either hourlyRate or dailyRate, not both.'));
+// Define which rate is authoritative for calculations
+employeeSchema.add({
+  definedRate: { type: String, enum: ['hourly','daily', 'weekly', 'monthly', 'yearly'], default: 'weekly' }
+});
+
+// Helper: convert Decimal128 to Number safely
+function d2n(v) {
+  if (v == null) return null;
+  try { return typeof v === 'object' && v.toString ? Number(v.toString()) : Number(v); } catch (_) { return Number(v); }
+}
+
+// Compute all rate fields from a base value and context
+function computeRatesFrom(baseKind, baseValue, ctx) {
+  const workingDays = Number.isFinite(ctx.workingDaysPerWeek) && ctx.workingDaysPerWeek > 0 ? ctx.workingDaysPerWeek : 5;
+  const hoursPerWeek = Number.isFinite(ctx.hoursPerWeek) && ctx.hoursPerWeek > 0 ? ctx.hoursPerWeek : null;
+  const weeksPerYear = 52;
+  const monthsPerYear = 12;
+
+  let daily = null, weekly = null, monthly = null, yearly = null, hourly = null;
+
+  switch (baseKind) {
+    case 'daily':
+      daily = baseValue;
+      weekly = daily * workingDays;
+      yearly = weekly * weeksPerYear;
+      monthly = yearly / monthsPerYear;
+      if (hoursPerWeek) {
+        const hoursPerDay = hoursPerWeek / workingDays;
+        if (hoursPerDay > 0) hourly = daily / hoursPerDay;
+      }
+      break;
+    case 'weekly':
+      weekly = baseValue;
+      daily = weekly / workingDays;
+      yearly = weekly * weeksPerYear;
+      monthly = yearly / monthsPerYear;
+      if (hoursPerWeek && hoursPerWeek > 0) hourly = weekly / hoursPerWeek;
+      break;
+    case 'monthly':
+      monthly = baseValue;
+      yearly = monthly * monthsPerYear;
+      weekly = yearly / weeksPerYear;
+      daily = weekly / workingDays;
+      if (hoursPerWeek && hoursPerWeek > 0) hourly = weekly / hoursPerWeek;
+      break;
+    case 'yearly':
+      yearly = baseValue;
+      weekly = yearly / weeksPerYear;
+      daily = weekly / workingDays;
+      monthly = yearly / monthsPerYear;
+      if (hoursPerWeek && hoursPerWeek > 0) hourly = weekly / hoursPerWeek;
+      break;
+    default:
+      break;
   }
-  next();
+
+  const toD128 = (n) => (Number.isFinite(n) ? mongoose.Types.Decimal128.fromString(n.toFixed(2)) : undefined);
+  return {
+    dailyRate: toD128(daily),
+    weeklyRate: toD128(weekly),
+    monthlyRate: toD128(monthly),
+    yearlyRate: toD128(yearly),
+    hourlyRate: Number.isFinite(hourly) ? mongoose.Types.Decimal128.fromString(hourly.toFixed(4)) : undefined
+  };
+}
+
+// Pre-validate: enforce that only the definedRate numeric change is accepted; others are derived
+employeeSchema.pre('validate', function (next) {
+  try {
+    const defined = this.definedRate || 'weekly';
+    // Determine if a rate field was modified
+    const modified = {
+      dailyRate: this.isModified('dailyRate'),
+      weeklyRate: this.isModified('weeklyRate'),
+      monthlyRate: this.isModified('monthlyRate'),
+      yearlyRate: this.isModified('yearlyRate'),
+      hourlyRate: this.isModified('hourlyRate')
+    };
+
+    // Base value comes from the defined rate field; if none modified, on create use existing value
+    let baseValue = null;
+    if (defined === 'daily') baseValue = d2n(this.dailyRate);
+    else if (defined === 'weekly') baseValue = d2n(this.weeklyRate);
+    else if (defined === 'monthly') baseValue = d2n(this.monthlyRate);
+    else if (defined === 'yearly') baseValue = d2n(this.yearlyRate);
+
+    // If a non-defined rate was modified, ignore it by recomputing from base
+    const nonDefinedModified = Object.entries(modified).some(([k, v]) => {
+      if (!v) return false;
+      if (defined === 'daily' && k === 'dailyRate') return false;
+      if (defined === 'weekly' && k === 'weeklyRate') return false;
+      if (defined === 'monthly' && k === 'monthlyRate') return false;
+      if (defined === 'yearly' && k === 'yearlyRate') return false;
+      return true;
+    });
+
+    // If no base value yet (e.g., first set was made against non-defined), infer base from whichever rate was changed and then require definedRate to be updated first
+    if (baseValue == null) {
+      // If user changed a specific rate but didn't change definedRate accordingly, block with guidance
+      const changedKind = modified.dailyRate ? 'daily' : modified.weeklyRate ? 'weekly' : modified.monthlyRate ? 'monthly' : modified.yearlyRate ? 'yearly' : null;
+      if (changedKind && changedKind !== defined) {
+        return next(new Error(`To change ${changedKind} pay, set definedRate to '${changedKind}' first.`));
+      }
+      // Else proceed (create without base) — nothing to compute
+      return next();
+    }
+
+    // Compute all rates from the base and overwrite non-defined fields
+    const ctx = {
+      workingDaysPerWeek: this.contract && this.contract.workingDaysPerWeek,
+      hoursPerWeek: this.contract && this.contract.hoursPerWeek
+    };
+    const computed = computeRatesFrom(defined, baseValue, ctx);
+
+    // Apply computed values, but leave the defined field as-is
+    if (defined !== 'daily') this.dailyRate = computed.dailyRate ?? this.dailyRate;
+    if (defined !== 'weekly') this.weeklyRate = computed.weeklyRate ?? this.weeklyRate;
+    if (defined !== 'monthly') this.monthlyRate = computed.monthlyRate ?? this.monthlyRate;
+    if (defined !== 'yearly') this.yearlyRate = computed.yearlyRate ?? this.yearlyRate;
+    // Hourly is auxiliary; recompute if context allows, otherwise keep provided
+    this.hourlyRate = computed.hourlyRate ?? this.hourlyRate;
+
+    // If user tried changing non-defined rate directly, we neutralize by overwriting from base
+    if (nonDefinedModified) {
+      // No error; silently align to definedRate rule
+    }
+
+    return next();
+  } catch (err) {
+    return next(err);
+  }
 });
 
 module.exports = {
