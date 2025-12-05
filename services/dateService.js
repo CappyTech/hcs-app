@@ -9,7 +9,7 @@ const moment = require('moment-timezone');
  * @returns {string} - The formatted date string, or 'N/A' / 'Invalid date'.
  */
 function slimDateTime(dateString, options = [], timezone = 'Europe/London') {
-  if (!dateString) return 'N/A';
+  if (!dateString) return 'Never';
 
   const date = moment.tz(dateString, timezone);
   if (!date.isValid()) return 'Invalid date';
