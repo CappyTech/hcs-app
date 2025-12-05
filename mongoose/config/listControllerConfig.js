@@ -131,7 +131,7 @@ module.exports = {
     title: 'Employees',
     linkField: 'name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
-    fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type', 'dailyRate', 'hourlyRate', 'hireDate', 'managerId'],
+    fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type', 'definedRate', 'dailyRate', 'weeklyRate', 'monthlyRate', 'yearlyRate', 'hourlyRate', 'hireDate', 'managerId'],
     sortField: 'name',
     sortOrder: 1,
     department: ['payroll', 'human-resources'],
