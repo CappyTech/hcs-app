@@ -78,14 +78,14 @@ module.exports = {
     },
     Paperlessngx: {
         title: 'Document Management',
-        description: 'Manage OCR documents imported from Paperless-ngx.',
+        description: 'Manage OCR documents imported from docs.heroncs.co.uk.',
         link: '/paperless/ocr',
         department: ['paperless'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     ExternalPaperlessngx: {
         title: 'External Document Management',
-        description: 'Access the external Paperless-ngx document management system.',
+        description: 'Access the external purchase invoice document management system.',
         link: 'https://docs.heroncs.co.uk',
         department: ['paperless'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
@@ -96,6 +96,13 @@ module.exports = {
         description: 'Access the external payroll management system.',
         link: 'https://go.kashflowpayroll.com/Users/SignIn',
         department: ['finance', 'payroll'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    ExternalOneDrive: {
+        title: 'Microsoft OneDrive',
+        description: 'Access OneDrive for document storage and management.',
+        link: 'https://heroncscouk-my.sharepoint.com/',
+        department: ['management'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     }
 };
