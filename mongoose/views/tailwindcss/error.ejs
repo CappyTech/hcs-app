@@ -10,7 +10,7 @@
     <p class="mt-2 text-lg text-gray-600 dark:text-gray-300"><%= error.message %></p>
 
     <!-- Stack Trace -->
-    <% if (error.stack) { %>
+    <% if (error.stack && process.env.DEBUG === 'true') { %>
       <div class="mt-6 bg-yellow-100 dark:bg-yellow-900 border border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-100 rounded p-4 text-left">
         <details class="text-sm whitespace-pre-wrap">
           <summary class="cursor-pointer font-semibold">View Stack Trace</summary>
