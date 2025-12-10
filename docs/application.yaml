@@ -1,0 +1,2185 @@
+openapi: 3.0.3
+info:
+  title: CIS Deductions (MTD)
+  description: "# Send fraud prevention data\nHMRC monitors transactions to help protect\
+    \ your customers' confidential data from criminals and fraudsters. \n\n<div class=\"\
+    govuk-warning-text warning-icon-fix\">\n  <span class=\"govuk-warning-text__icon\
+    \ warning-icon-ui-fix\" aria-hidden=\"true\">!</span>\n  <strong class=\"govuk-warning-text__text\"\
+    >\n    <span class=\"govuk-warning-text__assistive\">Warning</span>\n    You are\
+    \ required by law to submit header data for this API. This includes all associated\
+    \ APIs and endpoints.\n  </strong>\n</div>\n\n[Check the data you need to send](/guides/fraud-prevention/).\
+    \ You can also use the [Test API](/api-documentation/docs/api/service/txm-fph-validator-api/1.0)\
+    \ during initial development and as part of your quality assurance checks.\n\n\
+    # Mapping APIs to Self Assessment tax return forms\nSome parameters in this API\
+    \ map to box numbers in one or more Self Assessment tax return forms. To learn\
+    \ more and to download this mapping information as a CSV file, go to [income-tax-mtd-changelog/mapping](https://github.com/hmrc/income-tax-mtd-changelog?tab=readme-ov-file#mapping-apis-to-self-assessment-tax-return-forms)\
+    \ on GitHub.\n\n# Changelog\nYou can find the changelog in the [income-tax-mtd-changelog](https://github.com/hmrc/income-tax-mtd-changelog/#readme)\
+    \ on GitHub.\n\n# Support\n\n* Direct reports of bugs or errors in Production\
+    \ or Sandbox code, or queries about HMRC business functionality (such as how a\
+    \ specific field is used by HMRC or why it is needed) to the [Software Development\
+    \ Support Team (SDST)](https://developer.service.hmrc.gov.uk/developer/support).\n\
+    * Send queries or feedback related to the design of the APIs (including recommended\
+    \ changes) using the [income-tax-mtd-changelog](https://github.com/hmrc/income-tax-mtd-changelog/issues)\
+    \ GitHub page.\n* <a href=\"/contact/report-technical-problem?newTab=true&service=api-documentation-frontend\"\
+    \ target=\"_blank\">Is this page not working properly? (opens in new tab)</a>\n"
+  version: "3.0"
+servers:
+- url: https://test-api.service.hmrc.gov.uk
+  description: Sandbox
+- url: https://api.service.hmrc.gov.uk
+  description: Production
+paths:
+  /individuals/deductions/cis/{nino}/current-position/{taxYear}/{source}:
+    get:
+      summary: Retrieve CIS Deductions for Subcontractor
+      description: |
+        This endpoint allows a developer to retrieve a customer's latest CIS deductions data and whether it was submitted by a contractor or user. A National Insurance number, tax year and source must be provided.
+
+        ### Test data
+        Scenario simulation using Gov-Test-Scenario headers is only available in the sandbox environment.
+
+        | Header Value (Gov-Test-Scenario)                | Scenario                                                                                                                    |
+        |-------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+        | N/A - DEFAULT                                   | Simulates success response with customer and contractor deductions.                                                         |
+        | N/A - DEFAULT <br> using source **all**         | Simulates success response with customer and contractor deductions                                                          |
+        | N/A - DEFAULT <br> using source **contractor**  | Simulates success response with contractor deductions.                                                                      |
+        | N/A - DEFAULT <br> using source **customer**    | Simulates success response with customer deductions.                                                                        |
+        | TAX_YEAR_RANGE_INVALID                          | Simulates the scenario where specified tax year is outside the allowable tax years (the current tax year minus four years). |
+        | TAX_YEAR_NOT_SUPPORTED                          | Simulates the scenario where the tax year is not supported.                                                                 |
+        | NOT_FOUND                                       | Simulates the scenario where no data is found.                                                                              |
+        | DYNAMIC                                         | The following response values will change to correspond to the values submitted in the request: <br/> &bull; fromDate <br/> &bull; toDate <br/> &bull; deductionFromDate <br/> &bull; deductionToDate <br/> &bull; submissionDate <br/> &bull; source |
+        | STATEFUL                                        | Performs a stateful retrieve.                                                                                               |
+      parameters:
+      - name: nino
+        in: path
+        description: |
+          National Insurance number in the format AA999999A.
+        required: true
+        schema:
+          type: string
+          example: TC663795B
+      - name: taxYear
+        in: path
+        description: |
+          The tax year the data applies to, for example, 2021-22. The start year and end year must not span two tax years.
+        required: true
+        schema:
+          type: string
+          example: 2021-22
+      - name: source
+        in: path
+        description: |
+          The source of amended data. Defaults to `all`.
+        required: true
+        schema:
+          type: string
+          example: all
+          enum:
+          - all
+          - contractor
+          - customer
+      - name: Authorization
+        in: header
+        description: |
+          An OAuth 2.0 Bearer Token with the *read:self-assessment* scope.
+        required: true
+        schema:
+          type: string
+          example: Bearer bb7fed3fe10dd235a2ccda3d50fb
+      - name: Accept
+        in: header
+        description: |
+          Specifies the response format and the version of the API to be used.
+        required: true
+        schema:
+          type: string
+          example: application/vnd.hmrc.3.0+json
+      - name: Gov-Test-Scenario
+        in: header
+        description: |
+          Only in sandbox environment. See Test Data table for all header values.
+        required: false
+        schema:
+          type: string
+          example: "-"
+      responses:
+        "200":
+          description: Success
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                title: List CIS Deductions
+                required:
+                - cisDeductions
+                type: object
+                properties:
+                  totalDeductionAmount:
+                    type: number
+                    description: The total amount of tax deducted by CIS contractors.
+                      The value must be between 0 and 99999999999.99 up to 2 decimal
+                      places.
+                    example: 5000.99
+                  totalCostOfMaterials:
+                    type: number
+                    description: The total cost of materials incurred under CIS by
+                      the subcontractor across all of the CIS contractors that they
+                      worked for. This value must be between 0 and 99999999999.99
+                      up to 2 decimal places.
+                    example: 5000.99
+                  totalGrossAmountPaid:
+                    type: number
+                    description: The total gross amount paid by CIS contractors. The
+                      value must be between 0 and 99999999999.99 up to 2 decimal places.
+                    example: 5000.99
+                  cisDeductions:
+                    type: array
+                    description: List of the components that make up the overall deductions.
+                    items:
+                      title: item
+                      required:
+                      - employerRef
+                      - fromDate
+                      - periodData
+                      - toDate
+                      type: object
+                      properties:
+                        fromDate:
+                          type: string
+                          description: CIS start date of a tax year.
+                          example: 2020-04-06
+                        toDate:
+                          type: string
+                          description: CIS end date of a tax year.
+                          example: 2021-04-05
+                        contractorName:
+                          maximum: 105
+                          minimum: 1
+                          type: string
+                          description: The name of the contractor the subcontractor
+                            worked for.
+                        employerRef:
+                          pattern: "^[0-9]{3}\\/[^ ].{0,9}$"
+                          type: string
+                          description: "A unique identifier, the contractor reference\
+                            \ number."
+                          example: 123/AC80213
+                        totalDeductionAmount:
+                          type: number
+                          description: The total amount of tax deducted by a CIS contractor.
+                            The value must be between 0 and 99999999999.99 up to 2
+                            decimal places.
+                          example: 5000.99
+                        totalCostOfMaterials:
+                          type: number
+                          description: The total cost of materials incurred under
+                            CIS by the subcontractor. This value must be between 0
+                            and 99999999999.99 up to 2 decimal places.
+                          example: 5000.99
+                        totalGrossAmountPaid:
+                          type: number
+                          description: The total gross amount paid by a CIS contractor.
+                            The value must be between 0 and 99999999999.99 up to 2
+                            decimal places.
+                          example: 5000.99
+                        periodData:
+                          type: array
+                          description: List of deductions.
+                          items:
+                            title: item
+                            required:
+                            - deductionFromDate
+                            - deductionToDate
+                            - source
+                            - submissionDate
+                            type: object
+                            properties:
+                              deductionFromDate:
+                                type: string
+                                description: The From date when the deduction was
+                                  made within the CIS tax year period.
+                                example: 2020-07-06
+                              deductionToDate:
+                                type: string
+                                description: The To date when the deduction was made
+                                  within the CIS tax year period.
+                                example: 2020-08-05
+                              deductionAmount:
+                                multipleOf: 0.01
+                                maximum: 99999999999.99
+                                minimum: 0
+                                type: number
+                                description: The amount of tax deducted by the contractor.
+                                  This value must be between 0 and 99999999999.99
+                                  up to 2 decimal places.
+                                example: 5000.99
+                              costOfMaterials:
+                                multipleOf: 0.01
+                                maximum: 99999999999.99
+                                minimum: 0
+                                type: number
+                                description: The cost of materials incurred under
+                                  CIS. This value must be between 0 and 99999999999.99
+                                  up to 2 decimal places.
+                                example: 50.00
+                              grossAmountPaid:
+                                multipleOf: 0.01
+                                maximum: 99999999999.99
+                                minimum: 0
+                                type: number
+                                description: The gross amount paid under CIS. This
+                                  value must be between 0 and 99999999999.99 up to
+                                  2 decimal places.
+                                example: 5000.99
+                              submissionDate:
+                                type: string
+                                description: The date the deduction was submitted.
+                                example: 2020-05-11T16:38:57Z
+                              submissionId:
+                                type: string
+                                description: The unique identifier for the submission.
+                                example: 4557ecb5-fd32-48cc-81f5-e6acd1099f3c
+                              source:
+                                type: string
+                                description: The source of the data.
+                                example: customer or contractor
+                description: List CIS Deductions
+              examples:
+                example-response:
+                  description: Example Response
+                  value:
+                    $ref: ./examples/list_response_1.json
+        "400":
+          description: Bad request
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                FORMAT_NINO:
+                  description: |
+                    The format of the supplied NINO field is not valid.
+                  value:
+                    code: FORMAT_NINO
+                    message: The provided NINO is invalid
+                FORMAT_TAX_YEAR:
+                  description: |
+                    The format of the supplied tax year field is not valid.
+                  value:
+                    code: FORMAT_TAX_YEAR
+                    message: The provided tax year is invalid
+                RULE_DATE_RANGE_INVALID:
+                  description: |
+                    The specified date range is invalid
+                  value:
+                    code: RULE_DATE_RANGE_INVALID
+                    message: The date range should be a valid tax year
+                RULE_TAX_YEAR_NOT_SUPPORTED:
+                  description: |
+                    The specified tax year is not supported. Either the tax year specified is before the minimum tax year value,
+                    or it is after the maximum tax year value.
+                  value:
+                    code: RULE_TAX_YEAR_NOT_SUPPORTED
+                    message: The tax year specified does not lie within the supported
+                      range
+                RULE_TAX_YEAR_RANGE_INVALID:
+                  description: |
+                    The specified date range is outside the allowable tax years (the current tax year minus four years).
+                  value:
+                    code: RULE_TAX_YEAR_RANGE_INVALID
+                    message: The specified date range is outside the allowable tax
+                      years (the current tax year minus four years)
+                RULE_SOURCE_INVALID:
+                  description: |
+                    The source of data should be one of these All (Blended view), Customer or Contractor.
+                  value:
+                    code: RULE_SOURCE_INVALID
+                    message: The source is invalid
+                RULE_INCORRECT_OR_EMPTY_BODY_SUBMITTED:
+                  description: |
+                    An empty or non-matching body was submitted.
+                  value:
+                    code: RULE_INCORRECT_OR_EMPTY_BODY_SUBMITTED
+                    message: An empty or non-matching body was submitted
+                RULE_INCORRECT_GOV_TEST_SCENARIO:
+                  description: |
+                    The request did not match any available Sandbox data. Check that the supplied Gov-Test-Scenario is correct for this endpoint version. This error will only be returned in the Sandbox environment.
+                  value:
+                    code: RULE_INCORRECT_GOV_TEST_SCENARIO
+                    message: The supplied Gov-Test-Scenario is not valid
+        "403":
+          description: Forbidden
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                CLIENT_OR_AGENT_NOT_AUTHORISED:
+                  description: |
+                    The client or agent is not authorised. This is because: the client is not subscribed to MTD, the agent is not subscribed to Agent Services, or the client has not authorised the agent to act on their behalf.
+                  value:
+                    code: CLIENT_OR_AGENT_NOT_AUTHORISED
+                    message: The client and/or agent is not authorised
+        "404":
+          description: Not Found
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                MATCHING_RESOURCE_NOT_FOUND:
+                  description: |
+                    The remote endpoint has indicated that no data can be found for the given period.
+                  value:
+                    code: MATCHING_RESOURCE_NOT_FOUND
+                    message: Matching resource not found
+      security:
+      - User-Restricted:
+        - read:self-assessment
+  /individuals/deductions/cis/{nino}/amendments:
+    post:
+      summary: Create CIS Deductions for Subcontractor
+      description: |
+        This endpoint allows a developer to create a customer’s CIS deductions that have been previously populated. A National Insurance number must be provided.
+
+        ### Test data
+        Scenario simulation using Gov-Test-Scenario headers is only available in the sandbox environment.
+
+        | Header Value (Gov-Test-Scenario) | Scenario                                                                                                                       |
+        |----------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+        | N/A - DEFAULT                    | Simulates success response.                                                                                                    |
+        | DEDUCTIONS_DATE_RANGE_INVALID    | Simulates the scenario where the deductions period does not align from the 6th of one month to the 5th of the following month. |
+        | UNALIGNED_DEDUCTIONS_PERIOD      | Simulates the scenario where the deductions periods do not align with the tax year supplied.                                   |
+        | TAX_YEAR_NOT_ENDED               | Simulates the scenario where the submission is for a tax year that has not ended.                                              |
+        | DUPLICATE_SUBMISSION             | Simulates the scenario where CIS deductions already exists for this tax year.                                                  |
+        | DUPLICATE_PERIOD                 | Simulates the scenario where CIS deductions already exists for this period.                                                    |
+        | OUTSIDE_AMENDMENT_WINDOW         | Simulates the scenario where request cannot be completed as it is outside the amendment window.                                |
+        | STATEFUL                         | Performs a stateful create.                                                                                                    |
+      parameters:
+      - name: nino
+        in: path
+        description: |
+          National Insurance number in the format AA999999A.
+        required: true
+        schema:
+          type: string
+          example: TC663795B
+      - name: Authorization
+        in: header
+        description: |
+          An OAuth 2.0 Bearer Token with the *write:self-assessment* scope.
+        required: true
+        schema:
+          type: string
+          example: Bearer bb7fed3fe10dd235a2ccda3d50fb
+      - name: Accept
+        in: header
+        description: |
+          Specifies the response format and the version of the API to be used.
+        required: true
+        schema:
+          type: string
+          example: application/vnd.hmrc.3.0+json
+      - name: Content-Type
+        in: header
+        description: |
+          Specifies the format of the request body, which must be JSON.
+        required: true
+        schema:
+          type: string
+          example: application/json
+      - name: Gov-Test-Scenario
+        in: header
+        description: |
+          Only in sandbox environment. See Test Data table for all header values.
+        required: false
+        schema:
+          type: string
+          example: "-"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Create CIS Deduction
+              required:
+              - contractorName
+              - employerRef
+              - fromDate
+              - periodData
+              - toDate
+              type: object
+              properties:
+                fromDate:
+                  type: string
+                  description: CIS tax year start date. The minimum tax year is 2020-21.
+                    The minimum tax year in Sandbox is 2019-20.
+                  example: 2020-04-06
+                toDate:
+                  type: string
+                  description: CIS tax year end date. The minimum tax year is 2020-21.
+                    The minimum tax year in Sandbox is 2019-20.
+                  example: 2021-04-05
+                contractorName:
+                  type: string
+                  description: The name of the contractor the subcontractor worked
+                    for.
+                employerRef:
+                  pattern: "^[0-9]{3}\\/[^ ].{0,9}$"
+                  type: string
+                  description: "A unique identifier, the contractor reference number."
+                  example: 123/AB56797
+                periodData:
+                  type: array
+                  description: List of deductions. At least one item is required.
+                  items:
+                    title: item
+                    required:
+                    - deductionAmount
+                    - deductionFromDate
+                    - deductionToDate
+                    type: object
+                    properties:
+                      deductionAmount:
+                        multipleOf: 0.01
+                        maximum: 99999999999.99
+                        minimum: 0
+                        type: number
+                        description: The amount of tax deducted by the contractor.
+                          This value must be between 0 and 99999999999.99 up to 2
+                          decimal places.
+                        example: 5000.99
+                      deductionFromDate:
+                        type: string
+                        description: The From date when the deduction was made within
+                          the CIS tax year period.
+                        example: 2020-07-06
+                      deductionToDate:
+                        type: string
+                        description: The To date when the deduction was made within
+                          the CIS tax year period.
+                        example: 2020-08-05
+                      costOfMaterials:
+                        multipleOf: 0.01
+                        maximum: 99999999999.99
+                        minimum: 0
+                        type: number
+                        description: The cost of materials incurred under CIS. This
+                          value must be between 0 and 99999999999.99 up to 2 decimal
+                          places.
+                        example: 5000.99
+                      grossAmountPaid:
+                        multipleOf: 0.01
+                        maximum: 99999999999.99
+                        minimum: 0
+                        type: number
+                        description: The gross amount paid under CIS. This value must
+                          be between 0 and 99999999999.99 up to 2 decimal places.
+                        example: 5000.99
+              description: Create CIS Deduction
+            examples:
+              example-1:
+                description: Create CIS request
+                value:
+                  $ref: ./examples/create_request.json
+      responses:
+        "200":
+          description: Success
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                title: Create CIS Deduction
+                required:
+                - submissionId
+                type: object
+                properties:
+                  submissionId:
+                    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                    type: string
+                    description: A unique identifier for the customer provided CIS
+                      deduction amendment.
+                    example: ab123aaa-65ab-488c-9120-f63abc14b9n1
+                description: Create CIS Deduction
+              examples:
+                example-user-response:
+                  description: Example user response
+                  value:
+                    $ref: ./examples/example_1.json
+        "400":
+          description: Bad request
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                FORMAT_NINO:
+                  description: |
+                    The format of the supplied NINO field is not valid.
+                  value:
+                    code: FORMAT_NINO
+                    message: The provided NINO is invalid
+                RULE_INCORRECT_OR_EMPTY_BODY_SUBMITTED:
+                  description: |
+                    An empty or non-matching body was submitted.
+                  value:
+                    code: RULE_INCORRECT_OR_EMPTY_BODY_SUBMITTED
+                    message: An empty or non-matching body was submitted
+                FORMAT_DEDUCTIONS_FROM_DATE:
+                  description: |
+                    The deductions From date is not a valid date format.
+                  value:
+                    code: FORMAT_DEDUCTIONS_FROM_DATE
+                    message: The provided deductions From date is invalid
+                FORMAT_DEDUCTIONS_TO_DATE:
+                  description: |
+                    The deductions To date is not a valid date format.
+                  value:
+                    code: FORMAT_DEDUCTIONS_TO_DATE
+                    message: The provided deductions To date is invalid
+                FORMAT_EMPLOYER_REFERENCE:
+                  description: |
+                    The format of the Employer Reference number is invalid.
+                  value:
+                    code: FORMAT_EMPLOYER_REFERENCE
+                    message: The format of the Employer Reference number is invalid
+                FORMAT_FROM_DATE:
+                  description: |
+                    The From date is not a valid format.
+                  value:
+                    code: FORMAT_FROM_DATE
+                    message: The provided From date is invalid
+                FORMAT_TO_DATE:
+                  description: |
+                    The To date is not a valid format.
+                  value:
+                    code: FORMAT_TO_DATE
+                    message: The provided To date is invalid
+                RULE_DEDUCTIONS_AMOUNT:
+                  description: |
+                    The deductions amount should be a positive number less than 99999999999.99 up to 2 decimal places.
+                  value:
+                    code: RULE_DEDUCTIONS_AMOUNT
+                    message: The deductions amount should be a positive number less
+                      than 99999999999.99 up to 2 decimal places
+                RULE_COST_OF_MATERIALS:
+                  description: |
+                    The cost of materials should be a positive number less than 99999999999.99  up to 2 decimal places.
+                  value:
+                    code: RULE_COST_OF_MATERIALS
+                    message: The cost of materials should be a positive number less
+                      than 99999999999.99 up to 2 decimal places
+                RULE_GROSS_AMOUNT_PAID:
+                  description: |
+                    The gross amount should be a positive number less than 99999999999.99 up to 2 decimal places.
+                  value:
+                    code: RULE_GROSS_AMOUNT_PAID
+                    message: The gross amount should be a positive number less than
+                      99999999999.99 up to 2 decimal places
+                RULE_DATE_RANGE_INVALID:
+                  description: |
+                    The specified date range is invalid
+                  value:
+                    code: RULE_DATE_RANGE_INVALID
+                    message: The date range should be a valid tax year
+                RULE_UNALIGNED_DEDUCTIONS_PERIOD:
+                  description: |
+                    The deductions periods do not align with the tax year supplied.
+                  value:
+                    code: RULE_UNALIGNED_DEDUCTIONS_PERIOD
+                    message: The deductions periods do not align with the tax year
+                      supplied
+                RULE_TAX_YEAR_NOT_SUPPORTED:
+                  description: |
+                    The specified tax year is not supported. Either the tax year specified is before the minimum tax year value,
+                    or it is after the maximum tax year value.
+                  value:
+                    code: RULE_TAX_YEAR_NOT_SUPPORTED
+                    message: The tax year specified does not lie within the supported
+                      range
+                RULE_DEDUCTIONS_DATE_RANGE_INVALID:
+                  description: |
+                    The deductions period does not align from the 6th of one month to the 5th of the following month.
+                  value:
+                    code: RULE_DEDUCTIONS_DATE_RANGE_INVALID
+                    message: The deductions period must align from the 6th of one
+                      month to the 5th of the following month
+                RULE_TAX_YEAR_NOT_ENDED:
+                  description: |
+                    The submission has been made before the tax year has ended.
+                  value:
+                    code: RULE_TAX_YEAR_NOT_ENDED
+                    message: The submission has been made before the tax year has
+                      ended
+                RULE_DUPLICATE_SUBMISSION:
+                  description: |
+                    CIS deductions already exists for this tax year.
+                  value:
+                    code: RULE_DUPLICATE_SUBMISSION
+                    message: CIS deduction already exists for this tax year
+                RULE_DUPLICATE_PERIOD:
+                  description: |
+                    More than one deduction period has been supplied for the same month or period.
+                  value:
+                    code: RULE_DUPLICATE_PERIOD
+                    message: More than one deduction period has been supplied for
+                      the same month or period
+                RULE_INCORRECT_GOV_TEST_SCENARIO:
+                  description: |
+                    The request did not match any available Sandbox data. Check that the supplied Gov-Test-Scenario is correct for this endpoint version. This error will only be returned in the Sandbox environment.
+                  value:
+                    code: RULE_INCORRECT_GOV_TEST_SCENARIO
+                    message: The supplied Gov-Test-Scenario is not valid
+                RULE_OUTSIDE_AMENDMENT_WINDOW:
+                  description: |
+                    The request cannot be completed as you are outside the amendment window.
+                  value:
+                    code: RULE_OUTSIDE_AMENDMENT_WINDOW
+                    message: You are outside the amendment window
+        "403":
+          description: Forbidden
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                CLIENT_OR_AGENT_NOT_AUTHORISED:
+                  description: |
+                    The client or agent is not authorised. This is because: the client is not subscribed to MTD, the agent is not subscribed to Agent Services, or the client has not authorised the agent to act on their behalf.
+                  value:
+                    code: CLIENT_OR_AGENT_NOT_AUTHORISED
+                    message: The client and/or agent is not authorised
+      security:
+      - User-Restricted:
+        - write:self-assessment
+  /individuals/deductions/cis/{nino}/amendments/{submissionId}:
+    put:
+      summary: Amend CIS Deductions for Subcontractor
+      description: |
+        This endpoint allows a developer to amend a customer’s CIS deductions data that has been previously populated. A National Insurance number and submission ID must be provided.
+
+        ### Test data
+        Scenario simulation using Gov-Test-Scenario headers is only available in the sandbox environment.
+
+        | Header Value (Gov-Test-Scenario) | Scenario                                                                                                                       |
+        |----------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+        | N/A - DEFAULT                    | Simulates success response.                                                                                                    |
+        | DEDUCTIONS_DATE_RANGE_INVALID    | Simulates the scenario where the deductions period does not align from the 6th of one month to the 5th of the following month. |
+        | UNALIGNED_DEDUCTIONS_PERIOD      | Simulates the scenario where the deductions periods do not align with the tax year supplied.                                   |
+        | DUPLICATE_PERIOD                 | Simulates the scenario where CIS deductions already exists for this period.                                                    |
+        | NOT_FOUND                        | Simulates the scenario where the CIS deduction was not found.                                                                  |
+        | TAX_YEAR_NOT_SUPPORTED           | Simulates the scenario where the tax year is not supported.                                                                    |
+        | OUTSIDE_AMENDMENT_WINDOW         | Simulates the scenario where request cannot be completed as it is outside the amendment window.                                |
+        | STATEFUL                         | Performs a stateful update.                                                                                                    |
+      parameters:
+      - name: nino
+        in: path
+        description: |
+          National Insurance number in the format AA999999A.
+        required: true
+        schema:
+          type: string
+          example: TC663795B
+      - name: submissionId
+        in: path
+        description: |
+          A unique identifier for the customer provided CIS deduction amendment.
+        required: true
+        schema:
+          type: string
+          example: 4557ecb5-fd32-48cc-81f5-e6acd1099f3c
+      - name: Authorization
+        in: header
+        description: |
+          An OAuth 2.0 Bearer Token with the *write:self-assessment* scope.
+        required: true
+        schema:
+          type: string
+          example: Bearer bb7fed3fe10dd235a2ccda3d50fb
+      - name: Accept
+        in: header
+        description: |
+          Specifies the response format and the version of the API to be used.
+        required: true
+        schema:
+          type: string
+          example: application/vnd.hmrc.3.0+json
+      - name: Content-Type
+        in: header
+        description: |
+          Specifies the format of the request body, which must be JSON.
+        required: true
+        schema:
+          type: string
+          example: application/json
+      - name: Gov-Test-Scenario
+        in: header
+        description: |
+          Only in sandbox environment. See Test Data table for all header values.
+        required: false
+        schema:
+          type: string
+          example: "-"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: |
+                Amend CIS Deductions for Subcontractor
+              required:
+              - periodData
+              type: object
+              properties:
+                periodData:
+                  type: array
+                  description: List of deductions. At least one item is required.
+                  items:
+                    required:
+                    - deductionAmount
+                    - deductionFromDate
+                    - deductionToDate
+                    type: object
+                    properties:
+                      deductionAmount:
+                        type: number
+                        description: The amount of tax deducted by the contractor.
+                          The value must be between 0 and 99999999999.99 up to 2 decimal
+                          places.
+                        example: 5000.99
+                      deductionFromDate:
+                        type: string
+                        description: The From date when the deduction was made within
+                          the CIS tax year period.
+                        example: 2020-04-06
+                      deductionToDate:
+                        type: string
+                        description: The To date when the deduction was made within
+                          the CIS tax year period.
+                        example: 2020-04-05
+                      costOfMaterials:
+                        type: number
+                        description: The cost of materials incurred under CIS. This
+                          value must be between 0 and 99999999999.99 up to 2 decimal
+                          places.
+                        example: 5000.99
+                      grossAmountPaid:
+                        type: number
+                        description: The gross amount paid under CIS. The value must
+                          be between 0 and 99999999999.99 up to 2 decimal places.
+                        example: 5000.99
+              description: This endpoint allows as developer to amend a CIS deductions
+                which has been previously populated
+            examples:
+              example-1:
+                description: Amend CIS request
+                value:
+                  $ref: ./examples/AmendCisDeductions/amend_cis_deductions_request.json
+      responses:
+        "204":
+          description: No Content
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+        "400":
+          description: Bad request
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                FORMAT_NINO:
+                  description: |
+                    The format of the supplied NINO field is not valid.
+                  value:
+                    code: FORMAT_NINO
+                    message: The provided NINO is invalid
+                RULE_INCORRECT_OR_EMPTY_BODY_SUBMITTED:
+                  description: |
+                    An empty or non-matching body was submitted.
+                  value:
+                    code: RULE_INCORRECT_OR_EMPTY_BODY_SUBMITTED
+                    message: An empty or non-matching body was submitted
+                FORMAT_DEDUCTIONS_FROM_DATE:
+                  description: |
+                    The deductions From date is not a valid date format.
+                  value:
+                    code: FORMAT_DEDUCTIONS_FROM_DATE
+                    message: The provided deductions From date is invalid
+                FORMAT_DEDUCTIONS_TO_DATE:
+                  description: |
+                    The deductions To date is not a valid date format.
+                  value:
+                    code: FORMAT_DEDUCTIONS_TO_DATE
+                    message: The provided deductions To date is invalid
+                RULE_DEDUCTIONS_AMOUNT:
+                  description: |
+                    The deductions amount should be a positive number less than 99999999999.99 up to 2 decimal places.
+                  value:
+                    code: RULE_DEDUCTIONS_AMOUNT
+                    message: The deductions amount should be a positive number less
+                      than 99999999999.99 up to 2 decimal places
+                RULE_COST_OF_MATERIALS:
+                  description: |
+                    The cost of materials should be a positive number less than 99999999999.99  up to 2 decimal places.
+                  value:
+                    code: RULE_COST_OF_MATERIALS
+                    message: The cost of materials should be a positive number less
+                      than 99999999999.99 up to 2 decimal places
+                RULE_GROSS_AMOUNT_PAID:
+                  description: |
+                    The gross amount should be a positive number less than 99999999999.99 up to 2 decimal places.
+                  value:
+                    code: RULE_GROSS_AMOUNT_PAID
+                    message: The gross amount should be a positive number less than
+                      99999999999.99 up to 2 decimal places
+                RULE_DEDUCTIONS_DATE_RANGE_INVALID:
+                  description: |
+                    The deductions period does not align from the 6th of one month to the 5th of the following month.
+                  value:
+                    code: RULE_DEDUCTIONS_DATE_RANGE_INVALID
+                    message: The deductions period must align from the 6th of one
+                      month to the 5th of the following month
+                FORMAT_SUBMISSION_ID:
+                  description: |
+                    The format of the submission ID is not valid.
+                  value:
+                    code: FORMAT_SUBMISSION_ID
+                    message: The provided submission ID is invalid
+                RULE_UNALIGNED_DEDUCTIONS_PERIOD:
+                  description: |
+                    The deductions periods do not align with the tax year supplied.
+                  value:
+                    code: RULE_UNALIGNED_DEDUCTIONS_PERIOD
+                    message: The deductions periods do not align with the tax year
+                      supplied
+                RULE_DUPLICATE_PERIOD:
+                  description: |
+                    More than one deduction period has been supplied for the same month or period.
+                  value:
+                    code: RULE_DUPLICATE_PERIOD
+                    message: More than one deduction period has been supplied for
+                      the same month or period
+                RULE_TAX_YEAR_NOT_SUPPORTED:
+                  description: |
+                    The specified tax year is not supported. Either the tax year specified is before the minimum tax year value,
+                    or it is after the maximum tax year value.
+                  value:
+                    code: RULE_TAX_YEAR_NOT_SUPPORTED
+                    message: The tax year specified does not lie within the supported
+                      range
+                RULE_OUTSIDE_AMENDMENT_WINDOW:
+                  description: |
+                    The request cannot be completed as you are outside the amendment window.
+                  value:
+                    code: RULE_OUTSIDE_AMENDMENT_WINDOW
+                    message: You are outside the amendment window
+                RULE_INCORRECT_GOV_TEST_SCENARIO:
+                  description: |
+                    The request did not match any available Sandbox data. Check that the supplied Gov-Test-Scenario is correct for this endpoint version. This error will only be returned in the Sandbox environment.
+                  value:
+                    code: RULE_INCORRECT_GOV_TEST_SCENARIO
+                    message: The supplied Gov-Test-Scenario is not valid
+        "403":
+          description: Forbidden
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                CLIENT_OR_AGENT_NOT_AUTHORISED:
+                  description: |
+                    The client or agent is not authorised. This is because: the client is not subscribed to MTD, the agent is not subscribed to Agent Services, or the client has not authorised the agent to act on their behalf.
+                  value:
+                    code: CLIENT_OR_AGENT_NOT_AUTHORISED
+                    message: The client and/or agent is not authorised
+        "404":
+          description: Not Found
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                MATCHING_RESOURCE_NOT_FOUND:
+                  description: |
+                    The remote endpoint has indicated that no data can be found for the given period.
+                  value:
+                    code: MATCHING_RESOURCE_NOT_FOUND
+                    message: Matching resource not found
+      security:
+      - User-Restricted:
+        - write:self-assessment
+  /individuals/deductions/cis/{nino}/amendments/{submissionId}/{taxYear}:
+    delete:
+      summary: Delete CIS Deductions for Subcontractor
+      description: |
+        This endpoint allows a developer to remove a customer’s CIS deductions data that has been previously populated. A National Insurance number, submission ID and tax year must be provided.
+
+        ### Test data
+        Scenario simulation using Gov-Test-Scenario headers is only available in the sandbox environment.
+
+        | Header Value (Gov-Test-Scenario) | Scenario                                                                                         |
+        |----------------------------------|--------------------------------------------------------------------------------------------------|
+        | N/A - DEFAULT                    | Simulates successfully deleting CIS deductions.                                                  |
+        | NOT_FOUND                        | Simulates the scenario where the CIS deduction was not found.                                    |
+        | TAX_YEAR_NOT_SUPPORTED           | Simulates the scenario where the tax year is not supported.                                  |
+        | OUTSIDE_AMENDMENT_WINDOW         | Simulates the scenario where request cannot be completed as it is outside the amendment window.  |
+        | STATEFUL                         | Performs a stateful delete.                                                                      |
+      parameters:
+      - name: nino
+        in: path
+        description: |
+          National Insurance number in the format AA999999A.
+        required: true
+        schema:
+          type: string
+          example: TC663795B
+      - name: submissionId
+        in: path
+        description: |
+          A unique identifier for the customer provided CIS deduction amendment.
+        required: true
+        schema:
+          type: string
+          example: 4557ecb5-fd32-48cc-81f5-e6acd1099f3c
+      - name: taxYear
+        in: path
+        description: |
+          The tax year the data applies to, for example, 2021-22. The start year and end year must not span two tax years.
+        required: true
+        schema:
+          type: string
+          example: 2021-22
+      - name: Authorization
+        in: header
+        description: |
+          An OAuth 2.0 Bearer Token with the *write:self-assessment* scope.
+        required: true
+        schema:
+          type: string
+          example: Bearer bb7fed3fe10dd235a2ccda3d50fb
+      - name: Accept
+        in: header
+        description: |
+          Specifies the response format and the version of the API to be used.
+        required: true
+        schema:
+          type: string
+          example: application/vnd.hmrc.3.0+json
+      - name: Gov-Test-Scenario
+        in: header
+        description: |
+          Only in sandbox environment. See Test Data table for all header values.
+        required: false
+        schema:
+          type: string
+          example: "-"
+      responses:
+        "204":
+          description: No Content
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+        "400":
+          description: Bad request
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                FORMAT_NINO:
+                  description: |
+                    The format of the supplied NINO field is not valid.
+                  value:
+                    code: FORMAT_NINO
+                    message: The provided NINO is invalid
+                FORMAT_TAX_YEAR:
+                  description: |
+                    The format of the supplied tax year field is not valid.
+                  value:
+                    code: FORMAT_TAX_YEAR
+                    message: The provided tax year is invalid
+                FORMAT_SUBMISSION_ID:
+                  description: |
+                    The format of the submission ID is not valid.
+                  value:
+                    code: FORMAT_SUBMISSION_ID
+                    message: The provided submission ID is invalid
+                RULE_TAX_YEAR_RANGE_EXCEEDED:
+                  description: |
+                    The tax year range is exceeded.  A tax year range of one year is required.
+                  value:
+                    code: RULE_TAX_YEAR_RANGE_EXCEEDED
+                    message: Tax year range exceeded. A tax year range of one year
+                      is required
+                RULE_TAX_YEAR_NOT_SUPPORTED:
+                  description: |
+                    The specified tax year is not supported. Either the tax year specified is before the minimum tax year value,
+                    or it is after the maximum tax year value.
+                  value:
+                    code: RULE_TAX_YEAR_NOT_SUPPORTED
+                    message: The tax year specified does not lie within the supported
+                      range
+                RULE_INCORRECT_GOV_TEST_SCENARIO:
+                  description: |
+                    The request did not match any available Sandbox data. Check that the supplied Gov-Test-Scenario is correct for this endpoint version. This error will only be returned in the Sandbox environment.
+                  value:
+                    code: RULE_INCORRECT_GOV_TEST_SCENARIO
+                    message: The supplied Gov-Test-Scenario is not valid
+                RULE_OUTSIDE_AMENDMENT_WINDOW:
+                  description: |
+                    The request cannot be completed as you are outside the amendment window.
+                  value:
+                    code: RULE_OUTSIDE_AMENDMENT_WINDOW
+                    message: You are outside the amendment window
+        "403":
+          description: Forbidden
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                CLIENT_OR_AGENT_NOT_AUTHORISED:
+                  description: |
+                    The client or agent is not authorised. This is because: the client is not subscribed to MTD, the agent is not subscribed to Agent Services, or the client has not authorised the agent to act on their behalf.
+                  value:
+                    code: CLIENT_OR_AGENT_NOT_AUTHORISED
+                    message: The client and/or agent is not authorised
+        "404":
+          description: Not Found
+          headers:
+            X-CorrelationId:
+              description: |
+                Unique ID for operation tracking
+                String, 36 characters.
+              required: true
+              schema:
+                type: string
+                example: c75f40a6-a3df-4429-a697-471eeec46435
+            Deprecation:
+              description: |
+                The deprecation date/time for this endpoint.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 01 Jan 2023 23:59:59 GMT"
+            Sunset:
+              description: |
+                The earliest date/time this endpoint will become unavailable after deprecation.
+              required: false
+              schema:
+                type: string
+                example: "Sun, 02 Jul 2023 23:59:59 GMT"
+            Link:
+              description: |
+                URL of the documentation for the API.
+              required: false
+              schema:
+                type: string
+                example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The error code
+                  message:
+                    type: string
+                    description: The error message
+                description: Error Response
+              examples:
+                MATCHING_RESOURCE_NOT_FOUND:
+                  description: |
+                    The remote endpoint has indicated that no data can be found for the given period.
+                  value:
+                    code: MATCHING_RESOURCE_NOT_FOUND
+                    message: Matching resource not found
+      security:
+      - User-Restricted:
+        - write:self-assessment
+components:
+  schemas:
+    list_response:
+      title: List CIS Deductions
+      required:
+      - cisDeductions
+      type: object
+      properties:
+        totalDeductionAmount:
+          type: number
+          description: The total amount of tax deducted by CIS contractors. The value
+            must be between 0 and 99999999999.99 up to 2 decimal places.
+          example: 5000.99
+        totalCostOfMaterials:
+          type: number
+          description: The total cost of materials incurred under CIS by the subcontractor
+            across all of the CIS contractors that they worked for. This value must
+            be between 0 and 99999999999.99 up to 2 decimal places.
+          example: 5000.99
+        totalGrossAmountPaid:
+          type: number
+          description: The total gross amount paid by CIS contractors. The value must
+            be between 0 and 99999999999.99 up to 2 decimal places.
+          example: 5000.99
+        cisDeductions:
+          type: array
+          description: List of the components that make up the overall deductions.
+          items:
+            title: item
+            required:
+            - employerRef
+            - fromDate
+            - periodData
+            - toDate
+            type: object
+            properties:
+              fromDate:
+                type: string
+                description: CIS start date of a tax year.
+                example: 2020-04-06
+              toDate:
+                type: string
+                description: CIS end date of a tax year.
+                example: 2021-04-05
+              contractorName:
+                maximum: 105
+                minimum: 1
+                type: string
+                description: The name of the contractor the subcontractor worked for.
+              employerRef:
+                pattern: "^[0-9]{3}\\/[^ ].{0,9}$"
+                type: string
+                description: "A unique identifier, the contractor reference number."
+                example: 123/AC80213
+              totalDeductionAmount:
+                type: number
+                description: The total amount of tax deducted by a CIS contractor.
+                  The value must be between 0 and 99999999999.99 up to 2 decimal places.
+                example: 5000.99
+              totalCostOfMaterials:
+                type: number
+                description: The total cost of materials incurred under CIS by the
+                  subcontractor. This value must be between 0 and 99999999999.99 up
+                  to 2 decimal places.
+                example: 5000.99
+              totalGrossAmountPaid:
+                type: number
+                description: The total gross amount paid by a CIS contractor. The
+                  value must be between 0 and 99999999999.99 up to 2 decimal places.
+                example: 5000.99
+              periodData:
+                type: array
+                description: List of deductions.
+                items:
+                  title: item
+                  required:
+                  - deductionFromDate
+                  - deductionToDate
+                  - source
+                  - submissionDate
+                  type: object
+                  properties:
+                    deductionFromDate:
+                      type: string
+                      description: The From date when the deduction was made within
+                        the CIS tax year period.
+                      example: 2020-07-06
+                    deductionToDate:
+                      type: string
+                      description: The To date when the deduction was made within
+                        the CIS tax year period.
+                      example: 2020-08-05
+                    deductionAmount:
+                      multipleOf: 0.01
+                      maximum: 99999999999.99
+                      minimum: 0
+                      type: number
+                      description: The amount of tax deducted by the contractor. This
+                        value must be between 0 and 99999999999.99 up to 2 decimal
+                        places.
+                      example: 5000.99
+                    costOfMaterials:
+                      multipleOf: 0.01
+                      maximum: 99999999999.99
+                      minimum: 0
+                      type: number
+                      description: The cost of materials incurred under CIS. This
+                        value must be between 0 and 99999999999.99 up to 2 decimal
+                        places.
+                      example: 50.00
+                    grossAmountPaid:
+                      multipleOf: 0.01
+                      maximum: 99999999999.99
+                      minimum: 0
+                      type: number
+                      description: The gross amount paid under CIS. This value must
+                        be between 0 and 99999999999.99 up to 2 decimal places.
+                      example: 5000.99
+                    submissionDate:
+                      type: string
+                      description: The date the deduction was submitted.
+                      example: 2020-05-11T16:38:57Z
+                    submissionId:
+                      type: string
+                      description: The unique identifier for the submission.
+                      example: 4557ecb5-fd32-48cc-81f5-e6acd1099f3c
+                    source:
+                      type: string
+                      description: The source of the data.
+                      example: customer or contractor
+      description: List CIS Deductions
+    error-response:
+      required:
+      - code
+      type: object
+      properties:
+        code:
+          type: string
+          description: The error code
+        message:
+          type: string
+          description: The error message
+      description: Error Response
+    create_request:
+      title: Create CIS Deduction
+      required:
+      - contractorName
+      - employerRef
+      - fromDate
+      - periodData
+      - toDate
+      type: object
+      properties:
+        fromDate:
+          type: string
+          description: CIS tax year start date. The minimum tax year is 2020-21. The
+            minimum tax year in Sandbox is 2019-20.
+          example: 2020-04-06
+        toDate:
+          type: string
+          description: CIS tax year end date. The minimum tax year is 2020-21. The
+            minimum tax year in Sandbox is 2019-20.
+          example: 2021-04-05
+        contractorName:
+          type: string
+          description: The name of the contractor the subcontractor worked for.
+        employerRef:
+          pattern: "^[0-9]{3}\\/[^ ].{0,9}$"
+          type: string
+          description: "A unique identifier, the contractor reference number."
+          example: 123/AB56797
+        periodData:
+          type: array
+          description: List of deductions. At least one item is required.
+          items:
+            title: item
+            required:
+            - deductionAmount
+            - deductionFromDate
+            - deductionToDate
+            type: object
+            properties:
+              deductionAmount:
+                multipleOf: 0.01
+                maximum: 99999999999.99
+                minimum: 0
+                type: number
+                description: The amount of tax deducted by the contractor. This value
+                  must be between 0 and 99999999999.99 up to 2 decimal places.
+                example: 5000.99
+              deductionFromDate:
+                type: string
+                description: The From date when the deduction was made within the
+                  CIS tax year period.
+                example: 2020-07-06
+              deductionToDate:
+                type: string
+                description: The To date when the deduction was made within the CIS
+                  tax year period.
+                example: 2020-08-05
+              costOfMaterials:
+                multipleOf: 0.01
+                maximum: 99999999999.99
+                minimum: 0
+                type: number
+                description: The cost of materials incurred under CIS. This value
+                  must be between 0 and 99999999999.99 up to 2 decimal places.
+                example: 5000.99
+              grossAmountPaid:
+                multipleOf: 0.01
+                maximum: 99999999999.99
+                minimum: 0
+                type: number
+                description: The gross amount paid under CIS. This value must be between
+                  0 and 99999999999.99 up to 2 decimal places.
+                example: 5000.99
+      description: Create CIS Deduction
+    create_response:
+      title: Create CIS Deduction
+      required:
+      - submissionId
+      type: object
+      properties:
+        submissionId:
+          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          type: string
+          description: A unique identifier for the customer provided CIS deduction
+            amendment.
+          example: ab123aaa-65ab-488c-9120-f63abc14b9n1
+      description: Create CIS Deduction
+    amend_cis_deductions_request:
+      title: |
+        Amend CIS Deductions for Subcontractor
+      required:
+      - periodData
+      type: object
+      properties:
+        periodData:
+          type: array
+          description: List of deductions. At least one item is required.
+          items:
+            required:
+            - deductionAmount
+            - deductionFromDate
+            - deductionToDate
+            type: object
+            properties:
+              deductionAmount:
+                type: number
+                description: The amount of tax deducted by the contractor. The value
+                  must be between 0 and 99999999999.99 up to 2 decimal places.
+                example: 5000.99
+              deductionFromDate:
+                type: string
+                description: The From date when the deduction was made within the
+                  CIS tax year period.
+                example: 2020-04-06
+              deductionToDate:
+                type: string
+                description: The To date when the deduction was made within the CIS
+                  tax year period.
+                example: 2020-04-05
+              costOfMaterials:
+                type: number
+                description: The cost of materials incurred under CIS. This value
+                  must be between 0 and 99999999999.99 up to 2 decimal places.
+                example: 5000.99
+              grossAmountPaid:
+                type: number
+                description: The gross amount paid under CIS. The value must be between
+                  0 and 99999999999.99 up to 2 decimal places.
+                example: 5000.99
+      description: This endpoint allows as developer to amend a CIS deductions which
+        has been previously populated
+    uid:
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      type: string
+      description: A unique identifier for the customer provided CIS deduction amendment.
+      example: ab123aaa-65ab-488c-9120-f63abc14b9n1
+  parameters:
+    nino:
+      name: nino
+      in: path
+      description: |
+        National Insurance number in the format AA999999A.
+      required: true
+      schema:
+        type: string
+        example: TC663795B
+    taxYear:
+      name: taxYear
+      in: path
+      description: |
+        The tax year the data applies to, for example, 2021-22. The start year and end year must not span two tax years.
+      required: true
+      schema:
+        type: string
+        example: 2021-22
+    source:
+      name: source
+      in: path
+      description: |
+        The source of amended data. Defaults to `all`.
+      required: true
+      schema:
+        type: string
+        example: all
+        enum:
+        - all
+        - contractor
+        - customer
+    authorizationReadScopeHeader:
+      name: Authorization
+      in: header
+      description: |
+        An OAuth 2.0 Bearer Token with the *read:self-assessment* scope.
+      required: true
+      schema:
+        type: string
+        example: Bearer bb7fed3fe10dd235a2ccda3d50fb
+    acceptJson:
+      name: Accept
+      in: header
+      description: |
+        Specifies the response format and the version of the API to be used.
+      required: true
+      schema:
+        type: string
+        example: application/vnd.hmrc.3.0+json
+    testScenarioHeader:
+      name: Gov-Test-Scenario
+      in: header
+      description: |
+        Only in sandbox environment. See Test Data table for all header values.
+      required: false
+      schema:
+        type: string
+        example: "-"
+    authorizationWriteScopeHeader:
+      name: Authorization
+      in: header
+      description: |
+        An OAuth 2.0 Bearer Token with the *write:self-assessment* scope.
+      required: true
+      schema:
+        type: string
+        example: Bearer bb7fed3fe10dd235a2ccda3d50fb
+    contentTypeJson:
+      name: Content-Type
+      in: header
+      description: |
+        Specifies the format of the request body, which must be JSON.
+      required: true
+      schema:
+        type: string
+        example: application/json
+    submissionId:
+      name: submissionId
+      in: path
+      description: |
+        A unique identifier for the customer provided CIS deduction amendment.
+      required: true
+      schema:
+        type: string
+        example: 4557ecb5-fd32-48cc-81f5-e6acd1099f3c
+  examples:
+    formatNino:
+      description: |
+        The format of the supplied NINO field is not valid.
+      value:
+        code: FORMAT_NINO
+        message: The provided NINO is invalid
+    formatTaxYear:
+      description: |
+        The format of the supplied tax year field is not valid.
+      value:
+        code: FORMAT_TAX_YEAR
+        message: The provided tax year is invalid
+    ruleDateRangeInvalid:
+      description: |
+        The specified date range is invalid
+      value:
+        code: RULE_DATE_RANGE_INVALID
+        message: The date range should be a valid tax year
+    ruleTaxYearNotSupported:
+      description: |
+        The specified tax year is not supported. Either the tax year specified is before the minimum tax year value,
+        or it is after the maximum tax year value.
+      value:
+        code: RULE_TAX_YEAR_NOT_SUPPORTED
+        message: The tax year specified does not lie within the supported range
+    ruleTaxYearRangeInvalid:
+      description: |
+        The specified date range is outside the allowable tax years (the current tax year minus four years).
+      value:
+        code: RULE_TAX_YEAR_RANGE_INVALID
+        message: The specified date range is outside the allowable tax years (the
+          current tax year minus four years)
+    ruleSourceInvalid:
+      description: |
+        The source of data should be one of these All (Blended view), Customer or Contractor.
+      value:
+        code: RULE_SOURCE_INVALID
+        message: The source is invalid
+    incorrectOrEmptyBody:
+      description: |
+        An empty or non-matching body was submitted.
+      value:
+        code: RULE_INCORRECT_OR_EMPTY_BODY_SUBMITTED
+        message: An empty or non-matching body was submitted
+    ruleIncorrectGovTestScenario:
+      description: |
+        The request did not match any available Sandbox data. Check that the supplied Gov-Test-Scenario is correct for this endpoint version. This error will only be returned in the Sandbox environment.
+      value:
+        code: RULE_INCORRECT_GOV_TEST_SCENARIO
+        message: The supplied Gov-Test-Scenario is not valid
+    clientOrAgentNotAuthorised:
+      description: |
+        The client or agent is not authorised. This is because: the client is not subscribed to MTD, the agent is not subscribed to Agent Services, or the client has not authorised the agent to act on their behalf.
+      value:
+        code: CLIENT_OR_AGENT_NOT_AUTHORISED
+        message: The client and/or agent is not authorised
+    notFound:
+      description: |
+        The remote endpoint has indicated that no data can be found for the given period.
+      value:
+        code: MATCHING_RESOURCE_NOT_FOUND
+        message: Matching resource not found
+    formatDeductionsFromDate:
+      description: |
+        The deductions From date is not a valid date format.
+      value:
+        code: FORMAT_DEDUCTIONS_FROM_DATE
+        message: The provided deductions From date is invalid
+    formatDeductionsToDate:
+      description: |
+        The deductions To date is not a valid date format.
+      value:
+        code: FORMAT_DEDUCTIONS_TO_DATE
+        message: The provided deductions To date is invalid
+    formatEmployerReference:
+      description: |
+        The format of the Employer Reference number is invalid.
+      value:
+        code: FORMAT_EMPLOYER_REFERENCE
+        message: The format of the Employer Reference number is invalid
+    formatFromDate:
+      description: |
+        The From date is not a valid format.
+      value:
+        code: FORMAT_FROM_DATE
+        message: The provided From date is invalid
+    formatToDate:
+      description: |
+        The To date is not a valid format.
+      value:
+        code: FORMAT_TO_DATE
+        message: The provided To date is invalid
+    ruleDeductionsAmount:
+      description: |
+        The deductions amount should be a positive number less than 99999999999.99 up to 2 decimal places.
+      value:
+        code: RULE_DEDUCTIONS_AMOUNT
+        message: The deductions amount should be a positive number less than 99999999999.99
+          up to 2 decimal places
+    ruleCostOfMaterials:
+      description: |
+        The cost of materials should be a positive number less than 99999999999.99  up to 2 decimal places.
+      value:
+        code: RULE_COST_OF_MATERIALS
+        message: The cost of materials should be a positive number less than 99999999999.99
+          up to 2 decimal places
+    ruleGrossAmountPaid:
+      description: |
+        The gross amount should be a positive number less than 99999999999.99 up to 2 decimal places.
+      value:
+        code: RULE_GROSS_AMOUNT_PAID
+        message: The gross amount should be a positive number less than 99999999999.99
+          up to 2 decimal places
+    ruleUnalignedDeductionsPeriod:
+      description: |
+        The deductions periods do not align with the tax year supplied.
+      value:
+        code: RULE_UNALIGNED_DEDUCTIONS_PERIOD
+        message: The deductions periods do not align with the tax year supplied
+    ruleDeductionsDateRangeInvalid:
+      description: |
+        The deductions period does not align from the 6th of one month to the 5th of the following month.
+      value:
+        code: RULE_DEDUCTIONS_DATE_RANGE_INVALID
+        message: The deductions period must align from the 6th of one month to the
+          5th of the following month
+    ruleTaxYearNotEnded:
+      description: |
+        The submission has been made before the tax year has ended.
+      value:
+        code: RULE_TAX_YEAR_NOT_ENDED
+        message: The submission has been made before the tax year has ended
+    ruleDuplicateSubmission:
+      description: |
+        CIS deductions already exists for this tax year.
+      value:
+        code: RULE_DUPLICATE_SUBMISSION
+        message: CIS deduction already exists for this tax year
+    ruleDuplicatePeriod:
+      description: |
+        More than one deduction period has been supplied for the same month or period.
+      value:
+        code: RULE_DUPLICATE_PERIOD
+        message: More than one deduction period has been supplied for the same month
+          or period
+    ruleOutsideAmendmentWindow:
+      description: |
+        The request cannot be completed as you are outside the amendment window.
+      value:
+        code: RULE_OUTSIDE_AMENDMENT_WINDOW
+        message: You are outside the amendment window
+    formatSubmissionId:
+      description: |
+        The format of the submission ID is not valid.
+      value:
+        code: FORMAT_SUBMISSION_ID
+        message: The provided submission ID is invalid
+    ruleTaxYearRangeExceeded:
+      description: |
+        The tax year range is exceeded.  A tax year range of one year is required.
+      value:
+        code: RULE_TAX_YEAR_RANGE_EXCEEDED
+        message: Tax year range exceeded. A tax year range of one year is required
+  headers:
+    correlationId:
+      description: |
+        Unique ID for operation tracking
+        String, 36 characters.
+      required: true
+      schema:
+        type: string
+        example: c75f40a6-a3df-4429-a697-471eeec46435
+    deprecationHeader:
+      description: |
+        The deprecation date/time for this endpoint.
+      required: false
+      schema:
+        type: string
+        example: "Sun, 01 Jan 2023 23:59:59 GMT"
+    sunsetHeader:
+      description: |
+        The earliest date/time this endpoint will become unavailable after deprecation.
+      required: false
+      schema:
+        type: string
+        example: "Sun, 02 Jul 2023 23:59:59 GMT"
+    linkHeader:
+      description: |
+        URL of the documentation for the API.
+      required: false
+      schema:
+        type: string
+        example: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api
+  securitySchemes:
+    User-Restricted:
+      type: oauth2
+      description: "HMRC supports OAuth 2.0 for authenticating [User-restricted](https://developer.service.hmrc.gov.uk/api-documentation/docs/authorisation/user-restricted-endpoints)\
+        \ API requests"
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.service.hmrc.gov.uk/oauth/authorize
+          tokenUrl: https://api.service.hmrc.gov.uk/oauth/token
+          refreshUrl: https://api.service.hmrc.gov.uk/oauth/refresh
+          scopes:
+            write:self-assessment: Grant write access
+            read:self-assessment: Grant read access
