@@ -42,7 +42,7 @@
   </div>
 
   <!-- Read-only fields -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white dark:bg-gray-900 p-6 rounded-lg shadow">
     <% for (const key in schema) { %>
       <%- include('../partials/_formField', {
         key,
@@ -77,5 +77,210 @@
     <% } %>
   </div>
 <% } %>
+
+  <% if (basePath === 'supplier' && (item.Subcontractor || item.IsSubcontractor) && Array.isArray(item.purchases)) { %>
+    <div class="mt-8">
+      <h2 class="text-xl font-medium mb-3 text-gray-900 dark:text-gray-100">CIS Calendar (Paid)</h2>
+      <% 
+        // Display months April→March (UK tax year). Labels aligned A M J J A S O N D J F M
+        const monthsShort = ['A','M','J','J','A','S','O','N','D','J','F','M'];
+        const cisMap = {};
+        // Helper: map a JS Date to HMRC tax year/month (Apr=1..Mar=12)
+        const toTaxYearMonth = (dateObj) => {
+          if (!dateObj || isNaN(dateObj.getTime())) return null;
+          const cm = dateObj.getMonth();
+          const taxMonth = ((cm + 9) % 12) + 1; // Apr=1
+          const calYear = dateObj.getFullYear();
+          const taxYear = (cm >= 3) ? calYear : (calYear - 1);
+          return { taxYear, taxMonth };
+        };
+        item.purchases.forEach(p => {
+          // Only count months based on payment line dates (PayDate/Date)
+          let dates = [];
+          if (Array.isArray(p.PaymentLines)) {
+            p.PaymentLines.forEach(pl => {
+              const raw = pl?.PayDate || pl?.Date;
+              if (!raw) return;
+              let d = new Date(raw);
+              if (isNaN(d.getTime()) && typeof raw === 'string') {
+                const s = raw.trim();
+                const isoish = s.replace(' ', 'T');
+                d = new Date(isoish);
+              }
+              if (!isNaN(d.getTime())) dates.push(d);
+            });
+          }
+          // If no payment line dates, do not include this purchase in CIS calendar
+          if (dates.length === 0) return;
+          // Increment counts for each payment date's tax month
+          dates.forEach(d => {
+            const t = toTaxYearMonth(d);
+            if (!t) return;
+            const y = t.taxYear;
+            const m = t.taxMonth;
+            if (!cisMap[y]) cisMap[y] = {};
+            cisMap[y][m] = (cisMap[y][m] || 0) + 1;
+          });
+        });
+        const years = Object.keys(cisMap).sort((a,b) => Number(b) - Number(a));
+      %>
+      <% if (years.length > 0) { %>
+        <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Year</th>
+                <% monthsShort.forEach(ms => { %>
+                  <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"><%= ms %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              <% years.forEach(y => { %>
+                <tr>
+                  <td class="px-4 py-2 text-gray-800 dark:text-gray-200 font-medium"><%= y %></td>
+                  <% for (let i = 1; i <= 12; i++) { %>
+                    <% const count = cisMap[y][i] || 0; const has = count > 0; %>
+                    <td class="px-2 py-2 text-center">
+                      <% if (has) { %>
+                        <a href="/CIS/Dashboard/<%= y %>/<%= i %>" 
+                           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-600 hover:bg-green-700 text-white text-[10px] font-medium" 
+                           title="<%= count %> purchase<%= count === 1 ? '' : 's' %>"><%= count %></a>
+                      <% } else { %>
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px]" title="0 purchases">0</span>
+                      <% } %>
+                    </td>
+                  <% } %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p class="text-gray-500 dark:text-gray-300 italic">No CIS months found for this supplier.</p>
+        <% if (Array.isArray(item.purchases) && item.purchases.length > 0) { %>
+          <div class="mt-3 text-xs text-gray-600 dark:text-gray-300">
+            <p class="mb-1">Debug: showing payment dates detected from purchases:</p>
+            <ul class="list-disc ml-5">
+              <% item.purchases.forEach(p => { %>
+                <% const lines = Array.isArray(p.PaymentLines) ? p.PaymentLines.map(pl => pl?.PayDate || pl?.Date).filter(Boolean) : []; %>
+                <li>
+                  #<%= p.Number %>: PaymentLines=<%= lines.length ? lines.join(', ') : '—' %>
+                </li>
+              <% }) %>
+            </ul>
+          </div>
+        <% } %>
+      <% } %>
+    </div>
+    <div class="mt-6">
+      <h2 class="text-xl font-medium mb-3 text-gray-900 dark:text-gray-100">CIS Calendar (Issued)</h2>
+      <% 
+        // Issued-based calendar uses explicit TaxYear/TaxMonth when present, else maps IssuedDate to tax month
+        const monthsShortIssued = ['A','M','J','J','A','S','O','N','D','J','F','M'];
+        const cisIssuedMap = {};
+        const toTaxYMFromIssued = (dateObj) => {
+          if (!dateObj || isNaN(dateObj.getTime())) return null;
+          const cm = dateObj.getMonth();
+          const taxMonth = ((cm + 9) % 12) + 1;
+          const calYear = dateObj.getFullYear();
+          const taxYear = (cm >= 3) ? calYear : (calYear - 1);
+          return { taxYear, taxMonth };
+        };
+        item.purchases.forEach(p => {
+          let y = p.TaxYear;
+          let m = p.TaxMonth;
+          if ((!y || !m) && p.IssuedDate) {
+            const d = new Date(p.IssuedDate);
+            const t = toTaxYMFromIssued(d);
+            if (t) { y = t.taxYear; m = t.taxMonth; }
+          }
+          if (!y || !m) return;
+          if (!cisIssuedMap[y]) cisIssuedMap[y] = {};
+          const mm = Number(m);
+          cisIssuedMap[y][mm] = (cisIssuedMap[y][mm] || 0) + 1;
+        });
+        const yearsIssued = Object.keys(cisIssuedMap).sort((a,b) => Number(b) - Number(a));
+      %>
+      <% if (yearsIssued.length > 0) { %>
+        <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tax Year</th>
+                <% monthsShortIssued.forEach(ms => { %>
+                  <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"><%= ms %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              <% yearsIssued.forEach(y => { %>
+                <tr>
+                  <td class="px-4 py-2 text-gray-800 dark:text-gray-200 font-medium"><%= y %></td>
+                  <% for (let i = 1; i <= 12; i++) { %>
+                    <% const count = cisIssuedMap[y][i] || 0; const has = count > 0; %>
+                    <td class="px-2 py-2 text-center">
+                      <% if (has) { %>
+                        <a href="/CIS/Dashboard/<%= y %>/<%= i %>" 
+                           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-medium" 
+                           title="<%= count %> purchase<%= count === 1 ? '' : 's' %>"><%= count %></a>
+                      <% } else { %>
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px]" title="0 purchases">0</span>
+                      <% } %>
+                    </td>
+                  <% } %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p class="text-gray-500 dark:text-gray-300 italic">No issued months found for this supplier.</p>
+      <% } %>
+    </div>
+  <% } %>
+
+  <% if (basePath === 'supplier' && Array.isArray(item.purchases)) { %>
+    <div class="mt-8">
+      <h2 class="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">Purchases</h2>
+      <% if (item.purchases.length > 0) { %>
+        <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Number</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Issued</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Net</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">VAT</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Gross</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              <% item.purchases.forEach(p => { %>
+                <tr>
+                  <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= p.Number %></td>
+                  <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= slimDateTime(p.IssuedDate) %></td>
+                  <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= p.Status %></td>
+                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.NetAmount) %></td>
+                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.VATAmount) %></td>
+                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.GrossAmount) %></td>
+                  <td class="px-4 py-2 text-right">
+                    <a href="/purchase/read/<%= p.uuid %>" class="inline-flex items-center justify-center rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 transition">
+                      <i class="bi bi-eye"></i>
+                      <span class="ml-1 hidden sm:inline">View</span>
+                    </a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p class="text-gray-500 dark:text-gray-300 italic">No purchases found for this supplier.</p>
+      <% } %>
+    </div>
+  <% } %>
 
 </div>

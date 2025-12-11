@@ -59,8 +59,9 @@
         if (key === 'Payments') {
           ['PayDate', 'PayNote', 'PayAmount'].forEach(k => filtered[k] = row[k]);
         } else if (key === 'PaymentLines') {
-          // REST payments
-          ['Date', 'Amount', 'Method', 'Note'].forEach(k => filtered[k] = row[k]);
+          // REST payments: include full object fields commonly present
+          const cols = ['BulkPaymentNumber','Permalink','PaymentProcessorEnumValue','IsPaymentCreditNote','VATReturnId','Id','Date','PayDate','BulkId','BFSTransactionId','PaymentProcessor','AccountId','Note','Method','Amount'];
+          cols.forEach(k => filtered[k] = row[k]);
         } else if (key === 'Lines') {
           ['Description', 'Rate', 'ChargeTypeName', 'VatAmount', 'ProjID'].forEach(k => filtered[k] = row[k]);
         } else if (key === 'LineItems') {
@@ -93,6 +94,8 @@
                 <td class="px-2 py-1 border border-gray-200 dark:border-gray-700 max-w-[120px]">
                   <% if (val && col.toLowerCase().includes('date') && typeof slimDateTime === 'function') { %>
                     <%= slimDateTime(val, ['displayFormat']) %>
+                  <% } else if (col === 'Permalink' && typeof val === 'string' && val) { %>
+                    <a href="<%= val %>" class="text-green-600 dark:text-green-400 underline" target="_blank" rel="noopener noreferrer">link</a>
                   <% } else { %>
                     <%= val ?? '\u2014' %>
                   <% } %>
@@ -121,7 +124,7 @@
     }
   %>
   <div class="mb-2 border-b border-gray-200 dark:border-gray-700 last:border-none">
-    <div class="flex justify-between items-center px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded">
+    <div class="flex justify-between items-center px-2 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
       <span class="text-sm text-gray-500 dark:text-gray-300 font-medium pr-4">
         <%- label %>
       </span>

@@ -22,21 +22,25 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     // Fetch purchases for the period. Prefer TaxYear/TaxMonth match; also include PaidDate OR any PaymentLines within window; fallback to IssuedDate window.
     // Note: Do NOT filter deletedAt at DB level — handle soft-deletes client-side to match weekly logic.
-    const purchasesRaw = await mdb.REST.purchase.find({
-      $or: [
-        { TaxYear: specifiedYear, TaxMonth: specifiedMonth },
-        { PaidDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
-        // Any payment line in the window counts as paid in this tax month
-        { PaymentLines: { $elemMatch: { $or: [
-          { PayDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
-          { Date: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
-        ] } } },
-        { IssuedDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
-      ]
-    }).lean();
+    const orConditions = [
+      { TaxYear: specifiedYear, TaxMonth: specifiedMonth },
+      { PaidDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
+      // Any payment line in the window counts as paid in this tax month
+      { PaymentLines: { $elemMatch: { $or: [
+        { PayDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
+        { Date: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
+      ] } } },
+      { IssuedDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } }
+    ];
+    // Optional broader scan: include any purchases with PaymentLines and filter by window in app logic.
+    if (req.query.scanLines === '1') {
+      logger.info('[CIS] scanLines mode: broadening query to include all purchases with PaymentLines for in-app date filtering');
+      orConditions.push({ PaymentLines: { $exists: true, $ne: [] } });
+    }
+    const purchasesRaw = await mdb.REST.purchase.find({ $or: orConditions }).lean();
 
-    // Period-aware deletion filter: treat records as deleted only if deletedAt <= periodEnd
-    const periodEndMsForDelete = new Date(currentMonthlyReturn.periodEnd).getTime();
+    // Period-aware deletion filter: treat records as deleted only if deleted before the period starts
+    const periodStartMsForDelete = new Date(currentMonthlyReturn.periodStart).getTime();
     const toDateDel = (d) => {
       if (!d) return null;
       if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
@@ -63,9 +67,11 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       const d = doc.deletedAt ?? doc.DeletedAt;
       const dt = toDateDel(d);
       if (!dt) return false;
-      return dt.getTime() <= periodEndMsForDelete;
+      return dt.getTime() < periodStartMsForDelete;
     };
-    const purchases = (purchasesRaw || []).filter(p => !isSoftDeleted(p));
+    const purchases = (req.query.ignoreDeleted === '1')
+      ? (purchasesRaw || [])
+      : (purchasesRaw || []).filter(p => !isSoftDeleted(p));
 
     // Only paid purchases are allowed in CIS, and they must be paid within the tax-month window
     const start = new Date(currentMonthlyReturn.periodStart);

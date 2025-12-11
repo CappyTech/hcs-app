@@ -111,6 +111,21 @@ for (const namespace of ['REST', 'INTERNAL']) {
           const schema = extractSchema(Model, config);
           const referenceData = await fetchReferenceData(schema, config);
 
+          // If reading a REST supplier, include their related purchases
+          if (modelName === 'supplier' && mdb.REST?.purchase) {
+            try {
+              const purchases = await mdb.REST.purchase
+                .find({ SupplierId: item.Id })
+                .select('uuid Number IssuedDate Status NetAmount VATAmount GrossAmount SupplierReference PaidDate PaymentLines TaxYear TaxMonth')
+                .sort({ IssuedDate: -1 })
+                .lean();
+              item.purchases = purchases;
+            } catch (e) {
+              logger.warn(`Failed to fetch purchases for supplier ${item.Id}: ${e.message}`);
+              item.purchases = [];
+            }
+          }
+
           // 🔽 Inject documents if the model config says it handles them
           if (config.handlesDocuments) {
             const fs = require('fs').promises;

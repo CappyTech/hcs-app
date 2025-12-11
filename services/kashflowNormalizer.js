@@ -17,7 +17,8 @@ function normalizePayments(payments) {
   return extracted
     .filter(p => p && typeof p === 'object' && p.PayDate && !isNaN(new Date(p.PayDate)))
     .map(p => ({
-      PayDate: new Date(p.PayDate).toISOString(),
+      // Ensure Date object so Mongoose Date type persists correctly
+      PayDate: new Date(p.PayDate),
       PayAmount: +p.PayAmount || 0
     }));
 }
