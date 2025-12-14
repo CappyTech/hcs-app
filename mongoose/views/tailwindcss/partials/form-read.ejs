@@ -1,4 +1,4 @@
-<div class="container mx-auto my-5 px-4">
+<div class="w-full mx-auto my-3 px-4">
   <a href="/<%= basePath %>s" class="text-green-600 dark:text-green-400 hover:underline"><i class="bi bi-arrow-left"></i> Go Back</a>
   <!-- Header: Title + Update/Delete buttons -->
   <div class="flex items-center justify-between mb-6">
@@ -41,18 +41,62 @@
     <% } %>
   </div>
 
-  <!-- Read-only fields -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white dark:bg-gray-900 p-6 rounded-lg shadow">
-    <% for (const key in schema) { %>
-      <%- include('../partials/_formField', {
-        key,
-        field: schema[key],
-        formData: item,
-        referenceData,
-        readOnly: true,
-        showTips: false
-      }) %>
-    <% } %>
+  <!-- Horizontal layout: details left, sidebar with Items/Payments right -->
+  <div class="grid md:grid-cols-3 gap-4">
+    <!-- Main details -->
+    <div class="md:col-span-2 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+      <% for (const key in schema) { 
+           if (key === 'LineItems' || key === 'PaymentLines') continue; 
+      %>
+        <%- include('../partials/_formField', {
+          key,
+          field: schema[key],
+          formData: item,
+          referenceData,
+          readOnly: true,
+          showTips: false
+        }) %>
+      <% } %>
+    </div>
+
+    <!-- Sidebar: Items and Payments stacked -->
+    <div class="space-y-4">
+      <% if (schema['LineItems']) { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow">
+          <div class="px-4 pt-3">
+            <h2 class="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">Items</h2>
+          </div>
+          <div class="px-2 pb-3">
+            <%- include('../partials/_formField', {
+              key: 'LineItems',
+              field: schema['LineItems'],
+              formData: item,
+              referenceData,
+              readOnly: true,
+              showTips: false
+            }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (schema['PaymentLines']) { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow">
+          <div class="px-4 pt-3">
+            <h2 class="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">Payments</h2>
+          </div>
+          <div class="px-2 pb-3">
+            <%- include('../partials/_formField', {
+              key: 'PaymentLines',
+              field: schema['PaymentLines'],
+              formData: item,
+              referenceData,
+              readOnly: true,
+              showTips: false
+            }) %>
+          </div>
+        </div>
+      <% } %>
+    </div>
   </div>
 
 <% if (config?.handlesDocuments) { %>
@@ -254,6 +298,7 @@
                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Net</th>
                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">VAT</th>
                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Gross</th>
+                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Overdue Days</th>
                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -266,6 +311,7 @@
                   <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.NetAmount) %></td>
                   <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.VATAmount) %></td>
                   <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.GrossAmount) %></td>
+                  <td class="px-4 py-2 text-center text-gray-800 dark:text-gray-200"><%= (typeof p.OverdueDays === 'number' && !Number.isNaN(p.OverdueDays)) ? p.OverdueDays : '' %></td>
                   <td class="px-4 py-2 text-right">
                     <a href="/purchase/read/<%= p.uuid %>" class="inline-flex items-center justify-center rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 transition">
                       <i class="bi bi-eye"></i>
