@@ -140,6 +140,56 @@
       </div>
     </div>
 
+  <% /* 2b) Generic array-of-objects pretty table (e.g., Contacts) */ %>
+  <% } else if (Array.isArray(selectedValue) && selectedValue.length > 0 && typeof selectedValue[0] === 'object' && !Array.isArray(selectedValue[0])) { %>
+    <% 
+      const rows = selectedValue.map(r => r || {});
+      const allCols = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+      const isNonEmpty = (v) => {
+        if (v === null || v === undefined) return false;
+        if (v instanceof Date) return !isNaN(v.getTime());
+        const t = typeof v;
+        if (t === 'string') return v.trim().length > 0;
+        if (t === 'number') return !Number.isNaN(v);
+        if (t === 'boolean') return true;
+        if (Array.isArray(v)) return v.length > 0;
+        if (t === 'object') return Object.keys(v).length > 0;
+        return false;
+      };
+      const visibleCols = allCols.filter(col => rows.some(r => isNonEmpty(r[col])));
+    %>
+    <div class="mt-4">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"><%= field.label || key %></label>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-xs text-left text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-700 table-auto">
+          <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+            <tr>
+              <% visibleCols.forEach(col => { %>
+                <th class="px-3 py-2 border border-gray-200 dark:border-gray-700 text-xs font-medium"><%= col %></th>
+              <% }) %>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-gray-900">
+            <% rows.forEach(r => { %>
+              <tr class="border-t border-gray-200 dark:border-gray-700">
+                <% visibleCols.forEach(col => { const v = r[col]; %>
+                  <td class="px-3 py-2 border border-gray-200 dark:border-gray-700 align-top whitespace-normal break-words">
+                    <% if (v && typeof v === 'object' && !(v instanceof Date)) { %>
+                      <%= JSON.stringify(v) %>
+                    <% } else if (v && String(col).toLowerCase().includes('date') && typeof slimDateTime === 'function') { %>
+                      <%= slimDateTime(v, ['displayFormat']) %>
+                    <% } else { %>
+                      <%= (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) ? '' : v %>
+                    <% } %>
+                  </td>
+                <% }) %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   <% /* 3) Default simple read-only field */ %>
   <% } else { %>
     <% 

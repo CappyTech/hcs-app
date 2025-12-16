@@ -1,12 +1,14 @@
 const path = require('path');
 const moment = require('moment-timezone');
 const attendanceService = require('../services/attendanceServicesMongoose');
+const { title } = require('process');
 
 exports.getDailyAttendance = async (req,res,next)=>{
   const date = req.params.date || moment().format('YYYY-MM-DD');
   try {
     const attendance = await attendanceService.getAttendanceForDay(date);
     res.render(path.join('tailwindcss', 'attendance', 'daily'), {
+      title: `Attendance for ${moment(date).format('DD MMMM YYYY')}`,
       moment,
       attendance,
       date
@@ -52,6 +54,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
 
     const viewFile = isManagementView ? 'weeklyManagement' : 'weeklyAdmin';
     res.render(path.join('tailwindcss', 'attendance', viewFile), {
+      title : 'Attendance for Week ' + payrollWeekStart.format('WW YYYY'),
       moment,
       groupedAttendance: groupedAttendance, // prevent table reuse
       startDate: payrollWeekStart.format('YYYY-MM-DD'),

@@ -1,4 +1,4 @@
-<div class="w-full mx-auto my-3 px-4">
+<div class="w-1/2 mx-auto my-3 px-4">
   <a href="/<%= basePath %>s" class="text-green-600 dark:text-green-400 hover:underline"><i class="bi bi-arrow-left"></i> Go Back</a>
   <!-- Header: Title + Update/Delete buttons -->
   <div class="flex items-center justify-between mb-6">
@@ -293,31 +293,28 @@
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Number</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Reference</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Issued</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Net</th>
                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">VAT</th>
                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Gross</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Overdue Days</th>
-                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
               <% item.purchases.forEach(p => { %>
                 <tr>
-                  <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= p.Number %></td>
+                  <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><a class="text-green-600" href="https://app.kashflow.com/#purchases/<%= p.Number %>" target="_blank" rel="noopener noreferrer"><%= p.Number %> <i class="bi bi-box-arrow-up-right"></i></a></td>
+                  <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><a class="text-green-600" href="/purchase/read/<%= p.uuid %>"><%= p.SupplierReference %></a></td>
                   <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= slimDateTime(p.IssuedDate) %></td>
                   <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= p.Status %></td>
-                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.NetAmount) %></td>
-                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.VATAmount) %></td>
-                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= formatCurrency(p.GrossAmount) %></td>
-                  <td class="px-4 py-2 text-center text-gray-800 dark:text-gray-200"><%= (typeof p.OverdueDays === 'number' && !Number.isNaN(p.OverdueDays)) ? p.OverdueDays : '' %></td>
-                  <td class="px-4 py-2 text-right">
-                    <a href="/purchase/read/<%= p.uuid %>" class="inline-flex items-center justify-center rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 transition">
-                      <i class="bi bi-eye"></i>
-                      <span class="ml-1 hidden sm:inline">View</span>
-                    </a>
-                  </td>
+                  <% const netAmt = (typeof p.NetAmount === 'number') ? p.NetAmount : Number(p.NetAmount);
+                     const vatAmt = (typeof p.VATAmount === 'number') ? p.VATAmount : Number(p.VATAmount);
+                     const grossAmt = (typeof p.GrossAmount === 'number') ? p.GrossAmount : Number(p.GrossAmount);
+                  %>
+                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= Number.isFinite(netAmt) ? formatCurrency(netAmt) : '' %></td>
+                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= Number.isFinite(vatAmt) ? formatCurrency(vatAmt) : '' %></td>
+                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= Number.isFinite(grossAmt) ? formatCurrency(grossAmt) : '' %></td>
                 </tr>
               <% }) %>
             </tbody>
