@@ -139,6 +139,36 @@ docker compose up -d
 
 - Reverse proxy via Caddy is provided. Adjust `Caddyfile` and environment configs to your deployment.
 
+### Getting Started with Docker
+
+1) Copy environment template and tailor values (ports, DB URIs, secrets):
+
+```bash
+cp compose.env.example compose.env
+```
+
+2) Build and start services:
+
+```bash
+docker compose up -d --build
+```
+
+3) Verify containers:
+
+```bash
+docker compose ps
+```
+
+4) Tail logs (optional):
+
+```bash
+docker compose logs -f --tail=100
+```
+
+Notes:
+- If MongoDB is external, set the connection string in `compose.env` accordingly.
+- Caddy will proxy to the app container based on `Caddyfile` rules; update hostnames and TLS settings as needed.
+
 ## API Documentation
 
 - Swagger/OpenAPI: Access `/api-docs` when the server is running.
