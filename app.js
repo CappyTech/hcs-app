@@ -44,7 +44,8 @@ const main = async () => {
     const createSessionService = require('./mongoose/services/sessionServiceMongoose');
     const sessionService = createSessionService(internalClient);
 
-    app.set('trust proxy', 1);
+    // Behind Caddy → frps/frpc (multiple proxy hops), trust forwarded headers
+    app.set('trust proxy', true);
     app.set('view engine', 'ejs');
     app.set('views', [
       path.join(__dirname, 'mongoose/views')
