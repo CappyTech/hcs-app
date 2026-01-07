@@ -1,14 +1,40 @@
+# Redirect HTTP → HTTPS
 :80 {
-  redir hcs-app:5000
+  redir https://{host}{uri}
 }
-hcs.local {
-  tls internal
-  encode zstd gzip
 
-  header {
-    Cross-Origin-Opener-Policy "same-origin"
-    Origin-Agent-Cluster "?1"
-  }
+team.heroncs.co.uk {
+    encode zstd gzip
+    reverse_proxy frps:18080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote}
+        transport http {
+            versions 1.1
+        }
+    }
+}
 
-  reverse_proxy hcs-app:5000
+sync.heroncs.co.uk {
+    encode zstd gzip
+    reverse_proxy frps:18080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote}
+        transport http {
+            versions 1.1
+        }
+    }
+}
+
+app.heroncs.co.uk {
+    encode zstd gzip
+    reverse_proxy frps:18080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote}
+        transport http {
+            versions 1.1
+        }
+    }
 }
