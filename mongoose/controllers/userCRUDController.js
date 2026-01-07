@@ -209,7 +209,7 @@ exports.logoutUser = (req, res) => {
       req.flash('error', 'An error occurred while logging out.');
       return res.redirect('/');
     }
-    res.clearCookie('connect.sid');
+    res.clearCookie('hms.sid');
     req.flash('success', 'You have been logged out.');
     return res.redirect('/user/login');
   });

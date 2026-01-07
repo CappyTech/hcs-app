@@ -33,6 +33,7 @@ module.exports = function csrfService(req, res, next) {
 
     const supplied = (req.body && (req.body._csrf || req.body.csrfToken))
       || req.headers['x-csrf-token']
+      || req.headers['x-xsrf-token']
       || req.query._csrf;
 
   if (supplied && supplied === req.session.csrfToken) return next();

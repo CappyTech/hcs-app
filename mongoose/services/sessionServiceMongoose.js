@@ -40,7 +40,8 @@ module.exports = function createSessionService(mongoClient) {
             secure: cookieSecure,
             httpOnly: true,
             maxAge: 1000 * 60 * 60 * 8,
-            sameSite: 'strict',
+            // Lax improves post-redirect flows while maintaining CSRF protections
+            sameSite: 'lax',
         }
     });
 };
