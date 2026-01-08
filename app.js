@@ -124,6 +124,26 @@ const main = async () => {
     // Session activity tracking (after auth)
     app.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
 
+    // Admin-only debug route to inspect forwarded headers and connection security
+    app.get('/__debug/headers', require('./services/authService').ensureRole('admin'), (req, res) => {
+      res.json({
+        secure: req.secure,
+        protocol: req.protocol,
+        ip: req.ip,
+        ips: req.ips,
+        headers: {
+          host: req.headers['host'],
+          'x-forwarded-for': req.headers['x-forwarded-for'] || null,
+          'x-forwarded-proto': req.headers['x-forwarded-proto'] || null,
+          'x-forwarded-host': req.headers['x-forwarded-host'] || null,
+          'x-real-ip': req.headers['x-real-ip'] || null,
+          'cf-connecting-ip': req.headers['cf-connecting-ip'] || null,
+          'x-csrf-token': req.headers['x-csrf-token'] || null,
+          'x-xsrf-token': req.headers['x-xsrf-token'] || null,
+        },
+      });
+    });
+
     // Attach user info to templates
     app.use((req, res, next) => {
       const successFlash = req.flash('success');
