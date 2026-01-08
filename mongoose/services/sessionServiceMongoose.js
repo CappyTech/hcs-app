@@ -21,6 +21,7 @@ module.exports = function createSessionService(mongoClient) {
                 ? false
                 : process.env.NODE_ENV === 'production';
 
+        const cookieDomain = process.env.SESSION_COOKIE_DOMAIN && process.env.SESSION_COOKIE_DOMAIN.trim();
         return session({
         name: COOKIE_NAME,
         key: COOKIE_NAME,
@@ -42,6 +43,7 @@ module.exports = function createSessionService(mongoClient) {
             maxAge: 1000 * 60 * 60 * 8,
             // Lax improves post-redirect flows while maintaining CSRF protections
             sameSite: 'lax',
+            ...(cookieDomain ? { domain: cookieDomain } : {})
         }
     });
 };
