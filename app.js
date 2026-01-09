@@ -44,9 +44,9 @@ const main = async () => {
     const createSessionService = require('./mongoose/services/sessionServiceMongoose');
     const sessionService = createSessionService(internalClient);
 
-    // Behind Caddy → FRP (multiple proxy hops): trust only private/loopback proxies
-    // Avoid permissive trust that breaks IP-based rate limiting
-    app.set('trust proxy', 'loopback, linklocal, uniquelocal');
+    // Behind Caddy → FRP (multiple proxy hops): trust loopback and private IPv4 ranges
+    // This enables req.secure from X-Forwarded-Proto without permissive trust
+    app.set('trust proxy', ['loopback', '127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
     app.set('view engine', 'ejs');
     app.set('views', [
       path.join(__dirname, 'mongoose/views')
