@@ -17,11 +17,19 @@ const EXEMPT = (process.env.CSRF_EXEMPT_PATHS || '')
 module.exports = function csrfService(req, res, next) {
   try {
     if (!req.session) return next();
-
+    let createdToken = false;
     if (!req.session.csrfToken) {
       req.session.csrfToken = crypto.randomBytes(24).toString('hex');
+      createdToken = true;
     }
     res.locals.csrfToken = req.session.csrfToken;
+    // Ensure the session cookie is set on first interaction
+    if (createdToken) {
+      try {
+        // Non-blocking save; cookie will be sent with response
+        req.session.save(() => {});
+      } catch (_) {}
+    }
 
     if (SAFE_METHODS.has(req.method)) return next();
 
