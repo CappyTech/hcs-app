@@ -21,3 +21,7 @@ app.log
 # Test output
 test/routes_test.log
 compose.env
+tests/cookies.txt
+tests/headers.txt
+tests/login1.html
+tests/login2.html
