@@ -15,11 +15,16 @@ module.exports = function createSessionService(mongoClient) {
             process.env.SESSION_SECRET = require('crypto').randomBytes(32).toString('hex');
         }
     }
-        const cookieSecure = (process.env.COOKIE_SECURE || '').toLowerCase() === 'true'
+        // Cookie "secure" handling:
+        // - If COOKIE_SECURE=true/false is explicitly set, honor it.
+        // - Otherwise use 'auto' so Express sets secure cookies only when req.secure is true
+        //   (works behind reverse proxies and avoids breaking local HTTP).
+        const cookieSecureEnv = (process.env.COOKIE_SECURE || '').toLowerCase();
+        const cookieSecure = cookieSecureEnv === 'true'
             ? true
-            : (process.env.COOKIE_SECURE || '').toLowerCase() === 'false'
+            : cookieSecureEnv === 'false'
                 ? false
-                : process.env.NODE_ENV === 'production';
+                : 'auto';
 
         const cookieDomain = process.env.SESSION_COOKIE_DOMAIN && process.env.SESSION_COOKIE_DOMAIN.trim();
         return session({
@@ -28,6 +33,8 @@ module.exports = function createSessionService(mongoClient) {
         secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false,
+        // Helps when running behind a reverse proxy; required if cookie.secure is true/auto.
+        proxy: true,
         store: MongoStore.create({
             client: mongoClient,
             dbName: process.env.MONGO_DBNAME_INTERNAL,
