@@ -8,6 +8,8 @@ const logger = require('./loggerService');
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+const CSRF_COOKIE_NAME = 'hms.csrf';
+
 // Optional comma separated path prefixes to exempt (e.g. "/user/login,/user/register")
 const EXEMPT = (process.env.CSRF_EXEMPT_PATHS || '')
   .split(',')
@@ -22,7 +24,22 @@ module.exports = function csrfService(req, res, next) {
       req.session.csrfToken = crypto.randomBytes(24).toString('hex');
       createdToken = true;
     }
-    res.locals.csrfToken = req.session.csrfToken;
+    // Prefer an existing CSRF cookie (supports cases where the session cookie isn't
+    // sent back due to proxy/secure-cookie mismatches), otherwise fall back to session.
+    const cookieToken = req.cookies && req.cookies[CSRF_COOKIE_NAME];
+    res.locals.csrfToken = cookieToken || req.session.csrfToken;
+
+    // Always set a CSRF cookie to support double-submit style validation.
+    // - SameSite=Lax prevents cross-site POSTs from including this cookie.
+    // - We tie "secure" to req.secure so it still works behind imperfect proxy headers.
+    try {
+      res.cookie(CSRF_COOKIE_NAME, res.locals.csrfToken, {
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: !!req.secure,
+        path: '/',
+      });
+    } catch (_) {}
     // Ensure the session cookie is set on first interaction
     if (createdToken) {
       try {
@@ -44,7 +61,9 @@ module.exports = function csrfService(req, res, next) {
       || req.headers['x-xsrf-token']
       || req.query._csrf;
 
-  if (supplied && supplied === req.session.csrfToken) return next();
+    const expectedSession = req.session.csrfToken;
+    const expectedCookie = req.cookies && req.cookies[CSRF_COOKIE_NAME];
+    if (supplied && (supplied === expectedSession || supplied === expectedCookie)) return next();
 
     const strict = process.env.STRICT_MODE === 'true';
     if (strict) {
