@@ -1,6 +1,7 @@
 // services/logRequestDetailsService.js
 
 const logger = require('./loggerService');
+const { getClientIp } = require('./ipService');
 
 const logRequestDetailsService = (req, res, next) => {
   const userAgent = req.headers['user-agent'] || '';
@@ -23,17 +24,19 @@ const logRequestDetailsService = (req, res, next) => {
   const browser = detectBrowser();
   const version = userAgent.match(/(?:Chrome|Firefox|Version|MSIE|Opera|Safari|Edge|OPR)[/ ]([0-9.]+)/)?.[1] || 'Unknown';
 
+  const clientIp = getClientIp(req);
+
   req.userDetails = {
     browser,
     version,
     os: platform,
     mobile: isMobile ? 'Yes' : 'No',
-    ip: req.ip,
+    ip: clientIp,
     timestamp: new Date().toISOString(),
   };
 
   const logUser = req.user?.username || 'unknown user';
-  logger.info(`${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${req.ip})`);
+  logger.info(`${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${clientIp})`);
 
   next();
 };
