@@ -126,10 +126,12 @@ const main = async () => {
 
     // Admin-only debug route to inspect forwarded headers and connection security
     app.get('/__debug/headers', require('./services/authService').ensureRole('admin'), (req, res) => {
+      const { getClientIp } = require('./services/ipService');
       res.json({
         secure: req.secure,
         protocol: req.protocol,
         ip: req.ip,
+        clientIp: getClientIp(req),
         ips: req.ips,
         headers: {
           host: req.headers['host'],
