@@ -27,6 +27,11 @@ module.exports = function createSessionService(mongoClient) {
                 : 'auto';
 
         const cookieDomain = process.env.SESSION_COOKIE_DOMAIN && process.env.SESSION_COOKIE_DOMAIN.trim();
+
+        try {
+            logger.info(`[session] cookie.secure=${cookieSecure} (COOKIE_SECURE=${cookieSecureEnv || 'unset'}) sameSite=lax domain=${cookieDomain || '-'} name=${COOKIE_NAME}`);
+        } catch (_) {}
+
         return session({
         name: COOKIE_NAME,
         key: COOKIE_NAME,
