@@ -3,6 +3,56 @@
 const logger = require('./loggerService');
 const { getClientIp } = require('./ipService');
 
+const SESSION_COOKIE_NAME = 'hms.sid';
+
+function hasCookie(req, cookieName) {
+  try {
+    const header = String((req.headers && req.headers.cookie) || '');
+    if (!header) return false;
+    return header.split(';').some(part => part.trim().startsWith(`${cookieName}=`));
+  } catch (_) {
+    return false;
+  }
+}
+
+function maskId(value) {
+  try {
+    const v = String(value || '');
+    if (!v) return '-';
+    if (v.length <= 10) return `${v.slice(0, 2)}…${v.slice(-2)}`;
+    return `${v.slice(0, 6)}…${v.slice(-4)}`;
+  } catch (_) {
+    return '-';
+  }
+}
+
+function summarizeSetCookie(setCookieHeader) {
+  try {
+    const parts = String(setCookieHeader)
+      .split(';')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const namePart = parts[0] || '';
+    const name = namePart.split('=')[0] || 'cookie';
+
+    const keep = [];
+    for (const p of parts.slice(1)) {
+      if (/^secure$/i.test(p)) keep.push('Secure');
+      else if (/^httponly$/i.test(p)) keep.push('HttpOnly');
+      else if (/^samesite=/i.test(p)) keep.push(p);
+      else if (/^domain=/i.test(p)) keep.push(p);
+      else if (/^path=/i.test(p)) keep.push(p);
+      else if (/^max-age=/i.test(p)) keep.push(p);
+      else if (/^expires=/i.test(p)) keep.push('Expires');
+    }
+
+    return `${name}{${keep.join(',')}}`;
+  } catch (_) {
+    return 'cookie{?}';
+  }
+}
+
 const logRequestDetailsService = (req, res, next) => {
   const userAgent = req.headers['user-agent'] || '';
   const clientHints = req.headers['sec-ch-ua'] || '';
@@ -36,7 +86,46 @@ const logRequestDetailsService = (req, res, next) => {
   };
 
   const logUser = req.user?.username || 'unknown user';
-  logger.info(`${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${clientIp})`);
+
+  const path = req.path || req.originalUrl || '';
+  const isLogin = path === '/user/login';
+  const isAuthRoute = isLogin || path === '/user/logout' || path.startsWith('/user/2fa') || path.startsWith('/user/register');
+  const isInteresting = isAuthRoute || path === '/';
+
+  if (isInteresting) {
+    const sidPresent = hasCookie(req, SESSION_COOKIE_NAME);
+    const sessionId = maskId(req.sessionID);
+    const hasSessionUser = !!(req.session && req.session.user);
+    const hasReqUser = !!req.user;
+
+    logger.info(
+      `${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${clientIp}) ` +
+      `sid=${sidPresent ? 'Y' : 'N'} sess=${sessionId} reqUser=${hasReqUser ? 'Y' : 'N'} sessUser=${hasSessionUser ? 'Y' : 'N'} ` +
+      `secure=${req.secure ? 'Y' : 'N'} proto=${req.protocol}`
+    );
+
+    if (isLogin && req.method === 'POST') {
+      const startMs = Date.now();
+      res.on('finish', () => {
+        try {
+          const setCookie = res.getHeader('set-cookie');
+          const location = res.getHeader('location');
+          const cookies = Array.isArray(setCookie)
+            ? setCookie.map(summarizeSetCookie)
+            : setCookie
+              ? [summarizeSetCookie(setCookie)]
+              : [];
+
+          logger.info(
+            `[login response] status=${res.statusCode} location=${location || '-'} ` +
+            `t=${Date.now() - startMs}ms setCookie=${cookies.length ? cookies.join(' ') : 'none'}`
+          );
+        } catch (_) {}
+      });
+    }
+  } else {
+    logger.info(`${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${clientIp})`);
+  }
 
   next();
 };
