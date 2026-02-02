@@ -101,7 +101,8 @@ const logRequestDetailsService = (req, res, next) => {
     logger.info(
       `${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${clientIp}) ` +
       `sid=${sidPresent ? 'Y' : 'N'} sess=${sessionId} reqUser=${hasReqUser ? 'Y' : 'N'} sessUser=${hasSessionUser ? 'Y' : 'N'} ` +
-      `secure=${req.secure ? 'Y' : 'N'} proto=${req.protocol}`
+      `secure=${req.secure ? 'Y' : 'N'} proto=${req.protocol} ` +
+      `xfp=${req.headers['x-forwarded-proto'] || '-'} xff=${(req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim() || '-'}`
     );
 
     if (isLogin && req.method === 'POST') {
