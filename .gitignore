@@ -12,6 +12,11 @@ compose.env
 app.log
 /logs/
 
+# Deploy artifacts (server/container-local)
+deploy.log
+deploy-cron.log
+deploy.sh
+
 # Project files
 /Projects/
 
