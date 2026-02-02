@@ -3,6 +3,39 @@ const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
+const { getClientIp } = require('../../services/ipService');
+
+function hasCookie(req, cookieName) {
+  try {
+    const header = String((req.headers && req.headers.cookie) || '');
+    if (!header) return false;
+    return header.split(';').some(part => part.trim().startsWith(`${cookieName}=`));
+  } catch (_) {
+    return false;
+  }
+}
+
+function maskId(value) {
+  try {
+    const v = String(value || '');
+    if (!v) return '-';
+    if (v.length <= 10) return `${v.slice(0, 2)}…${v.slice(-2)}`;
+    return `${v.slice(0, 6)}…${v.slice(-4)}`;
+  } catch (_) {
+    return '-';
+  }
+}
+
+function maskIdentifier(value) {
+  try {
+    const v = String(value || '').trim();
+    if (!v) return '-';
+    if (v.length <= 3) return `${v[0]}…`;
+    return `${v.slice(0, 2)}…${v.slice(-1)}`;
+  } catch (_) {
+    return '-';
+  }
+}
 
 exports.renderRegistrationForm = (req, res, next) => {
     res.render(path.join('mongoose', 'user', 'register'), {
@@ -90,9 +123,15 @@ exports.loginUser = async (req, res) => {
   try {
     const { usernameOrEmail, password } = req.body;
     const token = req.body['cf-turnstile-response'];
-    const ip = req.ip;
+    const ip = getClientIp(req);
     const agent = req.useragent || {};
     const skipCaptcha = process.env.SKIP_TURNSTILE === 'true';
+
+    logger.info(
+      `[login attempt] ident=${maskIdentifier(usernameOrEmail)} isEmail=${String(usernameOrEmail || '').includes('@') ? 'Y' : 'N'} ` +
+      `ip=${ip} sidCookie=${hasCookie(req, 'hms.sid') ? 'Y' : 'N'} sess=${maskId(req.sessionID)} ` +
+      `secure=${req.secure ? 'Y' : 'N'} proto=${req.protocol} ua=${agent.browser || 'Unknown'}/${agent.os || 'Unknown'}`
+    );
 
     if (!skipCaptcha && !token) {
       logger.info('Login rejected: CAPTCHA token missing');
@@ -191,7 +230,10 @@ exports.loginUser = async (req, res) => {
       req.session.save(err => (err ? reject(err) : resolve()));
     });
 
-    logger.info(`${user.username} successfully logged in.`);
+    logger.info(
+      `${user.username} successfully logged in. ` +
+      `sess=${maskId(req.sessionID)} sidCookieWas=${hasCookie(req, 'hms.sid') ? 'Y' : 'N'} sessionUser=${req.session?.user ? 'Y' : 'N'}`
+    );
     req.flash('success', `${user.username}, you're logged in.`);
     return res.redirect('/');
 
