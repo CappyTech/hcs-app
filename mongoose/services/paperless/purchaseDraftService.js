@@ -594,6 +594,52 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
   const currencyCode = draft.Currency || opts.currencyDefault || process.env.DEFAULT_CURRENCY || 'GBP';
   const defaultNominal = typeof draft.DefaultNominalCode === 'number' ? draft.DefaultNominalCode : undefined;
 
+  const vatLevels = Array.isArray(opts.vatLevels) ? opts.vatLevels.filter(n => typeof n === 'number' && Number.isFinite(n)) : [];
+  const vatTolerance = (() => {
+    const raw = process.env.KASHFLOW_VATLEVEL_TOLERANCE;
+    if (raw == null || String(raw).trim() === '') return 0.5;
+    const n = parseFloat(String(raw));
+    return Number.isFinite(n) ? n : 0.5;
+  })();
+
+  const computeVatLevelFromAmounts = (li) => {
+    if (!li || typeof li !== 'object') return undefined;
+    if (typeof li.VATLevel === 'number' && Number.isFinite(li.VATLevel)) return li.VATLevel;
+    const vatAmount = li.VATAmount;
+    if (typeof vatAmount !== 'number' || !Number.isFinite(vatAmount)) return undefined;
+
+    let netBase = li.NetAmount;
+    if ((netBase == null || !Number.isFinite(netBase)) && typeof li.GrossAmount === 'number' && Number.isFinite(li.GrossAmount)) {
+      netBase = +(li.GrossAmount - vatAmount).toFixed(2);
+    }
+    if ((netBase == null || !Number.isFinite(netBase)) && typeof li.Quantity === 'number' && Number.isFinite(li.Quantity)) {
+      const unit = (typeof li.UnitPrice === 'number' && Number.isFinite(li.UnitPrice)) ? li.UnitPrice
+        : ((typeof li.Rate === 'number' && Number.isFinite(li.Rate)) ? li.Rate : undefined);
+      if (typeof unit === 'number') netBase = +(li.Quantity * unit).toFixed(2);
+    }
+
+    if (typeof netBase !== 'number' || !Number.isFinite(netBase) || netBase <= 0) {
+      // If vat is explicitly 0 and we can't derive net, assume 0%.
+      if (vatAmount === 0) return 0;
+      return undefined;
+    }
+
+    const pct = +(vatAmount / netBase * 100).toFixed(4);
+    if (!Number.isFinite(pct)) return undefined;
+    if (!vatLevels || vatLevels.length === 0) return pct;
+
+    let best = vatLevels[0];
+    let bestDiff = Math.abs(pct - best);
+    for (let i = 1; i < vatLevels.length; i++) {
+      const r = vatLevels[i];
+      const d = Math.abs(pct - r);
+      if (d < bestDiff) { best = r; bestDiff = d; }
+    }
+    // Snap to known KF level when close enough, otherwise still pick closest.
+    if (bestDiff <= vatTolerance) return best;
+    return best;
+  };
+
   const payload = {
     // Header (request fields only)
     SupplierCode: draft.SupplierCode,
@@ -611,18 +657,21 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
       // Only ExchangeRate is part of request model; others are response-only
       ExchangeRate: typeof opts.exchangeRate === 'number' ? opts.exchangeRate : undefined,
     },
-    LineItems: Array.isArray(draft.LineItems) ? draft.LineItems.map((li) => ({
+    LineItems: Array.isArray(draft.LineItems) ? draft.LineItems.map((li) => {
+      const resolvedVatLevel = computeVatLevelFromAmounts(li);
+      return ({
       Description: li.Description,
       Quantity: li.Quantity ?? 1,
       // KashFlow expects Rate (unit price). If only NetAmount was provided, fallback to that.
       Rate: li.UnitPrice ?? li.Rate ?? li.NetAmount ?? 0,
-      VATLevel: li.VATLevel,
+      VATLevel: resolvedVatLevel,
       VATAmount: li.VATAmount,
       VATExempt: typeof li.VATExempt === 'boolean' ? li.VATExempt : undefined,
       NominalCode: (typeof li.NominalCode === 'number' ? li.NominalCode : defaultNominal),
       // Optional request fields
       ProjectNumber: li.ProjectNumber,
-    })) : [],
+      });
+    }) : [],
     PaymentLines: Array.isArray(draft.PaymentLines) ? draft.PaymentLines.map(pl => ({
       AccountId: pl.AccountId,
       Amount: pl.Amount,
@@ -670,7 +719,7 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
         if (deferDefaults) {
           // Common defaultable fields: let API decide
           if (li.VATExempt === false) delete li.VATExempt;
-          if (li.VATLevel === 0) delete li.VATLevel; // avoid sending 0; let API choose default rate
+          // Keep VATLevel even when it is 0 (zero-rated). Deleting it can cause KashFlow to default to a non-zero VAT rate.
           if (li.ProjectNumber === 0) delete li.ProjectNumber;
           if (li.GrossAmount === 0) delete li.GrossAmount;
           if (li.ProductCode === 0) delete li.ProductCode;

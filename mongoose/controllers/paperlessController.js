@@ -343,7 +343,6 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         draft.LineItems[i] = li;
       }
     }
-    const payload = buildKashFlowPayloadFromDraft(draft);
     const webhookUrl = process.env.KASHFLOW_CREATOR_WEBHOOK_URL;
     const webhookToken = process.env.KASHFLOW_CREATOR_WEBHOOK_TOKEN;
 
@@ -351,7 +350,18 @@ exports.sendDraftToKashflow = async (req, res, next) => {
   const KF_BASE = (process.env.KASHFLOW_API_BASE_URL || 'https://api.kashflow.com/v2').replace(/\/+$/, '');
   // We now prefer session-token auth (KfToken) over Basic
   const kfSession = require('../../services/kashflowSessionService');
+  const kfVat = require('../../services/kashflowVatService');
   const hasDirectAuth = !!(process.env.KASHFLOW_SESSION_TOKEN || process.env.KFSESSIONTOKEN || process.env.KASHFLOW_EXTERNAL_TOKEN || ((process.env.KASHFLOW_API_USERNAME || process.env.KFUSERNAME) && (process.env.KASHFLOW_API_PASSWORD || process.env.KFPASSWORD) && (process.env.KASHFLOW_MEMORABLE || process.env.KFMEMORABLE)));
+
+    // Determine VATLevel format from KashFlow itself (not our MongoDB) and compute VATLevel from VATAmount.
+    let vatLevels = [];
+    try {
+      vatLevels = await kfVat.getVatLevels({ baseUrl: KF_BASE });
+    } catch (e) {
+      logger.warn(`[kashflow] Failed to load VAT rates from KashFlow; will send payload without snapping VATLevel. ${e.message}`);
+    }
+
+    const payload = buildKashFlowPayloadFromDraft(draft, { vatLevels });
 
     let result = { paperlessId, mode: null, endpoint: null, status: null, ok: false, message: null, location: null, response: null };
 
