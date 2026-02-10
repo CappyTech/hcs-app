@@ -6,19 +6,34 @@ const moment = require('moment-timezone');
 const speakeasy = require('speakeasy');
 const encryptionService = require('../../services/encryptionService');
 
+function getSafeNext(raw) {
+  const v = String(raw || '').trim();
+  if (!v) return null;
+  if (v.length > 2000) return null;
+  if (v.includes('\n') || v.includes('\r')) return null;
+  if (!v.startsWith('/')) return null;
+  if (v.startsWith('//')) return null;
+  if (v.includes('\\')) return null;
+  if (v.includes('://')) return null;
+  return v;
+}
+
 exports.render2FAPage = (req, res) => {
   if (!req.session.userPending2FA) {
     req.flash('error', '2FA session expired. Please log in again.');
     return res.redirect('/user/login');
   }
 
-  res.render(path.join('tailwindcss', 'user', '2fa'), { title: 'Two-Factor Authentication' });
+  const pending = req.session.userPending2FA;
+  const next = getSafeNext(pending?.next);
+  res.render(path.join('tailwindcss', 'user', '2fa'), { title: 'Two-Factor Authentication', next });
 };
 
 exports.verify2FA = async (req, res) => {
   try {
     const code = req.body.totpToken;
     const pending = req.session.userPending2FA;
+    const next = getSafeNext(req.body?.next || pending?.next);
 
     if (!pending) {
       req.flash('error', '2FA session missing. Please log in again.');
@@ -100,7 +115,7 @@ exports.verify2FA = async (req, res) => {
         logger.info(`[SESSION DENORM 2FA] matched=${upd.matchedCount} modified=${upd.modifiedCount} upserted=${upd.upsertedCount||0} sid=${req.sessionID}`);
       }
     } catch (_) { /* ignore */ }
-    return res.redirect('/');
+    return res.redirect(next || '/');
   } catch (error) {
     logger.error('2FA verification error: ' + error.message);
     delete req.session.userPending2FA;
