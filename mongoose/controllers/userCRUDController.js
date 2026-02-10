@@ -37,6 +37,21 @@ function maskIdentifier(value) {
   }
 }
 
+function getSafeNext(raw) {
+  const v = String(raw || '').trim();
+  if (!v) return null;
+  if (v.length > 2000) return null;
+  if (v.includes('\n') || v.includes('\r')) return null;
+
+  // Only allow internal relative paths to prevent open redirects.
+  // Disallow protocol-relative (//evil.com) and backslashes.
+  if (!v.startsWith('/')) return null;
+  if (v.startsWith('//')) return null;
+  if (v.includes('\\')) return null;
+  if (v.includes('://')) return null;
+  return v;
+}
+
 exports.renderRegistrationForm = (req, res, next) => {
     res.render(path.join('mongoose', 'user', 'register'), {
         title: 'Register',
@@ -113,14 +128,17 @@ exports.registerUser = async (req, res, next) => {
 
 exports.renderLoginForm = (req, res) => {
   // Render TailwindCSS version of login template
+  const next = getSafeNext(req.query?.next);
   res.render(path.join('tailwindcss', 'user', 'login'), {
     title: 'Log In',
     siteKey: process.env.TURNSTILE_SITE_KEY,
+    next,
   });
 };
 
 exports.loginUser = async (req, res) => {
   try {
+    const next = getSafeNext(req.body?.next || req.query?.next);
     const { usernameOrEmail, password } = req.body;
     const token = req.body['cf-turnstile-response'];
     const ip = getClientIp(req);
@@ -136,7 +154,7 @@ exports.loginUser = async (req, res) => {
     if (!skipCaptcha && !token) {
       logger.info('Login rejected: CAPTCHA token missing');
       req.flash('error', 'CAPTCHA token missing.');
-      return res.redirect('/user/login');
+      return res.redirect('/user/login' + (next ? ('?next=' + encodeURIComponent(next)) : ''));
     }
 
     if (!skipCaptcha) {
@@ -151,7 +169,7 @@ exports.loginUser = async (req, res) => {
       if (!verifyResponse.data.success) {
         logger.info('Login rejected: CAPTCHA verification failed');
         req.flash('error', 'CAPTCHA verification failed.');
-        return res.redirect('/user/login');
+        return res.redirect('/user/login' + (next ? ('?next=' + encodeURIComponent(next)) : ''));
       }
     } else {
       logger.info('Login CAPTCHA bypass active (SKIP_TURNSTILE=true)');
@@ -160,7 +178,7 @@ exports.loginUser = async (req, res) => {
     if (!usernameOrEmail || !password) {
       logger.info('Login rejected: missing credentials');
       req.flash('error', 'Username and password are required.');
-      return res.redirect('/user/login');
+      return res.redirect('/user/login' + (next ? ('?next=' + encodeURIComponent(next)) : ''));
     }
 
     const user = await mdb.INTERNAL.user.findOne({
@@ -198,7 +216,7 @@ exports.loginUser = async (req, res) => {
     }
     if (!authOk) {
       req.flash('error', 'Invalid username or password.');
-      return res.redirect('/user/login');
+      return res.redirect('/user/login' + (next ? ('?next=' + encodeURIComponent(next)) : ''));
     }
 
     const sessionData = {
@@ -209,6 +227,7 @@ exports.loginUser = async (req, res) => {
       role: user.role,
       loginTime: new Date().toISOString(),
       ip,
+      next,
       userAgent: {
         browser: agent.browser || 'Unknown',
         version: agent.version || 'Unknown',
@@ -235,12 +254,13 @@ exports.loginUser = async (req, res) => {
       `sess=${maskId(req.sessionID)} sidCookieWas=${hasCookie(req, 'hms.sid') ? 'Y' : 'N'} sessionUser=${req.session?.user ? 'Y' : 'N'}`
     );
     req.flash('success', `${user.username}, you're logged in.`);
-    return res.redirect('/');
+    return res.redirect(next || '/');
 
   } catch (error) {
     logger.error('Login error: ' + error.message);
     req.flash('error', 'Login failed. Please try again.');
-    return res.redirect('/user/login');
+    const next = getSafeNext(req.body?.next || req.query?.next);
+    return res.redirect('/user/login' + (next ? ('?next=' + encodeURIComponent(next)) : ''));
   }
 };
 
