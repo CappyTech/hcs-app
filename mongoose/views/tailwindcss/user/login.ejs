@@ -8,8 +8,11 @@
                         CAPTCHA bypass is active (SKIP_TURNSTILE=true). Do not enable this in production.
                     </div>
                 <% } %>
-                <form action="/user/login" method="POST" class="space-y-6">
+                                <form action="/user/login" method="POST" class="space-y-6">
                     <%- include('../partials/csrfHidden.ejs') %>
+                                        <% if (typeof next !== 'undefined' && next) { %>
+                                            <input type="hidden" name="next" value="<%= next %>" />
+                                        <% } %>
             
             <!-- Username or Email -->
             <div>
