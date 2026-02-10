@@ -43,8 +43,31 @@ function isAllowedReturnTo(urlObj) {
   return false;
 }
 
+function upgradeReturnToToHttpsIfAllowed(urlObj) {
+  if (!urlObj) return null;
+
+  // If the target host is allowlisted but proto is http (common when upstream
+  // loses X-Forwarded-Proto), upgrade to https rather than rejecting.
+  try {
+    const hostAllowList = String(process.env.HCS_SSO_RETURN_HOSTS || 'sync.heroncs.co.uk')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const host = String(urlObj.hostname || '').toLowerCase();
+    const proto = String(urlObj.protocol || '').toLowerCase();
+    const allowHttp = String(process.env.HCS_SSO_ALLOW_HTTP || '').toLowerCase() === 'true';
+    if (proto === 'http:' && !allowHttp && hostAllowList.includes(host)) {
+      urlObj.protocol = 'https:';
+    }
+  } catch {
+    // ignore
+  }
+
+  return urlObj;
+}
+
 exports.hcsSyncHandoff = async (req, res) => {
-  const returnTo = parseReturnTo(req.query?.return_to);
+  const returnTo = upgradeReturnToToHttpsIfAllowed(parseReturnTo(req.query?.return_to));
 
   // Not authenticated → bounce to login (internal next only).
   if (!req.user) {
