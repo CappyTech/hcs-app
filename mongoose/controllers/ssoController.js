@@ -2,6 +2,14 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const logger = require('../../services/loggerService');
 
+function isLocalhostHostname(hostname) {
+  const h = String(hostname || '').trim().toLowerCase();
+  if (!h) return false;
+  if (h === 'localhost' || h.endsWith('.localhost')) return true;
+  if (h === '127.0.0.1' || h === '::1') return true;
+  return false;
+}
+
 function getCookieSecure(req) {
   const env = String(process.env.COOKIE_SECURE || '').toLowerCase();
   if (env === 'true') return true;
@@ -39,6 +47,7 @@ function isAllowedReturnTo(urlObj) {
   const protocol = String(urlObj.protocol || '').toLowerCase();
   const allowHttp = String(process.env.HCS_SSO_ALLOW_HTTP || '').toLowerCase() === 'true';
   if (protocol === 'https:') return true;
+  if (isLocalhostHostname(host) && protocol === 'http:') return true;
   if (allowHttp && protocol === 'http:') return true;
   return false;
 }
@@ -55,6 +64,13 @@ function upgradeReturnToToHttpsIfAllowed(urlObj) {
       .filter(Boolean);
     const host = String(urlObj.hostname || '').toLowerCase();
     const proto = String(urlObj.protocol || '').toLowerCase();
+
+    // Local development: if return host is localhost/loopback, prefer plain HTTP.
+    if (isLocalhostHostname(host)) {
+      urlObj.protocol = 'http:';
+      return urlObj;
+    }
+
     const allowHttp = String(process.env.HCS_SSO_ALLOW_HTTP || '').toLowerCase() === 'true';
     if (proto === 'http:' && !allowHttp && hostAllowList.includes(host)) {
       urlObj.protocol = 'https:';
