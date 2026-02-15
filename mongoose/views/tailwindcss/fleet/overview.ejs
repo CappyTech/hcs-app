@@ -1,0 +1,241 @@
+<div class="container mx-auto py-4 px-4">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6 print:hidden">
+    <h1 class="text-4xl font-extrabold text-gray-900 dark:text-gray-100">Fleet Overview</h1>
+    <div class="flex gap-2">
+      <a href="/vehicle/create" class="inline-block bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2 text-sm font-medium">
+        + Add Vehicle
+      </a>
+      <a href="/vehicles" class="inline-block bg-gray-600 hover:bg-gray-700 text-white rounded px-4 py-2 text-sm font-medium">
+        All Vehicles
+      </a>
+    </div>
+  </div>
+
+  <!-- Summary Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
+    <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Vehicles</p>
+      <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><%= totalCount %></p>
+    </div>
+    <% const statusColors = {
+      'Available': 'text-green-600',
+      'In Use': 'text-blue-600',
+      'Under Maintenance': 'text-yellow-600',
+      'Out of Service': 'text-red-600',
+      'Disposed': 'text-gray-400'
+    }; %>
+    <% for (const [status, count] of Object.entries(availabilityCounts)) { %>
+      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-4 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1"><%= status %></p>
+        <p class="text-3xl font-bold <%= statusColors[status] || 'text-gray-900 dark:text-gray-100' %>"><%= count %></p>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Expired (past-due) alerts -->
+  <% const expiredSections = [
+    { items: expiredMot, label: 'Expired MOT', field: 'motExpiryDate', color: 'red' },
+    { items: expiredInsurance, label: 'Expired Insurance', field: 'insuranceExpiryDate', color: 'red' },
+    { items: expiredRoadTax, label: 'Expired Road Tax', field: 'roadTaxExpiryDate', color: 'red' }
+  ].filter(s => s.items.length > 0); %>
+
+  <% if (expiredSections.length > 0) { %>
+    <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+      <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Expired Compliance</h2>
+      <% for (const section of expiredSections) { %>
+        <h3 class="text-lg font-semibold text-red-600 dark:text-red-400 mb-2"><%= section.label %> (<%= section.items.length %>)</h3>
+        <div class="overflow-x-auto mb-4">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="bg-red-100 dark:bg-red-800/30">
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reg</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Vehicle</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Expired On</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-red-200 dark:divide-red-800">
+              <% for (const v of section.items) { %>
+                <tr>
+                  <td class="px-4 py-2 font-mono font-bold"><%= v.registrationNumber %></td>
+                  <td class="px-4 py-2"><%= v.make %> <%= v.model %></td>
+                  <td class="px-4 py-2 text-red-600 font-semibold"><%= slimDateTime(v[section.field]) %></td>
+                  <td class="px-4 py-2">
+                    <a href="/vehicle/update/<%= v.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
+
+  <!-- Expiring Soon -->
+  <% const expiringSections = [
+    { items: expiringMot, label: 'MOT Expiring Soon', field: 'motExpiryDate' },
+    { items: expiringInsurance, label: 'Insurance Expiring Soon', field: 'insuranceExpiryDate' },
+    { items: expiringRoadTax, label: 'Road Tax Expiring Soon', field: 'roadTaxExpiryDate' }
+  ].filter(s => s.items.length > 0); %>
+
+  <% if (expiringSections.length > 0) { %>
+    <div class="mb-8 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+      <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-4">&#9888; Expiring Within <%= expiryDays %> Days</h2>
+      <% for (const section of expiringSections) { %>
+        <h3 class="text-lg font-semibold text-yellow-600 dark:text-yellow-400 mb-2"><%= section.label %> (<%= section.items.length %>)</h3>
+        <div class="overflow-x-auto mb-4">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="bg-yellow-100 dark:bg-yellow-800/30">
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reg</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Vehicle</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Expires</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Days Left</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-yellow-200 dark:divide-yellow-800">
+              <% for (const v of section.items) {
+                const daysLeft = Math.ceil((new Date(v[section.field]) - new Date()) / (1000 * 60 * 60 * 24));
+              %>
+                <tr>
+                  <td class="px-4 py-2 font-mono font-bold"><%= v.registrationNumber %></td>
+                  <td class="px-4 py-2"><%= v.make %> <%= v.model %></td>
+                  <td class="px-4 py-2"><%= slimDateTime(v[section.field]) %></td>
+                  <td class="px-4 py-2 font-semibold <%= daysLeft <= 7 ? 'text-red-600' : 'text-yellow-600' %>"><%= daysLeft %></td>
+                  <td class="px-4 py-2">
+                    <a href="/vehicle/update/<%= v.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
+
+  <!-- Service Due Soon -->
+  <% if (serviceDueSoon.length > 0) { %>
+    <div class="mb-8 border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+      <h2 class="text-xl font-bold text-blue-700 dark:text-blue-400 mb-4">&#128295; Service Due Within <%= expiryDays %> Days (<%= serviceDueSoon.length %>)</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="bg-blue-100 dark:bg-blue-800/30">
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reg</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Vehicle</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Service Due</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Last Service</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Mileage</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-blue-200 dark:divide-blue-800">
+            <% for (const v of serviceDueSoon) { %>
+              <tr>
+                <td class="px-4 py-2 font-mono font-bold"><%= v.registrationNumber %></td>
+                <td class="px-4 py-2"><%= v.make %> <%= v.model %></td>
+                <td class="px-4 py-2"><%= slimDateTime(v.nextServiceDueDate) %></td>
+                <td class="px-4 py-2"><%= v.lastServiceDate ? slimDateTime(v.lastServiceDate) : '—' %></td>
+                <td class="px-4 py-2"><%= v.currentMileage != null ? v.currentMileage.toLocaleString() : '—' %></td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Current Assignments -->
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Current Assignments (<%= assignedVehicles.length %>)</h2>
+    <% if (assignedVehicles.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow">
+          <thead>
+            <tr class="bg-gray-100 dark:bg-gray-800">
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reg</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Vehicle</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Assigned To</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Type</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Usage</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <% for (const v of assignedVehicles) { %>
+              <tr>
+                <td class="px-4 py-2 font-mono font-bold">
+                  <a href="/vehicle/read/<%= v.uuid %>" class="text-blue-600 hover:underline"><%= v.registrationNumber %></a>
+                </td>
+                <td class="px-4 py-2"><%= v.make %> <%= v.model %></td>
+                <td class="px-4 py-2">
+                  <% if (v._assigneeUuid) { %>
+                    <a href="/<%= v._assigneeType === 'employee' ? 'employee' : 'supplier' %>/read/<%= v._assigneeUuid %>" class="text-blue-600 hover:underline">
+                      <%= v._assigneeName %>
+                    </a>
+                  <% } else { %>
+                    <%= v._assigneeName %>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                    <%= v._assigneeType === 'employee' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-purple-100 text-purple-800 dark:bg-purple-800/20 dark:text-purple-400' %>">
+                    <%= v._assigneeType === 'employee' ? 'Employee' : 'Subcontractor' %>
+                  </span>
+                </td>
+                <td class="px-4 py-2"><%= v.availabilityStatus || 'Available' %></td>
+                <td class="px-4 py-2"><%= v.vehicleUsage || '—' %></td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="text-gray-500 dark:text-gray-400">No vehicles currently assigned.</p>
+    <% } %>
+  </div>
+
+  <!-- Unassigned & Available -->
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Unassigned &amp; Available (<%= unassigned.length %>)</h2>
+    <% if (unassigned.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow">
+          <thead>
+            <tr class="bg-gray-100 dark:bg-gray-800">
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reg</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Vehicle</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Fuel</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Body</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Mileage</th>
+              <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <% for (const v of unassigned) { %>
+              <tr>
+                <td class="px-4 py-2 font-mono font-bold">
+                  <a href="/vehicle/read/<%= v.uuid %>" class="text-blue-600 hover:underline"><%= v.registrationNumber %></a>
+                </td>
+                <td class="px-4 py-2"><%= v.make %> <%= v.model %> <%= v.year || '' %></td>
+                <td class="px-4 py-2"><%= v.fuelType || '—' %></td>
+                <td class="px-4 py-2"><%= v.bodyType || '—' %></td>
+                <td class="px-4 py-2"><%= v.currentMileage != null ? v.currentMileage.toLocaleString() : '—' %></td>
+                <td class="px-4 py-2">
+                  <a href="/vehicle/update/<%= v.uuid %>" class="text-blue-600 hover:underline text-xs">Edit</a>
+                </td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="text-gray-500 dark:text-gray-400">All vehicles are currently assigned or unavailable.</p>
+    <% } %>
+  </div>
+
+</div>

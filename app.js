@@ -222,6 +222,7 @@ const main = async () => {
     app.use('/', require('./mongoose/routes/holidayRoutes'));
     app.use('/', require('./mongoose/routes/fileRoutes'));
     app.use('/', require('./mongoose/routes/paperlessRoutes'));
+    app.use('/', require('./mongoose/routes/fleetRoutes'));
     app.use('/', require('./mongoose/routes/ssoRoutes'));
 
     // Catch-all 404
@@ -254,6 +255,9 @@ const main = async () => {
 
     // Start periodic session cleanup
     try { require('./mongoose/services/sessionCleanupService').start(); } catch (e) { logger.warn('Session cleanup start failed: ' + e.message); }
+
+    // Start periodic vehicle compliance checks (MOT, insurance, road tax)
+    try { require('./mongoose/services/vehicleComplianceService').start(); } catch (e) { logger.warn('Vehicle compliance service start failed: ' + e.message); }
 
   } catch (err) {
     logger.error('❌ Failed to start application: ' + err + err.stack);

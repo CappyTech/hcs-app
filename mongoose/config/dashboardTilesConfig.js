@@ -108,7 +108,7 @@ module.exports = {
     FleetManagement: {
         title: 'Fleet Management',
         description: 'Manage company vehicles, compliance and assignments.',
-        link: '/vehicles',
+        link: '/fleet',
         department: ['management'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     }
