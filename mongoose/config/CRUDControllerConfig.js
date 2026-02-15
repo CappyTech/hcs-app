@@ -270,10 +270,30 @@ module.exports = {
   vehicle: {
     readOnly: ['uuid', 'createdAt'],
     validators: {
-      registrationNumber: value => typeof value === 'string' && value.length > 0,
-      make: value => typeof value === 'string' && value.length > 0,
-      model: value => typeof value === 'string' && value.length > 0,
-      year: value => !isNaN(value) && value > 1900 && value <= new Date().getFullYear(),
+      registrationNumber: value => typeof value === 'string' && value.trim().length > 0,
+      make: value => typeof value === 'string' && value.trim().length > 0,
+      model: value => typeof value === 'string' && value.trim().length > 0,
+      year: value => !isNaN(value) && value >= 1900 && value <= new Date().getFullYear() + 1,
+      vin: value => !value || (typeof value === 'string' && value.trim().length === 17),
+      engineSize: value => value == null || (typeof value === 'number' && value >= 0),
+      currentMileage: value => value == null || (typeof value === 'number' && value >= 0),
+      grossWeight: value => value == null || (typeof value === 'number' && value >= 0),
+      payload: value => value == null || (typeof value === 'number' && value >= 0),
+      insuranceExpiryDate: value => !value || !isNaN(Date.parse(value)),
+      motExpiryDate: value => !value || !isNaN(Date.parse(value)),
+      roadTaxExpiryDate: value => !value || !isNaN(Date.parse(value)),
+      purchaseDate: value => !value || !isNaN(Date.parse(value)),
+      leaseExpiryDate: value => !value || !isNaN(Date.parse(value)),
+      lastServiceDate: value => !value || !isNaN(Date.parse(value)),
+      nextServiceDueDate: value => !value || !isNaN(Date.parse(value)),
+    },
+    xorGroups: [
+      ['employeeId', 'subcontractorId']
+    ],
+    referenceFilters: {
+      employeeId: { status: 'active' },
+      subcontractorId: { IsSubcontractor: true },
+      projectId: { $or: [{ Status: 0 }, { Status: 2 }] }
     },
     middleware: {
       read: ['ensureRole:admin', 'ensureAuthenticated'],

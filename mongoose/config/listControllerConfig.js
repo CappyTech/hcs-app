@@ -400,11 +400,74 @@ module.exports = {
   },
   vehicle: {
     title: 'Vehicles',
+    description: {
+      create: 'Register a new vehicle in the fleet.',
+      manage: 'Manage company fleet vehicles, compliance dates and assignments.',
+    },
     linkField: 'registrationNumber',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'vin', 'engineNumber',
+      'motCertificateNumber', 'insuranceCost', 'purchasePrice', 'leaseMonthlyCost',
+      'leaseProvider', 'grossWeight', 'payload', 'lastServiceMileage', 'nextServiceDueMileage', 'notes'],
+    fieldOrder: [
+      'registrationNumber', 'make', 'model', 'year', 'color',
+      'fuelType', 'bodyType', 'transmission', 'engineSize',
+      'currentMileage', 'availabilityStatus', 'vehicleUsage',
+      'employeeId', 'subcontractorId', 'projectId', 'assignedDepartment',
+      'ownershipStatus', 'purchaseDate', 'leaseExpiryDate',
+      'insuranceProvider', 'insuranceExpiryDate',
+      'motExpiryDate', 'roadTaxExpiryDate', 'roadTaxAmount',
+      'lastServiceDate', 'nextServiceDueDate'
+    ],
     sortField: 'registrationNumber',
     sortOrder: 1,
     department: ['management'],
+    tabsby: 'availabilityStatus',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Available', label: 'Available' },
+      { value: 'In Use', label: 'In Use' },
+      { value: 'Under Maintenance', label: 'Maintenance' },
+      { value: 'Out of Service', label: 'Out of Service' },
+      { value: 'Disposed', label: 'Disposed' }
+    ],
+    labelOverrides: {
+      registrationNumber: 'Reg',
+      employeeId: 'Assigned Employee',
+      subcontractorId: 'Assigned Subcontractor',
+      projectId: 'Project',
+      currentMileage: 'Mileage',
+      availabilityStatus: 'Status',
+      vehicleUsage: 'Usage',
+      ownershipStatus: 'Ownership',
+      motExpiryDate: 'MOT Expiry',
+      insuranceExpiryDate: 'Insurance Expiry',
+      roadTaxExpiryDate: 'Tax Expiry',
+      roadTaxAmount: 'Tax Cost',
+      insuranceCost: 'Insurance Cost',
+      lastServiceDate: 'Last Service',
+      nextServiceDueDate: 'Next Service Due',
+      assignedDepartment: 'Department'
+    },
+    fieldTransforms: {
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
+      },
+      projectId: {
+        fromModel: 'project',
+        matchField: ['_id', 'Id'],
+        returnField: 'Name',
+        linkTo: (matched) => `/project/read/${matched.uuid}`
+      }
+    },
   },
   holidayDismissal: {
     title: 'Dismissed Holidays',

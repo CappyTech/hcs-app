@@ -104,5 +104,12 @@ module.exports = {
         link: 'https://heroncscouk-my.sharepoint.com/',
         department: ['management'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    FleetManagement: {
+        title: 'Fleet Management',
+        description: 'Manage company vehicles, compliance and assignments.',
+        link: '/vehicles',
+        department: ['management'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
     }
 };
