@@ -10,4 +10,8 @@ router.get('/weekly-management/:year?/:week?', authService.ensureRole(), (req, r
   ctrl.getWeeklyAttendance(req, res, next);
 });
 
+// Approval workflow
+router.post('/attendance/:uuid/approve', authService.ensureRole('admin'), ctrl.approveAttendance);
+router.post('/attendance/:uuid/reject', authService.ensureRole('admin'), ctrl.rejectAttendance);
+
 module.exports = router;

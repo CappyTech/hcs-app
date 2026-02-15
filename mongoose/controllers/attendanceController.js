@@ -1,7 +1,8 @@
 const path = require('path');
 const moment = require('moment-timezone');
 const attendanceService = require('../services/attendanceServicesMongoose');
-const { title } = require('process');
+const mdb = require('../services/mongooseDatabaseService');
+const logger = require('../../services/loggerService');
 
 exports.getDailyAttendance = async (req,res,next)=>{
   const date = req.params.date || moment().format('YYYY-MM-DD');
@@ -39,7 +40,9 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       totalSubcontractorDays,
       daysOfWeek,
       activeProjects,
-      projectStatusFilter
+      projectStatusFilter,
+      taxWeekNumber,
+      taxYear
     } = await attendanceService.getAttendanceForWeek(yearParam, weekParam);
 
     const isManagementView = req.isManagementView === true;
@@ -53,10 +56,10 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       .map(([uuid, v]) => [uuid, isManagementView ? stripPayroll(v) : v]);
 
     const viewFile = isManagementView ? 'weeklyManagement' : 'weeklyAdmin';
-    res.render(path.join('tailwindcss', 'attendance', viewFile), {
-      title : 'Attendance for Week ' + payrollWeekStart.format('WW YYYY'),
+    res.render(path.join('tailwindcss', 'attendance', 'weekly'), {
+      title : `Tax Week ${taxWeekNumber} — ${payrollWeekStart.format('YYYY')}`,
       moment,
-      groupedAttendance: groupedAttendance, // prevent table reuse
+      groupedAttendance: groupedAttendance,
       startDate: payrollWeekStart.format('YYYY-MM-DD'),
       endDate: endDate.format('YYYY-MM-DD'),
       previousYear,
@@ -74,7 +77,9 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       projectStatusFilter,
       employeeEntries,
       subcontractorEntries,
-      isManagementView
+      isManagementView,
+      taxWeekNumber,
+      taxYear
     });
   } catch (err) {
     next(err);
@@ -91,3 +96,44 @@ function stripPayroll(record) {
   delete clone.cisDeductions;
   return clone;
 }
+
+exports.approveAttendance = async (req, res, next) => {
+  try {
+    const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
+      { uuid: req.params.uuid, status: 'pending' },
+      { status: 'approved' },
+      { new: true }
+    );
+    if (!updated) {
+      logger.warn(`Approve failed: attendance ${req.params.uuid} not found or not pending`);
+      return res.status(404).redirect('back');
+    }
+    // Trigger holiday accrual now that it's approved
+    const holidayAccrualService = require('../services/holidayAccrualService');
+    await holidayAccrualService.updateAccrualFromAttendance(updated);
+    logger.info(`✅ Attendance ${req.params.uuid} approved`);
+    res.redirect('back');
+  } catch (err) {
+    logger.error(`❌ Error approving attendance: ${err.message}`);
+    next(err);
+  }
+};
+
+exports.rejectAttendance = async (req, res, next) => {
+  try {
+    const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
+      { uuid: req.params.uuid, status: 'pending' },
+      { status: 'rejected' },
+      { new: true }
+    );
+    if (!updated) {
+      logger.warn(`Reject failed: attendance ${req.params.uuid} not found or not pending`);
+      return res.status(404).redirect('back');
+    }
+    logger.info(`❌ Attendance ${req.params.uuid} rejected`);
+    res.redirect('back');
+  } catch (err) {
+    logger.error(`❌ Error rejecting attendance: ${err.message}`);
+    next(err);
+  }
+};

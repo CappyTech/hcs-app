@@ -14,7 +14,10 @@ const getAttendanceForDay = async (date) => {
     return await mdb.INTERNAL.attendance
       .find({ date: { $gte: start, $lte: end } })
       .populate('employeeId')
+      .populate('subcontractorId')
       .populate('locationId')
+      .populate('projectId')
+      .populate('contractAssignmentId')
       .sort({ date: 1 });
   } catch (error) {
     logger.error('Error fetching attendance records: ' + error.message);
@@ -356,9 +359,12 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     totalEmployeePay,
     totalEmployeeHours,
     totalSubcontractorPay,
+    totalSubcontractorDays,
     daysOfWeek,
     activeProjects,
-    projectStatusFilter
+    projectStatusFilter,
+    taxWeekNumber: requestedWeekNumber,
+    taxYear: year
   };
 };
 

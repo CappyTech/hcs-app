@@ -15,9 +15,13 @@ module.exports = {
     validators: {
       date: value => !isNaN(Date.parse(value)),
       type: value => ['off', 'holiday', 'sick', 'work', 'training', 'leave'].includes(value),
+      status: value => ['pending', 'approved', 'rejected'].includes(value),
       hoursWorked: value => typeof value === 'number' && value >= 0,
       payRate: value => typeof value === 'number' && value >= 0,
       dayRate: value => typeof value === 'number' && value >= 0,
+      overtimeHours: value => typeof value === 'number' && value >= 0,
+      overtimeRate: value => typeof value === 'number' && value >= 0,
+      breakMinutes: value => Number.isInteger(value) && value >= 0,
     },
     middleware: {
       read: ['ensureRole:admin', 'ensureAuthenticated'],
@@ -25,9 +29,8 @@ module.exports = {
       update: ['ensureRole:admin', 'ensureAuthenticated'],
       delete: ['ensureRole:admin', 'ensureAuthenticated'],
     },
-    xorGroups: [ // can only choose one.
+    xorGroups: [
       ['employeeId', 'subcontractorId'],
-      ['locationId', 'projectId'],
       ['hoursWorked', 'dayRate']
     ],
     referenceFilters: {

@@ -9,10 +9,13 @@
       <table class="min-w-full table-auto border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden">
         <thead class="bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
           <tr>
-            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Location</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Location / Project</th>
             <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Person</th>
             <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Type</th>
-            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Hours Worked</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Status</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Hours</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">OT</th>
+            <th class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 text-left">Notes</th>
             <th class="px-4 py-2 text-center">Actions</th>
           </tr>
         </thead>
@@ -21,48 +24,87 @@
             <% attendance.forEach(record => { %>
               <tr class="even:bg-white odd:bg-gray-50 dark:even:bg-gray-900 dark:odd:bg-gray-800">
                 <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
-                  <% if (record.Location) { %>
-                    <a href="/location/read/<%= record.Location.id %>" class="text-green-700 dark:text-green-400 hover:underline">
-                      <%= record.Location.name || `${record.Location.address}, ${record.Location.city}, ${record.Location.postalCode}` %>
+                  <% if (record.locationId && typeof record.locationId === 'object') { %>
+                    <a href="/location/read/<%= record.locationId.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">
+                      <%= record.locationId.name || [record.locationId.address, record.locationId.city, record.locationId.postalCode].filter(Boolean).join(', ') %>
+                    </a>
+                  <% } else if (record.projectId && typeof record.projectId === 'object') { %>
+                    <a href="/project/read/<%= record.projectId.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">
+                      <%= record.projectId.Name || record.projectId.name || 'Project' %>
                     </a>
                   <% } else { %>
-                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
+                    <span class="text-gray-400 dark:text-gray-500">&mdash;</span>
                   <% } %>
                 </td>
                 <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
-                  <% if (record.Employee) { %>
-                    <a href="/employee/read/<%= record.Employee.id %>" class="text-green-700 dark:text-green-400 hover:underline">
-                      <%= record.Employee.name %>
+                  <% if (record.employeeId && typeof record.employeeId === 'object') { %>
+                    <a href="/employee/read/<%= record.employeeId.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">
+                      <%= record.employeeId.name %>
                     </a>
-                  <% } else if (record.Subcontractor) { %>
-                    <a href="/subcontractor/read/<%= record.Subcontractor.id %>" class="text-green-700 dark:text-green-400 hover:underline">
-                      <%= record.Subcontractor.company %>
+                  <% } else if (record.subcontractorId && typeof record.subcontractorId === 'object') { %>
+                    <a href="/supplier/read/<%= record.subcontractorId.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">
+                      <%= record.subcontractorId.Name || record.subcontractorId.name %>
                     </a>
                   <% } else { %>
-                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
+                    <span class="text-gray-400 dark:text-gray-500">&mdash;</span>
                   <% } %>
                 </td>
-                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700"><%= record.type || 'N/A' %></td>
+                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
+                  <span class="capitalize"><%= record.type || 'N/A' %></span>
+                </td>
+                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
+                  <% const statusColors = { approved: 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400', pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400', rejected: 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' }; %>
+                  <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium <%= statusColors[record.status] || statusColors.approved %>">
+                    <%= record.status || 'approved' %>
+                  </span>
+                </td>
                 <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
                   <% if (record.hoursWorked) { %>
-                    <%= record.hoursWorked %> hours
+                    <%= record.hoursWorked %> hrs
+                    <% if (record.breakMinutes) { %>
+                      <span class="text-xs text-gray-500">(<%= record.breakMinutes %>m break)</span>
+                    <% } %>
+                  <% } else if (record.dayRate) { %>
+                    <span class="text-xs">Day rate</span>
                   <% } else { %>
-                    <span class="text-gray-400 dark:text-gray-500">N/A</span>
+                    <span class="text-gray-400 dark:text-gray-500">&mdash;</span>
                   <% } %>
                 </td>
-                <td class="px-4 py-2 text-center space-x-2">
-                  <a href="/attendance/read/<%= record.id %>" class="inline-block rounded bg-green-600 hover:bg-green-700 text-white p-1" title="View">
+                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700">
+                  <% if (record.overtimeHours) { %>
+                    <%= record.overtimeHours %> hrs
+                  <% } else { %>
+                    <span class="text-gray-400 dark:text-gray-500">&mdash;</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2 border-r border-gray-300 dark:border-gray-700 max-w-xs truncate" title="<%= record.notes || '' %>">
+                  <%= record.notes ? record.notes.substring(0, 50) + (record.notes.length > 50 ? '…' : '') : '' %>
+                </td>
+                <td class="px-4 py-2 text-center space-x-1">
+                  <a href="/attendance/read/<%= record.uuid %>" class="inline-block rounded bg-green-600 hover:bg-green-700 text-white p-1" title="View">
                     <i class="bi bi-eye"></i>
                   </a>
-                  <a href="/attendance/update/<%= record.id %>" class="inline-block rounded bg-gray-600 hover:bg-gray-700 text-white p-1" title="Edit">
+                  <a href="/attendance/update/<%= record.uuid %>" class="inline-block rounded bg-gray-600 hover:bg-gray-700 text-white p-1" title="Edit">
                     <i class="bi bi-pencil-square"></i>
                   </a>
+                  <% if (record.status === 'pending') { %>
+                    <form method="POST" action="/attendance/<%= record.uuid %>/approve" class="inline">
+                      <button type="submit" class="inline-block rounded bg-blue-600 hover:bg-blue-700 text-white p-1" title="Approve">
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                    </form>
+                    <form method="POST" action="/attendance/<%= record.uuid %>/reject" class="inline">
+                      <button type="submit" class="inline-block rounded bg-red-600 hover:bg-red-700 text-white p-1" title="Reject">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </form>
+                  <% } %>
                 </td>
               </tr>
             <% }); %>
           <% } else { %>
             <tr>
-              <td colspan="5" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No attendance records found for this day.</td>
+              <td colspan="8" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No attendance records found for this day.</td>
             </tr>
           <% } %>
           <tr class="font-light">
@@ -71,31 +113,10 @@
                 +
               </a>
             </td>
-            <td colspan="4"></td>
+            <td colspan="7"></td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-
-<script>
-  // Optional JS for tabs if you want to switch without reload
-  document.querySelectorAll('ul.nav-tabs button[data-tab]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.preventDefault();
-      const selectedTab = e.target.dataset.tab;
-
-      // Update active class on buttons
-      document.querySelectorAll('ul.nav-tabs button[data-tab]').forEach(b => {
-        b.classList.toggle('border-blue-600', b.dataset.tab === selectedTab);
-        b.classList.toggle('text-blue-600', b.dataset.tab === selectedTab);
-        b.classList.toggle('border-transparent', b.dataset.tab !== selectedTab);
-        b.classList.toggle('text-gray-500', b.dataset.tab !== selectedTab);
-      });
-
-      // Optionally you can fetch data for selected tab via AJAX or reload page
-      // location.href = `/${selectedTab}`;
-    });
-  });
-</script>

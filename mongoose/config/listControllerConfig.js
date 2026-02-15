@@ -36,12 +36,11 @@ module.exports = {
   attendance: {
     title: 'Attendances',
     linkField: 'date',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
-    fieldOrder: ['date', 'type', 'employeeId', 'subcontractorId', 'hoursWorked', 'dayRate', 'payRate', 'locationId', 'projectId'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'contractAssignmentId', 'overtimeRate', 'breakMinutes'],
+    fieldOrder: ['date', 'type', 'status', 'employeeId', 'subcontractorId', 'hoursWorked', 'overtimeHours', 'dayRate', 'payRate', 'locationId', 'projectId', 'notes'],
     sortField: 'date',
-    sortOrder: 1,
+    sortOrder: -1,
     department: ['management'],
-    // Add tabs for common attendance categories with an 'All' option
     tabsby: 'type',
     tabsValues: [
       { value: 'all', label: 'All' },
@@ -56,7 +55,10 @@ module.exports = {
       employeeId: 'Employee',
       subcontractorId: 'Subcontractor',
       locationId: 'Location',
-      projectId: 'Project'
+      projectId: 'Project',
+      overtimeHours: 'OT Hours',
+      overtimeRate: 'OT Rate',
+      breakMinutes: 'Break (mins)'
     },
     fieldTransforms: {
       employeeId: {

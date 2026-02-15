@@ -52,6 +52,36 @@ async function updateAccrualFromAttendance(attendanceDoc) {
     const employee = await mdb.INTERNAL.employee.findById(empId).lean();
     const policy = employee?.holidayPolicy || {};
 
+    // ── Holiday / leave taken ──────────────────────────────────────────
+    const isHolidayType = attendanceDoc.type === 'holiday' || attendanceDoc.type === 'leave';
+    if (isHolidayType) {
+      const hoursWorked = toNumber(attendanceDoc.hoursWorked);
+      const takenUpdates = {};
+
+      if (hoursWorked > 0) {
+        // Partial-day holiday tracked by hours
+        takenUpdates.takenHours = toNumber(eh.takenHours) + hoursWorked;
+        // Also convert to days for the days tracker
+        const hoursPerWeek = Number(employee?.contract?.hoursPerWeek) || 40;
+        const daysPerWeek = Number(employee?.contract?.workingDaysPerWeek) || 5;
+        const hoursPerDay = daysPerWeek > 0 ? (hoursPerWeek / daysPerWeek) : 8;
+        if (hoursPerDay > 0) takenUpdates.takenDays = toNumber(eh.takenDays) + (hoursWorked / hoursPerDay);
+      } else {
+        // Full-day holiday
+        takenUpdates.takenDays = toNumber(eh.takenDays) + 1;
+        const hoursPerWeek = Number(employee?.contract?.hoursPerWeek) || 40;
+        const daysPerWeek = Number(employee?.contract?.workingDaysPerWeek) || 5;
+        const hoursPerDay = daysPerWeek > 0 ? (hoursPerWeek / daysPerWeek) : 8;
+        takenUpdates.takenHours = toNumber(eh.takenHours) + hoursPerDay;
+      }
+
+      if (Object.keys(takenUpdates).length) {
+        await mdb.INTERNAL.employeeHoliday.updateOne({ _id: eh._id }, { $set: takenUpdates });
+      }
+      return; // holiday/leave doesn't also accrue
+    }
+
+    // ── Work-type accrual ──────────────────────────────────────────────
     const method = policy.accrualMethod || eh.accrualMethod || 'fixed';
     const percent = (policy.accrualPercent != null ? policy.accrualPercent : eh.accrualPercent || 12.07) / 100;
 
