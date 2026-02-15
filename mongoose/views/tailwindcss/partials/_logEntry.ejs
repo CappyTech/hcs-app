@@ -1,0 +1,42 @@
+<%
+  const levelColorMap = {
+    info:  'text-blue-600 dark:text-blue-400',
+    debug: 'text-amber-600 dark:text-amber-400',
+    warn:  'text-yellow-600 dark:text-yellow-400',
+    error: 'text-red-600 dark:text-red-400'
+  };
+  const msg = entry.message || '';
+  const isTruncated = msg.length > 300;
+  const msgShort = isTruncated ? msg.slice(0, 300) + '…' : msg;
+%>
+<div class="log-entry border border-gray-200 dark:border-gray-700 p-3 rounded bg-white dark:bg-gray-800 shadow-sm">
+  <div class="flex justify-between items-start text-xs text-gray-500 dark:text-gray-400 mb-1">
+    <div>
+      <span><%= entry.timestamp %></span>
+      <span class="relative-time ml-1 text-gray-400 dark:text-gray-500" data-ts="<%= entry.timestamp %>"></span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="uppercase font-bold <%= levelColorMap[level] || 'text-gray-500' %>"><%= level %></span>
+      <button class="copy-btn text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition" title="Copy message">
+        <i class="bi bi-clipboard"></i>
+      </button>
+    </div>
+  </div>
+  <div class="log-message font-medium text-gray-900 dark:text-gray-100 break-words leading-relaxed">
+    <span class="msg-short"><%= msgShort %></span>
+    <% if (isTruncated) { %>
+      <span class="msg-full hidden"><%= msg %></span>
+      <button class="toggle-msg text-xs text-blue-500 hover:underline ml-1">Show more</button>
+    <% } %>
+  </div>
+  <% if (entry.user) { %>
+    <div class="text-xs text-gray-600 dark:text-gray-300 mt-1">
+      <i class="bi bi-person"></i> <%= entry.user.username %> <span class="text-gray-400">(ID: <%= entry.user.id %>)</span>
+    </div>
+  <% } %>
+  <% if (entry.route) { %>
+    <div class="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+      <i class="bi bi-signpost-split"></i> <%= entry.route %>
+    </div>
+  <% } %>
+</div>

@@ -1,178 +1,523 @@
+<div class="max-w-6xl mx-auto my-6 px-4">
 
-  <div class="text-center mb-4">
-    <h1 class="text-2xl font-bold gap-2">
+  <!-- Header row -->
+  <div class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-3">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
       <i class="bi bi-terminal"></i> Application Logs
     </h1>
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- WebSocket status -->
+      <div id="ws-status" class="flex items-center gap-1.5 text-xs text-gray-400 mr-1">
+        <span class="inline-block w-2 h-2 rounded-full bg-gray-400" id="ws-dot"></span>
+        <span id="ws-label">Connecting…</span>
+      </div>
+
+      <!-- Pause / Resume -->
+      <button id="btn-pause" title="Pause live updates"
+        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+        <i class="bi bi-pause-fill" id="pause-icon"></i>
+        <span id="pause-label">Pause</span>
+      </button>
+
+      <!-- Search -->
+      <div class="relative">
+        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+        <input
+          id="log-search"
+          type="text"
+          placeholder="Filter logs…"
+          class="pl-9 pr-8 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-56"
+        >
+        <button id="btn-clear-search" title="Clear filter"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hidden">
+          <i class="bi bi-x-lg text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Download -->
+      <a id="btn-download" href="/logs/download" title="Download all logs"
+        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+        <i class="bi bi-download"></i> Download
+      </a>
+
+      <!-- Clear -->
+      <button id="btn-clear-logs" title="Clear all logs"
+        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
+        <i class="bi bi-trash"></i> Clear
+      </button>
+    </div>
   </div>
 
   <!-- Tabs -->
-<div class="border-b text-center mb-4" id="log-tabs">
-<% ['info', 'debug', 'warn', 'error'].forEach((level) => {
-  const colorMap = {
-    info: {
-      text: 'text-blue-600 dark:text-blue-400 blind:text-blue-600',
-      hover: 'hover:text-blue-100 dark:hover:text-blue-800 blind:hover:text-blue-100'
-    },
-    debug: {
-      text: 'text-amber-600 dark:text-yellow-400 blind:text-cyan-600',
-      hover: 'hover:text-amber-100 dark:hover:text-yellow-800 blind:hover:text-cyan-100'
-    },
-    warn: {
-      text: 'text-yellow-600 dark:text-yellow-400 blind:text-orange-600',
-      hover: 'hover:text-yellow-100 dark:hover:text-yellow-800 blind:hover:text-orange-100'
-    },
-    error: {
-      text: 'text-red-600 dark:text-red-400 blind:text-rose-600',
-      hover: 'hover:text-red-100 dark:hover:text-red-800 blind:hover:text-rose-100'
-    }
-  };
-%>
-  <button
-    class="
-      tab-btn
-      px-4
-      py-2
-      border-b-2
-      text-sm
-      font-medium
-      transition-all
-      <%= colorMap[level].text %>
-      <%= colorMap[level].hover %>
-    "
-    data-target="log-<%= level %>"
-  >
-    <%= level.charAt(0).toUpperCase() + level.slice(1) %>
-    <span class="ml-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1 rounded-full">
-      <%= logsByLevel[level].length %>
-    </span>
-  </button>
-<% }) %>
-</div>
-
-
-  <!-- Tab Panels -->
-  <div id="log-panels">
-    <% ['info', 'debug' , 'warn' , 'error' ].forEach((level, i)=> { %>
-      <div id="log-<%= level %>" class="tab-panel flex flex-col-reverse <%= i !== 0 ? 'hidden' : '' %>">
-        <% if (logsByLevel[level].length> 0) { %>
-          <% logsByLevel[level].slice().sort((b, a) => new Date(a.timestamp) - new Date(b.timestamp)).forEach(entry => { %>
-            <div class="border border-gray-200 dark:border-gray-700 p-3 rounded bg-white dark:bg-gray-800 shadow-sm">
-              <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span>
-                  <%= entry.timestamp %>
-                </span>
-                <span class="uppercase font-bold <%= level === 'info' ? 'text-blue-600' : level === 'debug' ? 'text-gray-500' : level === 'warn' ? 'text-yellow-600' : 'text-red-600' %>">
-                  <%= level %>
-                </span>
-              </div>
-              <div class="font-medium text-gray-900 dark:text-gray-100">
-                <%= entry.message %>
-              </div>
-              <% if (entry.user) { %>
-                <div class="text-xs text-gray-600 dark:text-gray-300">User: <%= entry.user.username %> (ID: <%= entry.user.id %>)</div>
-                <% } %>
-                  <% if (entry.route) { %>
-                    <div class="text-xs text-gray-600 dark:text-gray-300">Route: <%= entry.route %>
-                    </div>
-                    <% } %>
-            </div>
-            <% }) %>
-              <% } else { %>
-                <div class="text-sm text-gray-500">No <%= level %> logs available.</div>
-                <% } %>
-      </div>
-      <% }) %>
+  <%
+    const colorMap = {
+      info:  { active: 'border-blue-500 text-blue-600 dark:text-blue-400',     badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
+      debug: { active: 'border-amber-500 text-amber-600 dark:text-amber-400',  badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' },
+      warn:  { active: 'border-yellow-500 text-yellow-600 dark:text-yellow-400', badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' },
+      error: { active: 'border-red-500 text-red-600 dark:text-red-400',        badge: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' }
+    };
+  %>
+  <div class="border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-1 mb-4" id="log-tabs">
+    <% ['info', 'debug', 'warn', 'error'].forEach((level) => { %>
+      <button
+        class="tab-btn px-4 py-2 border-b-2 border-transparent text-sm font-medium transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 relative"
+        data-target="log-<%= level %>"
+        data-active-class="<%= colorMap[level].active %>"
+      >
+        <%= level.charAt(0).toUpperCase() + level.slice(1) %>
+        <span class="tab-badge ml-1 text-xs px-2 py-0.5 rounded-full <%= colorMap[level].badge %>" data-level="<%= level %>">
+          <%= logsByLevel[level].length %>
+        </span>
+        <span class="tab-unseen hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" data-unseen="<%= level %>"></span>
+      </button>
+    <% }) %>
   </div>
 
+  <!-- Tab Panels -->
+  <div id="log-panels" class="relative">
+    <!-- "New logs" scroll-to-top indicator -->
+    <button id="btn-scroll-top"
+      class="hidden fixed bottom-6 right-6 z-50 px-4 py-2 text-sm font-medium rounded-full shadow-lg bg-blue-600 text-white hover:bg-blue-700 transition animate-bounce">
+      <i class="bi bi-arrow-up"></i> New logs
+    </button>
+
+    <% ['info', 'debug', 'warn', 'error'].forEach((level, i) => { %>
+      <div id="log-<%= level %>" class="tab-panel space-y-2 <%= i !== 0 ? 'hidden' : '' %>">
+        <% if (logsByLevel[level].length > 0) { %>
+          <% logsByLevel[level].slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(entry => { %>
+            <%- include('../partials/_logEntry', { entry, level }) %>
+          <% }) %>
+        <% } else { %>
+          <div class="log-empty text-center py-10 text-gray-400 dark:text-gray-500">
+            <i class="bi bi-inbox text-3xl block mb-2"></i>
+            <span class="text-sm">No <%= level %> logs available.</span>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+
+    <!-- Load More button (for pagination) -->
+    <div class="text-center mt-4">
+      <button id="btn-load-more"
+        class="hidden px-4 py-2 text-sm font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+        <i class="bi bi-arrow-clockwise"></i> Load more…
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm clear modal -->
+<div id="modal-clear" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Clear all logs?</h2>
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">This will permanently delete all log entries. This action cannot be undone.</p>
+    <div class="flex justify-end gap-2">
+      <button id="modal-cancel" class="px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">Cancel</button>
+      <button id="modal-confirm" class="px-4 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700 transition">Clear logs</button>
+    </div>
+  </div>
+</div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const tabs = document.querySelectorAll('.tab-btn');
-    const panels = document.querySelectorAll('.tab-panel');
+document.addEventListener('DOMContentLoaded', () => {
+  /* ── Constants / DOM refs ── */
+  const MAX_DOM_ENTRIES = 500;
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+  const searchInput = document.getElementById('log-search');
+  const clearSearchBtn = document.getElementById('btn-clear-search');
+  const pauseBtn = document.getElementById('btn-pause');
+  const pauseIcon = document.getElementById('pause-icon');
+  const pauseLabel = document.getElementById('pause-label');
+  const scrollTopBtn = document.getElementById('btn-scroll-top');
+  const loadMoreBtn  = document.getElementById('btn-load-more');
+  const downloadBtn  = document.getElementById('btn-download');
+  const clearLogsBtn = document.getElementById('btn-clear-logs');
+  const modal = document.getElementById('modal-clear');
+  const modalCancel  = document.getElementById('modal-cancel');
+  const modalConfirm = document.getElementById('modal-confirm');
+  const storageKey = 'activeLogTab';
+  const csrfToken = '<%= typeof csrfToken !== "undefined" ? csrfToken : "" %>';
 
-    const storageKey = 'activeLogTab';
+  let paused = false;
+  let pauseQueue = [];
+  let currentLevel = null;   // tracks which tab is active
+  let loadMorePage = {};      // per-level page counters
 
-    // Helper to activate a tab by ID
-    function activateTab(targetId) {
-      tabs.forEach(t => {
-        t.classList.remove('border-blue-600', 'text-blue-600', 'text-gray-500', 'hover:text-gray-800', 'hover:border-gray-300', 'border-transparent');
-        t.classList.add('text-gray-500', 'hover:text-gray-800', 'hover:border-gray-300', 'border-transparent');
+  /* ── Helpers ── */
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function relativeTime(ts) {
+    const diff = Date.now() - new Date(ts).getTime();
+    if (isNaN(diff) || diff < 0) return '';
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    const d = Math.floor(h / 24);
+    return d + 'd ago';
+  }
+
+  /* Refresh relative timestamps for visible entries */
+  function refreshRelativeTimes() {
+    document.querySelectorAll('.log-entry .relative-time').forEach(el => {
+      el.textContent = relativeTime(el.dataset.ts);
+    });
+  }
+  setInterval(refreshRelativeTimes, 30000);
+
+  /* ── Build a log entry DOM node ── */
+  const levelColorClass = {
+    info:  'text-blue-600 dark:text-blue-400',
+    debug: 'text-amber-600 dark:text-amber-400',
+    warn:  'text-yellow-600 dark:text-yellow-400',
+    error: 'text-red-600 dark:text-red-400'
+  };
+
+  function createEntryEl(entry, level, highlight) {
+    const { message, timestamp, user, route } = entry;
+    const div = document.createElement('div');
+    div.className = 'log-entry border border-gray-200 dark:border-gray-700 p-3 rounded bg-white dark:bg-gray-800 shadow-sm'
+      + (highlight ? ' ring-2 ring-blue-300 dark:ring-blue-700' : '');
+    const msgTruncated = message.length > 300;
+    const msgShort = msgTruncated ? escapeHtml(message.slice(0, 300)) + '…' : escapeHtml(message);
+    const msgFull  = escapeHtml(message);
+
+    div.innerHTML = `
+      <div class="flex justify-between items-start text-xs text-gray-500 dark:text-gray-400 mb-1">
+        <div>
+          <span>${escapeHtml(timestamp || '')}</span>
+          <span class="relative-time ml-1 text-gray-400 dark:text-gray-500" data-ts="${escapeHtml(timestamp || '')}">${relativeTime(timestamp)}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="uppercase font-bold ${levelColorClass[level] || 'text-gray-500'}">${escapeHtml(level)}</span>
+          <button class="copy-btn text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition" title="Copy message">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+      </div>
+      <div class="log-message font-medium text-gray-900 dark:text-gray-100 break-words leading-relaxed">
+        <span class="msg-short">${msgShort}</span>
+        ${msgTruncated ? `<span class="msg-full hidden">${msgFull}</span>
+        <button class="toggle-msg text-xs text-blue-500 hover:underline ml-1">Show more</button>` : ''}
+      </div>
+      ${user ? `<div class="text-xs text-gray-600 dark:text-gray-300 mt-1"><i class="bi bi-person"></i> ${escapeHtml(user.username || '')} <span class="text-gray-400">(ID: ${escapeHtml(String(user.id || ''))})</span></div>` : ''}
+      ${route ? `<div class="text-xs text-gray-600 dark:text-gray-300 mt-0.5"><i class="bi bi-signpost-split"></i> ${escapeHtml(route)}</div>` : ''}
+    `;
+
+    // Copy handler
+    div.querySelector('.copy-btn')?.addEventListener('click', () => {
+      navigator.clipboard.writeText(message).then(() => {
+        const icon = div.querySelector('.copy-btn i');
+        icon.className = 'bi bi-check-lg text-green-500';
+        setTimeout(() => { icon.className = 'bi bi-clipboard'; }, 1500);
       });
+    });
 
-      panels.forEach(p => p.classList.add('hidden'));
+    // Truncation toggle handler
+    const toggleBtn = div.querySelector('.toggle-msg');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const short = div.querySelector('.msg-short');
+        const full  = div.querySelector('.msg-full');
+        const isExpanded = !full.classList.contains('hidden');
+        short.classList.toggle('hidden', !isExpanded);
+        full.classList.toggle('hidden', isExpanded);
+        toggleBtn.textContent = isExpanded ? 'Show more' : 'Show less';
+      });
+    }
 
-      const activeTab = [...tabs].find(t => t.dataset.target === targetId);
-      const activePanel = document.getElementById(targetId);
+    // Fade highlight after 3s
+    if (highlight) {
+      setTimeout(() => div.classList.remove('ring-2', 'ring-blue-300', 'dark:ring-blue-700'), 3000);
+    }
 
-      if (activeTab && activePanel) {
-        activeTab.classList.remove('text-gray-500', 'hover:text-gray-800', 'hover:border-gray-300', 'border-transparent');
-        activeTab.classList.add('border-blue-600', 'text-blue-600');
-        activePanel.classList.remove('hidden');
+    return div;
+  }
+
+  /* ── Cap DOM entries per panel ── */
+  function capEntries(panel) {
+    const entries = panel.querySelectorAll('.log-entry');
+    if (entries.length > MAX_DOM_ENTRIES) {
+      for (let i = MAX_DOM_ENTRIES; i < entries.length; i++) {
+        entries[i].remove();
+      }
+    }
+  }
+
+  /* ── Badge helpers ── */
+  function updateBadge(level) {
+    const badge = document.querySelector(`.tab-badge[data-level="${level}"]`);
+    if (!badge) return;
+    const panel = document.getElementById('log-' + level);
+    if (!panel) return;
+    badge.textContent = panel.querySelectorAll('.log-entry').length;
+  }
+
+  function showUnseenDot(level) {
+    const dot = document.querySelector(`.tab-unseen[data-unseen="${level}"]`);
+    if (dot && level !== currentLevel) dot.classList.remove('hidden');
+  }
+
+  function hideUnseenDot(level) {
+    const dot = document.querySelector(`.tab-unseen[data-unseen="${level}"]`);
+    if (dot) dot.classList.add('hidden');
+  }
+
+  /* ── Tab switching ── */
+  function activateTab(targetId) {
+    tabs.forEach(t => {
+      const activeClasses = t.dataset.activeClass.split(' ');
+      t.classList.remove(...activeClasses);
+      t.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    });
+    panels.forEach(p => p.classList.add('hidden'));
+
+    const activeTab = [...tabs].find(t => t.dataset.target === targetId);
+    const activePanel = document.getElementById(targetId);
+
+    if (activeTab && activePanel) {
+      const activeClasses = activeTab.dataset.activeClass.split(' ');
+      activeTab.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+      activeTab.classList.add(...activeClasses);
+      activePanel.classList.remove('hidden');
+    }
+
+    currentLevel = targetId.replace('log-', '');
+    hideUnseenDot(currentLevel);
+    applyFilter(searchInput.value);
+
+    // Update download link for current level
+    downloadBtn.href = '/logs/download?level=' + currentLevel;
+  }
+
+  const lastActive = localStorage.getItem(storageKey) || tabs[0]?.dataset.target;
+  activateTab(lastActive);
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetId = tab.dataset.target;
+      localStorage.setItem(storageKey, targetId);
+      activateTab(targetId);
+    });
+  });
+
+  /* ── Keyboard shortcuts: 1-4 for tabs, Escape to clear search ── */
+  document.addEventListener('keydown', (e) => {
+    // Don't intercept when typing in inputs
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      if (e.key === 'Escape') {
+        searchInput.value = '';
+        clearSearchBtn.classList.add('hidden');
+        applyFilter('');
+        searchInput.blur();
+      }
+      return;
+    }
+    const levels = ['info', 'debug', 'warn', 'error'];
+    const idx = parseInt(e.key, 10) - 1;
+    if (idx >= 0 && idx < 4) {
+      const targetId = 'log-' + levels[idx];
+      localStorage.setItem(storageKey, targetId);
+      activateTab(targetId);
+    }
+    if (e.key === '/' || e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+
+  /* ── Search / filter ── */
+  function applyFilter(query) {
+    const q = query.toLowerCase().trim();
+    panels.forEach(panel => {
+      panel.querySelectorAll('.log-entry').forEach(entry => {
+        const text = entry.textContent.toLowerCase();
+        entry.style.display = (!q || text.includes(q)) ? '' : 'none';
+      });
+    });
+  }
+
+  let debounceTimer;
+  searchInput.addEventListener('input', () => {
+    clearSearchBtn.classList.toggle('hidden', !searchInput.value);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => applyFilter(searchInput.value), 150);
+  });
+
+  clearSearchBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    clearSearchBtn.classList.add('hidden');
+    applyFilter('');
+    searchInput.focus();
+  });
+
+  /* ── Pause / Resume ── */
+  pauseBtn.addEventListener('click', () => {
+    paused = !paused;
+    pauseIcon.className = paused ? 'bi bi-play-fill' : 'bi bi-pause-fill';
+    pauseLabel.textContent = paused ? 'Resume' : 'Pause';
+    pauseBtn.classList.toggle('border-amber-400', paused);
+    pauseBtn.classList.toggle('text-amber-600', paused);
+
+    if (!paused && pauseQueue.length) {
+      pauseQueue.forEach(fn => fn());
+      pauseQueue = [];
+    }
+  });
+
+  /* ── Scroll-to-top indicator ── */
+  window.addEventListener('scroll', () => {
+    scrollTopBtn.classList.toggle('hidden', window.scrollY < 300);
+  });
+  scrollTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollTopBtn.classList.add('hidden');
+  });
+
+  /* ── Clear logs modal ── */
+  clearLogsBtn.addEventListener('click', () => modal.classList.remove('hidden'));
+  modalCancel.addEventListener('click',  () => modal.classList.add('hidden'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+
+  modalConfirm.addEventListener('click', async () => {
+    modal.classList.add('hidden');
+    try {
+      const res = await fetch('/logs/clear', {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrfToken }
+      });
+      if (res.ok) {
+        panels.forEach(panel => {
+          panel.innerHTML = `<div class="log-empty text-center py-10 text-gray-400 dark:text-gray-500">
+            <i class="bi bi-inbox text-3xl block mb-2"></i>
+            <span class="text-sm">Logs cleared.</span>
+          </div>`;
+        });
+        ['info','debug','warn','error'].forEach(l => {
+          const badge = document.querySelector(`.tab-badge[data-level="${l}"]`);
+          if (badge) badge.textContent = '0';
+        });
+      }
+    } catch (_) {}
+  });
+
+  /* ── Load More (pagination) ── */
+  loadMoreBtn.addEventListener('click', async () => {
+    if (!currentLevel) return;
+    const page = (loadMorePage[currentLevel] || 1) + 1;
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.innerHTML = '<i class="bi bi-arrow-clockwise animate-spin"></i> Loading…';
+
+    try {
+      const res = await fetch(`/logs/api?level=${currentLevel}&page=${page}&limit=100`);
+      const data = await res.json();
+      if (data.items?.length) {
+        const panel = document.getElementById('log-' + currentLevel);
+        data.items.forEach(entry => {
+          panel.appendChild(createEntryEl(entry, currentLevel, false));
+        });
+        loadMorePage[currentLevel] = page;
+        updateBadge(currentLevel);
+        if (page >= data.totalPages) loadMoreBtn.classList.add('hidden');
+      } else {
+        loadMoreBtn.classList.add('hidden');
+      }
+    } catch (_) {}
+
+    loadMoreBtn.disabled = false;
+    loadMoreBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Load more…';
+  });
+
+  /* ── Attach copy + truncation handlers to server-rendered entries ── */
+  document.querySelectorAll('.log-entry').forEach(el => {
+    el.querySelector('.copy-btn')?.addEventListener('click', () => {
+      const msg = el.querySelector('.msg-full')?.textContent || el.querySelector('.msg-short')?.textContent || '';
+      navigator.clipboard.writeText(msg).then(() => {
+        const icon = el.querySelector('.copy-btn i');
+        icon.className = 'bi bi-check-lg text-green-500';
+        setTimeout(() => { icon.className = 'bi bi-clipboard'; }, 1500);
+      });
+    });
+    const toggleBtn = el.querySelector('.toggle-msg');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const short = el.querySelector('.msg-short');
+        const full  = el.querySelector('.msg-full');
+        const isExpanded = !full.classList.contains('hidden');
+        short.classList.toggle('hidden', !isExpanded);
+        full.classList.toggle('hidden', isExpanded);
+        toggleBtn.textContent = isExpanded ? 'Show more' : 'Show less';
+      });
+    }
+  });
+
+  /* ── Initial relative times ── */
+  refreshRelativeTimes();
+
+  /* ===== WebSocket ===== */
+  const wsDot   = document.getElementById('ws-dot');
+  const wsLabel = document.getElementById('ws-label');
+
+  const socket = io({ transports: ['websocket'] });
+
+  socket.on('connect', () => {
+    wsDot.className = 'inline-block w-2 h-2 rounded-full bg-green-500';
+    wsLabel.textContent = 'Live';
+  });
+
+  socket.on('disconnect', () => {
+    wsDot.className = 'inline-block w-2 h-2 rounded-full bg-red-500';
+    wsLabel.textContent = 'Disconnected';
+  });
+
+  socket.on('logs:init', () => {});
+
+  socket.on('logs:update', (data) => {
+    const entry = data.entry || data;
+    const level = data.level || entry.level;
+    const { message } = entry || {};
+    if (!message) return;
+
+    function insert() {
+      const panel = document.getElementById('log-' + level);
+      if (!panel) return;
+
+      // Remove empty-state placeholder
+      const placeholder = panel.querySelector('.log-empty');
+      if (placeholder) placeholder.remove();
+
+      const el = createEntryEl(entry, level, true);
+      panel.prepend(el);
+      capEntries(panel);
+      updateBadge(level);
+      showUnseenDot(level);
+
+      // Show scroll-to-top if user is scrolled down and this is the active tab
+      if (level === currentLevel && window.scrollY > 300) {
+        scrollTopBtn.classList.remove('hidden');
+      }
+
+      // Play subtle notification for errors on inactive tab
+      if (level === 'error' && level !== currentLevel) {
+        try { document.title = '⚠ ' + document.title.replace(/^⚠ /, ''); } catch (_) {}
       }
     }
 
-    // Restore last active tab from localStorage (or fallback to first)
-    const lastActive = localStorage.getItem(storageKey) || tabs[0].dataset.target;
-    activateTab(lastActive);
-
-    // Add click listeners
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        const targetId = tab.dataset.target;
-        localStorage.setItem(storageKey, targetId);
-        activateTab(targetId);
-      });
-    });
+    if (paused) {
+      pauseQueue.push(insert);
+      // Update pause button to show queued count
+      pauseLabel.textContent = `Resume (${pauseQueue.length})`;
+    } else {
+      insert();
+    }
   });
+});
 </script>
 <script src="/socket.io/socket.io.js"></script>
-<script>
-  const socket = io({
-    transports: ['websocket'], // Force WS
-  });
-
-  socket.on('connect', () => {
-    console.log('✅ WebSocket connected');
-  });
-
-  socket.on('logs:init', (data) => {
-    console.log('ℹ️ Initial log message:', data.message);
-  });
-
-  socket.on('logs:update', (data) => {
-    const { level } = data;
-    // Defensive fallback:
-    const entry = data.entry || data; // accept either full entry or nested entry
-
-    const { message, timestamp, user, route } = entry || {};
-
-    if (!message) {
-      console.warn('Received logs:update event missing message:', data);
-      return;
-    }
-
-    const panel = document.getElementById(`log-${level}`);
-    if (!panel) {
-      console.warn(`⚠️ No panel found for level: ${level}`);
-      return;
-    }
-
-    const div = document.createElement('div');
-    div.className = 'border p-3 rounded bg-white dark:bg-gray-800 shadow-sm mb-2';
-    div.innerHTML = `
-    <div class="flex justify-between text-xs text-gray-500 mb-1">
-      <span>${timestamp}</span>
-      <span class="uppercase font-bold ${level === 'info' ? 'text-blue-600' :
-        level === 'debug' ? 'text-gray-500' :
-          level === 'warn' ? 'text-yellow-600' : 'text-red-600'
-      }">${level}</span>
-    </div>
-    <div class="font-medium">${message}</div>
-    ${user ? `<div class="text-xs text-gray-600">User: ${user.username} (ID: ${user.id})</div>` : ''}
-    ${route ? `<div class="text-xs text-gray-600">Route: ${route}</div>` : ''}
-  `;
-  console.log('Appending log entry for level:', level);
-  console.log('Target panel:', panel);
-  panel.prepend(div);
-  });
-</script>
