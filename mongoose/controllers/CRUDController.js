@@ -10,6 +10,61 @@ const mongoose = require('mongoose');
 const e = require('express');
 const holidayAccrualService = require('../services/holidayAccrualService');
 
+/**
+ * Sync parent vehicle record when a sub-model (fuel log, mileage log, service) is created/updated.
+ * Updates currentMileage, lastMileageUpdate, lastServiceDate, nextServiceDueDate, etc.
+ */
+async function syncVehicleFromSubModel(modelName, doc) {
+  const vehicleSubModels = ['vehicleFuelLog', 'vehicleMileageLog', 'vehicleService'];
+  if (!vehicleSubModels.includes(modelName) || !doc.vehicleId) return;
+  if (!mdb.INTERNAL?.vehicle) return;
+
+  try {
+    const updates = {};
+
+    if (modelName === 'vehicleFuelLog' && doc.mileageAtFillUp) {
+      // Update current mileage if this fill-up reading is higher
+      const vehicle = await mdb.INTERNAL.vehicle.findById(doc.vehicleId).select('currentMileage').lean();
+      if (!vehicle) return;
+      if (!vehicle.currentMileage || doc.mileageAtFillUp > vehicle.currentMileage) {
+        updates.currentMileage = doc.mileageAtFillUp;
+        updates.lastMileageUpdate = new Date();
+      }
+    }
+
+    if (modelName === 'vehicleMileageLog' && doc.endMileage) {
+      const vehicle = await mdb.INTERNAL.vehicle.findById(doc.vehicleId).select('currentMileage').lean();
+      if (!vehicle) return;
+      if (!vehicle.currentMileage || doc.endMileage > vehicle.currentMileage) {
+        updates.currentMileage = doc.endMileage;
+        updates.lastMileageUpdate = new Date();
+      }
+    }
+
+    if (modelName === 'vehicleService' && doc.status === 'Completed') {
+      updates.lastServiceDate = doc.date;
+      if (doc.mileageAtService) {
+        updates.lastServiceMileage = doc.mileageAtService;
+
+        const vehicle = await mdb.INTERNAL.vehicle.findById(doc.vehicleId).select('currentMileage').lean();
+        if (vehicle && (!vehicle.currentMileage || doc.mileageAtService > vehicle.currentMileage)) {
+          updates.currentMileage = doc.mileageAtService;
+          updates.lastMileageUpdate = new Date();
+        }
+      }
+      if (doc.nextServiceDueDate) updates.nextServiceDueDate = doc.nextServiceDueDate;
+      if (doc.nextServiceDueMileage) updates.nextServiceDueMileage = doc.nextServiceDueMileage;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await mdb.INTERNAL.vehicle.findByIdAndUpdate(doc.vehicleId, updates);
+      logger.info(`🔧 Synced vehicle ${doc.vehicleId} from ${modelName}: ${Object.keys(updates).join(', ')}`);
+    }
+  } catch (err) {
+    logger.warn(`Failed to sync vehicle from ${modelName}: ${err.message}`);
+  }
+}
+
 // Merge list and CRUD configs
 const getMergedConfig = (modelName) => ({
   ...(listControllerConfig[modelName] || {}),
@@ -177,6 +232,39 @@ for (const namespace of ['REST', 'INTERNAL']) {
             }
           }
 
+          // 🔽 Inject related records for vehicle read view
+          if (modelName === 'vehicle' && mdb.INTERNAL) {
+            try {
+              const vehicleObjId = item._id;
+              if (mdb.INTERNAL.vehicleFuelLog) {
+                item.fuelLogs = await mdb.INTERNAL.vehicleFuelLog
+                  .find({ vehicleId: vehicleObjId })
+                  .sort({ date: -1 })
+                  .limit(50)
+                  .lean();
+              }
+              if (mdb.INTERNAL.vehicleMileageLog) {
+                item.mileageLogs = await mdb.INTERNAL.vehicleMileageLog
+                  .find({ vehicleId: vehicleObjId })
+                  .sort({ date: -1 })
+                  .limit(50)
+                  .lean();
+              }
+              if (mdb.INTERNAL.vehicleService) {
+                item.serviceHistory = await mdb.INTERNAL.vehicleService
+                  .find({ vehicleId: vehicleObjId })
+                  .sort({ date: -1 })
+                  .limit(50)
+                  .lean();
+              }
+            } catch (e) {
+              logger.warn(`Failed to fetch related records for vehicle ${item.uuid}: ${e.message}`);
+              item.fuelLogs = [];
+              item.mileageLogs = [];
+              item.serviceHistory = [];
+            }
+          }
+
           // 🔽 Inject documents if the model config says it handles them
           if (config.handlesDocuments) {
             const fs = require('fs').promises;
@@ -294,6 +382,8 @@ for (const namespace of ['REST', 'INTERNAL']) {
           if (modelName === 'attendance') {
             await holidayAccrualService.updateAccrualFromAttendance(doc);
           }
+          // Hook: sync parent vehicle when creating sub-model records
+          await syncVehicleFromSubModel(modelName, doc);
           res.redirect(`/${modelName}s`);
         } catch (err) {
           logger.error(`❌ Error creating ${modelName}: ${err.message}`);
@@ -391,6 +481,8 @@ for (const namespace of ['REST', 'INTERNAL']) {
           if (modelName === 'attendance' && updated) {
             await holidayAccrualService.updateAccrualFromAttendance(updated);
           }
+          // Hook: sync parent vehicle when updating sub-model records
+          if (updated) await syncVehicleFromSubModel(modelName, updated);
           res.redirect(`/${modelName}s`);
         } catch (err) {
           logger.error(`❌ Error updating ${modelName}: ${err.message}`);

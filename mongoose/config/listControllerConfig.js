@@ -527,4 +527,178 @@ module.exports = {
     department: ['management'],
     deny: ['c', 'u', 'd'],
   },
+  vehicleFuelLog: {
+    title: 'Fuel Logs',
+    description: {
+      create: 'Record a fuel fill-up for a vehicle.',
+      manage: 'Track fuel receipts, costs and consumption across the fleet.',
+    },
+    linkField: 'date',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'notes'],
+    fieldOrder: [
+      'date', 'vehicleId', 'fuelType', 'litres', 'costPerLitre', 'totalCost',
+      'fullTank', 'mileageAtFillUp', 'station', 'location',
+      'employeeId', 'subcontractorId', 'paymentMethod', 'receiptReference'
+    ],
+    sortField: 'date',
+    sortOrder: -1,
+    department: ['management'],
+    labelOverrides: {
+      vehicleId: 'Vehicle',
+      employeeId: 'Driver (Employee)',
+      subcontractorId: 'Driver (Subcontractor)',
+      litres: 'Litres',
+      costPerLitre: 'Cost/Litre',
+      totalCost: 'Total Cost',
+      fullTank: 'Full Tank?',
+      mileageAtFillUp: 'Mileage',
+      paymentMethod: 'Payment',
+      receiptReference: 'Receipt Ref'
+    },
+    fieldTransforms: {
+      vehicleId: {
+        fromModel: 'vehicle',
+        matchField: '_id',
+        returnField: 'registrationNumber',
+        linkTo: (matched) => `/vehicle/read/${matched.uuid}`
+      },
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
+      }
+    },
+    tabsby: 'fuelType',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Petrol', label: 'Petrol' },
+      { value: 'Diesel', label: 'Diesel' },
+      { value: 'Electric', label: 'Electric' },
+      { value: 'AdBlue', label: 'AdBlue' }
+    ],
+  },
+  vehicleMileageLog: {
+    title: 'Mileage Logs',
+    description: {
+      create: 'Record a trip / odometer reading for a vehicle.',
+      manage: 'Track mileage, trips and HMRC mileage claims.',
+    },
+    linkField: 'date',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'notes', 'hmrcRate'],
+    fieldOrder: [
+      'date', 'vehicleId', 'employeeId', 'subcontractorId',
+      'startLocation', 'endLocation', 'startMileage', 'endMileage', 'distance',
+      'tripPurpose', 'description', 'projectId',
+      'claimable', 'claimAmount'
+    ],
+    sortField: 'date',
+    sortOrder: -1,
+    department: ['management'],
+    labelOverrides: {
+      vehicleId: 'Vehicle',
+      employeeId: 'Driver (Employee)',
+      subcontractorId: 'Driver (Subcontractor)',
+      projectId: 'Project',
+      startMileage: 'Start Miles',
+      endMileage: 'End Miles',
+      startLocation: 'From',
+      endLocation: 'To',
+      tripPurpose: 'Purpose',
+      claimable: 'Claimable?',
+      claimAmount: 'Claim (£)'
+    },
+    fieldTransforms: {
+      vehicleId: {
+        fromModel: 'vehicle',
+        matchField: '_id',
+        returnField: 'registrationNumber',
+        linkTo: (matched) => `/vehicle/read/${matched.uuid}`
+      },
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
+      },
+      projectId: {
+        fromModel: 'project',
+        matchField: ['_id', 'Id'],
+        returnField: 'Name',
+        linkTo: (matched) => `/project/read/${matched.uuid}`
+      }
+    },
+    tabsby: 'tripPurpose',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Business', label: 'Business' },
+      { value: 'Site Visit', label: 'Site Visit' },
+      { value: 'Delivery', label: 'Delivery' },
+      { value: 'Client Meeting', label: 'Client Meeting' },
+      { value: 'Commute', label: 'Commute' }
+    ],
+  },
+  vehicleService: {
+    title: 'Service History',
+    description: {
+      create: 'Record a service, MOT or repair for a vehicle.',
+      manage: 'View and manage vehicle service history and costs.',
+    },
+    linkField: 'date',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'notes',
+      'providerContact', 'providerReference', 'invoiceReference',
+      'partsReplaced', 'advisories'],
+    fieldOrder: [
+      'date', 'vehicleId', 'serviceType', 'status', 'provider',
+      'mileageAtService', 'labourCost', 'partsCost', 'vatAmount', 'totalCost',
+      'passed', 'paymentMethod',
+      'nextServiceDueDate', 'nextServiceDueMileage'
+    ],
+    sortField: 'date',
+    sortOrder: -1,
+    department: ['management'],
+    labelOverrides: {
+      vehicleId: 'Vehicle',
+      serviceType: 'Type',
+      mileageAtService: 'Mileage',
+      labourCost: 'Labour',
+      partsCost: 'Parts',
+      vatAmount: 'VAT',
+      totalCost: 'Total',
+      passed: 'Passed?',
+      paymentMethod: 'Payment',
+      nextServiceDueDate: 'Next Due',
+      nextServiceDueMileage: 'Next Due Miles'
+    },
+    fieldTransforms: {
+      vehicleId: {
+        fromModel: 'vehicle',
+        matchField: '_id',
+        returnField: 'registrationNumber',
+        linkTo: (matched) => `/vehicle/read/${matched.uuid}`
+      }
+    },
+    tabsby: 'serviceType',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Full Service', label: 'Full Service' },
+      { value: 'MOT', label: 'MOT' },
+      { value: 'Tyre Replacement', label: 'Tyres' },
+      { value: 'Brake Service', label: 'Brakes' },
+      { value: 'Oil Change', label: 'Oil Change' },
+      { value: 'Other', label: 'Other' }
+    ],
+  },
 };

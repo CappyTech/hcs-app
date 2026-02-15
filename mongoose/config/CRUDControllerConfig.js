@@ -319,5 +319,70 @@ module.exports = {
     middleware: {
       read: ['ensureRole:admin', 'ensureAuthenticated'],
     }
+  },
+  vehicleFuelLog: {
+    readOnly: ['uuid', 'createdAt'],
+    validators: {
+      date: value => !isNaN(Date.parse(value)),
+      litres: value => !isNaN(value) && Number(value) > 0,
+      totalCost: value => !isNaN(value) && Number(value) >= 0,
+      costPerLitre: value => value == null || (!isNaN(value) && Number(value) >= 0),
+      mileageAtFillUp: value => value == null || (!isNaN(value) && Number(value) >= 0),
+    },
+    xorGroups: [
+      ['employeeId', 'subcontractorId']
+    ],
+    referenceFilters: {
+      employeeId: { status: 'active' },
+      subcontractorId: { IsSubcontractor: true }
+    },
+    middleware: {
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+    }
+  },
+  vehicleMileageLog: {
+    readOnly: ['uuid', 'createdAt', 'distance', 'claimAmount'],
+    validators: {
+      date: value => !isNaN(Date.parse(value)),
+      startMileage: value => !isNaN(value) && Number(value) >= 0,
+      endMileage: value => !isNaN(value) && Number(value) >= 0,
+      hmrcRate: value => value == null || (!isNaN(value) && Number(value) >= 0),
+    },
+    xorGroups: [
+      ['employeeId', 'subcontractorId']
+    ],
+    referenceFilters: {
+      employeeId: { status: 'active' },
+      subcontractorId: { IsSubcontractor: true },
+      projectId: { $or: [{ Status: 0 }, { Status: 2 }] }
+    },
+    middleware: {
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+    }
+  },
+  vehicleService: {
+    readOnly: ['uuid', 'createdAt'],
+    validators: {
+      date: value => !isNaN(Date.parse(value)),
+      totalCost: value => value == null || (!isNaN(value) && Number(value) >= 0),
+      labourCost: value => value == null || (!isNaN(value) && Number(value) >= 0),
+      partsCost: value => value == null || (!isNaN(value) && Number(value) >= 0),
+      vatAmount: value => value == null || (!isNaN(value) && Number(value) >= 0),
+      mileageAtService: value => value == null || (!isNaN(value) && Number(value) >= 0),
+      nextServiceDueDate: value => !value || !isNaN(Date.parse(value)),
+      nextServiceDueMileage: value => value == null || (!isNaN(value) && Number(value) >= 0),
+    },
+    middleware: {
+      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      create: ['ensureRole:admin', 'ensureAuthenticated'],
+      update: ['ensureRole:admin', 'ensureAuthenticated'],
+      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+    }
   }
 }
