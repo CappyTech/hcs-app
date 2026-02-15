@@ -116,13 +116,15 @@ const fetchReferenceData = async (schema, config = {}) => {
   const referenceData = {};
 
   for (const [key, field] of Object.entries(schema)) {
-    if (field.ref && mdb[field.ref]) {
-      const filter = config.referenceFilters?.[key] || {};
-      referenceData[key] = await mdb[field.ref]
-        .find(filter)
-        .select('uuid name Name InvoiceNumber Customer jobRef title username Number Status status')
-        .lean();
-    }
+    if (!field.ref) continue;
+    // Look up the referenced model across all namespaces
+    const refModel = mdb.REST?.[field.ref] || mdb.INTERNAL?.[field.ref] || mdb.PAPERLESS?.[field.ref] || mdb[field.ref];
+    if (!refModel || typeof refModel.find !== 'function') continue;
+    const filter = config.referenceFilters?.[key] || {};
+    referenceData[key] = await refModel
+      .find(filter)
+      .select('uuid name Name InvoiceNumber Customer jobRef title username Number Status status Id')
+      .lean();
   }
 
   return referenceData;
