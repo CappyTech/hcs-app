@@ -90,8 +90,17 @@ const extractSchema = (model, config = {}) => {
       ref: path.options?.ref?.toLowerCase()
         || (Array.isArray(path.options?.type) && path.options.type[0]?.ref?.toLowerCase())
         || null,
-      isArray: Array.isArray(path.options?.type)
+      isArray: Array.isArray(path.options?.type),
+      refDenyCreate: false // updated below if ref model denies create
     };
+
+    // Check if the referenced model denies create
+    if (schema[field].ref) {
+      const refConfig = getMergedConfig(schema[field].ref);
+      if (denyGuard(refConfig, 'c')) {
+        schema[field].refDenyCreate = true;
+      }
+    }
   });
 
   // Order fields
