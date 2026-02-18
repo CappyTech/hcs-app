@@ -400,6 +400,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
           includeAllSuppliers,
           dbStats: {
             totalPurchases,
+            missingTaxYearMonth: await mdb.REST.purchase.countDocuments({ $or: [{ TaxYear: null }, { TaxYear: { $exists: false } }, { TaxMonth: null }, { TaxMonth: { $exists: false } }] }),
             taxYearMonthDistribution: taxYearMonthAgg.map(r => ({ ...r._id, count: r.count })),
             latestPaidDates: latestPaid,
             latestIssuedDates: latestIssued,
@@ -408,6 +409,33 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
               TaxYear: p.TaxYear, TaxMonth: p.TaxMonth,
               PaymentLineDates: (p.PaymentLines || []).map(pl => pl?.PayDate || pl?.Date).slice(0, 3),
             })),
+            // Check field types: sample a purchase with PaidDate to see if it's a Date or string
+            fieldTypeCheck: await (async () => {
+              const sample = await mdb.REST.purchase.collection.findOne({ PaidDate: { $ne: null } });
+              if (!sample) return null;
+              return {
+                PaidDate_value: sample.PaidDate,
+                PaidDate_type: typeof sample.PaidDate,
+                PaidDate_isDate: sample.PaidDate instanceof Date,
+                IssuedDate_value: sample.IssuedDate,
+                IssuedDate_type: typeof sample.IssuedDate,
+                IssuedDate_isDate: sample.IssuedDate instanceof Date,
+                TaxYear_value: sample.TaxYear,
+                TaxYear_type: typeof sample.TaxYear,
+                TaxMonth_value: sample.TaxMonth,
+                TaxMonth_type: typeof sample.TaxMonth,
+              };
+            })(),
+            // Purchases with dates in the window but no TaxYear/TaxMonth
+            purchasesInWindowMissingTax: await mdb.REST.purchase.find({
+              $and: [
+                { $or: [{ TaxYear: null }, { TaxYear: { $exists: false } }] },
+                { $or: [
+                  { PaidDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
+                  { IssuedDate: { $gte: new Date(currentMonthlyReturn.periodStart), $lte: new Date(currentMonthlyReturn.periodEnd) } },
+                ] }
+              ]
+            }).limit(5).select('Id Number SupplierName PaidDate IssuedDate TaxYear TaxMonth').lean(),
           },
           sampleRawPurchases: purchasesRaw.slice(0, 5).map(p => ({
             Id: p.Id, Number: p.Number, SupplierId: p.SupplierId, SupplierName: p.SupplierName,
