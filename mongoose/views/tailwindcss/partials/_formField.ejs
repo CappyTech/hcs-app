@@ -252,32 +252,38 @@
     <% } else if (field.ref && referenceData?.[key]) { %>
       <!-- Reference -->
       <% const isArray = Array.isArray(selectedValue); %>
-      <select
-        id="<%= key %>"
-        name="<%= key %><%= field.isArray ? '[]' : '' %>"
-        <%= field.isArray ? 'multiple' : '' %>
-        class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
-      >
-        <option value="" <%= !field.isArray ? '' : 'disabled' %>>-- Select --</option>
-        <% referenceData[key].forEach(refItem => {
-            const value = isUuid ? refItem.uuid : refItem._id;
-            let label;
-            if (config?.referenceLabelFormat?.[key]) {
-              try {
-                label = config.referenceLabelFormat[key](refItem);
-              } catch (err) {
-                label = '[Invalid Format]';
+      <div class="flex gap-2 items-start">
+        <select
+          id="<%= key %>"
+          name="<%= key %><%= field.isArray ? '[]' : '' %>"
+          <%= field.isArray ? 'multiple' : '' %>
+          class="flex-1 border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+        >
+          <option value="" <%= !field.isArray ? '' : 'disabled' %>>-- Select --</option>
+          <% referenceData[key].forEach(refItem => {
+              const value = isUuid ? refItem.uuid : refItem._id;
+              let label;
+              if (config?.referenceLabelFormat?.[key]) {
+                try {
+                  label = config.referenceLabelFormat[key](refItem);
+                } catch (err) {
+                  label = '[Invalid Format]';
+                }
+              } else {
+                label = refItem.name || refItem.Name || refItem.Number || refItem.username || refItem.title || value;
               }
-            } else {
-              label = refItem.name || refItem.Name || refItem.Number || refItem.username || refItem.title || value;
-            }
-            const selected = field.isArray
-              ? (selectedValue || []).map(String).includes(String(value))
-              : String(selectedValue) === String(value);
-        %>
-          <option value="<%= value %>" <%= selected ? 'selected' : '' %>><%= label %></option>
-        <% }) %>
-      </select>
+              const selected = field.isArray
+                ? (selectedValue || []).map(String).includes(String(value))
+                : String(selectedValue) === String(value);
+          %>
+            <option value="<%= value %>" <%= selected ? 'selected' : '' %>><%= label %></option>
+          <% }) %>
+        </select>
+        <a href="/<%= field.ref %>" target="_blank" title="Create new <%= field.label || key %>"
+          class="inline-flex items-center justify-center shrink-0 w-10 h-10 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 hover:border-green-400 transition">
+          <i class="bi bi-plus-lg"></i>
+        </a>
+      </div>
       <% if ((field.ref || field.enum) && field.isArray && showFieldTips) { %>
         <p class="text-sm text-gray-500 mt-1">Tip: Press a letter key to jump through matching entries.</p>
       <% } %>

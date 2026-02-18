@@ -3,7 +3,7 @@
   <form action="<%= formAction %>" method="POST" novalidate class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
     <%- include('./csrfHidden.ejs') %>
     <% for (const key in schema) { %>
-      <%- include('../partials/_formField', { key, field: schema[key], formData, referenceData, readOnly: false, showTips: true }) %>
+      <%- include('../partials/_formField', { key, field: schema[key], formData, referenceData, readOnly: false, showTips: true, config: typeof config !== 'undefined' ? config : {} }) %>
     <% } %>
 
   <p class="text-gray-500 dark:text-gray-300 text-sm mb-4"><span class="text-red-600">*</span> Required fields</p>
