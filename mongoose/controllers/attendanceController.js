@@ -42,7 +42,12 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       activeProjects,
       projectStatusFilter,
       taxWeekNumber,
-      taxYear
+      taxYear,
+      pendingCount,
+      approvedCount,
+      rejectedCount,
+      typeBreakdown,
+      dailyHeadcount
     } = await attendanceService.getAttendanceForWeek(yearParam, weekParam);
 
     const isManagementView = req.isManagementView === true;
@@ -79,7 +84,12 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       subcontractorEntries,
       isManagementView,
       taxWeekNumber,
-      taxYear
+      taxYear,
+      pendingCount,
+      approvedCount,
+      rejectedCount,
+      typeBreakdown,
+      dailyHeadcount
     });
   } catch (err) {
     next(err);
@@ -134,6 +144,46 @@ exports.rejectAttendance = async (req, res, next) => {
     res.redirect('back');
   } catch (err) {
     logger.error(`❌ Error rejecting attendance: ${err.message}`);
+    next(err);
+  }
+};
+
+exports.bulkApproveAttendance = async (req, res, next) => {
+  try {
+    const { weekStart, weekEnd } = req.body;
+    if (!weekStart || !weekEnd) {
+      logger.warn('Bulk approve: missing weekStart or weekEnd');
+      return res.status(400).redirect('back');
+    }
+
+    const start = moment(weekStart).startOf('day').toDate();
+    const end = moment(weekEnd).endOf('day').toDate();
+
+    const result = await mdb.INTERNAL.attendance.updateMany(
+      { date: { $gte: start, $lte: end }, status: 'pending' },
+      { status: 'approved' }
+    );
+
+    // Trigger holiday accrual for each approved record
+    if (result.modifiedCount > 0) {
+      const holidayAccrualService = require('../services/holidayAccrualService');
+      const approvedRecords = await mdb.INTERNAL.attendance.find({
+        date: { $gte: start, $lte: end },
+        status: 'approved'
+      });
+      for (const record of approvedRecords) {
+        try {
+          await holidayAccrualService.updateAccrualFromAttendance(record);
+        } catch (accrualErr) {
+          logger.warn(`Holiday accrual update failed for ${record.uuid}: ${accrualErr.message}`);
+        }
+      }
+    }
+
+    logger.info(`✅ Bulk approved ${result.modifiedCount} attendance records for ${weekStart} to ${weekEnd}`);
+    res.redirect('back');
+  } catch (err) {
+    logger.error(`❌ Error bulk approving attendance: ${err.message}`);
     next(err);
   }
 };

@@ -1,3 +1,31 @@
+<%
+  /* Type → color mapping for cell backgrounds and badges */
+  const _cellBg = {
+    work:     'bg-green-50 dark:bg-green-900/20',
+    training: 'bg-blue-50 dark:bg-blue-900/20',
+    sick:     'bg-red-50 dark:bg-red-900/20',
+    holiday:  'bg-purple-50 dark:bg-purple-900/20',
+    off:      'bg-gray-100 dark:bg-gray-800',
+    leave:    'bg-yellow-50 dark:bg-yellow-900/20',
+    Purchase: 'bg-cyan-50 dark:bg-cyan-900/20'
+  };
+  const _badgeCls = {
+    work:     'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    training: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    sick:     'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    holiday:  'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+    off:      'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    leave:    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    Purchase: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400'
+  };
+  const _statusBadge = {
+    pending:  'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+  };
+  const _dh = typeof dailyHeadcount !== 'undefined' ? dailyHeadcount : {};
+  const _showHC = typeof showHeadcount !== 'undefined' ? showHeadcount : false;
+%>
 <table class="min-w-full border-collapse border border-gray-300 dark:border-gray-700 text-sm">
   <thead>
     <tr class="bg-gray-100 dark:bg-gray-800">
@@ -12,15 +40,20 @@
       <% }); %>
       <% if (!isManagementView) { %>
         <th class="text-center font-normal border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">
-          Weekly Pay <br> 
+          Weekly Pay
         </th>
-      <% } else {} %>
+      <% } %>
     </tr>
   </thead>
   <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-    <% entries.forEach(([, details]) => { %>
-      <tr class="font-light border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-        <td class="border border-gray-300 dark:border-gray-700 px-3 py-2">
+    <% entries.forEach(([, details]) => {
+      /* Check if any record for this person is pending */
+      const _hasPending = Object.values(details.dailyRecords || {}).some(recs =>
+        Object.values(recs).some(r => r.status === 'pending')
+      );
+    %>
+      <tr class="font-light border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 <%= _hasPending ? 'ring-2 ring-inset ring-amber-300 dark:ring-amber-600' : '' %>">
+        <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap">
           <% if (details.employeeId) { %>
             <a href="/employee/read/<%= details.employeeId %>" class="text-green-900 dark:text-green-400 hover:underline">
               <%= details.name || 'Unnamed Employee' %>
@@ -34,7 +67,13 @@
 
         <% daysOfWeek.forEach(day => { %>
           <% const dailyRecords = details.dailyRecords[day] || {}; %>
-          <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 align-top">
+          <%
+            /* Determine dominant type for cell color */
+            const _recValues = Object.values(dailyRecords);
+            const _dominantType = _recValues.length > 0 ? (_recValues[0].type || '') : '';
+            const _cellClass = _recValues.length > 0 ? (_cellBg[_dominantType] || '') : '';
+          %>
+          <td class="border border-gray-300 dark:border-gray-700 text-center px-2 py-1.5 align-top <%= _cellClass %>">
             <% if (Object.keys(dailyRecords).length > 0) { %>
               <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
                 <% const isPurchase = recordId.startsWith('purchase-'); %>
@@ -50,43 +89,87 @@
                   </a>
                 <% } %>
 
-                <a href="<%= href %>" class="block text-green-900 dark:text-green-400 hover:underline text-sm">
+                <%/* Type badge */-%>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _badgeCls[record.type] || 'bg-gray-100 text-gray-700' %> mb-0.5">
+                  <%= record.type || 'Purchase' %>
+                </span>
+
+                <a href="<%= href %>" class="block text-green-900 dark:text-green-400 hover:underline text-xs leading-tight">
                   <% if (isPurchase) { %>
                     KF#: <%= record.invoiceNumber || '—' %> SF#: <%= record.supplierReference || '—' %>
                     <% if (!isManagementView && record.weeklyPay) { %>
                       – £<%= record.weeklyPay.toFixed(2) %>
                     <% } %>
                   <% } else { %>
-                    <%= record.location?.name %> - <%= record.type %>
+                    <%= record.location?.name || '' %><% if (record.location?.name) { %> <% } %>
                     <% if (!isManagementView && record.weeklyPay) { %>
-                      – £<%= record.weeklyPay.toFixed(2) %>
+                      £<%= record.weeklyPay.toFixed(2) %>
                     <% } %>
                   <% } %>
                 </a>
 
                 <% if (record.hoursWorked > 0) { %>
-                  <a href="<%= href %>" class="block text-gray-700 dark:text-gray-300 text-xs">
-                    <%= record.hoursWorked %> hours
-                  </a>
+                  <span class="block text-gray-600 dark:text-gray-400 text-[10px]"><%= record.hoursWorked %>h</span>
                 <% } %>
+
+                <%/* Status badge with approve/reject actions for pending */-%>
+                <% if (record.status && !isPurchase) { %>
+                  <div class="mt-0.5">
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _statusBadge[record.status] || '' %>">
+                      <%= record.status %>
+                    </span>
+                    <% if (record.status === 'pending') { %>
+                      <span class="inline-flex gap-1 ml-0.5 print:hidden">
+                        <form action="/attendance/<%= record.uuid %>/approve" method="POST" class="inline">
+                          <%- include('./csrfHidden.ejs') %>
+                          <button type="submit" class="text-green-600 hover:text-green-800 text-xs" title="Approve"><i class="bi bi-check-lg"></i></button>
+                        </form>
+                        <form action="/attendance/<%= record.uuid %>/reject" method="POST" class="inline">
+                          <%- include('./csrfHidden.ejs') %>
+                          <button type="submit" class="text-red-600 hover:text-red-800 text-xs" title="Reject"><i class="bi bi-x-lg"></i></button>
+                        </form>
+                      </span>
+                    <% } %>
+                  </div>
+                <% } %>
+
               <% }); %>
             <% } else if (details.type === 'employee') { %>
-              <a href="/attendance/create?date=<%= day %>&uuid=<%= details.employeeId %>" class="text-gray-400 dark:text-gray-400 text-xs hover:text-gray-600 dark:hover:text-gray-300 hover:underline">
-                Add Attendance
+              <a href="/attendance/create?date=<%= day %>&uuid=<%= details.employeeId %>" class="text-gray-400 dark:text-gray-500 text-[10px] hover:text-gray-600 dark:hover:text-gray-300 hover:underline print:hidden">
+                + Add
               </a>
             <% } %>
           </td>
         <% }); %>
 
         <% if (!isManagementView) { %>
-          <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 font-semibold">
+          <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 font-semibold whitespace-nowrap">
             £<%= details.weeklyPay.toFixed(2) %><br>
             <% if (details.totalHoursWorked > 0) { %>
-            <span class="text-sm font-normal text-gray-700 dark:text-gray-300"><%= details.totalHoursWorked %> hours</span>
+            <span class="text-xs font-normal text-gray-700 dark:text-gray-300"><%= details.totalHoursWorked %>h</span>
             <% } %>
           </td>
-        <% } else {} %>
+        <% } %>
       </tr>
     <% }); %>
   </tbody>
+
+  <%/* Daily totals footer row */%>
+  <% if (_showHC) { %>
+  <tfoot>
+    <tr class="bg-gray-50 dark:bg-gray-800 font-medium">
+      <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-right text-xs text-gray-600 dark:text-gray-400">
+        Daily headcount
+      </td>
+      <% daysOfWeek.forEach(day => { %>
+        <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <%= _dh[day] || 0 %>
+        </td>
+      <% }); %>
+      <% if (!isManagementView) { %>
+        <td class="border border-gray-300 dark:border-gray-700"></td>
+      <% } %>
+    </tr>
+  </tfoot>
+  <% } %>
 </table>

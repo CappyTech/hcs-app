@@ -11,6 +11,7 @@ router.get('/weekly-management/:year?/:week?', authService.ensureRole(), (req, r
 });
 
 // Approval workflow
+router.post('/attendance/bulk-approve', authService.ensureRole('admin'), ctrl.bulkApproveAttendance);
 router.post('/attendance/:uuid/approve', authService.ensureRole('admin'), ctrl.approveAttendance);
 router.post('/attendance/:uuid/reject', authService.ensureRole('admin'), ctrl.rejectAttendance);
 

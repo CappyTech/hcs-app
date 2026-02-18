@@ -171,8 +171,17 @@ for (const namespace of ['REST', 'INTERNAL']) {
       // READ
       crudController[`read${baseName}`] = async (req, res, next) => {
         try {
-          const item = await Model.findOne({ uuid: req.params.uuid }).lean();
+          let item = await Model.findOne({ uuid: req.params.uuid }).lean();
           if (!item) return res.status(404).render(path.join('mongoose', 'error'));
+
+          // Flatten nested data objects (e.g., when hcs-sync stores { number, data: {...}, syncedAt })
+          if (config.flattenField) {
+            const nested = item[config.flattenField];
+            if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+              const { [config.flattenField]: _, ...rest } = item;
+              item = { ...rest, ...nested };
+            }
+          }
 
           const schema = extractSchema(Model, config);
           const referenceData = await fetchReferenceData(schema, config);
@@ -181,7 +190,9 @@ for (const namespace of ['REST', 'INTERNAL']) {
           if (modelName === 'supplier' && mdb.REST?.purchase) {
             try {
               const listCfg = listControllerConfig['purchase'] || {};
-              const filter = { SupplierId: item.Id };
+              const pFlatten = listCfg.flattenField || null;
+              const filterKey = pFlatten ? `${pFlatten}.SupplierId` : 'SupplierId';
+              const filter = { [filterKey]: item.Id };
 
               // Optional filters from query string
               // ?status=Paid|Unpaid|All

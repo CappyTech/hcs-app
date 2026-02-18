@@ -160,6 +160,19 @@ const generateHeaders = (firstDoc, config = {}) => {
           .limit(limit)
           .lean();
 
+        // Flatten nested data objects (e.g., when hcs-sync stores { number, data: {...}, syncedAt })
+        if (config.flattenField) {
+          const ff = config.flattenField;
+          items = items.map(item => {
+            const nested = item[ff];
+            if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+              const { [ff]: _, ...rest } = item;
+              return { ...rest, ...nested };
+            }
+            return item;
+          });
+        }
+
         if (!items.length) {
           return res.render(path.join('tailwindcss', 'partials', 'listTable'), {
             title: config.title || capitalize(modelName) + 's',
@@ -426,6 +439,19 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
         .skip(skip)
         .limit(limit)
         .lean();
+
+      // Flatten nested data objects (e.g., when hcs-sync stores { number, data: {...}, syncedAt })
+      if (config.flattenField) {
+        const ff = config.flattenField;
+        items = items.map(item => {
+          const nested = item[ff];
+          if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+            const { [ff]: _, ...rest } = item;
+            return { ...rest, ...nested };
+          }
+          return item;
+        });
+      }
 
       if (!items.length) {
         return res.render(path.join('tailwindcss', 'partials', 'listTable'), {

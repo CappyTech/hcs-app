@@ -247,9 +247,11 @@ const groupAttendanceByPerson = (
       uuid: record.uuid,
       location: record.locationId || null,
       type: record.type,
+      status: record.status || 'approved',
       hoursWorked,
       weeklyPay: calculatedPay,
-      contractAssignmentId: record.contractAssignmentId || null
+      contractAssignmentId: record.contractAssignmentId || null,
+      projectId: record.projectId || null
     };
 
     groupedAttendance[name].totalHoursWorked += hoursWorked;
@@ -270,13 +272,44 @@ const groupAttendanceByPerson = (
     .filter(e => e.type === 'subcontractor')
     .reduce((sum, e) => sum + Object.keys(e.dailyRecords).length, 0);
 
+  // ── Management summary stats ──────────────────────────────────────
+  let pendingCount = 0;
+  let approvedCount = 0;
+  let rejectedCount = 0;
+  const typeBreakdown = {}; // { work: N, sick: N, ... }
+  const dailyHeadcount = {}; // { 'YYYY-MM-DD': N }
+
+  Object.values(groupedAttendance).forEach(person => {
+    Object.entries(person.dailyRecords).forEach(([day, records]) => {
+      Object.values(records).forEach(rec => {
+        // Count statuses (employee attendance only, purchases have no status)
+        if (rec.status === 'pending') pendingCount++;
+        else if (rec.status === 'rejected') rejectedCount++;
+        else if (rec.status) approvedCount++;
+
+        // Type breakdown
+        const t = rec.type || 'unknown';
+        typeBreakdown[t] = (typeBreakdown[t] || 0) + 1;
+      });
+      // Headcount: count unique people present per day
+      if (Object.keys(records).length > 0) {
+        dailyHeadcount[day] = (dailyHeadcount[day] || 0) + 1;
+      }
+    });
+  });
+
   return {
     groupedAttendance,
     totalEmployeeHours,
     totalEmployeePay,
     totalSubcontractorPay,
     totalSubcontractorDays,
-    daysOfWeek
+    daysOfWeek,
+    pendingCount,
+    approvedCount,
+    rejectedCount,
+    typeBreakdown,
+    dailyHeadcount
   };
 };
 
@@ -326,7 +359,12 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     totalEmployeePay,
     totalSubcontractorPay,
     totalSubcontractorDays,
-    daysOfWeek
+    daysOfWeek,
+    pendingCount,
+    approvedCount,
+    rejectedCount,
+    typeBreakdown,
+    dailyHeadcount
   } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidPurchases);
 
   // INTERNAL.job was replaced with REST.project — surface "active jobs" from active REST projects
@@ -364,7 +402,12 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     activeProjects,
     projectStatusFilter,
     taxWeekNumber: requestedWeekNumber,
-    taxYear: year
+    taxYear: year,
+    pendingCount,
+    approvedCount,
+    rejectedCount,
+    typeBreakdown,
+    dailyHeadcount
   };
 };
 
