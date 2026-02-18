@@ -364,35 +364,63 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       submissionEndDate,
       specifiedYear,
       specifiedMonth,
-      debug: req.query.debug === '1' ? {
-        params: { year: specifiedYear, month: specifiedMonth },
-        periodStart: currentMonthlyReturn.periodStart,
-        periodEnd: currentMonthlyReturn.periodEnd,
-        purchasesRawCount: purchasesRaw.length,
-        purchasesAfterDeleteFilter: purchases.length,
-        paidPurchasesCount: paidPurchases.length,
-        supplierIDsFromPaid: supplierIDs.slice(0, 20),
-        suppliersFoundCount: suppliers.length,
-        subbieCount: subbieSuppliers.length,
-        filteredPurchasesCount: filteredPurchases.length,
-        includeAllSuppliers,
-        sampleRawPurchases: purchasesRaw.slice(0, 5).map(p => ({
-          Id: p.Id, Number: p.Number, SupplierId: p.SupplierId, SupplierName: p.SupplierName,
-          PaidDate: p.PaidDate, IssuedDate: p.IssuedDate, TaxYear: p.TaxYear, TaxMonth: p.TaxMonth,
-          PaymentLinesCount: Array.isArray(p.PaymentLines) ? p.PaymentLines.length : 0,
-          PaymentLineDates: (p.PaymentLines || []).slice(0, 3).map(pl => pl?.PayDate || pl?.Date || null),
-          deletedAt: p.deletedAt || p.DeletedAt || null,
-        })),
-        sampleSuppliers: suppliers.slice(0, 10).map(s => ({
-          Id: s.Id, Name: s.Name, Subcontractor: s.Subcontractor, IsSubcontractor: s.IsSubcontractor, CISRate: s.CISRate,
-        })),
-        orConditionsUsed: [
-          `TaxYear=${specifiedYear}, TaxMonth=${specifiedMonth}`,
-          `PaidDate between ${currentMonthlyReturn.periodStart} and ${currentMonthlyReturn.periodEnd}`,
-          `PaymentLines.PayDate/Date in window`,
-          `IssuedDate in window`,
-        ],
-      } : null,
+      debug: req.query.debug === '1' ? await (async () => {
+        // Per-condition counts
+        const conditionCounts = {};
+        for (let i = 0; i < orConditions.length; i++) {
+          conditionCounts[`condition_${i}`] = await mdb.REST.purchase.countDocuments(orConditions[i]);
+        }
+        // Database-wide stats
+        const totalPurchases = await mdb.REST.purchase.countDocuments({});
+        const taxYearMonthAgg = await mdb.REST.purchase.aggregate([
+          { $group: { _id: { TaxYear: '$TaxYear', TaxMonth: '$TaxMonth' }, count: { $sum: 1 } } },
+          { $sort: { '_id.TaxYear': -1, '_id.TaxMonth': -1 } },
+          { $limit: 20 }
+        ]);
+        const latestPaid = await mdb.REST.purchase.find({ PaidDate: { $ne: null } })
+          .sort({ PaidDate: -1 }).limit(3).select('Id Number SupplierName PaidDate TaxYear TaxMonth').lean();
+        const latestIssued = await mdb.REST.purchase.find({ IssuedDate: { $ne: null } })
+          .sort({ IssuedDate: -1 }).limit(3).select('Id Number SupplierName IssuedDate TaxYear TaxMonth').lean();
+        const latestPaymentLine = await mdb.REST.purchase.find({ 'PaymentLines.0': { $exists: true } })
+          .sort({ 'PaymentLines.PayDate': -1 }).limit(3).select('Id Number SupplierName PaymentLines TaxYear TaxMonth').lean();
+
+        return {
+          params: { year: specifiedYear, month: specifiedMonth },
+          periodStart: currentMonthlyReturn.periodStart,
+          periodEnd: currentMonthlyReturn.periodEnd,
+          mongoQuery: JSON.parse(JSON.stringify({ $or: orConditions })),
+          conditionCounts,
+          purchasesRawCount: purchasesRaw.length,
+          purchasesAfterDeleteFilter: purchases.length,
+          paidPurchasesCount: paidPurchases.length,
+          supplierIDsFromPaid: supplierIDs.slice(0, 20),
+          suppliersFoundCount: suppliers.length,
+          subbieCount: subbieSuppliers.length,
+          filteredPurchasesCount: filteredPurchases.length,
+          includeAllSuppliers,
+          dbStats: {
+            totalPurchases,
+            taxYearMonthDistribution: taxYearMonthAgg.map(r => ({ ...r._id, count: r.count })),
+            latestPaidDates: latestPaid,
+            latestIssuedDates: latestIssued,
+            latestPaymentLineDates: latestPaymentLine.map(p => ({
+              Id: p.Id, Number: p.Number, SupplierName: p.SupplierName,
+              TaxYear: p.TaxYear, TaxMonth: p.TaxMonth,
+              PaymentLineDates: (p.PaymentLines || []).map(pl => pl?.PayDate || pl?.Date).slice(0, 3),
+            })),
+          },
+          sampleRawPurchases: purchasesRaw.slice(0, 5).map(p => ({
+            Id: p.Id, Number: p.Number, SupplierId: p.SupplierId, SupplierName: p.SupplierName,
+            PaidDate: p.PaidDate, IssuedDate: p.IssuedDate, TaxYear: p.TaxYear, TaxMonth: p.TaxMonth,
+            PaymentLinesCount: Array.isArray(p.PaymentLines) ? p.PaymentLines.length : 0,
+            PaymentLineDates: (p.PaymentLines || []).slice(0, 3).map(pl => pl?.PayDate || pl?.Date || null),
+            deletedAt: p.deletedAt || p.DeletedAt || null,
+          })),
+          sampleSuppliers: suppliers.slice(0, 10).map(s => ({
+            Id: s.Id, Name: s.Name, Subcontractor: s.Subcontractor, IsSubcontractor: s.IsSubcontractor, CISRate: s.CISRate,
+          })),
+        };
+      })() : null,
     });
   } catch (error) {
     logger.error(`Error rendering CIS dashboard Mongo: ${error.message}`, { stack: error.stack });

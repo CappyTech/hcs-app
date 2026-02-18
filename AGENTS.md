@@ -9,3 +9,4 @@
 - trace from app.js that the file is included at some point, or is a child of another file that is included in the app.js file
 - do not use \mongoose\views\mongoose
 - do use \mongoose\views\tailwindcss
+- The `kashflowAPI/` folder is unused. Data sync is handled by [github.com/cappytech/hcs-sync](https://github.com/cappytech/hcs-sync).
