@@ -24,6 +24,18 @@
 
       const renderedFields = new Set();
       const keys = Object.keys(schema);
+
+      // Pre-compute nested field groups (e.g., contract.termsType → group 'contract')
+      const _nestedGroups = {};
+      keys.forEach(k => {
+        const dot = k.indexOf('.');
+        if (dot > -1) {
+          const prefix = k.substring(0, dot);
+          if (!_nestedGroups[prefix]) _nestedGroups[prefix] = [];
+          _nestedGroups[prefix].push(k);
+        }
+      });
+      const _groupLabel = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase());
     %>
 
     <% keys.forEach((key, index) => {

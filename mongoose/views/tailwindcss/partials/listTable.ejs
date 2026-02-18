@@ -131,7 +131,7 @@
                     <a href="<%= href %>" class="text-green-600 dark:text-green-400 hover:underline">
                       <%= (typeof val === 'string' || typeof val === 'number') ? val
                           : val instanceof Date ? slimDateTime(val)
-                          : typeof val === 'object' ? val?.name || val?.title || val?.Number || '[Object]'
+                          : typeof val === 'object' ? val?.name || val?.Name || val?.title || val?.Code || val?.Number || '[Object]'
                           : val ?? '—' %>
                     </a>
                   <% } else { %>
@@ -147,7 +147,7 @@
                       <% if (Array.isArray(val)) { %>
                         <% if (h.key === 'LineItems') { %>
                           <span class="inline-flex items-center gap-2">
-                            <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700"><%= val.length %> items</span>
+                            <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700"><%= val.length %> item<%= val.length !== 1 ? 's' : '' %></span>
                             <% if (row.uuid) { %>
                               <a href="/<%= modelName %>/read/<%= row.uuid %>#LineItems" class="text-xs text-green-600 dark:text-green-400 hover:underline">View</a>
                             <% } %>
@@ -155,7 +155,7 @@
                         <% } else if (h.key === 'PaymentLines') { %>
                           <% const totalPaid = val.reduce((s, p) => s + (Number(p?.Amount) || 0), 0); %>
                           <span class="inline-flex items-center gap-2">
-                            <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700"><%= val.length %> payments</span>
+                            <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700"><%= val.length %> payment<%= val.length !== 1 ? 's' : '' %></span>
                             <span class="text-xs text-gray-600 dark:text-gray-300">£<%= Number(totalPaid).toFixed(2) %></span>
                             <% if (row.uuid) { %>
                               <a href="/<%= modelName %>/read/<%= row.uuid %>#PaymentLines" class="text-xs text-green-600 dark:text-green-400 hover:underline">View</a>
@@ -163,15 +163,30 @@
                           </span>
                         <% } else if (h.key === 'tags') { %>
                           <% const tagNames = val.map(t => t && (t.name || t.title || t.slug)).filter(Boolean); %>
-                          <%= tagNames.length ? tagNames.join(', ') : `${val.length} tags` %>
+                          <%= tagNames.length ? tagNames.join(', ') : `${val.length} tag${val.length !== 1 ? 's' : ''}` %>
                         <% } else { %>
-                          <%= `${val.length} ${h.key.toLowerCase()}` %>
+                          <%
+                            const keyLower = h.key.toLowerCase();
+                            const abbr = h.key
+                              .replace(/([a-z])([A-Z])/g, '$1 $2')
+                              .split(/[\s_]+/)
+                              .map(w => w.charAt(0).toUpperCase())
+                              .join('');
+                          %>
+                          <% if (val.length > 0) { %>
+                            <span class="inline-flex items-center gap-1">
+                              <i class="bi bi-check-circle-fill text-green-600 dark:text-green-400"></i>
+                              <span class="text-xs" title="<%= h.label || h.key %>"><%= val.length %> <%= abbr %></span>
+                            </span>
+                          <% } else { %>
+                            <span class="text-gray-400 text-xs">&mdash;</span>
+                          <% } %>
                         <% } %>
                       <% } else if (val && val._bsontype === 'Decimal128') { %>
                         <% const num = parseFloat(val.toString()); %>
                         <%= ['payrate', 'dayrate'].includes(h.key.toLowerCase()) ? formatCurrency(num) : num.toFixed(2) %>
                       <% } else if (typeof val === 'object') { %>
-                        <%= val?.name || val?.title || val?.Number || '[Object]' %>
+                        <%= val?.name || val?.Name || val?.title || val?.Code || val?.Number || '[Object]' %>
                       <% } else { %>
                         <%= val %>
                       <% } %>
