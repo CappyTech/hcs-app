@@ -9,7 +9,7 @@
   <!-- Read-only fields (same grid as form-read) -->
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
     <% for (const key in schema) { %>
-      <%- include('../partials/_formField', { key, field: schema[key], formData: item, referenceData, readOnly: true, showTips: false }) %>
+      <%- include('../partials/_formField', { key, field: schema[key], formData: item, referenceData, readOnly: true, showTips: false, config }) %>
     <% } %>
   </div>
 

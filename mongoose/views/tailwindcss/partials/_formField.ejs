@@ -215,7 +215,50 @@
       displayValue = value.length ? value.join(', ') : '—';
     } else if (typeof value === 'string' || typeof value === 'number') {
       displayValue = value || '—';
+    } else if (value && typeof value === 'object') {
+      displayValue = String(value);
     }
+
+    // Resolve ref fields to human-readable names and links
+    const _cfg = typeof config !== 'undefined' ? config : {};
+    let refLink = null;
+    let resolvedArrayItems = null;
+
+    if (field.ref && typeof referenceData !== 'undefined' && Array.isArray(referenceData[key])) {
+      const findMatch = (v) => referenceData[key].find(r =>
+        String(r._id) === String(v) ||
+        String(r.uuid) === String(v) ||
+        (r.Id != null && String(r.Id) === String(v))
+      );
+      const getLabel = (matched) => {
+        if (_cfg.referenceLabelFormat && _cfg.referenceLabelFormat[key]) {
+          try { return _cfg.referenceLabelFormat[key](matched); } catch(e) {}
+        }
+        return matched.name || matched.Name || matched.Number || matched.username || matched.title || matched.uuid || '';
+      };
+      const getLink = (matched) => {
+        if (_cfg.fieldTransforms && _cfg.fieldTransforms[key] && _cfg.fieldTransforms[key].linkTo) {
+          try { return _cfg.fieldTransforms[key].linkTo(matched); } catch(e) {}
+        }
+        return null;
+      };
+
+      if (Array.isArray(value) && value.length > 0) {
+        resolvedArrayItems = value.map(v => {
+          const matched = findMatch(v);
+          if (!matched) return { name: String(v), link: null };
+          return { name: getLabel(matched), link: getLink(matched) };
+        });
+        displayValue = resolvedArrayItems.map(i => i.name).join(', ');
+      } else if (value) {
+        const matched = findMatch(value);
+        if (matched) {
+          displayValue = getLabel(matched);
+          refLink = getLink(matched);
+        }
+      }
+    }
+
     // If value is empty, do not render this field at all
     const shouldRender = isNonEmptySimple(value) || (field.type === 'Boolean' && (value === true || value === 'true' || value === false || value === 'false')) || (field.type === 'Date' && !!value);
   %>
@@ -226,7 +269,15 @@
           <%- label %>
         </div>
         <div class="text-sm text-gray-900 dark:text-gray-100 break-words leading-relaxed">
-          <%= displayValue %>
+          <% if (resolvedArrayItems) { %>
+            <% resolvedArrayItems.forEach((ri, i) => { %>
+              <% if (ri.link) { %><a href="<%= ri.link %>" class="text-green-600 dark:text-green-400 hover:underline"><%= ri.name %></a><% } else { %><%= ri.name %><% } %><%= i < resolvedArrayItems.length - 1 ? ', ' : '' %>
+            <% }) %>
+          <% } else if (refLink) { %>
+            <a href="<%= refLink %>" class="text-green-600 dark:text-green-400 hover:underline"><%= displayValue %></a>
+          <% } else { %>
+            <%= displayValue %>
+          <% } %>
         </div>
       </div>
     </div>

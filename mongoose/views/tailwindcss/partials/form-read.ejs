@@ -41,6 +41,12 @@
     <% } %>
   </div>
 
+  <% const _desc = typeof config !== 'undefined' ? config?.description : undefined; %>
+  <% const descText = typeof _desc === 'string' ? _desc : (_desc?.manage || ''); %>
+  <% if (descText) { %>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mb-4"><%= descText %></p>
+  <% } %>
+
   <!-- Horizontal layout: details left, sidebar with Items/Payments right -->
   <div class="grid md:grid-cols-3 gap-4">
     <!-- Main details -->
@@ -54,7 +60,8 @@
           formData: item,
           referenceData,
           readOnly: true,
-          showTips: false
+          showTips: false,
+          config
         }) %>
       <% } %>
     </div>
@@ -73,7 +80,8 @@
               formData: item,
               referenceData,
               readOnly: true,
-              showTips: false
+              showTips: false,
+              config
             }) %>
           </div>
         </div>
@@ -91,7 +99,8 @@
               formData: item,
               referenceData,
               readOnly: true,
-              showTips: false
+              showTips: false,
+              config
             }) %>
           </div>
         </div>

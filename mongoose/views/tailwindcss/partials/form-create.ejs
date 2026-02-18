@@ -1,6 +1,12 @@
 <div class="container mx-auto my-5 px-4 max-w-3xl">
   <h1 class="mb-4 text-3xl font-semibold text-gray-900 dark:text-gray-100"><%= title %></h1>
 
+  <% const _desc = typeof config !== 'undefined' ? config?.description : undefined; %>
+  <% const descText = typeof _desc === 'string' ? _desc : (_desc?.create || _desc?.manage || ''); %>
+  <% if (descText) { %>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mb-4"><%= descText %></p>
+  <% } %>
+
   <% if (errors?.length) { %>
     <div class="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-3 rounded mb-4 text-sm border border-red-200 dark:border-red-800">
       <% errors.forEach(error => { %>
