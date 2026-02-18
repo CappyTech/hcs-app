@@ -34,6 +34,13 @@ module.exports = {
         department: ['construction-industry-scheme'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    AssignSubcontractors: {
+        title: 'Assign Subcontractors',
+        description: 'Add new subcontractors.',
+        link: '/subcontractor/assign',
+        department: ['construction-industry-scheme'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     KF_Customers: {
         title: 'KF Customers',
         description: 'View KF Customers',
