@@ -174,6 +174,7 @@ const generateHeaders = (firstDoc, config = {}) => {
             query,
             model: modelName,
             actions: config.actions || [],
+            headerActions: config.headerActions || [],
             fieldLinks: config.fieldLinks || null,
             activeTab,
             tabsValues,
@@ -308,6 +309,7 @@ const generateHeaders = (firstDoc, config = {}) => {
           query,
           model: modelName,
           actions: config.actions || [],
+          headerActions: config.headerActions || [],
           fieldLinks: dynamicFieldLinks,
           activeTab,
           tabsValues,
@@ -436,6 +438,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
           limit, page, totalPages, query,
           model: aliasName,
           actions: config.actions || [],
+          headerActions: config.headerActions || [],
           fieldLinks: config.fieldLinks || null,
           activeTab, tabsValues, tabsBy, tabs
         });
@@ -553,6 +556,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
         limit, page, totalPages, query,
         model: aliasName,
         actions: config.actions || [],
+        headerActions: config.headerActions || [],
         fieldLinks: dynamicFieldLinks,
         activeTab, tabsValues, tabsBy, tabs
       });
