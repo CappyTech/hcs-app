@@ -197,44 +197,50 @@ for (const namespace of ['REST', 'INTERNAL']) {
               // Optional filters from query string
               // ?status=Paid|Unpaid|All
               if (req.query.status && req.query.status.toLowerCase() !== 'all') {
-                filter.Status = req.query.status;
+                const statusKey = pFlatten ? `${pFlatten}.Status` : 'Status';
+                filter[statusKey] = req.query.status;
               }
               // Date range on IssuedDate: ?from=YYYY-MM-DD&to=YYYY-MM-DD
               if (req.query.from || req.query.to) {
-                filter.IssuedDate = {};
-                if (req.query.from) filter.IssuedDate.$gte = new Date(req.query.from);
-                if (req.query.to) filter.IssuedDate.$lte = new Date(req.query.to);
+                const dateKey = pFlatten ? `${pFlatten}.IssuedDate` : 'IssuedDate';
+                filter[dateKey] = {};
+                if (req.query.from) filter[dateKey].$gte = new Date(req.query.from);
+                if (req.query.to) filter[dateKey].$lte = new Date(req.query.to);
               }
 
-              // Projection based on list config fieldOrder, honoring hideFields, plus extras needed by read/CIS
-              const extraFields = [
-                'uuid',
-                'SupplierReference',
-                'IssuedDate',
-                'PaidDate',
-                'PaymentLines',
-                'TaxYear',
-                'TaxMonth'
-              ];
-              const baseFields = Array.from(new Set([
-                ...(Array.isArray(listCfg.fieldOrder) ? listCfg.fieldOrder : []),
-                ...extraFields
-              ]));
-
-              const hideSet = new Set(Array.isArray(listCfg.hideFields) ? listCfg.hideFields : []);
-              const filteredFields = baseFields.filter(f => !hideSet.has(f) || extraFields.includes(f));
-
-              const selectParts = [...filteredFields];
-              // Explicitly drop _id if configured hidden (safe to combine with inclusive projection)
-              if (hideSet.has('_id')) selectParts.push('-_id');
-              const selectProjection = selectParts.join(' ');
-
               // Sorting: allow query override, else use list config, fallback IssuedDate desc
-              const sortField = req.query.sort || listCfg.sortField || 'IssuedDate';
+              const rawSortField = req.query.sort || listCfg.sortField || 'IssuedDate';
               const sortOrder = (req.query.order ? Number(req.query.order) : (typeof listCfg.sortOrder === 'number' ? listCfg.sortOrder : -1)) || -1;
-              const sortSpec = { [sortField]: sortOrder };
+              const sortSpec = { [rawSortField]: sortOrder };
 
-              const query = mdb.REST.purchase.find(filter).select(selectProjection).sort(sortSpec);
+              let query;
+              if (pFlatten) {
+                // When data is nested, skip .select() since fields live inside the subdocument
+                query = mdb.REST.purchase.find(filter).sort(sortSpec);
+              } else {
+                // Projection based on list config fieldOrder, honoring hideFields, plus extras needed by read/CIS
+                const extraFields = [
+                  'uuid',
+                  'SupplierReference',
+                  'IssuedDate',
+                  'PaidDate',
+                  'PaymentLines',
+                  'TaxYear',
+                  'TaxMonth'
+                ];
+                const baseFields = Array.from(new Set([
+                  ...(Array.isArray(listCfg.fieldOrder) ? listCfg.fieldOrder : []),
+                  ...extraFields
+                ]));
+
+                const hideSet = new Set(Array.isArray(listCfg.hideFields) ? listCfg.hideFields : []);
+                const filteredFields = baseFields.filter(f => !hideSet.has(f) || extraFields.includes(f));
+
+                const selectParts = [...filteredFields];
+                if (hideSet.has('_id')) selectParts.push('-_id');
+                const selectProjection = selectParts.join(' ');
+                query = mdb.REST.purchase.find(filter).select(selectProjection).sort(sortSpec);
+              }
 
               // Optional limit/page
               if (req.query.limit) {
@@ -246,7 +252,20 @@ for (const namespace of ['REST', 'INTERNAL']) {
                 query.skip((page - 1) * limit);
               }
 
-              const purchases = await query.lean();
+              let purchases = await query.lean();
+
+              // Flatten nested data if purchases use the hcs-sync format
+              if (pFlatten) {
+                purchases = purchases.map(p => {
+                  const nested = p[pFlatten];
+                  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+                    const { [pFlatten]: _, ...rest } = p;
+                    return { ...rest, ...nested };
+                  }
+                  return p;
+                });
+              }
+
               item.purchases = purchases;
             } catch (e) {
               logger.warn(`Failed to fetch purchases for supplier ${item.Id}: ${e.message}`);
