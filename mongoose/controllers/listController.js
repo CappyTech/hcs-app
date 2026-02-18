@@ -322,4 +322,245 @@ const generateHeaders = (firstDoc, config = {}) => {
   }
 });
 
+// Support alias configs: entries with `aliasOf` point to an existing model but apply a baseFilter.
+for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
+  if (!aliasConfig.aliasOf) continue;
+  const functionName = `list${capitalize(aliasName)}`;
+  if (listController[functionName]) continue; // already registered
+
+  const targetModelName = aliasConfig.aliasOf;
+  const model = (mdb.REST && mdb.REST[targetModelName])
+    || (mdb.INTERNAL && mdb.INTERNAL[targetModelName])
+    || (mdb.PAPERLESS && mdb.PAPERLESS[targetModelName]);
+  if (!model || typeof model.find !== 'function') {
+    logger.warn && logger.warn(`[listController] aliasOf target '${targetModelName}' not found for alias '${aliasName}'`);
+    continue;
+  }
+
+  const config = aliasConfig;
+  if (denyGuard(config, 'l')) continue;
+
+  listController[functionName] = async (req, res, next) => {
+    const sortField = config.sortField || 'createdAt';
+    const sortOrder = config.sortOrder ?? -1;
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 500);
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const rawSearch = (req.query.search || '').trim();
+    const query = rawSearch;
+
+    const tabsBy = config.tabsby || null;
+    const tabsValues = Array.isArray(config.tabsValues) ? config.tabsValues : [];
+    const requestedTab = req.query.tab || null;
+    const activeTab = requestedTab && (
+      String(requestedTab).toLowerCase() === 'all' || tabsValues.some(tv => String(tv.value) === String(requestedTab))
+    ) ? requestedTab : null;
+
+    // Start with the baseFilter so only matching docs are shown
+    let mongoFilter = config.baseFilter ? { ...config.baseFilter } : {};
+
+    if (query) {
+      const searchFields = Array.isArray(config.searchFields) && config.searchFields.length
+        ? config.searchFields
+        : [config.linkField || 'title'];
+      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      const orConds = [];
+      for (const f of searchFields) {
+        const pathInfo = model?.schema?.path?.(f) || null;
+        const instance = pathInfo ? pathInfo.instance : null;
+        if (instance === 'Number') {
+          const n = Number(query);
+          if (!Number.isNaN(n)) orConds.push({ [f]: n });
+        } else if (instance === 'String' || instance === 'Mixed' || !instance) {
+          orConds.push({ [f]: regex });
+        }
+      }
+      if (orConds.length) {
+        if (Object.keys(mongoFilter).length > 0) {
+          mongoFilter = { $and: [mongoFilter, { $or: orConds }] };
+        } else {
+          mongoFilter.$or = orConds;
+        }
+      }
+    }
+
+    if (tabsBy && activeTab) {
+      if (String(activeTab).toLowerCase() !== 'all') {
+        const orConds = [];
+        const tabsPath = model?.schema?.path?.(tabsBy) || null;
+        const tabsType = tabsPath ? tabsPath.instance : null;
+        const nameField = `${tabsBy}Name`;
+        const hasNameField = !!(model?.schema?.path?.(nameField));
+        const numVal = Number(activeTab);
+        if (tabsType === 'Number' && !Number.isNaN(numVal)) orConds.push({ [tabsBy]: numVal });
+        if (tabsType === 'String') orConds.push({ [tabsBy]: activeTab });
+        if (hasNameField) orConds.push({ [nameField]: activeTab });
+        if (orConds.length) {
+          const tabsFilter = orConds.length === 1 ? orConds[0] : { $or: orConds };
+          if (Object.keys(mongoFilter).length > 0) {
+            mongoFilter = { $and: [mongoFilter, tabsFilter] };
+          } else {
+            mongoFilter = tabsFilter;
+          }
+        }
+      }
+    }
+
+    try {
+      const totalCount = await model.countDocuments(mongoFilter);
+      let tabs = [];
+      if (tabsValues.length) {
+        tabs = tabsValues.map(tv => ({
+          value: tv.value,
+          label: tv.label || String(tv.value),
+          isActive: String(tv.value) === String(activeTab)
+        }));
+      }
+      const totalPages = Math.max(Math.ceil(totalCount / limit), 1);
+      const skip = (page - 1) * limit;
+      let items = await model
+        .find(mongoFilter)
+        .sort({ [sortField]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      if (!items.length) {
+        return res.render(path.join('tailwindcss', 'partials', 'listTable'), {
+          title: config.title || capitalize(aliasName) + 's',
+          headers: [],
+          rows: [],
+          basePath: config.basePath || aliasName,
+          modelName: aliasName,
+          linkField: config.linkField || 'title',
+          limit, page, totalPages, query,
+          model: aliasName,
+          actions: config.actions || [],
+          fieldLinks: config.fieldLinks || null,
+          activeTab, tabsValues, tabsBy, tabs
+        });
+      }
+
+      const headers = generateHeaders(items[0], config);
+      const defaultHidden = ['_id', '__v'];
+      const autoHideUnderscore = config.autoHideUnderscore !== false;
+      const hidden = new Set([...(config.hideFields || []), ...defaultHidden]);
+      if (config.linkField) hidden.delete(config.linkField);
+      const allowedKeys = new Set(headers.map(h => h.key));
+      const transforms = config.fieldTransforms || {};
+      const pendingLookups = {};
+
+      items = items.map(row => {
+        const cleaned = {};
+        for (const key of allowedKeys) cleaned[key] = row[key];
+        if (autoHideUnderscore) {
+          for (const k in cleaned) {
+            if (k.startsWith('_') && !allowedKeys.has(k)) delete cleaned[k];
+          }
+        }
+        if (row.uuid) cleaned.uuid = row.uuid;
+        for (const [field, tConf] of Object.entries(transforms)) {
+          if (!allowedKeys.has(field)) continue;
+          const v = row[field];
+          const ensureBucket = () => {
+            if (!pendingLookups[field]) pendingLookups[field] = { keys: new Set(), originals: new Map() };
+            return pendingLookups[field];
+          };
+          const addVal = (val) => {
+            if (val === null || val === undefined) return;
+            const key = String(val && val._id ? val._id : val);
+            const bucket = ensureBucket();
+            bucket.keys.add(key);
+            if (!bucket.originals.has(key)) bucket.originals.set(key, val);
+          };
+          if (Array.isArray(v)) v.forEach(addVal); else addVal(v);
+        }
+        return cleaned;
+      });
+
+      const resolvedMaps = {};
+      for (const [field, tConf] of Object.entries(transforms)) {
+        try {
+          const bucket = pendingLookups[field];
+          if (!bucket || bucket.keys.size === 0) continue;
+          const { keys, originals } = bucket;
+          const fromModelName = tConf.fromModel;
+          const matchFields = Array.isArray(tConf.matchField) ? tConf.matchField : [tConf.matchField || '_id'];
+          const returnField = tConf.returnField || 'name';
+          const fromModel = (mdb.INTERNAL && mdb.INTERNAL[fromModelName]) || (mdb.REST && mdb.REST[fromModelName]);
+          if (!fromModel || typeof fromModel.find !== 'function') continue;
+          const values = Array.from(keys).map(k => originals.get(k));
+          const or = matchFields.map(f => ({ [f]: { $in: values } }));
+          const filter = or.length === 1 ? or[0] : { $or: or };
+          const docs = await fromModel.find(filter).lean();
+          const index = new Map();
+          docs.forEach(d => {
+            matchFields.forEach(f => {
+              if (typeof d[f] !== 'undefined' && d[f] !== null) {
+                const k = String(d[f]);
+                if (!index.has(k)) index.set(k, d);
+              }
+            });
+          });
+          resolvedMaps[field] = { index, returnField, linkTo: tConf.linkTo, matchFields };
+        } catch (e) {
+          logger.warn && logger.warn(`[listController] transform lookup failed for field '${field}': ${e.message}`);
+        }
+      }
+
+      items = items.map(row => {
+        if (!row) return row;
+        const links = {};
+        for (const [field, resolved] of Object.entries(resolvedMaps)) {
+          if (!(field in row)) continue;
+          const value = row[field];
+          const { index, returnField, linkTo } = resolved;
+          const resolveOne = (val) => {
+            const key = String(val && val._id ? val._id : val);
+            const matched = index.get(key);
+            return matched ? matched[returnField] : (typeof val === 'string' ? val : '—');
+          };
+          if (Array.isArray(value)) {
+            row[field] = value.map(resolveOne).filter(Boolean).join(', ');
+          } else {
+            const key = String(value && value._id ? value._id : value);
+            const matched = index.get(key);
+            row[field] = resolveOne(value);
+            if (matched && typeof linkTo === 'function') {
+              try { links[field] = linkTo(matched); } catch (_) { }
+            } else if (matched && typeof linkTo === 'string') {
+              links[field] = linkTo;
+            }
+          }
+        }
+        if (Object.keys(links).length) row.__links = links;
+        return row;
+      });
+
+      const dynamicFieldLinks = (row) => {
+        const fromConfig = typeof config.fieldLinks === 'function' ? config.fieldLinks(row) : config.fieldLinks;
+        const dynamic = row && row.__links ? row.__links : null;
+        return { ...(fromConfig || {}), ...(dynamic || {}) };
+      };
+
+      res.render(path.join('tailwindcss', 'partials', 'listTable'), {
+        title: config.title || capitalize(aliasName) + 's',
+        headers,
+        rows: items,
+        basePath: config.basePath || aliasName,
+        modelName: aliasName,
+        linkField: config.linkField || 'title',
+        limit, page, totalPages, query,
+        model: aliasName,
+        actions: config.actions || [],
+        fieldLinks: dynamicFieldLinks,
+        activeTab, tabsValues, tabsBy, tabs
+      });
+    } catch (err) {
+      logger.error(`Error listing ${aliasName}:`, err);
+      next(err);
+    }
+  };
+}
+
 module.exports = listController;

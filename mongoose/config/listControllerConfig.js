@@ -299,6 +299,23 @@ module.exports = {
   session: {
     deny: ['c', 'r', 'u', 'd', 'l'],
   },
+  subcontractor: {
+    aliasOf: 'supplier',
+    basePath: 'supplier',
+    baseFilter: { Subcontractor: true },
+    title: 'Subcontractors',
+    linkField: 'Name',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id', 'IsRegisteredInEC', 'IsArchived', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull', 'WithholdingTaxRate', 'WithholdingTaxReferences', 'Subcontractor', 'IsSubcontractor'],
+    fieldOrder: ['Name', 'Code', 'CISRate', 'CISNumber', 'Note', 'OutstandingBalance', 'TotalPaidAmount', 'VATNumber', 'Contacts', 'Address'],
+    searchFields: ['Name', 'Code', 'CISNumber'],
+    sortField: 'Name',
+    sortOrder: 1,
+    department: ['construction-industry-scheme'],
+    deny: ['c', 'u', 'd'],
+    description: {
+      manage: 'Manage subcontractors (suppliers with Subcontractor status).',
+    },
+  },
   supplier: {
     title: 'Suppliers',
     linkField: 'Name',
