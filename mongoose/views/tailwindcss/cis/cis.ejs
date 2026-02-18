@@ -84,6 +84,13 @@
       </div>
 
       <!-- Subcontractors Table -->
+
+      <% if (typeof debug !== 'undefined' && debug) { %>
+      <div class="mb-8 p-4 bg-gray-900 text-green-300 rounded-lg font-mono text-xs overflow-x-auto">
+        <h4 class="text-sm font-bold text-yellow-300 mb-2">Debug Output (?debug=1)</h4>
+        <pre><%= JSON.stringify(debug, null, 2) %></pre>
+      </div>
+      <% } %>
       <div class="mb-12">
         <h3 class="text-center text-2xl font-bold mb-6">Subcontractors</h3>
         <div class="overflow-x-auto">

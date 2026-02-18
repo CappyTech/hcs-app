@@ -364,6 +364,35 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       submissionEndDate,
       specifiedYear,
       specifiedMonth,
+      debug: req.query.debug === '1' ? {
+        params: { year: specifiedYear, month: specifiedMonth },
+        periodStart: currentMonthlyReturn.periodStart,
+        periodEnd: currentMonthlyReturn.periodEnd,
+        purchasesRawCount: purchasesRaw.length,
+        purchasesAfterDeleteFilter: purchases.length,
+        paidPurchasesCount: paidPurchases.length,
+        supplierIDsFromPaid: supplierIDs.slice(0, 20),
+        suppliersFoundCount: suppliers.length,
+        subbieCount: subbieSuppliers.length,
+        filteredPurchasesCount: filteredPurchases.length,
+        includeAllSuppliers,
+        sampleRawPurchases: purchasesRaw.slice(0, 5).map(p => ({
+          Id: p.Id, Number: p.Number, SupplierId: p.SupplierId, SupplierName: p.SupplierName,
+          PaidDate: p.PaidDate, IssuedDate: p.IssuedDate, TaxYear: p.TaxYear, TaxMonth: p.TaxMonth,
+          PaymentLinesCount: Array.isArray(p.PaymentLines) ? p.PaymentLines.length : 0,
+          PaymentLineDates: (p.PaymentLines || []).slice(0, 3).map(pl => pl?.PayDate || pl?.Date || null),
+          deletedAt: p.deletedAt || p.DeletedAt || null,
+        })),
+        sampleSuppliers: suppliers.slice(0, 10).map(s => ({
+          Id: s.Id, Name: s.Name, Subcontractor: s.Subcontractor, IsSubcontractor: s.IsSubcontractor, CISRate: s.CISRate,
+        })),
+        orConditionsUsed: [
+          `TaxYear=${specifiedYear}, TaxMonth=${specifiedMonth}`,
+          `PaidDate between ${currentMonthlyReturn.periodStart} and ${currentMonthlyReturn.periodEnd}`,
+          `PaymentLines.PayDate/Date in window`,
+          `IssuedDate in window`,
+        ],
+      } : null,
     });
   } catch (error) {
     logger.error(`Error rendering CIS dashboard Mongo: ${error.message}`, { stack: error.stack });
