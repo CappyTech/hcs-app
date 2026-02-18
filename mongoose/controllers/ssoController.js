@@ -96,9 +96,9 @@ exports.hcsSyncHandoff = async (req, res) => {
     return res.status(400).send('Invalid return URL');
   }
 
-  const secret = process.env.HCS_SSO_JWT_SECRET;
+  const secret = process.env.HCS_SSO_JWT_SECRET || process.env.JWT_SECRET;
   if (!secret) {
-    logger.error('[sso] HCS_SSO_JWT_SECRET missing');
+    logger.error('[sso] HCS_SSO_JWT_SECRET (and JWT_SECRET fallback) missing – cannot sign SSO token');
     return res.status(500).send('SSO not configured');
   }
 
@@ -124,13 +124,38 @@ exports.hcsSyncHandoff = async (req, res) => {
 
   const cookieDomain = String(process.env.HCS_SSO_COOKIE_DOMAIN || process.env.SESSION_COOKIE_DOMAIN || '').trim();
 
+  // Derive a shared parent domain when no explicit cookie domain is configured.
+  // e.g. app.heroncs.co.uk + sync.heroncs.co.uk → .heroncs.co.uk
+  let effectiveDomain = cookieDomain;
+  if (!effectiveDomain) {
+    try {
+      const appHost = (req.hostname || req.headers?.host || '').split(':')[0].toLowerCase();
+      const targetHost = String(returnTo.hostname || '').toLowerCase();
+      if (appHost && targetHost && appHost !== targetHost) {
+        const appParts = appHost.split('.');
+        const targetParts = targetHost.split('.');
+        const common = [];
+        while (appParts.length && targetParts.length &&
+               appParts[appParts.length - 1] === targetParts[targetParts.length - 1]) {
+          common.unshift(appParts.pop());
+          targetParts.pop();
+        }
+        // Need at least a registrable domain (e.g. heroncs.co.uk → 3 labels)
+        if (common.length >= 2) {
+          effectiveDomain = '.' + common.join('.');
+          logger.info(`[sso] No explicit cookie domain; derived "${effectiveDomain}" from ${appHost} ↔ ${targetHost}`);
+        }
+      }
+    } catch (_) { /* ignore derivation errors */ }
+  }
+
   res.cookie('hcs_sso', token, {
     httpOnly: true,
     secure: getCookieSecure(req),
     sameSite: 'lax',
     path: '/',
     maxAge: ttlSec * 1000,
-    ...(cookieDomain ? { domain: cookieDomain } : {}),
+    ...(effectiveDomain ? { domain: effectiveDomain } : {}),
   });
 
   return res.redirect(returnTo.toString());
