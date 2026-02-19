@@ -51,9 +51,45 @@
   <div class="grid md:grid-cols-3 gap-4">
     <!-- Main details -->
     <div class="md:col-span-2 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-      <% for (const key in schema) { 
-           if (key === 'LineItems' || key === 'PaymentLines') continue; 
+      <%
+        const _readRendered = new Set();
+        const _readKeys = Object.keys(schema).filter(k => k !== 'LineItems' && k !== 'PaymentLines');
+        const _readNestedGroups = {};
+        _readKeys.forEach(k => {
+          const dot = k.indexOf('.');
+          if (dot > -1) {
+            const prefix = k.substring(0, dot);
+            if (!_readNestedGroups[prefix]) _readNestedGroups[prefix] = [];
+            _readNestedGroups[prefix].push(k);
+          }
+        });
+        const _readGroupLabel = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase());
       %>
+      <% _readKeys.forEach(key => {
+        if (_readRendered.has(key)) return;
+        const _dot = key.indexOf('.');
+        const _prefix = _dot > -1 ? key.substring(0, _dot) : null;
+        if (_prefix && _readNestedGroups[_prefix]) {
+      %>
+        <fieldset class="mb-4 border border-gray-300 dark:border-gray-600 rounded p-3">
+          <legend class="px-2 text-sm font-semibold text-gray-700 dark:text-gray-200"><%= _readGroupLabel(_prefix) %></legend>
+          <% _readNestedGroups[_prefix].forEach(gKey => {
+            if (!_readRendered.has(gKey) && schema[gKey]) { %>
+              <%- include('../partials/_formField', {
+                key: gKey,
+                field: schema[gKey],
+                formData: item,
+                referenceData,
+                readOnly: true,
+                showTips: false,
+                config,
+                groupPrefix: _prefix
+              }) %>
+          <%  _readRendered.add(gKey);
+            }
+          }) %>
+        </fieldset>
+      <% } else { %>
         <%- include('../partials/_formField', {
           key,
           field: schema[key],
@@ -61,9 +97,12 @@
           referenceData,
           readOnly: true,
           showTips: false,
-          config
+          config,
+          groupPrefix: null
         }) %>
-      <% } %>
+      <% _readRendered.add(key);
+        }
+      }) %>
     </div>
 
     <!-- Sidebar: Items and Payments stacked -->

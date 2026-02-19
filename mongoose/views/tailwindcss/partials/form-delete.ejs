@@ -8,9 +8,40 @@
 
   <!-- Read-only fields (same grid as form-read) -->
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-    <% for (const key in schema) { %>
-      <%- include('../partials/_formField', { key, field: schema[key], formData: item, referenceData, readOnly: true, showTips: false, config }) %>
-    <% } %>
+    <%
+      const _delRendered = new Set();
+      const _delKeys = Object.keys(schema);
+      const _delNestedGroups = {};
+      _delKeys.forEach(k => {
+        const dot = k.indexOf('.');
+        if (dot > -1) {
+          const prefix = k.substring(0, dot);
+          if (!_delNestedGroups[prefix]) _delNestedGroups[prefix] = [];
+          _delNestedGroups[prefix].push(k);
+        }
+      });
+      const _delGroupLabel = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase());
+    %>
+    <% _delKeys.forEach(key => {
+      if (_delRendered.has(key)) return;
+      const _dot = key.indexOf('.');
+      const _prefix = _dot > -1 ? key.substring(0, _dot) : null;
+      if (_prefix && _delNestedGroups[_prefix]) {
+    %>
+      <fieldset class="col-span-full mb-4 border border-gray-300 dark:border-gray-600 rounded p-3">
+        <legend class="px-2 text-sm font-semibold text-gray-700 dark:text-gray-200"><%= _delGroupLabel(_prefix) %></legend>
+        <% _delNestedGroups[_prefix].forEach(gKey => {
+          if (!_delRendered.has(gKey) && schema[gKey]) { %>
+            <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData: item, referenceData, readOnly: true, showTips: false, config, groupPrefix: _prefix }) %>
+        <%  _delRendered.add(gKey);
+          }
+        }) %>
+      </fieldset>
+    <% } else { %>
+      <%- include('../partials/_formField', { key, field: schema[key], formData: item, referenceData, readOnly: true, showTips: false, config, groupPrefix: null }) %>
+    <% _delRendered.add(key);
+      }
+    }) %>
   </div>
 
   <!-- Confirmation panel -->

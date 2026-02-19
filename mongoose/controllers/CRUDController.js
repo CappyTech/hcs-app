@@ -156,6 +156,36 @@ function validateXorGroups(data, xorGroups) {
   return errors;
 }
 
+// Recursively clean nested objects from form body (bracket-notation parsed by qs)
+// For create: convert empty strings to undefined so Mongoose defaults apply
+function cleanBodyForCreate(obj) {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return obj;
+  const result = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+      result[key] = cleanBodyForCreate(val);
+    } else {
+      result[key] = val === '' ? undefined : val;
+    }
+  }
+  return result;
+}
+
+// For update: remove empty strings entirely so unchanged fields are not overwritten
+function cleanBodyForUpdate(obj) {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return obj;
+  const result = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+      const nested = cleanBodyForUpdate(val);
+      if (Object.keys(nested).length > 0) result[key] = nested;
+    } else if (val !== '') {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 // Register handlers for both REST and INTERNAL namespaces
 for (const namespace of ['REST', 'INTERNAL']) {
   if (!mdb[namespace]) continue;
@@ -412,11 +442,8 @@ for (const namespace of ['REST', 'INTERNAL']) {
               });
             }
           }
-          // Clean up submitted data: convert empty strings to undefined
-          const cleanedData = {};
-          for (const [key, value] of Object.entries(req.body)) {
-            cleanedData[key] = value === '' ? undefined : value;
-          }
+          // Clean up submitted data: convert empty strings to undefined (supports nested objects)
+          const cleanedData = cleanBodyForCreate(req.body);
           const doc = new Model(cleanedData);
           await doc.save();
           // Hook: update holiday accruals when creating attendance for an employee
@@ -483,11 +510,15 @@ for (const namespace of ['REST', 'INTERNAL']) {
           // 1) pull down your schema so you know which fields are .ref
           const schema = extractSchema(Model, config);
 
-          // 2) clean + map
+          // 2) clean + map (supports nested objects from bracket-notation form fields)
+          const preClean = cleanBodyForUpdate(req.body);
           const cleaned = {};
-          for (const [key, val] of Object.entries(req.body)) {
-            // drop empty strings
-            if (val === '') continue;
+          for (const [key, val] of Object.entries(preClean)) {
+            // Nested objects (e.g., contract, holidayPolicy) pass through directly
+            if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+              cleaned[key] = val;
+              continue;
+            }
 
             // if this field is a ref, and it's not already a valid ObjectId…
             // Try both namespaces for refModel

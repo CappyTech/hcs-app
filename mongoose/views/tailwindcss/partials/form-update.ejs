@@ -50,15 +50,30 @@
           <p class="text-sm text-cyan-700 dark:text-cyan-300 italic mb-4">Select only one of the following:</p>
           <% groupFields.forEach(gKey => {
             if (schema[gKey] && !renderedFields.has(gKey)) { %>
-              <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData, referenceData, readOnly: false, showTips: true, config }) %>
+              <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData, referenceData, readOnly: false, showTips: true, config, groupPrefix: null }) %>
           <%  renderedFields.add(gKey);
             }
           }) %>
         </div>
+    <% } else {
+        const _dot = key.indexOf('.');
+        const _prefix = _dot > -1 ? key.substring(0, _dot) : null;
+        if (_prefix && _nestedGroups[_prefix]) {
+    %>
+        <fieldset class="mb-6 border border-gray-300 dark:border-gray-600 rounded p-4">
+          <legend class="px-2 text-sm font-semibold text-gray-700 dark:text-gray-200"><%= _groupLabel(_prefix) %></legend>
+          <% _nestedGroups[_prefix].forEach(gKey => {
+            if (!renderedFields.has(gKey) && schema[gKey]) { %>
+              <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData, referenceData, readOnly: false, showTips: true, config, groupPrefix: _prefix }) %>
+          <%  renderedFields.add(gKey);
+            }
+          }) %>
+        </fieldset>
     <% } else { %>
-        <%- include('../partials/_formField', { key, field, formData, referenceData, readOnly: false, showTips: true, config }) %>
+        <%- include('../partials/_formField', { key, field, formData, referenceData, readOnly: false, showTips: true, config, groupPrefix: null }) %>
     <%  renderedFields.add(key);
       }
+    }
     }) %>
 
     <p class="text-gray-500 dark:text-gray-300 text-sm mb-4"><span class="text-red-600">*</span> Required fields</p>
