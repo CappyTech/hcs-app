@@ -159,15 +159,15 @@
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Email</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%= employee.email || '<span class="text-gray-400 italic">Not set</span>' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.email || '<span class="text-gray-400 italic">Not set</span>' %></p>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Phone</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%= employee.phoneNumber || '<span class="text-gray-400 italic">Not set</span>' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.phoneNumber || '<span class="text-gray-400 italic">Not set</span>' %></p>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Position</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%= employee.position || '<span class="text-gray-400 italic">Not set</span>' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.position || '<span class="text-gray-400 italic">Not set</span>' %></p>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Employment Type</p>
@@ -214,7 +214,7 @@
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Hours / Week</p>
-              <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%= employee.contract.hoursPerWeek != null ? employee.contract.hoursPerWeek : '<span class="text-gray-400 italic">Not specified</span>' %></p>
+              <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.contract.hoursPerWeek != null ? employee.contract.hoursPerWeek : '<span class="text-gray-400 italic">Not specified</span>' %></p>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Working Days / Week</p>
@@ -269,7 +269,7 @@
                 <span class="absolute -top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-500 text-white">Primary</span>
               <% } %>
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide"><%= r.label %></p>
-              <p class="mt-1 text-base font-semibold text-gray-800 dark:text-gray-200"><%= r.value || '<span class="text-gray-400 font-normal">—</span>' %></p>
+              <p class="mt-1 text-base font-semibold text-gray-800 dark:text-gray-200"><%- r.value || '<span class="text-gray-400 font-normal">—</span>' %></p>
             </div>
           <% }) %>
         </div>
@@ -357,7 +357,7 @@
           <% } %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">VAT Number</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%= subcontractor.VATNumber || subcontractor.VatNumber || '<span class="text-gray-400 italic">Not set</span>' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- subcontractor.VATNumber || subcontractor.VatNumber || '<span class="text-gray-400 italic">Not set</span>' %></p>
           </div>
           <% if (subcontractor.UniqueEntityNumber) { %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
@@ -424,7 +424,7 @@
           const addrParts = [addr.Line1, addr.Line2, addr.City, addr.County, addr.PostalCode, addr.Country].filter(Boolean);
         %>
         <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 max-w-lg">
-          <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed"><%= addrParts.join(', ') || '<span class="text-gray-400 italic">No address on file</span>' %></p>
+          <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed"><%- addrParts.join(', ') || '<span class="text-gray-400 italic">No address on file</span>' %></p>
         </div>
       </section>
       <% } %>
