@@ -47,9 +47,17 @@ exports.getProfilePage = async (req, res, next) => {
     // Fetch last login time from the most recent session
     let lastLoginTime = null;
     try {
+      // Try denormalized loginTime first
       const lastSession = await mdb.INTERNAL.session.findOne({ userId: user._id.toString() }).sort({ loginTime: -1 }).lean();
       if (lastSession && lastSession.loginTime) {
         lastLoginTime = lastSession.loginTime;
+      } else if (lastSession) {
+        // Fallback: parse loginTime from the session JSON payload (legacy sessions)
+        let payload = lastSession.session;
+        if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch (_) { payload = {}; } }
+        if (payload?.user?.loginTime) {
+          lastLoginTime = new Date(payload.user.loginTime);
+        }
       }
     } catch (e) {
       logger.warn(`Could not fetch last login time: ${e.message}`);

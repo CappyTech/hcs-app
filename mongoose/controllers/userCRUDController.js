@@ -270,6 +270,30 @@ exports.loginUser = async (req, res) => {
       req.session.save(err => (err ? reject(err) : resolve()));
     });
 
+    // Denormalize user fields onto the session document for efficient querying
+    try {
+      if (mdb.INTERNAL.session) {
+        await mdb.INTERNAL.session.updateOne(
+          { _id: req.sessionID },
+          { $set: {
+              userId: user._id.toString(),
+              username: user.username,
+              email: user.email,
+              role: user.role,
+              ip,
+              uaBrowser: sessionData.userAgent.browser,
+              uaVersion: sessionData.userAgent.version,
+              uaOS: sessionData.userAgent.os,
+              loginTime: new Date(sessionData.loginTime)
+            }
+          },
+          { upsert: true }
+        );
+      }
+    } catch (e) {
+      logger.warn(`Session denorm (login) failed: ${e.message}`);
+    }
+
     logger.info(
       `${user.username} successfully logged in. ` +
       `sess=${maskId(req.sessionID)} sidCookieWas=${hasCookie(req, 'hms.sid') ? 'Y' : 'N'} sessionUser=${req.session?.user ? 'Y' : 'N'}`

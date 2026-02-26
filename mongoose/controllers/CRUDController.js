@@ -379,7 +379,18 @@ for (const namespace of ['REST', 'INTERNAL']) {
           const canUpdate = req.user?.role === 'admin' || rbac.canAccess(req.user?.role, modelName, 'u').allowed;
           const canDelete = req.user?.role === 'admin' || rbac.canAccess(req.user?.role, modelName, 'd').allowed;
 
-          res.render(path.join('tailwindcss', 'partials', 'form-read'), {
+          // Allow per-model custom read view + extra locals
+          const viewPath = config.readView || path.join('tailwindcss', 'partials', 'form-read');
+          let extraLocals = {};
+          if (typeof config.readLocals === 'function') {
+            try {
+              extraLocals = await config.readLocals(item, req) || {};
+            } catch (e) {
+              logger.warn(`readLocals for ${modelName} failed: ${e.message}`);
+            }
+          }
+
+          res.render(viewPath, {
             title: `${config.title || baseName} Details`,
             item,
             schema,
@@ -389,6 +400,7 @@ for (const namespace of ['REST', 'INTERNAL']) {
             actions: config.actions || [],
             canUpdate,
             canDelete,
+            ...extraLocals,
           });
         } catch (err) {
           logger.error(`❌ Error reading ${modelName}: ${err.message}`);

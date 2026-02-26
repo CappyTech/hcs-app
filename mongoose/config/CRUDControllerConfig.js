@@ -1,5 +1,6 @@
 const note = require("../models/mongoose/REST/note");
 const { OcrDocument } = require("./listControllerConfig");
+const path = require('path');
 
 module.exports = {
   purchase: {
@@ -333,7 +334,53 @@ module.exports = {
       create: ['ensureRole:admin'],
       update: ['ensureRole:admin'],
       delete: ['ensureRole:admin'],
-    }
+    },
+    readView: path.join('tailwindcss', 'user', 'read'),
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const rbac = require('./rolePermissionsConfig');
+
+      const employee = item.employeeId ? await mdb.INTERNAL.employee.findById(item.employeeId).lean() : null;
+      const subcontractor = item.subcontractorId ? await mdb.REST.supplier.findById(item.subcontractorId).lean() : null;
+      const client = item.clientId ? await mdb.REST.customer.findById(item.clientId).lean() : null;
+
+      const role = item.role || 'none';
+      const departments = rbac.getDepartmentsForRole(role);
+      const modelAccess = rbac.roleModelAccess[role] || {};
+
+      const permissions = {
+        role,
+        departments,
+        models: Object.entries(modelAccess).map(([model, perms]) => {
+          const ops = perms.split(',').map(e => e.trim());
+          return {
+            model: model.charAt(0).toUpperCase() + model.slice(1),
+            operations: ops.map(op => {
+              const [code, scope] = op.split(':');
+              const labels = { c: 'Create', r: 'Read', u: 'Update', d: 'Delete', l: 'List' };
+              return { label: labels[code] || code, ownOnly: scope === 'own' };
+            }),
+          };
+        }),
+        customRoutes: Object.entries(rbac.routeAccess)
+          .filter(([, roles]) => roles === '*' || (Array.isArray(roles) && roles.includes(role)))
+          .map(([route]) => route),
+      };
+
+      let lastLoginTime = null;
+      try {
+        const lastSession = await mdb.INTERNAL.session.findOne({ userId: item._id.toString() }).sort({ loginTime: -1 }).lean();
+        if (lastSession && lastSession.loginTime) {
+          lastLoginTime = lastSession.loginTime;
+        } else if (lastSession) {
+          let payload = lastSession.session;
+          if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch (_) { payload = {}; } }
+          if (payload?.user?.loginTime) lastLoginTime = new Date(payload.user.loginTime);
+        }
+      } catch (_) { /* ignore */ }
+
+      return { user: item, employee, subcontractor, client, permissions, lastLoginTime };
+    },
   },
   employeeHoliday: {
     readOnly: ['uuid', 'createdAt'],
