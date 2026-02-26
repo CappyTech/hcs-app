@@ -25,13 +25,16 @@
     baseLabel = baseLabel.substring(baseLabel.indexOf('.') + 1).trim();
   }
 
-  let labelSuffix = field.required
-    ? '<span class="text-red-600">*</span>'
-    : '<small class="text-gray-500">(optional)</small>';
-  if (field.default != null && typeof field.default !== 'function' && field.default !== '') {
-    labelSuffix += ` <small class="text-gray-500">(default: ${field.default})</small>`;
+  let labelSuffix = '';
+  if (!readOnlyField) {
+    labelSuffix = field.required
+      ? '<span class="text-red-600">*</span>'
+      : '<small class="text-gray-500">(optional)</small>';
+    if (field.default != null && typeof field.default !== 'function' && field.default !== '') {
+      labelSuffix += ` <small class="text-gray-500">(default: ${field.default})</small>`;
+    }
   }
-  const label = baseLabel + ' ' + labelSuffix;
+  const label = baseLabel + (labelSuffix ? ' ' + labelSuffix : '');
 %>
 <% if (readOnlyField) { %>
   <% /* 1) Special case: Assignments array pretty table */ %>

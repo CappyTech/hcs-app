@@ -11,7 +11,31 @@ module.exports = {
     }
   },
   attendance: {
+    title: 'Attendance',
     readOnly: ['uuid', 'createdAt'],
+    hideFields: ['_id', '__v'],
+    fieldOrder: [
+      'date', 'type', 'status',
+      'employeeId', 'subcontractorId',
+      'projectId', 'locationId', 'contractAssignmentId',
+      'hoursWorked', 'breakMinutes', 'overtimeHours', 'overtimeRate',
+      'payRate', 'dayRate',
+      'notes',
+      'uuid', 'createdAt', 'updatedAt'
+    ],
+    labelOverrides: {
+      employeeId: 'Employee',
+      subcontractorId: 'Subcontractor',
+      projectId: 'Project',
+      locationId: 'Location',
+      contractAssignmentId: 'Contract Assignment',
+      hoursWorked: 'Hours Worked',
+      breakMinutes: 'Break (minutes)',
+      overtimeHours: 'Overtime Hours',
+      overtimeRate: 'Overtime Rate',
+      payRate: 'Pay Rate',
+      dayRate: 'Day Rate'
+    },
     validators: {
       date: value => !isNaN(Date.parse(value)),
       type: value => ['off', 'holiday', 'sick', 'work', 'training', 'leave'].includes(value),
@@ -41,21 +65,49 @@ module.exports = {
     referenceLabelFormat: {
       // Projects: Show number, name, and status label
       projectId: (project) => {
-        const statusLabel = {
-          0: 'Pending',
-          1: 'In Progress',
-          2: 'Completed'
-        }[project.Status] || 'NothingisFuckingSet';
-
-        const projectReference = project.Number ?? 'NothingisFuckingSet';
-        const projectName = project.Name ?? 'NothingisFuckingSet';
-        return `#${projectReference} – ${projectName} (${statusLabel})`;
+        const statusMap = { 0: 'Pending', 1: 'In Progress', 2: 'Completed' };
+        const statusLabel = statusMap[project.Status] || 'Unknown';
+        const projectReference = project.Number ?? '';
+        const projectName = project.Name ?? 'Unnamed Project';
+        const prefix = projectReference ? `#${projectReference} – ` : '';
+        return `${prefix}${projectName} (${statusLabel})`;
       },
 
-      // Subcontractors: Show name, postcode, and CIS rate
+      // Subcontractors: Show name
       subcontractorId: (supplier) => {
-        const name = supplier.Name ?? '';
-        return `${name}`;
+        return supplier.Name || supplier.name || 'Unnamed Subcontractor';
+      },
+
+      // Employees: Show name
+      employeeId: (employee) => {
+        return employee.name || employee.Name || 'Unnamed Employee';
+      },
+
+      // Locations: Show name or address
+      locationId: (location) => {
+        return location.name || location.Name || [location.address, location.city, location.postalCode].filter(Boolean).join(', ') || 'Unnamed Location';
+      },
+
+      // Contract Assignments: Show title or reference
+      contractAssignmentId: (assignment) => {
+        return assignment.title || assignment.Name || assignment.name || 'Assignment';
+      }
+    },
+    fieldTransforms: {
+      projectId: {
+        linkTo: (matched) => `/project/read/${matched.uuid}`
+      },
+      employeeId: {
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorId: {
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
+      },
+      locationId: {
+        linkTo: (matched) => `/location/read/${matched.uuid}`
+      },
+      contractAssignmentId: {
+        linkTo: (matched) => `/contractAssignment/read/${matched.uuid}`
       }
     }
   },

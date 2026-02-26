@@ -121,7 +121,8 @@ const extractSchema = (model, config = {}) => {
 };
 
 // Fetch reference data (for fields with .ref)
-const fetchReferenceData = async (schema, config = {}) => {
+// skipFilters: when true, ignore referenceFilters (used by read/delete views to resolve any referenced item)
+const fetchReferenceData = async (schema, config = {}, { skipFilters = false } = {}) => {
   const referenceData = {};
 
   for (const [key, field] of Object.entries(schema)) {
@@ -129,10 +130,10 @@ const fetchReferenceData = async (schema, config = {}) => {
     // Look up the referenced model across all namespaces
     const refModel = mdb.REST?.[field.ref] || mdb.INTERNAL?.[field.ref] || mdb.PAPERLESS?.[field.ref] || mdb[field.ref];
     if (!refModel || typeof refModel.find !== 'function') continue;
-    const filter = config.referenceFilters?.[key] || {};
+    const filter = skipFilters ? {} : (config.referenceFilters?.[key] || {});
     referenceData[key] = await refModel
       .find(filter)
-      .select('uuid name Name InvoiceNumber Customer jobRef title username Number Status status Id')
+      .select('uuid name Name InvoiceNumber Customer jobRef title username Number Status status Id address city postalCode')
       .lean();
   }
 
@@ -214,7 +215,7 @@ for (const namespace of ['REST', 'INTERNAL']) {
           }
 
           const schema = extractSchema(Model, config);
-          const referenceData = await fetchReferenceData(schema, config);
+          const referenceData = await fetchReferenceData(schema, config, { skipFilters: true });
 
           // If reading a REST supplier, include their related purchases
           if (modelName === 'supplier' && mdb.REST?.purchase) {
@@ -572,7 +573,7 @@ for (const namespace of ['REST', 'INTERNAL']) {
 
             // Build schema and reference data for read-only field rendering
             const schema = extractSchema(Model, config);
-            const referenceData = await fetchReferenceData(schema, config);
+            const referenceData = await fetchReferenceData(schema, config, { skipFilters: true });
 
             return res.render(path.join('tailwindcss', 'partials', 'form-delete'), {
               title: `Delete ${config.title || baseName}`,
