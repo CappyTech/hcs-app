@@ -320,7 +320,20 @@ module.exports = {
     }
   },
   user: {
+    title: 'User',
     readOnly: ['uuid', 'createdAt'],
+    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'emailVerificationToken', 'emailVerificationExpires'],
+    fieldOrder: [
+      'username', 'email', 'emailVerified', 'role',
+      'employeeId', 'subcontractorId', 'clientId',
+      'uuid', 'createdAt', 'updatedAt',
+    ],
+    labelOverrides: {
+      employeeId: 'Employee',
+      subcontractorId: 'Subcontractor',
+      clientId: 'Client',
+      emailVerified: 'Email Verified',
+    },
     validators: {
       email: value => /\S+@\S+\.\S+/.test(value),
       password: value => typeof value === 'string' && value.length >= 6,
@@ -341,6 +354,35 @@ module.exports = {
         const crypto = require('crypto');
         data.password = crypto.randomBytes(24).toString('base64url');
       }
+    },
+    updateView: path.join('tailwindcss', 'user', 'update'),
+    updateLocals: async (item) => {
+      const rbac = require('./rolePermissionsConfig');
+      const allRoles = ['none', 'employee', 'subcontractor', 'client', 'accountant', 'hmrc', 'admin'];
+
+      // Build a summary of what each role grants for the permissions preview
+      const roleDetails = {};
+      for (const r of allRoles) {
+        const departments = rbac.getDepartmentsForRole(r);
+        const modelAccess = rbac.roleModelAccess[r] || {};
+        const models = Object.entries(modelAccess).map(([model, perms]) => {
+          const ops = perms.split(',').map(e => e.trim());
+          return {
+            model: model.charAt(0).toUpperCase() + model.slice(1),
+            operations: ops.map(op => {
+              const [code, scope] = op.split(':');
+              const labels = { c: 'Create', r: 'Read', u: 'Update', d: 'Delete', l: 'List' };
+              return { label: labels[code] || code, ownOnly: scope === 'own' };
+            }),
+          };
+        });
+        const customRoutes = Object.entries(rbac.routeAccess)
+          .filter(([, roles]) => roles === '*' || (Array.isArray(roles) && roles.includes(r)))
+          .map(([route]) => route);
+        roleDetails[r] = { departments, models, customRoutes };
+      }
+
+      return { roleDetails, allRoles };
     },
     readView: path.join('tailwindcss', 'user', 'read'),
     readLocals: async (item) => {

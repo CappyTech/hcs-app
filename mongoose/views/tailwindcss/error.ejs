@@ -1,15 +1,31 @@
 <div class="max-w-3xl mx-auto mt-12 px-4">
   <div class="text-center">
-    <!-- Bootstrap Icon with Tailwind sizing & color -->
-    <i class="bi bi-exclamation-triangle-fill text-red-600 text-[5rem]"></i>
+    <% const is403 = error.title && error.title.startsWith('403'); %>
+    <% const is404 = error.title && error.title.startsWith('404'); %>
 
-    <!-- Error Title -->
-    <h1 class="mt-6 text-3xl font-bold"><%= error.title %></h1>
+    <% if (is403) { %>
+      <!-- 403 Forbidden — lock icon, friendly tone -->
+      <i class="bi bi-shield-lock-fill text-amber-500 text-[5rem]"></i>
+      <h1 class="mt-6 text-3xl font-bold">Access Denied</h1>
+      <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">
+        You don't have permission to view this page.<br>
+        If you think this is a mistake, contact your administrator.
+      </p>
+    <% } else if (is404) { %>
+      <!-- 404 Not Found — search icon, friendly tone -->
+      <i class="bi bi-search text-gray-400 text-[5rem]"></i>
+      <h1 class="mt-6 text-3xl font-bold">Page Not Found</h1>
+      <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">
+        The page you're looking for doesn't exist or has been moved.
+      </p>
+    <% } else { %>
+      <!-- Generic error -->
+      <i class="bi bi-exclamation-triangle-fill text-red-600 text-[5rem]"></i>
+      <h1 class="mt-6 text-3xl font-bold"><%= error.title %></h1>
+      <p class="mt-2 text-lg text-gray-600 dark:text-gray-300"><%= error.message %></p>
+    <% } %>
 
-    <!-- Error Message -->
-    <p class="mt-2 text-lg text-gray-600 dark:text-gray-300"><%= error.message %></p>
-
-    <!-- Stack Trace -->
+    <!-- Stack Trace (debug only) -->
     <% if (error.stack && process.env.DEBUG === 'true') { %>
       <div class="mt-6 bg-yellow-100 dark:bg-yellow-900 border border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-100 rounded p-4 text-left">
         <details class="text-sm whitespace-pre-wrap">
@@ -20,7 +36,7 @@
     <% } %>
 
     <!-- Return Button -->
-    <a href="/" class="inline-block mt-6 px-6 py-3 bg-red-700 text-white rounded hover:bg-red-800 transition">
+    <a href="/" class="inline-block mt-6 px-6 py-3 <%= is403 ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-700 hover:bg-red-800' %> text-white rounded transition">
       Return to Home
     </a>
   </div>

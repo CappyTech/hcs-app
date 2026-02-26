@@ -66,6 +66,11 @@ const userSchema = new mongoose.Schema({
     totpEnabled: {
         type: Boolean,
         default: false
+    },
+    customPermissions: {
+        departments: { type: [String], default: [] },
+        models: { type: Map, of: String, default: () => new Map() },
+        routes: { type: [String], default: [] }
     }
 }, {
     timestamps: true,

@@ -185,38 +185,72 @@ const routeAccess = {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /**
- * Return the departments a role can access.
- * @param {string} role
- * @returns {string[]}
+ * Parse a permission string like 'r:own,l:own,c' into entries.
+ * @param {string} perms
+ * @returns {{ op: string, scope: string|undefined }[]}
  */
-function getDepartmentsForRole(role) {
-  return roleDepartments[role] || [];
+function parsePerms(perms) {
+  if (!perms) return [];
+  return perms.split(',').map(e => {
+    const [op, scope] = e.trim().split(':');
+    return { op, scope };
+  });
 }
 
 /**
- * Check whether a role may perform an operation on a model.
- * @param {string}  role       e.g. 'accountant'
- * @param {string}  model      e.g. 'invoice'
+ * Return the departments a role can access, merged with any custom
+ * per-user departments.
+ * @param {string} role
+ * @param {Object} [customPerms]  user.customPermissions
+ * @returns {string[]}
+ */
+function getDepartmentsForRole(role, customPerms) {
+  const base = roleDepartments[role] || [];
+  const extra = customPerms?.departments || [];
+  if (!extra.length) return base;
+  return [...new Set([...base, ...extra])];
+}
+
+/**
+ * Check whether a role (+ optional custom permissions) may perform an
+ * operation on a model.
+ * @param {string}  role
+ * @param {string}  model
  * @param {string}  operation  one of 'c','r','u','d','l'
+ * @param {Object}  [customPerms]  user.customPermissions
  * @returns {{ allowed: boolean, ownOnly: boolean }}
  */
-function canAccess(role, model, operation) {
+function canAccess(role, model, operation, customPerms) {
   if (role === 'admin') return { allowed: true, ownOnly: false };
 
+  // 1) Check role-level access
   const access = roleModelAccess[role];
-  if (!access) return { allowed: false, ownOnly: false };
-
-  const perms = access[model];
-  if (!perms) return { allowed: false, ownOnly: false };
-
-  // Parse permission string, e.g. 'r:own,l:own,c:own'
-  const entries = perms.split(',').map(e => e.trim());
-  for (const entry of entries) {
-    const [op, scope] = entry.split(':');
-    if (op === operation) {
-      return { allowed: true, ownOnly: scope === 'own' };
+  if (access) {
+    const perms = access[model];
+    if (perms) {
+      for (const { op, scope } of parsePerms(perms)) {
+        if (op === operation) {
+          return { allowed: true, ownOnly: scope === 'own' };
+        }
+      }
     }
   }
+
+  // 2) Check user-level custom permissions (always additive)
+  if (customPerms?.models) {
+    const customModelPerms = customPerms.models instanceof Map
+      ? customPerms.models.get(model)
+      : customPerms.models[model];
+    if (customModelPerms) {
+      for (const { op, scope } of parsePerms(customModelPerms)) {
+        if (op === operation) {
+          // Custom per-user model access is never own-scoped (admin granted it)
+          return { allowed: true, ownOnly: false };
+        }
+      }
+    }
+  }
+
   return { allowed: false, ownOnly: false };
 }
 
@@ -245,32 +279,91 @@ function getAllowedRolesForRoute(routePattern) {
 }
 
 /**
+ * Match a real request path (e.g. '/CIS/Dashboard/2026/2') to the best
+ * routeAccess key using longest-prefix matching.
+ * Returns the matched pattern key, or null if no pattern covers this path.
+ * @param {string} reqPath
+ * @returns {string|null}
+ */
+function matchRoutePattern(reqPath) {
+  // Strip trailing slash for consistent comparison
+  const normalised = reqPath.endsWith('/') && reqPath.length > 1
+    ? reqPath.slice(0, -1)
+    : reqPath;
+  let best = null;
+  let bestLen = 0;
+  for (const pattern of Object.keys(routeAccess)) {
+    if (normalised === pattern || normalised.startsWith(pattern + '/')) {
+      if (pattern.length > bestLen) { best = pattern; bestLen = pattern.length; }
+    }
+  }
+  return best;
+}
+
+/**
+ * Check whether a user can access a custom route (role + custom grants).
+ * @param {string} role
+ * @param {string} routePattern
+ * @param {Object} [customPerms]  user.customPermissions
+ * @returns {boolean}
+ */
+function canAccessRoute(role, routePattern, customPerms) {
+  if (role === 'admin') return true;
+  const allowed = routeAccess[routePattern];
+  if (allowed === '*') return true;
+  if (Array.isArray(allowed) && allowed.includes(role)) return true;
+  if (customPerms?.routes?.includes(routePattern)) return true;
+  return false;
+}
+
+/**
  * Check whether a role can access a given department.
  * @param {string} role
  * @param {string} department
+ * @param {Object} [customPerms]  user.customPermissions
  * @returns {boolean}
  */
-function canAccessDepartment(role, department) {
+function canAccessDepartment(role, department, customPerms) {
   if (role === 'admin') return true;
-  return (roleDepartments[role] || []).includes(department);
+  if ((roleDepartments[role] || []).includes(department)) return true;
+  if (customPerms?.departments?.includes(department)) return true;
+  return false;
 }
 
 /**
  * Get all models a role can list (for nav/UI filtering).
  * @param {string} role
+ * @param {Object} [customPerms]  user.customPermissions
  * @returns {{ model: string, ownOnly: boolean }[]}
  */
-function getListableModels(role) {
+function getListableModels(role, customPerms) {
   if (role === 'admin') return [{ model: '_wildcard', ownOnly: false }];
 
-  const access = roleModelAccess[role];
-  if (!access) return [];
-
   const result = [];
-  for (const [model, perms] of Object.entries(access)) {
-    const { allowed, ownOnly } = canAccess(role, model, 'l');
-    if (allowed) result.push({ model, ownOnly });
+  const seen = new Set();
+
+  // Role-level
+  const access = roleModelAccess[role];
+  if (access) {
+    for (const [model, perms] of Object.entries(access)) {
+      const { allowed, ownOnly } = canAccess(role, model, 'l');
+      if (allowed) { result.push({ model, ownOnly }); seen.add(model); }
+    }
   }
+
+  // Custom user-level
+  if (customPerms?.models) {
+    const entries = customPerms.models instanceof Map
+      ? [...customPerms.models.entries()]
+      : Object.entries(customPerms.models);
+    for (const [model, perms] of entries) {
+      if (seen.has(model)) continue;
+      for (const { op } of parsePerms(perms)) {
+        if (op === 'l') { result.push({ model, ownOnly: false }); seen.add(model); break; }
+      }
+    }
+  }
+
   return result;
 }
 
@@ -281,6 +374,8 @@ module.exports = {
   routeAccess,
   getDepartmentsForRole,
   canAccess,
+  canAccessRoute,
+  matchRoutePattern,
   getOwnershipConfig,
   getAllowedRolesForRoute,
   canAccessDepartment,

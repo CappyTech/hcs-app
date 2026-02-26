@@ -30,7 +30,8 @@ async function scopeQuery(req, model, operation = 'r') {
   // Admin bypasses all scoping
   if (role === 'admin') return {};
 
-  const { allowed, ownOnly } = rbac.canAccess(role, model, operation);
+  const customPerms = req.user?.customPermissions || {};
+  const { allowed, ownOnly } = rbac.canAccess(role, model, operation, customPerms);
   if (!allowed) return null; // caller should 403
 
   // If not own-only, return unscoped

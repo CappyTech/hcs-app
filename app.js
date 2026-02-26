@@ -130,6 +130,7 @@ const main = async () => {
     app.use(require('./services/securityService'));
     app.use(require('./services/flashService'));
     app.use(authService.ensureAuthenticated);
+    app.use(authService.ensureRouteAccess);
     app.use(require('./services/logRequestDetailsService'));
     app.use(require('./services/rateLimiterService'));
   // Maintenance/availability guard (friendly 503 when backing services are restarting)
@@ -172,13 +173,14 @@ const main = async () => {
       res.locals.isAdmin = req.user && req.user.role === 'admin';
 
       // RBAC: expose departments the user's role can access
+      const _customPerms = req.user?.customPermissions || {};
       res.locals.userDepartments = req.user
-        ? rbac.getDepartmentsForRole(req.user.role)
+        ? rbac.getDepartmentsForRole(req.user.role, _customPerms)
         : [];
       // Helper: check if user can access a department (usable in templates)
-      res.locals.canDept = (dept) => req.user ? rbac.canAccessDepartment(req.user.role, dept) : false;
+      res.locals.canDept = (dept) => req.user ? rbac.canAccessDepartment(req.user.role, dept, _customPerms) : false;
       // Helper: check CRUD access on a model
-      res.locals.canModel = (model, op) => req.user ? rbac.canAccess(req.user.role, model, op).allowed : false;
+      res.locals.canModel = (model, op) => req.user ? rbac.canAccess(req.user.role, model, op, _customPerms).allowed : false;
       // Expose role flags for template convenience
       res.locals.isEmployee = req.user && req.user.role === 'employee';
       res.locals.isSubcontractor = req.user && req.user.role === 'subcontractor';

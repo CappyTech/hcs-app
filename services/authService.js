@@ -88,15 +88,21 @@ function ensureRoles(...roles) {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
-      return next({
-        statusCode: 403,
-        name: 'ForbiddenError',
-        message: `User role "${req.user.role}" is not in [${roles.join(', ')}]`,
-      });
+    // 1. Role match — allow
+    if (roles.includes(req.user.role)) return next();
+
+    // 2. Custom route permission — check if this path is in user's custom grants
+    const customRoutes = req.user.customPermissions?.routes || [];
+    if (customRoutes.length > 0) {
+      const matched = rbac.matchRoutePattern(req.path);
+      if (matched && customRoutes.includes(matched)) return next();
     }
 
-    next();
+    return next({
+      statusCode: 403,
+      name: 'ForbiddenError',
+      message: 'You do not have permission to access this page.',
+    });
   };
 }
 
@@ -130,7 +136,8 @@ function ensureModelAccess(model, operation) {
         message: 'User not authenticated',
       });
     }
-    const { allowed, ownOnly } = rbac.canAccess(req.user.role, model, operation);
+    const customPerms = req.user.customPermissions || {};
+    const { allowed, ownOnly } = rbac.canAccess(req.user.role, model, operation, customPerms);
     if (!allowed) {
       return next({
         statusCode: 403, name: 'ForbiddenError',
@@ -189,6 +196,25 @@ function ensureOwnership(model) {
   };
 }
 
+// ── Global route-access guard (uses routeAccess config + customPerms) ─
+function ensureRouteAccess(req, res, next) {
+  // Only applies to authenticated users (ensureAuthenticated runs first)
+  if (!req.user) return next();
+
+  const matched = rbac.matchRoutePattern(req.path);
+  // No pattern in config → not a controlled route, let per-route guards decide
+  if (!matched) return next();
+
+  const customPerms = req.user.customPermissions || {};
+  if (rbac.canAccessRoute(req.user.role, matched, customPerms)) return next();
+
+  return next({
+    statusCode: 403,
+    name: 'ForbiddenError',
+    message: 'You do not have permission to access this page.',
+  });
+}
+
 // ── Department access middleware ──────────────────────────────────────
 function ensureDepartment(department) {
   return (req, res, next) => {
@@ -198,7 +224,8 @@ function ensureDepartment(department) {
         message: 'User not authenticated',
       });
     }
-    if (!rbac.canAccessDepartment(req.user.role, department)) {
+    const customPerms = req.user.customPermissions || {};
+    if (!rbac.canAccessDepartment(req.user.role, department, customPerms)) {
       return next({
         statusCode: 403, name: 'ForbiddenError',
         message: `Role "${req.user.role}" cannot access department "${department}"`,
@@ -210,6 +237,7 @@ function ensureDepartment(department) {
 
 module.exports = {
   ensureAuthenticated,
+  ensureRouteAccess,
   ensureRoles,
   ensureRole,
   ensureAnyRole,

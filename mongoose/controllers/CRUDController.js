@@ -209,7 +209,8 @@ for (const namespace of ['REST', 'INTERNAL']) {
 
           // ── Ownership check: non-admin own-only roles must own this record ──
           if (req.user && req.user.role !== 'admin') {
-            const { allowed, ownOnly } = rbac.canAccess(req.user.role, modelName, 'r');
+            const customPerms = req.user?.customPermissions || {};
+            const { allowed, ownOnly } = rbac.canAccess(req.user.role, modelName, 'r', customPerms);
             if (ownOnly) {
               const filter = await scopeQuery(req, modelName, 'r');
               if (!filter) return res.status(403).render(path.join('mongoose', 'error'));
@@ -376,8 +377,9 @@ for (const namespace of ['REST', 'INTERNAL']) {
           }
 
           // Determine if current user can update/delete this model
-          const canUpdate = req.user?.role === 'admin' || rbac.canAccess(req.user?.role, modelName, 'u').allowed;
-          const canDelete = req.user?.role === 'admin' || rbac.canAccess(req.user?.role, modelName, 'd').allowed;
+          const _cp = req.user?.customPermissions || {};
+          const canUpdate = req.user?.role === 'admin' || rbac.canAccess(req.user?.role, modelName, 'u', _cp).allowed;
+          const canDelete = req.user?.role === 'admin' || rbac.canAccess(req.user?.role, modelName, 'd', _cp).allowed;
 
           // Allow per-model custom read view + extra locals
           const viewPath = config.readView || path.join('tailwindcss', 'partials', 'form-read');
@@ -512,7 +514,18 @@ for (const namespace of ['REST', 'INTERNAL']) {
             const schema = extractSchema(Model, config);
             const referenceData = await fetchReferenceData(schema, config);
 
-            return res.render(path.join('tailwindcss', 'partials', 'form-update'), {
+            // Allow per-model custom update view + extra locals
+            const updateViewPath = config.updateView || path.join('tailwindcss', 'partials', 'form-update');
+            let extraLocals = {};
+            if (typeof config.updateLocals === 'function') {
+              try {
+                extraLocals = await config.updateLocals(item, req) || {};
+              } catch (e) {
+                logger.warn(`updateLocals for ${modelName} failed: ${e.message}`);
+              }
+            }
+
+            return res.render(updateViewPath, {
               title: `Update ${config.title || baseName}`,
               formData: item,
               schema,
@@ -521,7 +534,8 @@ for (const namespace of ['REST', 'INTERNAL']) {
               basePath: modelName,
               listControllerConfig: listControllerConfig[modelName] || {},
               config,
-              errors: [], // ✅ Now safe
+              errors: [],
+              ...extraLocals,
             });
           } catch (err) {
             logger.error(`❌ Error fetching ${modelName} for update: ${err.message}`);
