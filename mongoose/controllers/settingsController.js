@@ -8,6 +8,8 @@ const encryptionService = require('../../services/encryptionService');
 const speakeasy = require('speakeasy');
 const totpService = require('../../services/totpService');
 const rbac = require('../config/rolePermissionsConfig');
+const crypto = require('crypto');
+const emailService = require('../../services/emailService');
 const { validationResult, body } = require('express-validator');
 
 exports.getProfilePage = async (req, res, next) => {
@@ -65,7 +67,7 @@ exports.getProfilePage = async (req, res, next) => {
   } catch (error) {
     logger.error(`Error loading profile: ${error.message}`);
     req.flash('error', 'Failed to load profile.');
-    res.redirect('/');
+    next(error);
   }
 };
 
@@ -166,16 +168,55 @@ exports.updateAccountSettings = async (req, res) => {
       return res.redirect('/user/account');
     }
 
-    user.username = req.body.newUsername;
-    user.email = req.body.newEmail;
+    const newUsername = req.body.newUsername;
+    const newEmail = req.body.newEmail;
 
-    await user.save();
+    // Check uniqueness of username (if changed)
+    if (newUsername !== user.username) {
+      const existingUser = await mdb.INTERNAL.user.findOne({ username: newUsername, _id: { $ne: user._id } });
+      if (existingUser) {
+        req.flash('error', 'That username is already taken.');
+        return res.redirect('/user/account');
+      }
+    }
 
-    req.flash('success', 'Account settings updated successfully');
+    // Check uniqueness of email (if changed)
+    const emailChanged = newEmail.toLowerCase() !== user.email.toLowerCase();
+    if (emailChanged) {
+      const existingEmail = await mdb.INTERNAL.user.findOne({ email: newEmail.toLowerCase(), _id: { $ne: user._id } });
+      if (existingEmail) {
+        req.flash('error', 'That email is already in use.');
+        return res.redirect('/user/account');
+      }
+    }
+
+    user.username = newUsername;
+    user.email = newEmail;
+
+    // Reset email verification when the email address changes
+    if (emailChanged) {
+      user.emailVerified = false;
+      const verificationToken = crypto.randomBytes(48).toString('hex');
+      user.emailVerificationToken = verificationToken;
+      user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await user.save();
+      await emailService.sendVerificationEmail(newEmail, verificationToken);
+      logger.info(`Email changed for user ${req.session.user.id} — verification email sent to ${newEmail}`);
+    } else {
+      await user.save();
+    }
+
+    // Keep session in sync
+    req.session.user.username = user.username;
+    req.session.user.email = user.email;
+
+    req.flash('success', emailChanged
+      ? 'Account settings updated. Please verify your new email address.'
+      : 'Account settings updated successfully.');
     res.redirect('/user/account');
   } catch (error) {
     logger.error(`Error updating account settings: ${error.message}`);
-    req.flash('error', 'Failed to update account settings');
+    req.flash('error', 'Failed to update account settings.');
     res.redirect('/user/account');
   }
 };
@@ -207,6 +248,12 @@ exports.logoutSession = async (req, res, next) => {
 
     if (!ownsSession) {
       req.flash('error', 'You can only log out your own sessions.');
+      return res.redirect('/user/account/');
+    }
+
+    // Prevent logging out the current session (use the normal logout flow instead)
+    if (sessionId === req.sessionID) {
+      req.flash('error', 'You cannot log out your current session from here. Use the logout button instead.');
       return res.redirect('/user/account/');
     }
 
@@ -306,9 +353,21 @@ exports.verifyAndEnableTotp = async (req, res) => {
 
 exports.disableTotp = async (req, res) => {
   try {
+    const { confirmPassword } = req.body;
+    if (!confirmPassword) {
+      req.flash('error', 'Please enter your password to disable Two-Factor Authentication.');
+      return res.redirect('/user/account');
+    }
+
     const user = await mdb.INTERNAL.user.findById(req.session.user.id);
     if (!user) {
       req.flash('error', 'User not found');
+      return res.redirect('/user/account');
+    }
+
+    const isMatch = await bcrypt.compare(confirmPassword, user.password);
+    if (!isMatch) {
+      req.flash('error', 'Incorrect password. Two-Factor Authentication was not disabled.');
       return res.redirect('/user/account');
     }
 

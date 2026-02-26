@@ -56,6 +56,10 @@ const userSchema = new mongoose.Schema({
     },
     totpSecret: {
         type: String,
+        // NOTE: The getter/setter auto-encrypts on write and auto-decrypts on read.
+        // totpService.generateTOTPSecret and the controllers ALSO call encrypt/decrypt
+        // manually, resulting in double encryption at rest. This works because the two
+        // layers are symmetrically applied, but callers should be aware of the pattern.
         get: (v) => (v ? encryptionService.decrypt(v) : null),
         set: (v) => (v ? encryptionService.encrypt(v) : undefined)
     },
