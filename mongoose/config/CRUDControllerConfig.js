@@ -2,12 +2,20 @@ const note = require("../models/mongoose/REST/note");
 const { OcrDocument } = require("./listControllerConfig");
 
 module.exports = {
+  purchase: {
+    middleware: {
+      read: ['ensureRoles:admin,accountant,subcontractor'],
+    },
+    ownershipFields: {
+      subcontractor: 'SupplierId',
+    },
+  },
   default: {
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   attendance: {
@@ -48,10 +56,14 @@ module.exports = {
       breakMinutes: value => Number.isInteger(value) && value >= 0,
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRoles:admin,employee,subcontractor'],
+      create: ['ensureRoles:admin,employee,subcontractor'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      employee: 'employeeId',
+      subcontractor: 'subcontractorId',
     },
     xorGroups: [
       ['employeeId', 'subcontractorId'],
@@ -118,10 +130,10 @@ module.exports = {
       status: value => ['active', 'completed', 'draft'].includes(value),
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   contractAssignment: {
@@ -133,10 +145,10 @@ module.exports = {
       contractId: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   employee: {
@@ -146,20 +158,26 @@ module.exports = {
       startDate: value => !isNaN(Date.parse(value))
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+      read: ['ensureRoles:admin,employee'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      employee: '_id',
+    },
   },
   customer: {
     readOnly: ['uuid', 'createdAt'],
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+      read: ['ensureRoles:admin,accountant,client'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      client: '_id',
+    },
   },
   holiday: {
     readOnly: ['uuid', 'createdAt'],
@@ -168,10 +186,10 @@ module.exports = {
       description: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   invoice: {
@@ -182,11 +200,14 @@ module.exports = {
       dueDate: value => !isNaN(Date.parse(value)),
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+      read: ['ensureRoles:admin,accountant,client'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      client: 'CustomerId',
+    },
   },
   location: {
     readOnly: ['uuid', 'createdAt'],
@@ -195,10 +216,10 @@ module.exports = {
       address: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   meta: {
@@ -208,10 +229,10 @@ module.exports = {
       value: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   project: {
@@ -223,10 +244,13 @@ module.exports = {
       endDate: value => !isNaN(Date.parse(value)) || value === null,
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRoles:admin,accountant,client'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      client: 'CustomerCode',
     },
   },
   quote: {
@@ -237,11 +261,14 @@ module.exports = {
       date: value => !isNaN(Date.parse(value)),
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+      read: ['ensureRoles:admin,accountant,client'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      client: 'CustomerId',
+    },
   },
   session: {
     readOnly: ['id', 'createdAt'],
@@ -250,10 +277,10 @@ module.exports = {
       expiresAt: value => !isNaN(Date.parse(value)),
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   supplier: {
@@ -268,11 +295,14 @@ module.exports = {
       Website: value => typeof value === 'string' && (value.length === 0 || /^https?:\/\/.+/.test(value)),
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+      read: ['ensureRoles:admin,accountant,subcontractor,hmrc'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      subcontractor: '_id',
+    },
   },
   task: {
     readOnly: ['uuid', 'createdAt'],
@@ -282,10 +312,10 @@ module.exports = {
       dueDate: value => !isNaN(Date.parse(value)),
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   user: {
@@ -296,10 +326,10 @@ module.exports = {
       name: value => typeof value === 'string' && value.length > 0,
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   },
   employeeHoliday: {
@@ -313,10 +343,13 @@ module.exports = {
       accrualPercent: v => v == null || (typeof v === 'number' && v >= 0 && v <= 100)
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRoles:admin,employee'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      employee: 'employeeId',
     },
     referenceFilters: {
       employeeId: { status: 'active' }
@@ -351,28 +384,32 @@ module.exports = {
       projectId: { $or: [{ Status: 0 }, { Status: 2 }] }
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+      read: ['ensureRoles:admin,employee,subcontractor'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      employee: 'employeeId',
+      subcontractor: 'subcontractorId',
+    },
   },
   OcrDocument: {
     readOnly: ['uuid', 'createdAt', 'paperlessId', 'ocrText', 'fetchedAt', 'error'],
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
     }
   },
   nominal: {
     readOnly: ['uuid', 'createdAt'],
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRoles:admin,accountant'],
     }
   },
   note: { 
     readOnly: ['uuid', 'createdAt'],
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRoles:admin,accountant'],
     }
   },
   vehicleFuelLog: {
@@ -392,11 +429,15 @@ module.exports = {
       subcontractorId: { IsSubcontractor: true }
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+      read: ['ensureRoles:admin,employee,subcontractor'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      employee: 'employeeId',
+      subcontractor: 'subcontractorId',
+    },
   },
   vehicleMileageLog: {
     readOnly: ['uuid', 'createdAt', 'distance', 'claimAmount'],
@@ -415,11 +456,15 @@ module.exports = {
       projectId: { $or: [{ Status: 0 }, { Status: 2 }] }
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
-    }
+      read: ['ensureRoles:admin,employee,subcontractor'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      employee: 'employeeId',
+      subcontractor: 'subcontractorId',
+    },
   },
   vehicleService: {
     readOnly: ['uuid', 'createdAt'],
@@ -434,10 +479,10 @@ module.exports = {
       nextServiceDueMileage: value => value == null || (!isNaN(value) && Number(value) >= 0),
     },
     middleware: {
-      read: ['ensureRole:admin', 'ensureAuthenticated'],
-      create: ['ensureRole:admin', 'ensureAuthenticated'],
-      update: ['ensureRole:admin', 'ensureAuthenticated'],
-      delete: ['ensureRole:admin', 'ensureAuthenticated'],
+      read: ['ensureRole:admin'],
+      create: ['ensureRole:admin'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
     }
   }
 }

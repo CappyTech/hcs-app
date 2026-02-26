@@ -1,0 +1,95 @@
+<div class="container mx-auto py-4 px-4 max-w-lg">
+  <div class="mb-4 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+
+    <h1 class="text-3xl font-extrabold text-center mb-2 text-gray-900 dark:text-gray-100">
+      Submit Attendance
+    </h1>
+    <p class="text-center text-gray-500 dark:text-gray-400 mb-6">
+      Submitting as <strong><%= entityName %></strong> (<%= isEmployee ? 'Employee' : 'Subcontractor' %>)
+    </p>
+
+    <form method="POST" action="/attendance/submit" class="space-y-5">
+      <% if (typeof csrfToken !== 'undefined' && csrfToken) { %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <% } %>
+
+      <!-- Date -->
+      <div>
+        <label for="date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+        <input type="date" id="date" name="date" value="<%= today %>" required
+          class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none">
+      </div>
+
+      <!-- Type -->
+      <div>
+        <label for="type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+        <select id="type" name="type" required
+          class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none">
+          <option value="work" selected>Work</option>
+          <option value="training">Training</option>
+          <option value="sick">Sick</option>
+          <option value="holiday">Holiday</option>
+          <option value="leave">Leave</option>
+          <option value="off">Off</option>
+        </select>
+      </div>
+
+      <!-- Project -->
+      <div>
+        <label for="projectId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project <span class="text-gray-400">(optional)</span></label>
+        <select id="projectId" name="projectId"
+          class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none">
+          <option value="">— None —</option>
+          <% projects.forEach(p => { %>
+            <option value="<%= p._id %>">
+              <%= p.Number ? '#' + p.Number + ' – ' : '' %><%= p.Name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- Location -->
+      <div>
+        <label for="locationId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location <span class="text-gray-400">(optional)</span></label>
+        <select id="locationId" name="locationId"
+          class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none">
+          <option value="">— None —</option>
+          <% locations.forEach(l => { %>
+            <option value="<%= l._id %>"><%= l.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <% if (isEmployee) { %>
+        <!-- Hours Worked (employees only) -->
+        <div>
+          <label for="hoursWorked" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hours Worked</label>
+          <input type="number" id="hoursWorked" name="hoursWorked" step="0.25" min="0" max="24" placeholder="8"
+            class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none">
+        </div>
+      <% } %>
+
+      <!-- Notes -->
+      <div>
+        <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes <span class="text-gray-400">(optional)</span></label>
+        <textarea id="notes" name="notes" rows="3" maxlength="2000" placeholder="Any additional details..."
+          class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none resize-y"></textarea>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex justify-between items-center pt-2">
+        <a href="/daily/<%= today %>" class="text-green-600 dark:text-green-400 hover:underline text-sm">
+          <i class="bi bi-arrow-left"></i> Back to Daily View
+        </a>
+        <button type="submit"
+          class="inline-flex items-center rounded bg-green-600 px-5 py-2 text-sm font-medium text-white hover:bg-green-700 transition focus:ring-2 focus:ring-green-500 focus:outline-none">
+          <i class="bi bi-send me-1"></i> Submit for Approval
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-2">
+    Your attendance will be set to <strong>Pending</strong> until approved by an administrator.
+  </p>
+</div>

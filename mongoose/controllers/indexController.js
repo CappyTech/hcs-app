@@ -1,19 +1,21 @@
 const path = require('path');
 const listConfig = require('../config/listControllerConfig');
-const customTiles = require('../config/dashboardTilesConfig'); // <-- New
+const customTiles = require('../config/dashboardTilesConfig');
 const taskService = require('../services/taskServiceMongoose');
 const holidayService = require('../services/holidayServiceMongoose');
+const rbac = require('../config/rolePermissionsConfig');
 const { endOfToday, endOfWeek, endOfMonth } = require('date-fns');
 const moment = require('moment-timezone');
 
 const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 
-// Helper: get all visible listable models for a department
-const getDashboardModels = (department) => {
+// Helper: get all visible listable models for a department, filtered by role
+const getDashboardModels = (department, userRole) => {
   const standardModels = Object.entries(listConfig)
-    .filter(([_, config]) =>
+    .filter(([model, config]) =>
       config?.department?.includes(department) &&
-      !denyGuard(config, 'l')
+      !denyGuard(config, 'l') &&
+      (userRole === 'admin' || rbac.canAccess(userRole, model, 'l'))
     )
     .map(([model, config]) => {
       const desc =
@@ -38,10 +40,13 @@ const getDashboardModels = (department) => {
   return [...standardModels, ...extraTiles];
 };
 
-// Helper: get all creatable models
-const getCreateModels = () => {
+// Helper: get all creatable models, filtered by role
+const getCreateModels = (userRole) => {
   return Object.entries(listConfig)
-    .filter(([_, config]) => !denyGuard(config, 'c'))
+    .filter(([model, config]) =>
+      !denyGuard(config, 'c') &&
+      (userRole === 'admin' || rbac.canAccess(userRole, model, 'c'))
+    )
     .map(([model, config]) => ({
       model,
       title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
@@ -104,7 +109,8 @@ const departments = [
 departments.forEach(([exportName, title, department]) => {
   if (exportName === 'renderCreate') {
     exports[exportName] = (req, res, next) => {
-      const createModels = getCreateModels();
+      const userRole = req.user?.role || 'subcontractor';
+      const createModels = getCreateModels(userRole);
       res.render(path.join('tailwindcss', 'partials', 'listModels'), {
         title,
         models: createModels
@@ -112,7 +118,8 @@ departments.forEach(([exportName, title, department]) => {
     };
   } else {
     exports[exportName] = (req, res, next) => {
-      const dashboardModels = getDashboardModels(department);
+      const userRole = req.user?.role || 'subcontractor';
+      const dashboardModels = getDashboardModels(department, userRole);
       res.render(path.join('tailwindcss', 'partials', 'listModels'), {
         title,
         models: dashboardModels

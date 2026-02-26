@@ -147,6 +147,7 @@ const main = async () => {
     });
 
     // Attach user info to templates
+    const rbac = require('./mongoose/config/rolePermissionsConfig');
     app.use((req, res, next) => {
       const successFlash = req.flash('success');
       const errorFlash = req.flash('error');
@@ -156,6 +157,21 @@ const main = async () => {
       res.locals.isAuthenticated = !!req.user;
       res.locals.role = req.user && req.user.role || null;
       res.locals.isAdmin = req.user && req.user.role === 'admin';
+
+      // RBAC: expose departments the user's role can access
+      res.locals.userDepartments = req.user
+        ? rbac.getDepartmentsForRole(req.user.role)
+        : [];
+      // Helper: check if user can access a department (usable in templates)
+      res.locals.canDept = (dept) => req.user ? rbac.canAccessDepartment(req.user.role, dept) : false;
+      // Helper: check CRUD access on a model
+      res.locals.canModel = (model, op) => req.user ? rbac.canAccess(req.user.role, model, op).allowed : false;
+      // Expose role flags for template convenience
+      res.locals.isEmployee = req.user && req.user.role === 'employee';
+      res.locals.isSubcontractor = req.user && req.user.role === 'subcontractor';
+      res.locals.isAccountant = req.user && req.user.role === 'accountant';
+      res.locals.isClient = req.user && req.user.role === 'client';
+
       res.locals.firstName = req.user && req.user.username
         ? req.user.username.split('.')[0].replace(/^\w/, c => c.toUpperCase())
         : null;

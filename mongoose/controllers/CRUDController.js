@@ -3,6 +3,8 @@ const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const listControllerConfig = require('../config/listControllerConfig');
 const CRUDControllerConfig = require('../config/CRUDControllerConfig');
+const { scopeQuery } = require('../../services/dataScopingService');
+const rbac = require('../config/rolePermissionsConfig');
 const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 const crudController = {};
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
@@ -205,6 +207,21 @@ for (const namespace of ['REST', 'INTERNAL']) {
           let item = await Model.findOne({ uuid: req.params.uuid }).lean();
           if (!item) return res.status(404).render(path.join('mongoose', 'error'));
 
+          // ── Ownership check: non-admin own-only roles must own this record ──
+          if (req.user && req.user.role !== 'admin') {
+            const { allowed, ownOnly } = rbac.canAccess(req.user.role, modelName, 'r');
+            if (ownOnly) {
+              const filter = await scopeQuery(req, modelName, 'r');
+              if (!filter) return res.status(403).render(path.join('mongoose', 'error'));
+              // Verify the fetched item matches ownership filter
+              const ownerMatch = Object.entries(filter).every(([k, v]) => {
+                const itemVal = item[k];
+                return itemVal && String(itemVal) === String(v);
+              });
+              if (!ownerMatch) return res.status(403).render(path.join('mongoose', 'error'));
+            }
+          }
+
           // Flatten nested data objects (e.g., when hcs-sync stores { number, data: {...}, syncedAt })
           if (config.flattenField) {
             const nested = item[config.flattenField];
@@ -358,6 +375,10 @@ for (const namespace of ['REST', 'INTERNAL']) {
             }
           }
 
+          // Determine if current user can update/delete this model
+          const canUpdate = req.user?.role === 'admin' || rbac.canAccess(req.user?.role, modelName, 'u').allowed;
+          const canDelete = req.user?.role === 'admin' || rbac.canAccess(req.user?.role, modelName, 'd').allowed;
+
           res.render(path.join('tailwindcss', 'partials', 'form-read'), {
             title: `${config.title || baseName} Details`,
             item,
@@ -366,6 +387,8 @@ for (const namespace of ['REST', 'INTERNAL']) {
             referenceData,
             config,
             actions: config.actions || [],
+            canUpdate,
+            canDelete,
           });
         } catch (err) {
           logger.error(`❌ Error reading ${modelName}: ${err.message}`);

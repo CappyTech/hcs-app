@@ -1,6 +1,7 @@
 const express = require('express');
 const listController = require('../controllers/listController');
 const authService = require('../../services/authService');
+const rbac = require('../config/rolePermissionsConfig');
 
 const router = express.Router();
 
@@ -24,8 +25,26 @@ for (const [functionName, handler] of Object.entries(listController)) {
     routePath = `/${[...parts, pluralLast].join('/')}`;
   }
 
-  // Register route: e.g. GET /contracts
-  router.get(routePath, authService.ensureRole(), authService.ensureAuthenticated, handler);
+  // Build role list. Admin always has access.
+  // Check which other roles can list this model via RBAC config.
+  const crudConfig = require('../config/CRUDControllerConfig')[originalModel] || {};
+  const middlewares = crudConfig.middleware?.read || require('../config/CRUDControllerConfig').default?.middleware?.read || ['ensureRole:admin'];
+
+  // Use the same middleware resolution as CRUDRoutes
+  const resolveMiddleware = (entry = '') => {
+    if (!entry.includes(':')) return authService[entry];
+    const [fn, ...rest] = entry.split(':');
+    const arg = rest.join(':');
+    if (fn === 'ensureRoles') {
+      const roles = arg.split(',').map(r => r.trim());
+      return authService.ensureRoles(...roles);
+    }
+    return authService[fn]?.(arg);
+  };
+
+  const resolved = middlewares.map(resolveMiddleware).filter(Boolean);
+
+  router.get(routePath, ...resolved, handler);
 }
 
 module.exports = router;

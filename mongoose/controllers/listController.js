@@ -2,6 +2,7 @@ const path = require('path');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const listControllerConfig = require('../config/listControllerConfig');
+const { scopeQuery } = require('../../services/dataScopingService');
 
 const denyGuard = (config, op) => Array.isArray(config.deny) && config.deny.includes(op);
 const listController = {};
@@ -140,6 +141,21 @@ const generateHeaders = (firstDoc, config = {}) => {
       }
 
       try {
+        // ── Data scoping: restrict results based on user role + linked entity ──
+        if (req.user) {
+          const ownerFilter = await scopeQuery(req, modelName, 'l');
+          if (ownerFilter === null) {
+            return res.status(403).render(path.join('mongoose', 'error'));
+          }
+          if (Object.keys(ownerFilter).length > 0) {
+            if (Object.keys(mongoFilter).length > 0) {
+              mongoFilter = { $and: [mongoFilter, ownerFilter] };
+            } else {
+              mongoFilter = { ...mongoFilter, ...ownerFilter };
+            }
+          }
+        }
+
         const totalCount = await model.countDocuments(mongoFilter);
         // Build tab metadata (no counts per tab for now unless cheap to derive)
         let tabs = [];

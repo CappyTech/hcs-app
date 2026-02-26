@@ -64,7 +64,7 @@ exports.renderRegistrationForm = (req, res, next) => {
 
 exports.registerUser = async (req, res, next) => {
     try {
-        const { username, email, password, role } = req.body;
+        const { username, email, password } = req.body;
         const token = req.body['cf-turnstile-response'];
         const ip = req.ip;
 
@@ -99,7 +99,8 @@ exports.registerUser = async (req, res, next) => {
             return res.redirect('/user/register');
         }
 
-    const assignedRole = role || 'subcontractor';
+    // Role is always the safe default — only admins can change roles via user CRUD update
+    const assignedRole = 'subcontractor';
     const UserModel = mdb.INTERNAL?.user;
     if(!UserModel){
       logger.error('User model not loaded (INTERNAL.user missing)');

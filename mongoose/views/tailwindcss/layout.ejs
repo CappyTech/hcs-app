@@ -81,40 +81,64 @@
     <!-- Top Nav -->
     <nav class="fixed top-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50 print:hidden">
       <div class="flex justify-around text-center py-2">
+        <% if (canDept('construction-industry-scheme')) { %>
         <a href="/construction-industry-scheme" class="text-sm hover:text-green-600">
           <i class="bi bi-building fs-5"></i><br>
           <small>Construction Industry Scheme</small>
         </a>
+        <% } %>
+        <% if (canDept('management')) { %>
         <a href="/management" class="text-sm hover:text-green-600">
           <i class="bi bi-folder2-open fs-5"></i><br>
           <small>Management</small>
         </a>
+        <% } %>
+        <% if (canDept('payroll')) { %>
         <a href="/payroll" class="text-sm hover:text-green-600">
           <i class="bi bi-cash-coin fs-5"></i><br>
           <small>Payroll</small>
         </a>
-        <% if (isAdmin) { %>
+        <% } %>
+        <% if (canDept('human-resources')) { %>
           <a href="/human-resources" class="text-sm hover:text-green-600">
             <i class="bi bi-people fs-5"></i><br>
             <small>Human Resources</small>
           </a>
+        <% } %>
+        <% if (canDept('paperless')) { %>
           <a href="/paperless" class="text-sm hover:text-green-600">
             <i class="bi bi-file-earmark-text fs-5"></i><br>
             <small>Documents</small>
           </a>
+        <% } %>
+        <% if (canDept('finance')) { %>
           <a href="/finance" class="text-sm hover:text-green-600">
             <i class="bi bi-wallet2 fs-5"></i><br>
             <small>Finance</small>
           </a>
-          <% } %>
+        <% } %>
+        <% if (canDept('kashflow')) { %>
             <a href="/kashflow" class="text-sm hover:text-green-600">
               <i class="bi bi-graph-up fs-5"></i><br>
               <small>Kashflow</small>
             </a>
+        <% } %>
+        <% if (isAdmin) { %>
             <a href="/create" class="text-sm text-green-600 hover:text-green-800">
               <i class="bi bi-plus fs-5"></i><br>
               <small>Create</small>
             </a>
+        <% } %>
+        <% if (isEmployee || isSubcontractor) { %>
+            <a href="/attendance/submit" class="text-sm text-green-600 hover:text-green-800">
+              <i class="bi bi-calendar-check fs-5"></i><br>
+              <small>Submit Attendance</small>
+            </a>
+            <a href="/daily" class="text-sm hover:text-green-600">
+              <i class="bi bi-calendar-day fs-5"></i><br>
+              <small>My Attendance</small>
+            </a>
+        <% } %>
       </div>
     </nav>
     <% } %>

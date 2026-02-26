@@ -7,31 +7,46 @@
 
     <div class="d-flex flex-wrap gap-2 justify-content-end text-nowrap">
       <% if (isAuthenticated) { %>
+        <% if (canDept('construction-industry-scheme')) { %>
         <a href="/construction-industry-scheme" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-building"></i> <span class="d-sm-inline d-none">Construction Industry Scheme</span>
         </a>
+        <% } %>
+        <% if (canDept('management')) { %>
         <a href="/management" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-folder2-open"></i> <span class="d-sm-inline d-none">Management</span>
         </a>
+        <% } %>
+        <% if (canDept('payroll')) { %>
         <a href="/payroll" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-cash-coin"></i> <span class="d-sm-inline d-none">Payroll</span>
         </a>
-        <% if (isAdmin) { %>
+        <% } %>
+        <% if (canDept('human-resources')) { %>
           <a href="/human-resources" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-person"></i> <span class="d-sm-inline d-none">Human Resources</span>
           </a>
         <% } %>
-        <% if (isAdmin) { %>
+        <% if (canDept('paperless')) { %>
           <a href="/paperless/ocr" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-file-earmark-text"></i> <span class="d-sm-inline d-none">Paperless OCR</span>
           </a> 
         <% } %>
+        <% if (canDept('kashflow')) { %>
         <a href="/kashflow" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-graph-up"></i> <span class="d-sm-inline d-none">Kashflow</span>
         </a>
+        <% } %>
+        <% if (isAdmin) { %>
         <a href="/create" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-plus"></i> <span class="d-sm-inline d-none">Create</span>
         </a>
+        <% } %>
+        <% if (isEmployee || isSubcontractor) { %>
+        <a href="/attendance/submit" class="btn btn-outline-success btn-sm">
+          <i class="bi bi-calendar-check"></i> <span class="d-sm-inline d-none">Submit Attendance</span>
+        </a>
+        <% } %>
       <% } %>
     </div>
 

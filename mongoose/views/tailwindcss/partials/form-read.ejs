@@ -4,7 +4,7 @@
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100"><%= title %></h1>
 
-    <% if (isAuthenticated && isAdmin) { %>
+    <% if (isAuthenticated && (typeof canUpdate !== 'undefined' ? canUpdate : isAdmin)) { %>
       <div class="flex space-x-2">
         <% if (Array.isArray(actions) && actions.length > 0) { %>
           <% actions.forEach(action => { %>
@@ -15,14 +15,14 @@
             </a>
           <% }) %>
         <% } else { %>
-          <% if (!config?.deny?.includes('u')) { %>
+          <% if (!config?.deny?.includes('u') && (typeof canUpdate !== 'undefined' ? canUpdate : isAdmin)) { %>
             <a href="/<%= basePath %>/update/<%= item.uuid %>" 
               class="inline-flex items-center justify-center rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 transition">
               <i class="bi bi-arrow-clockwise"></i>
               <span class="ml-1 hidden sm:inline">Update</span>
             </a>
           <% } %>
-          <% if (!config?.deny?.includes('d')) { %>
+          <% if (!config?.deny?.includes('d') && (typeof canDelete !== 'undefined' ? canDelete : isAdmin)) { %>
             <a href="/<%= basePath %>/delete/<%= item.uuid %>" 
               class="inline-flex items-center justify-center rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 transition">
               <i class="bi bi-trash-fill"></i>

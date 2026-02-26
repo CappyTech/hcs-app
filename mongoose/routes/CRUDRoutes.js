@@ -15,10 +15,16 @@ router.param('uuid', (req, res, next, uuid) => {
   next();
 });
 
-// Resolve a string like 'ensureRole:admin' into actual middleware
+// Resolve a string like 'ensureRole:admin' or 'ensureRoles:admin,accountant' into actual middleware
 const resolveMiddleware = (entry = '') => {
   if (!entry.includes(':')) return authService[entry];
-  const [fn, arg] = entry.split(':');
+  const [fn, ...rest] = entry.split(':');
+  const arg = rest.join(':'); // rejoin in case of colons in args
+  if (fn === 'ensureRoles') {
+    // Support comma-separated roles: 'ensureRoles:admin,accountant'
+    const roles = arg.split(',').map(r => r.trim());
+    return authService.ensureRoles(...roles);
+  }
   return authService[fn]?.(arg);
 };
 
