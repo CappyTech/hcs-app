@@ -1,0 +1,41 @@
+<div class="max-w-lg mx-auto py-16 px-4">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-lg overflow-hidden">
+    <div class="p-8 text-center">
+
+      <i class="bi bi-envelope-check text-amber-500 text-[4rem]"></i>
+
+      <h1 class="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100">
+        Email Verification Required
+      </h1>
+
+      <p class="mt-4 text-gray-600 dark:text-gray-400">
+        We sent a verification email to
+        <strong class="text-gray-800 dark:text-gray-200"><%= email %></strong>.
+      </p>
+
+      <p class="mt-2 text-gray-600 dark:text-gray-400">
+        Please check your inbox (and spam folder) and click the verification link to activate your account.
+      </p>
+
+      <div class="mt-8 space-y-4">
+        <form action="/user/resend-verification" method="POST">
+          <%- include('../partials/csrfHidden.ejs') %>
+          <button type="submit"
+            class="w-full bg-green-700 text-white px-6 py-3 rounded hover:bg-green-800 transition">
+            <i class="bi bi-envelope"></i> Resend Verification Email
+          </button>
+        </form>
+
+        <a href="/user/logout"
+          class="block w-full text-center border border-gray-400 text-gray-700 dark:text-gray-300 px-6 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-sm">
+          <i class="bi bi-box-arrow-right"></i> Log out
+        </a>
+      </div>
+
+      <p class="mt-6 text-gray-500 dark:text-gray-500 text-xs">
+        The verification link expires in 24 hours. If you didn't receive the email, click "Resend" above.
+      </p>
+
+    </div>
+  </div>
+</div>

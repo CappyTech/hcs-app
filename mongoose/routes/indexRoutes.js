@@ -3,7 +3,7 @@ const router = express.Router();
 const authService = require('../../services/authService');
 const index = require('../controllers/indexController');
 
-router.get('/', authService.ensureRole('none'), index.renderIndex);
+router.get('/', authService.ensureRole('public'), index.renderIndex);
 router.get('/construction-industry-scheme', authService.ensureRoles('admin', 'accountant', 'hmrc', 'subcontractor'), index.renderConstructionIndustryScheme);
 router.get('/management', authService.ensureRole('admin'), index.renderManagement);
 router.get('/payroll', authService.ensureRole('admin'), index.renderPayroll);

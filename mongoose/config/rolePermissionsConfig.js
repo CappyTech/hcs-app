@@ -4,11 +4,12 @@
  * Single source of truth for what each role can access.
  * Used by authService middleware, route files, controllers, templates.
  *
- * Roles: admin | accountant | employee | subcontractor | client | hmrc
+ * Roles: none | admin | accountant | employee | subcontractor | client | hmrc
  */
 
 // ── Departments each role may access ──────────────────────────────────
 const roleDepartments = {
+  none: [],
   admin: [
     'construction-industry-scheme',
     'management',
@@ -37,6 +38,10 @@ const roleDepartments = {
 // Operations: c = create, r = read, u = update, d = delete, l = list
 // 'own' suffix means scoped to the user's linked entity (e.g. 'r:own')
 const roleModelAccess = {
+  none: {
+    // No model access — awaiting role assignment by admin.
+  },
+
   admin: {
     // Admin has unrestricted access — handled as a bypass in middleware.
     // Listed here for documentation only.

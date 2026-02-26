@@ -1,3 +1,10 @@
+<!-- Navigation link to profile -->
+<div class="max-w-6xl mx-auto mb-4 px-4">
+  <a href="/user/profile" class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline text-sm font-medium">
+    <i class="bi bi-person-circle"></i> View Profile
+  </a>
+</div>
+
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[600px]">
   <!-- LEFT: TOTP Section -->
   <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg flex flex-col justify-between shadow">
@@ -17,21 +24,33 @@
         <p class="mb-2">Alternatively, enter this key manually into your authentication app of choice:</p>
         <p class="text-sm font-semibold text-gray-600">Secret Key: <pre class="text-center"><%= secret %></pre></p>
       <% } else { %>
-        <div class="text-center text-green-600 dark:text-green-400 font-medium">
-          <p>Two-Factor Authentication is enabled for your account.</p>
+        <div class="text-center py-8">
+          <i class="bi bi-shield-check text-green-500 text-5xl"></i>
+          <p class="mt-4 text-green-600 dark:text-green-400 font-semibold text-lg">Two-Factor Authentication is enabled.</p>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Your account is protected with an authenticator app.</p>
         </div>
       <% } %>
     </div>
 
     <% if (!user.totpEnabled) { %>
-      <form action="/account/verify-totp" method="POST" class="mt-6">
+      <form action="/user/account/verify-totp" method="POST" class="mt-6">
         <%- include('../partials/csrfHidden.ejs') %>
         <label for="totpToken" class="block font-medium mb-1">Enter the 6-digit authentication code:</label>
-        <input type="text" name="totpToken" id="totpToken" required
-          class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 mb-3">
+        <input type="text" name="totpToken" id="totpToken" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code"
+          class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 mb-3">
         <div class="flex justify-center">
           <button type="submit" class="w-full max-w-xs bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
             Verify & Enable 2FA
+          </button>
+        </div>
+      </form>
+    <% } else { %>
+      <form action="/user/account/disable-totp" method="POST" class="mt-6">
+        <%- include('../partials/csrfHidden.ejs') %>
+        <div class="flex justify-center">
+          <button type="submit" class="w-full max-w-xs bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+            onclick="return confirm('Are you sure you want to disable Two-Factor Authentication?')">
+            <i class="bi bi-shield-x"></i> Disable 2FA
           </button>
         </div>
       </form>
@@ -55,18 +74,18 @@
 
       <hr class="my-6 border-t-2 border-line">
 
-      <form action="/account/settings" method="POST" class="space-y-4">
+      <form action="/user/account/settings" method="POST" class="space-y-4">
         <%- include('../partials/csrfHidden.ejs') %>
         <div>
           <label for="username" class="block font-medium mb-1">New Username:</label>
-          <input type="text" name="newUsername" id="username" value="<%= user.username %>" required class="w-full px-4 py-2 rounded border border-gray-300 text-black">
+          <input type="text" name="newUsername" id="username" value="<%= user.username %>" required class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
         </div>
         <div>
           <label for="email" class="block font-medium mb-1">New Email:</label>
-          <input type="email" name="newEmail" id="email" value="<%= user.email %>" required class="w-full px-4 py-2 rounded border border-gray-300 text-black">
+          <input type="email" name="newEmail" id="email" value="<%= user.email %>" required class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
         </div>
         <div class="flex justify-end gap-2 mt-2">
-          <button type="submit" class="bg-red-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
             Update Details
           </button>
         </div>
@@ -80,18 +99,19 @@
         <%- include('../partials/csrfHidden.ejs') %>
         <div>
           <label for="currentPassword" class="block font-medium mb-1">Current Password</label>
-          <input type="password" id="currentPassword" name="currentPassword" required class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+          <input type="password" id="currentPassword" name="currentPassword" required class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
         <div>
           <label for="newPassword" class="block font-medium mb-1">New Password</label>
-          <input type="password" id="newPassword" name="newPassword" required class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+          <input type="password" id="newPassword" name="newPassword" required minlength="6" class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimum 6 characters.</p>
         </div>
         <div>
           <label for="confirmNewPassword" class="block font-medium mb-1">Confirm New Password</label>
-          <input type="password" id="confirmNewPassword" name="confirmNewPassword" required class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+          <input type="password" id="confirmNewPassword" name="confirmNewPassword" required minlength="6" class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
         <div class="flex justify-end gap-2 mt-2">
-          <button type="submit" class="bg-red-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
             Update Password
           </button>
         </div>
@@ -101,7 +121,7 @@
 </div>
 
 <!-- Active Sessions -->
-<div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg mt-2">
+<div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg mt-6">
   <h1 class="text-2xl font-bold text-center mb-6">Active Sessions</h1>
 
   <% if (sessions.length === 0) { %>
@@ -110,7 +130,7 @@
     </div>
   <% } else { %>
     <div class="overflow-auto">
-      <table class="min-w-full text-sm text-left border border-gray-300 rounded-lg">
+      <table class="min-w-full text-sm text-left border border-gray-300 dark:border-gray-700 rounded-lg">
         <thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
           <tr>
             <th class="px-4 py-2">Username</th>
@@ -129,15 +149,15 @@
         </thead>
         <tbody class="bg-white dark:bg-gray-800">
           <% sessions.forEach(session => { %>
-            <tr class="border-t border-gray-200 dark:border-gray-700 <%= session.isCurrent ? 'bg-yellow-50 dark:bg-yellow-900/20' : '' %>">
-              <td class="px-4 py-2 font-medium <%= session.isCurrent ? 'text-blue-700 dark:text-blue-300' : '' %>">
+            <tr class="border-t border-gray-200 dark:border-gray-700 <%= session.isCurrent ? 'bg-green-50 dark:bg-green-900/20' : '' %>">
+              <td class="px-4 py-2 font-medium">
                 <%= session.username %>
                 <% if (session.isCurrent) { %>
-                  <span class="ml-2 inline-block text-xs bg-blue-600 text-white px-2 py-0.5 rounded">This device</span>
+                  <span class="ml-1 inline-block text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">Current</span>
                 <% } %>
               </td>
               <td class="px-4 py-2"><%= session.email %></td>
-              <td class="px-4 py-2"><%= session.role %></td>
+              <td class="px-4 py-2 capitalize"><%= session.role %></td>
               <td class="px-4 py-2"><%= session.ip %></td>
               <td class="px-4 py-2"><%= session.browser %></td>
               <td class="px-4 py-2"><%= session.platform.replace(/['"]+/g, '') || 'Unknown' %></td>
@@ -146,21 +166,24 @@
               <td class="px-4 py-2"><%= session.idleFor %></td>
               <td class="px-4 py-2">
                 <%= slimDateTime(session.expires, ['includeTime']) %><br>
-                (<%= session.timeUntilExpiry %>)
+                <span class="text-xs text-gray-500 dark:text-gray-400">(<%= session.timeUntilExpiry %>)</span>
               </td>
               <td class="px-4 py-2 font-medium <%= session.secure ? 'text-green-600' : 'text-red-600' %>">
                 <%= session.secure ? 'Yes' : 'No' %>
               </td>
               <td class="px-4 py-2">
-                <form action="/account/logout-session" method="POST">
-                  <%- include('../partials/csrfHidden.ejs') %>
-                  <input type="hidden" name="sessionId" value="<%= session.sessionId %>">
-                  <div class="flex justify-end gap-2 mt-2">
-                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+                <% if (session.isCurrent) { %>
+                  <span class="text-xs text-gray-400 dark:text-gray-500 italic">In use</span>
+                <% } else { %>
+                  <form action="/user/account/logout-session" method="POST">
+                    <%- include('../partials/csrfHidden.ejs') %>
+                    <input type="hidden" name="sessionId" value="<%= session.sessionId %>">
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm"
+                      onclick="return confirm('Log out this session?')">
                       Logout
                     </button>
-                  </div>
-                </form>
+                  </form>
+                <% } %>
               </td>
             </tr>
           <% }) %>

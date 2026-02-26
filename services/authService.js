@@ -5,9 +5,19 @@ const rbac = require('../mongoose/config/rolePermissionsConfig');
 const PUBLIC_PATHS = new Set([
   '/user/login',
   '/user/register',
+  '/user/verify-email',
   '/health',
 ]);
 const PUBLIC_PREFIXES = ['/resources/', '/manifest/'];
+
+// Paths accessible to authenticated-but-unverified users
+const UNVERIFIED_PATHS = new Set([
+  '/user/verify-pending',
+  '/user/resend-verification',
+  '/user/logout',
+  '/user/profile',
+  '/user/account',
+]);
 
 function isPublicPath(url) {
   const path = url.split('?')[0];
@@ -54,6 +64,16 @@ async function ensureAuthenticated(req, res, next) {
     });
   }
 
+  // Block unverified users — only allow access to verification-related pages
+  // Treat legacy users (field missing in DB → undefined before Mongoose default) as verified.
+  // Only block users who explicitly have emailVerified === false AND have a verification token.
+  const reqPath = req.originalUrl.split('?')[0];
+  if (req.user.emailVerified === false
+      && req.user.emailVerificationToken != null
+      && !UNVERIFIED_PATHS.has(reqPath)) {
+    return res.redirect('/user/verify-pending');
+  }
+
   next();
 }
 
@@ -80,9 +100,9 @@ function ensureRoles(...roles) {
   };
 }
 
-// ── Shortcut — defaults to 'admin'. 'none' = passthrough. ───────────
+// ── Shortcut — defaults to 'admin'. 'public' = passthrough. ────────
 function ensureRole(role = 'admin') {
-  if (role === 'none') return (req, res, next) => next();
+  if (role === 'public') return (req, res, next) => next();
   return ensureRoles(role);
 }
 

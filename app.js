@@ -35,6 +35,19 @@ const main = async () => {
   try {
     await mdb.connect(); // Wait for MongoDB/SSH tunnel
 
+    // One-time migration: mark existing users (without a verification token) as email-verified
+    try {
+      const result = await mdb.INTERNAL.user.updateMany(
+        { emailVerified: { $ne: true }, emailVerificationToken: { $eq: null } },
+        { $set: { emailVerified: true } }
+      );
+      if (result.modifiedCount > 0) {
+        logger.info(`[migration] Marked ${result.modifiedCount} existing user(s) as email-verified`);
+      }
+    } catch (migrationErr) {
+      logger.error('[migration] Email verification backfill failed', { error: migrationErr.message });
+    }
+
     const app = express();
     const http = require('http');
     const { initSocket } = require('./services/socketService');
@@ -171,6 +184,7 @@ const main = async () => {
       res.locals.isSubcontractor = req.user && req.user.role === 'subcontractor';
       res.locals.isAccountant = req.user && req.user.role === 'accountant';
       res.locals.isClient = req.user && req.user.role === 'client';
+      res.locals.emailVerified = req.user ? req.user.emailVerified : false;
 
       res.locals.firstName = req.user && req.user.username
         ? req.user.username.split('.')[0].replace(/^\w/, c => c.toUpperCase())

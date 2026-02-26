@@ -3,7 +3,9 @@ const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { getClientIp } = require('../../services/ipService');
+const emailService = require('../../services/emailService');
 
 function hasCookie(req, cookieName) {
   try {
@@ -100,7 +102,7 @@ exports.registerUser = async (req, res, next) => {
         }
 
     // Role is always the safe default — only admins can change roles via user CRUD update
-    const assignedRole = 'subcontractor';
+    const assignedRole = 'none';
     const UserModel = mdb.INTERNAL?.user;
     if(!UserModel){
       logger.error('User model not loaded (INTERNAL.user missing)');
@@ -110,17 +112,32 @@ exports.registerUser = async (req, res, next) => {
     // Hash password before storing (was previously stored in plaintext)
     const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Generate email verification token (URL-safe, 48 bytes → 64 chars hex)
+    const verificationToken = crypto.randomBytes(48).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     const newUser = new UserModel({
       username,
       email,
       password: hashedPassword,
       role: assignedRole,
+      emailVerified: false,
+      emailVerificationToken: verificationToken,
+      emailVerificationExpires: verificationExpires,
     });
 
         await newUser.save();
 
+        // Send verification email (non-blocking — don't fail registration if email fails)
+        try {
+          await emailService.sendVerificationEmail(email, verificationToken);
+        } catch (emailErr) {
+          logger.error(`Failed to send verification email to ${email}: ${emailErr.message}`);
+        }
+
         logger.info('New User Created.');
-        req.flash('success', 'Account created. You can now log in.');
+        req.flash('success', 'Account created! Please check your email to verify your account before logging in.');
         return res.redirect('/user/login');
 
     } catch (error) {
@@ -279,4 +296,93 @@ exports.logoutUser = (req, res) => {
     req.flash('success', 'You have been logged out.');
     return res.redirect('/user/login');
   });
+};
+
+// ── Email verification ───────────────────────────────────────────────
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      req.flash('error', 'Invalid verification link.');
+      return res.redirect('/user/login');
+    }
+
+    const user = await mdb.INTERNAL.user.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      req.flash('error', 'Verification link is invalid or has expired.');
+      return res.redirect('/user/login');
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
+    await user.save();
+
+    logger.info(`Email verified for user: ${user.username}`);
+    req.flash('success', 'Email verified successfully! You can now log in.');
+    return res.redirect('/user/login');
+  } catch (err) {
+    logger.error(`Email verification error: ${err.message}`);
+    req.flash('error', 'Verification failed. Please try again.');
+    return res.redirect('/user/login');
+  }
+};
+
+// ── Render verification-pending page ─────────────────────────────────
+exports.renderVerifyPending = (req, res) => {
+  res.render(path.join('tailwindcss', 'user', 'verify-pending'), {
+    title: 'Email Verification Required',
+    email: req.user?.email || req.session?.user?.email || '',
+  });
+};
+
+// ── Resend verification email ────────────────────────────────────────
+exports.resendVerification = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.session?.user?.id;
+    if (!userId) {
+      req.flash('error', 'Please log in first.');
+      return res.redirect('/user/login');
+    }
+
+    const user = await mdb.INTERNAL.user.findById(userId);
+    if (!user) {
+      req.flash('error', 'User not found.');
+      return res.redirect('/user/login');
+    }
+
+    if (user.emailVerified) {
+      req.flash('success', 'Your email is already verified.');
+      return res.redirect('/');
+    }
+
+    // Rate limit: only allow resend if token expired or > 2 min since last
+    if (user.emailVerificationExpires && user.emailVerificationExpires > new Date()) {
+      const tokenAge = Date.now() - (user.emailVerificationExpires.getTime() - 24 * 60 * 60 * 1000);
+      if (tokenAge < 2 * 60 * 1000) {
+        req.flash('error', 'Please wait a couple of minutes before requesting another email.');
+        return res.redirect('/user/verify-pending');
+      }
+    }
+
+    // Generate new token
+    const verificationToken = crypto.randomBytes(48).toString('hex');
+    user.emailVerificationToken = verificationToken;
+    user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await user.save();
+
+    await emailService.sendVerificationEmail(user.email, verificationToken);
+
+    logger.info(`Verification email resent to ${user.email}`);
+    req.flash('success', 'Verification email sent! Check your inbox.');
+    return res.redirect('/user/verify-pending');
+  } catch (err) {
+    logger.error(`Resend verification error: ${err.message}`);
+    req.flash('error', 'Failed to resend verification email.');
+    return res.redirect('/user/verify-pending');
+  }
 };

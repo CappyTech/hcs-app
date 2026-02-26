@@ -24,8 +24,8 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['subcontractor', 'employee', 'accountant', 'hmrc', 'admin', 'client'],
-        default: 'subcontractor'
+        enum: ['none', 'subcontractor', 'employee', 'accountant', 'hmrc', 'admin', 'client'],
+        default: 'none'
     },
     subcontractorId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -40,6 +40,18 @@ const userSchema = new mongoose.Schema({
     employeeId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'employee',
+        default: null
+    },
+    emailVerified: {
+        type: Boolean,
+        default: false
+    },
+    emailVerificationToken: {
+        type: String,
+        default: null
+    },
+    emailVerificationExpires: {
+        type: Date,
         default: null
     },
     totpSecret: {
