@@ -5,11 +5,13 @@
   const hasClient = !!(user.clientId && client);
   const hasEntity = hasEmployee || hasSubcontractor || hasClient;
 
-  /* Helper: safely convert Decimal128 / mixed to formatted GBP string */
+  /* Helper: safely convert Decimal128 / mixed to formatted GBP string.
+     Treats 0 / NaN / null / undefined as "no value" → returns null. */
   function formatGBP(val) {
     if (val == null) return null;
     const n = typeof val === 'object' && val.toString ? Number(val.toString()) : Number(val);
-    return isNaN(n) ? null : '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (isNaN(n) || n === 0) return null;
+    return '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   /* Helper: humanise an enum slug  e.g. "zero-hours" → "Zero Hours"  */
