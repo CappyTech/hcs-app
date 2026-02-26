@@ -480,6 +480,12 @@ for (const namespace of ['REST', 'INTERNAL']) {
           }
           // Clean up submitted data: convert empty strings to undefined (supports nested objects)
           const cleanedData = cleanBodyForCreate(req.body);
+
+          // Allow per-model pre-processing before document creation
+          if (typeof config.beforeCreate === 'function') {
+            await config.beforeCreate(cleanedData, req);
+          }
+
           const doc = new Model(cleanedData);
           await doc.save();
           // Hook: update holiday accruals when creating attendance for an employee

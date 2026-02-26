@@ -335,6 +335,13 @@ module.exports = {
       update: ['ensureRole:admin'],
       delete: ['ensureRole:admin'],
     },
+    beforeCreate: async (data) => {
+      // Auto-generate a secure random password when admin creates a user without one
+      if (!data.password) {
+        const crypto = require('crypto');
+        data.password = crypto.randomBytes(24).toString('base64url');
+      }
+    },
     readView: path.join('tailwindcss', 'user', 'read'),
     readLocals: async (item) => {
       const mdb = require('../services/mongooseDatabaseService');

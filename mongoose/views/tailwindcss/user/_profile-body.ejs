@@ -14,9 +14,12 @@
     return '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  /* Consistent fallback for missing individual values */
+  const dash = '<span class="text-gray-400">—</span>';
+
   /* Helper: humanise an enum slug  e.g. "zero-hours" → "Zero Hours"  */
   function humanise(str) {
-    if (!str) return 'N/A';
+    if (!str) return null;
     return str.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 %>
@@ -161,19 +164,19 @@
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Email</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.email || '<span class="text-gray-400 italic">Not set</span>' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.email || dash %></p>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Phone</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.phoneNumber || '<span class="text-gray-400 italic">Not set</span>' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.phoneNumber || dash %></p>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Position</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.position || '<span class="text-gray-400 italic">Not set</span>' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.position || dash %></p>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Employment Type</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200 capitalize"><%= employee.type || 'N/A' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200 capitalize"><%- employee.type || dash %></p>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</p>
@@ -182,12 +185,12 @@
                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                 : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>">
               <i class="bi <%= employee.status === 'active' ? 'bi-check-circle-fill' : 'bi-x-circle-fill' %>"></i>
-              <%= employee.status ? employee.status.charAt(0).toUpperCase() + employee.status.slice(1) : 'N/A' %>
+              <%- employee.status ? employee.status.charAt(0).toUpperCase() + employee.status.slice(1) : dash %>
             </span>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Hire Date</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%= employee.hireDate ? slimDateTime(employee.hireDate) : 'N/A' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.hireDate ? slimDateTime(employee.hireDate) : dash %></p>
           </div>
           <% if (employee.contactName || employee.contactNumber) { %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
@@ -212,11 +215,11 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Contract Type</p>
-              <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%= humanise(employee.contract.termsType) %></p>
+              <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%- humanise(employee.contract.termsType) || dash %></p>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Hours / Week</p>
-              <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.contract.hoursPerWeek != null ? employee.contract.hoursPerWeek : '<span class="text-gray-400 italic">Not specified</span>' %></p>
+              <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- employee.contract.hoursPerWeek != null ? employee.contract.hoursPerWeek : dash %></p>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Working Days / Week</p>
@@ -263,7 +266,9 @@
             { label: 'Yearly',  key: 'yearly',  value: formatGBP(employee.yearlyRate) },
           ];
           const definedRate = employee.definedRate || 'weekly';
+          const hasAnyRate = rates.some(r => r.value);
         %>
+        <% if (hasAnyRate) { %>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <% rates.forEach(r => { %>
             <div class="relative bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 <%= r.key === definedRate ? 'ring-2 ring-green-500/60' : '' %>">
@@ -271,10 +276,13 @@
                 <span class="absolute -top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-500 text-white">Primary</span>
               <% } %>
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide"><%= r.label %></p>
-              <p class="mt-1 text-base font-semibold text-gray-800 dark:text-gray-200"><%- r.value || '<span class="text-gray-400 font-normal">—</span>' %></p>
+              <p class="mt-1 text-base font-semibold text-gray-800 dark:text-gray-200"><%- r.value || dash %></p>
             </div>
           <% }) %>
         </div>
+        <% } else { %>
+          <p class="text-sm text-gray-400 dark:text-gray-500 italic">No compensation configured.</p>
+        <% } %>
       </section>
 
       <!-- Holiday Policy -->
@@ -349,7 +357,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Name</p>
-            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%= subcontractor.Name || 'N/A' %></p>
+            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%- subcontractor.Name || dash %></p>
           </div>
           <% if (subcontractor.Code) { %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
@@ -359,7 +367,7 @@
           <% } %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">VAT Number</p>
-            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- subcontractor.VATNumber || subcontractor.VatNumber || '<span class="text-gray-400 italic">Not set</span>' %></p>
+            <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200"><%- subcontractor.VATNumber || subcontractor.VatNumber || dash %></p>
           </div>
           <% if (subcontractor.UniqueEntityNumber) { %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
@@ -426,7 +434,7 @@
           const addrParts = [addr.Line1, addr.Line2, addr.City, addr.County, addr.PostalCode, addr.Country].filter(Boolean);
         %>
         <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 max-w-lg">
-          <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed"><%- addrParts.join(', ') || '<span class="text-gray-400 italic">No address on file</span>' %></p>
+          <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed"><%- addrParts.join(', ') || dash %></p>
         </div>
       </section>
       <% } %>
@@ -497,7 +505,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Name</p>
-            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%= client.Name || client.DisplayName || 'N/A' %></p>
+            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%- client.Name || client.DisplayName || dash %></p>
           </div>
           <% if (client.Code) { %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
