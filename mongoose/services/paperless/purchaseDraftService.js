@@ -131,6 +131,23 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     grossAmount = Number.isFinite(g) ? g : grossAmount;
   }
 
+  // When all three amounts are present but Net + VAT ≠ Gross, one is likely an OCR
+  // extraction failure.  A zero Net paired with positive Gross/VAT is the most common
+  // case (OCR returns "0" for Total Goods when it can't read the field).
+  if (netAmount != null && vatAmount != null && grossAmount != null) {
+    const headerSum = +(netAmount + vatAmount).toFixed(2);
+    if (Math.abs(headerSum - grossAmount) > 0.01) {
+      if (netAmount === 0 && grossAmount > 0) {
+        const recalcNet = +(grossAmount - vatAmount).toFixed(2);
+        if (Number.isFinite(recalcNet) && recalcNet > 0) {
+          netAmount = recalcNet;
+        }
+      } else if (grossAmount === 0 && (netAmount + vatAmount) > 0) {
+        grossAmount = headerSum;
+      }
+    }
+  }
+
   // Line items: try to read as JSON; else single-line fallback
   let lineItemsRaw = findCustomField(cf, mapping.LineItems);
   let lineItems = undefined;
