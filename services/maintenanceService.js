@@ -48,8 +48,9 @@ function renderMaintenance(res) {
   res.locals.isAuthenticated ??= false;
   res.locals.isAdmin ??= false;
   res.locals.firstName ??= null;
-  res.locals.successMessage ??= [];
-  res.locals.errorMessage ??= [];
+  res.locals.successMessage ??= null;
+  res.locals.errorMessage ??= null;
+  res.locals.flash ??= {};
   res.locals.session ??= {};
   res.status(503);
   try {

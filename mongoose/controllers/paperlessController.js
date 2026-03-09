@@ -168,11 +168,11 @@ exports.triggerGrab = async (req, res, next) => {
     const concurrency = parseInt(req.body.concurrency || process.env.PAPERLESS_CONCURRENCY || '5', 10);
 
     const result = await grabPaperlessOCR({ since, query, pageSize, concurrency });
-    req.flash && req.flash('success', `Grab complete: processed=${result.processed}, skipped=${result.skipped}, failed=${result.failed}`);
+    req.flash('success', `Grab complete: processed=${result.processed}, skipped=${result.skipped}, failed=${result.failed}`);
     res.redirect('/paperless/ingest');
   } catch (err) {
     logger.error('Trigger grab error:', err);
-    if (req.flash) req.flash('error', `Grab failed: ${err.message}`);
+    req.flash('error', `Grab failed: ${err.message}`);
     res.redirect('/paperless/ingest');
   }
 };
@@ -370,7 +370,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
       logger.info(`[kashflow] DRY-RUN create Purchase for paperlessId=${paperlessId}${!webhookUrl && !hasDirectAuth ? ' (no sender configured)' : ''}`, { payload });
       const msg = `Dry run only${!webhookUrl && !hasDirectAuth ? ' (no sender configured)' : ''}. No data sent.`;
       result = { ...result, mode: 'dry-run', ok: true, message: msg, response: null };
-      if (req.flash) req.flash('success', msg);
+      req.flash('success', msg);
     } else if (hasDirectAuth) {
       // Prefer direct send to KashFlow when credentials are configured
       try {
@@ -409,7 +409,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         } catch (persistErr) {
           logger.warn(`Post-send persist (direct) failed for paperlessId=${paperlessId}: ${persistErr.message}`);
         }
-        if (req.flash) req.flash('success', 'Purchase created in KashFlow.');
+        req.flash('success', 'Purchase created in KashFlow.');
 
         updatePaperlessWithKashFlowInfo(paperlessId, resp.data, resp.status).catch((e) => {
           logger.warn(`Async updatePaperlessWithKashFlowInfo failed for paperlessId=${paperlessId}: ${e.message}`);
@@ -437,7 +437,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         }
         result = { ...result, mode: 'direct', endpoint: `${KF_BASE}/purchases`, status: status || null, ok: false, message: `Direct send failed: ${msg}`,
           response: data || { error: sendErr.message } };
-        if (req.flash) req.flash('error', result.message);
+        req.flash('error', result.message);
       }
     } else if (webhookUrl) {
       // Fallback to external creator webhook if configured
@@ -485,7 +485,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         } catch (persistErr) {
           logger.warn(`Post-send persist (webhook) failed for paperlessId=${paperlessId}: ${persistErr.message}`);
         }
-        if (req.flash) req.flash('success', 'Draft sent to KashFlow creator webhook.');
+        req.flash('success', 'Draft sent to KashFlow creator webhook.');
 
         // Also try to reflect webhook result into Paperless custom fields
         updatePaperlessWithKashFlowInfo(paperlessId, resp.data, resp.status).catch((e) => {
@@ -503,14 +503,14 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         const detail = sendErr?.response?.data || { error: sendErr.message };
         logger.error(`[kashflow] Webhook send failed for paperlessId=${paperlessId}: ${sendErr.message}`);
         result = { ...result, mode: 'webhook', endpoint: webhookUrl, status: status || null, ok: false, message: `Webhook send failed: ${sendErr.message}`, response: detail };
-        if (req.flash) req.flash('error', result.message);
+        req.flash('error', result.message);
       }
     } else {
       // Nothing configured to actually send
       const msg = 'Dry run only (no direct/webhook configured). No data sent.';
       logger.info(`[kashflow] DRY-RUN (no direct/webhook configured) create Purchase for paperlessId=${paperlessId}`, { payload });
       result = { ...result, mode: 'dry-run', ok: true, message: msg, response: null };
-      if (req.flash) req.flash('success', msg);
+      req.flash('success', msg);
     }
     // Render a dedicated result view with details
     res.render(path.join('tailwindcss', 'paperless', 'sendResult'), {
@@ -523,7 +523,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
     });
   } catch (err) {
     logger.error('sendDraftToKashflow error:', err);
-    if (req.flash) req.flash('error', `Send failed: ${err.message}`);
+    req.flash('error', `Send failed: ${err.message}`);
     res.render(path.join('tailwindcss', 'paperless', 'sendResult'), {
       title: 'KashFlow Send Result',
       paperlessId: parseInt(req.params.paperlessId, 10),

@@ -16,6 +16,9 @@ module.exports = (req, res, next) => {
     if (typeof message !== 'undefined') {
       if (!flashToSet[type]) flashToSet[type] = [];
       flashToSet[type].push(message);
+      // Also expose to current request so same-request renders see the message
+      if (!flashData[type]) flashData[type] = [];
+      flashData[type].push(message);
     } else {
       const messages = flashData[type] || [];
       delete flashData[type];

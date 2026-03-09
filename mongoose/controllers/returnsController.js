@@ -260,7 +260,7 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
     const { year } = req.params;
     if (!year) return res.status(400).send('Year required');
     // Redirect to CIS Dashboard (choose month 1 by default)
-    req.flash('info', 'Redirected to CIS Dashboard (year view not yet implemented).');
+    req.flash('success', 'Redirected to CIS Dashboard (year view not yet implemented).');
     return res.redirect(`/CIS/Dashboard/${year}/1`);
   } catch (err) {
     next(err);

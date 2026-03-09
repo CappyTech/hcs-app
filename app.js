@@ -163,11 +163,6 @@ const main = async () => {
     // Attach user info to templates
     const rbac = require('./mongoose/config/rolePermissionsConfig');
     app.use((req, res, next) => {
-      const successFlash = req.flash('success');
-      const errorFlash = req.flash('error');
-
-      res.locals.successMessage = successFlash.length > 0 ? successFlash : null;
-      res.locals.errorMessage = errorFlash.length > 0 ? errorFlash : null;
       res.locals.isAuthenticated = !!req.user;
       res.locals.role = req.user && req.user.role || null;
       res.locals.isAdmin = req.user && req.user.role === 'admin';
