@@ -246,9 +246,9 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
       const asMoney = (x) => Number.isFinite(x) ? +x.toFixed(2) : undefined;
       const origVATNumeric = li.VATAmount;
       if (maybePercent(origVATNumeric, !!li.__VATHasDecimal, !!li.__VATHasPercentSymbol)) {
-        // Preserve the VAT percentage as VATLevel for KashFlow payload
+        // Preserve the VAT percentage as VATLevel for KashFlow payload, rounded to nearest 5%
         if (typeof origVATNumeric === 'number' && Number.isFinite(origVATNumeric)) {
-          li.VATLevel = +origVATNumeric.toFixed(4);
+          li.VATLevel = Math.round(origVATNumeric / 5) * 5;
         }
         const pct = origVATNumeric / 100;
         // Prefer Net to compute VAT; derive Net first when possible
@@ -643,7 +643,9 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
 
     const pct = +(vatAmount / netBase * 100).toFixed(4);
     if (!Number.isFinite(pct)) return undefined;
-    if (!vatLevels || vatLevels.length === 0) return pct;
+    // Round to nearest 5% increment (0, 5, 10, 15, 20, …)
+    const roundTo5 = (v) => Math.round(v / 5) * 5;
+    if (!vatLevels || vatLevels.length === 0) return roundTo5(pct);
 
     let best = vatLevels[0];
     let bestDiff = Math.abs(pct - best);
