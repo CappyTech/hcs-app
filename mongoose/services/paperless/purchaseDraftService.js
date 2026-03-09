@@ -39,11 +39,11 @@ function findCustomField(customFields, names) {
     const k = normalizeKey(cf.fieldName);
     if (wantedKeys.has(k)) return cf.value;
   }
-  // Pass 3: contains match (fallback)
+  // Pass 3: prefix match on normalized key (fallback)
   for (const cf of customFields) {
     const k = normalizeKey(cf.fieldName);
     for (const w of wantedKeys) {
-      if (w && k.includes(w)) return cf.value;
+      if (w && k.startsWith(w)) return cf.value;
     }
   }
   return undefined;
