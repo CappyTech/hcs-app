@@ -67,7 +67,11 @@
 							<span class="text-xs text-slate-500">(from <%= sources.IssuedDateSource %>)</span>
 						<% } %>
 					</div>
-					<div><span class="font-medium">Due Date:</span> <%= draft.DueDate ? new Date(draft.DueDate).toLocaleDateString() : '-' %></div>
+					<div><span class="font-medium">Due Date:</span> <%= draft.DueDate ? new Date(draft.DueDate).toLocaleDateString() : '-' %>
+						<% if (sources && sources.DueDateSource) { %>
+							<span class="text-xs text-slate-500">(from <%= sources.DueDateSource %>)</span>
+						<% } %>
+					</div>
 					<div><span class="font-medium">Currency:</span> <%= draft.Currency || '-' %></div>
 				</div>
 			</div>

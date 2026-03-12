@@ -205,6 +205,7 @@ exports.getPurchaseDraft = async (req, res, next) => {
     const sources = {
       SupplierReferenceSource: pickSource(defaultMap.SupplierReference),
       IssuedDateSource: pickSource(defaultMap.IssuedDate),
+      DueDateSource: pickSource(defaultMap.DueDate),
       NetAmountSource: pickSource(defaultMap.NetAmount),
       VATAmountSource: pickSource(defaultMap.VATAmount),
       GrossAmountSource: pickSource(defaultMap.GrossAmount),

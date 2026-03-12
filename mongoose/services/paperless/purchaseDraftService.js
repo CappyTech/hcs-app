@@ -595,12 +595,12 @@ function formatKFDate(d) {
   const dt = (d instanceof Date) ? d : new Date(d);
   if (isNaN(dt)) return undefined;
   const pad = (n) => String(n).padStart(2, '0');
-  const yyyy = dt.getFullYear();
-  const mm = pad(dt.getMonth() + 1);
-  const dd = pad(dt.getDate());
-  const HH = pad(dt.getHours());
-  const MM = pad(dt.getMinutes());
-  const SS = pad(dt.getSeconds());
+  const yyyy = dt.getUTCFullYear();
+  const mm = pad(dt.getUTCMonth() + 1);
+  const dd = pad(dt.getUTCDate());
+  const HH = pad(dt.getUTCHours());
+  const MM = pad(dt.getUTCMinutes());
+  const SS = pad(dt.getUTCSeconds());
   // "YYYY-MM-DD HH:mm:ss" (commonly accepted by KF JSON API)
   return `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}`;
 }
