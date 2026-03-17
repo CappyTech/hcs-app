@@ -240,6 +240,7 @@ const main = async () => {
     app.use('/', require('./mongoose/routes/CRUDRoutes'));
     app.use('/', require('./mongoose/routes/indexRoutes'));
     app.use('/', require('./mongoose/routes/listRoutes'));
+    app.use('/', require('./mongoose/routes/adminRoutes'));
     app.use('/', require('./mongoose/routes/loggerRoutes'));
     app.use('/', require('./mongoose/routes/returnsRoutes'));
     app.use('/', require('./mongoose/routes/settingsRoutes'));
