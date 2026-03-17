@@ -107,7 +107,8 @@
 
           <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">
             CIS @ 
-            <% if (supplier.CISRate===' 0') { %>0%<% } else if (supplier.CISRate==='0.2') { %>20%<% } else if (supplier.CISRate==='0.3') { %>30%<% } %>
+            <% const cisRateNum = typeof supplier.CISRate === 'number' ? supplier.CISRate : (supplier.CISRate != null && supplier.CISRate !== '' ? +supplier.CISRate : null); %>
+            <%= cisRateNum === 0 ? '0%' : cisRateNum === 0.2 ? '20%' : cisRateNum === 0.3 ? '30%' : 'Unknown' %>
           </th>
           <th class="px-3 py-2 border border-gray-300 md:hidden">CIS</th>
 

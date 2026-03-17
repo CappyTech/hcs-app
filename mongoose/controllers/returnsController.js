@@ -39,7 +39,7 @@ exports.renderMonthlyReturnsForm = async (req,res,next)=>{
         if (!receiptsByYear[r.TaxYear]) receiptsByYear[r.TaxYear] = [];
         if (!receiptsByYear[r.TaxYear].includes(r.TaxMonth)) {
           receiptsByYear[r.TaxYear].push(r.TaxMonth);
-          receiptsByYear[r.TaxYear].sort((a,b)=> monthNames.indexOf(monthNames[a-1]) - monthNames.indexOf(monthNames[b-1]));
+          receiptsByYear[r.TaxYear].sort((a,b)=> a - b);
         }
       });
       suppliersWithMonths.push({
@@ -64,6 +64,17 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
     const { month, year, uuid } = req.params;
     const debug = !!req.query.debug;
     if(!month || !year || !uuid) return res.status(400).send('Month, Year and Supplier UUID required');
+
+    // Subcontractors may only view their own returns
+    if (req.user && req.user.role === 'subcontractor') {
+      const ownSupplier = req.user.subcontractorId
+        ? await mdb.REST.supplier.findById(req.user.subcontractorId).lean()
+        : null;
+      if (!ownSupplier || ownSupplier.uuid !== uuid) {
+        return res.status(403).send('You do not have permission to view this subcontractor\'s returns.');
+      }
+    }
+
     const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
     if(!supplier) {
       req.flash('error', 'Supplier not found.');
@@ -86,7 +97,7 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
     // Paid-only filtering as per CIS policy
     const paidPurchases = purchases.filter(p => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate);
 
-    // Helper to classify line items similar to cisController
+    // Helper to classify line items — consistent with cisController
     const classifyPurchase = (p) => {
       const hasLineItems = Array.isArray(p.LineItems) && p.LineItems.length > 0;
       const hasLines = Array.isArray(p.Lines) && p.Lines.length > 0;
@@ -95,9 +106,13 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
       for (const line of lines) {
         if (!line) continue;
         const chargeType = line.ChargeType != null ? Number(line.ChargeType) : null;
-        const qty = Number(line.Quantity) || 0;
-        const rate = Number(line.Rate) || 0;
-        const amount = line.Amount != null ? Number(line.Amount) : (rate * qty);
+        const qty = Number(line.Quantity ?? line.Qty) || 0;
+        const rate = Number(line.Rate ?? line.UnitPrice ?? line.Price ?? line.Unit) || 0;
+        const amount = (line.Amount != null && line.Amount !== '')
+          ? Number(line.Amount)
+          : (line.NetAmount != null && line.NetAmount !== ''
+            ? Number(line.NetAmount)
+            : (rate * qty));
         if (chargeType === 18685896) { materialsCost += amount; continue; }
         if (chargeType === 18685897) { labourCost += amount; continue; }
         if (chargeType === 18685964) { cisAmount += Math.abs(amount); continue; }
@@ -164,6 +179,17 @@ exports.renderYearlyReturns = async (req,res,next)=>{
     const { year, uuid } = req.params;
     const debug = !!req.query.debug;
     if(!year || !uuid) return res.status(400).send('Year and Supplier UUID required');
+
+    // Subcontractors may only view their own returns
+    if (req.user && req.user.role === 'subcontractor') {
+      const ownSupplier = req.user.subcontractorId
+        ? await mdb.REST.supplier.findById(req.user.subcontractorId).lean()
+        : null;
+      if (!ownSupplier || ownSupplier.uuid !== uuid) {
+        return res.status(403).send('You do not have permission to view this subcontractor\'s returns.');
+      }
+    }
+
     const supplier = await mdb.REST.supplier.findOne({ uuid }).lean();
     if(!supplier) {
       req.flash('error', 'Supplier not found.');
@@ -193,9 +219,13 @@ exports.renderYearlyReturns = async (req,res,next)=>{
       for (const line of lines) {
         if (!line) continue;
         const chargeType = line.ChargeType != null ? Number(line.ChargeType) : null;
-        const qty = Number(line.Quantity) || 0;
-        const rate = Number(line.Rate) || 0;
-        const amount = line.Amount != null ? Number(line.Amount) : (rate * qty);
+        const qty = Number(line.Quantity ?? line.Qty) || 0;
+        const rate = Number(line.Rate ?? line.UnitPrice ?? line.Price ?? line.Unit) || 0;
+        const amount = (line.Amount != null && line.Amount !== '')
+          ? Number(line.Amount)
+          : (line.NetAmount != null && line.NetAmount !== ''
+            ? Number(line.NetAmount)
+            : (rate * qty));
         if (chargeType === 18685896) { materialsCost += amount; continue; }
         if (chargeType === 18685897) { labourCost += amount; continue; }
         if (chargeType === 18685964) { cisAmount += Math.abs(amount); continue; }
