@@ -21,15 +21,17 @@ exports.renderMonthlyReturnsForm = async (req,res,next)=>{
       .lean();
 
     const suppliersWithMonths = [];
+    const deletedFilter = { $or: [
+      { deletedAt: null },
+      { deletedAt: { $exists: false } },
+      { deletedAt: '' },
+      { deletedAt: '0000-00-00 00:00:00' }
+    ]};
+
     for (const supplier of suppliers) {
       const recs = await mdb.REST.purchase.find({
         SupplierId: supplier.Id,
-        $or: [
-          { deletedAt: null },
-          { deletedAt: { $exists: false } },
-          { deletedAt: '' },
-          { deletedAt: '0000-00-00 00:00:00' }
-        ]
+        ...deletedFilter
       })
         .select('TaxYear TaxMonth')
         .lean();
@@ -42,9 +44,37 @@ exports.renderMonthlyReturnsForm = async (req,res,next)=>{
           receiptsByYear[r.TaxYear].sort((a,b)=> a - b);
         }
       });
+
+      // If no TaxYear/TaxMonth data, try computing from payment dates
+      if (Object.keys(receiptsByYear).length === 0) {
+        const fallbackRecs = await mdb.REST.purchase.find({
+          SupplierId: supplier.Id,
+          $or: [{ TaxYear: null }, { TaxYear: { $exists: false } }],
+          ...deletedFilter
+        })
+          .select('PaidDate PaymentLines')
+          .lean();
+        for (const r of fallbackRecs) {
+          const payDate = r.PaidDate
+            || (Array.isArray(r.PaymentLines) && r.PaymentLines.length > 0
+              ? (r.PaymentLines[0].PayDate || r.PaymentLines[0].Date)
+              : null);
+          if (!payDate) continue;
+          const { taxYear: ty, taxMonth: tm } = taxService.calculateTaxYearAndMonth(payDate);
+          if (!ty || !tm) continue;
+          if (!receiptsByYear[ty]) receiptsByYear[ty] = [];
+          if (!receiptsByYear[ty].includes(tm)) {
+            receiptsByYear[ty].push(tm);
+            receiptsByYear[ty].sort((a,b)=> a - b);
+          }
+        }
+      }
+
+      const years = Object.keys(receiptsByYear).sort((a,b)=> b - a);
+      if (years.length === 0) continue;
       suppliersWithMonths.push({
         supplier,
-        years: Object.keys(receiptsByYear).sort((a,b)=> b - a),
+        years,
         receiptsByYear
       });
     }
@@ -82,15 +112,21 @@ exports.renderMonthlyReturns = async (req,res,next)=>{
     }
 
     // Fetch purchases for supplier and period
+    const taxMonthRange = taxService.getCurrentMonthlyReturn(+year, +month);
     const purchases = await mdb.REST.purchase.find({
       SupplierId: supplier.Id,
-      TaxYear: +year,
-      TaxMonth: +month,
-      $or: [
-        { deletedAt: null },
-        { deletedAt: { $exists: false } },
-        { deletedAt: '' },
-        { deletedAt: '0000-00-00 00:00:00' }
+      $and: [
+        { $or: [
+          { TaxYear: +year, TaxMonth: +month },
+          { TaxYear: null, PaidDate: { $gte: taxMonthRange.periodStart, $lte: taxMonthRange.periodEnd } },
+          { TaxYear: { $exists: false }, PaidDate: { $gte: taxMonthRange.periodStart, $lte: taxMonthRange.periodEnd } }
+        ]},
+        { $or: [
+          { deletedAt: null },
+          { deletedAt: { $exists: false } },
+          { deletedAt: '' },
+          { deletedAt: '0000-00-00 00:00:00' }
+        ]}
       ]
     }).sort({ Number: 1 }).lean();
 
@@ -195,14 +231,21 @@ exports.renderYearlyReturns = async (req,res,next)=>{
       req.flash('error', 'Supplier not found.');
       return res.redirect('/suppliers');
     }
+    const taxYearRange = taxService.getTaxYearStartEnd(+year);
     const purchases = await mdb.REST.purchase.find({
       SupplierId: supplier.Id,
-      TaxYear: +year,
-      $or: [
-        { deletedAt: null },
-        { deletedAt: { $exists: false } },
-        { deletedAt: '' },
-        { deletedAt: '0000-00-00 00:00:00' }
+      $and: [
+        { $or: [
+          { TaxYear: +year },
+          { TaxYear: null, PaidDate: { $gte: taxYearRange.start, $lte: taxYearRange.end } },
+          { TaxYear: { $exists: false }, PaidDate: { $gte: taxYearRange.start, $lte: taxYearRange.end } }
+        ]},
+        { $or: [
+          { deletedAt: null },
+          { deletedAt: { $exists: false } },
+          { deletedAt: '' },
+          { deletedAt: '0000-00-00 00:00:00' }
+        ]}
       ]
     }).sort({ TaxMonth: 1, Number: 1 }).lean();
 
@@ -245,7 +288,17 @@ exports.renderYearlyReturns = async (req,res,next)=>{
     };
 
     for (const p of paidPurchases) {
-      const m = (p.TaxMonth || 1).toString();
+      let m = p.TaxMonth;
+      if (!m) {
+        const payDate = p.PaidDate
+          || (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0
+            ? (p.PaymentLines[0].PayDate || p.PaymentLines[0].Date)
+            : null);
+        if (payDate) {
+          m = taxService.calculateTaxYearAndMonth(payDate).taxMonth;
+        }
+      }
+      m = (m || 1).toString();
       if (!receiptsByMonth[m]) receiptsByMonth[m] = [];
       const c = classifyPurchase(p);
       receiptsByMonth[m].push({

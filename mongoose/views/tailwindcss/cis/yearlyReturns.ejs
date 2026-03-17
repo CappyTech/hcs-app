@@ -81,7 +81,7 @@
   <% const tableClasses = pageBreakMonths.includes(monthIndex) ? 'page-break d-print-table' : 'd-print-table'; %>
   <div class="avoid-page-break">
   <table class="min-w-full border border-gray-300 rounded-lg overflow-hidden text-left text-xs leading-tight mb-4 condensed-table <%= tableClasses %>">
-      <caption class="text-center font-semibold p-2 text-gray-700">Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= year %>)</caption>
+      <caption class="text-center font-semibold p-2 text-gray-700">Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= monthIndex >= 10 ? year + 1 : year %>)</caption>
       <thead class="bg-gray-100">
         <tr>
           <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Invoice</th>

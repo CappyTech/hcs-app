@@ -44,7 +44,7 @@
     <% if (hasReceipts) { %>
       <table class="min-w-full border-collapse border border-gray-300 mb-10 print:table <%= pageBreakMonths.includes(monthIndex) ? 'print:break-after-page' : '' %>">
         <caption class="text-center text-lg font-semibold mb-4">
-          Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= year %>)
+          Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= monthIndex >= 10 ? year + 1 : year %>)
         </caption>
         <thead class="bg-gray-100">
           <tr>
