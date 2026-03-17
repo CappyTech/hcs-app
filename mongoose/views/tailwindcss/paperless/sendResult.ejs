@@ -16,8 +16,9 @@
     <% } %>
     <div class="mt-4 flex gap-2">
       <a href="/paperless/ocr/<%= paperlessId %>/draft" class="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-800 text-white text-sm">Back to draft</a>
-      <% if (result.location) { %>
-        <a href="<%= result.location %>" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-md bg-green-700 hover:bg-green-800 text-white text-sm">Open in KashFlow</a>
+      <% const kfNumber = result.response && (result.response.Number != null) ? result.response.Number : null; %>
+      <% if (kfNumber != null) { %>
+        <a href="https://app.kashflow.com/#purchases/<%= kfNumber %>" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-md bg-green-700 hover:bg-green-800 text-white text-sm">Open in KashFlow</a>
       <% } %>
     </div>
   </div>
