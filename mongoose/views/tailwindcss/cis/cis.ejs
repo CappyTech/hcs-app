@@ -177,9 +177,37 @@
           </div>
         </div>
       <% } %>
-      <% if (!allPurchasesSubmitted) { %>
+      <% if (purchases.length > 0) { %>
       <hr class="my-8 border-gray-300 dark:border-gray-600">
       <div class="mb-8">
+        <% if (allPurchasesSubmitted) { %>
+        <div class="mb-4 text-center">
+          <span class="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-sm font-medium px-3 py-1 rounded-full">
+            <i class="bi bi-check-circle"></i> All Purchases Submitted
+          </span>
+        </div>
+        <% } %>
+        <!-- Change All Submissions quick action -->
+        <div class="max-w-xl mx-auto mb-6">
+          <form action="/purchase/change" method="POST" class="flex flex-col sm:flex-row items-end gap-3">
+            <%- include('../partials/csrfHidden.ejs') %>
+            <input type="hidden" name="redirectPath" value="/CIS/Dashboard/<%= specifiedYear %>/<%= specifiedMonth %>">
+            <% purchases.forEach(purchase => { %>
+              <input type="hidden" name="uuids" value="<%= purchase.uuid %>">
+            <% }); %>
+            <div class="flex-1 w-full">
+              <label for="submissionDateAll" class="block mb-1 font-medium text-gray-700 dark:text-gray-200">Change all submissions to Date:</label>
+              <input type="date" id="submissionDateAll" name="submissionDate" required
+                class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-hcs-green bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            </div>
+            <button type="submit" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded transition">
+              Update All
+            </button>
+          </form>
+        </div>
+
+        <hr class="my-6 border-gray-200 dark:border-gray-700">
+
         <h4 class="text-center text-lg font-semibold mb-4">Update Submission Date for Selected Purchases</h4>
         <form action="/purchase/change" method="POST" class="max-w-xl mx-auto">
           <%- include('../partials/csrfHidden.ejs') %>
@@ -233,11 +261,6 @@
             Update Selected Purchases
           </button>
         </form>
-      </div>
-      <% } else if (purchases.length > 0) { %>
-      <hr class="my-8 border-gray-300 dark:border-gray-600">
-      <div>
-        <h4 class="text-center text-lg font-semibold">All Purchases Submitted</h4>
       </div>
       <% } %>
     </div>
