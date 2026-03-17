@@ -190,15 +190,24 @@ exports.getPurchaseDraft = async (req, res, next) => {
 
     // Determine source field names for key draft values to aid debugging/visibility
     const norm = (s) => String(s || '').trim().toLowerCase();
+    const normKey = (s) => norm(s).replace(/[^a-z0-9]+/g, '');
     const cf = Array.isArray(doc?.customFields) ? doc.customFields : [];
-    const cfNameSet = new Map(); // normalized name -> original name
-    for (const c of cf) {
-      if (c && c.fieldName) cfNameSet.set(norm(c.fieldName), String(c.fieldName));
-    }
+    const cfEntries = cf.filter(c => c && c.fieldName).map(c => ({
+      original: String(c.fieldName),
+      norm: norm(c.fieldName),
+      key: normKey(c.fieldName),
+    }));
     const pickSource = (names) => {
-      for (const n of (names || [])) {
-        const key = norm(n);
-        if (cfNameSet.has(key)) return cfNameSet.get(key);
+      const nameList = Array.isArray(names) ? names : [];
+      const wanted = new Set(nameList.map(norm));
+      const wantedKeys = new Set(nameList.map(normKey));
+      // Pass 1: exact normalized
+      for (const e of cfEntries) { if (wanted.has(e.norm)) return e.original; }
+      // Pass 2: key-normalized
+      for (const e of cfEntries) { if (wantedKeys.has(e.key)) return e.original; }
+      // Pass 3: prefix
+      for (const e of cfEntries) {
+        for (const w of wantedKeys) { if (w && e.key.startsWith(w)) return e.original; }
       }
       return null;
     };

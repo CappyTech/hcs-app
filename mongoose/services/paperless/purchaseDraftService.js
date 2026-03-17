@@ -11,7 +11,7 @@ const defaultMap = {
   // Prefer explicit invoice number over generic reference labels
   SupplierReference: ['Invoice Number', 'Invoice No', 'Invoice #', 'Inv No', 'Inv #', 'Supplier Reference', 'Reference', 'Ref', 'Doc No', 'Document Number'],
   IssuedDate: ['Invoice Date', 'Date', 'Document Date'],
-  DueDate: ['Due Date', 'Payment Due'],
+  DueDate: ['Due Date', 'Invoice Due Date', 'Payment Due', 'Payment Due Date', 'Due By', 'Pay By', 'Pay By Date'],
   NetAmount: ['Net', 'Net Amount', 'Subtotal', 'Total Goods'],
   VATAmount: ['VAT', 'VAT Amount', 'Tax', 'Tax Amount', 'Total VAT'],
   GrossAmount: ['Gross', 'Total', 'Total Amount', 'Amount', 'Invoice Total'],
