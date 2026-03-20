@@ -1,19 +1,19 @@
-const crypto = require('crypto');
-const logger = require('./loggerService');
+const crypto = require("crypto");
+const logger = require("./loggerService");
 
 // Lightweight CSRF middleware (transitional mode by default).
 // Generates a per-session token and validates non-idempotent methods.
 // Accepts token in body._csrf / body.csrfToken / X-CSRF-Token header / ?_csrf query.
 // STRICT_MODE=true enforces rejection; otherwise logs and allows (grace period to update forms).
 
-const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-const CSRF_COOKIE_NAME = 'hms.csrf';
+const CSRF_COOKIE_NAME = "hms.csrf";
 
 // Optional comma separated path prefixes to exempt (e.g. "/user/login,/user/register")
-const EXEMPT = (process.env.CSRF_EXEMPT_PATHS || '')
-  .split(',')
-  .map(s => s.trim())
+const EXEMPT = (process.env.CSRF_EXEMPT_PATHS || "")
+  .split(",")
+  .map((s) => s.trim())
   .filter(Boolean);
 
 module.exports = function csrfService(req, res, next) {
@@ -21,7 +21,7 @@ module.exports = function csrfService(req, res, next) {
     if (!req.session) return next();
     let createdToken = false;
     if (!req.session.csrfToken) {
-      req.session.csrfToken = crypto.randomBytes(24).toString('hex');
+      req.session.csrfToken = crypto.randomBytes(24).toString("hex");
       createdToken = true;
     }
     // Prefer an existing CSRF cookie (supports cases where the session cookie isn't
@@ -35,9 +35,9 @@ module.exports = function csrfService(req, res, next) {
     try {
       res.cookie(CSRF_COOKIE_NAME, res.locals.csrfToken, {
         httpOnly: false,
-        sameSite: 'lax',
+        sameSite: "lax",
         secure: !!req.secure,
-        path: '/',
+        path: "/",
       });
     } catch (_) {}
     // Ensure the session cookie is set on first interaction
@@ -51,34 +51,47 @@ module.exports = function csrfService(req, res, next) {
     if (SAFE_METHODS.has(req.method)) return next();
 
     // Exempt explicit paths (prefix match) to unblock critical flows during debugging
-    if (EXEMPT.length && EXEMPT.some(p => req.path.startsWith(p))) {
-      logger.warn(`CSRF exempt path allowed method=${req.method} path=${req.originalUrl}`);
+    if (EXEMPT.length && EXEMPT.some((p) => req.path.startsWith(p))) {
+      logger.warn(
+        `CSRF exempt path allowed method=${req.method} path=${req.originalUrl}`,
+      );
       return next();
     }
 
-    const supplied = (req.body && (req.body._csrf || req.body.csrfToken))
-      || req.headers['x-csrf-token']
-      || req.headers['x-xsrf-token']
-      || req.query._csrf;
+    const supplied =
+      (req.body && (req.body._csrf || req.body.csrfToken)) ||
+      req.headers["x-csrf-token"] ||
+      req.headers["x-xsrf-token"] ||
+      req.query._csrf;
 
     const expectedSession = req.session.csrfToken;
     const expectedCookie = req.cookies && req.cookies[CSRF_COOKIE_NAME];
-    if (supplied && (supplied === expectedSession || supplied === expectedCookie)) return next();
+    if (
+      supplied &&
+      (supplied === expectedSession || supplied === expectedCookie)
+    )
+      return next();
 
-    const strict = process.env.STRICT_MODE === 'true';
+    const strict = process.env.STRICT_MODE === "true";
     if (strict) {
-      const exp = req.session.csrfToken || 'none';
-      const ob = v => v ? `${v.slice(0,8)}...${v.slice(-6)}(len=${v.length})` : 'null';
-      logger.warn(`CSRF blocked: ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)} hasSession=${!!req.sessionID}`);
-      return res.status(403).send('Forbidden (CSRF)');
+      const exp = req.session.csrfToken || "none";
+      const ob = (v) =>
+        v ? `${v.slice(0, 8)}...${v.slice(-6)}(len=${v.length})` : "null";
+      logger.warn(
+        `CSRF blocked: ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)} hasSession=${!!req.sessionID}`,
+      );
+      return res.status(403).send("Forbidden (CSRF)");
     } else {
-      const exp = req.session.csrfToken || 'none';
-      const ob = v => v ? `${v.slice(0,8)}...${v.slice(-6)}(len=${v.length})` : 'null';
-      logger.warn(`CSRF missing/mismatch (allowed transitional) for ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)}`);
+      const exp = req.session.csrfToken || "none";
+      const ob = (v) =>
+        v ? `${v.slice(0, 8)}...${v.slice(-6)}(len=${v.length})` : "null";
+      logger.warn(
+        `CSRF missing/mismatch (allowed transitional) for ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)}`,
+      );
       return next();
     }
   } catch (err) {
-    logger.error('CSRF middleware error: ' + err.message);
+    logger.error("CSRF middleware error: " + err.message);
     next();
   }
 };

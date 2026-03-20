@@ -1,7 +1,7 @@
-const express = require('express');
-const listController = require('../controllers/listController');
-const authService = require('../../services/authService');
-const rbac = require('../config/rolePermissionsConfig');
+const express = require("express");
+const listController = require("../controllers/listController");
+const authService = require("../../services/authService");
+const rbac = require("../config/rolePermissionsConfig");
 
 const router = express.Router();
 
@@ -12,31 +12,38 @@ for (const [functionName, handler] of Object.entries(listController)) {
 
   const modelName = match[1];
   const originalModel = modelName.charAt(0).toLowerCase() + modelName.slice(1);
-  const listConfig = require('../config/listControllerConfig')[originalModel] || {};
+  const listConfig =
+    require("../config/listControllerConfig")[originalModel] || {};
   const routeModel = (listConfig.modelRename || originalModel).toLowerCase();
   let routePath;
   if (listConfig.pathOverride) {
-    routePath = listConfig.pathOverride.startsWith('/') ? listConfig.pathOverride : `/${listConfig.pathOverride}`;
+    routePath = listConfig.pathOverride.startsWith("/")
+      ? listConfig.pathOverride
+      : `/${listConfig.pathOverride}`;
   } else {
     // Support nested paths in modelRename, e.g., 'paperless/ocrdocument' -> '/paperless/ocrdocuments'
-    const parts = routeModel.split('/').filter(Boolean);
+    const parts = routeModel.split("/").filter(Boolean);
     const last = parts.pop();
     const pluralLast = `${last}s`;
-    routePath = `/${[...parts, pluralLast].join('/')}`;
+    routePath = `/${[...parts, pluralLast].join("/")}`;
   }
 
   // Build role list. Admin always has access.
   // Check which other roles can list this model via RBAC config.
-  const crudConfig = require('../config/CRUDControllerConfig')[originalModel] || {};
-  const middlewares = crudConfig.middleware?.read || require('../config/CRUDControllerConfig').default?.middleware?.read || ['ensureRole:admin'];
+  const crudConfig =
+    require("../config/CRUDControllerConfig")[originalModel] || {};
+  const middlewares = crudConfig.middleware?.read ||
+    require("../config/CRUDControllerConfig").default?.middleware?.read || [
+      "ensureRole:admin",
+    ];
 
   // Use the same middleware resolution as CRUDRoutes
-  const resolveMiddleware = (entry = '') => {
-    if (!entry.includes(':')) return authService[entry];
-    const [fn, ...rest] = entry.split(':');
-    const arg = rest.join(':');
-    if (fn === 'ensureRoles') {
-      const roles = arg.split(',').map(r => r.trim());
+  const resolveMiddleware = (entry = "") => {
+    if (!entry.includes(":")) return authService[entry];
+    const [fn, ...rest] = entry.split(":");
+    const arg = rest.join(":");
+    if (fn === "ensureRoles") {
+      const roles = arg.split(",").map((r) => r.trim());
       return authService.ensureRoles(...roles);
     }
     return authService[fn]?.(arg);

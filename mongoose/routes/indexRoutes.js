@@ -1,17 +1,41 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authService = require('../../services/authService');
-const index = require('../controllers/indexController');
+const authService = require("../../services/authService");
+const index = require("../controllers/indexController");
 
-router.get('/', authService.ensureRole('public'), index.renderIndex);
-router.get('/construction-industry-scheme', authService.ensureRoles('admin', 'accountant', 'hmrc', 'subcontractor'), index.renderConstructionIndustryScheme);
-router.get('/management', authService.ensureRole('admin'), index.renderManagement);
-router.get('/payroll', authService.ensureRole('admin'), index.renderPayroll);
-router.get('/human-resources', authService.ensureRole('admin'), index.renderHumanResources);
-router.get('/kashflow', authService.ensureRoles('admin', 'accountant'), index.renderKashflow);
-router.get('/create', authService.ensureRole('admin'), index.renderCreate);
-router.get('/paperless', authService.ensureRole('admin'), index.renderPaperless);
-router.get('/finance', authService.ensureRoles('admin', 'accountant'), index.renderFinance);
+router.get("/", authService.ensureRole("public"), index.renderIndex);
+router.get(
+  "/construction-industry-scheme",
+  authService.ensureRoles("admin", "accountant", "hmrc", "subcontractor"),
+  index.renderConstructionIndustryScheme,
+);
+router.get(
+  "/management",
+  authService.ensureRole("admin"),
+  index.renderManagement,
+);
+router.get("/payroll", authService.ensureRole("admin"), index.renderPayroll);
+router.get(
+  "/human-resources",
+  authService.ensureRole("admin"),
+  index.renderHumanResources,
+);
+router.get(
+  "/kashflow",
+  authService.ensureRoles("admin", "accountant"),
+  index.renderKashflow,
+);
+router.get("/create", authService.ensureRole("admin"), index.renderCreate);
+router.get(
+  "/paperless",
+  authService.ensureRole("admin"),
+  index.renderPaperless,
+);
+router.get(
+  "/finance",
+  authService.ensureRoles("admin", "accountant"),
+  index.renderFinance,
+);
 /*
 const fetch = require('../kashflowAPI/fetchKashFlowDataMongoose');
 router.get('/fetch-kashflow-data-mongoose', async (req, res, next) => {

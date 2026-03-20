@@ -1,6 +1,6 @@
-const path = require('path');
-const logger = require('./loggerService');
-const mdb = require('../mongoose/services/mongooseDatabaseService');
+const path = require("path");
+const logger = require("./loggerService");
+const mdb = require("../mongoose/services/mongooseDatabaseService");
 
 /**
  * Maintenance/availability middleware.
@@ -11,16 +11,17 @@ const mdb = require('../mongoose/services/mongooseDatabaseService');
 module.exports = async function maintenanceService(req, res, next) {
   try {
     // Allow health probes and static assets through
-    const p = req.path || '';
+    const p = req.path || "";
     if (
-      p === '/healthz' ||
-      p === '/favicon.ico' ||
-      p.startsWith('/resources/') ||
-      p.startsWith('/robots.txt')
-    ) return next();
+      p === "/healthz" ||
+      p === "/favicon.ico" ||
+      p.startsWith("/resources/") ||
+      p.startsWith("/robots.txt")
+    )
+      return next();
 
     // Explicit maintenance flag via env
-    if (process.env.MAINTENANCE === 'true') {
+    if (process.env.MAINTENANCE === "true") {
       return renderMaintenance(res);
     }
 
@@ -31,14 +32,18 @@ module.exports = async function maintenanceService(req, res, next) {
 
     const ok = restReady && internalReady && paperlessReady;
     if (!ok) {
-      logger.warn('[maintenance] One or more DB connections unavailable', { restReady, internalReady, paperlessReady });
+      logger.warn("[maintenance] One or more DB connections unavailable", {
+        restReady,
+        internalReady,
+        paperlessReady,
+      });
       return renderMaintenance(res);
     }
 
     return next();
   } catch (err) {
     // If the maintenance check itself fails, be permissive and let request continue; error handler will catch downstream
-    logger.warn('[maintenance] check error: ' + err.message);
+    logger.warn("[maintenance] check error: " + err.message);
     return next();
   }
 };
@@ -54,11 +59,15 @@ function renderMaintenance(res) {
   res.locals.session ??= {};
   res.status(503);
   try {
-    res.render(path.join('tailwindcss', 'maintenance'), {
-      title: 'Service Unavailable',
-      message: 'The service is restarting. Please retry in a few seconds.'
+    res.render(path.join("tailwindcss", "maintenance"), {
+      title: "Service Unavailable",
+      message: "The service is restarting. Please retry in a few seconds.",
     });
   } catch (e) {
-    res.type('text/plain').send('503 - Service Unavailable: The service is restarting. Please retry in a few seconds.');
+    res
+      .type("text/plain")
+      .send(
+        "503 - Service Unavailable: The service is restarting. Please retry in a few seconds.",
+      );
   }
 }

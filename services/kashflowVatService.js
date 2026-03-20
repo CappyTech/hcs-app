@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
-const axios = require('axios');
-const logger = require('./loggerService');
-const kfSession = require('./kashflowSessionService');
+const axios = require("axios");
+const logger = require("./loggerService");
+const kfSession = require("./kashflowSessionService");
 
 let _cached = {
   fetchedAt: 0,
@@ -12,16 +12,20 @@ let _cached = {
 };
 
 function normBaseUrl(url) {
-  return String(url || 'https://api.kashflow.com/v2').replace(/\/\/+$/, '');
+  return String(url || "https://api.kashflow.com/v2").replace(/\/\/+$/, "");
 }
 
 function guessCountryCode() {
-  const cc = (process.env.KASHFLOW_VAT_COUNTRY_CODE || process.env.KASHFLOW_COUNTRY_CODE || 'GB').trim();
-  return cc || 'GB';
+  const cc = (
+    process.env.KASHFLOW_VAT_COUNTRY_CODE ||
+    process.env.KASHFLOW_COUNTRY_CODE ||
+    "GB"
+  ).trim();
+  return cc || "GB";
 }
 
 function extractRateNumber(obj) {
-  if (!obj || typeof obj !== 'object') return null;
+  if (!obj || typeof obj !== "object") return null;
   const candidates = [
     obj.Rate,
     obj.VatRate,
@@ -31,14 +35,15 @@ function extractRateNumber(obj) {
     obj.Value,
   ];
   for (const c of candidates) {
-    const n = typeof c === 'number' ? c : (typeof c === 'string' ? parseFloat(c) : NaN);
+    const n =
+      typeof c === "number" ? c : typeof c === "string" ? parseFloat(c) : NaN;
     if (Number.isFinite(n)) return n;
   }
   return null;
 }
 
 function extractCountryCode(obj) {
-  if (!obj || typeof obj !== 'object') return null;
+  if (!obj || typeof obj !== "object") return null;
   const candidates = [
     obj.CountryCode,
     obj.Country,
@@ -48,13 +53,17 @@ function extractCountryCode(obj) {
     obj.Iso,
   ];
   for (const c of candidates) {
-    if (typeof c === 'string' && c.trim()) return c.trim().toUpperCase();
+    if (typeof c === "string" && c.trim()) return c.trim().toUpperCase();
   }
   return null;
 }
 
 function uniqSorted(nums) {
-  const arr = Array.from(new Set((nums || []).filter(n => typeof n === 'number' && Number.isFinite(n))));
+  const arr = Array.from(
+    new Set(
+      (nums || []).filter((n) => typeof n === "number" && Number.isFinite(n)),
+    ),
+  );
   arr.sort((a, b) => a - b);
   return arr;
 }
@@ -64,7 +73,7 @@ async function fetchVatLevelsFromApi(baseUrl, countryCode) {
 
   // Prefer authenticated call (some deployments require it), but fall back to unauth.
   const attempt = async (token) => {
-    const headers = { Accept: 'application/json' };
+    const headers = { Accept: "application/json" };
     if (token) headers.Authorization = `KfToken ${token}`;
     return axios.get(url, { headers, timeout: 15000 });
   };
@@ -78,7 +87,13 @@ async function fetchVatLevelsFromApi(baseUrl, countryCode) {
   }
 
   const data = resp && resp.data;
-  const rows = Array.isArray(data) ? data : (Array.isArray(data?.Data) ? data.Data : (Array.isArray(data?.Items) ? data.Items : []));
+  const rows = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.Data)
+      ? data.Data
+      : Array.isArray(data?.Items)
+        ? data.Items
+        : [];
 
   const levels = [];
   for (const row of rows) {
@@ -94,18 +109,34 @@ async function fetchVatLevelsFromApi(baseUrl, countryCode) {
 }
 
 async function getVatLevels(opts = {}) {
-  const baseUrl = normBaseUrl(opts.baseUrl || process.env.KASHFLOW_API_BASE_URL || 'https://api.kashflow.com/v2');
-  const countryCode = String(opts.countryCode || guessCountryCode()).toUpperCase();
-  const ttlMs = Number.isFinite(+opts.ttlMs) ? +opts.ttlMs : 24 * 60 * 60 * 1000; // 24h
+  const baseUrl = normBaseUrl(
+    opts.baseUrl ||
+      process.env.KASHFLOW_API_BASE_URL ||
+      "https://api.kashflow.com/v2",
+  );
+  const countryCode = String(
+    opts.countryCode || guessCountryCode(),
+  ).toUpperCase();
+  const ttlMs = Number.isFinite(+opts.ttlMs)
+    ? +opts.ttlMs
+    : 24 * 60 * 60 * 1000; // 24h
 
-  const fresh = _cached.vatLevels && _cached.baseUrl === baseUrl && _cached.countryCode === countryCode && (Date.now() - _cached.fetchedAt) < ttlMs;
+  const fresh =
+    _cached.vatLevels &&
+    _cached.baseUrl === baseUrl &&
+    _cached.countryCode === countryCode &&
+    Date.now() - _cached.fetchedAt < ttlMs;
   if (fresh) return _cached.vatLevels;
 
   const levels = await fetchVatLevelsFromApi(baseUrl, countryCode);
   if (!levels || levels.length === 0) {
-    logger.warn(`[kashflow] No VAT rates returned from ${baseUrl}/countries/vatrates for country=${countryCode}`);
+    logger.warn(
+      `[kashflow] No VAT rates returned from ${baseUrl}/countries/vatrates for country=${countryCode}`,
+    );
   } else {
-    logger.info(`[kashflow] Loaded VAT rates from KashFlow for country=${countryCode}: ${levels.join(', ')}`);
+    logger.info(
+      `[kashflow] Loaded VAT rates from KashFlow for country=${countryCode}: ${levels.join(", ")}`,
+    );
   }
 
   _cached = { fetchedAt: Date.now(), baseUrl, countryCode, vatLevels: levels };

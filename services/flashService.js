@@ -7,13 +7,13 @@ module.exports = (req, res, next) => {
     } catch (e) {
       flashData = {};
     }
-    res.clearCookie('__flash');
+    res.clearCookie("__flash");
   }
 
   const flashToSet = {};
 
   req.flash = (type, message) => {
-    if (typeof message !== 'undefined') {
+    if (typeof message !== "undefined") {
       if (!flashToSet[type]) flashToSet[type] = [];
       flashToSet[type].push(message);
       // Also expose to current request so same-request renders see the message
@@ -34,7 +34,7 @@ module.exports = (req, res, next) => {
   const originalEnd = res.end;
   res.end = function (...args) {
     if (Object.keys(flashToSet).length > 0 && !res.headersSent) {
-      res.cookie('__flash', JSON.stringify(flashToSet), {
+      res.cookie("__flash", JSON.stringify(flashToSet), {
         maxAge: 5000,
         httpOnly: false,
       });

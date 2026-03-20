@@ -1,4 +1,4 @@
-const logger = require('./loggerService');
+const logger = require("./loggerService");
 
 // Compile a list of patterns commonly used by scanners probing for PHP/WordPress/etc.
 const blockPatterns = [
@@ -30,23 +30,42 @@ const blockPatterns = [
 // Query and path heuristics (simple WAF-like checks)
 const blockHeuristics = (req) => {
   try {
-    const url = (req.originalUrl || req.url || '').toLowerCase();
+    const url = (req.originalUrl || req.url || "").toLowerCase();
     // Directory traversal
-    if (url.includes('..') || url.includes('%2e%2e') || url.includes('%252e%252e')) return true;
+    if (
+      url.includes("..") ||
+      url.includes("%2e%2e") ||
+      url.includes("%252e%252e")
+    )
+      return true;
     // Basic SQLi/XSS probes
-    const qs = req.url.split('?')[1] || '';
+    const qs = req.url.split("?")[1] || "";
     const qsl = qs.toLowerCase();
-    const badFragments = ['union select', 'sleep(', 'benchmark(', 'load_file(', 'outfile', "or 1=1", '<script', 'onerror=', 'javascript:', 'data:text/html'];
-    if (badFragments.some(f => qsl.includes(f))) return true;
+    const badFragments = [
+      "union select",
+      "sleep(",
+      "benchmark(",
+      "load_file(",
+      "outfile",
+      "or 1=1",
+      "<script",
+      "onerror=",
+      "javascript:",
+      "data:text/html",
+    ];
+    if (badFragments.some((f) => qsl.includes(f))) return true;
     return false;
-  } catch (_) { return false; }
+  } catch (_) {
+    return false;
+  }
 };
 
 // Optional: allow comma-separated IPs to be blocked via env
-const parseList = (s) => (s || '')
-  .split(',')
-  .map(v => v.trim())
-  .filter(Boolean);
+const parseList = (s) =>
+  (s || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
 
 const blockedIPs = new Set(parseList(process.env.BLOCKED_IPS));
 
@@ -62,15 +81,20 @@ const bans = new Map(); // ip -> untilTs
 module.exports = function requestBlocklistService(req, res, next) {
   try {
     // Allow health probes through
-    if (req.path === '/healthz') return next();
+    if (req.path === "/healthz") return next();
 
-    const p = (req.path || '').trim();
+    const p = (req.path || "").trim();
 
     // IP resolution (from proxy), take first IP if a list, strip port if any
-    const xf = req.headers['x-forwarded-for'] || '';
-    const remote = Array.isArray(xf) ? xf[0] : String(xf).split(',')[0];
-    const ipPort = (remote || req.socket?.remoteAddress || '').replace(/^::ffff:/, '').trim();
-    const ip = ipPort.includes(':') && ipPort.includes('.') ? ipPort.split(':')[0] : ipPort; // strip :port for IPv4:port
+    const xf = req.headers["x-forwarded-for"] || "";
+    const remote = Array.isArray(xf) ? xf[0] : String(xf).split(",")[0];
+    const ipPort = (remote || req.socket?.remoteAddress || "")
+      .replace(/^::ffff:/, "")
+      .trim();
+    const ip =
+      ipPort.includes(":") && ipPort.includes(".")
+        ? ipPort.split(":")[0]
+        : ipPort; // strip :port for IPv4:port
 
     // Active ban?
     const now = Date.now();
@@ -90,7 +114,10 @@ module.exports = function requestBlocklistService(req, res, next) {
     // Path-based blocking
     let matched = false;
     for (const rx of blockPatterns) {
-      if (rx.test(p)) { matched = true; break; }
+      if (rx.test(p)) {
+        matched = true;
+        break;
+      }
     }
     if (!matched && blockHeuristics(req)) matched = true;
 
@@ -101,7 +128,8 @@ module.exports = function requestBlocklistService(req, res, next) {
         const entry = hitCounters.get(ip) || { firstTs: now, hits: 0 };
         // Reset window if expired
         if (now - entry.firstTs > HIT_WINDOW_MS) {
-          entry.firstTs = now; entry.hits = 0;
+          entry.firstTs = now;
+          entry.hits = 0;
         }
         entry.hits += 1;
         hitCounters.set(ip, entry);
@@ -109,7 +137,9 @@ module.exports = function requestBlocklistService(req, res, next) {
           const until = now + BAN_TTL_MS;
           bans.set(ip, until);
           hitCounters.delete(ip);
-          logger.warn(`[blocklist] autoban applied ip=${ip} until=${new Date(until).toISOString()}`);
+          logger.warn(
+            `[blocklist] autoban applied ip=${ip} until=${new Date(until).toISOString()}`,
+          );
         }
       }
       return deny(res);
@@ -124,9 +154,11 @@ module.exports = function requestBlocklistService(req, res, next) {
 
 function deny(res) {
   try {
-    res.setHeader('Connection', 'close');
-    res.status(403).type('text/plain').send('Forbidden');
+    res.setHeader("Connection", "close");
+    res.status(403).type("text/plain").send("Forbidden");
   } catch (_) {
-    try { res.end(); } catch (__) {}
+    try {
+      res.end();
+    } catch (__) {}
   }
 }

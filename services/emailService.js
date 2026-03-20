@@ -1,5 +1,5 @@
-const nodemailer = require('nodemailer');
-const logger = require('./loggerService');
+const nodemailer = require("nodemailer");
+const logger = require("./loggerService");
 
 // ── Transporter (lazy-initialised) ───────────────────────────────────
 let _transporter = null;
@@ -13,7 +13,9 @@ function getTransporter() {
   const pass = process.env.SMTP_PASS;
 
   if (!host || !user || !pass) {
-    logger.warn('Email service: SMTP_HOST, SMTP_USER or SMTP_PASS not configured — emails will be logged only.');
+    logger.warn(
+      "Email service: SMTP_HOST, SMTP_USER or SMTP_PASS not configured — emails will be logged only.",
+    );
     return null;
   }
 
@@ -29,7 +31,8 @@ function getTransporter() {
 
 // ── Send an email ────────────────────────────────────────────────────
 async function sendMail({ to, subject, html, text }) {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@heroncs.co.uk';
+  const from =
+    process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@heroncs.co.uk";
   const transporter = getTransporter();
 
   if (!transporter) {
@@ -52,10 +55,11 @@ async function sendMail({ to, subject, html, text }) {
 
 // ── Send verification email ──────────────────────────────────────────
 async function sendVerificationEmail(email, token) {
-  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const baseUrl =
+    process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const verifyUrl = `${baseUrl}/user/verify-email?token=${encodeURIComponent(token)}`;
 
-  const subject = 'Verify your email — Heron CS';
+  const subject = "Verify your email — Heron CS";
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #15803d;">Verify Your Email</h2>

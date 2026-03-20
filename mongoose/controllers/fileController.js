@@ -1,12 +1,13 @@
-const path = require('path');
-const fs = require('fs'); // for existsSync
-const fsp = require('fs').promises; // for async file ops if needed
-const mime = require('mime-types');
-const sanitize = require('sanitize-filename');
-const logger = require('../../services/loggerService');
-const mdb = require('../services/mongooseDatabaseService');
+const path = require("path");
+const fs = require("fs"); // for existsSync
+const fsp = require("fs").promises; // for async file ops if needed
+const mime = require("mime-types");
+const sanitize = require("sanitize-filename");
+const logger = require("../../services/loggerService");
+const mdb = require("../services/mongooseDatabaseService");
 
-const getBaseDir = (modelName) => path.join(__dirname, '../../public', modelName.toLowerCase());
+const getBaseDir = (modelName) =>
+  path.join(__dirname, "../../public", modelName.toLowerCase());
 
 exports.viewFile = async (req, res, next) => {
   try {
@@ -23,37 +24,35 @@ exports.viewFile = async (req, res, next) => {
     const modelDisplay = model.charAt(0).toUpperCase() + model.slice(1);
     const fileUrl = `/resources/${modelDisplay}/${safeDir}/${safeFile}`;
 
-    if (mimeType?.startsWith('image/')) {
-      return res.render('tailwindcss/partials/view-file', {
+    if (mimeType?.startsWith("image/")) {
+      return res.render("tailwindcss/partials/view-file", {
         title: `Viewing ${safeFile}`,
         fileUrl,
-        fileType: 'image',
+        fileType: "image",
         filename: safeFile,
         uuid,
-        basePath: modelName
+        basePath: modelName,
       });
     }
 
-    if (mimeType === 'application/pdf') {
-      return res.render('tailwindcss/partials/view-file', {
+    if (mimeType === "application/pdf") {
+      return res.render("tailwindcss/partials/view-file", {
         title: `Viewing ${safeFile}`,
         fileUrl,
-        fileType: 'pdf',
+        fileType: "pdf",
         filename: safeFile,
         uuid,
-        basePath: modelName
+        basePath: modelName,
       });
     }
 
     // Unsupported → fallback to download
     return res.download(filePath, safeFile);
-
   } catch (err) {
     logger.error(`❌ Error in viewFile: ${err.message}`);
     next(err);
   }
 };
-
 
 exports.renderUploadForm = async (req, res, next) => {
   const { model, uuid } = req.params;
@@ -61,9 +60,9 @@ exports.renderUploadForm = async (req, res, next) => {
 
   try {
     const item = await mdb[modelName]?.findOne({ uuid }).lean();
-    if (!item) return res.status(404).send('Not found');
+    if (!item) return res.status(404).send("Not found");
 
-    res.render(path.join('tailwindcss', 'partials', 'form-upload'), {
+    res.render(path.join("tailwindcss", "partials", "form-upload"), {
       title: `Upload Documents`,
       item,
       modelName,
@@ -75,7 +74,7 @@ exports.renderUploadForm = async (req, res, next) => {
 };
 
 exports.uploadFiles = async (req, res, next) => {
-  const { model, uuid} = req.params;
+  const { model, uuid } = req.params;
   const modelName = model.toLowerCase();
   const dirName = sanitize(uuid);
   const baseDir = getBaseDir(modelName);
@@ -90,7 +89,9 @@ exports.uploadFiles = async (req, res, next) => {
 
       await fsp.rename(file.path, filePath);
 
-      logger.info(`📄 Uploaded: ${sanitizedFileName} to ${modelName}/${dirName}`);
+      logger.info(
+        `📄 Uploaded: ${sanitizedFileName} to ${modelName}/${dirName}`,
+      );
 
       if (mdb[`${modelName}_files`]) {
         await mdb[`${modelName}_files`].create({
@@ -98,7 +99,7 @@ exports.uploadFiles = async (req, res, next) => {
           [`${modelName}Ref`]: dirName,
           filename: sanitizedFileName,
           path: filePath,
-          uploadedAt: new Date()
+          uploadedAt: new Date(),
         });
       }
     }
@@ -122,7 +123,9 @@ exports.downloadFile = async (req, res, next) => {
     await fsp.access(filePath); // throws if file doesn't exist
     res.download(filePath, sanitizedFile, (err) => {
       if (err) return next(err);
-      logger.info(`⬇️ Downloaded: ${sanitizedFile} from ${modelName}/${dirName}`);
+      logger.info(
+        `⬇️ Downloaded: ${sanitizedFile} from ${modelName}/${dirName}`,
+      );
     });
   } catch (err) {
     logger.warn(`⚠️ File not found or error downloading: ${filePath}`);

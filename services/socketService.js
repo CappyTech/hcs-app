@@ -1,14 +1,16 @@
 // services/socketService.js
-const { Server } = require('socket.io');
+const { Server } = require("socket.io");
 
 let io = null;
 
 function initSocket(server) {
   if (io) {
-    console.warn('[DUPE CHECK] ⚠️ Socket.IO already initialized, returning existing instance');
+    console.warn(
+      "[DUPE CHECK] ⚠️ Socket.IO already initialized, returning existing instance",
+    );
     return io; // Prevent double init
   }
-  console.log('[DUPE CHECK] ✅ Initializing Socket.IO...');
+  console.log("[DUPE CHECK] ✅ Initializing Socket.IO...");
   io = new Server(server, {
     cors: {
       origin: true,
@@ -16,10 +18,10 @@ function initSocket(server) {
     },
   });
 
-  io.on('connection', (socket) => {
+  io.on("connection", (socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
       console.log(`Socket disconnected: ${socket.id}`);
     });
   });
@@ -28,7 +30,7 @@ function initSocket(server) {
 }
 
 function getIo() {
-  if (!io) throw new Error('Socket.io not initialized!');
+  if (!io) throw new Error("Socket.io not initialized!");
   return io;
 }
 

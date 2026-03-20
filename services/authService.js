@@ -1,29 +1,29 @@
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const rbac = require('../mongoose/config/rolePermissionsConfig');
+const mdb = require("../mongoose/services/mongooseDatabaseService");
+const rbac = require("../mongoose/config/rolePermissionsConfig");
 
 // ── Paths that never require authentication ──────────────────────────
 const PUBLIC_PATHS = new Set([
-  '/user/login',
-  '/user/register',
-  '/user/verify-email',
-  '/health',
+  "/user/login",
+  "/user/register",
+  "/user/verify-email",
+  "/health",
 ]);
-const PUBLIC_PREFIXES = ['/resources/', '/manifest/'];
+const PUBLIC_PREFIXES = ["/resources/", "/manifest/"];
 
 // Paths accessible to authenticated-but-unverified users
 const UNVERIFIED_PATHS = new Set([
-  '/user/verify-pending',
-  '/user/resend-verification',
-  '/user/logout',
-  '/user/profile',
-  '/user/account',
+  "/user/verify-pending",
+  "/user/resend-verification",
+  "/user/logout",
+  "/user/profile",
+  "/user/account",
 ]);
 
 function isPublicPath(url) {
-  const path = url.split('?')[0];
-  if (path === '/') return true;
+  const path = url.split("?")[0];
+  if (path === "/") return true;
   if (PUBLIC_PATHS.has(path)) return true;
-  return PUBLIC_PREFIXES.some(p => path.startsWith(p));
+  return PUBLIC_PREFIXES.some((p) => path.startsWith(p));
 }
 
 // ── Populate req.user from session — blocks unauthenticated users ────
@@ -35,7 +35,9 @@ async function ensureAuthenticated(req, res, next) {
         const user = await mdb.INTERNAL.user.findById(req.session.user.id);
         if (user) req.user = user;
         else delete req.session.user;
-      } catch (_) { /* swallow — public page still works */ }
+      } catch (_) {
+        /* swallow — public page still works */
+      }
     }
     return next();
   }
@@ -44,7 +46,7 @@ async function ensureAuthenticated(req, res, next) {
   if (!req.session || !req.session.user) {
     // Store the original URL for post-login redirect
     const returnTo = req.originalUrl;
-    return res.redirect('/user/login?next=' + encodeURIComponent(returnTo));
+    return res.redirect("/user/login?next=" + encodeURIComponent(returnTo));
   }
 
   try {
@@ -53,13 +55,13 @@ async function ensureAuthenticated(req, res, next) {
       req.user = user;
     } else {
       delete req.session.user;
-      return res.redirect('/user/login');
+      return res.redirect("/user/login");
     }
   } catch (err) {
     return next({
       statusCode: 500,
-      name: 'DatabaseError',
-      message: 'Failed to fetch user from database',
+      name: "DatabaseError",
+      message: "Failed to fetch user from database",
       stack: err.stack,
     });
   }
@@ -67,11 +69,13 @@ async function ensureAuthenticated(req, res, next) {
   // Block unverified users — only allow access to verification-related pages
   // Treat legacy users (field missing in DB → undefined before Mongoose default) as verified.
   // Only block users who explicitly have emailVerified === false AND have a verification token.
-  const reqPath = req.originalUrl.split('?')[0];
-  if (req.user.emailVerified === false
-      && req.user.emailVerificationToken != null
-      && !UNVERIFIED_PATHS.has(reqPath)) {
-    return res.redirect('/user/verify-pending');
+  const reqPath = req.originalUrl.split("?")[0];
+  if (
+    req.user.emailVerified === false &&
+    req.user.emailVerificationToken != null &&
+    !UNVERIFIED_PATHS.has(reqPath)
+  ) {
+    return res.redirect("/user/verify-pending");
   }
 
   next();
@@ -83,8 +87,8 @@ function ensureRoles(...roles) {
     if (!req.user) {
       return next({
         statusCode: 401,
-        name: 'UnauthorizedError',
-        message: 'User not authenticated',
+        name: "UnauthorizedError",
+        message: "User not authenticated",
       });
     }
 
@@ -100,15 +104,15 @@ function ensureRoles(...roles) {
 
     return next({
       statusCode: 403,
-      name: 'ForbiddenError',
-      message: 'You do not have permission to access this page.',
+      name: "ForbiddenError",
+      message: "You do not have permission to access this page.",
     });
   };
 }
 
 // ── Shortcut — defaults to 'admin'. 'public' = passthrough. ────────
-function ensureRole(role = 'admin') {
-  if (role === 'public') return (req, res, next) => next();
+function ensureRole(role = "admin") {
+  if (role === "public") return (req, res, next) => next();
   return ensureRoles(role);
 }
 
@@ -118,8 +122,8 @@ function ensureAnyRole() {
     if (!req.user) {
       return next({
         statusCode: 401,
-        name: 'UnauthorizedError',
-        message: 'User not authenticated',
+        name: "UnauthorizedError",
+        message: "User not authenticated",
       });
     }
     next();
@@ -132,15 +136,22 @@ function ensureModelAccess(model, operation) {
   return (req, res, next) => {
     if (!req.user) {
       return next({
-        statusCode: 401, name: 'UnauthorizedError',
-        message: 'User not authenticated',
+        statusCode: 401,
+        name: "UnauthorizedError",
+        message: "User not authenticated",
       });
     }
     const customPerms = req.user.customPermissions || {};
-    const { allowed, ownOnly } = rbac.canAccess(req.user.role, model, operation, customPerms);
+    const { allowed, ownOnly } = rbac.canAccess(
+      req.user.role,
+      model,
+      operation,
+      customPerms,
+    );
     if (!allowed) {
       return next({
-        statusCode: 403, name: 'ForbiddenError',
+        statusCode: 403,
+        name: "ForbiddenError",
         message: `Role "${req.user.role}" cannot ${operation} on ${model}`,
       });
     }
@@ -157,13 +168,14 @@ function ensureOwnership(model) {
   return (req, res, next) => {
     if (!req.user) {
       return next({
-        statusCode: 401, name: 'UnauthorizedError',
-        message: 'User not authenticated',
+        statusCode: 401,
+        name: "UnauthorizedError",
+        message: "User not authenticated",
       });
     }
 
     // Admin bypasses ownership
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       req.ownershipFilter = {};
       return next();
     }
@@ -178,7 +190,8 @@ function ensureOwnership(model) {
     const ownerCfg = rbac.getOwnershipConfig(req.user.role, model);
     if (!ownerCfg) {
       return next({
-        statusCode: 403, name: 'ForbiddenError',
+        statusCode: 403,
+        name: "ForbiddenError",
         message: `No ownership mapping for role "${req.user.role}" on model "${model}"`,
       });
     }
@@ -186,7 +199,8 @@ function ensureOwnership(model) {
     const userEntityId = req.user[ownerCfg.userField];
     if (!userEntityId) {
       return next({
-        statusCode: 403, name: 'ForbiddenError',
+        statusCode: 403,
+        name: "ForbiddenError",
         message: `User has no linked ${ownerCfg.userField}`,
       });
     }
@@ -210,8 +224,8 @@ function ensureRouteAccess(req, res, next) {
 
   return next({
     statusCode: 403,
-    name: 'ForbiddenError',
-    message: 'You do not have permission to access this page.',
+    name: "ForbiddenError",
+    message: "You do not have permission to access this page.",
   });
 }
 
@@ -220,14 +234,16 @@ function ensureDepartment(department) {
   return (req, res, next) => {
     if (!req.user) {
       return next({
-        statusCode: 401, name: 'UnauthorizedError',
-        message: 'User not authenticated',
+        statusCode: 401,
+        name: "UnauthorizedError",
+        message: "User not authenticated",
       });
     }
     const customPerms = req.user.customPermissions || {};
     if (!rbac.canAccessDepartment(req.user.role, department, customPerms)) {
       return next({
-        statusCode: 403, name: 'ForbiddenError',
+        statusCode: 403,
+        name: "ForbiddenError",
         message: `Role "${req.user.role}" cannot access department "${department}"`,
       });
     }

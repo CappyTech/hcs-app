@@ -1,35 +1,38 @@
-const mongoose = require('mongoose');
-const path = require('path');
-const mdb = require('../services/mongooseDatabaseService');
-const logger = require('../../services/loggerService');
-const moment = require('moment-timezone');
-const speakeasy = require('speakeasy');
-const encryptionService = require('../../services/encryptionService');
+const mongoose = require("mongoose");
+const path = require("path");
+const mdb = require("../services/mongooseDatabaseService");
+const logger = require("../../services/loggerService");
+const moment = require("moment-timezone");
+const speakeasy = require("speakeasy");
+const encryptionService = require("../../services/encryptionService");
 
 function getSafeNext(raw) {
-  const v = String(raw || '').trim();
+  const v = String(raw || "").trim();
   if (!v) return null;
   if (v.length > 2000) return null;
-  if (v.includes('\n') || v.includes('\r')) return null;
-  if (!v.startsWith('/')) return null;
-  if (v.startsWith('//')) return null;
-  if (v.includes('\\')) return null;
+  if (v.includes("\n") || v.includes("\r")) return null;
+  if (!v.startsWith("/")) return null;
+  if (v.startsWith("//")) return null;
+  if (v.includes("\\")) return null;
   // Check only the path portion (before ?) for :// so that query params
   // like ?return_to=https://sync.heroncs.co.uk are not rejected.
-  const pathPart = v.split('?')[0];
-  if (pathPart.includes('://')) return null;
+  const pathPart = v.split("?")[0];
+  if (pathPart.includes("://")) return null;
   return v;
 }
 
 exports.render2FAPage = (req, res) => {
   if (!req.session.userPending2FA) {
-    req.flash('error', '2FA session expired. Please log in again.');
-    return res.redirect('/user/login');
+    req.flash("error", "2FA session expired. Please log in again.");
+    return res.redirect("/user/login");
   }
 
   const pending = req.session.userPending2FA;
   const next = getSafeNext(pending?.next);
-  res.render(path.join('tailwindcss', 'user', '2fa'), { title: 'Two-Factor Authentication', next });
+  res.render(path.join("tailwindcss", "user", "2fa"), {
+    title: "Two-Factor Authentication",
+    next,
+  });
 };
 
 exports.verify2FA = async (req, res) => {
@@ -39,29 +42,29 @@ exports.verify2FA = async (req, res) => {
     const next = getSafeNext(req.body?.next || pending?.next);
 
     if (!pending) {
-      req.flash('error', '2FA session missing. Please log in again.');
-      return res.redirect('/user/login');
+      req.flash("error", "2FA session missing. Please log in again.");
+      return res.redirect("/user/login");
     }
 
     const user = await mdb.INTERNAL.user.findOne({ uuid: pending.uuid });
 
     if (!user || !user.totpSecret) {
-      req.flash('error', 'User not found or 2FA not enabled.');
-      return res.redirect('/user/login');
+      req.flash("error", "User not found or 2FA not enabled.");
+      return res.redirect("/user/login");
     }
 
     const decryptedSecret = encryptionService.decrypt(user.totpSecret);
 
     const isValid = speakeasy.totp.verify({
       secret: decryptedSecret,
-      encoding: 'base32',
+      encoding: "base32",
       token: code,
-      window: 1
+      window: 1,
     });
 
     if (!isValid) {
-      req.flash('error', 'Invalid 2FA code. Please try again.');
-      return res.redirect('/user/2fa');
+      req.flash("error", "Invalid 2FA code. Please try again.");
+      return res.redirect("/user/2fa");
     }
 
     const agent = req.useragent || {};
@@ -69,7 +72,7 @@ exports.verify2FA = async (req, res) => {
 
     // Regenerate session to mitigate fixation at 2FA completion stage
     await new Promise((resolve, reject) => {
-      req.session.regenerate(err => (err ? reject(err) : resolve()));
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });
 
     req.session.user = {
@@ -81,27 +84,28 @@ exports.verify2FA = async (req, res) => {
       loginTime: new Date().toISOString(),
       ip,
       userAgent: {
-        browser: agent.browser || 'Unknown',
-        version: agent.version || 'Unknown',
-        os: agent.os || 'Unknown',
-        platform: agent.platform || 'Unknown',
+        browser: agent.browser || "Unknown",
+        version: agent.version || "Unknown",
+        os: agent.os || "Unknown",
+        platform: agent.platform || "Unknown",
       },
     };
 
     delete req.session.userPending2FA;
 
     await new Promise((resolve, reject) => {
-      req.session.save(err => (err ? reject(err) : resolve()));
+      req.session.save((err) => (err ? reject(err) : resolve()));
     });
 
-    req.flash('success', 'Successfully logged in.');
+    req.flash("success", "Successfully logged in.");
 
     // Denormalize user fields for querying sessions list
     try {
       if (mdb.INTERNAL.session) {
         const upd = await mdb.INTERNAL.session.updateOne(
           { _id: req.sessionID },
-          { $set: {
+          {
+            $set: {
               userId: user._id.toString(),
               username: user.username,
               email: user.email,
@@ -110,19 +114,23 @@ exports.verify2FA = async (req, res) => {
               uaBrowser: req.session.user.userAgent.browser,
               uaVersion: req.session.user.userAgent.version,
               uaOS: req.session.user.userAgent.os,
-              loginTime: new Date(req.session.user.loginTime)
-            }
+              loginTime: new Date(req.session.user.loginTime),
+            },
           },
-          { upsert: true }
+          { upsert: true },
         );
-        logger.info(`[SESSION DENORM 2FA] matched=${upd.matchedCount} modified=${upd.modifiedCount} upserted=${upd.upsertedCount||0} sid=${req.sessionID}`);
+        logger.info(
+          `[SESSION DENORM 2FA] matched=${upd.matchedCount} modified=${upd.modifiedCount} upserted=${upd.upsertedCount || 0} sid=${req.sessionID}`,
+        );
       }
-    } catch (_) { /* ignore */ }
-    return res.redirect(next || '/');
+    } catch (_) {
+      /* ignore */
+    }
+    return res.redirect(next || "/");
   } catch (error) {
-    logger.error('2FA verification error: ' + error.message);
+    logger.error("2FA verification error: " + error.message);
     delete req.session.userPending2FA;
-    req.flash('error', 'An error occurred during 2FA. Please log in again.');
-    return res.redirect('/user/login');
+    req.flash("error", "An error occurred during 2FA. Please log in again.");
+    return res.redirect("/user/login");
   }
 };
