@@ -5,45 +5,110 @@
       <i class="bi bi-trash3"></i> Deleted Items
     </h1>
     <span class="text-sm text-gray-500 dark:text-gray-400">
-      <%= rows.length %> record<%= rows.length !== 1 ? 's' : '' %> soft-deleted across all models
+      <%= grandTotal.toLocaleString() %> record<%= grandTotal !== 1 ? 's' : '' %> soft-deleted across all models
     </span>
   </div>
 
-  <% if (rows.length === 0) { %>
+  <% if (grandTotal === 0) { %>
     <div class="rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 p-6 text-center text-green-700 dark:text-green-300">
       <i class="bi bi-check-circle text-2xl mb-2 block"></i>
       No soft-deleted records found.
     </div>
   <% } else { %>
 
-    <!-- Search filter -->
-    <div class="mb-4">
-      <input id="row-search" type="text" placeholder="Filter by model or label…"
-        class="w-full sm:w-80 px-3 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600
-               bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-               focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" />
+    <!-- Per-model summary cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+      <% summary.forEach(s => { %>
+        <a href="/admin/deleted-items?model=<%= s.modelName %>"
+           class="rounded-lg border <%= filterModel === s.modelName ? 'border-red-500 ring-2 ring-red-300' : 'border-gray-200 dark:border-gray-700' %>
+                  bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-red-400 transition">
+          <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1"><%= s.modelName %></div>
+          <div class="text-2xl font-bold text-red-600 dark:text-red-400"><%= s.total.toLocaleString() %></div>
+          <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            <% if (s.minDate) { %><%= new Date(s.minDate).toLocaleDateString('en-GB') %> –<% } %>
+            <% if (s.maxDate) { %> <%= new Date(s.maxDate).toLocaleDateString('en-GB') %><% } %>
+          </div>
+          <% if (s.lcCount > 0 && s.pcCount > 0) { %>
+            <div class="text-xs text-yellow-600 dark:text-yellow-400 mt-1 font-medium">
+              ⚠ Mixed casing: <%= s.lcCount %> deletedAt / <%= s.pcCount %> DeletedAt
+            </div>
+          <% } else if (s.pcCount > 0) { %>
+            <div class="text-xs text-orange-500 mt-1">DeletedAt (PascalCase)</div>
+          <% } %>
+        </a>
+      <% }) %>
+      <% if (filterModel) { %>
+        <a href="/admin/deleted-items"
+           class="rounded-lg border border-dashed border-gray-300 dark:border-gray-600
+                  bg-white dark:bg-gray-900 p-4 shadow-sm hover:border-gray-400 transition
+                  flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+          <i class="bi bi-x-circle mr-1"></i> Clear filter
+        </a>
+      <% } %>
+    </div>
+
+    <!-- Monthly distribution chart -->
+    <% if (distribution.length > 0) { %>
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 mb-6 shadow-sm">
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+        <i class="bi bi-bar-chart"></i> Deletions by Month
+        <span class="ml-2 text-xs font-normal text-gray-400">(all models · both field casings)</span>
+      </h2>
+      <canvas id="dist-chart" height="90"></canvas>
+    </div>
+    <% } %>
+
+    <!-- Paginated record table -->
+    <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
+      <div class="text-sm text-gray-600 dark:text-gray-400">
+        Showing
+        <% const from = (page - 1) * pageSize + 1; %>
+        <% const to = Math.min(page * pageSize, totalRows); %>
+        <%= from %>–<%= to %> of <%= totalRows.toLocaleString() %>
+        <% if (filterModel) { %> in <strong><%= filterModel %></strong><% } %>
+      </div>
+      <!-- Pagination -->
+      <div class="flex items-center gap-1 text-sm">
+        <% if (page > 1) { %>
+          <a href="?<%= filterModel ? 'model=' + filterModel + '&' : '' %>page=<%= page - 1 %>"
+             class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+            &laquo; Prev
+          </a>
+        <% } %>
+        <span class="px-3 py-1 text-gray-500 dark:text-gray-400">Page <%= page %> / <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a href="?<%= filterModel ? 'model=' + filterModel + '&' : '' %>page=<%= page + 1 %>"
+             class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+            Next &raquo;
+          </a>
+        <% } %>
+      </div>
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-      <table class="w-full text-sm text-left" id="deleted-table">
+      <table class="w-full text-sm text-left">
         <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase text-xs tracking-wide">
           <tr>
             <th class="px-4 py-3 font-semibold">Model</th>
             <th class="px-4 py-3 font-semibold">Record</th>
+            <th class="px-4 py-3 font-semibold whitespace-nowrap">Field</th>
             <th class="px-4 py-3 font-semibold whitespace-nowrap">Deleted At</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
           <% rows.forEach(row => { %>
-            <tr class="bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/10 transition deleted-row">
-              <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap row-model">
+            <tr class="bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/10 transition">
+              <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 <span class="inline-block px-2 py-0.5 rounded text-xs font-medium
                   bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                   <%= row.model %>
                 </span>
               </td>
-              <td class="px-4 py-3 text-gray-900 dark:text-gray-100 row-label">
-                <%= row.label %>
+              <td class="px-4 py-3 text-gray-900 dark:text-gray-100"><%= row.label %></td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <span class="font-mono text-xs <%= row.casing === 'DeletedAt' ? 'text-orange-500' : 'text-gray-400 dark:text-gray-500' %>">
+                  <%= row.casing %>
+                </span>
               </td>
               <td class="px-4 py-3 text-red-600 dark:text-red-400 whitespace-nowrap font-mono text-xs">
                 <%= new Date(row.deletedAt).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %>
@@ -54,16 +119,58 @@
       </table>
     </div>
 
-    <script>
-      document.getElementById('row-search').addEventListener('input', function () {
-        const q = this.value.toLowerCase();
-        document.querySelectorAll('#deleted-table .deleted-row').forEach(tr => {
-          const model = tr.querySelector('.row-model').textContent.toLowerCase();
-          const label = tr.querySelector('.row-label').textContent.toLowerCase();
-          tr.style.display = (model.includes(q) || label.includes(q)) ? '' : 'none';
-        });
-      });
-    </script>
+    <!-- Bottom pagination -->
+    <div class="flex justify-end mt-3">
+      <div class="flex items-center gap-1 text-sm">
+        <% if (page > 1) { %>
+          <a href="?<%= filterModel ? 'model=' + filterModel + '&' : '' %>page=<%= page - 1 %>"
+             class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+            &laquo; Prev
+          </a>
+        <% } %>
+        <span class="px-3 py-1 text-gray-500 dark:text-gray-400">Page <%= page %> / <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a href="?<%= filterModel ? 'model=' + filterModel + '&' : '' %>page=<%= page + 1 %>"
+             class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+            Next &raquo;
+          </a>
+        <% } %>
+      </div>
+    </div>
 
   <% } %>
 </div>
+
+<% if (distribution.length > 0) { %>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const labels = <%- JSON.stringify(distribution.map(d => d.month)) %>;
+  const data   = <%- JSON.stringify(distribution.map(d => d.count)) %>;
+  const ctx = document.getElementById('dist-chart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Deletions',
+        data,
+        backgroundColor: 'rgba(239,68,68,0.6)',
+        borderColor: 'rgba(239,68,68,1)',
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { maxRotation: 45, font: { size: 11 } } },
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+})();
+</script>
+<% } %>
