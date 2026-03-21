@@ -403,6 +403,8 @@ function buildSubEntry(supplier, purchases) {
   // NEW: use WithholdingTaxRate; -1 means N/A
   const whtRate = supplier.WithholdingTaxRate != null ? Number(supplier.WithholdingTaxRate) : null;
   const cisRate = (whtRate != null && whtRate >= 0) ? whtRate : null;
+  // Normalise to decimal so views always see 0 / 0.2 / 0.3
+  const normRate = cisRate != null && cisRate > 1 ? cisRate / 100 : cisRate;
   const invoices = purchases.map((p) => {
     const c = classifyLines(p);
     const taxMonth = p.TaxMonth || (c.payDate ? taxService.calculateTaxYearAndMonth(c.payDate).taxMonth : null);
@@ -431,10 +433,9 @@ function buildSubEntry(supplier, purchases) {
   return {
     name:            supplier.Name,
     company:         "",
-    deduction:       Number.isFinite(cisRate) ? cisRate : null,
-    isGross:         cisRate === 0,
+    deduction:       Number.isFinite(normRate) ? normRate : null,
+    isGross:         normRate === 0,
     cisNumber:       (verificationRef && verificationRef.Value) || (utrRef && utrRef.Value) || "",
-    isReverseCharge: !!(supplier.IsCISReverseCharge || supplier.isReverseCharge),
     invoices,
   };
 }

@@ -1,7 +1,7 @@
 <div class="max-w-6xl mx-auto p-6 print:p-0">
   <div class="flex items-center justify-between mb-6 print:hidden">
     <h1 class="text-2xl font-semibold">Monthly CIS Returns - <%= supplier.Name %> (<%= monthName %> <%= year %>)</h1>
-    <button onclick="window.print()" class="bg-hcs-green text-white px-4 py-2 rounded">Print</button>
+    <button id="printBtn" type="button" class="bg-hcs-green text-white px-4 py-2 rounded cursor-pointer">Print</button>
   </div>
   <div class="mb-4 text-sm text-gray-600">
     Supplier Code: <span class="font-medium"><%= supplier.Code || '—' %></span>
@@ -64,4 +64,11 @@
     .print\:hidden { display: none; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+</style>
+
+<script>
+  document.getElementById('printBtn').addEventListener('click', function () {
+    window.print();
+  });
+</script>
 </style>

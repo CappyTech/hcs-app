@@ -131,8 +131,25 @@
               <% } %>
             </tbody>
             <tfoot class="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-semibold">
+              <%
+                let totGross = 0, totLabour = 0, totMaterials = 0, totCIS = 0, totRC = 0;
+                suppliers.forEach(s => {
+                  const st = supplierTotals[String(s.Id)];
+                  if (!st) return;
+                  totGross += st.grossAmount || 0;
+                  totLabour += st.labourCost || 0;
+                  totMaterials += st.materialsCost || 0;
+                  totCIS += (st.cisDeductions && st.cisDeductions !== 0) ? st.cisDeductions : (st.calculatedCISDeduction || 0);
+                  totRC += st.reverseChargeVAT || 0;
+                });
+              %>
               <tr>
-                <td class="border border-gray-300 dark:border-gray-700 px-2 py-1 text-center" colspan="6">Totals</td>
+                <td class="border border-gray-300 dark:border-gray-700 px-4 py-2">Totals</td>
+                <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency(totGross) %></td>
+                <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right"><%= formatCurrency(totLabour) %></td>
+                <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency(totMaterials) %></td>
+                <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency(totCIS) %></td>
+                <td class="border border-gray-300 dark:border-gray-700 px-4 py-2 text-right"><%= formatCurrency(totRC) %></td>
               </tr>
             </tfoot>
           </table>
