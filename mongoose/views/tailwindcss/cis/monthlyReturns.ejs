@@ -78,11 +78,11 @@
             <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= receipt.KashflowNumber || receipt.Number %></td>
             <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= slimDateTime(receipt.InvoiceDate || receipt.IssuedDate) %></td>
             <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= slimDateTime(receipt.PayDate) %></td>
-            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.GrossAmount) %></td>
-            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.LabourCost) %></td>
-            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.MaterialCost) %></td>
-            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.CISAmount) %></td>
-            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.NetAmount) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.Gross) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.Labour) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.Material) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.CIS) %></td>
+            <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.Net) %></td>
             <% if (supplier.isReverseCharge) { %>
               <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= formatCurrency(receipt.ReverseCharge) %></td>
             <% } %>
@@ -91,11 +91,11 @@
             <td class="border border-gray-300 px-3 py-1 text-center text-sm"><%= slimDateTime(receipt.SubmissionDate) %></td>
           </tr>
           <% 
-            totalGross += receipt.GrossAmount;
-            totalLabour += receipt.LabourCost;
-            totalMaterial += receipt.MaterialCost;
-            totalCIS += receipt.CISAmount;
-            totalNet += receipt.NetAmount;
+            totalGross += receipt.Gross;
+            totalLabour += receipt.Labour;
+            totalMaterial += receipt.Material;
+            totalCIS += receipt.CIS;
+            totalNet += receipt.Net;
           }); %>
           <tr class="font-bold bg-gray-200">
             <td colspan="4" class="border border-gray-300 px-3 py-1 text-left">Total for Month <%= monthKey %>:</td>

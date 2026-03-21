@@ -124,7 +124,7 @@
         </tr>
       </thead>
       <tbody>
-        <% let totalGross=0, totalLabour=0, totalMaterial=0, totalCIS=0, totalNet=0; %>
+        <% let totalGross=0, totalLabour=0, totalMaterial=0, totalCIS=0, totalNet=0, totalRC=0; %>
         <% receipts.forEach(receipt => { %>
           <tr class="even:bg-gray-50">
             <td class="border border-gray-300 px-3 py-1"><%= receipt.InvoiceNumber %></td>
@@ -147,6 +147,7 @@
             totalMaterial += receipt.Material;
             totalCIS += receipt.CIS;
             totalNet += receipt.Net;
+            totalRC += receipt.ReverseCharge || 0;
           %>
         <% }) %>
         <tr class="font-semibold bg-gray-200">
@@ -156,6 +157,9 @@
           <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalMaterial) %></td>
           <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalCIS) %></td>
           <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalNet) %></td>
+          <% if (supplier.isReverseCharge) { %>
+            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalRC) %></td>
+          <% } %>
           <td class="border border-gray-300 px-3 py-1"></td>
         </tr>
       </tbody>

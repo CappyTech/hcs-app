@@ -354,20 +354,17 @@ exports.renderYearlyReturns = async (req, res, next) => {
       .sort({ TaxMonth: 1, Number: 1 })
       .lean();
 
-    // Filter soft-deletes client-side, checking both field-name casings (deletedAt / DeletedAt)
-    const isNotDeleted = (p) => {
-      const d = p.deletedAt ?? p.DeletedAt;
-      if (
-        d === null ||
-        d === undefined ||
-        d === "" ||
-        d === "0000-00-00 00:00:00"
-      )
-        return true;
-      const dt = new Date(d);
-      return isNaN(dt.getTime()); // treat unparseable values as not-deleted
-    };
-    const purchases = purchasesRaw.filter(isNotDeleted);
+    // Filter soft-deletes client-side — DISABLED pending hcs-sync fix.
+    // The old hcs-app sync incorrectly wrote deletedAt on active records before Nov 2025,
+    // causing pre-switch months to be hidden. Re-enable once hcs-sync cleans the data.
+    // const isNotDeleted = (p) => {
+    //   const d = p.deletedAt ?? p.DeletedAt;
+    //   if (d === null || d === undefined || d === '' || d === '0000-00-00 00:00:00') return true;
+    //   const dt = new Date(d);
+    //   return isNaN(dt.getTime());
+    // };
+    // const purchases = purchasesRaw.filter(isNotDeleted);
+    const purchases = purchasesRaw;
 
     // Paid-only filtering as per CIS policy
     const paidPurchases = purchases.filter(
@@ -484,6 +481,7 @@ exports.renderYearlyReturns = async (req, res, next) => {
         Material: c.materialsCost,
         CIS: c.cisAmount,
         Net: c.netAmount,
+        ReverseCharge: Number(p.ReverseChargeVATAmount || p.CISRCVatAmount || 0),
         SubmissionDate: p.SubmissionDate,
       });
     }
