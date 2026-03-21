@@ -25,8 +25,10 @@ const monthNames = [
 exports.renderMonthlyReturnsForm = async (req, res, next) => {
   try {
     // Build suppliersWithMonths similar to legacy view but from REST purchases
+    // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+    // NEW: subcontractors have WithholdingTaxRate >= 0
     const suppliers = await mdb.REST.supplier
-      .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+      .find({ WithholdingTaxRate: { $gte: 0 } })
       .sort({ Name: 1 })
       .lean();
 
@@ -386,7 +388,10 @@ function classifyLines(p) {
 // Shared helper: build a subcontractor entry for the "ForAll" views
 function buildSubEntry(supplier, purchases) {
   const slimDT = (d) => d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
-  const cisRate = supplier.CISRate != null ? Number(supplier.CISRate) : null;
+  // OLD: const cisRate = supplier.CISRate != null ? Number(supplier.CISRate) : null;
+  // NEW: use WithholdingTaxRate; -1 means N/A
+  const whtRate = supplier.WithholdingTaxRate != null ? Number(supplier.WithholdingTaxRate) : null;
+  const cisRate = (whtRate != null && whtRate >= 0) ? whtRate : null;
   const invoices = purchases.map((p) => {
     const c = classifyLines(p);
     const taxMonth = p.TaxMonth || (c.payDate ? taxService.calculateTaxYearAndMonth(c.payDate).taxMonth : null);
@@ -407,12 +412,15 @@ function buildSubEntry(supplier, purchases) {
       submissionDate:  p.SubmissionDate,
     };
   });
+  // OLD: cisNumber: supplier.CISNumber || "",
+  // NEW: derive first reference from WithholdingTaxReferences array
+  const refs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences : [];
   return {
     name:            supplier.Name,
     company:         "",
     deduction:       Number.isFinite(cisRate) ? cisRate : null,
     isGross:         cisRate === 0,
-    cisNumber:       supplier.CISNumber || "",
+    cisNumber:       refs[0] || "",
     isReverseCharge: !!(supplier.IsCISReverseCharge || supplier.isReverseCharge),
     invoices,
   };
@@ -429,8 +437,9 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
     const taxYearRange = taxService.getTaxYearStartEnd(+year);
 
     // All subcontractor suppliers
+    // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
     const suppliers = await mdb.REST.supplier
-      .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+      .find({ WithholdingTaxRate: { $gte: 0 } })
       .sort({ Name: 1 })
       .lean();
 
@@ -479,8 +488,9 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
     const taxMonthRange = taxService.getCurrentMonthlyReturn(+year, +month);
 
     // All subcontractor suppliers
+    // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
     const suppliers = await mdb.REST.supplier
-      .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+      .find({ WithholdingTaxRate: { $gte: 0 } })
       .sort({ Name: 1 })
       .lean();
 

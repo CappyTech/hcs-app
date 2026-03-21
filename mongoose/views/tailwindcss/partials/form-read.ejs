@@ -170,7 +170,8 @@
   </div>
 <% } %>
 
-  <% if (basePath === 'supplier' && (item.Subcontractor || item.IsSubcontractor) && Array.isArray(item.purchases)) { %>
+  <!-- OLD: basePath === 'supplier' && (item.Subcontractor || item.IsSubcontractor) -->
+  <% if (basePath === 'supplier' && (item.WithholdingTaxRate != null && Number(item.WithholdingTaxRate) >= 0) && Array.isArray(item.purchases)) { %>
     <div class="mt-8">
       <h2 class="text-xl font-medium mb-3 text-gray-900 dark:text-gray-100">CIS Calendar (Paid)</h2>
       <% 

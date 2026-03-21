@@ -3,30 +3,31 @@
   <form action="/supplier/change/<%= supplier.uuid %>" method="POST" novalidate class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
     <%- include('../partials/csrfHidden.ejs') %>
 
-    <!-- Subcontractor Checkbox -->
+    <!-- OLD: Subcontractor checkbox — no longer needed; WithholdingTaxRate >= 0 implies subcontractor -->
+    <!--
     <div class="mb-6 flex items-start space-x-3">
-      <input 
-        type="checkbox" 
-        id="subcontractor" 
-        name="subcontractor" 
+      <input type="checkbox" id="subcontractor" name="subcontractor"
         class="mt-1 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-bg-green-600"
-        <%= supplier.Subcontractor ? 'checked' : '' %>>
+        <%%= supplier.Subcontractor ? 'checked' : '' %>>
       <label for="subcontractor" class="select-none text-gray-700 dark:text-gray-200">
         Is this supplier a subcontractor under CIS?
       </label>
     </div>
+    -->
     <div class="mb-6 text-sm text-gray-500 dark:text-gray-300">
-      Subcontractors may have CIS tax deductions applied (0%, 20%, or 30%) based on HMRC verification.
+      Subcontractors have a Withholding Tax Rate of 0%, 20%, or 30% based on HMRC verification. Set to -1 to remove subcontractor status.
     </div>
 
-    <!-- CIS Fields -->
-    <div id="cis-fields" class="space-y-6">
+    <!-- Withholding Tax Fields -->
+    <div class="space-y-6">
       <div>
-  <label for="cisRate" class="block mb-1 font-medium text-gray-700 dark:text-gray-200">CIS Rate</label>
-  <select id="cisRate" name="cisRate" class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-gray-800 dark:text-white">
-          <option value="0" <%= supplier.CISRate === '0' ? 'selected' : '' %>>0% (Gross)</option>
-          <option value="0.2" <%= supplier.CISRate === '0.2' ? 'selected' : '' %>>20% (Standard)</option>
-          <option value="0.3" <%= supplier.CISRate === '0.3' ? 'selected' : '' %>>30% (Higher)</option>
+  <label for="withholdingTaxRate" class="block mb-1 font-medium text-gray-700 dark:text-gray-200">Withholding Tax Rate</label>
+  <% const whtRate = supplier.WithholdingTaxRate != null ? Number(supplier.WithholdingTaxRate) : -1; %>
+  <select id="withholdingTaxRate" name="withholdingTaxRate" class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-gray-800 dark:text-white">
+          <option value="-1" <%= whtRate < 0 || isNaN(whtRate) ? 'selected' : '' %>>Not a subcontractor</option>
+          <option value="0" <%= whtRate === 0 ? 'selected' : '' %>>0% (Gross)</option>
+          <option value="0.2" <%= whtRate === 0.2 ? 'selected' : '' %>>20% (Standard)</option>
+          <option value="0.3" <%= whtRate === 0.3 ? 'selected' : '' %>>30% (Higher)</option>
         </select>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">
           0% = Gross payment status, 20% = standard rate, 30% = unverified subcontractor.
@@ -34,17 +35,17 @@
       </div>
 
       <div>
-        <label for="cisNumber" class="block mb-1 font-medium text-gray-700 dark:text-gray-200">HMRC CIS Verification Number</label>
+        <label for="withholdingTaxReferences" class="block mb-1 font-medium text-gray-700 dark:text-gray-200">Withholding Tax References</label>
         <input 
           type="text" 
-          id="cisNumber" 
-          name="cisNumber" 
-          value="<%= supplier.CISNumber || '' %>" 
+          id="withholdingTaxReferences" 
+          name="withholdingTaxReferences" 
+          value="<%= Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences.join(', ') : (supplier.WithholdingTaxReferences || '') %>" 
           placeholder="VXXXXXXXXXXXXX"
           class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-gray-800 dark:text-white"
         >
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">
-          Issued by HMRC when a subcontractor is verified.
+          HMRC verification number(s). Separate multiple with commas.
         </p>
       </div>
     </div>
@@ -55,6 +56,7 @@
   </form>
 </div>
 
+<!-- OLD: JS to toggle CIS fields based on subcontractor checkbox — no longer needed
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const subcontractorCheckbox = document.getElementById("subcontractor");
@@ -65,6 +67,7 @@
     }
 
     subcontractorCheckbox.addEventListener("change", toggleCISFields);
-    toggleCISFields(); // Initial state
+    toggleCISFields();
   });
 </script>
+-->

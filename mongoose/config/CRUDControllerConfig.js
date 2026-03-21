@@ -70,7 +70,8 @@ module.exports = {
       ['hoursWorked', 'dayRate']
     ],
     referenceFilters: {
-      subcontractorId: { IsSubcontractor: true },
+      // OLD: subcontractorId: { IsSubcontractor: true },
+      subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
       employeeId: { status: 'active' },
       projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
     },
@@ -477,7 +478,8 @@ module.exports = {
     ],
     referenceFilters: {
       employeeId: { status: 'active' },
-      subcontractorId: { IsSubcontractor: true },
+      // OLD: subcontractorId: { IsSubcontractor: true },
+      subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
       projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
     },
     middleware: {
@@ -523,7 +525,8 @@ module.exports = {
     ],
     referenceFilters: {
       employeeId: { status: 'active' },
-      subcontractorId: { IsSubcontractor: true }
+      // OLD: subcontractorId: { IsSubcontractor: true }
+      subcontractorId: { WithholdingTaxRate: { $gte: 0 } }
     },
     middleware: {
       read: ['ensureRoles:admin,employee,subcontractor'],
@@ -549,7 +552,8 @@ module.exports = {
     ],
     referenceFilters: {
       employeeId: { status: 'active' },
-      subcontractorId: { IsSubcontractor: true },
+      // OLD: subcontractorId: { IsSubcontractor: true },
+      subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
       projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
     },
     middleware: {

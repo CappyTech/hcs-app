@@ -107,7 +107,8 @@
 
           <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">
             CIS @ 
-            <% const cisRateNum = typeof supplier.CISRate === 'number' ? supplier.CISRate : (supplier.CISRate != null && supplier.CISRate !== '' ? +supplier.CISRate : null); %>
+            <!-- OLD: supplier.CISRate -->
+            <% const cisRateNum = typeof supplier.WithholdingTaxRate === 'number' ? supplier.WithholdingTaxRate : (supplier.WithholdingTaxRate != null && supplier.WithholdingTaxRate !== '' ? +supplier.WithholdingTaxRate : null); %>
             <%= cisRateNum === 0 ? '0%' : cisRateNum === 0.2 ? '20%' : cisRateNum === 0.3 ? '30%' : 'Unknown' %>
           </th>
           <th class="px-3 py-2 border border-gray-300 md:hidden">CIS</th>

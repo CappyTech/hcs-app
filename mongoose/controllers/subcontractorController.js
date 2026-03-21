@@ -7,8 +7,10 @@ const mdb = require("../services/mongooseDatabaseService");
  */
 exports.renderAssignForm = async (req, res, next) => {
   try {
+    // OLD: .find({ IsSubcontractor: { $ne: true } })
+    // NEW: non-subcontractors have WithholdingTaxRate null or -1 (not set)
     const suppliers = await mdb.REST.supplier
-      .find({ IsSubcontractor: { $ne: true } })
+      .find({ $or: [{ WithholdingTaxRate: null }, { WithholdingTaxRate: { $exists: false } }, { WithholdingTaxRate: -1 }] })
       .sort({ Name: 1 })
       .select("uuid Name Code")
       .lean();
@@ -68,16 +70,31 @@ exports.renderChangeSupplierForm = async (req, res, next) => {
 
 exports.changeSupplier = async (req, res, next) => {
   try {
-    const { subcontractor, cisRate, cisNumber } = req.body;
+    // OLD: const { subcontractor, cisRate, cisNumber } = req.body;
+    const { withholdingTaxRate, withholdingTaxReferences } = req.body;
+
+    // Parse rate: 0, 0.2, 0.3 are valid subcontractor rates; -1 means not a subcontractor
+    const parsedRate = withholdingTaxRate != null && withholdingTaxRate !== '' ? Number(withholdingTaxRate) : -1;
+
+    // Parse references: comma-separated string → array, or keep existing array
+    let parsedRefs = null;
+    if (typeof withholdingTaxReferences === 'string' && withholdingTaxReferences.trim()) {
+      parsedRefs = withholdingTaxReferences.split(',').map(r => r.trim()).filter(Boolean);
+    } else if (Array.isArray(withholdingTaxReferences)) {
+      parsedRefs = withholdingTaxReferences.filter(Boolean);
+    }
 
     await mdb.REST.supplier.updateOne(
       { uuid: req.params.uuid },
       {
         $set: {
-          Subcontractor: !!subcontractor,
-          IsSubcontractor: !!subcontractor,
-          CISRate: cisRate,
-          CISNumber: cisNumber || null,
+          // OLD SOAP fields — commented out
+          // Subcontractor: !!subcontractor,
+          // IsSubcontractor: !!subcontractor,
+          // CISRate: cisRate,
+          // CISNumber: cisNumber || null,
+          WithholdingTaxRate: parsedRate,
+          WithholdingTaxReferences: parsedRefs,
         },
       },
     );

@@ -385,7 +385,10 @@
       </section>
 
       <!-- CIS Information -->
-      <% if (subcontractor.IsSubcontractor || subcontractor.Subcontractor || subcontractor.CISNumber || subcontractor.CISRate != null) { %>
+      <!-- OLD: subcontractor.IsSubcontractor || subcontractor.Subcontractor || subcontractor.CISNumber || subcontractor.CISRate != null -->
+      <% const _whtRate = subcontractor.WithholdingTaxRate != null ? Number(subcontractor.WithholdingTaxRate) : -1; %>
+      <% const _whtRefs = Array.isArray(subcontractor.WithholdingTaxReferences) ? subcontractor.WithholdingTaxReferences : []; %>
+      <% if (_whtRate >= 0 || _whtRefs.length > 0) { %>
       <section>
         <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
           <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
@@ -397,23 +400,26 @@
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">CIS Registered</p>
             <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">
-              <% if (subcontractor.IsSubcontractor || subcontractor.Subcontractor) { %>
+              <!-- OLD: subcontractor.IsSubcontractor || subcontractor.Subcontractor -->
+              <% if (_whtRate >= 0) { %>
                 <i class="bi bi-check-circle-fill text-green-500"></i> Yes
               <% } else { %>
                 <i class="bi bi-x-circle-fill text-gray-400"></i> No
               <% } %>
             </p>
           </div>
-          <% if (subcontractor.CISNumber) { %>
+          <% if (_whtRefs.length > 0) { %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
-            <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">CIS Number</p>
-            <p class="mt-0.5 text-sm font-mono text-gray-800 dark:text-gray-200"><%= subcontractor.CISNumber %></p>
+            <!-- OLD: CIS Number -->
+            <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Withholding Tax References</p>
+            <p class="mt-0.5 text-sm font-mono text-gray-800 dark:text-gray-200"><%= _whtRefs.join(', ') %></p>
           </div>
           <% } %>
-          <% if (subcontractor.CISRate != null) { %>
+          <% if (_whtRate >= 0) { %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
-            <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">CIS Deduction Rate</p>
-            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%= (subcontractor.CISRate * 100) %>%</p>
+            <!-- OLD: CIS Deduction Rate from CISRate -->
+            <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Withholding Tax Rate</p>
+            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%= (_whtRate * 100) %>%</p>
           </div>
           <% } %>
         </div>

@@ -304,12 +304,16 @@ module.exports = {
   subcontractor: {
     aliasOf: 'supplier',
     basePath: 'supplier',
-    baseFilter: { Subcontractor: true },
+    // OLD: baseFilter: { Subcontractor: true },
+    baseFilter: { WithholdingTaxRate: { $gte: 0 } },
     title: 'Subcontractors',
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id', 'IsRegisteredInEC', 'IsArchived', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull', 'WithholdingTaxRate', 'WithholdingTaxReferences', 'Subcontractor', 'IsSubcontractor'],
-    fieldOrder: ['Name', 'Code', 'CISRate', 'CISNumber', 'Note', 'OutstandingBalance', 'TotalPaidAmount', 'VATNumber', 'Contacts', 'Address'],
-    searchFields: ['Name', 'Code', 'CISNumber'],
+    // OLD: hideFields included 'Subcontractor', 'IsSubcontractor' and hid 'WithholdingTaxRate', 'WithholdingTaxReferences'
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id', 'IsRegisteredInEC', 'IsArchived', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull'],
+    // OLD: fieldOrder: ['Name', 'Code', 'CISRate', 'CISNumber', ...],
+    fieldOrder: ['Name', 'Code', 'WithholdingTaxRate', 'WithholdingTaxReferences', 'Note', 'OutstandingBalance', 'TotalPaidAmount', 'VATNumber', 'Contacts', 'Address'],
+    // OLD: searchFields: ['Name', 'Code', 'CISNumber'],
+    searchFields: ['Name', 'Code'],
     sortField: 'Name',
     sortOrder: 1,
     department: ['construction-industry-scheme'],
@@ -318,7 +322,7 @@ module.exports = {
       { label: 'Assign Subcontractor', href: '/subcontractor/assign', icon: 'bi bi-plus-circle', class: 'bg-green-600 hover:bg-green-700' },
     ],
     description: {
-      manage: 'Manage subcontractors (suppliers with Subcontractor status).',
+      manage: 'Manage subcontractors (suppliers with WithholdingTaxRate set).',
     },
   },
   supplier: {

@@ -221,8 +221,10 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       }
       return false;
     };
+    // OLD: const isSubbie = (s) => s && (truthyish(s.Subcontractor) || truthyish(s.IsSubcontractor));
+    // NEW: A subcontractor has WithholdingTaxRate >= 0 (0, 0.2, or 0.3); -1 or null = not a subcontractor
     const isSubbie = (s) =>
-      s && (truthyish(s.Subcontractor) || truthyish(s.IsSubcontractor));
+      s && s.WithholdingTaxRate != null && Number(s.WithholdingTaxRate) >= 0;
     // Optional debugging escape hatch: include all suppliers if requested
     const includeAllSuppliers =
       req.query.includeAll === "1" ||
@@ -240,8 +242,10 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     // CIS rate map per supplier id
     const cisRateBySupplierId = new Map();
     for (const s of subbieSuppliers) {
-      let rate = s.CISRate != null ? Number(s.CISRate) : null; // parse numeric strings too
-      if (!Number.isFinite(rate)) rate = null; // null means unknown
+      // OLD: let rate = s.CISRate != null ? Number(s.CISRate) : null;
+      // NEW: use WithholdingTaxRate; -1 means N/A, treat as null
+      let rate = s.WithholdingTaxRate != null ? Number(s.WithholdingTaxRate) : null;
+      if (!Number.isFinite(rate) || rate < 0) rate = null; // null means unknown
       cisRateBySupplierId.set(String(s.Id), rate);
     }
 
@@ -502,8 +506,8 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
           .map((s) => ({
             Id: s.Id,
             Name: s.Name,
-            Subcontractor: s.Subcontractor,
-            IsSubcontractor: s.IsSubcontractor,
+            // OLD: Subcontractor: s.Subcontractor, IsSubcontractor: s.IsSubcontractor,
+            WithholdingTaxRate: s.WithholdingTaxRate,
           }));
         logger.info(
           `[CIS] paid purchases exist but no subcontractors detected; sample suppliers: ${JSON.stringify(supplierProbe)}`,
@@ -691,9 +695,9 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
                 sampleSuppliers: suppliers.slice(0, 10).map((s) => ({
                   Id: s.Id,
                   Name: s.Name,
-                  Subcontractor: s.Subcontractor,
-                  IsSubcontractor: s.IsSubcontractor,
-                  CISRate: s.CISRate,
+                  // OLD: Subcontractor: s.Subcontractor, IsSubcontractor: s.IsSubcontractor, CISRate: s.CISRate,
+                  WithholdingTaxRate: s.WithholdingTaxRate,
+                  WithholdingTaxReferences: s.WithholdingTaxReferences,
                 })),
               };
             })()

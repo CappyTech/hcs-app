@@ -3,12 +3,12 @@
  *
  * @param {number} labourCost - The cost of labour.
  * @param {number} materialCost - The cost of materials.
- * @param {number} deduction - The CIS deduction rate (0, 0.2, or 0.3).
- * @param {string} cisNumber - The CIS number of the contractor.
- * @param {boolean} isGross - Whether the contractor is under the gross payment status.
+ * @param {number} deduction - The withholding tax rate (0, 0.2, or 0.3) from supplier.WithholdingTaxRate.
+ * @param {string} cisNumber - DEPRECATED (was SOAP CISNumber). Kept for backward compat but unused in rate logic.
+ * @param {boolean} isGross - Whether the contractor is under the gross payment status (WithholdingTaxRate === 0).
  * @param {boolean} isReverseCharge - Whether the reverse charge mechanism applies.
  * @returns {Object} - An object containing calculated amounts:
- *   - cisRate: The CIS rate applied.
+ *   - cisRate: The withholding tax rate applied.
  *   - grossAmount: The total gross amount (labour + material).
  *   - cisAmount: The CIS amount deducted.
  *   - netAmount: The net amount after CIS deduction.
@@ -31,9 +31,19 @@ function calculateInvoiceAmounts(
   const grossAmount = labourCost + materialCost;
   let cisRate, reverseCharge;
 
+  // OLD: determined rate from cisNumber presence + deduction
+  // if (deduction === 0) {
+  //   cisRate = 0.0;
+  // } else if (cisNumber && deduction === 0.2) {
+  //   cisRate = 0.2;
+  // } else {
+  //   cisRate = 0.3;
+  // }
+
+  // NEW: WithholdingTaxRate is the canonical rate (0, 0.2, or 0.3)
   if (deduction === 0) {
     cisRate = 0.0;
-  } else if (cisNumber && deduction === 0.2) {
+  } else if (deduction === 0.2) {
     cisRate = 0.2;
   } else {
     cisRate = 0.3;

@@ -106,7 +106,7 @@ This document summarizes the key differences between the KashFlow SOAP and REST 
 | DefaultPdfTheme        | DefaultPdfTheme          | number (REST only)                    |
 | UniqueEntityNumber     | UniqueEntityNumber       | string                                |
 | WithholdingTaxRate     | WithholdingTaxRate       | number (REST only)                    |
-| WithholdingTaxReferences | WithholdingTaxReferences | string|null (REST only)              |
+| WithholdingTaxReferences | WithholdingTaxReferences | array|null (REST only)               |
 | IsWhtDeductionToBeApplied | IsWhtDeductionToBeApplied | boolean (REST only)                |
 | StockManagementApplicable | StockManagementApplicable | boolean (REST only)                |
 | AdditionalFieldValue   | AdditionalFieldValue     | string (REST only)                    |
@@ -583,7 +583,7 @@ The following are the main SOAP models used in the legacy system (see `mongoose/
   "UniqueEntityNumber": "string",
   "VatNumber": "string",
   "WithholdingTaxRate": "number",
-  "WithholdingTaxReferences": "string|null"
+  "WithholdingTaxReferences": "array|null"
 }
 ```
 

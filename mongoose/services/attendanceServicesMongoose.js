@@ -45,7 +45,8 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
     const activeEmployeesPromise = mdb.INTERNAL.employee.find({ status: 'active' });
 
     // Subcontractors (REST)
-  const subcontractorsPromise = mdb.REST.supplier.find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] });
+  // OLD: const subcontractorsPromise = mdb.REST.supplier.find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] });
+  const subcontractorsPromise = mdb.REST.supplier.find({ WithholdingTaxRate: { $gte: 0 } });
 
     // Purchases with payments within the week (REST)
     const purchasesPromise = mdb.REST.purchase.find({
@@ -78,10 +79,11 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
       // Collect supplierIds from purchases first
       const supplierIds = [...new Set(purchasesNotDeleted.map(p => p.SupplierId).filter(id => id != null))];
       const suppliers = supplierIds.length
-        ? await mdb.REST.supplier.find({ Id: { $in: supplierIds } }).select('Id Name uuid Subcontractor IsSubcontractor').lean()
+        ? await mdb.REST.supplier.find({ Id: { $in: supplierIds } }).select('Id Name uuid WithholdingTaxRate').lean()
         : [];
-      // Build allowed subcontractor id set using tolerant truthiness
-      const isSubbie = (s) => s && (s.Subcontractor === true || s.IsSubcontractor === true || s.Subcontractor === 1 || s.IsSubcontractor === 1 || s.Subcontractor === 'true' || s.IsSubcontractor === 'true');
+      // Build allowed subcontractor id set using WithholdingTaxRate
+      // OLD: const isSubbie = (s) => s && (s.Subcontractor === true || s.IsSubcontractor === true || ...);
+      const isSubbie = (s) => s && s.WithholdingTaxRate != null && Number(s.WithholdingTaxRate) >= 0;
       const allowedSubcontractorIds = new Set(suppliers.filter(isSubbie).map(s => s.Id));
       const filteredPurchases = purchasesNotDeleted.filter(p => p && allowedSubcontractorIds.has(p.SupplierId));
       if (process.env.DEBUG) {
