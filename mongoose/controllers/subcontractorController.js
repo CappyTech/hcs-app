@@ -73,8 +73,11 @@ exports.changeSupplier = async (req, res, next) => {
     // OLD: const { subcontractor, cisRate, cisNumber } = req.body;
     const { withholdingTaxRate } = req.body;
 
-    // Parse rate: 0, 0.2, 0.3 are valid subcontractor rates; -1 means not a subcontractor
-    const parsedRate = withholdingTaxRate != null && withholdingTaxRate !== '' ? Number(withholdingTaxRate) : -1;
+    // Parse rate: 0, 20, 30 are valid subcontractor rates (REST whole %); -1 means not a subcontractor
+    // Also accept legacy decimal forms 0.2, 0.3
+    const allowedRates = [-1, 0, 0.2, 0.3, 20, 30];
+    const rawRate = withholdingTaxRate != null && withholdingTaxRate !== '' ? Number(withholdingTaxRate) : -1;
+    const parsedRate = allowedRates.includes(rawRate) ? rawRate : -1;
 
     // Parse references: array of { Name, Value } objects from individual form fields
     const parsedRefs = [];

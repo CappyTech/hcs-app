@@ -48,6 +48,15 @@ const main = async () => {
       logger.error('[migration] Email verification backfill failed', { error: migrationErr.message });
     }
 
+    // Load CIS nominal code mappings from the database
+    try {
+      const cisMappings = require('./mongoose/config/cisMappings');
+      await cisMappings.loadFromDb(mdb.REST.nominal);
+      logger.info(`[cis] Loaded nominal codes — materials: [${cisMappings.materialsNominalCodes}], labour: [${cisMappings.labourNominalCodes}], cisDeduction: [${cisMappings.cisDeductionNominalCodes}]`);
+    } catch (cisErr) {
+      logger.error('[cis] Failed to load nominal codes from DB, using defaults', { error: cisErr.message });
+    }
+
     const app = express();
     const http = require('http');
     const { initSocket } = require('./services/socketService');

@@ -3,7 +3,7 @@
  *
  * @param {number} labourCost - The cost of labour.
  * @param {number} materialCost - The cost of materials.
- * @param {number} deduction - The withholding tax rate (0, 0.2, or 0.3) from supplier.WithholdingTaxRate.
+ * @param {number} deduction - The withholding tax rate from supplier.WithholdingTaxRate. Accepts both REST (0, 20, 30) and legacy decimal (0, 0.2, 0.3) formats.
  * @param {string} cisNumber - DEPRECATED (was SOAP CISNumber). Kept for backward compat but unused in rate logic.
  * @param {boolean} isGross - Whether the contractor is under the gross payment status (WithholdingTaxRate === 0).
  * @param {boolean} isReverseCharge - Whether the reverse charge mechanism applies.
@@ -17,6 +17,33 @@
  *   - cisAmountTwo: The CIS amount if the rate is 20%.
  *   - cisAmountThree: The CIS amount if the rate is 30%.
  */
+/**
+ * Normalise a WithholdingTaxRate value to a decimal fraction.
+ * The KashFlow REST API stores rates as whole-number percentages (0, 20, 30)
+ * while legacy SOAP data used decimals (0, 0.2, 0.3).
+ * Returns the decimal form (0, 0.2, 0.3) or null/-1 unchanged.
+ */
+function normalizeWhtRate(rate) {
+  if (rate == null || rate === '' || rate === -1) return rate;
+  const n = Number(rate);
+  if (!Number.isFinite(n)) return null;
+  // Whole-number percentages: 20 → 0.2, 30 → 0.3
+  if (n > 1) return n / 100;
+  return n;
+}
+
+/**
+ * Return a display label for a WithholdingTaxRate value.
+ * Accepts both REST (20, 30) and SOAP (0.2, 0.3) formats.
+ */
+function whtRateLabel(rate) {
+  const n = normalizeWhtRate(rate);
+  if (n === 0)   return '0% (Gross)';
+  if (n === 0.2) return '20%';
+  if (n === 0.3) return '30%';
+  return null;
+}
+
 function calculateInvoiceAmounts(
   labourCost,
   materialCost,
@@ -31,19 +58,11 @@ function calculateInvoiceAmounts(
   const grossAmount = labourCost + materialCost;
   let cisRate, reverseCharge;
 
-  // OLD: determined rate from cisNumber presence + deduction
-  // if (deduction === 0) {
-  //   cisRate = 0.0;
-  // } else if (cisNumber && deduction === 0.2) {
-  //   cisRate = 0.2;
-  // } else {
-  //   cisRate = 0.3;
-  // }
-
-  // NEW: WithholdingTaxRate is the canonical rate (0, 0.2, or 0.3)
-  if (deduction === 0) {
+  // Normalise deduction so both 20/30 and 0.2/0.3 work
+  const normDed = normalizeWhtRate(deduction);
+  if (normDed === 0) {
     cisRate = 0.0;
-  } else if (deduction === 0.2) {
+  } else if (normDed === 0.2) {
     cisRate = 0.2;
   } else {
     cisRate = 0.3;
@@ -70,4 +89,6 @@ function calculateInvoiceAmounts(
 
 module.exports = {
   calculateInvoiceAmounts,
+  normalizeWhtRate,
+  whtRateLabel,
 };

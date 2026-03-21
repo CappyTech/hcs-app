@@ -5,6 +5,7 @@ const logger = require("../../services/loggerService");
 const moment = require("moment-timezone");
 const taxService = require("../../services/taxService");
 const cisMappings = require("../config/cisMappings");
+const { normalizeWhtRate } = require("../../services/cisService");
 
 exports.renderCISDashboardMongo = async (req, res, next) => {
   try {
@@ -222,7 +223,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       return false;
     };
     // OLD: const isSubbie = (s) => s && (truthyish(s.Subcontractor) || truthyish(s.IsSubcontractor));
-    // NEW: A subcontractor has WithholdingTaxRate >= 0 (0, 0.2, or 0.3); -1 or null = not a subcontractor
+    // NEW: A subcontractor has WithholdingTaxRate >= 0 (0, 20, or 30); -1 or null = not a subcontractor
     const isSubbie = (s) =>
       s && s.WithholdingTaxRate != null && Number(s.WithholdingTaxRate) >= 0;
     // Optional debugging escape hatch: include all suppliers if requested
@@ -322,16 +323,16 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
               ? Number(line.NetAmount)
               : rate * qty;
 
-        // Primary: SOAP charge types if present
-        if (chargeType === 18685896) {
+        // Primary: ChargeType enum IDs (from KashFlow API)
+        if (chargeType === cisMappings.chargeTypes.materials) {
           supplierTotals[supplierId].materialsCost += amount;
           continue;
         }
-        if (chargeType === 18685897) {
+        if (chargeType === cisMappings.chargeTypes.labour) {
           supplierTotals[supplierId].labourCost += amount;
           continue;
         }
-        if (chargeType === 18685964) {
+        if (chargeType === cisMappings.chargeTypes.cisDeduction) {
           supplierTotals[supplierId].cisDeductions += Math.abs(amount);
           continue;
         }
@@ -421,7 +422,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 
     // Compute fallback CIS deduction from labour * CISRate when explicit cis line is zero
     for (const [sid, totals] of Object.entries(supplierTotals)) {
-      const rate = cisRateBySupplierId.get(sid);
+      const rate = normalizeWhtRate(cisRateBySupplierId.get(sid));
       totals.calculatedCISDeduction = rate ? totals.labourCost * rate : 0;
     }
 
@@ -459,7 +460,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
             (dt) => dt && dt.getTime() >= startMs && dt.getTime() <= endMs,
           )
           .sort((a, b) => a - b);
-        displayPaidDate = lineDates[0] || null;
+        displayPaidDate = lineDates.length ? lineDates[lineDates.length - 1] : null;
       }
       const isPaid = !!displayPaidDate;
       const displayDateRaw = isPaid

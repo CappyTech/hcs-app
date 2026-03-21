@@ -11,11 +11,14 @@
         <% if (sub.company) { %>
           | <%= sub.company %>
         <% } %>
-        <% if (sub.deduction === 0.0) { %>
+        <%
+          const dedNorm = sub.deduction != null && sub.deduction > 1 ? sub.deduction / 100 : sub.deduction;
+        %>
+        <% if (dedNorm === 0) { %>
           | 0%
-        <% } else if (sub.deduction === 0.2) { %>
+        <% } else if (dedNorm === 0.2) { %>
           | 20%
-        <% } else if (sub.deduction === 0.3) { %>
+        <% } else if (dedNorm === 0.3) { %>
           | 30%
         <% } %>
         <% if (sub.isGross) { %>

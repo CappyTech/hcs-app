@@ -329,7 +329,9 @@ exports.renderYearlyReturns = async (req, res, next) => {
         Material: c.materialsCost,
         CIS: c.cisAmount,
         Net: c.netAmount,
-        ReverseCharge: Number(p.ReverseChargeVATAmount || p.CISRCVatAmount || 0),
+        // CISRCVatAmount is a SOAP-era field — no REST equivalent exists.
+        // Kept for legacy data; will be 0 for REST-only purchases.
+        ReverseCharge: Number(p.CISRCVatAmount || 0),
         SubmissionDate: p.SubmissionDate,
       });
     }
@@ -374,9 +376,9 @@ function classifyLines(p) {
         : line.NetAmount != null && line.NetAmount !== ""
           ? Number(line.NetAmount)
           : rate * qty;
-    if (chargeType === 18685896) { materialsCost += amount; continue; }
-    if (chargeType === 18685897) { labourCost += amount; continue; }
-    if (chargeType === 18685964) { cisAmount += Math.abs(amount); continue; }
+    if (chargeType === cisMappings.chargeTypes.materials) { materialsCost += amount; continue; }
+    if (chargeType === cisMappings.chargeTypes.labour) { labourCost += amount; continue; }
+    if (chargeType === cisMappings.chargeTypes.cisDeduction) { cisAmount += Math.abs(amount); continue; }
     const nc = Number(line.NominalCode) || null;
     const nn = (line.NominalName || line.Description || "").toString().toLowerCase();
     if (nc && cisMappings.materialsNominalCodes.includes(nc)) { materialsCost += amount; continue; }
@@ -415,7 +417,7 @@ function buildSubEntry(supplier, purchases) {
       materialCost:    c.materialsCost,
       cisAmount:       c.cisAmount,
       netAmount:       c.netAmount,
-      reverseCharge:   Number(p.ReverseChargeVATAmount || p.CISRCVatAmount || 0),
+      reverseCharge:   Number(p.CISRCVatAmount || 0),
       month:           taxMonth,
       year:            taxYear,
       submissionDate:  p.SubmissionDate,

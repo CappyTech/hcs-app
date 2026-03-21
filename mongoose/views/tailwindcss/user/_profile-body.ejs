@@ -420,7 +420,7 @@
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <!-- OLD: CIS Deduction Rate from CISRate -->
             <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Withholding Tax Rate</p>
-            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%= (_whtRate * 100) %>%</p>
+            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-200"><%= _whtRate > 1 ? _whtRate : (_whtRate * 100) %>%</p>
           </div>
           <% } %>
         </div>

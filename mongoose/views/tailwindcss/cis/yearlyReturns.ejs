@@ -3,7 +3,8 @@
   const cisRateNum = typeof supplier.WithholdingTaxRate === 'number'
     ? supplier.WithholdingTaxRate
     : (supplier.WithholdingTaxRate != null && supplier.WithholdingTaxRate !== '' ? +supplier.WithholdingTaxRate : null);
-  const cisRateLabel = cisRateNum === 0 ? '0% (Gross)' : cisRateNum === 0.2 ? '20%' : cisRateNum === 0.3 ? '30%' : '—';
+  const cisRateNorm = cisRateNum != null && cisRateNum > 1 ? cisRateNum / 100 : cisRateNum;
+  const cisRateLabel = cisRateNorm === 0 ? '0% (Gross)' : cisRateNorm === 0.2 ? '20%' : cisRateNorm === 0.3 ? '30%' : '—';
   const refs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences : [];
   const verificationRef = refs.find(r => r && r.Name === 'Verification Number');
   const utrRef = refs.find(r => r && r.Name === 'UTR Number');
@@ -106,7 +107,7 @@
   </details>
   <% } %>
 
-  <button onclick="window.print()" class="print:hidden mb-4 border border-black px-4 py-1 text-sm hover:bg-gray-100">
+  <button id="printBtn" type="button" class="print:hidden mb-4 border border-black px-4 py-1 text-sm hover:bg-gray-100 cursor-pointer">
     Print Report
   </button>
 </div>
