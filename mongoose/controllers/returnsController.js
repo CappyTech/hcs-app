@@ -68,7 +68,7 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
           .find({
             SupplierId: supplier.Id,
             $or: [{ TaxYear: null }, { TaxYear: { $exists: false } }],
-            ...deletedFilter,
+            // ...deletedFilter,
           })
           .select("PaidDate PaymentLines")
           .lean();
