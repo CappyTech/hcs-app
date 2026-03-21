@@ -80,11 +80,12 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
           .select("PaidDate PaymentLines")
           .lean();
         for (const r of fallbackRecs) {
+          const lastPL = Array.isArray(r.PaymentLines) && r.PaymentLines.length > 0
+            ? r.PaymentLines[r.PaymentLines.length - 1]
+            : null;
           const payDate =
             r.PaidDate ||
-            (Array.isArray(r.PaymentLines) && r.PaymentLines.length > 0
-              ? r.PaymentLines[0].PayDate || r.PaymentLines[0].Date
-              : null);
+            (lastPL ? lastPL.PayDate || lastPL.Date : null);
           if (!payDate) continue;
           const { taxYear: ty, taxMonth: tm } =
             taxService.calculateTaxYearAndMonth(payDate);
@@ -305,11 +306,12 @@ exports.renderYearlyReturns = async (req, res, next) => {
     for (const p of paidPurchases) {
       let m = p.TaxMonth;
       if (!m) {
+        const lastPL = Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0
+          ? p.PaymentLines[p.PaymentLines.length - 1]
+          : null;
         const payDate =
           p.PaidDate ||
-          (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0
-            ? p.PaymentLines[0].PayDate || p.PaymentLines[0].Date
-            : null);
+          (lastPL ? lastPL.PayDate || lastPL.Date : null);
         if (payDate) {
           m = taxService.calculateTaxYearAndMonth(payDate).taxMonth;
         }
@@ -388,7 +390,7 @@ function classifyLines(p) {
   const payDates = Array.isArray(p.PaymentLines)
     ? p.PaymentLines.map((pl) => pl.PayDate || pl.Date).filter(Boolean)
     : [];
-  const payDate = p.PaidDate || (payDates.length ? payDates[0] : null);
+  const payDate = p.PaidDate || (payDates.length ? payDates[payDates.length - 1] : null);
   return { labourCost, materialsCost, cisAmount, grossAmount, netAmount, payDate };
 }
 

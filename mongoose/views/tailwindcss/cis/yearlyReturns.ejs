@@ -1,213 +1,237 @@
-<div class="">
-  <h1 class="mb-4 text-center font-extrabold">
-    <%= year %>-<%= (parseInt(year) + 1).toString().slice(-2) %> Construction Industry Scheme Returns
+<%
+  // -- Compute shared values once --
+  const cisRateNum = typeof supplier.WithholdingTaxRate === 'number'
+    ? supplier.WithholdingTaxRate
+    : (supplier.WithholdingTaxRate != null && supplier.WithholdingTaxRate !== '' ? +supplier.WithholdingTaxRate : null);
+  const cisRateLabel = cisRateNum === 0 ? '0% (Gross)' : cisRateNum === 0.2 ? '20%' : cisRateNum === 0.3 ? '30%' : '—';
+  const refs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences : [];
+  const verificationRef = refs.find(r => r && r.Name === 'Verification Number');
+  const utrRef = refs.find(r => r && r.Name === 'UTR Number');
+  const niRef = refs.find(r => r && r.Name === 'NI Number');
+  const A = supplier.Address || {};
+  const addrParts = [A.Line1, A.Line2, A.Line3, A.Line4, A.PostCode].map(s => (s || '').trim()).filter(Boolean);
+
+  // Compute annual totals across all months
+  let annualGross = 0, annualLabour = 0, annualMaterial = 0, annualCIS = 0, annualNet = 0, annualRC = 0, annualCount = 0;
+  for (let mi = 1; mi <= 12; mi++) {
+    const recs = receiptsByMonth[mi.toString()] || [];
+    recs.forEach(r => {
+      annualGross += r.Gross || 0;
+      annualLabour += r.Labour || 0;
+      annualMaterial += r.Material || 0;
+      annualCIS += r.CIS || 0;
+      annualNet += r.Net || 0;
+      annualRC += r.ReverseCharge || 0;
+      annualCount++;
+    });
+  }
+%>
+
+<!-- ===== COVER / HEADER PAGE ===== -->
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold text-center border-b-2 border-black pb-2 mb-6">
+    Construction Industry Scheme — Yearly Return<br>
+    Tax Year <%= year %>/<%= (parseInt(year) + 1).toString().slice(-2) %>
   </h1>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-8 text-center">
-    <div>
-      <p class="font-semibold mb-2">Subcontractor</p>
-      <p>
-        <%= supplier.Name %><br><br>
-        <% 
-          // Address is consistently shaped as:
-          // { Line1, Line2, Line3, Line4, PostCode, CountryName, CountryCode, CountryId }
-          const A = supplier.Address || {};
-          const line1 = (A.Line1 || '').trim();
-          const line2 = (A.Line2 || '').trim();
-          const line3 = (A.Line3 || '').trim();
-          const line4 = (A.Line4 || '').trim();
-          const postCode = (A.PostCode || '').trim();
-          const slots = [line1, line2, line3, line4, postCode];
-        %>
-        <% if (typeof debug !== 'undefined' && debug) { %>
-          <details class="mt-2 mb-2 p-2 border border-yellow-300 bg-yellow-50 text-xs rounded print:hidden">
-            <summary class="cursor-pointer font-semibold">Debug: address slots</summary>
-            <div class="mt-2">
-              <div><span class="font-medium">typeof supplier.Address:</span> <%= typeof supplier.Address %></div>
-              <div class="mt-1"><span class="font-medium">Raw supplier.Address:</span></div>
-              <pre class="whitespace-pre-wrap break-words"><%- JSON.stringify(supplier.Address, null, 2) %></pre>
-              <div class="mt-1"><span class="font-medium">Computed slots:</span></div>
-              <pre class="whitespace-pre-wrap break-words"><%- JSON.stringify(slots, null, 2) %></pre>
-            </div>
-          </details>
+  <div class="flex justify-between text-sm mb-6">
+    <!-- Subcontractor -->
+    <div class="w-1/2 pr-4">
+      <table class="w-full text-sm">
+        <tr><td colspan="2" class="font-bold border-b border-black pb-1 mb-1">Subcontractor</td></tr>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top w-28">Name</td><td class="py-0.5"><%= supplier.Name %></td></tr>
+        <% if (supplier.Code) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Code</td><td class="py-0.5"><%= supplier.Code %></td></tr>
         <% } %>
-        <% 
-          const nonEmptyIdx = slots.map((s,i)=> (s && s.trim()) ? i : -1).filter(i=>i!==-1);
-          const lastIdx = nonEmptyIdx.length ? nonEmptyIdx[nonEmptyIdx.length-1] : -1;
-          for (let i = 0; i < slots.length; i++) {
-            const raw = slots[i] || '';
-            const trimmed = raw.trim();
-            const isEmpty = !trimmed;
-            const isLast = i === lastIdx;
-        %>
-          <span>
-            <% if (!isEmpty) { 
-                 const endsWithPunct = /[.,]$/.test(trimmed);
-                 let out = trimmed;
-                 if (!endsWithPunct) {
-                   out = trimmed + (isLast ? '.' : ',');
-                 }
-            %>
-              <%= out %>
-            <% } else { %>
-              <%- '&nbsp;' %>
-            <% } %>
-          </span><br>
+        <% if (addrParts.length) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Address</td><td class="py-0.5"><%= addrParts.join(', ') %></td></tr>
         <% } %>
-      </p>
+        <% if (verificationRef && verificationRef.Value) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Verification No.</td><td class="py-0.5 font-mono"><%= verificationRef.Value %></td></tr>
+        <% } %>
+        <% if (utrRef && utrRef.Value) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">UTR</td><td class="py-0.5 font-mono"><%= utrRef.Value %></td></tr>
+        <% } %>
+        <% if (niRef && niRef.Value) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">NI Number</td><td class="py-0.5 font-mono"><%= niRef.Value %></td></tr>
+        <% } %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Deduction Rate</td><td class="py-0.5"><%= cisRateLabel %></td></tr>
+      </table>
     </div>
-    <div>
-      <p class="font-semibold mb-2">Contractor</p>
-      <p>
-        Heron Constructive Solutions LTD<br><br>
-        103 Herondale Road,<br>
-        Mossley Hill,<br>
-        Liverpool,<br>
-        Merseyside,<br>
-        L18 1JZ.
-      </p>
+    <!-- Contractor -->
+    <div class="w-1/2 pl-4">
+      <table class="w-full text-sm">
+        <tr><td colspan="2" class="font-bold border-b border-black pb-1 mb-1">Contractor</td></tr>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top w-28">Name</td><td class="py-0.5">Heron Constructive Solutions LTD</td></tr>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Address</td><td class="py-0.5">103 Herondale Road, Mossley Hill, Liverpool, Merseyside, L18 1JZ</td></tr>
+      </table>
     </div>
   </div>
+
+  <!-- Annual Summary -->
+  <table class="w-full text-sm border-collapse border border-black mb-6">
+    <caption class="text-left font-bold text-base mb-1">Annual Summary</caption>
+    <thead>
+      <tr>
+        <th class="border border-black px-2 py-1 text-left">Invoices</th>
+        <th class="border border-black px-2 py-1 text-right">Gross</th>
+        <th class="border border-black px-2 py-1 text-right">Labour</th>
+        <th class="border border-black px-2 py-1 text-right">Materials</th>
+        <th class="border border-black px-2 py-1 text-right">CIS Deducted</th>
+        <th class="border border-black px-2 py-1 text-right">Net Paid</th>
+        <% if (annualRC > 0) { %>
+        <th class="border border-black px-2 py-1 text-right">Reverse Charge</th>
+        <% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="font-semibold">
+        <td class="border border-black px-2 py-1"><%= annualCount %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualGross) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualLabour) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualMaterial) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualCIS) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualNet) %></td>
+        <% if (annualRC > 0) { %>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualRC) %></td>
+        <% } %>
+      </tr>
+    </tbody>
+  </table>
+
+  <% if (typeof debug !== 'undefined' && debug) { %>
+  <details class="mb-4 p-2 border border-gray-400 text-xs print:hidden">
+    <summary class="cursor-pointer font-semibold">Debug: supplier object</summary>
+    <pre class="whitespace-pre-wrap break-words mt-2"><%- JSON.stringify(supplier, null, 2) %></pre>
+  </details>
+  <% } %>
+
+  <button onclick="window.print()" class="print:hidden mb-4 border border-black px-4 py-1 text-sm hover:bg-gray-100">
+    Print Report
+  </button>
 </div>
 
 <div class="page-break"></div>
 
+<!-- ===== MONTHLY DETAIL TABLES ===== -->
+<div class="max-w-4xl mx-auto">
 <% for (let monthIndex = 1; monthIndex <= 12; monthIndex++) { %>
   <% const monthKey = monthIndex.toString(); %>
   <% let receipts = receiptsByMonth[monthKey] || []; %>
   <% receipts = receipts.sort((a, b) => new Date(a.PayDate) - new Date(b.PayDate)); %>
-  <% const hasReceipts = receipts.length > 0; %>
-  <% if (hasReceipts) { %>
-  <% const tableClasses = pageBreakMonths.includes(monthIndex) ? 'page-break d-print-table' : 'd-print-table'; %>
-  <div class="avoid-page-break">
-  <table class="min-w-full border border-gray-300 rounded-lg overflow-hidden text-left text-xs leading-tight mb-4 condensed-table <%= tableClasses %>">
-      <caption class="text-center font-semibold p-2 text-gray-700">Month <%= monthKey %> (<%= monthNames[monthIndex - 1] %> <%= monthIndex >= 10 ? year + 1 : year %>)</caption>
-      <thead class="bg-gray-100">
+  <% if (receipts.length > 0) { %>
+  <div class="avoid-page-break mb-6">
+    <table class="w-full text-xs border-collapse border border-black cis-table">
+      <caption class="text-left font-bold text-sm pb-1">
+        Month <%= monthKey %>: <%= monthNames[monthIndex - 1] %> <%= monthIndex >= 10 ? parseInt(year) + 1 : year %>
+      </caption>
+      <thead>
         <tr>
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Invoice</th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">Inv</th>
-
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Kashflow</th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">KF</th>
-
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Invoiced</th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">Invoiced</th>
-
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Paid</th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">Paid</th>
-
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Gross</th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">Gross</th>
-
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Labour</th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">Labour</th>
-
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Material</th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">Material</th>
-
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">
-            CIS @ 
-            <!-- OLD: supplier.CISRate -->
-            <% const cisRateNum = typeof supplier.WithholdingTaxRate === 'number' ? supplier.WithholdingTaxRate : (supplier.WithholdingTaxRate != null && supplier.WithholdingTaxRate !== '' ? +supplier.WithholdingTaxRate : null); %>
-            <%= cisRateNum === 0 ? '0%' : cisRateNum === 0.2 ? '20%' : cisRateNum === 0.3 ? '30%' : 'Unknown' %>
-          </th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">CIS</th>
-
-          <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Net</th>
-          <th class="px-3 py-2 border border-gray-300 md:hidden">Net</th>
-
-          <% if (supplier.isReverseCharge) { %>
-            <th class="px-3 py-2 border border-gray-300 hidden md:table-cell">Reverse Charge</th>
-            <th class="px-3 py-2 border border-gray-300 md:hidden">RC</th>
+          <th class="border border-black px-1 py-0.5 text-left">Invoice</th>
+          <th class="border border-black px-1 py-0.5 text-left">KF No.</th>
+          <th class="border border-black px-1 py-0.5 text-left">Invoiced</th>
+          <th class="border border-black px-1 py-0.5 text-left">Paid</th>
+          <th class="border border-black px-1 py-0.5 text-right">Gross</th>
+          <th class="border border-black px-1 py-0.5 text-right">Labour</th>
+          <th class="border border-black px-1 py-0.5 text-right">Material</th>
+          <th class="border border-black px-1 py-0.5 text-right">CIS @ <%= cisRateLabel %></th>
+          <th class="border border-black px-1 py-0.5 text-right">Net</th>
+          <% if (annualRC > 0) { %>
+          <th class="border border-black px-1 py-0.5 text-right">RC</th>
           <% } %>
-
-          <th class="px-3 py-2 border border-gray-300 text-center">Submission Date</th>
         </tr>
       </thead>
       <tbody>
-        <% let totalGross=0, totalLabour=0, totalMaterial=0, totalCIS=0, totalNet=0, totalRC=0; %>
+        <% let mGross=0, mLabour=0, mMaterial=0, mCIS=0, mNet=0, mRC=0; %>
         <% receipts.forEach(receipt => { %>
-          <tr class="even:bg-gray-50">
-            <td class="border border-gray-300 px-3 py-1"><%= receipt.InvoiceNumber %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= receipt.KashflowNumber %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= slimDateTime(receipt.InvoiceDate) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= slimDateTime(receipt.PayDate) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.Gross) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.Labour) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.Material) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.CIS) %></td>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.Net) %></td>
-            <% if (supplier.isReverseCharge) { %>
-              <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(receipt.ReverseCharge) %></td>
-            <% } %>
-            <td class="border border-gray-300 px-3 py-1"><%= slimDateTime(receipt.SubmissionDate) %></td>
-          </tr>
-          <% 
-            totalGross += receipt.Gross;
-            totalLabour += receipt.Labour;
-            totalMaterial += receipt.Material;
-            totalCIS += receipt.CIS;
-            totalNet += receipt.Net;
-            totalRC += receipt.ReverseCharge || 0;
-          %>
-        <% }) %>
-        <tr class="font-semibold bg-gray-200">
-          <td colspan="4" class="border border-gray-300 px-3 py-1">Totals for Month <%= monthKey %>:</td>
-          <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalGross) %></td>
-          <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalLabour) %></td>
-          <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalMaterial) %></td>
-          <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalCIS) %></td>
-          <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalNet) %></td>
-          <% if (supplier.isReverseCharge) { %>
-            <td class="border border-gray-300 px-3 py-1"><%= formatCurrency(totalRC) %></td>
+        <tr>
+          <td class="border border-black px-1 py-0.5"><%= receipt.InvoiceNumber %></td>
+          <td class="border border-black px-1 py-0.5"><%= receipt.KashflowNumber %></td>
+          <td class="border border-black px-1 py-0.5"><%= slimDateTime(receipt.InvoiceDate) %></td>
+          <td class="border border-black px-1 py-0.5"><%= slimDateTime(receipt.PayDate) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(receipt.Gross) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(receipt.Labour) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(receipt.Material) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(receipt.CIS) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(receipt.Net) %></td>
+          <% if (annualRC > 0) { %>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(receipt.ReverseCharge) %></td>
           <% } %>
-          <td class="border border-gray-300 px-3 py-1"></td>
         </tr>
+        <%
+          mGross += receipt.Gross || 0;
+          mLabour += receipt.Labour || 0;
+          mMaterial += receipt.Material || 0;
+          mCIS += receipt.CIS || 0;
+          mNet += receipt.Net || 0;
+          mRC += receipt.ReverseCharge || 0;
+        %>
+        <% }); %>
       </tbody>
-  </table>
+      <tfoot>
+        <tr class="font-bold">
+          <td colspan="4" class="border border-black px-1 py-0.5">Month Total (<%= receipts.length %> invoice<%= receipts.length !== 1 ? 's' : '' %>)</td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(mGross) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(mLabour) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(mMaterial) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(mCIS) %></td>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(mNet) %></td>
+          <% if (annualRC > 0) { %>
+          <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(mRC) %></td>
+          <% } %>
+        </tr>
+      </tfoot>
+    </table>
   </div>
   <% } %>
 <% } %>
 
+<!-- Annual Totals (repeated at end for easy reference) -->
+<div class="avoid-page-break mt-4 border-t-2 border-black pt-2">
+  <table class="w-full text-sm border-collapse border border-black">
+    <caption class="text-left font-bold text-base mb-1">Annual Total — Tax Year <%= year %>/<%= (parseInt(year) + 1).toString().slice(-2) %></caption>
+    <thead>
+      <tr>
+        <th class="border border-black px-2 py-1 text-left">Invoices</th>
+        <th class="border border-black px-2 py-1 text-right">Gross</th>
+        <th class="border border-black px-2 py-1 text-right">Labour</th>
+        <th class="border border-black px-2 py-1 text-right">Materials</th>
+        <th class="border border-black px-2 py-1 text-right">CIS Deducted</th>
+        <th class="border border-black px-2 py-1 text-right">Net Paid</th>
+        <% if (annualRC > 0) { %>
+        <th class="border border-black px-2 py-1 text-right">Reverse Charge</th>
+        <% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="font-bold">
+        <td class="border border-black px-2 py-1"><%= annualCount %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualGross) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualLabour) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualMaterial) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualCIS) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualNet) %></td>
+        <% if (annualRC > 0) { %>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualRC) %></td>
+        <% } %>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
 
 <style>
   @media print {
-    /* Preserve colors for header rows, etc. */
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    /* Hide UI-only elements */
     .print\:hidden { display: none !important; }
-
-    /* Make tables paginate cleanly */
     table { page-break-inside: auto; border-collapse: collapse; }
-    tr { page-break-inside: avoid; page-break-after: auto; }
+    tr { page-break-inside: avoid; }
     thead { display: table-header-group; }
     tfoot { display: table-footer-group; }
-    caption { caption-side: top; }
-
-    /* Keep each table together on one page when possible */
-  .avoid-page-break { page-break-inside: avoid; break-inside: avoid; }
-  .avoid-page-break table { page-break-inside: avoid !important; break-inside: avoid !important; }
-
-    /* Utility classes used in template */
+    .avoid-page-break { page-break-inside: avoid; break-inside: avoid; }
     .page-break { page-break-before: always; break-before: page; }
-    .d-print-table { display: table !important; width: 100% !important; }
-    .d-print-table th, .d-print-table td { padding: 6px 8px !important; }
-  }
-  /* Ensure borders render crisply both on screen and print */
-  .d-print-table, .d-print-table th, .d-print-table td { border-color: #d1d5db; }
-</style>
-
-<style>
-  /* Condensed table utility for yearly returns */
-  .condensed-table { font-size: 0.75rem; line-height: 1.2; }
-  .condensed-table th, .condensed-table td { padding: 2px 4px; }
-  .condensed-table caption { padding: 4px 0; }
-
-  @media print {
-    .condensed-table { font-size: 10px !important; }
-    /* Override earlier print padding rules to be tighter */
-    .condensed-table.d-print-table th, .condensed-table.d-print-table td { padding: 2px 4px !important; }
-    .condensed-table caption { padding: 2px 0 !important; }
+    .cis-table { font-size: 9px !important; }
+    .cis-table th, .cis-table td { padding: 1px 3px !important; }
   }
 </style>
 
