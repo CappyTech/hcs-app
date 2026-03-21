@@ -8,7 +8,7 @@ const taskSchema = new mongoose.Schema({
   dueDate: { type: Date },
   recurrence: { type: String, enum: ['none', 'daily', 'weekly', 'monthly'], default: 'none' },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true, index: true },
-  jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'job', default: null },
+  contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'contract', default: null },
   completed: { type: Boolean, default: false, index: true }
 }, {
   timestamps: true

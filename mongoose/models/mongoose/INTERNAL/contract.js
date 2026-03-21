@@ -5,7 +5,7 @@ const contractSchema = new mongoose.Schema({
   uuid: { type: String, unique: true, required: true, default: uuidv4 },
   quoteId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'quote', // or 'Quote' depending on your actual model name
+    ref: 'quote',
     required: false
   },
 

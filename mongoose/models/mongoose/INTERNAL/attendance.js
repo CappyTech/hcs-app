@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
-const logger = require('../../../../services/loggerService')
 
 const attendanceSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: uuidv4 },

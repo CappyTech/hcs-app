@@ -1,4 +1,3 @@
-const note = require("../models/mongoose/REST/note");
 const { OcrDocument } = require("./listControllerConfig");
 const path = require('path');
 
@@ -73,13 +72,12 @@ module.exports = {
     referenceFilters: {
       subcontractorId: { IsSubcontractor: true },
       employeeId: { status: 'active' },
-      projectId: { $or: [{ Status: 0 }, { Status: 2 }] }
+      projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
     },
     referenceLabelFormat: {
       // Projects: Show number, name, and status label
       projectId: (project) => {
-        const statusMap = { 0: 'Pending', 1: 'In Progress', 2: 'Completed' };
-        const statusLabel = statusMap[project.Status] || 'Unknown';
+        const statusLabel = project.Status || 'Unknown';
         const projectReference = project.Number ?? '';
         const projectName = project.Name ?? 'Unnamed Project';
         const prefix = projectReference ? `#${projectReference} – ` : '';
@@ -128,7 +126,7 @@ module.exports = {
     readOnly: ['uuid', 'createdAt'],
     validators: {
       title: value => typeof value === 'string' && value.length >= 3,
-      status: value => ['active', 'completed', 'draft'].includes(value),
+      status: value => ['Planned', 'In Progress', 'Completed'].includes(value),
     },
     middleware: {
       read: ['ensureRole:admin'],
@@ -480,7 +478,7 @@ module.exports = {
     referenceFilters: {
       employeeId: { status: 'active' },
       subcontractorId: { IsSubcontractor: true },
-      projectId: { $or: [{ Status: 0 }, { Status: 2 }] }
+      projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
     },
     middleware: {
       read: ['ensureRoles:admin,employee,subcontractor'],
@@ -552,7 +550,7 @@ module.exports = {
     referenceFilters: {
       employeeId: { status: 'active' },
       subcontractorId: { IsSubcontractor: true },
-      projectId: { $or: [{ Status: 0 }, { Status: 2 }] }
+      projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
     },
     middleware: {
       read: ['ensureRoles:admin,employee,subcontractor'],

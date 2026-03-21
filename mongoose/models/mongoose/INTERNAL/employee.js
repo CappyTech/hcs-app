@@ -105,6 +105,15 @@ function computeRatesFrom(baseKind, baseValue, ctx) {
       monthly = yearly / monthsPerYear;
       if (hoursPerWeek && hoursPerWeek > 0) hourly = weekly / hoursPerWeek;
       break;
+    case 'hourly':
+      hourly = baseValue;
+      if (hoursPerWeek && hoursPerWeek > 0) {
+        weekly = hourly * hoursPerWeek;
+        daily = weekly / workingDays;
+        yearly = weekly * weeksPerYear;
+        monthly = yearly / monthsPerYear;
+      }
+      break;
     default:
       break;
   }
@@ -138,6 +147,7 @@ employeeSchema.pre('validate', function (next) {
     else if (defined === 'weekly') baseValue = d2n(this.weeklyRate);
     else if (defined === 'monthly') baseValue = d2n(this.monthlyRate);
     else if (defined === 'yearly') baseValue = d2n(this.yearlyRate);
+    else if (defined === 'hourly') baseValue = d2n(this.hourlyRate);
 
     // If a non-defined rate was modified, ignore it by recomputing from base
     const nonDefinedModified = Object.entries(modified).some(([k, v]) => {
@@ -146,13 +156,14 @@ employeeSchema.pre('validate', function (next) {
       if (defined === 'weekly' && k === 'weeklyRate') return false;
       if (defined === 'monthly' && k === 'monthlyRate') return false;
       if (defined === 'yearly' && k === 'yearlyRate') return false;
+      if (defined === 'hourly' && k === 'hourlyRate') return false;
       return true;
     });
 
     // If no base value yet (e.g., first set was made against non-defined), infer base from whichever rate was changed and then require definedRate to be updated first
     if (baseValue == null) {
       // If user changed a specific rate but didn't change definedRate accordingly, block with guidance
-      const changedKind = modified.dailyRate ? 'daily' : modified.weeklyRate ? 'weekly' : modified.monthlyRate ? 'monthly' : modified.yearlyRate ? 'yearly' : null;
+      const changedKind = modified.dailyRate ? 'daily' : modified.weeklyRate ? 'weekly' : modified.monthlyRate ? 'monthly' : modified.yearlyRate ? 'yearly' : modified.hourlyRate ? 'hourly' : null;
       if (changedKind && changedKind !== defined) {
         return next(new Error(`To change ${changedKind} pay, set definedRate to '${changedKind}' first.`));
       }
@@ -172,8 +183,7 @@ employeeSchema.pre('validate', function (next) {
     if (defined !== 'weekly') this.weeklyRate = computed.weeklyRate ?? this.weeklyRate;
     if (defined !== 'monthly') this.monthlyRate = computed.monthlyRate ?? this.monthlyRate;
     if (defined !== 'yearly') this.yearlyRate = computed.yearlyRate ?? this.yearlyRate;
-    // Hourly is auxiliary; recompute if context allows, otherwise keep provided
-    this.hourlyRate = computed.hourlyRate ?? this.hourlyRate;
+    if (defined !== 'hourly') this.hourlyRate = computed.hourlyRate ?? this.hourlyRate;
 
     // If user tried changing non-defined rate directly, we neutralize by overwriting from base
     if (nonDefinedModified) {
