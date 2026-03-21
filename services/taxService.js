@@ -64,10 +64,24 @@ function getTaxYearStartEnd(year) {
 function getCurrentMonthlyReturn(year, month) {
   const startOfTaxYear = moment.tz({ year, month: 3, day: 6 }, "Europe/London");
   const startOfPeriod = startOfTaxYear.clone().add(month - 1, "months");
+  // End of period is the 5th of the following month at 23:59:59 London time.
+  //
+  // KashFlow stores dates as the UTC equivalent of midnight local time:
+  //   - During BST (UTC+1): midnight BST = T23:00:00Z on the *previous* UTC day
+  //     e.g. 5th Sep midnight BST = 2025-09-04T23:00:00Z
+  //   - During GMT (UTC+0): midnight GMT = T00:00:00Z on the same UTC day
+  //     e.g. 5th Jan midnight GMT = 2026-01-05T00:00:00Z
+  //
+  // Using endOf("day") (23:59:59.999 London time) instead of midnight covers both:
+  //   - BST: endOfPeriod = 2025-09-05T22:59:59.999Z → catches T23:00:00Z on the 4th ✓
+  //   - GMT: endOfPeriod = 2026-01-05T23:59:59.999Z → catches T00:00:00Z on the 5th ✓
+  //
+  // Without this, boundary-day records were silently dropped between months.
   const endOfPeriod = startOfPeriod
     .clone()
     .add(1, "months")
-    .subtract(1, "days");
+    .subtract(1, "days")
+    .endOf("day");
   const today = moment.tz("Europe/London");
 
   // CIS submission window is typically 7th–11th following the period end (which is the 5th)
