@@ -408,13 +408,14 @@
               <% } %>
             </p>
           </div>
-          <% if (_whtRefs.length > 0) { %>
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
-            <!-- OLD: CIS Number -->
-            <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Withholding Tax References</p>
-            <p class="mt-0.5 text-sm font-mono text-gray-800 dark:text-gray-200"><%= _whtRefs.join(', ') %></p>
-          </div>
-          <% } %>
+          <% _whtRefs.forEach(ref => { %>
+            <% if (ref && ref.Value) { %>
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
+              <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide"><%= ref.Name %></p>
+              <p class="mt-0.5 text-sm font-mono text-gray-800 dark:text-gray-200"><%= ref.Value %></p>
+            </div>
+            <% } %>
+          <% }); %>
           <% if (_whtRate >= 0) { %>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3">
             <!-- OLD: CIS Deduction Rate from CISRate -->

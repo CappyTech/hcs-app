@@ -26,9 +26,16 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
   try {
     // Build suppliersWithMonths similar to legacy view but from REST purchases
     // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
-    // NEW: subcontractors have WithholdingTaxRate >= 0
+    // A supplier is CIS-relevant if they have:
+    //   - a positive deduction rate (20% or 30%), OR
+    //   - a Verification Number in WithholdingTaxReferences
     const suppliers = await mdb.REST.supplier
-      .find({ WithholdingTaxRate: { $gte: 0 } })
+      .find({
+        $or: [
+          { WithholdingTaxRate: { $gt: 0 } },
+          { WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $exists: true, $ne: '' } } } },
+        ],
+      })
       .sort({ Name: 1 })
       .lean();
 
@@ -412,15 +419,17 @@ function buildSubEntry(supplier, purchases) {
       submissionDate:  p.SubmissionDate,
     };
   });
-  // OLD: cisNumber: supplier.CISNumber || "",
-  // NEW: derive first reference from WithholdingTaxReferences array
+  // OLD: cisNumber: supplier.CISNumber || ""
+  // WithholdingTaxReferences is an array of { Name, Value } objects
   const refs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences : [];
+  const verificationRef = refs.find(r => r && r.Name === 'Verification Number');
+  const utrRef = refs.find(r => r && (r.Name === 'UTR Number' || r.Name === 'NI Number'));
   return {
     name:            supplier.Name,
     company:         "",
     deduction:       Number.isFinite(cisRate) ? cisRate : null,
     isGross:         cisRate === 0,
-    cisNumber:       refs[0] || "",
+    cisNumber:       (verificationRef && verificationRef.Value) || (utrRef && utrRef.Value) || "",
     isReverseCharge: !!(supplier.IsCISReverseCharge || supplier.isReverseCharge),
     invoices,
   };

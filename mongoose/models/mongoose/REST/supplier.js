@@ -29,7 +29,9 @@ const supplierSchema = new mongoose.Schema({
   UniqueEntityNumber: String,
   VatNumber: String,
   WithholdingTaxRate: Number,
-  WithholdingTaxReferences: mongoose.Schema.Types.Mixed,
+  // Array of { Name: string, Value: string } objects, e.g.
+  // [{ Name: "Verification Number", Value: "V1234567890" }, { Name: "UTR Number", Value: "1234567890" }]
+  WithholdingTaxReferences: [{ Name: String, Value: String }],
   // OLD SOAP-era CIS fields — replaced by WithholdingTaxRate / WithholdingTaxReferences
   // Subcontractor: { type: Boolean, default: false },
   // IsSubcontractor: { type: Boolean, default: false },

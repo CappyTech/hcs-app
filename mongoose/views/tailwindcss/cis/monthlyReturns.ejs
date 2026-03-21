@@ -10,8 +10,10 @@
       <p class="text-3xl font-semibold mb-2">Subcontractor</p>
       <p><%= supplier.Name %></p>
       <!-- OLD: supplier.CISNumber -->
-      <% const whtRefs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences.join(', ') : ''; %>
-      <% if (whtRefs) { %><p>CIS: <%= whtRefs %></p><% } %>
+      <% const whtRefs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences : []; %>
+      <% whtRefs.forEach(ref => { %>
+        <% if (ref && ref.Value) { %><p><%= ref.Name %>: <%= ref.Value %></p><% } %>
+      <% }); %>
       <% if (supplier.VATNumber) { %><p>VAT: <%= supplier.VATNumber %></p><% } %>
       <address class="not-italic mt-2 leading-relaxed">
         <% if (supplier.Address1) { %><%= supplier.Address1 %>, <br><% } %>

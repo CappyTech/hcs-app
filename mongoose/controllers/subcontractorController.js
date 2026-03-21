@@ -71,17 +71,19 @@ exports.renderChangeSupplierForm = async (req, res, next) => {
 exports.changeSupplier = async (req, res, next) => {
   try {
     // OLD: const { subcontractor, cisRate, cisNumber } = req.body;
-    const { withholdingTaxRate, withholdingTaxReferences } = req.body;
+    const { withholdingTaxRate } = req.body;
 
     // Parse rate: 0, 0.2, 0.3 are valid subcontractor rates; -1 means not a subcontractor
     const parsedRate = withholdingTaxRate != null && withholdingTaxRate !== '' ? Number(withholdingTaxRate) : -1;
 
-    // Parse references: comma-separated string → array, or keep existing array
-    let parsedRefs = null;
-    if (typeof withholdingTaxReferences === 'string' && withholdingTaxReferences.trim()) {
-      parsedRefs = withholdingTaxReferences.split(',').map(r => r.trim()).filter(Boolean);
-    } else if (Array.isArray(withholdingTaxReferences)) {
-      parsedRefs = withholdingTaxReferences.filter(Boolean);
+    // Parse references: array of { Name, Value } objects from individual form fields
+    const parsedRefs = [];
+    for (let i = 0; i < 10; i++) {
+      const name = req.body[`whtRefName_${i}`];
+      const value = req.body[`whtRefValue_${i}`];
+      if (name && value && value.trim()) {
+        parsedRefs.push({ Name: name, Value: value.trim() });
+      }
     }
 
     await mdb.REST.supplier.updateOne(
@@ -94,7 +96,7 @@ exports.changeSupplier = async (req, res, next) => {
           // CISRate: cisRate,
           // CISNumber: cisNumber || null,
           WithholdingTaxRate: parsedRate,
-          WithholdingTaxReferences: parsedRefs,
+          WithholdingTaxReferences: parsedRefs.length > 0 ? parsedRefs : null,
         },
       },
     );
