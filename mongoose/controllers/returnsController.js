@@ -31,20 +31,22 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
       .lean();
 
     const suppliersWithMonths = [];
-    const deletedFilter = {
-      $or: [
-        { deletedAt: null },
-        { deletedAt: { $exists: false } },
-        { deletedAt: "" },
-        { deletedAt: "0000-00-00 00:00:00" },
-      ],
-    };
+    // NOTE: deletedAt filtering disabled — hcs-sync may write stale deletedAt values.
+    // Filtering by casing-inconsistent deletedAt was excluding live records.
+    // const deletedFilter = {
+    //   $or: [
+    //     { deletedAt: null },
+    //     { deletedAt: { $exists: false } },
+    //     { deletedAt: '' },
+    //     { deletedAt: '0000-00-00 00:00:00' },
+    //   ],
+    // };
 
     for (const supplier of suppliers) {
       const recs = await mdb.REST.purchase
         .find({
           SupplierId: supplier.Id,
-          ...deletedFilter,
+          // ...deletedFilter,
         })
         .select("TaxYear TaxMonth")
         .lean();
@@ -137,33 +139,22 @@ exports.renderMonthlyReturns = async (req, res, next) => {
     const purchases = await mdb.REST.purchase
       .find({
         SupplierId: supplier.Id,
-        $and: [
+        // NOTE: deletedAt filtering removed — hcs-sync may write stale deletedAt values.
+        $or: [
+          { TaxYear: +year, TaxMonth: +month },
           {
-            $or: [
-              { TaxYear: +year, TaxMonth: +month },
-              {
-                TaxYear: null,
-                PaidDate: {
-                  $gte: taxMonthRange.periodStart,
-                  $lte: taxMonthRange.periodEnd,
-                },
-              },
-              {
-                TaxYear: { $exists: false },
-                PaidDate: {
-                  $gte: taxMonthRange.periodStart,
-                  $lte: taxMonthRange.periodEnd,
-                },
-              },
-            ],
+            TaxYear: null,
+            PaidDate: {
+              $gte: taxMonthRange.periodStart,
+              $lte: taxMonthRange.periodEnd,
+            },
           },
           {
-            $or: [
-              { deletedAt: null },
-              { deletedAt: { $exists: false } },
-              { deletedAt: "" },
-              { deletedAt: "0000-00-00 00:00:00" },
-            ],
+            TaxYear: { $exists: false },
+            PaidDate: {
+              $gte: taxMonthRange.periodStart,
+              $lte: taxMonthRange.periodEnd,
+            },
           },
         ],
       })
