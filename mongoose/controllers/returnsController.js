@@ -168,91 +168,8 @@ exports.renderMonthlyReturns = async (req, res, next) => {
         !!p.PaidDate,
     );
 
-    // Helper to classify line items — consistent with cisController
-    const classifyPurchase = (p) => {
-      const hasLineItems = Array.isArray(p.LineItems) && p.LineItems.length > 0;
-      const hasLines = Array.isArray(p.Lines) && p.Lines.length > 0;
-      const lines = hasLineItems ? p.LineItems : hasLines ? p.Lines : [];
-      let labourCost = 0,
-        materialsCost = 0,
-        cisAmount = 0;
-      for (const line of lines) {
-        if (!line) continue;
-        const chargeType =
-          line.ChargeType != null ? Number(line.ChargeType) : null;
-        const qty = Number(line.Quantity ?? line.Qty) || 0;
-        const rate =
-          Number(line.Rate ?? line.UnitPrice ?? line.Price ?? line.Unit) || 0;
-        const amount =
-          line.Amount != null && line.Amount !== ""
-            ? Number(line.Amount)
-            : line.NetAmount != null && line.NetAmount !== ""
-              ? Number(line.NetAmount)
-              : rate * qty;
-        if (chargeType === 18685896) {
-          materialsCost += amount;
-          continue;
-        }
-        if (chargeType === 18685897) {
-          labourCost += amount;
-          continue;
-        }
-        if (chargeType === 18685964) {
-          cisAmount += Math.abs(amount);
-          continue;
-        }
-        const nc = Number(line.NominalCode) || null;
-        const nn = (line.NominalName || line.Description || "")
-          .toString()
-          .toLowerCase();
-        if (nc && cisMappings.materialsNominalCodes.includes(nc)) {
-          materialsCost += amount;
-          continue;
-        }
-        if (nc && cisMappings.labourNominalCodes.includes(nc)) {
-          labourCost += amount;
-          continue;
-        }
-        if (
-          nc &&
-          Array.isArray(cisMappings.cisDeductionNominalCodes) &&
-          cisMappings.cisDeductionNominalCodes.includes(nc)
-        ) {
-          cisAmount += Math.abs(amount);
-          continue;
-        }
-        if (nn.includes("material")) {
-          materialsCost += amount;
-          continue;
-        }
-        if (
-          nn.includes("labour") ||
-          nn.includes("labor") ||
-          nn.includes("subcontract")
-        ) {
-          labourCost += amount;
-          continue;
-        }
-      }
-      const grossAmount = labourCost + materialsCost;
-      const netAmount = grossAmount - cisAmount;
-      const payDates = Array.isArray(p.PaymentLines)
-        ? p.PaymentLines.map((pl) => pl.PayDate || pl.Date).filter(Boolean)
-        : [];
-      const payDate = p.PaidDate || (payDates.length ? payDates[0] : null);
-      return {
-        labourCost,
-        materialsCost,
-        cisAmount,
-        grossAmount,
-        netAmount,
-        payDates,
-        payDate,
-      };
-    };
-
     const rows = paidPurchases.map((p) => {
-      const c = classifyPurchase(p);
+      const c = classifyLines(p);
       return {
         Number: p.Number,
         IssuedDate: p.IssuedDate,
@@ -375,86 +292,6 @@ exports.renderYearlyReturns = async (req, res, next) => {
 
     // Build receiptsByMonth compatible with existing template
     const receiptsByMonth = {};
-    const classifyPurchase = (p) => {
-      const hasLineItems = Array.isArray(p.LineItems) && p.LineItems.length > 0;
-      const hasLines = Array.isArray(p.Lines) && p.Lines.length > 0;
-      const lines = hasLineItems ? p.LineItems : hasLines ? p.Lines : [];
-      let labourCost = 0,
-        materialsCost = 0,
-        cisAmount = 0;
-      for (const line of lines) {
-        if (!line) continue;
-        const chargeType =
-          line.ChargeType != null ? Number(line.ChargeType) : null;
-        const qty = Number(line.Quantity ?? line.Qty) || 0;
-        const rate =
-          Number(line.Rate ?? line.UnitPrice ?? line.Price ?? line.Unit) || 0;
-        const amount =
-          line.Amount != null && line.Amount !== ""
-            ? Number(line.Amount)
-            : line.NetAmount != null && line.NetAmount !== ""
-              ? Number(line.NetAmount)
-              : rate * qty;
-        if (chargeType === 18685896) {
-          materialsCost += amount;
-          continue;
-        }
-        if (chargeType === 18685897) {
-          labourCost += amount;
-          continue;
-        }
-        if (chargeType === 18685964) {
-          cisAmount += Math.abs(amount);
-          continue;
-        }
-        const nc = Number(line.NominalCode) || null;
-        const nn = (line.NominalName || line.Description || "")
-          .toString()
-          .toLowerCase();
-        if (nc && cisMappings.materialsNominalCodes.includes(nc)) {
-          materialsCost += amount;
-          continue;
-        }
-        if (nc && cisMappings.labourNominalCodes.includes(nc)) {
-          labourCost += amount;
-          continue;
-        }
-        if (
-          nc &&
-          Array.isArray(cisMappings.cisDeductionNominalCodes) &&
-          cisMappings.cisDeductionNominalCodes.includes(nc)
-        ) {
-          cisAmount += Math.abs(amount);
-          continue;
-        }
-        if (nn.includes("material")) {
-          materialsCost += amount;
-          continue;
-        }
-        if (
-          nn.includes("labour") ||
-          nn.includes("labor") ||
-          nn.includes("subcontract")
-        ) {
-          labourCost += amount;
-          continue;
-        }
-      }
-      const grossAmount = labourCost + materialsCost;
-      const netAmount = grossAmount - cisAmount;
-      const payDates = Array.isArray(p.PaymentLines)
-        ? p.PaymentLines.map((pl) => pl.PayDate || pl.Date).filter(Boolean)
-        : [];
-      const payDate = p.PaidDate || (payDates.length ? payDates[0] : null);
-      return {
-        labourCost,
-        materialsCost,
-        cisAmount,
-        grossAmount,
-        netAmount,
-        payDate,
-      };
-    };
 
     for (const p of paidPurchases) {
       let m = p.TaxMonth;
@@ -470,7 +307,7 @@ exports.renderYearlyReturns = async (req, res, next) => {
       }
       m = (m || 1).toString();
       if (!receiptsByMonth[m]) receiptsByMonth[m] = [];
-      const c = classifyPurchase(p);
+      const c = classifyLines(p);
       receiptsByMonth[m].push({
         InvoiceNumber: p.SupplierReference || p.Number,
         KashflowNumber: p.Number,
@@ -509,17 +346,123 @@ exports.renderYearlyReturns = async (req, res, next) => {
   }
 };
 
-// New: stub handlers to satisfy routes and avoid undefined callbacks
+// Shared helper: classify line items of a purchase into labour/materials/CIS
+function classifyLines(p) {
+  const hasLineItems = Array.isArray(p.LineItems) && p.LineItems.length > 0;
+  const hasLines = Array.isArray(p.Lines) && p.Lines.length > 0;
+  const lines = hasLineItems ? p.LineItems : hasLines ? p.Lines : [];
+  let labourCost = 0, materialsCost = 0, cisAmount = 0;
+  for (const line of lines) {
+    if (!line) continue;
+    const chargeType = line.ChargeType != null ? Number(line.ChargeType) : null;
+    const qty = Number(line.Quantity ?? line.Qty) || 0;
+    const rate = Number(line.Rate ?? line.UnitPrice ?? line.Price ?? line.Unit) || 0;
+    const amount =
+      line.Amount != null && line.Amount !== ""
+        ? Number(line.Amount)
+        : line.NetAmount != null && line.NetAmount !== ""
+          ? Number(line.NetAmount)
+          : rate * qty;
+    if (chargeType === 18685896) { materialsCost += amount; continue; }
+    if (chargeType === 18685897) { labourCost += amount; continue; }
+    if (chargeType === 18685964) { cisAmount += Math.abs(amount); continue; }
+    const nc = Number(line.NominalCode) || null;
+    const nn = (line.NominalName || line.Description || "").toString().toLowerCase();
+    if (nc && cisMappings.materialsNominalCodes.includes(nc)) { materialsCost += amount; continue; }
+    if (nc && cisMappings.labourNominalCodes.includes(nc)) { labourCost += amount; continue; }
+    if (nc && Array.isArray(cisMappings.cisDeductionNominalCodes) && cisMappings.cisDeductionNominalCodes.includes(nc)) { cisAmount += Math.abs(amount); continue; }
+    if (nn.includes("material")) { materialsCost += amount; continue; }
+    if (nn.includes("labour") || nn.includes("labor") || nn.includes("subcontract")) { labourCost += amount; continue; }
+  }
+  const grossAmount = labourCost + materialsCost;
+  const netAmount = grossAmount - cisAmount;
+  const payDates = Array.isArray(p.PaymentLines)
+    ? p.PaymentLines.map((pl) => pl.PayDate || pl.Date).filter(Boolean)
+    : [];
+  const payDate = p.PaidDate || (payDates.length ? payDates[0] : null);
+  return { labourCost, materialsCost, cisAmount, grossAmount, netAmount, payDate };
+}
+
+// Shared helper: build a subcontractor entry for the "ForAll" views
+function buildSubEntry(supplier, purchases) {
+  const slimDT = (d) => d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+  const cisRate = supplier.CISRate != null ? Number(supplier.CISRate) : null;
+  const invoices = purchases.map((p) => {
+    const c = classifyLines(p);
+    const taxMonth = p.TaxMonth || (c.payDate ? taxService.calculateTaxYearAndMonth(c.payDate).taxMonth : null);
+    const taxYear  = p.TaxYear  || (c.payDate ? taxService.calculateTaxYearAndMonth(c.payDate).taxYear  : null);
+    return {
+      invoiceNumber:   p.SupplierReference || p.Number,
+      kashflowNumber:  p.Number,
+      invoiceDate:     p.IssuedDate,
+      remittanceDate:  c.payDate,
+      grossAmount:     c.grossAmount,
+      labourCost:      c.labourCost,
+      materialCost:    c.materialsCost,
+      cisAmount:       c.cisAmount,
+      netAmount:       c.netAmount,
+      reverseCharge:   Number(p.ReverseChargeVATAmount || p.CISRCVatAmount || 0),
+      month:           taxMonth,
+      year:            taxYear,
+      submissionDate:  p.SubmissionDate,
+    };
+  });
+  return {
+    name:            supplier.Name,
+    company:         "",
+    deduction:       Number.isFinite(cisRate) ? cisRate : null,
+    isGross:         cisRate === 0,
+    cisNumber:       supplier.CISNumber || "",
+    isReverseCharge: !!(supplier.IsCISReverseCharge || supplier.isReverseCharge),
+    invoices,
+  };
+}
+
 exports.renderYearlyReturnsForAll = async (req, res, next) => {
   try {
     const { year } = req.params;
     if (!year) return res.status(400).send("Year required");
-    // Redirect to CIS Dashboard (choose month 1 by default)
-    req.flash(
-      "success",
-      "Redirected to CIS Dashboard (year view not yet implemented).",
-    );
-    return res.redirect(`/CIS/Dashboard/${year}/1`);
+
+    const slimDateTime = (d) => d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+    const formatCurrency = (n) => `£${Number(n || 0).toFixed(2)}`;
+
+    const taxYearRange = taxService.getTaxYearStartEnd(+year);
+
+    // All subcontractor suppliers
+    const suppliers = await mdb.REST.supplier
+      .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+      .sort({ Name: 1 })
+      .lean();
+
+    const subcontractors = [];
+    for (const supplier of suppliers) {
+      const purchases = await mdb.REST.purchase
+        .find({
+          SupplierId: supplier.Id,
+          $or: [
+            { TaxYear: +year },
+            { TaxYear: null,             PaidDate: { $gte: taxYearRange.start, $lte: taxYearRange.end } },
+            { TaxYear: { $exists: false }, PaidDate: { $gte: taxYearRange.start, $lte: taxYearRange.end } },
+          ],
+        })
+        .sort({ TaxMonth: 1, Number: 1 })
+        .lean();
+
+      const paid = purchases.filter(
+        (p) => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate,
+      );
+      if (paid.length === 0) continue;
+      subcontractors.push(buildSubEntry(supplier, paid));
+    }
+
+    const nextYearShort = (Number(year) + 1).toString().slice(-2);
+    return res.render(path.join("tailwindcss", "cis", "yearlyReturnsForAll"), {
+      title: `CIS Yearly Returns ${year}-${nextYearShort} | All Subcontractors`,
+      year: +year,
+      subcontractors,
+      slimDateTime,
+      formatCurrency,
+    });
   } catch (err) {
     next(err);
   }
@@ -529,8 +472,53 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
   try {
     const { year, month } = req.params;
     if (!year || !month) return res.status(400).send("Year and Month required");
-    // Redirect to CIS Dashboard monthly view
-    return res.redirect(`/CIS/Dashboard/${year}/${month}`);
+
+    const slimDateTime = (d) => d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+    const formatCurrency = (n) => `£${Number(n || 0).toFixed(2)}`;
+
+    const taxMonthRange = taxService.getCurrentMonthlyReturn(+year, +month);
+
+    // All subcontractor suppliers
+    const suppliers = await mdb.REST.supplier
+      .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+      .sort({ Name: 1 })
+      .lean();
+
+    const subcontractors = [];
+    for (const supplier of suppliers) {
+      const purchases = await mdb.REST.purchase
+        .find({
+          SupplierId: supplier.Id,
+          $or: [
+            { TaxYear: +year, TaxMonth: +month },
+            { TaxYear: null,             PaidDate: { $gte: taxMonthRange.periodStart, $lte: taxMonthRange.periodEnd } },
+            { TaxYear: { $exists: false }, PaidDate: { $gte: taxMonthRange.periodStart, $lte: taxMonthRange.periodEnd } },
+          ],
+        })
+        .sort({ Number: 1 })
+        .lean();
+
+      const paid = purchases.filter(
+        (p) => (Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0) || !!p.PaidDate,
+      );
+      if (paid.length === 0) continue;
+      subcontractors.push(buildSubEntry(supplier, paid));
+    }
+
+    const monthName = moment
+      .tz({ year: +year, month: 3, day: 6 }, "Europe/London")
+      .add(+month - 1, "months")
+      .format("MMMM");
+    const nextYearShort = (Number(year) + 1).toString().slice(-2);
+    return res.render(path.join("tailwindcss", "cis", "monthlyReturnsForAll"), {
+      title: `CIS Monthly Returns ${year}-${nextYearShort} — ${monthName} | All Subcontractors`,
+      year: +year,
+      month: +month,
+      monthName,
+      subcontractors,
+      slimDateTime,
+      formatCurrency,
+    });
   } catch (err) {
     next(err);
   }
