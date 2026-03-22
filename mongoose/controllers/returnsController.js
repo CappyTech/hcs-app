@@ -218,6 +218,10 @@ exports.renderMonthlyReturns = async (req, res, next) => {
       .add(+month - 1, "months")
       .format("MMMM");
 
+    const slimDateTimeM = (d) =>
+      d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+    const formatCurrencyM = (n) => `£${Number(n || 0).toFixed(2)}`;
+
     const nextYearShortM = (Number(year) + 1).toString().slice(-2);
     const dynamicTitleM = `${supplier.Name} | Heron Constructive Solutions LTD | ${year}-${nextYearShortM} CIS Returns — ${monthName}`;
     return res.render(
@@ -231,6 +235,9 @@ exports.renderMonthlyReturns = async (req, res, next) => {
         rows,
         totals,
         debug,
+        slimDateTime: slimDateTimeM,
+        formatCurrency: formatCurrencyM,
+        whtRateLabel,
       },
     );
   } catch (err) {

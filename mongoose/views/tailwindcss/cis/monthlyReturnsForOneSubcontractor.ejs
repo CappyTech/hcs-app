@@ -1,68 +1,147 @@
-<div class="max-w-6xl mx-auto p-6 print:p-0">
-  <div class="flex items-center justify-between mb-6 print:hidden">
-    <h1 class="text-2xl font-semibold">Monthly CIS Returns - <%= supplier.Name %> (<%= monthName %> <%= year %>)</h1>
-    <button id="printBtn" type="button" class="bg-hcs-green text-white px-4 py-2 rounded cursor-pointer">Print</button>
+<%
+  // -- Compute shared values once --
+  const cisRateLabel = whtRateLabel(supplier.WithholdingTaxRate) || '—';
+  const refs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences : [];
+  const verificationRef = refs.find(r => r && r.Name === 'Verification Number');
+  const utrRef = refs.find(r => r && r.Name === 'UTR Number');
+  const niRef = refs.find(r => r && r.Name === 'NI Number');
+  const A = supplier.Address || {};
+  const addrParts = [A.Line1, A.Line2, A.Line3, A.Line4, A.PostCode].map(s => (s || '').trim()).filter(Boolean);
+%>
+
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold text-center border-b-2 border-black pb-2 mb-6">
+    Construction Industry Scheme — Monthly Return<br>
+    <%= monthName %> <%= year %>
+  </h1>
+
+  <div class="flex justify-between text-sm mb-6">
+    <!-- Subcontractor -->
+    <div class="w-1/2 pr-4">
+      <table class="w-full text-sm">
+        <tr><td colspan="2" class="font-bold border-b border-black pb-1 mb-1">Subcontractor</td></tr>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top w-28">Name</td><td class="py-0.5"><%= supplier.Name %></td></tr>
+        <% if (supplier.Code) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Code</td><td class="py-0.5"><%= supplier.Code %></td></tr>
+        <% } %>
+        <% if (addrParts.length) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Address</td><td class="py-0.5"><%= addrParts.join(', ') %></td></tr>
+        <% } %>
+        <% if (verificationRef && verificationRef.Value) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Verification No.</td><td class="py-0.5 font-mono"><%= verificationRef.Value %></td></tr>
+        <% } %>
+        <% if (utrRef && utrRef.Value) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">UTR</td><td class="py-0.5 font-mono"><%= utrRef.Value %></td></tr>
+        <% } %>
+        <% if (niRef && niRef.Value) { %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">NI Number</td><td class="py-0.5 font-mono"><%= niRef.Value %></td></tr>
+        <% } %>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Deduction Rate</td><td class="py-0.5"><%= cisRateLabel %></td></tr>
+      </table>
+    </div>
+    <!-- Contractor -->
+    <div class="w-1/2 pl-4">
+      <table class="w-full text-sm">
+        <tr><td colspan="2" class="font-bold border-b border-black pb-1 mb-1">Contractor</td></tr>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top w-28">Name</td><td class="py-0.5">Heron Constructive Solutions LTD</td></tr>
+        <tr><td class="py-0.5 pr-2 font-semibold align-top">Address</td><td class="py-0.5">103 Herondale Road, Mossley Hill, Liverpool, Merseyside, L18 1JZ</td></tr>
+      </table>
+    </div>
   </div>
-  <div class="mb-4 text-sm text-gray-600">
-    Supplier Code: <span class="font-medium"><%= supplier.Code || '—' %></span>
-  </div>
-  <% if (typeof debug !== 'undefined' && debug) { %>
-    <details class="mb-4 p-3 border border-yellow-300 bg-yellow-50 rounded text-xs">
-      <summary class="cursor-pointer font-semibold">Debug: rows and totals</summary>
-      <div class="mt-2">
-        <div class="font-medium">rows:</div>
-        <pre class="whitespace-pre-wrap break-words"><%- JSON.stringify(rows, null, 2) %></pre>
-        <div class="font-medium mt-2">totals:</div>
-        <pre class="whitespace-pre-wrap break-words"><%- JSON.stringify(totals, null, 2) %></pre>
-      </div>
-    </details>
-  <% } %>
-  <table class="w-full text-sm border border-gray-300 dark:border-gray-700">
-    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+
+  <!-- Month Summary -->
+  <table class="w-full text-sm border-collapse border border-black mb-6">
+    <caption class="text-left font-bold text-base mb-1">Month Summary — <%= monthName %> <%= year %></caption>
+    <thead>
       <tr>
-        <th class="p-2 border">Number</th>
-        <th class="p-2 border">Issued</th>
-        <th class="p-2 border">Paid</th>
-        <th class="p-2 border">Labour</th>
-        <th class="p-2 border">Materials</th>
-        <th class="p-2 border">CIS</th>
-        <th class="p-2 border">Gross</th>
-        <th class="p-2 border">Net</th>
-        <th class="p-2 border">Submission</th>
+        <th class="border border-black px-2 py-1 text-left">Invoices</th>
+        <th class="border border-black px-2 py-1 text-right">Gross</th>
+        <th class="border border-black px-2 py-1 text-right">Labour</th>
+        <th class="border border-black px-2 py-1 text-right">Materials</th>
+        <th class="border border-black px-2 py-1 text-right">CIS Deducted</th>
+        <th class="border border-black px-2 py-1 text-right">Net Paid</th>
       </tr>
     </thead>
-  <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+    <tbody>
+      <tr class="font-semibold">
+        <td class="border border-black px-2 py-1"><%= rows.length %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(totals.GrossAmount) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(totals.LabourCost) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(totals.MaterialCost) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(totals.CISAmount) %></td>
+        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(totals.NetAmount) %></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <% if (typeof debug !== 'undefined' && debug) { %>
+  <details class="mb-4 p-2 border border-gray-400 text-xs print:hidden">
+    <summary class="cursor-pointer font-semibold">Debug: rows and totals</summary>
+    <pre class="whitespace-pre-wrap break-words mt-2"><%- JSON.stringify({ rows, totals }, null, 2) %></pre>
+  </details>
+  <% } %>
+
+  <button id="printBtn" type="button" class="print:hidden mb-4 border border-black px-4 py-1 text-sm hover:bg-gray-100 cursor-pointer">
+    Print Report
+  </button>
+
+  <!-- Invoice Detail Table -->
+  <table class="w-full text-xs border-collapse border border-black cis-table">
+    <caption class="text-left font-bold text-sm pb-1">
+      <%= monthName %> <%= year %> — Invoice Detail
+    </caption>
+    <thead>
+      <tr>
+        <th class="border border-black px-1 py-0.5 text-left">Invoice</th>
+        <th class="border border-black px-1 py-0.5 text-left">Issued</th>
+        <th class="border border-black px-1 py-0.5 text-left">Paid</th>
+        <th class="border border-black px-1 py-0.5 text-right">Gross</th>
+        <th class="border border-black px-1 py-0.5 text-right">Labour</th>
+        <th class="border border-black px-1 py-0.5 text-right">Material</th>
+        <th class="border border-black px-1 py-0.5 text-right">CIS @ <%= cisRateLabel %></th>
+        <th class="border border-black px-1 py-0.5 text-right">Net</th>
+        <th class="border border-black px-1 py-0.5 text-left">Submission</th>
+      </tr>
+    </thead>
+    <tbody>
       <% rows.forEach(r => { %>
-        <tr>
-          <td class="p-2 border"><%= r.Number %></td>
-          <td class="p-2 border"><%= r.IssuedDate ? new Date(r.IssuedDate).toLocaleDateString('en-GB') : '' %></td>
-          <td class="p-2 border"><%= r.PaidDate ? new Date(r.PaidDate).toLocaleDateString('en-GB') : '' %></td>
-          <td class="p-2 border text-right">£<%= (r.LabourCost || 0).toFixed(2) %></td>
-          <td class="p-2 border text-right">£<%= (r.MaterialCost || 0).toFixed(2) %></td>
-          <td class="p-2 border text-right">£<%= (r.CISAmount || 0).toFixed(2) %></td>
-          <td class="p-2 border text-right">£<%= (r.GrossAmount || 0).toFixed(2) %></td>
-          <td class="p-2 border text-right">£<%= (r.NetAmount || 0).toFixed(2) %></td>
-          <td class="p-2 border"><%= r.SubmissionDate ? new Date(r.SubmissionDate).toLocaleDateString('en-GB') : '' %></td>
-        </tr>
+      <tr>
+        <td class="border border-black px-1 py-0.5"><%= r.Number %></td>
+        <td class="border border-black px-1 py-0.5"><%= slimDateTime(r.IssuedDate) %></td>
+        <td class="border border-black px-1 py-0.5"><%= slimDateTime(r.PaidDate) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(r.GrossAmount) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(r.LabourCost) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(r.MaterialCost) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(r.CISAmount) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(r.NetAmount) %></td>
+        <td class="border border-black px-1 py-0.5"><%= slimDateTime(r.SubmissionDate) %></td>
+      </tr>
       <% }) %>
     </tbody>
-  <tfoot class="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-      <tr>
-        <td class="p-2 border font-medium" colspan="3">Totals</td>
-        <td class="p-2 border text-right">£<%= totals.LabourCost.toFixed(2) %></td>
-        <td class="p-2 border text-right">£<%= totals.MaterialCost.toFixed(2) %></td>
-        <td class="p-2 border text-right">£<%= totals.CISAmount.toFixed(2) %></td>
-        <td class="p-2 border text-right">£<%= totals.GrossAmount.toFixed(2) %></td>
-        <td class="p-2 border text-right">£<%= totals.NetAmount.toFixed(2) %></td>
-        <td class="p-2 border"></td>
+    <tfoot>
+      <tr class="font-bold">
+        <td colspan="3" class="border border-black px-1 py-0.5">Month Total (<%= rows.length %> invoice<%= rows.length !== 1 ? 's' : '' %>)</td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(totals.GrossAmount) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(totals.LabourCost) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(totals.MaterialCost) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(totals.CISAmount) %></td>
+        <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(totals.NetAmount) %></td>
+        <td class="border border-black px-1 py-0.5"></td>
       </tr>
     </tfoot>
   </table>
 </div>
+
 <style>
   @media print {
-    .print\:hidden { display: none; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .print\:hidden { display: none !important; }
+    table { page-break-inside: auto; border-collapse: collapse; }
+    tr { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    .cis-table { font-size: 9px !important; }
+    .cis-table th, .cis-table td { padding: 1px 3px !important; }
   }
 </style>
 
@@ -71,4 +150,3 @@
     window.print();
   });
 </script>
-</style>
