@@ -217,7 +217,20 @@
 </div>
 </div>
 
+<div class="print-footer">
+  Heron Constructive Solutions LTD &bull; 103 Herondale Road, Mossley Hill, Liverpool, L18 1JZ &bull; admin@heroncs.co.uk
+</div>
+
 <style>
+  .print-footer { display: none; }
+  @page {
+    margin-bottom: 18mm;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 7pt;
+      color: #999;
+    }
+  }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .print\:hidden { display: none !important; }
@@ -229,6 +242,18 @@
     .page-break { page-break-before: always; break-before: page; }
     .cis-table { font-size: 9px !important; }
     .cis-table th, .cis-table td { padding: 1px 3px !important; }
+    .print-footer {
+      display: block;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 7pt;
+      color: #666;
+      border-top: 0.5pt solid #ccc;
+      padding: 2pt 0 0;
+    }
   }
 </style>
 

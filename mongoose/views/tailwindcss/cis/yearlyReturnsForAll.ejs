@@ -1,8 +1,8 @@
 <div class="text-center mt-10 max-w-6xl mx-auto px-4">
   <h1 class="text-3xl font-semibold mb-6">CIS Yearly Returns - <%= year %></h1>
 
-  <% subcontractors.forEach(sub => { %>
-    <div class="mb-10 text-left">
+  <% subcontractors.forEach((sub, subIdx) => { %>
+    <div class="sub-section mb-10 text-left">
       <!-- Subcontractor Header -->
       <div class="mb-2 text-lg font-medium">
         <% if (sub.name) { %>
@@ -97,3 +97,40 @@
     </div>
   <% }); %>
 </div>
+
+<div class="print-footer">
+  Heron Constructive Solutions LTD &bull; 103 Herondale Road, Mossley Hill, Liverpool, L18 1JZ &bull; admin@heroncs.co.uk
+</div>
+
+<style>
+  .print-footer { display: none; }
+  @page {
+    margin-bottom: 18mm;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 7pt;
+      color: #999;
+    }
+  }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table { page-break-inside: auto; border-collapse: collapse; }
+    tr { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    .sub-section { page-break-inside: avoid; break-inside: avoid; }
+    .sub-section + .sub-section { page-break-before: always; break-before: page; }
+    .print-footer {
+      display: block;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 7pt;
+      color: #666;
+      border-top: 0.5pt solid #ccc;
+      padding: 2pt 0 0;
+    }
+  }
+</style>

@@ -10,6 +10,7 @@
 %>
 
 <div class="max-w-4xl mx-auto">
+  <div class="avoid-page-break">
   <h1 class="text-2xl font-bold text-center border-b-2 border-black pb-2 mb-6">
     Construction Industry Scheme — Monthly Return<br>
     <%= monthName %> <%= year %>
@@ -73,6 +74,7 @@
       </tr>
     </tbody>
   </table>
+  </div>
 
   <% if (typeof debug !== 'undefined' && debug) { %>
   <details class="mb-4 p-2 border border-gray-400 text-xs print:hidden">
@@ -132,7 +134,20 @@
   </table>
 </div>
 
+<div class="print-footer">
+  Heron Constructive Solutions LTD &bull; 103 Herondale Road, Mossley Hill, Liverpool, L18 1JZ &bull; admin@heroncs.co.uk
+</div>
+
 <style>
+  .print-footer { display: none; }
+  @page {
+    margin-bottom: 18mm;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 7pt;
+      color: #999;
+    }
+  }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .print\:hidden { display: none !important; }
@@ -140,8 +155,21 @@
     tr { page-break-inside: avoid; }
     thead { display: table-header-group; }
     tfoot { display: table-footer-group; }
+    .avoid-page-break { page-break-inside: avoid; break-inside: avoid; }
     .cis-table { font-size: 9px !important; }
     .cis-table th, .cis-table td { padding: 1px 3px !important; }
+    .print-footer {
+      display: block;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 7pt;
+      color: #666;
+      border-top: 0.5pt solid #ccc;
+      padding: 2pt 0 0;
+    }
   }
 </style>
 
