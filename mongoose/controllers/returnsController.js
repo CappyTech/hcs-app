@@ -2,6 +2,7 @@ const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
 const taxService = require("../../services/taxService");
 const cisMappings = require("../config/cisMappings");
+const { whtRateLabel } = require("../../services/cisService");
 const moment = require("moment-timezone");
 
 // Tax month display names (April=1 .. March=12)
@@ -111,6 +112,7 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
       title: "Monthly Returns",
       suppliersWithMonths,
       monthNames,
+      whtRateLabel,
     });
   } catch (err) {
     next(err);
@@ -352,6 +354,7 @@ exports.renderYearlyReturns = async (req, res, next) => {
       pageBreakMonths: [],
       slimDateTime,
       formatCurrency,
+      whtRateLabel,
       debug,
     });
   } catch (err) {
@@ -434,6 +437,7 @@ function buildSubEntry(supplier, purchases) {
     name:            supplier.Name,
     company:         "",
     deduction:       Number.isFinite(normRate) ? normRate : null,
+    deductionLabel:  whtRateLabel(supplier.WithholdingTaxRate) || '—',
     isGross:         normRate === 0,
     cisNumber:       (verificationRef && verificationRef.Value) || (utrRef && utrRef.Value) || "",
     invoices,

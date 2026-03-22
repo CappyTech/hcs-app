@@ -26,11 +26,7 @@
                         <%= years.length %>
                           <%= years.length===1 ? 'Year' : 'Years' %>
                       </span>
-                      <%
-                        const rateRaw = typeof supplier.WithholdingTaxRate === 'number' ? supplier.WithholdingTaxRate : (supplier.WithholdingTaxRate != null && supplier.WithholdingTaxRate !== '' ? +supplier.WithholdingTaxRate : null);
-                        const rateNorm = rateRaw != null && rateRaw > 1 ? rateRaw / 100 : rateRaw;
-                        const rateLabel = rateNorm === 0 ? '0% (Gross)' : rateNorm === 0.2 ? '20%' : rateNorm === 0.3 ? '30%' : null;
-                      %>
+                      <% const rateLabel = whtRateLabel(supplier.WithholdingTaxRate); %>
                       <% if (rateLabel) { %>
                       <span class="inline-block bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-100 text-xs font-medium ml-2 px-2 py-0.5 rounded">
                         <%= rateLabel %>

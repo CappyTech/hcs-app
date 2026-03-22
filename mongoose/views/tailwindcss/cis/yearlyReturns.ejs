@@ -1,10 +1,6 @@
 <%
   // -- Compute shared values once --
-  const cisRateNum = typeof supplier.WithholdingTaxRate === 'number'
-    ? supplier.WithholdingTaxRate
-    : (supplier.WithholdingTaxRate != null && supplier.WithholdingTaxRate !== '' ? +supplier.WithholdingTaxRate : null);
-  const cisRateNorm = cisRateNum != null && cisRateNum > 1 ? cisRateNum / 100 : cisRateNum;
-  const cisRateLabel = cisRateNorm === 0 ? '0% (Gross)' : cisRateNorm === 0.2 ? '20%' : cisRateNorm === 0.3 ? '30%' : '—';
+  const cisRateLabel = whtRateLabel(supplier.WithholdingTaxRate) || '—';
   const refs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences : [];
   const verificationRef = refs.find(r => r && r.Name === 'Verification Number');
   const utrRef = refs.find(r => r && r.Name === 'UTR Number');

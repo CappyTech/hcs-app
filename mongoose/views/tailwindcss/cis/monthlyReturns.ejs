@@ -60,9 +60,7 @@
             <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Labour</th>
             <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Material</th>
             <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">
-              <% const cisRateVal = typeof supplier.WithholdingTaxRate === 'number' ? supplier.WithholdingTaxRate : (supplier.WithholdingTaxRate != null && supplier.WithholdingTaxRate !== '' ? +supplier.WithholdingTaxRate : null); %>
-              <% const cisRateNorm = cisRateVal != null && cisRateVal > 1 ? cisRateVal / 100 : cisRateVal; %>
-              CIS @ <%= cisRateNorm === 0 ? '0%' : cisRateNorm === 0.2 ? '20%' : cisRateNorm === 0.3 ? '30%' : 'Unknown' %>
+              CIS @ <%= whtRateLabel(supplier.WithholdingTaxRate) || 'Unknown' %>
             </th>
             <th class="border border-gray-300 px-3 py-1 text-center text-xs md:text-sm">Net</th>
             <% if (supplier.isReverseCharge) { %>
