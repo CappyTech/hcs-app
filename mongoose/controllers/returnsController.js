@@ -29,12 +29,12 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
     // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
     // A supplier is CIS-relevant if they have:
     //   - a positive deduction rate (20% or 30%), OR
-    //   - a Verification Number in WithholdingTaxReferences
+    //   - rate 0 (gross) with a Verification Number
     const suppliers = await mdb.REST.supplier
       .find({
         $or: [
           { WithholdingTaxRate: { $gt: 0 } },
-          { WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $exists: true, $ne: '' } } } },
+          { WithholdingTaxRate: 0, WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } } },
         ],
       })
       .sort({ Name: 1 })
@@ -467,7 +467,7 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
       .find({
         $or: [
           { WithholdingTaxRate: { $gt: 0 } },
-          { WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $exists: true, $ne: '' } } } },
+          { WithholdingTaxRate: 0, WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } } },
         ],
       })
       .sort({ Name: 1 })
@@ -523,7 +523,7 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
       .find({
         $or: [
           { WithholdingTaxRate: { $gt: 0 } },
-          { WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $exists: true, $ne: '' } } } },
+          { WithholdingTaxRate: 0, WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } } },
         ],
       })
       .sort({ Name: 1 })
