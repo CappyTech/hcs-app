@@ -223,9 +223,12 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       return false;
     };
     // OLD: const isSubbie = (s) => s && (truthyish(s.Subcontractor) || truthyish(s.IsSubcontractor));
-    // NEW: A subcontractor has WithholdingTaxRate >= 0 (0, 20, or 30); -1 or null = not a subcontractor
+    // NEW: A subcontractor has WithholdingTaxRate > 0 (20 or 30), OR has a Verification Number (covers gross-rated subbies)
+    const hasVerification = (s) =>
+      Array.isArray(s.WithholdingTaxReferences) &&
+      s.WithholdingTaxReferences.some(r => r && r.Name === 'Verification Number' && r.Value);
     const isSubbie = (s) =>
-      s && s.WithholdingTaxRate != null && Number(s.WithholdingTaxRate) >= 0;
+      s && (Number(s.WithholdingTaxRate) > 0 || hasVerification(s));
     // Optional debugging escape hatch: include all suppliers if requested
     const includeAllSuppliers =
       req.query.includeAll === "1" ||

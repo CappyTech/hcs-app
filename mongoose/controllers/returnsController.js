@@ -464,7 +464,12 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
     // All subcontractor suppliers
     // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
     const suppliers = await mdb.REST.supplier
-      .find({ WithholdingTaxRate: { $gte: 0 } })
+      .find({
+        $or: [
+          { WithholdingTaxRate: { $gt: 0 } },
+          { WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $exists: true, $ne: '' } } } },
+        ],
+      })
       .sort({ Name: 1 })
       .lean();
 
@@ -515,7 +520,12 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
     // All subcontractor suppliers
     // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
     const suppliers = await mdb.REST.supplier
-      .find({ WithholdingTaxRate: { $gte: 0 } })
+      .find({
+        $or: [
+          { WithholdingTaxRate: { $gt: 0 } },
+          { WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $exists: true, $ne: '' } } } },
+        ],
+      })
       .sort({ Name: 1 })
       .lean();
 
