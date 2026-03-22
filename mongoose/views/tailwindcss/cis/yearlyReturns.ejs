@@ -234,7 +234,11 @@
 
 <script>
   document.getElementById('printBtn').addEventListener('click', function () {
+    var root = document.documentElement;
+    var wasDark = root.classList.contains('dark');
+    if (wasDark) root.classList.remove('dark');
     window.print();
+    if (wasDark) root.classList.add('dark');
   });
 </script>
 
