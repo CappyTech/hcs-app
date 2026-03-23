@@ -21,7 +21,7 @@
   "author": "Heron Constructive Solutions LTD",
   "license": "All rights reserved.",
   "dependencies": {
-    "@cappytech/hcs-schemas": "^1.0.0",
+    "@cappytech/hcs-schemas": "github:CappyTech/hcs-schemas#v1.0.0",
     "axios": "^1.11.1",
     "bcrypt": "^6.0.0",
     "chalk": "^4.1.2",
