@@ -1,5 +1,28 @@
 const helmet = require("helmet");
-const xss = require("xss-clean");
+const { filterXSS } = require("xss");
+
+/**
+ * Express middleware that sanitises req.body, req.query, and req.params
+ * by stripping dangerous HTML/script content.  Replaces the abandoned
+ * `xss-clean` package with the actively-maintained `xss` library.
+ */
+function xssSanitize(req, _res, next) {
+  const clean = (obj) => {
+    if (!obj || typeof obj !== "object") return obj;
+    for (const key of Object.keys(obj)) {
+      if (typeof obj[key] === "string") {
+        obj[key] = filterXSS(obj[key]);
+      } else if (typeof obj[key] === "object") {
+        clean(obj[key]);
+      }
+    }
+    return obj;
+  };
+  if (req.body) clean(req.body);
+  if (req.query) clean(req.query);
+  if (req.params) clean(req.params);
+  next();
+}
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -76,7 +99,7 @@ const securityService = [
     crossOriginEmbedderPolicy: false, // adjust if you need COEP
     hsts: enableHsts ? { maxAge: 15552000 } : false,
   }),
-  xss(),
+  xssSanitize,
 ];
 
 module.exports = securityService;

@@ -16,7 +16,7 @@ A full-featured web application by Heron Constructive Solutions LTD for managing
 
 ## Tech Stack
 
-- Runtime: Node.js (16+)
+- Runtime: Node.js 20
 - Web: Express, EJS, Tailwind CSS
 - Data: MongoDB + Mongoose; optional MariaDB via Sequelize
 - Testing: Playwright (e2e)
@@ -24,7 +24,7 @@ A full-featured web application by Heron Constructive Solutions LTD for managing
 
 ## Prerequisites
 
-- Node.js 16 or newer
+- Node.js 20
 - MongoDB instance (local or remote)
 - Git Bash (recommended terminal for commands and scripts)
 
@@ -189,7 +189,7 @@ Notes:
 
 ## Repository Guidelines
 
-- Use Node.js 16 or newer
+- Use Node.js 20
 - Install dependencies with `npm install`
 - Run unit tests with `npm test` before committing
 - If you modify files in `e2e/`, run end-to-end tests with `npx playwright test`

@@ -32,11 +32,12 @@ const supplierSchema = new mongoose.Schema({
   // Array of { Name: string, Value: string } objects, e.g.
   // [{ Name: "Verification Number", Value: "V1234567890" }, { Name: "UTR Number", Value: "1234567890" }]
   WithholdingTaxReferences: [{ Name: String, Value: String }],
-  // OLD SOAP-era CIS fields — replaced by WithholdingTaxRate / WithholdingTaxReferences
-  // Subcontractor: { type: Boolean, default: false },
-  // IsSubcontractor: { type: Boolean, default: false },
-  // CISRate: { type: Number, enum: [null, 0, 0.2, 0.3], default: null },
-  // CISNumber: { type: String, default: null }
+  // CIS fields — written by sync adapters (e.g. hcs-sync), read by hcs-app for CIS returns.
+  // Marked as protectedFields in sync to preserve hcs-app customisations.
+  Subcontractor: { type: Boolean, default: false },
+  IsSubcontractor: { type: Boolean, default: false },
+  CISRate: { type: Number, enum: [null, 0, 0.2, 0.3], default: null },
+  CISNumber: { type: String, default: null }
 }, { timestamps: true });
 
 // Speed up CIS subcontractor lookups ($elemMatch on verification number)
