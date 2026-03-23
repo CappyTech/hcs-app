@@ -222,19 +222,13 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       }
       return false;
     };
-    // OLD: const isSubbie = (s) => s && (truthyish(s.Subcontractor) || truthyish(s.IsSubcontractor));
-    // NEW: A subcontractor has WithholdingTaxRate > 0 (20 or 30), OR rate 0 (gross) with a Verification Number
+    // A supplier appears in CIS reports only if they have a valid HMRC
+    // verification number (V + 7-10 digits, optional /A-ZZ suffix).
     const VERIFICATION_RE = /^V\d{7,10}(\/[A-Z]{1,2})?$/;
     const hasVerification = (s) =>
       Array.isArray(s.WithholdingTaxReferences) &&
       s.WithholdingTaxReferences.some(r => r && r.Name === 'Verification Number' && r.Value && VERIFICATION_RE.test(r.Value));
-    const isSubbie = (s) => {
-      if (!s) return false;
-      const rate = Number(s.WithholdingTaxRate);
-      if (rate > 0) return true;                      // 20% or 30%
-      if (rate === 0 && hasVerification(s)) return true; // gross with verification
-      return false;
-    };
+    const isSubbie = (s) => s ? hasVerification(s) : false;
     // Optional debugging escape hatch: include all suppliers if requested
     const includeAllSuppliers =
       req.query.includeAll === "1" ||

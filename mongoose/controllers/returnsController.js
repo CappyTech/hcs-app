@@ -25,17 +25,11 @@ const monthNames = [
 
 exports.renderMonthlyReturnsForm = async (req, res, next) => {
   try {
-    // Build suppliersWithMonths similar to legacy view but from REST purchases
-    // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
-    // A supplier is CIS-relevant if they have:
-    //   - a positive deduction rate (20% or 30%), OR
-    //   - rate 0 (gross) with a Verification Number
+    // A supplier appears in CIS reports only if they have a valid HMRC
+    // verification number (V + 7-10 digits, optional /A-ZZ suffix).
     const suppliers = await mdb.REST.supplier
       .find({
-        $or: [
-          { WithholdingTaxRate: { $gt: 0 } },
-          { WithholdingTaxRate: 0, WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } } },
-        ],
+        WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } },
       })
       .sort({ Name: 1 })
       .lean();
@@ -461,14 +455,11 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
 
     const taxYearRange = taxService.getTaxYearStartEnd(+year);
 
-    // All subcontractor suppliers
-    // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+    // A supplier appears in CIS reports only if they have a valid HMRC
+    // verification number (V + 7-10 digits, optional /A-ZZ suffix).
     const suppliers = await mdb.REST.supplier
       .find({
-        $or: [
-          { WithholdingTaxRate: { $gt: 0 } },
-          { WithholdingTaxRate: 0, WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } } },
-        ],
+        WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } },
       })
       .sort({ Name: 1 })
       .lean();
@@ -517,14 +508,11 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
 
     const taxMonthRange = taxService.getCurrentMonthlyReturn(+year, +month);
 
-    // All subcontractor suppliers
-    // OLD: .find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] })
+    // A supplier appears in CIS reports only if they have a valid HMRC
+    // verification number (V + 7-10 digits, optional /A-ZZ suffix).
     const suppliers = await mdb.REST.supplier
       .find({
-        $or: [
-          { WithholdingTaxRate: { $gt: 0 } },
-          { WithholdingTaxRate: 0, WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } } },
-        ],
+        WithholdingTaxReferences: { $elemMatch: { Name: 'Verification Number', Value: { $regex: /^V\d{7,10}(\/[A-Z]{1,2})?$/ } } },
       })
       .sort({ Name: 1 })
       .lean();
