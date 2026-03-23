@@ -10,13 +10,12 @@
 
 | Category | Count |
 |---|---|
-| KashFlow API (entire module) | 9 |
-| Services (`services/`) | 6 |
+| Services (`services/`) | 5 |
 | Mongoose routes | 2 |
 | Mongoose services | 1 |
 | Build scripts / config | 4 |
 | Client-side JS (served static) | 3 |
-| **Total** | **25** |
+| **Total** | **15** |
 
 ---
 
@@ -24,9 +23,6 @@
 
 ### `services/cisService.js`
 Pure calculation helper for CIS (Construction Industry Scheme) invoices. Takes labour/material costs, deduction rate, and CIS number and returns computed gross, net, CIS deduction, and reverse-charge amounts. Not imported by any reachable file.
-
-### `services/databaseMigrationService.js`
-Generic one-way data migrator that reads all records from a Sequelize model, applies a transform function, and upserts them into a corresponding Mongoose model by a configurable unique key. Leftover from a Sequelize-to-Mongoose migration.
 
 ### `services/envValidator.js`
 Empty placeholder file. Appears intended for environment-variable validation logic that was never implemented.
@@ -56,39 +52,6 @@ Defines a single `GET /tasks` route that returns pending tasks for the authentic
 
 ### `mongoose/services/uuidCheckServiceMongoose.js`
 Iterates over all Mongoose models and backfills any documents missing a `uuid` field with a newly-generated UUIDv4. The `require()` call in `app.js` is **commented out** (line ~208). Standalone data-integrity utility.
-
----
-
-## KashFlow API (`kashflowAPI/`)
-
-The entire `kashflowAPI/` directory is unreachable from `app.js`. It contains a SOAP-based data-sync pipeline that fetches accounting data from the KashFlow API and upserts it into Sequelize/Mongoose. None of its routes are mounted.
-
-### `kashflowAPI/fetchKashFlowData.js`
-Main (current) KashFlow data-sync orchestrator. Authenticates via SOAP, fetches customers/suppliers/projects/invoices/quotes, upserts them into the Sequelize DB, and spawns worker threads to process supplier receipts in parallel (capped at 3 concurrent).
-
-### `kashflowAPI/fetchKashFlowData-old.js`
-**Legacy version** of `fetchKashFlowData.js`. Same SOAP fetch-and-upsert workflow but includes its own inline `upsertData` function, processes receipts sequentially (no worker threads), and has extensive commented-out debug logging.
-
-### `kashflowAPI/fetchKashFlowData-old-old.js`
-**Oldest legacy version** of `fetchKashFlowData.js`. Uses Sequelize (`sequelizeDatabaseService`), a simpler `upsertData` with no change-detection, a callback-style `authenticate`, and runs as a self-executing IIFE.
-
-### `kashflowAPI/indexSeq.js`
-Early standalone script version of the KashFlow fetch using Sequelize with basic upsert and no change-detection or worker threads. Superseded by `fetchKashFlowData.js`.
-
-### `kashflowAPI/routes.js`
-Express router exposing a `GET /fetch-kashflow-data` endpoint (authenticated via a query-string token) that triggers the KashFlow data fetch and streams progress as chunked plain-text. Several other routes are commented out.
-
-### `kashflowAPI/updateTaxMonthTaxYear.js`
-Finds all Sequelize `KF_Receipts` records with null `TaxMonth`/`TaxYear`, calculates the tax month/year from the first payment date, and updates them in-place. The route that would call it is commented out.
-
-### `kashflowAPI/upsertData.js`
-Current upsert module for the KashFlow pipeline. Compares incoming data against existing Sequelize records field-by-field (skipping placeholder dates and normalizing timestamps), only writes on real changes, and also syncs new receipts to MongoDB.
-
-### `kashflowAPI/upsertData-old.js`
-**Legacy version** of `upsertData.js`. Similar field-by-field change detection but lacks the MongoDB sync step and uses slightly different normalization logic (boolean/integer coercion instead of timestamp truncation).
-
-### `kashflowAPI/workerProcessReceipts.js`
-Worker-thread script spawned by `fetchKashFlowData.js`. Authenticates independently, fetches receipts/payments/notes for a single supplier, normalizes and transforms them, then upserts into both Sequelize and Mongoose. Communicates progress back to the parent via `parentPort`. Also imports `services/kashflowNormalizer.js` (which is otherwise unused).
 
 ---
 

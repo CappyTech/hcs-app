@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 const employeeSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true, default: uuidv4 },
+  uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
   name: { type: String, required: true },
   email: { type: String, lowercase: true, trim: true },
   phoneNumber: { type: String },

@@ -16,7 +16,8 @@ COPY package*.json ./
 ARG NODE_ENV=production
 ENV NODE_ENV=$NODE_ENV
 # Prefer ci when a lockfile is present; fall back to install otherwise
-RUN if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then \
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then \
 			npm ci --omit=dev; \
 		else \
 			npm install --omit=dev; \

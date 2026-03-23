@@ -1,50 +1,12 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
+const { supplier, uuidField } = require('@cappytech/hcs-schemas');
 
 const supplierSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true, default: uuidv4 },
-  Id: Number,
-  Code: String,
-  Name: String,
-  Note: String,
-  CreatedDate: Date,
-  LastUpdatedDate: Date,
-  FirstPurchaseDate: Date,
-  LastPurchaseDate: Date,
-  OutstandingBalance: Number,
-  TotalPaidAmount: Number,
-  DefaultNominalCode: Number,
-  VATNumber: String,
-  IsRegisteredInEC: Boolean,
-  IsArchived: Boolean,
-  PaymentTerms: mongoose.Schema.Types.Mixed,
-  Currency: mongoose.Schema.Types.Mixed,
-  Contacts: [mongoose.Schema.Types.Mixed],
-  Address: mongoose.Schema.Types.Mixed,
-  DeliveryAddresses: [mongoose.Schema.Types.Mixed],
-  DefaultPdfTheme: Number,
-  PaymentMethod: Number,
-  CreateSupplierCodeIfDuplicate: Boolean,
-  CreateSupplierNameIfEmptyOrNull: Boolean,
-  UniqueEntityNumber: String,
-  VatNumber: String,
-  WithholdingTaxRate: Number,
-  // Array of { Name: string, Value: string } objects, e.g.
-  // [{ Name: "Verification Number", Value: "V1234567890" }, { Name: "UTR Number", Value: "1234567890" }]
-  WithholdingTaxReferences: [{ Name: String, Value: String }],
-  // CIS fields — written by sync adapters (e.g. hcs-sync), read by hcs-app for CIS returns.
-  // Marked as protectedFields in sync to preserve hcs-app customisations.
-  Subcontractor: { type: Boolean, default: false },
-  IsSubcontractor: { type: Boolean, default: false },
-  CISRate: { type: Number, enum: [null, 0, 0.2, 0.3], default: null },
-  CISNumber: { type: String, default: null }
+  uuid: uuidField,
+  ...supplier.fields,
 }, { timestamps: true });
 
-// Speed up CIS subcontractor lookups ($elemMatch on verification number)
-supplierSchema.index({
-  'WithholdingTaxReferences.Name': 1,
-  'WithholdingTaxReferences.Value': 1
-});
+supplier.indexes.forEach(idx => supplierSchema.index(idx.fields, idx.options));
 
 module.exports = {
   modelName: 'supplier',

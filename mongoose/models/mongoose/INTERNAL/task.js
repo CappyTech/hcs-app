@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 const taskSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true, default: uuidv4 },
+  uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
   title: { type: String, required: true, trim: true },
   description: { type: String, trim: true },
   dueDate: { type: Date },

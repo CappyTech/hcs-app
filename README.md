@@ -1,207 +1,66 @@
-# HCS App (HMS)
+# HCS App
 
-A full-featured web application by Heron Constructive Solutions LTD for managing subcontractors, CIS compliance, documents, projects, and operational workflows. Built on Node.js/Express with EJS + Tailwind CSS, MongoDB/Mongoose, optional MariaDB integrations, and modern developer tooling.
+Web application by Heron Constructive Solutions LTD for subcontractor management, CIS compliance, HR, fleet, attendance, and document workflows. Provider-agnostic — reads synced accounting data from MongoDB without coupling to any specific accounting provider.
 
-## Features
-
-- Subcontractor management: profiles, assignments, attendance, pay rates, and documents
-- CIS (Construction Industry Scheme): monthly/yearly returns, paid/issued calendars, deductions
-- KashFlow REST integration: sync customers, suppliers, invoices, purchases, projects
-- Paperless-ngx integration: OCR documents auto-ingest with cross-links to KashFlow entities
-- Dashboards: configurable tiles for finance, CIS, HR/payroll, Paperless
-- User authentication: sessions, optional TOTP, role-based access
-- Security & resilience: CSRF, rate limiting, Helmet, XSS clean, request logging
-- Realtime logs: WebSocket updates for operational insight
-- API & docs: Swagger/OpenAPI and repository docs for flows and endpoints
+> For full architecture, security, and module documentation see [AGENTS.md](AGENTS.md).
 
 ## Tech Stack
 
-- Runtime: Node.js 20
-- Web: Express, EJS, Tailwind CSS
-- Data: MongoDB + Mongoose; optional MariaDB via Sequelize
-- Testing: Playwright (e2e)
-- Infra: Docker Compose + Caddy
-
-## Prerequisites
-
-- Node.js 20
-- MongoDB instance (local or remote)
-- Git Bash (recommended terminal for commands and scripts)
+Node.js 20 · Express · EJS · Tailwind CSS 3 · MongoDB / Mongoose · Docker · Caddy
 
 ## Quick Start
 
-1) Clone and enter the repository
-
 ```bash
-git clone https://github.com/CappyTech/hcs-app.git
-cd hcs-app
-```
-
-2) Configure environment variables
-
-- Copy the example env file and update values:
-
-```bash
-cp compose.env.example compose.env
-```
-
-- If you prefer Windows PowerShell:
-
-```powershell
-Copy-Item -Path .\compose.env.example -Destination .\compose.env
-```
-
-3) Install dependencies
-
-```bash
+cp compose.env.example compose.env   # configure environment variables
 npm install
-```
-
-4) Run in development (server + Tailwind CSS watch)
-
-```bash
-npm run dev
-```
-
-5) Run in production mode
-
-```bash
-npm start
-```
-
-The server prints the port at startup. Access via your configured host and port.
-
-## Configuration
-
-- Application config is primarily via environment variables. See `compose.env.example` and update `compose.env` accordingly.
-- Session secrets, database URLs, tunnel settings, and API credentials should be set securely.
-
-## Development Workflow
-
-- Branching: Use feature branches. The active working branch is `Working`. Open PRs to `main` when ready.
-- Terminal: Use Git Bash for consistency across scripts and tooling.
-- Views: Use Tailwind EJS views under `mongoose/views/tailwindcss`. Do not add views under `mongoose/views/mongoose`.
-- Include chain: Trace changes from `app.js`, ensuring routes/middleware include updated files and partials.
-- CSS: Tailwind safelist generator helps keep dynamic classes. Build CSS as needed:
-
-```bash
-npm run gen:tailwind-safelist
-npm run build:css
-```
-
-- Watch CSS in dev:
-
-```bash
-npm run dev:css
+npm run dev                           # server + Tailwind CSS watch
 ```
 
 ## Testing
 
-- Unit tests: Run before committing
-
 ```bash
-npm test
+npm test                # unit tests (node --test)
+npx playwright test     # e2e tests (only if e2e/ files changed)
 ```
 
-- End-to-end tests (especially when modifying `e2e/`)
+## Docker
 
 ```bash
-npx playwright test
+cp compose.env.example compose.env
+docker compose up -d --build
 ```
+
+Caddy reverse proxy provides automatic HTTPS. Adjust `Caddyfile` for your domain.
+
+## Development Rules
+
+- **Terminal:** Use Git Bash
+- **Views:** Only use `mongoose/views/tailwindcss/` — never `mongoose/views/mongoose/`
+- **Include chain:** Trace new files back to `app.js` to ensure they are loaded
+- **CSS:** Run `npm run gen:tailwind-safelist` then `npm run build:css` if dynamic classes are missing
+- **Tests:** Run `npm test` before committing; run `npx playwright test` if `e2e/` files changed
+- **Clean tree:** Ensure `git status` reports a clean working tree before finishing
 
 ## Project Structure
 
 ```
-app.js                 # App entrypoint and middleware/router inclusion
-assets/                # Source Tailwind CSS
-public/                # Built CSS, JS, images, manifest
+app.js                  # Entry point — middleware chain, route mounting
+assets/                 # Source Tailwind CSS
+public/                 # Built CSS, JS, images, manifest
 mongoose/
-   controllers/         # CRUD, list, CIS, holiday, paperless, etc.
-   config/              # listControllerConfig, CRUDControllerConfig, dashboard tiles
-   models/              # Mongoose models across REST and INTERNAL namespaces
-   routes/              # Route definitions
-   services/            # Mongoose-bound services
-   views/
-      tailwindcss/       # EJS templates (partials, layout)
-services/              # App-wide services (auth, csrf, currency, tax, logger, sockets, etc.)
-docs/                  # API and architectural docs
-scripts/               # Utilities (tailwind safelist generator)
-Dockerfile, docker-compose.yml, Caddyfile, compose.env(.example)
+  controllers/          # CRUD, list, CIS, holiday, paperless, fleet
+  config/               # RBAC, CRUD/list configs, dashboard tiles
+  models/mongoose/      # Schemas: REST/, INTERNAL/, PAPERLESS/
+  routes/               # Express route files
+  services/             # DB connections, sessions, domain services
+  views/tailwindcss/    # EJS templates + partials
+services/               # Auth, CSRF, encryption, logging, email, security
+docs/                   # API docs, CURL examples, architectural notes
+scripts/                # Utilities (tailwind safelist, migrations)
 ```
-
-## Docker & Caddy
-
-- Use Docker Compose for local orchestration:
-
-```bash
-docker compose up -d
-```
-
-- Reverse proxy via Caddy is provided. Adjust `Caddyfile` and environment configs to your deployment.
-
-### Getting Started with Docker
-
-1) Copy environment template and tailor values (ports, DB URIs, secrets):
-
-```bash
-cp compose.env.example compose.env
-```
-
-2) Build and start services:
-
-```bash
-docker compose up -d --build
-```
-
-3) Verify containers:
-
-```bash
-docker compose ps
-```
-
-4) Tail logs (optional):
-
-```bash
-docker compose logs -f --tail=100
-```
-
-Notes:
-- If MongoDB is external, set the connection string in `compose.env` accordingly.
-- Caddy will proxy to the app container based on `Caddyfile` rules; update hostnames and TLS settings as needed.
-
-## API Documentation
-
-- Swagger/OpenAPI: Access `/api-docs` when the server is running.
-- Additional docs live in `docs/` including CIS-related notes and CURL examples under `docs/rest-curl/`.
-
-## Security Considerations
-
-- Ensure secrets are not committed. Use environment variables for keys and session secrets.
-- Helmet, express-rate-limit, xss-clean, and input validation are enabled to reduce risk.
-- CSRF protection is enabled where applicable. Review `services/csrfService.js` and related middleware.
-
-## Troubleshooting
-
-- Tailwind classes missing: run `npm run gen:tailwind-safelist` then `npm run build:css`.
-- CSS not updating in dev: ensure `npm run dev:css` is running alongside the server.
-- Data projection issues: verify `listControllerConfig.js` `fieldOrder` and `hideFields` settings.
-- Purchases rendering issues: ensure numeric guards are applied in views to avoid currency formatting errors.
-
-## Repository Guidelines
-
-- Use Node.js 20
-- Install dependencies with `npm install`
-- Run unit tests with `npm test` before committing
-- If you modify files in `e2e/`, run end-to-end tests with `npx playwright test`
-- Ensure `git status` reports a clean working tree before you finish
-- Use Git Bash as your terminal
-- Trace from `app.js` that files are included via route/middleware chains
-- Do not use `mongoose/views/mongoose` — do use `mongoose/views/tailwindcss`
 
 ## License
 
-- See the license specified in `package.json`.
-
-## Changelog & Timeline
+See `package.json`.
 
 - See `docs/Project-Timeline.md` for a phase-based summary of work on the `Working` branch, including links to key files and recent highlights.

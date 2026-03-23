@@ -513,13 +513,13 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         (process.env.KASHFLOW_MEMORABLE || process.env.KFMEMORABLE))
     );
 
-    // Determine VATLevel format from KashFlow itself (not our MongoDB) and compute VATLevel from VATAmount.
+    // Load VAT levels from MongoDB (synced by hcs-sync) to snap VATLevel on the payload.
     let vatLevels = [];
     try {
-      vatLevels = await kfVat.getVatLevels({ baseUrl: KF_BASE });
+      vatLevels = await kfVat.getVatLevels();
     } catch (e) {
       logger.warn(
-        `[kashflow] Failed to load VAT rates from KashFlow; will send payload without snapping VATLevel. ${e.message}`,
+        `[vatService] Failed to load VAT rates; will send payload without snapping VATLevel. ${e.message}`,
       );
     }
 

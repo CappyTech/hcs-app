@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 const metaSchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true, default: uuidv4 },
+  uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
   model: {
     type: String,
     required: true,

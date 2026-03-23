@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 const holidayDismissalSchema = new mongoose.Schema({
-    uuid: { type: String, unique: true, required: true, default: uuidv4 },
+    uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true },
     holidayId: { type: mongoose.Schema.Types.ObjectId, ref: 'holiday', required: true },
     dismissedAt: { type: Date, default: Date.now }

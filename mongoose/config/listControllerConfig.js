@@ -311,7 +311,7 @@ module.exports = {
     // OLD: hideFields included 'Subcontractor', 'IsSubcontractor' and hid 'WithholdingTaxRate', 'WithholdingTaxReferences'
     hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id', 'IsRegisteredInEC', 'IsArchived', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull'],
     // OLD: fieldOrder: ['Name', 'Code', 'CISRate', 'CISNumber', ...],
-    fieldOrder: ['Name', 'Code', 'WithholdingTaxRate', 'WithholdingTaxReferences', 'Note', 'OutstandingBalance', 'TotalPaidAmount', 'VATNumber', 'Contacts', 'Address'],
+    fieldOrder: ['Name', 'Code', 'WithholdingTaxRate', 'WithholdingTaxReferences', 'Note', 'OutstandingBalance', 'TotalPaidAmount', 'VatNumber', 'Contacts', 'Address'],
     // OLD: searchFields: ['Name', 'Code', 'CISNumber'],
     searchFields: ['Name', 'Code'],
     sortField: 'Name',
@@ -329,7 +329,7 @@ module.exports = {
     title: 'Suppliers',
     linkField: 'Name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency','DefaultPdfTheme','PaymentMethod','Id'],
-    fieldOrder: ['Name', 'Id', 'Code', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstPurchaseDate', 'LastPurchaseDate', 'OutstandingBalance', 'TotalPaidAmount', 'DefaultNominalCode', 'VATNumber', 'IsRegisteredInEC', 'IsArchived', 'PaymentTerms', 'Currency', 'Contacts', 'Address', 'DeliveryAddresses', 'DefaultPdfTheme', 'PaymentMethod', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull', 'UniqueEntityNumber', 'VatNumber', 'WithholdingTaxRate', 'WithholdingTaxReferences'],
+    fieldOrder: ['Name', 'Id', 'Code', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstPurchaseDate', 'LastPurchaseDate', 'OutstandingBalance', 'TotalPaidAmount', 'DefaultNominalCode', 'VatNumber', 'IsRegisteredInEC', 'IsArchived', 'PaymentTerms', 'Currency', 'Contacts', 'Address', 'DeliveryAddresses', 'DefaultPdfTheme', 'PaymentMethod', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull', 'UniqueEntityNumber', 'WithholdingTaxRate', 'WithholdingTaxReferences'],
     sortField: 'Name',
     sortOrder: 1,
     department: ['kashflow', 'construction-industry-scheme'],

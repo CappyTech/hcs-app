@@ -4,7 +4,7 @@ hcs-app is the main web application for **Heron Constructive Solutions LTD**. It
 
 **hcs-app is provider-agnostic.** It reads financial data from the **REST** MongoDB namespace without knowing or caring which sync service wrote it. Today that's KashFlow via [hcs-sync](https://github.com/cappytech/hcs-sync); tomorrow it could be Xero, QuickBooks, or any other adapter that conforms to the same REST schema contract. hcs-app also manages its own namespaces (**INTERNAL** for users, employees, attendance, etc. and **PAPERLESS** for OCR documents).
 
-Where hcs-app does call an external API directly (e.g. `kashflowVatService.js` for VAT rates, `paperlessController.js` for Paperless-ngx cross-referencing), those are **hcs-app's own integrations** — not shared with any sync service.
+Where hcs-app does call an external API directly (e.g. `kashflowSessionService.js` for KashFlow purchase creation, `paperlessController.js` for Paperless-ngx cross-referencing), those are **hcs-app's own integrations** — not shared with any sync service. VAT rates are read from the REST namespace (synced by hcs-sync).
 
 ---
 

@@ -1,19 +1,13 @@
 "use strict";
 
-const axios = require("axios");
 const logger = require("./loggerService");
-const kfSession = require("./kashflowSessionService");
+const mdb = require("../mongoose/services/mongooseDatabaseService");
 
 let _cached = {
   fetchedAt: 0,
   countryCode: null,
-  baseUrl: null,
   vatLevels: null,
 };
-
-function normBaseUrl(url) {
-  return String(url || "https://api.kashflow.com/v2").replace(/\/\/+$/, "");
-}
 
 function guessCountryCode() {
   const cc = (
@@ -24,96 +18,11 @@ function guessCountryCode() {
   return cc || "GB";
 }
 
-function extractRateNumber(obj) {
-  if (!obj || typeof obj !== "object") return null;
-  const candidates = [
-    obj.Rate,
-    obj.VatRate,
-    obj.VATRate,
-    obj.Percentage,
-    obj.Percent,
-    obj.Value,
-  ];
-  for (const c of candidates) {
-    const n =
-      typeof c === "number" ? c : typeof c === "string" ? parseFloat(c) : NaN;
-    if (Number.isFinite(n)) return n;
-  }
-  return null;
-}
-
-function extractCountryCode(obj) {
-  if (!obj || typeof obj !== "object") return null;
-  const candidates = [
-    obj.CountryCode,
-    obj.Country,
-    obj.Code,
-    obj.ISO,
-    obj.IsoCode,
-    obj.Iso,
-  ];
-  for (const c of candidates) {
-    if (typeof c === "string" && c.trim()) return c.trim().toUpperCase();
-  }
-  return null;
-}
-
-function uniqSorted(nums) {
-  const arr = Array.from(
-    new Set(
-      (nums || []).filter((n) => typeof n === "number" && Number.isFinite(n)),
-    ),
-  );
-  arr.sort((a, b) => a - b);
-  return arr;
-}
-
-async function fetchVatLevelsFromApi(baseUrl, countryCode) {
-  const url = `${normBaseUrl(baseUrl)}/countries/vatrates`;
-
-  // Prefer authenticated call (some deployments require it), but fall back to unauth.
-  const attempt = async (token) => {
-    const headers = { Accept: "application/json" };
-    if (token) headers.Authorization = `KfToken ${token}`;
-    return axios.get(url, { headers, timeout: 15000 });
-  };
-
-  let resp;
-  try {
-    resp = await kfSession.withKfAuth((token) => attempt(token));
-  } catch (e) {
-    // Try without auth
-    resp = await attempt(null);
-  }
-
-  const data = resp && resp.data;
-  const rows = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.Data)
-      ? data.Data
-      : Array.isArray(data?.Items)
-        ? data.Items
-        : [];
-
-  const levels = [];
-  for (const row of rows) {
-    const cc = extractCountryCode(row);
-    if (cc && countryCode && cc !== countryCode) continue;
-    const rate = extractRateNumber(row);
-    if (rate == null) continue;
-    // VATLevel in our payload is a numeric percentage (e.g. 20). Keep with up to 4dp.
-    levels.push(+Number(rate).toFixed(4));
-  }
-
-  return uniqSorted(levels);
-}
-
+/**
+ * Read VAT rates from the REST namespace (synced by hcs-sync).
+ * Returns a sorted array of unique numeric rate values, e.g. [0, 5, 20].
+ */
 async function getVatLevels(opts = {}) {
-  const baseUrl = normBaseUrl(
-    opts.baseUrl ||
-      process.env.KASHFLOW_API_BASE_URL ||
-      "https://api.kashflow.com/v2",
-  );
   const countryCode = String(
     opts.countryCode || guessCountryCode(),
   ).toUpperCase();
@@ -123,23 +32,33 @@ async function getVatLevels(opts = {}) {
 
   const fresh =
     _cached.vatLevels &&
-    _cached.baseUrl === baseUrl &&
     _cached.countryCode === countryCode &&
     Date.now() - _cached.fetchedAt < ttlMs;
   if (fresh) return _cached.vatLevels;
 
-  const levels = await fetchVatLevelsFromApi(baseUrl, countryCode);
-  if (!levels || levels.length === 0) {
-    logger.warn(
-      `[kashflow] No VAT rates returned from ${baseUrl}/countries/vatrates for country=${countryCode}`,
-    );
-  } else {
-    logger.info(
-      `[kashflow] Loaded VAT rates from KashFlow for country=${countryCode}: ${levels.join(", ")}`,
-    );
+  const VATRate = mdb.REST?.vatrate;
+  if (!VATRate) {
+    logger.warn("[vatService] VATRate model not available — database may not be connected yet");
+    return _cached.vatLevels || [];
   }
 
-  _cached = { fetchedAt: Date.now(), baseUrl, countryCode, vatLevels: levels };
+  const docs = await VATRate.find({ CountryCode: countryCode }).lean();
+  const levels = Array.from(
+    new Set(
+      docs
+        .map((d) => d.VATRate ?? d.Rate)
+        .filter((n) => typeof n === "number" && Number.isFinite(n)),
+    ),
+  );
+  levels.sort((a, b) => a - b);
+
+  if (levels.length === 0) {
+    logger.warn(`[vatService] No VAT rates found in MongoDB for country=${countryCode}`);
+  } else {
+    logger.info(`[vatService] Loaded VAT rates from MongoDB for country=${countryCode}: ${levels.join(", ")}`);
+  }
+
+  _cached = { fetchedAt: Date.now(), countryCode, vatLevels: levels };
   return levels;
 }
 

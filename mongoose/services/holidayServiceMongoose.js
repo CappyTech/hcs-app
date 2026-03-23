@@ -2,7 +2,7 @@ const axios = require('axios');
 const moment = require('moment-timezone');
 const mdb = require('./mongooseDatabaseService');
 const logger = require('../../services/loggerService');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const HOLIDAY_API_URL = 'https://www.gov.uk/bank-holidays.json';
 
 // Custom holidays are still in memory for now
@@ -151,7 +151,7 @@ const holidayService = {
               },
               update: {
                 $setOnInsert: {
-                  uuid: uuidv4()
+                  uuid: crypto.randomUUID()
                 }
               },
               upsert: true

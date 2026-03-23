@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 // UK holiday accrual rules vary. This model captures entitlement and accrual for a given holiday year window per employee.
 // It does not record individual leave bookings here (can be a separate model later); it tracks totals for entitlement, accrued and taken.
 const employeeHolidaySchema = new mongoose.Schema({
-  uuid: { type: String, unique: true, required: true, default: uuidv4 },
+  uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
 
   // Link to employee
   employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'employee', required: true, index: true },

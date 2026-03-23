@@ -14,7 +14,7 @@
       <% whtRefs.forEach(ref => { %>
         <% if (ref && ref.Value) { %><p><%= ref.Name %>: <%= ref.Value %></p><% } %>
       <% }); %>
-      <% if (supplier.VATNumber) { %><p>VAT: <%= supplier.VATNumber %></p><% } %>
+      <% if (supplier.VatNumber) { %><p>VAT: <%= supplier.VatNumber %></p><% } %>
       <address class="not-italic mt-2 leading-relaxed">
         <% if (supplier.Address1) { %><%= supplier.Address1 %>, <br><% } %>
         <% if (supplier.Address2) { %><%= supplier.Address2 %>, <br><% } %>

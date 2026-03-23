@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const encryptionService = require('../../../../services/encryptionService');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
-    uuid: { type: String, unique: true, required: true, default: uuidv4 },
+    uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
     username: {
         type: String,
         required: true,

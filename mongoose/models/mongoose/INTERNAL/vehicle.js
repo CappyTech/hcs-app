@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const logger = require('../../../../services/loggerService');
 
 const vehicleSchema = new mongoose.Schema({
-    uuid: { type: String, unique: true, required: true, default: uuidv4 },
+    uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
 
     // ── Ownership / assignment ──────────────────────────────────────────
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'employee' },

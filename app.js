@@ -89,9 +89,6 @@ const main = async () => {
     app.use('/resources/css', express.static(path.join(__dirname, 'public', 'css')));
     // Other static assets remain protected
     app.use('/resources', authService.ensureAuthenticated, express.static(path.join(__dirname, 'public')));
-    ['bootstrap-icons'].forEach(pkg => {
-      app.use(`/resources/${pkg}`, authService.ensureAuthenticated, express.static(path.join(__dirname, `node_modules/${pkg}`)));
-    });
 
     // Serve favicon to avoid 404 errors
     app.get('/favicon.ico', (req, res) => {
