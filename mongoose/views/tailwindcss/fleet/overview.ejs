@@ -1,13 +1,13 @@
-<div class="container mx-auto py-4 px-4">
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
 
   <!-- Header -->
   <div class="flex justify-between items-center mb-6 print:hidden">
-    <h1 class="text-4xl font-extrabold text-gray-900 dark:text-gray-100">Fleet Overview</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Fleet Overview</h1>
     <div class="flex gap-2">
-      <a href="/vehicle/create" class="inline-block bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2 text-sm font-medium">
+      <a href="/vehicle/create" class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">
         + Add Vehicle
       </a>
-      <a href="/vehicles" class="inline-block bg-gray-600 hover:bg-gray-700 text-white rounded px-4 py-2 text-sm font-medium">
+      <a href="/vehicles" class="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">
         All Vehicles
       </a>
     </div>
@@ -15,29 +15,29 @@
 
   <!-- Sub-model navigation -->
   <div class="flex flex-wrap gap-2 mb-6 print:hidden">
-    <a href="/vehicleFuelLogs" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded px-3 py-1.5 text-sm font-medium">
+    <a href="/vehicleFuelLogs" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">
       &#9981; Fuel Logs
     </a>
-    <a href="/vehicleMileageLogs" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded px-3 py-1.5 text-sm font-medium">
+    <a href="/vehicleMileageLogs" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">
       &#128663; Mileage Logs
     </a>
-    <a href="/vehicleServices" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded px-3 py-1.5 text-sm font-medium">
+    <a href="/vehicleServices" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">
       &#128295; Service History
     </a>
-    <a href="/vehicleFuelLog/create" class="inline-flex items-center gap-1 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-800/30 text-green-700 dark:text-green-400 rounded px-3 py-1.5 text-sm font-medium">
+    <a href="/vehicleFuelLog/create" class="inline-flex items-center gap-1 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-800/30 text-green-700 dark:text-green-400 rounded-lg px-3 py-1.5 text-sm font-medium">
       + Log Fuel
     </a>
-    <a href="/vehicleMileageLog/create" class="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800/30 text-blue-700 dark:text-blue-400 rounded px-3 py-1.5 text-sm font-medium">
+    <a href="/vehicleMileageLog/create" class="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800/30 text-blue-700 dark:text-blue-400 rounded-lg px-3 py-1.5 text-sm font-medium">
       + Log Trip
     </a>
-    <a href="/vehicleService/create" class="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-800/30 text-purple-700 dark:text-purple-400 rounded px-3 py-1.5 text-sm font-medium">
+    <a href="/vehicleService/create" class="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-800/30 text-purple-700 dark:text-purple-400 rounded-lg px-3 py-1.5 text-sm font-medium">
       + Log Service
     </a>
   </div>
 
   <!-- Summary Stats -->
   <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
-    <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-4 text-center">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Vehicles</p>
       <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><%= totalCount %></p>
     </div>
@@ -49,7 +49,7 @@
       'Disposed': 'text-gray-400'
     }; %>
     <% for (const [status, count] of Object.entries(availabilityCounts)) { %>
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-4 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-1"><%= status %></p>
         <p class="text-3xl font-bold <%= statusColors[status] || 'text-gray-900 dark:text-gray-100' %>"><%= count %></p>
       </div>
@@ -64,7 +64,7 @@
   ].filter(s => s.items.length > 0); %>
 
   <% if (expiredSections.length > 0) { %>
-    <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+    <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
       <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Expired Compliance</h2>
       <% for (const section of expiredSections) { %>
         <h3 class="text-lg font-semibold text-red-600 dark:text-red-400 mb-2"><%= section.label %> (<%= section.items.length %>)</h3>
@@ -104,7 +104,7 @@
   ].filter(s => s.items.length > 0); %>
 
   <% if (expiringSections.length > 0) { %>
-    <div class="mb-8 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+    <div class="mb-8 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-4">
       <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-4">&#9888; Expiring Within <%= expiryDays %> Days</h2>
       <% for (const section of expiringSections) { %>
         <h3 class="text-lg font-semibold text-yellow-600 dark:text-yellow-400 mb-2"><%= section.label %> (<%= section.items.length %>)</h3>
@@ -142,7 +142,7 @@
 
   <!-- Service Due Soon -->
   <% if (serviceDueSoon.length > 0) { %>
-    <div class="mb-8 border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+    <div class="mb-8 border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4">
       <h2 class="text-xl font-bold text-blue-700 dark:text-blue-400 mb-4">&#128295; Service Due Within <%= expiryDays %> Days (<%= serviceDueSoon.length %>)</h2>
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
@@ -176,9 +176,9 @@
     <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Current Assignments (<%= assignedVehicles.length %>)</h2>
     <% if (assignedVehicles.length > 0) { %>
       <div class="overflow-x-auto">
-        <table class="min-w-full text-sm bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow">
+        <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
           <thead>
-            <tr class="bg-gray-100 dark:bg-gray-800">
+            <tr class="bg-gray-50 dark:bg-gray-800">
               <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reg</th>
               <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Vehicle</th>
               <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Assigned To</th>
@@ -226,9 +226,9 @@
     <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Unassigned &amp; Available (<%= unassigned.length %>)</h2>
     <% if (unassigned.length > 0) { %>
       <div class="overflow-x-auto">
-        <table class="min-w-full text-sm bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow">
+        <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
           <thead>
-            <tr class="bg-gray-100 dark:bg-gray-800">
+            <tr class="bg-gray-50 dark:bg-gray-800">
               <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reg</th>
               <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Vehicle</th>
               <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Fuel</th>

@@ -44,9 +44,16 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
     // Active employees (INTERNAL)
     const activeEmployeesPromise = mdb.INTERNAL.employee.find({ status: 'active' });
 
-    // Subcontractors (REST)
-  // OLD: const subcontractorsPromise = mdb.REST.supplier.find({ $or: [{ Subcontractor: true }, { IsSubcontractor: true }] });
-  const subcontractorsPromise = mdb.REST.supplier.find({ WithholdingTaxRate: { $gte: 0 } });
+    // Subcontractors (REST) — match CIS dashboard: require HMRC verification number
+    const VERIFICATION_REGEX = /^V\d{7,10}(\/[A-Z]{1,2})?$/;
+    const subcontractorsPromise = mdb.REST.supplier.find({
+      WithholdingTaxReferences: {
+        $elemMatch: {
+          Name: 'Verification Number',
+          Value: { $regex: VERIFICATION_REGEX }
+        }
+      }
+    });
 
     // Purchases with payments within the week (REST)
     const purchasesPromise = mdb.REST.purchase.find({
@@ -79,12 +86,17 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
       // Collect supplierIds from purchases first
       const supplierIds = [...new Set(purchasesNotDeleted.map(p => p.SupplierId).filter(id => id != null))];
       const suppliers = supplierIds.length
-        ? await mdb.REST.supplier.find({ Id: { $in: supplierIds } }).select('Id Name uuid WithholdingTaxRate').lean()
+        ? await mdb.REST.supplier.find({
+            Id: { $in: supplierIds },
+            WithholdingTaxReferences: {
+              $elemMatch: {
+                Name: 'Verification Number',
+                Value: { $regex: VERIFICATION_REGEX }
+              }
+            }
+          }).select('Id Name uuid WithholdingTaxRate WithholdingTaxReferences').lean()
         : [];
-      // Build allowed subcontractor id set using WithholdingTaxRate
-      // OLD: const isSubbie = (s) => s && (s.Subcontractor === true || s.IsSubcontractor === true || ...);
-      const isSubbie = (s) => s && s.WithholdingTaxRate != null && Number(s.WithholdingTaxRate) >= 0;
-      const allowedSubcontractorIds = new Set(suppliers.filter(isSubbie).map(s => s.Id));
+      const allowedSubcontractorIds = new Set(suppliers.map(s => s.Id));
       const filteredPurchases = purchasesNotDeleted.filter(p => p && allowedSubcontractorIds.has(p.SupplierId));
       if (process.env.DEBUG) {
         logger.info(`[weekly] subcontractors=${allowedSubcontractorIds.size}, filteredPurchases=${filteredPurchases.length}`);
@@ -141,7 +153,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
       employeeCount: allEmployees.length,
         subcontractorCount: allowedSubcontractorIds.size,
       allEmployees,
-        allSubcontractors: suppliers.filter(isSubbie),
+        allSubcontractors: suppliers,
       paidPurchases
     };
   } catch (error) {

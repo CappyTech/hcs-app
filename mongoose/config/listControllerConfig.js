@@ -133,7 +133,7 @@ module.exports = {
     title: 'Employees',
     linkField: 'name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
-    fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type', 'definedRate', 'dailyRate', 'weeklyRate', 'monthlyRate', 'yearlyRate', 'hourlyRate', 'hireDate', 'managerId'],
+    fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type', 'ir35', 'definedRate', 'dailyRate', 'weeklyRate', 'monthlyRate', 'yearlyRate', 'hourlyRate', 'hireDate', 'managerId', 'subcontractorSupplierId'],
     sortField: 'name',
     sortOrder: 1,
     department: ['payroll', 'human-resources'],
@@ -146,7 +146,9 @@ module.exports = {
     ],
     labelOverrides: {
       phoneNumber: 'Number',
-      managerId: 'Manager'
+      managerId: 'Manager',
+      ir35: 'IR35',
+      subcontractorSupplierId: 'Linked Supplier'
     },
     fieldTransforms: {
       managerId: {
@@ -154,6 +156,12 @@ module.exports = {
         matchField: '_id',
         returnField: 'name',
         linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorSupplierId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+        linkTo: (matched) => `/supplier/read/${matched.uuid}`
       }
     },
   },

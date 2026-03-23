@@ -42,52 +42,87 @@ async function scopeQuery(req, model, operation = "r") {
   // If not own-only, return unscoped
   if (!ownOnly) return {};
 
-  // Resolve ownership
-  const ownerCfg = rbac.getOwnershipConfig(role, model);
-  if (!ownerCfg) {
-    logger.warn(
-      `[dataScopingService] No ownership mapping for role="${role}" model="${model}"`,
-    );
-    return null;
-  }
-
-  const userEntityId = req.user[ownerCfg.userField];
-  if (!userEntityId) {
-    logger.warn(
-      `[dataScopingService] User ${req.user.uuid} (${role}) has no ${ownerCfg.userField}`,
-    );
-    return null;
-  }
-
-  // For REST models that use KashFlow-style numeric Ids (e.g. SupplierId, CustomerId)
-  // we may need to resolve the linked document's Id field.
+  // Resolve ownership — build filter for the user's primary role, then
+  // extend with a secondary role when both employeeId and subcontractorId
+  // are set (IR35 off-payroll workers).
   const mdb = require("../mongoose/services/mongooseDatabaseService");
+
+  const primaryFilter = await buildOwnershipFilter(req, mdb, role, model);
+  if (!primaryFilter) return null;
+
+  // IR35 dual-link: if the employee record has ir35 + subcontractorSupplierId,
+  // or the user has both employeeId and subcontractorId, extend the filter
+  // so the worker sees data from both capacities.
+  if (role === "employee" || role === "subcontractor") {
+    const dualRole = await resolveIR35DualRole(req, mdb, role);
+    if (dualRole) {
+      const secondaryFilter = await buildOwnershipFilter(req, mdb, dualRole, model);
+      if (secondaryFilter) {
+        return { $or: [primaryFilter, secondaryFilter] };
+      }
+    }
+  }
+
+  return primaryFilter;
+}
+
+/**
+ * Build a Mongoose ownership filter for a given role + model.
+ * Returns null if no mapping exists or the user lacks the required link.
+ */
+async function buildOwnershipFilter(req, mdb, role, model) {
+  const ownerCfg = rbac.getOwnershipConfig(role, model);
+  if (!ownerCfg) return null;
+
+  const userEntityId = req.user[ownerCfg.userField]
+    || (ownerCfg.userField === "subcontractorId" && req.user._ir35SupplierId)
+    || null;
+  if (!userEntityId) return null;
 
   if (
     ["SupplierId", "CustomerId", "CustomerCode"].includes(ownerCfg.modelField)
   ) {
-    // Find the linked entity to get its KashFlow Id/Code
     const linkedDoc = await resolveLinkedEntity(mdb, role, userEntityId);
-    if (!linkedDoc) {
-      logger.warn(
-        `[dataScopingService] Could not resolve linked entity for user ${req.user.uuid}`,
-      );
-      return null;
-    }
+    if (!linkedDoc) return null;
 
-    if (ownerCfg.modelField === "SupplierId") {
-      return { SupplierId: linkedDoc.Id };
-    }
-    if (ownerCfg.modelField === "CustomerId") {
-      return { CustomerId: linkedDoc.Id };
-    }
-    if (ownerCfg.modelField === "CustomerCode") {
-      return { CustomerCode: linkedDoc.Code };
-    }
+    if (ownerCfg.modelField === "SupplierId") return { SupplierId: linkedDoc.Id };
+    if (ownerCfg.modelField === "CustomerId") return { CustomerId: linkedDoc.Id };
+    if (ownerCfg.modelField === "CustomerCode") return { CustomerCode: linkedDoc.Code };
   }
 
-  // Standard ObjectId-based ownership
   return { [ownerCfg.modelField]: userEntityId };
+}
+
+/**
+ * Determine whether this user has an IR35 dual-role.
+ * Checks: 1) employee.ir35 flag with subcontractorSupplierId, or
+ *         2) user model dual-link (employeeId + subcontractorId).
+ * Returns the secondary role name, or null.
+ */
+async function resolveIR35DualRole(req, mdb, primaryRole) {
+  // Path 1: employee record has ir35 flag
+  if (primaryRole === "employee" && req.user.employeeId) {
+    try {
+      const emp = await mdb.INTERNAL.employee
+        .findById(req.user.employeeId)
+        .select("ir35 subcontractorSupplierId")
+        .lean();
+      if (emp?.ir35 && emp.subcontractorSupplierId) {
+        // Temporarily set subcontractorId on req.user so buildOwnershipFilter
+        // can resolve the supplier link.
+        if (!req.user.subcontractorId) {
+          req.user._ir35SupplierId = emp.subcontractorSupplierId;
+        }
+        return "subcontractor";
+      }
+    } catch (_) { /* proceed without dual-role */ }
+  }
+
+  // Path 2: user model dual-link (legacy / direct assignment)
+  if (primaryRole === "employee" && req.user.subcontractorId) return "subcontractor";
+  if (primaryRole === "subcontractor" && req.user.employeeId) return "employee";
+
+  return null;
 }
 
 /**

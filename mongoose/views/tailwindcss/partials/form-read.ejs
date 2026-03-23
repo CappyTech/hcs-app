@@ -1,5 +1,11 @@
-<div class="w-1/2 mx-auto my-3 px-4">
-  <a href="/<%= basePath %>s" class="text-green-600 dark:text-green-400 hover:underline"><i class="bi bi-arrow-left"></i> Go Back</a>
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <a href="/<%= basePath %>s" class="inline-flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 hover:underline font-medium"><i class="bi bi-arrow-left"></i> Go Back</a>
+
+  <!-- Card wrapper -->
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-6 sm:p-8">
+
   <!-- Header: Title + Update/Delete buttons -->
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100"><%= title %></h1>
@@ -9,31 +15,31 @@
         <% if (Array.isArray(actions) && actions.length > 0) { %>
           <% actions.forEach(action => { %>
             <a href="<%= typeof action.href === 'function' ? action.href(item) : action.href %>"
-              class="inline-flex items-center justify-center rounded bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-600 px-3 py-1 text-sm text-white hover:bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-700 transition">
+              class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-600 px-4 py-2 text-sm font-medium text-white hover:bg-<%= action.class === 'danger' ? 'red' : action.class === 'success' ? 'green' : action.class === 'warning' ? 'yellow' : 'blue' %>-700 transition shadow-sm">
               <% if (action.icon) { %><i class="bi <%= action.icon %>"></i><% } %>
-              <span class="ml-1 hidden sm:inline"><%= action.label %></span>
+              <span class="hidden sm:inline"><%= action.label %></span>
             </a>
           <% }) %>
         <% } else { %>
           <% if (!config?.deny?.includes('u') && (typeof canUpdate !== 'undefined' ? canUpdate : isAdmin)) { %>
             <a href="/<%= basePath %>/update/<%= item.uuid %>" 
-              class="inline-flex items-center justify-center rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 transition">
+              class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition shadow-sm">
               <i class="bi bi-arrow-clockwise"></i>
-              <span class="ml-1 hidden sm:inline">Update</span>
+              <span class="hidden sm:inline">Update</span>
             </a>
           <% } %>
           <% if (!config?.deny?.includes('d') && (typeof canDelete !== 'undefined' ? canDelete : isAdmin)) { %>
             <a href="/<%= basePath %>/delete/<%= item.uuid %>" 
-              class="inline-flex items-center justify-center rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 transition">
+              class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition shadow-sm">
               <i class="bi bi-trash-fill"></i>
-              <span class="ml-1 hidden sm:inline">Delete</span>
+              <span class="hidden sm:inline">Delete</span>
             </a>
           <% } %>
           <% if (config?.handlesDocuments) { %>
             <a href="/<%= basePath %>/upload/<%= item.uuid %>" 
-              class="inline-flex items-center justify-center rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 transition">
+              class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition shadow-sm">
               <i class="bi bi-upload"></i>
-              <span class="ml-1 hidden sm:inline">Upload Documents</span>
+              <span class="hidden sm:inline">Upload</span>
             </a>
           <% } %>
         <% } %>
@@ -50,7 +56,7 @@
   <!-- Horizontal layout: details left, sidebar with Items/Payments right -->
   <div class="grid md:grid-cols-3 gap-4">
     <!-- Main details -->
-    <div class="md:col-span-2 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+    <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 p-6 rounded-xl">
       <%
         const _readRendered = new Set();
         const _readKeys = Object.keys(schema).filter(k => k !== 'LineItems' && k !== 'PaymentLines');
@@ -71,7 +77,7 @@
         const _prefix = _dot > -1 ? key.substring(0, _dot) : null;
         if (_prefix && _readNestedGroups[_prefix]) {
       %>
-        <fieldset class="mb-4 border border-gray-300 dark:border-gray-600 rounded p-3">
+        <fieldset class="mb-4 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
           <legend class="px-2 text-sm font-semibold text-gray-700 dark:text-gray-200"><%= _readGroupLabel(_prefix) %></legend>
           <% _readNestedGroups[_prefix].forEach(gKey => {
             if (!_readRendered.has(gKey) && schema[gKey]) { %>
@@ -108,11 +114,11 @@
     <!-- Sidebar: Items and Payments stacked -->
     <div class="space-y-4">
       <% if (schema['LineItems']) { %>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow">
-          <div class="px-4 pt-3">
-            <h2 class="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">Items</h2>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
+          <div class="px-4 pt-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Items</h2>
           </div>
-          <div class="px-2 pb-3">
+          <div class="px-3 pb-4">
             <%- include('../partials/_formField', {
               key: 'LineItems',
               field: schema['LineItems'],
@@ -127,11 +133,11 @@
       <% } %>
 
       <% if (schema['PaymentLines']) { %>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow">
-          <div class="px-4 pt-3">
-            <h2 class="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">Payments</h2>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
+          <div class="px-4 pt-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Payments</h2>
           </div>
-          <div class="px-2 pb-3">
+          <div class="px-3 pb-4">
             <%- include('../partials/_formField', {
               key: 'PaymentLines',
               field: schema['PaymentLines'],
@@ -147,33 +153,41 @@
     </div>
   </div>
 
+  </div></div><!-- close main card -->
+
 <% if (config?.handlesDocuments) { %>
-  <div class="mt-8">
-    <h2 class="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">Documents</h2>
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-blue-500 to-blue-400"></div>
+    <div class="p-6 sm:p-8">
+    <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100"><i class="bi bi-folder2-open mr-2 text-blue-500"></i>Documents</h2>
 
     <% if (item.documents?.length) { %>
-      <ul>
+      <ul class="space-y-2">
         <% item.documents.forEach(doc => { %>
-          <li class="text-gray-800 dark:text-gray-200">
-            <%= doc.name %>
+          <li class="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 text-gray-800 dark:text-gray-200">
+            <i class="bi bi-file-earmark text-gray-400"></i>
+            <span class="flex-1 truncate"><%= doc.name %></span>
             <% if (doc.name.match(/\.(pdf|jpg|jpeg|png|webp|gif)$/i)) { %>
-              <a href="<%= doc.url %>" class="text-green-600 dark:text-green-400 underline ml-2">View</a>
+              <a href="<%= doc.url %>" class="text-green-600 dark:text-green-400 hover:underline text-sm font-medium">View</a>
             <% } else { %>
-              <a href="/<%= basePath %>/download/<%= item.uuid %>/<%= encodeURIComponent(doc.name) %>" class="text-green-600 dark:text-green-400 underline ml-2">Download</a>
+              <a href="/<%= basePath %>/download/<%= item.uuid %>/<%= encodeURIComponent(doc.name) %>" class="text-green-600 dark:text-green-400 hover:underline text-sm font-medium">Download</a>
             <% } %>
           </li>
         <% }) %>
       </ul>
     <% } else { %>
-  <p class="text-gray-500 dark:text-gray-300 italic">No documents uploaded yet.</p>
+      <p class="text-gray-500 dark:text-gray-400 italic">No documents uploaded yet.</p>
     <% } %>
+    </div>
   </div>
 <% } %>
 
   <!-- OLD: basePath === 'supplier' && (item.Subcontractor || item.IsSubcontractor) -->
   <% if (basePath === 'supplier' && (item.WithholdingTaxRate != null && Number(item.WithholdingTaxRate) >= 0) && Array.isArray(item.purchases)) { %>
-    <div class="mt-8">
-      <h2 class="text-xl font-medium mb-3 text-gray-900 dark:text-gray-100">CIS Calendar (Paid)</h2>
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+      <div class="p-6 sm:p-8">
+      <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100"><i class="bi bi-calendar3 mr-2 text-green-500"></i>CIS Calendar (Paid)</h2>
       <% 
         // Display months April→March (UK tax year). Labels aligned A M J J A S O N D J F M
         const monthsShort = ['A','M','J','J','A','S','O','N','D','J','F','M'];
@@ -218,7 +232,7 @@
         const years = Object.keys(cisMap).sort((a,b) => Number(b) - Number(a));
       %>
       <% if (years.length > 0) { %>
-        <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
@@ -266,8 +280,11 @@
         <% } %>
       <% } %>
     </div>
-    <div class="mt-6">
-      <h2 class="text-xl font-medium mb-3 text-gray-900 dark:text-gray-100">CIS Calendar (Issued)</h2>
+    </div>
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="h-1.5 bg-gradient-to-r from-blue-500 to-blue-400"></div>
+      <div class="p-6 sm:p-8">
+      <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100"><i class="bi bi-calendar3 mr-2 text-blue-500"></i>CIS Calendar (Issued)</h2>
       <% 
         // Issued-based calendar uses explicit TaxYear/TaxMonth when present, else maps IssuedDate to tax month
         const monthsShortIssued = ['A','M','J','J','A','S','O','N','D','J','F','M'];
@@ -296,7 +313,7 @@
         const yearsIssued = Object.keys(cisIssuedMap).sort((a,b) => Number(b) - Number(a));
       %>
       <% if (yearsIssued.length > 0) { %>
-        <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
@@ -328,16 +345,19 @@
           </table>
         </div>
       <% } else { %>
-        <p class="text-gray-500 dark:text-gray-300 italic">No issued months found for this supplier.</p>
+        <p class="text-gray-500 dark:text-gray-400 italic">No issued months found for this supplier.</p>
       <% } %>
+    </div>
     </div>
   <% } %>
 
   <% if (basePath === 'supplier' && Array.isArray(item.purchases)) { %>
-    <div class="mt-8">
-      <h2 class="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">Purchases</h2>
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+      <div class="p-6 sm:p-8">
+      <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100"><i class="bi bi-receipt mr-2 text-green-500"></i>Purchases</h2>
       <% if (item.purchases.length > 0) { %>
-        <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
@@ -370,8 +390,9 @@
           </table>
         </div>
       <% } else { %>
-        <p class="text-gray-500 dark:text-gray-300 italic">No purchases found for this supplier.</p>
+        <p class="text-gray-500 dark:text-gray-400 italic">No purchases found for this supplier.</p>
       <% } %>
+    </div>
     </div>
   <% } %>
 
@@ -379,24 +400,26 @@
   <% if (basePath === 'vehicle') { %>
 
     <%# ── Quick actions bar ──────────────────────────────────────────── %>
-    <div class="mt-8 flex flex-wrap gap-2 print:hidden">
-      <a href="/vehicleFuelLog/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1.5 text-sm font-medium">
+    <div class="flex flex-wrap gap-2 print:hidden">
+      <a href="/vehicleFuelLog/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
         &#9981; Log Fuel
       </a>
-      <a href="/vehicleMileageLog/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1.5 text-sm font-medium">
+      <a href="/vehicleMileageLog/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
         &#128663; Log Trip
       </a>
-      <a href="/vehicleService/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white rounded px-3 py-1.5 text-sm font-medium">
+      <a href="/vehicleService/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
         &#128295; Log Service
       </a>
     </div>
 
     <%# ── Service History ────────────────────────────────────────────── %>
     <% if (Array.isArray(item.serviceHistory)) { %>
-      <div class="mt-8">
-        <h2 class="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">Service History</h2>
+      <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+        <div class="h-1.5 bg-gradient-to-r from-purple-500 to-purple-400"></div>
+        <div class="p-6 sm:p-8">
+        <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100"><i class="bi bi-wrench-adjustable mr-2 text-purple-500"></i>Service History</h2>
         <% if (item.serviceHistory.length > 0) { %>
-          <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+          <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead class="bg-gray-50 dark:bg-gray-800">
                 <tr>
@@ -416,7 +439,7 @@
                     <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= s.serviceType %></td>
                     <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= s.provider || '—' %></td>
                     <td class="px-4 py-2">
-                      <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium
+                      <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold
                         <%= s.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' :
                            s.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' :
                            s.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400' :
@@ -438,17 +461,20 @@
             </table>
           </div>
         <% } else { %>
-          <p class="text-gray-500 dark:text-gray-300 italic">No service records yet.</p>
+          <p class="text-gray-500 dark:text-gray-400 italic">No service records yet.</p>
         <% } %>
+      </div>
       </div>
     <% } %>
 
     <%# ── Fuel Logs ──────────────────────────────────────────────────── %>
     <% if (Array.isArray(item.fuelLogs)) { %>
-      <div class="mt-8">
-        <h2 class="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">Fuel Logs</h2>
+      <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+        <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+        <div class="p-6 sm:p-8">
+        <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100"><i class="bi bi-fuel-pump mr-2 text-green-500"></i>Fuel Logs</h2>
         <% if (item.fuelLogs.length > 0) { %>
-          <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+          <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead class="bg-gray-50 dark:bg-gray-800">
                 <tr>
@@ -480,17 +506,20 @@
             </table>
           </div>
         <% } else { %>
-          <p class="text-gray-500 dark:text-gray-300 italic">No fuel logs yet.</p>
+          <p class="text-gray-500 dark:text-gray-400 italic">No fuel logs yet.</p>
         <% } %>
+      </div>
       </div>
     <% } %>
 
     <%# ── Mileage Logs ───────────────────────────────────────────────── %>
     <% if (Array.isArray(item.mileageLogs)) { %>
-      <div class="mt-8">
-        <h2 class="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">Mileage / Trip Logs</h2>
+      <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+        <div class="h-1.5 bg-gradient-to-r from-blue-500 to-blue-400"></div>
+        <div class="p-6 sm:p-8">
+        <h2 class="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100"><i class="bi bi-speedometer2 mr-2 text-blue-500"></i>Mileage / Trip Logs</h2>
         <% if (item.mileageLogs.length > 0) { %>
-          <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+          <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead class="bg-gray-50 dark:bg-gray-800">
                 <tr>
@@ -521,8 +550,9 @@
             </table>
           </div>
         <% } else { %>
-          <p class="text-gray-500 dark:text-gray-300 italic">No mileage logs yet.</p>
+          <p class="text-gray-500 dark:text-gray-400 italic">No mileage logs yet.</p>
         <% } %>
+      </div>
       </div>
     <% } %>
 

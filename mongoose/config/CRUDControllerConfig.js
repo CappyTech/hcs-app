@@ -157,6 +157,10 @@ module.exports = {
       email: value => /\S+@\S+\.\S+/.test(value),
       startDate: value => !isNaN(Date.parse(value))
     },
+    labelOverrides: {
+      ir35: 'IR35',
+      subcontractorSupplierId: 'Linked Supplier',
+    },
     middleware: {
       read: ['ensureRoles:admin,employee'],
       create: ['ensureRole:admin'],
@@ -339,7 +343,8 @@ module.exports = {
       name: value => typeof value === 'string' && value.length > 0,
     },
     xorGroups: [
-      ['employeeId', 'subcontractorId', 'clientId'],
+      ['employeeId', 'clientId'],
+      ['subcontractorId', 'clientId'],
     ],
     middleware: {
       read: ['ensureRole:admin'],

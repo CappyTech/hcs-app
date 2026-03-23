@@ -1,66 +1,75 @@
-<div class="p-6 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl text-center shadow">
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
   <% if (isAuthenticated) { %>
-    <!-- Authenticated Welcome -->
-    <h1 class="text-3xl font-bold">Welcome, <%= firstName %>.</h1>
-    <p class="text-lg text-gray-600 dark:text-gray-300 mt-2">
-      Role: <strong><%= role.charAt(0).toUpperCase() + role.slice(1) %></strong>
-    </p>
+    <!-- Authenticated Welcome Card -->
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+      <div class="p-6 sm:p-8 text-center">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Welcome, <%= firstName %>.</h1>
+        <p class="text-lg text-gray-500 dark:text-gray-400 mt-2">
+          Role: <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"><i class="bi bi-person-check"></i> <%= role.charAt(0).toUpperCase() + role.slice(1) %></span>
+        </p>
+      </div>
+    </div>
+
     <% if (nextHoliday) { %>
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-xl shadow mb-6 p-6 text-center max-w-xl mx-auto">
-        <h2 class="text-1xl font-semibold mb-2">Next holiday 
-          <%= nextHoliday.division === 'england-and-wales' ? 'for England and Wales' : '' %>
-          <%= nextHoliday.division === 'scotland' ? 'for Scotland' : '' %>
-          <%= nextHoliday.division === 'northern-ireland' ? 'for Northern Ireland' : '' %></h2>
-        <p class="text-lg text-gray-700 dark:text-gray-300 mb-1">
-          <strong><%= nextHoliday.reason %></strong>
-        </p>
-        <p class="text-xl font-semibold mb-6">
-          <span class="font-light block"></span>
-          <% if (nextHoliday.startDate === nextHoliday.endDate) { %>
-            <span class="text-blue-600"><%= slimDateTime(nextHoliday.startDate, ['displayFormat']) %></span>
-          <% } else { %>
-            from <span class="text-blue-600"><%= slimDateTime(nextHoliday.startDate, ['displayFormat']) %></span><br />
-            to <span class="text-blue-600"><%= slimDateTime(nextHoliday.endDate, ['displayFormat']) %></span>
-          <% } %>
-        </p>
+      <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+        <div class="p-6 sm:p-8 text-center">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Next Holiday
+            <%= nextHoliday.division === 'england-and-wales' ? 'for England and Wales' : '' %>
+            <%= nextHoliday.division === 'scotland' ? 'for Scotland' : '' %>
+            <%= nextHoliday.division === 'northern-ireland' ? 'for Northern Ireland' : '' %></h2>
+          <p class="text-lg text-gray-700 dark:text-gray-300 mb-1">
+            <strong><%= nextHoliday.reason %></strong>
+          </p>
+          <p class="text-xl font-semibold">
+            <% if (nextHoliday.startDate === nextHoliday.endDate) { %>
+              <span class="text-green-600 dark:text-green-400"><%= slimDateTime(nextHoliday.startDate, ['displayFormat']) %></span>
+            <% } else { %>
+              from <span class="text-green-600 dark:text-green-400"><%= slimDateTime(nextHoliday.startDate, ['displayFormat']) %></span><br />
+              to <span class="text-green-600 dark:text-green-400"><%= slimDateTime(nextHoliday.endDate, ['displayFormat']) %></span>
+            <% } %>
+          </p>
+        </div>
       </div>
     <% } %>
   <% } else { %>
-    <!-- Public Jumbotron -->
-    <div class="container mx-auto py-8">
-      <div class="flex flex-col lg:flex-row items-center gap-8">
-        <div class="lg:w-1/2 text-left">
-          <h1 class="text-4xl font-bold">Heron Management System</h1>
-          <p class="text-lg text-gray-600 dark:text-gray-300 mt-2">
-            Developed by
-            <a href="https://heroncs.co.uk" class="text-green-700 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-medium">
-              Heron Constructive Solutions LTD
+    <!-- Public Hero -->
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+      <div class="p-8 sm:p-12">
+        <div class="flex flex-col lg:flex-row items-center gap-8">
+          <div class="lg:w-1/2 text-left">
+            <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100">Heron Management System</h1>
+            <p class="text-lg text-gray-500 dark:text-gray-400 mt-2">
+              Developed by
+              <a href="https://heroncs.co.uk" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium">
+                Heron Constructive Solutions LTD
+              </a>
+            </p>
+            <p class="text-base text-gray-600 dark:text-gray-300 mt-4">
+              Streamline subcontractor management, compliance, and documentation—built for the modern construction team.
+            </p>
+            <a href="/user/login"
+               class="inline-flex items-center gap-1.5 mt-6 px-6 py-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
+              <i class="bi bi-box-arrow-in-right"></i> Log In
             </a>
-          </p>
-          <p class="text-base mt-4">
-            Streamline subcontractor management, compliance, and documentation—built for the modern construction team.
-          </p>
-          <a href="/user/login"
-             class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">
-            Log In
-          </a>
-        </div>
-        <div class="lg:w-1/2 hidden lg:block">
-          <img src="https://placehold.co/600x300"
-               class="rounded shadow-lg" alt="Dashboard Screenshot">
+          </div>
+          <div class="lg:w-1/2 hidden lg:block">
+            <img src="https://placehold.co/600x300"
+                 class="rounded-xl shadow-lg" alt="Dashboard Screenshot">
+          </div>
         </div>
       </div>
     </div>
   <% } %>
-</div>
 
 <!-- Authenticated Dashboard Cards -->
 <% if (isAuthenticated) { %>
-  <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-xl shadow mb-6">
-    <div class="border-b dark:border-gray-700 px-4 py-2 font-bold text-lg">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4 font-bold text-lg text-gray-900 dark:text-gray-100">
       Your Tasks
     </div>
-    <div class="p-4 flex flex-wrap gap-4 justify-between">
+    <div class="p-6 flex flex-wrap gap-4 justify-between">
       <%- include('partials/taskCard', { title: 'Overdue Tasks', tasks: tasks.overdue, emptyMsg: 'No overdue tasks', showRecurrence: true }) %>
       <%- include('partials/taskCard', { title: 'Today', tasks: tasks.today, emptyMsg: 'No tasks today', showRecurrence: true }) %>
       <%- include('partials/taskCard', { title: 'This Week', tasks: tasks.week, emptyMsg: 'No tasks this week', showRecurrence: true }) %>
@@ -68,10 +77,10 @@
       <%- include('partials/taskCard', { title: 'General Tasks', tasks: tasks.general, emptyMsg: 'No general tasks', showRecurrence: true }) %>
       <%- include('partials/taskCard', { title: 'Recurring Tasks', tasks: tasks.recurring, emptyMsg: 'No recurring tasks', showRecurrence: true }) %>
     </div>
-    <div class="border-t dark:border-gray-700 px-4 py-3 text-center">
+    <div class="border-t border-gray-200 dark:border-gray-700 px-6 py-4 text-center">
       <a href="/tasks"
-         class="inline-block text-sm text-gray-600 dark:text-gray-300 border border-gray-400 dark:border-gray-500 rounded px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-        View All Tasks
+         class="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+        <i class="bi bi-list-task"></i> View All Tasks
       </a>
     </div>
   </div>
@@ -79,33 +88,36 @@
 
 <!-- Public Feature Highlights -->
 <% if (!isAuthenticated) { %>
-  <section class="container mx-auto text-center my-12">
-    <h2 class="text-2xl font-bold mb-6">Why Use Our System?</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-      <div>
-        <img src="https://placehold.co/200x150"
-             class="mx-auto rounded shadow mb-3" alt="Subcontractor Profiles">
-        <h5 class="text-lg font-semibold">Manage Subcontractors</h5>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Easily store and track contact, compliance, and employment details.
-        </p>
-      </div>
-      <div>
-        <img src="https://placehold.co/200x150"
-             class="mx-auto rounded shadow mb-3" alt="Purchases">
-        <h5 class="text-lg font-semibold">Upload Documents</h5>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Centralised uploads for job documents, expenses, and evidence.
-        </p>
-      </div>
-      <div>
-        <img src="https://placehold.co/200x150"
-             class="mx-auto rounded shadow mb-3" alt="CIS Reports">
-        <h5 class="text-lg font-semibold">Generate CIS Reports</h5>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Automatically build and export monthly or yearly HMRC-ready summaries.
-        </p>
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="p-8 sm:p-12 text-center">
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8">Why Use Our System?</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
+          <img src="https://placehold.co/200x150"
+               class="mx-auto rounded-lg shadow mb-4" alt="Subcontractor Profiles">
+          <h5 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Manage Subcontractors</h5>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            Easily store and track contact, compliance, and employment details.
+          </p>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
+          <img src="https://placehold.co/200x150"
+               class="mx-auto rounded-lg shadow mb-4" alt="Purchases">
+          <h5 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Documents</h5>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            Centralised uploads for job documents, expenses, and evidence.
+          </p>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
+          <img src="https://placehold.co/200x150"
+               class="mx-auto rounded-lg shadow mb-4" alt="CIS Reports">
+          <h5 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Generate CIS Reports</h5>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            Automatically build and export monthly or yearly HMRC-ready summaries.
+          </p>
+        </div>
       </div>
     </div>
-  </section>
+  </div>
 <% } %>
+</div>

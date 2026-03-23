@@ -254,7 +254,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
         try {
           let item = await Model.findOne({ uuid: req.params.uuid }).lean();
           if (!item)
-            return res.status(404).render(path.join("mongoose", "error"));
+            return res.status(404).render(path.join("tailwindcss", "error"), { title: '404 - Not Found', error: { title: '404 - Not Found', message: `${baseName} not found.` } });
 
           // ── Ownership check: non-admin own-only roles must own this record ──
           if (req.user && req.user.role !== "admin") {
@@ -268,14 +268,14 @@ for (const namespace of ["REST", "INTERNAL"]) {
             if (ownOnly) {
               const filter = await scopeQuery(req, modelName, "r");
               if (!filter)
-                return res.status(403).render(path.join("mongoose", "error"));
+                return res.status(403).render(path.join("tailwindcss", "error"), { title: '403 - Forbidden', error: { title: '403 - Forbidden', message: 'You do not have permission to view this record.' } });
               // Verify the fetched item matches ownership filter
               const ownerMatch = Object.entries(filter).every(([k, v]) => {
                 const itemVal = item[k];
                 return itemVal && String(itemVal) === String(v);
               });
               if (!ownerMatch)
-                return res.status(403).render(path.join("mongoose", "error"));
+                return res.status(403).render(path.join("tailwindcss", "error"), { title: '403 - Forbidden', error: { title: '403 - Forbidden', message: 'You do not have permission to view this record.' } });
             }
           }
 
@@ -756,7 +756,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
           try {
             const item = await Model.findOne({ uuid: req.params.uuid }).lean();
             if (!item)
-              return res.status(404).render(path.join("mongoose", "error"));
+              return res.status(404).render(path.join("tailwindcss", "error"), { title: '404 - Not Found', error: { title: '404 - Not Found', message: `${baseName} not found.` } });
 
             // Build schema and reference data for read-only field rendering
             const schema = extractSchema(Model, config);

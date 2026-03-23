@@ -70,7 +70,7 @@
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"><%= key %></label>
       <div class="overflow-x-auto">
       <table class="min-w-full text-xs text-left text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-700 table-auto">
-        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+        <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
             <% visibleCols.forEach(col => { %>
               <th class="px-3 py-2 border border-gray-200 dark:border-gray-700 text-xs font-medium"><%= col %></th>
@@ -138,7 +138,7 @@
       </div>
       <div class="overflow-x-auto <%= (key === 'PaymentLines' || key === 'LineItems') ? 'px-3 pb-3' : '' %>">
         <table class="min-w-full text-xs text-left text-gray-700 dark:text-gray-100 <%= (key === 'PaymentLines' || key === 'LineItems') ? '' : 'border border-gray-200 dark:border-gray-700' %> table-auto">
-        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+        <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
             <% visibleCols.forEach(col => { %>
               <th class="px-3 py-2 border border-gray-200 dark:border-gray-700 text-xs font-medium"><%= col %></th>
@@ -186,7 +186,7 @@
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"><%= field.label || key %></label>
       <div class="overflow-x-auto">
         <table class="min-w-full text-xs text-left text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-700 table-auto">
-          <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
             <tr>
               <% visibleCols.forEach(col => { %>
                 <th class="px-3 py-2 border border-gray-200 dark:border-gray-700 text-xs font-medium"><%= col %></th>
@@ -288,7 +288,7 @@
   %>
   <% if (shouldRender) { %>
     <div class="mb-2">
-      <div class="px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded">
+      <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
         <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
           <%- label %>
         </div>
@@ -317,7 +317,7 @@
 
     <% if (field.enum) { %>
       <!-- Enum -->
-      <select id="<%= key %>" name="<%= fieldName %>" class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+      <select id="<%= key %>" name="<%= fieldName %>" class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
         <option value="">-- Select --</option>
         <% field.enum.forEach(option => { %>
           <option value="<%= option %>" <%= selectedValue == option ? 'selected' : '' %>><%= option %></option>
@@ -332,7 +332,7 @@
           id="<%= key %>"
           name="<%= fieldName %><%= field.isArray ? '[]' : '' %>"
           <%= field.isArray ? 'multiple' : '' %>
-          class="flex-1 border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+          class="flex-1 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
         >
           <option value="" <%= !field.isArray ? '' : 'disabled' %>>-- Select --</option>
           <% referenceData[key].forEach(refItem => {
@@ -377,7 +377,7 @@
 
     <% } else if (field.type === 'Boolean') { %>
       <!-- Boolean -->
-      <select id="<%= key %>" name="<%= fieldName %>" class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+      <select id="<%= key %>" name="<%= fieldName %>" class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
         <option value="">-- Select --</option>
         <option value="true" <%= selectedValue === true || selectedValue === 'true' ? 'selected' : '' %>>True</option>
         <option value="false" <%= selectedValue === false || selectedValue === 'false' ? 'selected' : '' %>>False</option>
@@ -390,7 +390,7 @@
         id="<%= key %>"
         name="<%= fieldName %>"
         value="<%= selectedValue ? new Date(selectedValue).toISOString().split('T')[0] : '' %>"
-        class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+        class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
       >
 
     <% } else if (field.type === 'Decimal128' || field.type === 'Number') { %>
@@ -416,7 +416,7 @@
           <%= numMax ? `max="${numMax}"` : '' %>
           step="<%= numStep %>"
           placeholder="<%= isCurrency ? '0.00' : isHours ? '0' : '' %>"
-          class="w-full border rounded <%= isCurrency ? 'pl-7' : 'px-3' %> py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+          class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 <%= isCurrency ? 'pl-7' : 'px-3' %> py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
         >
       </div>
 
@@ -428,7 +428,7 @@
         name="<%= fieldName %>"
         value="<%= selectedValue || '' %>"
         placeholder="<%= field.default ? `Default: ${field.default}` : '' %>"
-        class="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+        class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
       >
     <% } %>
   </div>

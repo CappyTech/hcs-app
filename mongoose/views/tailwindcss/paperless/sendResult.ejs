@@ -2,7 +2,7 @@
 <h1 class="text-2xl font-semibold mt-2 mb-4"><%= title %></h1>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow">
+  <div class="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg">
     <h2 class="text-lg font-semibold mb-2">Result</h2>
     <dl class="text-sm space-y-1">
       <div class="flex justify-between"><dt class="text-gray-500">Mode</dt><dd><%= result.mode || '-' %></dd></div>
@@ -15,20 +15,20 @@
       <div class="mt-3 p-3 rounded <%= result.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800' %>"><%= result.message %></div>
     <% } %>
     <div class="mt-4 flex gap-2">
-      <a href="/paperless/ocr/<%= paperlessId %>/draft" class="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-800 text-white text-sm">Back to draft</a>
+      <a href="/paperless/ocr/<%= paperlessId %>/draft" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium transition shadow-sm">Back to draft</a>
       <% const kfNumber = result.response && (result.response.Number != null) ? result.response.Number : null; %>
       <% if (kfNumber != null) { %>
-        <a href="https://app.kashflow.com/#purchases/<%= kfNumber %>" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-md bg-green-700 hover:bg-green-800 text-white text-sm">Open in KashFlow</a>
+        <a href="https://app.kashflow.com/#purchases/<%= kfNumber %>" target="_blank" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm">Open in KashFlow</a>
       <% } %>
     </div>
   </div>
 
-  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow">
+  <div class="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg">
     <h2 class="text-lg font-semibold mb-2">KashFlow response</h2>
     <pre class="text-xs overflow-auto max-h-80 p-2 bg-gray-50 dark:bg-gray-900 rounded"><%= JSON.stringify(result.response || null, null, 2) %></pre>
   </div>
 
-  <div class="p-4 bg-white dark:bg-gray-800 rounded shadow md:col-span-2">
+  <div class="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg md:col-span-2">
     <details>
       <summary class="cursor-pointer font-semibold">Request payload</summary>
       <pre class="text-xs overflow-auto max-h-96 p-2 bg-gray-50 dark:bg-gray-900 rounded mt-2"><%= JSON.stringify(payload || null, null, 2) %></pre>

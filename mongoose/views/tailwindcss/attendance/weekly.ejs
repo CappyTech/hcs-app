@@ -1,19 +1,19 @@
-<div class="container mx-auto py-4 px-4">
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
 
   <!-- Week Navigation -->
-  <div class="flex justify-between items-center mb-4 print:hidden">
+  <div class="flex justify-between items-center mb-6 print:hidden">
     <a href="/<%= isManagementView ? 'weekly-management' : 'weekly' %>/<%= previousYear %>/<%= previousWeek %>"
-      class="inline-block bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2">
+      class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">
       &laquo; Previous Week
     </a>
     <div class="text-center flex-grow mx-4">
-      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-gray-100">Weekly Attendance</h1>
-      <p class="text-lg font-semibold text-gray-700 dark:text-gray-300 mt-1">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Weekly Attendance</h1>
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
         Tax Week <%= taxWeekNumber %> &mdash; <%= taxYear %>/<%= taxYear + 1 %>
       </p>
     </div>
     <a href="/<%= isManagementView ? 'weekly-management' : 'weekly' %>/<%= nextYear %>/<%= nextWeek %>"
-      class="inline-block bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2">
+      class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">
       Next Week &raquo;
     </a>
   </div>
@@ -31,19 +31,19 @@
     %>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <!-- Headcount -->
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-4 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
         <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Workforce</h4>
         <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><%= (employeeCount || 0) + (subcontractorCount || 0) %></p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= employeeCount || 0 %> employees &middot; <%= subcontractorCount || 0 %> subcontractors</p>
       </div>
       <!-- Attendance Rate -->
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-4 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
         <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Approval Rate</h4>
         <p class="text-3xl font-bold <%= approvalRate >= 90 ? 'text-green-600' : approvalRate >= 70 ? 'text-yellow-600' : 'text-red-600' %>"><%= approvalRate %>%</p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= approvedCount || 0 %> / <%= totalRecords %> records approved</p>
       </div>
       <!-- Pending Approvals -->
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-4 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
         <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Pending Approval</h4>
         <p class="text-3xl font-bold <%= (pendingCount || 0) > 0 ? 'text-amber-500' : 'text-green-600' %>"><%= pendingCount || 0 %></p>
         <% if ((rejectedCount || 0) > 0) { %>
@@ -53,12 +53,12 @@
         <% } %>
       </div>
       <!-- Type Breakdown -->
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-4 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
         <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Activity Breakdown</h4>
         <div class="flex flex-wrap justify-center gap-2 mt-2">
           <% const typeColors = { work: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', training: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', sick: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', holiday: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400', off: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', leave: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', Purchase: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400' }; %>
           <% Object.entries(tb).filter(([t]) => t !== 'unknown').forEach(([type, count]) => { %>
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= typeColors[type] || 'bg-gray-100 text-gray-700' %>">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold <%= typeColors[type] || 'bg-gray-100 text-gray-700' %>">
               <%= type %> <span class="ml-1 font-bold"><%= count %></span>
             </span>
           <% }) %>
@@ -68,19 +68,19 @@
   <% } else { %>
     <!-- Admin stats (original) -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-6 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center">
         <h4 class="text-lg font-semibold mb-2">Total Employee Payment</h4>
         <p class="text-4xl font-bold">&pound;<%= totalEmployeePay != null ? totalEmployeePay.toFixed(2) : '0.00' %> <small class="text-base font-normal">gross</small></p>
       </div>
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-6 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center">
         <h4 class="text-lg font-semibold mb-2">Total Subcontractor Payment</h4>
         <p class="text-4xl font-bold">&pound;<%= totalSubcontractorPay != null ? totalSubcontractorPay.toFixed(2) : '0.00' %> <small class="text-base font-normal">net</small></p>
       </div>
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-6 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center">
         <h4 class="text-lg font-semibold mb-2">Total Employee Hours Worked</h4>
         <p class="text-4xl font-bold"><%= totalEmployeeHours || '0' %> hours</p>
       </div>
-      <div class="bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg shadow p-6 text-center">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center">
         <h4 class="text-lg font-semibold mb-2">Total Subcontractor Days Worked</h4>
         <p class="text-4xl font-bold"><%= totalSubcontractorDays || '0' %> days</p>
       </div>
@@ -89,7 +89,7 @@
 
   <!-- Employee Table -->
   <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Employees</h3>
-  <div class="overflow-x-auto mb-5">
+  <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
     <%- include('../partials/weeklyTable', {
       entries: employeeEntries,
       daysOfWeek,
@@ -105,7 +105,7 @@
 
   <!-- Subcontractor Table -->
   <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Subcontractors</h3>
-  <div class="overflow-x-auto mb-5">
+  <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
     <%- include('../partials/weeklyTable', {
       entries: subcontractorEntries,
       daysOfWeek,
@@ -130,7 +130,7 @@
           <%- include('../partials/csrfHidden.ejs') %>
           <input type="hidden" name="weekStart" value="<%= startDate %>">
           <input type="hidden" name="weekEnd" value="<%= endDate %>">
-          <button type="submit" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2 text-sm font-medium transition"
+          <button type="submit" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm"
                   onclick="return confirm('Approve all <%= pendingCount %> pending attendance records for this week?')">
             <i class="bi bi-check-all"></i> Approve All (<%= pendingCount %>)
           </button>
@@ -149,7 +149,7 @@
         (<%= (projectStatusFilter && projectStatusFilter.length ? projectStatusFilter.join(', ') : 'All') %>)
       </span>
     </h3>
-    <ul class="divide-y divide-gray-200 dark:divide-gray-700 mb-5 border dark:border-gray-700 rounded-lg overflow-hidden">
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700 mb-5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
       <% activeProjects.forEach(project => { %>
         <li class="flex justify-between items-center px-4 py-3 bg-white dark:bg-gray-900">
           <a href="/project/read/<%= project.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">

@@ -58,6 +58,22 @@ employeeSchema.add({
   definedRate: { type: String, enum: ['hourly','daily', 'weekly', 'monthly', 'yearly'], default: 'weekly' }
 });
 
+// IR35 off-payroll: employee is also a CIS subcontractor
+employeeSchema.add({
+  ir35: { type: Boolean, default: false },
+  subcontractorSupplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier', default: null }
+});
+
+employeeSchema.pre('validate', function (next) {
+  if (this.ir35 && !this.subcontractorSupplierId) {
+    return next(new Error('IR35 employees must be linked to a supplier record (subcontractorSupplierId).'));
+  }
+  if (!this.ir35 && this.subcontractorSupplierId) {
+    return next(new Error('subcontractorSupplierId can only be set when ir35 is true.'));
+  }
+  next();
+});
+
 // Helper: convert Decimal128 to Number safely
 function d2n(v) {
   if (v == null) return null;

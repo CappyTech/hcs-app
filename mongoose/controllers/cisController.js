@@ -365,7 +365,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         const summary = {
           year: specifiedYear,
           month: specifiedMonth,
-          suppliersConsidered: suppliers.length,
+          suppliersConsidered: subbieSuppliers.length,
           purchasesConsidered: filteredPurchases.length,
           topNominalCodes: codesSorted.slice(0, 20),
           topNominalNames: namesSorted.slice(0, 20),
@@ -483,7 +483,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
             paidPurchases.map((p) => p?.SupplierId).filter((x) => x != null),
           ),
         ].slice(0, 10);
-        const supplierProbe = (suppliers || [])
+        const supplierProbe = (subbieSuppliers || [])
           .filter((s) => ids.map(String).includes(String(s.Id)))
           .map((s) => ({
             Id: s.Id,
@@ -496,7 +496,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         );
       }
       logger.info(
-        `[CIS] query: purchasesRaw=${purchasesRaw.length}, notDeleted=${purchases.length}, paid=${paidPurchases.length}, suppliers=${suppliers.length}, filtered=${filteredPurchases.length}, includeAllSuppliers=${includeAllSuppliers}`,
+        `[CIS] query: purchasesRaw=${purchasesRaw.length}, notDeleted=${purchases.length}, paid=${paidPurchases.length}, suppliers=${subbieSuppliers.length}, filtered=${filteredPurchases.length}, includeAllSuppliers=${includeAllSuppliers}`,
       );
     } catch (_) {}
 
@@ -570,7 +570,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
                 purchasesAfterDeleteFilter: purchases.length,
                 paidPurchasesCount: paidPurchases.length,
                 supplierIDsFromPaid: supplierIDs.slice(0, 20),
-                suppliersFoundCount: suppliers.length,
+                suppliersFoundCount: subbieSuppliers.length,
                 subbieCount: subbieSuppliers.length,
                 filteredPurchasesCount: filteredPurchases.length,
                 includeAllSuppliers,
@@ -674,7 +674,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
                     .map((pl) => pl?.PayDate || pl?.Date || null),
                   deletedAt: p.deletedAt || p.DeletedAt || null,
                 })),
-                sampleSuppliers: suppliers.slice(0, 10).map((s) => ({
+                sampleSuppliers: subbieSuppliers.slice(0, 10).map((s) => ({
                   Id: s.Id,
                   Name: s.Name,
                   // OLD: Subcontractor: s.Subcontractor, IsSubcontractor: s.IsSubcontractor, CISRate: s.CISRate,

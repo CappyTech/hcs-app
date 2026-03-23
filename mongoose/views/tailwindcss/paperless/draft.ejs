@@ -1,8 +1,8 @@
-<div class="w-full my-10 max-w-6xl mx-auto">
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
 	<a href="/paperless/ocr/<%= paperlessId %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Back to document</a>
 	<h1 class="text-2xl font-bold mt-2 mb-6"><%= title %></h1>
 	<div class="m-2 flex flex-wrap items-center gap-3">
-		<a href="https://docs.heroncs.co.uk/documents/<%= paperlessId %>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium bg-slate-100 text-slate-700 hover:bg-green-50 hover:text-green-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-green-900/30 focus:outline-none focus:ring-2 focus:ring-green-600">
+		<a href="https://docs.heroncs.co.uk/documents/<%= paperlessId %>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-green-900/30 focus:outline-none focus:ring-2 focus:ring-green-600">
 			<i class="bi bi-box-arrow-up-right text-xs"></i>
 			<span>View Document</span>
 		</a>
@@ -52,7 +52,7 @@
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
 		<!-- Left: Purchase Invoice -->
 		<div class="space-y-4 min-w-0">
-			<div class="border rounded-xl p-4">
+			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<h2 class="font-semibold mb-2">Purchase Invoice</h2>
 				<div class="text-sm space-y-1">
 					<div><span class="font-medium">Supplier Name:</span> <span id="supplier-name-display"><%= draft.SupplierName || (selectedSupplier && selectedSupplier.Name) || '-' %></span></div>
@@ -76,7 +76,7 @@
 				</div>
 			</div>
 
-			<div class="border rounded-xl p-4">
+			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<h2 class="font-semibold mb-2">Amounts</h2>
 				<div class="text-sm space-y-1">
 					<div><span class="font-medium">Net:</span> <%= (draft.NetAmount ?? '-') %>
@@ -104,7 +104,7 @@
 				</div>
 			</div>
 
-			<div class="border rounded-xl p-4">
+			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<h2 class="font-semibold mb-2 flex items-center gap-2">Line Items
 					<% if (usedCustomFieldLines) { %>
 						<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">Source: Custom fields</span>
@@ -180,7 +180,7 @@
 										<i title="Row consistency" class="bi <%= __rowOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
 									</td>
 									<td class="p-2 nominal-cell" data-explicit="<%= (typeof li.NominalCode === 'number') ? 'true' : 'false' %>">
-										<select class="nominal-select w-full rounded border px-1 py-1 bg-white text-gray-900 border-gray-300 focus:ring-green-600 focus:border-green-600 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:focus:ring-green-500 dark:focus:border-green-500">
+										<select class="nominal-select w-full rounded-xl border-gray-200 dark:border-gray-700 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:focus:ring-green-500 dark:focus:border-green-500">
 											<option value="">— Choose nominal —</option>
 											<%
 											  const __codes = Object.keys(nominalMap || {}).sort((a,b)=>Number(a)-Number(b));
@@ -226,7 +226,7 @@
 				</div>
 			</div>
 
-			<div class="border rounded-xl p-4">
+			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<h2 class="font-semibold mb-2">Notes</h2>
 				<div class="text-sm whitespace-pre-wrap">This purchase invoice was created automatically, with manual oversight and checks.</div>
 			</div>
@@ -236,11 +236,11 @@
 				<!-- Hidden supplier value populated by the selector on the right -->
 				<input type="hidden" id="supplier-uuid" name="supplierUuid" value="<%= selectedSupplier ? selectedSupplier.uuid : '' %>">
 				<label class="inline-flex items-center gap-2 text-sm">
-					<input type="checkbox" name="dryRun" value="true" checked class="rounded border-slate-300 accent-green-600 dark:border-gray-600 dark:bg-gray-800">
+					<input type="checkbox" name="dryRun" value="true" checked class="rounded border-gray-200 dark:border-gray-700 accent-green-600 dark:bg-gray-800">
 					Dry run (don’t send – just log)
 				</label>
 				<div>
-						<button id="send-button" type="submit" class="inline-flex items-center px-4 py-2 rounded-md text-white disabled:opacity-50 disabled:cursor-not-allowed bg-green-700 hover:bg-green-800" <%= canSend ? '' : 'disabled' %>>
+						<button id="send-button" type="submit" class="inline-flex items-center px-4 py-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700 shadow-sm font-medium transition" <%= canSend ? '' : 'disabled' %>>
 						Send to KashFlow (Create a Purchase Invoice)
 					</button>
 						<% if (!canSend) { %>
@@ -270,7 +270,7 @@
 
 		<!-- Right: Required info and setup -->
 		<div class="space-y-4 w-full lg:w-[360px] lg:max-w-[420px] lg:justify-self-end">
-			<div class="border rounded-xl p-4">
+			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<h2 class="font-semibold mb-2">Before sending</h2>
 				<ul class="text-sm space-y-2">
 					<li class="flex items-start gap-2">
@@ -304,16 +304,16 @@
 				</ul>
 			</div>
 
-			<div class="border rounded-xl p-4">
+			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<h2 class="font-semibold mb-2">Supplier</h2>
 				<div class="text-sm space-y-2">
 					<div>
 						<label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Search supplier</label>
-						<input id="supplier-search" type="text" placeholder="Type name or code..." class="w-full rounded border px-2 py-1 bg-white text-gray-900 border-gray-300 placeholder-gray-400 focus:ring-green-600 focus:border-green-600 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-green-500 dark:focus:border-green-500" />
+						<input id="supplier-search" type="text" placeholder="Type name or code..." class="w-full rounded-xl border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:focus:ring-green-500 dark:focus:border-green-500" />
 					</div>
 					<div>
 						<label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Select supplier</label>
-						<select id="supplier-select" class="w-full rounded border px-2 py-1 bg-white text-gray-900 border-gray-300 focus:ring-green-600 focus:border-green-600 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:focus:ring-green-500 dark:focus:border-green-500">
+						<select id="supplier-select" class="w-full rounded-xl border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:focus:ring-green-500 dark:focus:border-green-500">
 							<option value="">— Not selected —</option>
 							<% (suppliers || []).forEach(s => { %>
 								<option value="<%= s.uuid %>" data-name="<%= s.Name || '' %>" data-code="<%= s.Code || '' %>" data-default-nominal="<%= (s.DefaultNominalCode!=null && s.DefaultNominalCode!=='') ? s.DefaultNominalCode : '' %>" <%= (selectedSupplier && selectedSupplier.uuid===s.uuid)?'selected':'' %>>
@@ -327,7 +327,7 @@
 				</div>
 			</div>
 
-			<details class="border rounded-xl p-4">
+			<details class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<summary class="cursor-pointer font-semibold">Legend & troubleshooting</summary>
 				<div class="mt-2 text-sm space-y-4">
 					<div>
@@ -384,12 +384,12 @@
 				</div>
 			</details>
 
-			<details class="border rounded-xl p-4">
+			<details class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<summary class="cursor-pointer font-semibold">KashFlow payload (debug)</summary>
 				<pre class="mt-2 text-xs bg-neutral-50 dark:bg-neutral-900 p-3 rounded overflow-auto"><%= JSON.stringify(payloadPreview || { error: 'payload build failed' }, null, 2) %></pre>
 			</details>
 
-			<details class="border rounded-xl p-4">
+			<details class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<summary class="cursor-pointer font-semibold">Parsed line items (debug)</summary>
 				<div class="mt-2 grid md:grid-cols-2 gap-3">
 					<div>
@@ -403,7 +403,7 @@
 				</div>
 			</details>
 
-			<details class="border rounded-xl p-4">
+			<details class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<summary class="cursor-pointer font-semibold">Raw draft (debug)</summary>
 				<pre class="mt-2 text-xs bg-neutral-50 dark:bg-neutral-900 p-3 rounded overflow-auto"><%= JSON.stringify(draft, null, 2) %></pre>
 			</details>

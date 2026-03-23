@@ -84,10 +84,10 @@ userSchema.pre('save', async function (next) {
         this.password = await bcrypt.hash(this.password, 10);
     }
 
-    // Ensure only one of the foreign keys is set
-    const count = [this.subcontractorId, this.clientId, this.employeeId].filter(Boolean).length;
-    if (count > 1) {
-        return next(new Error('User can only be linked to one of subcontractor, client, or employee.'));
+    // clientId is mutually exclusive with employeeId/subcontractorId.
+    // employeeId + subcontractorId may coexist (IR35 off-payroll workers).
+    if (this.clientId && (this.employeeId || this.subcontractorId)) {
+        return next(new Error('A client user cannot also be linked as an employee or subcontractor.'));
     }
 
     next();

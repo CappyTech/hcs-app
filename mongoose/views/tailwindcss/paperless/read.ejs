@@ -1,9 +1,9 @@
-<div class="w-full my-10">
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
   <a href="/paperless/ocr" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Back to list</a>
   <h1 class="text-2xl font-bold mt-2 mb-4"><%= title %></h1>
 
   <div class="grid md:grid-cols-2 gap-4">
-    <div class="border rounded-xl p-4">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
       <h2 class="font-semibold mb-2">Document</h2>
       <div class="text-sm space-y-1">
         <div><span class="font-medium">Paperless ID:</span> #<%= doc.paperlessId %></div>
@@ -32,7 +32,7 @@
         <% } %>
       </div>
       <div class="mt-4">
-        <a href="/paperless/ocr/<%= doc.paperlessId %>/draft" class="inline-flex items-center px-3 py-1.5 rounded-md bg-green-700 hover:bg-green-800 text-white text-sm">
+        <a href="/paperless/ocr/<%= doc.paperlessId %>/draft" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm">
           Open Purchase Draft
         </a>
         <div class="m-2 flex flex-wrap items-center gap-3">
@@ -44,7 +44,7 @@
       </div>
     </div>
 
-    <div class="border rounded-xl p-4">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
       <h2 class="font-semibold mb-2">Ingest</h2>
       <% if (ingest) { %>
         <div class="text-sm space-y-1">
@@ -62,12 +62,12 @@
     </div>
   </div>
 
-  <div class="border rounded-xl p-4 mt-4">
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4 mt-4">
     <h2 class="font-semibold mb-2">OCR Text</h2>
     <pre class="whitespace-pre-wrap text-sm max-h-[60vh] overflow-auto p-3 bg-gray-50 dark:bg-gray-900 rounded-md"><%= (doc.ocrText||'').trim() %></pre>
   </div>
 
-  <div class="border rounded-xl p-4 mt-4">
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4 mt-4">
     <h2 class="font-semibold mb-2">Custom Fields</h2>
     <% const _cfs = Array.isArray(doc.customFields) ? doc.customFields : []; %>
     <% if (_cfs.length > 0) { %>

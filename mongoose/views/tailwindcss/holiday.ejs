@@ -1,8 +1,10 @@
 <%- include('./partials/successAlert.ejs') %>
 <%- include('./partials/errorAlert.ejs') %>
 
-<div class="container mx-auto px-4 mt-20 text-center">
-  <div class="border-4 border-hcs-green rounded-3xl p-10 shadow-lg max-w-3xl mx-auto">
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-10 text-center">
     <h1 class="text-4xl font-extrabold text-hcs-green mb-8 flex items-center justify-center gap-3">
       <i class="bi bi-calendar-x"></i>
       <% if (isAuthenticated) { %>
@@ -41,13 +43,14 @@
     </p>
 
     <% if (isAuthenticated) { %>
-      <button id="dismissHolidayBtn" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">Dismiss Holiday Notice</button>
+      <button id="dismissHolidayBtn" class="inline-flex items-center gap-1.5 bg-green-600 text-white text-lg px-6 py-3 rounded-lg mt-4 hover:bg-green-700 transition shadow-sm font-medium">Dismiss Holiday Notice</button>
     <% } else { %>
-      <a href="/user/login" class="inline-block bg-green-700 text-white text-lg px-6 py-3 rounded mt-4 hover:bg-green-800 transition">
+      <a href="/user/login" class="inline-flex items-center gap-1.5 bg-green-600 text-white text-lg px-6 py-3 rounded-lg mt-4 hover:bg-green-700 transition shadow-sm font-medium">
         Log In
       </a>
     <% } %>
 
+  </div>
   </div>
 </div>
 

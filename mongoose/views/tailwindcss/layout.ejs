@@ -32,7 +32,7 @@
   <style>
     /* Base background to avoid white flash before Tailwind loads */
     html { background-color: #f9fafb; }
-    html.dark { background-color: #374151; }
+    html.dark { background-color: #111827; }
 
     /* Global, consistent scrollbars (light and dark) */
     /* Firefox */
@@ -75,117 +75,117 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 
-<body class="text-gray-900 dark:bg-gray-700 dark:text-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
 
   <% if (isAuthenticated) { %>
     <!-- Top Nav -->
-    <nav class="fixed top-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50 print:hidden">
-      <div class="flex justify-around text-center py-2">
+    <nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden">
+      <div class="max-w-7xl mx-auto flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 overflow-x-auto">
         <% if (canDept('construction-industry-scheme')) { %>
-        <a href="/construction-industry-scheme" class="text-sm hover:text-green-600">
-          <i class="bi bi-building fs-5"></i><br>
-          <small>Construction Industry Scheme</small>
+        <a href="/construction-industry-scheme" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-building text-base"></i>
+          <span class="hidden sm:inline">CIS</span>
         </a>
         <% } %>
         <% if (canDept('management')) { %>
-        <a href="/management" class="text-sm hover:text-green-600">
-          <i class="bi bi-folder2-open fs-5"></i><br>
-          <small>Management</small>
+        <a href="/management" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-folder2-open text-base"></i>
+          <span class="hidden sm:inline">Management</span>
         </a>
         <% } %>
         <% if (canDept('payroll')) { %>
-        <a href="/payroll" class="text-sm hover:text-green-600">
-          <i class="bi bi-cash-coin fs-5"></i><br>
-          <small>Payroll</small>
+        <a href="/payroll" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-cash-coin text-base"></i>
+          <span class="hidden sm:inline">Payroll</span>
         </a>
         <% } %>
         <% if (canDept('human-resources')) { %>
-          <a href="/human-resources" class="text-sm hover:text-green-600">
-            <i class="bi bi-people fs-5"></i><br>
-            <small>Human Resources</small>
-          </a>
+        <a href="/human-resources" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-people text-base"></i>
+          <span class="hidden sm:inline">HR</span>
+        </a>
         <% } %>
         <% if (canDept('paperless')) { %>
-          <a href="/paperless" class="text-sm hover:text-green-600">
-            <i class="bi bi-file-earmark-text fs-5"></i><br>
-            <small>Documents</small>
-          </a>
+        <a href="/paperless" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-file-earmark-text text-base"></i>
+          <span class="hidden sm:inline">Documents</span>
+        </a>
         <% } %>
         <% if (canDept('finance')) { %>
-          <a href="/finance" class="text-sm hover:text-green-600">
-            <i class="bi bi-wallet2 fs-5"></i><br>
-            <small>Finance</small>
-          </a>
+        <a href="/finance" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-wallet2 text-base"></i>
+          <span class="hidden sm:inline">Finance</span>
+        </a>
         <% } %>
         <% if (canDept('kashflow')) { %>
-            <a href="/kashflow" class="text-sm hover:text-green-600">
-              <i class="bi bi-graph-up fs-5"></i><br>
-              <small>Kashflow</small>
-            </a>
+        <a href="/kashflow" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-graph-up text-base"></i>
+          <span class="hidden sm:inline">KashFlow</span>
+        </a>
         <% } %>
         <% if (isAdmin) { %>
-            <a href="/create" class="text-sm text-green-600 hover:text-green-800">
-              <i class="bi bi-plus fs-5"></i><br>
-              <small>Create</small>
-            </a>
+        <a href="/create" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition font-medium">
+          <i class="bi bi-plus-circle text-base"></i>
+          <span class="hidden sm:inline">Create</span>
+        </a>
         <% } %>
         <% if (isEmployee || isSubcontractor) { %>
-            <a href="/attendance/submit" class="text-sm text-green-600 hover:text-green-800">
-              <i class="bi bi-calendar-check fs-5"></i><br>
-              <small>Submit Attendance</small>
-            </a>
-            <a href="/daily" class="text-sm hover:text-green-600">
-              <i class="bi bi-calendar-day fs-5"></i><br>
-              <small>My Attendance</small>
-            </a>
+        <a href="/attendance/submit" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition font-medium">
+          <i class="bi bi-calendar-check text-base"></i>
+          <span class="hidden sm:inline">Attendance</span>
+        </a>
+        <a href="/daily" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-calendar-day text-base"></i>
+          <span class="hidden sm:inline">My Days</span>
+        </a>
         <% } %>
       </div>
     </nav>
     <% } %>
 
-      <main id="main-content" class="flex-grow w-full pt-16 pb-16 px-4">
+      <main id="main-content" class="flex-grow w-full pt-16 pb-20 px-4 sm:px-6 lg:px-8">
         <%- include('./partials/successAlert.ejs') %>
         <%- include('./partials/errorAlert.ejs') %>
         <%- body %>
       </main>
-      <br><br>
+      <br>
       <% if (isAuthenticated) { %>
         <!-- Bottom Nav -->
-        <nav class="fixed bottom-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50 print:hidden">
-          <div class="flex justify-around text-center py-2">
-            <a id="theme-toggle" class="text-sm hover:text-green-600">
-              <i id="theme-icon" class="bi bi-moon-stars fs-5"></i><br>
-              <small>Theme</small>
-            </a>
-            <a href="/user/profile" class="text-sm hover:text-green-600">
-              <i class="bi bi-person fs-5"></i><br>
-              <small>Profile</small>
+        <nav class="fixed bottom-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 z-50 print:hidden">
+          <div class="max-w-7xl mx-auto flex items-center justify-around px-2 py-1.5">
+            <button id="theme-toggle" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition cursor-pointer">
+              <i id="theme-icon" class="bi bi-moon-stars text-base"></i>
+              <span>Theme</span>
+            </button>
+            <a href="/user/profile" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+              <i class="bi bi-person text-base"></i>
+              <span>Profile</span>
             </a>
             <% if (isAdmin) { %>
-            <a href="/logs" class="text-sm hover:text-green-600">
-              <i class="bi bi-journal-text fs-5"></i><br>
-              <small>Logs</small>
+            <a href="/logs" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+              <i class="bi bi-journal-text text-base"></i>
+              <span>Logs</span>
             </a>
             <% } %>
-            <a href="/user/account" class="text-sm hover:text-green-600">
-              <i class="bi bi-sliders fs-5"></i><br>
-              <small>Settings</small>
+            <a href="/user/account" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+              <i class="bi bi-sliders text-base"></i>
+              <span>Settings</span>
             </a>
-            <a href="/user/logout" class="text-sm text-red-500 hover:text-red-600">
-              <i class="bi bi-box-arrow-right fs-5"></i><br>
-              <small>Logout</small>
+            <a href="/user/logout" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+              <i class="bi bi-box-arrow-right text-base"></i>
+              <span>Logout</span>
             </a>
           </div>
           <%- include('./partials/footer.ejs') %>
         </nav>
         <% } else { %>
           <!-- Bottom Nav -->
-          <nav class="fixed bottom-0 w-full bg-gray-100 dark:bg-gray-800 shadow-sm z-50 print:hidden">
-            <div class="flex justify-around text-center py-2">
-              <a id="theme-toggle" class="text-sm hover:text-green-600">
-                <i id="theme-icon" class="bi bi-moon-stars fs-5"></i><br>
-                <small>Theme</small>
-              </a>
+          <nav class="fixed bottom-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 z-50 print:hidden">
+            <div class="max-w-7xl mx-auto flex items-center justify-center px-2 py-1.5">
+              <button id="theme-toggle" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition cursor-pointer">
+                <i id="theme-icon" class="bi bi-moon-stars text-base"></i>
+                <span>Theme</span>
+              </button>
             </div>
             <%- include('./partials/footer.ejs') %>
           </nav>

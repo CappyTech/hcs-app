@@ -1,15 +1,18 @@
 <!-- Navigation link to profile -->
-<div class="max-w-6xl mx-auto mb-4 px-4">
+<div class="max-w-6xl mx-auto mb-4 px-4 sm:px-6 lg:px-8 pt-6">
   <a href="/user/profile" class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline text-sm font-medium">
     <i class="bi bi-person-circle"></i> View Profile
   </a>
 </div>
 
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[600px]">
   <!-- LEFT: TOTP Section -->
-  <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg flex flex-col justify-between shadow">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden flex flex-col">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-6 sm:p-8 flex-1 flex flex-col justify-between">
     <div>
-      <h2 class="text-2xl font-semibold text-center mb-4">Two-Factor Authentication (TOTP)</h2>
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-4">Two-Factor Authentication (TOTP)</h2>
 
       <% if (!user.totpEnabled) { %>
         <p class="text-center text-gray-600 dark:text-gray-300 mb-4">Two-Factor Authentication is not enabled for your account.</p>
@@ -37,9 +40,9 @@
         <%- include('../partials/csrfHidden.ejs') %>
         <label for="totpToken" class="block font-medium mb-1">Enter the 6-digit authentication code:</label>
         <input type="text" name="totpToken" id="totpToken" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code"
-          class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 mb-3">
+          class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 mb-3">
         <div class="flex justify-center">
-          <button type="submit" class="w-full max-w-xs bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+          <button type="submit" class="w-full max-w-xs inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition shadow-sm">
             Verify & Enable 2FA
           </button>
         </div>
@@ -50,31 +53,34 @@
         <div class="mb-3">
           <label for="confirmPassword" class="block font-medium mb-1">Enter your password to confirm:</label>
           <input type="password" name="confirmPassword" id="confirmPassword" required
-            class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500">
+            class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500">
         </div>
         <div class="flex justify-center">
-          <button type="submit" class="w-full max-w-xs bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+          <button type="submit" class="w-full max-w-xs inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition shadow-sm"
             onclick="return confirm('Are you sure you want to disable Two-Factor Authentication?')">
             <i class="bi bi-shield-x"></i> Disable 2FA
           </button>
         </div>
       </form>
     <% } %>
+    </div>
   </div>
 
   <!-- RIGHT: Account Details + Change Password -->
   <div class="space-y-6">
     <!-- Account Details -->
-    <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
-      <h1 class="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">Account Details</h1>
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+      <div class="p-6 sm:p-8">
+      <h1 class="text-xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">Account Details</h1>
 
       <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username:</label>
-        <input type="text" readonly class="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white rounded" value="<%= user.username %>">
+        <input type="text" readonly class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value="<%= user.username %>">
       </div>
       <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email:</label>
-        <input type="text" readonly class="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white rounded" value="<%= user.email %>">
+        <input type="text" readonly class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value="<%= user.email %>">
       </div>
 
       <hr class="my-6 border-t-2 border-line">
@@ -82,108 +88,114 @@
       <form action="/user/account/settings" method="POST" class="space-y-4">
         <%- include('../partials/csrfHidden.ejs') %>
         <div>
-          <label for="username" class="block font-medium mb-1">New Username:</label>
-          <input type="text" name="newUsername" id="username" value="<%= user.username %>" required class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+          <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Username:</label>
+          <input type="text" name="newUsername" id="username" value="<%= user.username %>" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
         <div>
-          <label for="email" class="block font-medium mb-1">New Email:</label>
-          <input type="email" name="newEmail" id="email" value="<%= user.email %>" required class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+          <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Email:</label>
+          <input type="email" name="newEmail" id="email" value="<%= user.email %>" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
         <div class="flex justify-end gap-2 mt-2">
-          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+          <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition shadow-sm">
             Update Details
           </button>
         </div>
       </form>
+      </div>
     </div>
 
     <!-- Change Password -->
-    <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
-      <h1 class="text-2xl font-bold text-center mb-6">Change Password</h1>
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+      <div class="p-6 sm:p-8">
+      <h1 class="text-xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">Change Password</h1>
       <form action="/user/account/change-password" method="POST" class="space-y-4">
         <%- include('../partials/csrfHidden.ejs') %>
         <div>
           <label for="currentPassword" class="block font-medium mb-1">Current Password</label>
-          <input type="password" id="currentPassword" name="currentPassword" required class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+          <input type="password" id="currentPassword" name="currentPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
         <div>
-          <label for="newPassword" class="block font-medium mb-1">New Password</label>
-          <input type="password" id="newPassword" name="newPassword" required minlength="6" class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+          <label for="newPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
+          <input type="password" id="newPassword" name="newPassword" required minlength="6" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500">
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimum 6 characters.</p>
         </div>
         <div>
-          <label for="confirmNewPassword" class="block font-medium mb-1">Confirm New Password</label>
-          <input type="password" id="confirmNewPassword" name="confirmNewPassword" required minlength="6" class="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+          <label for="confirmNewPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
+          <input type="password" id="confirmNewPassword" name="confirmNewPassword" required minlength="6" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
         <div class="flex justify-end gap-2 mt-2">
-          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+          <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition shadow-sm">
             Update Password
           </button>
         </div>
       </form>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- Active Sessions -->
-<div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg mt-6">
-  <h1 class="text-2xl font-bold text-center mb-6">Active Sessions</h1>
+<div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden mt-6">
+  <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+  <div class="p-6 sm:p-8">
+  <h1 class="text-xl font-bold text-center text-gray-900 dark:text-gray-100 mb-6">Active Sessions</h1>
 
   <% if (sessions.length === 0) { %>
-    <div class="text-center text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-6 rounded shadow">
+    <div class="text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-6 rounded-xl">
       <p>No active sessions.</p>
     </div>
   <% } else { %>
-    <div class="overflow-auto">
-      <table class="min-w-full text-sm text-left border border-gray-300 dark:border-gray-700 rounded-lg">
-        <thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+    <div class="overflow-auto rounded-xl border border-gray-200 dark:border-gray-700">
+      <table class="min-w-full text-sm text-left">
+        <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
-            <th class="px-4 py-2">Username</th>
-            <th class="px-4 py-2">Email</th>
-            <th class="px-4 py-2">Role</th>
-            <th class="px-4 py-2">IP Address</th>
-            <th class="px-4 py-2">Browser</th>
-            <th class="px-4 py-2">Platform</th>
-            <th class="px-4 py-2">Login Time</th>
-            <th class="px-4 py-2">Last Activity</th>
-            <th class="px-4 py-2">Idle</th>
-            <th class="px-4 py-2">Session Expiration</th>
-            <th class="px-4 py-2">Secure</th>
-            <th class="px-4 py-2">Actions</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Username</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Email</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Role</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">IP Address</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Browser</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Platform</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Login Time</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Last Activity</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Idle</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Session Expiration</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Secure</th>
+            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Actions</th>
           </tr>
         </thead>
-        <tbody class="bg-white dark:bg-gray-800">
+        <tbody class="bg-white dark:bg-gray-900">
           <% sessions.forEach(session => { %>
-            <tr class="border-t border-gray-200 dark:border-gray-700 <%= session.isCurrent ? 'bg-green-50 dark:bg-green-900/20' : '' %>">
-              <td class="px-4 py-2 font-medium">
+            <tr class="border-t border-gray-100 dark:border-gray-800 <%= session.isCurrent ? 'bg-green-50 dark:bg-green-900/20' : '' %>">
+              <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100">
                 <%= session.username %>
                 <% if (session.isCurrent) { %>
-                  <span class="ml-1 inline-block text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">Current</span>
+                  <span class="ml-1 inline-flex items-center text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">Current</span>
                 <% } %>
               </td>
-              <td class="px-4 py-2"><%= session.email %></td>
-              <td class="px-4 py-2 capitalize"><%= session.role %></td>
-              <td class="px-4 py-2"><%= session.ip %></td>
-              <td class="px-4 py-2"><%= session.browser %></td>
-              <td class="px-4 py-2"><%= session.platform.replace(/['"]+/g, '') || 'Unknown' %></td>
-              <td class="px-4 py-2"><%= session.loginTime ? slimDateTime(session.loginTime, ['includeTime']) : (session.isCurrent ? 'Just now' : '—') %></td>
-              <td class="px-4 py-2"><%= session.lastActivity ? slimDateTime(session.lastActivity, ['includeTime']) : '—' %></td>
-              <td class="px-4 py-2"><%= session.idleFor %></td>
-              <td class="px-4 py-2">
+              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.email %></td>
+              <td class="px-4 py-2.5 capitalize text-gray-700 dark:text-gray-300"><%= session.role %></td>
+              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.ip %></td>
+              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.browser %></td>
+              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.platform.replace(/['"]+/g, '') || 'Unknown' %></td>
+              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.loginTime ? slimDateTime(session.loginTime, ['includeTime']) : (session.isCurrent ? 'Just now' : '—') %></td>
+              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.lastActivity ? slimDateTime(session.lastActivity, ['includeTime']) : '—' %></td>
+              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.idleFor %></td>
+              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">
                 <%= slimDateTime(session.expires, ['includeTime']) %><br>
                 <span class="text-xs text-gray-500 dark:text-gray-400">(<%= session.timeUntilExpiry %>)</span>
               </td>
-              <td class="px-4 py-2 font-medium <%= session.secure ? 'text-green-600' : 'text-red-600' %>">
+              <td class="px-4 py-2.5 font-medium <%= session.secure ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' %>">
                 <%= session.secure ? 'Yes' : 'No' %>
               </td>
-              <td class="px-4 py-2">
+              <td class="px-4 py-2.5">
                 <% if (session.isCurrent) { %>
                   <span class="text-xs text-gray-400 dark:text-gray-500 italic">In use</span>
                 <% } else { %>
                   <form action="/user/account/logout-session" method="POST">
                     <%- include('../partials/csrfHidden.ejs') %>
                     <input type="hidden" name="sessionId" value="<%= session.sessionId %>">
-                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm"
+                    <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 hover:bg-red-700 text-white transition shadow-sm"
                       onclick="return confirm('Log out this session?')">
                       Logout
                     </button>
@@ -196,4 +208,6 @@
       </table>
     </div>
   <% } %>
+  </div>
+</div>
 </div>
