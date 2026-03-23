@@ -3,20 +3,19 @@ const mdb = require("../services/mongooseDatabaseService");
 
 /**
  * GET /subcontractor/assign
- * Renders a form to pick a non-subcontractor supplier and assign them.
+ * Renders a form to pick a supplier and edit their CIS details.
  */
 exports.renderAssignForm = async (req, res, next) => {
   try {
-    // OLD: .find({ IsSubcontractor: { $ne: true } })
-    // NEW: non-subcontractors have WithholdingTaxRate null or -1 (not set)
+    // Show all suppliers so any can be edited — not just unassigned ones
     const suppliers = await mdb.REST.supplier
-      .find({ $or: [{ WithholdingTaxRate: null }, { WithholdingTaxRate: { $exists: false } }, { WithholdingTaxRate: -1 }] })
+      .find({})
       .sort({ Name: 1 })
-      .select("uuid Name Code")
+      .select("uuid Name Code WithholdingTaxRate")
       .lean();
 
     res.render(path.join("tailwindcss", "supplier", "assignSubcontractor"), {
-      title: "Assign Subcontractor",
+      title: "Edit CIS Details",
       suppliers,
     });
   } catch (error) {
@@ -26,7 +25,7 @@ exports.renderAssignForm = async (req, res, next) => {
 
 /**
  * POST /subcontractor/assign
- * Redirects to the change form for the selected supplier.
+ * Redirects to the CIS edit form for the selected supplier.
  */
 exports.assignSubcontractor = async (req, res, next) => {
   try {
@@ -60,7 +59,7 @@ exports.renderChangeSupplierForm = async (req, res, next) => {
       return res.redirect("/suppliers");
     }
     res.render(path.join("tailwindcss", "supplier", "changeSupplier"), {
-      title: "Change Supplier",
+      title: "Edit CIS Details",
       supplier,
     });
   } catch (error) {

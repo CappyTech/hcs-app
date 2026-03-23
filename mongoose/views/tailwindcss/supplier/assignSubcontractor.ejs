@@ -1,9 +1,9 @@
 <div class="container mx-auto mt-10 max-w-xl px-4">
-  <h2 class="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">Assign Supplier as Subcontractor</h2>
+  <h2 class="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">Edit CIS Details</h2>
 
   <% if (suppliers.length === 0) { %>
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-6 text-center">
-      <p class="text-gray-500 dark:text-gray-400 mb-4">All suppliers have already been assigned as subcontractors.</p>
+      <p class="text-gray-500 dark:text-gray-400 mb-4">No suppliers found.</p>
       <a href="/supplier" class="inline-block text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium">
         &larr; Back to Suppliers
       </a>
@@ -18,11 +18,13 @@
           class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-gray-800 dark:text-white">
           <option value="">-- Choose a supplier --</option>
           <% suppliers.forEach(function(s) { %>
-            <option value="<%= s.uuid %>"><%= s.Name %><% if (s.Code) { %> (<%= s.Code %>)<% } %></option>
+            <option value="<%= s.uuid %>">
+              <%= s.Name %><% if (s.Code) { %> (<%= s.Code %>)<% } %><% if (s.WithholdingTaxRate != null && s.WithholdingTaxRate >= 0) { %> — CIS <%= s.WithholdingTaxRate %>%<% } %>
+            </option>
           <% }); %>
         </select>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">
-          Only suppliers not yet assigned as subcontractors are shown.
+          Pick a supplier to edit their CIS withholding tax rate and references.
         </p>
       </div>
 

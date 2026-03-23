@@ -1,36 +1,22 @@
 <div class="container mx-auto mt-10 max-w-xl px-4">
-  <h2 class="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">Change <%= supplier.Name %> Details</h2>
+  <h2 class="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">Edit CIS Details — <%= supplier.Name %></h2>
   <form action="/supplier/change/<%= supplier.uuid %>" method="POST" novalidate class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
     <%- include('../partials/csrfHidden.ejs') %>
 
-    <!-- OLD: Subcontractor checkbox — no longer needed; WithholdingTaxRate >= 0 implies subcontractor -->
-    <!--
-    <div class="mb-6 flex items-start space-x-3">
-      <input type="checkbox" id="subcontractor" name="subcontractor"
-        class="mt-1 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-bg-green-600"
-        <%%= supplier.Subcontractor ? 'checked' : '' %>>
-      <label for="subcontractor" class="select-none text-gray-700 dark:text-gray-200">
-        Is this supplier a subcontractor under CIS?
-      </label>
-    </div>
-    -->
     <div class="mb-6 text-sm text-gray-500 dark:text-gray-300">
-      Subcontractors have a Withholding Tax Rate of 0%, 20%, or 30% based on HMRC verification. Set to -1 to remove subcontractor status.
+      Edit CIS withholding tax rate and HMRC references for this supplier. A valid Verification Number is required for a supplier to appear on CIS reports.
     </div>
 
     <!-- Withholding Tax Fields -->
     <div class="space-y-6">
       <div>
   <label for="withholdingTaxRate" class="block mb-1 font-medium text-gray-700 dark:text-gray-200">Withholding Tax Rate</label>
-  <%
-    const whtRateRaw = supplier.WithholdingTaxRate != null ? Number(supplier.WithholdingTaxRate) : -1;
-    const whtRate = whtRateRaw > 1 ? whtRateRaw / 100 : whtRateRaw;
-  %>
+  <% const whtRate = supplier.WithholdingTaxRate != null ? Number(supplier.WithholdingTaxRate) : -1; %>
   <select id="withholdingTaxRate" name="withholdingTaxRate" class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-gray-800 dark:text-white">
           <option value="-1" <%= whtRate < 0 || isNaN(whtRate) ? 'selected' : '' %>>Not a subcontractor</option>
           <option value="0" <%= whtRate === 0 ? 'selected' : '' %>>0% (Gross)</option>
-          <option value="20" <%= whtRate === 0.2 ? 'selected' : '' %>>20% (Standard)</option>
-          <option value="30" <%= whtRate === 0.3 ? 'selected' : '' %>>30% (Higher)</option>
+          <option value="20" <%= whtRate === 20 ? 'selected' : '' %>>20% (Standard)</option>
+          <option value="30" <%= whtRate === 30 ? 'selected' : '' %>>30% (Higher)</option>
         </select>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">
           0% = Gross payment status, 20% = standard rate, 30% = unverified subcontractor.

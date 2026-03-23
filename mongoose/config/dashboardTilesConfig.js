@@ -35,8 +35,8 @@ module.exports = {
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     AssignSubcontractors: {
-        title: 'Assign Subcontractors',
-        description: 'Add new subcontractors.',
+        title: 'Edit CIS Details',
+        description: 'Edit subcontractor CIS details.',
         link: '/subcontractor/assign',
         department: ['construction-industry-scheme'],
         buttonClass: 'bg-green-700 hover:bg-green-800'

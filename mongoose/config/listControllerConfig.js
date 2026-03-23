@@ -319,7 +319,7 @@ module.exports = {
     department: ['construction-industry-scheme'],
     deny: ['c', 'u', 'd'],
     headerActions: [
-      { label: 'Assign Subcontractor', href: '/subcontractor/assign', icon: 'bi bi-plus-circle', class: 'bg-green-600 hover:bg-green-700' },
+      { label: 'Edit CIS Details', href: '/subcontractor/assign', icon: 'bi bi-pencil-square', class: 'bg-green-600 hover:bg-green-700' },
     ],
     description: {
       manage: 'Manage subcontractors (suppliers with WithholdingTaxRate set).',
