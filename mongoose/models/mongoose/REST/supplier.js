@@ -39,6 +39,12 @@ const supplierSchema = new mongoose.Schema({
   // CISNumber: { type: String, default: null }
 }, { timestamps: true });
 
+// Speed up CIS subcontractor lookups ($elemMatch on verification number)
+supplierSchema.index({
+  'WithholdingTaxReferences.Name': 1,
+  'WithholdingTaxReferences.Value': 1
+});
+
 module.exports = {
   modelName: 'supplier',
   schema: supplierSchema

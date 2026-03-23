@@ -179,7 +179,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       (p) => inWindow(p.PaidDate) || hasPaymentLineInWindow(p),
     );
 
-    // Suppliers for those purchases (subcontractors with tolerant truthiness)
+    // Suppliers for those purchases — only those with a valid HMRC verification number
     // Normalize supplier IDs to numbers to avoid type-mismatch on lookup
     const supplierIDs = [
       ...new Set(
@@ -188,54 +188,27 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
           .filter((n) => Number.isFinite(n)),
       ),
     ];
-    const suppliers = await mdb.REST.supplier
-      .find({ Id: { $in: supplierIDs } })
-      .sort({ Name: 1 })
-      .lean();
-
-    // If some supplier IDs didn't resolve to supplier docs, log a small sample
-    if (supplierIDs.length > 0 && suppliers.length < supplierIDs.length) {
-      const resolved = new Set(suppliers.map((s) => Number(s.Id)));
-      const missing = supplierIDs
-        .filter((id) => !resolved.has(Number(id)))
-        .slice(0, 10);
-      logger.info(
-        `[CIS] supplier lookup: missing ${supplierIDs.length - suppliers.length}/${supplierIDs.length} supplier docs; sample missing IDs: ${missing.join(", ")}`,
-      );
-    }
-
-    // Build allowed subcontractor id set using tolerant truthiness, expanded to common variants
-    const truthyish = (v) => {
-      if (v === true) return true;
-      const n = Number(v);
-      if (!Number.isNaN(n) && n === 1) return true;
-      if (typeof v === "string") {
-        const s = v.trim().toLowerCase();
-        return (
-          s === "true" ||
-          s === "yes" ||
-          s === "y" ||
-          s === "t" ||
-          s === "1" ||
-          s === "on"
-        );
-      }
-      return false;
-    };
-    // A supplier appears in CIS reports only if they have a valid HMRC
-    // verification number (V + 7-10 digits, optional /A-ZZ suffix).
-    const VERIFICATION_RE = /^V\d{7,10}(\/[A-Z]{1,2})?$/;
-    const hasVerification = (s) =>
-      Array.isArray(s.WithholdingTaxReferences) &&
-      s.WithholdingTaxReferences.some(r => r && r.Name === 'Verification Number' && r.Value && VERIFICATION_RE.test(r.Value));
-    const isSubbie = (s) => s ? hasVerification(s) : false;
     // Optional debugging escape hatch: include all suppliers if requested
     const includeAllSuppliers =
       req.query.includeAll === "1" ||
       req.query.includeNonSubcontractors === "1";
-    const subbieSuppliers = includeAllSuppliers
-      ? suppliers || []
-      : (suppliers || []).filter(isSubbie);
+    const VERIFICATION_REGEX = /^V\d{7,10}(\/[A-Z]{1,2})?$/;
+    const supplierQuery = includeAllSuppliers
+      ? { Id: { $in: supplierIDs } }
+      : {
+          Id: { $in: supplierIDs },
+          WithholdingTaxReferences: {
+            $elemMatch: {
+              Name: 'Verification Number',
+              Value: { $regex: VERIFICATION_REGEX }
+            }
+          }
+        };
+    const subbieSuppliers = await mdb.REST.supplier
+      .find(supplierQuery)
+      .sort({ Name: 1 })
+      .lean();
+
     const allowedSupplierIds = new Set(
       subbieSuppliers.map((s) => String(s.Id)),
     );
