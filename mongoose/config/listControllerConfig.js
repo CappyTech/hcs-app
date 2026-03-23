@@ -534,6 +534,19 @@ module.exports = {
     department: ['paperless'],
     deny: ['c', 'u', 'd'],
   },
+  OcrDocumentIngest: {
+    title: 'OCR Ingest Log',
+    description: {
+      manage: 'Paperless-ngx document ingest status and sync tracking.'
+    },
+    linkField: 'paperlessId',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'lastContentHash'],
+    fieldOrder: ['paperlessId', 'status', 'lastModified', 'lastFetchedAt', 'error'],
+    sortField: 'lastFetchedAt',
+    sortOrder: -1,
+    department: ['paperless'],
+    deny: ['c', 'u', 'd'],
+  },
   nominal: {
     title: 'Nominal Accounts',
     description: {
@@ -553,6 +566,19 @@ module.exports = {
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
+    deny: ['c', 'u', 'd'],
+  },
+  vatrate: {
+    title: 'VAT Rates',
+    description: {
+      manage: 'KashFlow VAT rate definitions synced from the API.'
+    },
+    linkField: 'VATText',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    fieldOrder: ['VATId', 'VATRate', 'VATText', 'Rate', 'CountryCode'],
+    sortField: 'VATId',
+    sortOrder: 1,
+    department: ['finance'],
     deny: ['c', 'u', 'd'],
   },
   vehicleFuelLog: {
