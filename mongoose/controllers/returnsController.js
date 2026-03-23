@@ -75,12 +75,13 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
           .select("PaidDate PaymentLines")
           .lean();
         for (const r of fallbackRecs) {
-          const lastPL = Array.isArray(r.PaymentLines) && r.PaymentLines.length > 0
-            ? r.PaymentLines[r.PaymentLines.length - 1]
-            : null;
+          const plDates = Array.isArray(r.PaymentLines)
+            ? r.PaymentLines.map((pl) => new Date(pl.PayDate || pl.Date)).filter((d) => !isNaN(d))
+            : [];
+          plDates.sort((a, b) => a - b);
           const payDate =
             r.PaidDate ||
-            (lastPL ? lastPL.PayDate || lastPL.Date : null);
+            (plDates.length ? plDates[plDates.length - 1] : null);
           if (!payDate) continue;
           const { taxYear: ty, taxMonth: tm } =
             taxService.calculateTaxYearAndMonth(payDate);
@@ -309,12 +310,13 @@ exports.renderYearlyReturns = async (req, res, next) => {
     for (const p of paidPurchases) {
       let m = p.TaxMonth;
       if (!m) {
-        const lastPL = Array.isArray(p.PaymentLines) && p.PaymentLines.length > 0
-          ? p.PaymentLines[p.PaymentLines.length - 1]
-          : null;
+        const plDates = Array.isArray(p.PaymentLines)
+          ? p.PaymentLines.map((pl) => new Date(pl.PayDate || pl.Date)).filter((d) => !isNaN(d))
+          : [];
+        plDates.sort((a, b) => a - b);
         const payDate =
           p.PaidDate ||
-          (lastPL ? lastPL.PayDate || lastPL.Date : null);
+          (plDates.length ? plDates[plDates.length - 1] : null);
         if (payDate) {
           m = taxService.calculateTaxYearAndMonth(payDate).taxMonth;
         }
@@ -394,8 +396,9 @@ function classifyLines(p) {
   const grossAmount = labourCost + materialsCost;
   const netAmount = grossAmount - cisAmount;
   const payDates = Array.isArray(p.PaymentLines)
-    ? p.PaymentLines.map((pl) => pl.PayDate || pl.Date).filter(Boolean)
+    ? p.PaymentLines.map((pl) => new Date(pl.PayDate || pl.Date)).filter((d) => !isNaN(d))
     : [];
+  payDates.sort((a, b) => a - b);
   const payDate = p.PaidDate || (payDates.length ? payDates[payDates.length - 1] : null);
   return { labourCost, materialsCost, cisAmount, grossAmount, netAmount, payDate };
 }
