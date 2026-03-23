@@ -95,12 +95,10 @@ async function buildOwnershipFilter(req, mdb, role, model) {
 
 /**
  * Determine whether this user has an IR35 dual-role.
- * Checks: 1) employee.ir35 flag with subcontractorSupplierId, or
- *         2) user model dual-link (employeeId + subcontractorId).
+ * Checks the employee record's ir35 flag + subcontractorSupplierId.
  * Returns the secondary role name, or null.
  */
 async function resolveIR35DualRole(req, mdb, primaryRole) {
-  // Path 1: employee record has ir35 flag
   if (primaryRole === "employee" && req.user.employeeId) {
     try {
       const emp = await mdb.INTERNAL.employee
@@ -108,19 +106,11 @@ async function resolveIR35DualRole(req, mdb, primaryRole) {
         .select("ir35 subcontractorSupplierId")
         .lean();
       if (emp?.ir35 && emp.subcontractorSupplierId) {
-        // Temporarily set subcontractorId on req.user so buildOwnershipFilter
-        // can resolve the supplier link.
-        if (!req.user.subcontractorId) {
-          req.user._ir35SupplierId = emp.subcontractorSupplierId;
-        }
+        req.user._ir35SupplierId = emp.subcontractorSupplierId;
         return "subcontractor";
       }
     } catch (_) { /* proceed without dual-role */ }
   }
-
-  // Path 2: user model dual-link (legacy / direct assignment)
-  if (primaryRole === "employee" && req.user.subcontractorId) return "subcontractor";
-  if (primaryRole === "subcontractor" && req.user.employeeId) return "employee";
 
   return null;
 }

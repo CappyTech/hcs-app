@@ -343,8 +343,7 @@ module.exports = {
       name: value => typeof value === 'string' && value.length > 0,
     },
     xorGroups: [
-      ['employeeId', 'clientId'],
-      ['subcontractorId', 'clientId'],
+      ['employeeId', 'subcontractorId', 'clientId'],
     ],
     middleware: {
       read: ['ensureRole:admin'],

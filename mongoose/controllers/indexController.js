@@ -30,7 +30,7 @@ const getDashboardModels = (department, userRole) => {
       return {
         model,
         title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
-        description: desc || `Manage ${model}s.`,
+        description: desc || `View all ${config.title || model} records in a table.`,
         link: config.listPath || `/${model}s`,
       };
     });
