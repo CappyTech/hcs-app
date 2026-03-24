@@ -11,26 +11,36 @@
 const roleDepartments = {
   none: [],
   admin: [
+    'admin',
     'construction-industry-scheme',
     'management',
+    'maintenance',
     'payroll',
     'human-resources',
     'kashflow',
     'paperless',
     'finance',
+    'user',
   ],
   accountant: [
     'construction-industry-scheme',
     'kashflow',
     'finance',
+    'user',
   ],
-  employee: [],
+  employee: [
+    'user',
+  ],
   subcontractor: [
     'construction-industry-scheme', // own CIS returns only
+    'user',
   ],
-  client: [],
+  client: [
+    'user',
+  ],
   hmrc: [
     'construction-industry-scheme',
+    'user',
   ],
 };
 
@@ -151,14 +161,17 @@ const routeAccess = {
   '/purchase/change':            ['admin'],
 
   // Department dashboards
+  '/admin':               ['admin'],
   '/construction-industry-scheme': ['admin', 'accountant', 'hmrc', 'subcontractor'],
   '/management':          ['admin'],
+  '/maintenance':         ['admin'],
   '/payroll':             ['admin'],
   '/human-resources':     ['admin'],
   '/kashflow':            ['admin', 'accountant'],
   '/create':              ['admin'],
   '/paperless':           ['admin'],
   '/finance':             ['admin', 'accountant'],
+  '/user':                '*',
 
   // Settings / profile (all authenticated users)
   '/user/profile':        '*',

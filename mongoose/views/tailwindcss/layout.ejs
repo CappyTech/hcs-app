@@ -81,6 +81,12 @@
     <!-- Top Nav -->
     <nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden">
       <div class="max-w-7xl mx-auto flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 overflow-x-auto">
+        <% if (canDept('admin')) { %>
+        <a href="/admin" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-shield-lock text-base"></i>
+          <span class="hidden sm:inline">Admin</span>
+        </a>
+        <% } %>
         <% if (canDept('construction-industry-scheme')) { %>
         <a href="/construction-industry-scheme" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
           <i class="bi bi-building text-base"></i>
@@ -91,6 +97,12 @@
         <a href="/management" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
           <i class="bi bi-folder2-open text-base"></i>
           <span class="hidden sm:inline">Management</span>
+        </a>
+        <% } %>
+        <% if (canDept('maintenance')) { %>
+        <a href="/maintenance" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-tools text-base"></i>
+          <span class="hidden sm:inline">Maintenance</span>
         </a>
         <% } %>
         <% if (canDept('payroll')) { %>
@@ -127,6 +139,12 @@
         <a href="/create" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition font-medium">
           <i class="bi bi-plus-circle text-base"></i>
           <span class="hidden sm:inline">Create</span>
+        </a>
+        <% } %>
+        <% if (canDept('user')) { %>
+        <a href="/user" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-person-circle text-base"></i>
+          <span class="hidden sm:inline">User</span>
         </a>
         <% } %>
         <% if (isEmployee || isSubcontractor) { %>

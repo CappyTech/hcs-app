@@ -1,4 +1,18 @@
 module.exports = {
+    DeletedItems: {
+        title: 'Deleted Items',
+        description: 'Browse and recover soft-deleted records.',
+        link: '/admin/deleted-items',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    LogViewer: {
+        title: 'System Logs',
+        description: 'View and monitor real-time application logs.',
+        link: '/logs',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     WeeklyAttendance: {
         title: 'Weekly Attendance',
         description: 'View weekly attendance records',
@@ -116,7 +130,21 @@ module.exports = {
         title: 'Fleet Management',
         description: 'Manage company vehicles, compliance and assignments.',
         link: '/fleet',
-        department: ['management'],
+        department: ['maintenance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    UserProfile: {
+        title: 'Profile',
+        description: 'View and manage your profile information.',
+        link: '/user/profile',
+        department: ['user'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    UserSettings: {
+        title: 'Settings',
+        description: 'Manage your account and preferences.',
+        link: '/user/account',
+        department: ['user'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     }
 };

@@ -118,18 +118,21 @@ exports.renderIndex = async (req, res, next) => {
 };
 
 const departments = [
+  ["renderAdmin", "Admin", "admin"],
   [
     "renderConstructionIndustryScheme",
     "Construction Industry Scheme",
     "construction-industry-scheme",
   ],
   ["renderManagement", "Management", "management"],
+  ["renderMaintenance", "Maintenance", "maintenance"],
   ["renderPayroll", "Payroll", "payroll"],
   ["renderHumanResources", "Human Resources", "human-resources"],
   ["renderKashflow", "Kashflow", "kashflow"],
   ["renderCreate", "Create", "create"],
   ["renderPaperless", "Paperless OCR Documents", "paperless"],
   ["renderFinance", "Finance", "finance"],
+  ["renderUser", "User", "user"],
 ];
 
 departments.forEach(([exportName, title, department]) => {

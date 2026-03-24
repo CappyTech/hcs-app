@@ -4,6 +4,7 @@ const authService = require("../../services/authService");
 const index = require("../controllers/indexController");
 
 router.get("/", authService.ensureRole("public"), index.renderIndex);
+router.get("/admin", authService.ensureRole("admin"), index.renderAdmin);
 router.get(
   "/construction-industry-scheme",
   authService.ensureRoles("admin", "accountant", "hmrc", "subcontractor"),
@@ -13,6 +14,11 @@ router.get(
   "/management",
   authService.ensureRole("admin"),
   index.renderManagement,
+);
+router.get(
+  "/maintenance",
+  authService.ensureRole("admin"),
+  index.renderMaintenance,
 );
 router.get("/payroll", authService.ensureRole("admin"), index.renderPayroll);
 router.get(
@@ -35,6 +41,11 @@ router.get(
   "/finance",
   authService.ensureRoles("admin", "accountant"),
   index.renderFinance,
+);
+router.get(
+  "/user",
+  authService.ensureRole("public"),
+  index.renderUser,
 );
 /*
 const fetch = require('../kashflowAPI/fetchKashFlowDataMongoose');
