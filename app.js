@@ -99,6 +99,7 @@ const main = async () => {
     res.status(503);
     try {
       res.render(path.join('tailwindcss', 'maintenance'), {
+        layout: false,
         title: 'Service Unavailable',
         message: 'The service is starting up. Please retry in a few seconds.',
       });

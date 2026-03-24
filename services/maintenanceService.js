@@ -60,6 +60,7 @@ function renderMaintenance(res) {
   res.status(503);
   try {
     res.render(path.join("tailwindcss", "maintenance"), {
+      layout: false,
       title: "Service Unavailable",
       message: "The service is restarting. Please retry in a few seconds.",
     });

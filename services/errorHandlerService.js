@@ -56,6 +56,7 @@ const errorHandlerService = (error, req, res, next) => {
     if (statusCode === 503) {
       // Use branded maintenance page for service unavailability
       return res.render(path.join("tailwindcss", "maintenance"), {
+        layout: false,
         title: "Service Unavailable",
         message,
       });
