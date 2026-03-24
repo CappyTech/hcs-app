@@ -154,6 +154,27 @@ module.exports = {
         department: ['maintenance'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    FuelLogs: {
+        title: 'Fuel Logs',
+        description: 'Track fuel receipts, costs and consumption across the fleet.',
+        link: '/vehicleFuelLogs',
+        department: ['maintenance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    MileageLogs: {
+        title: 'Mileage Logs',
+        description: 'Track mileage, trips and HMRC mileage claims.',
+        link: '/vehicleMileageLogs',
+        department: ['maintenance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    ServiceHistory: {
+        title: 'Service History',
+        description: 'View and manage vehicle service history and costs.',
+        link: '/vehicleServices',
+        department: ['maintenance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     HolidayManagement: {
         title: 'Holiday Management',
         description: 'Manage holiday accrual, requests and approvals.',
@@ -188,5 +209,12 @@ module.exports = {
         link: '/user/2fa',
         department: ['user'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    Logout: {
+        title: 'Logout',
+        description: 'Sign out of your account.',
+        link: '/user/logout',
+        department: ['user'],
+        buttonClass: 'bg-red-700 hover:bg-red-800'
     }
 };

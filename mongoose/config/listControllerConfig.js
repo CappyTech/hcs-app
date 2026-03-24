@@ -458,7 +458,7 @@ module.exports = {
     ],
     sortField: 'registrationNumber',
     sortOrder: 1,
-    department: ['management'],
+    department: ['maintenance'],
     tabsby: 'availabilityStatus',
     tabsValues: [
       { value: 'all', label: 'All' },
@@ -606,7 +606,7 @@ module.exports = {
     ],
     sortField: 'date',
     sortOrder: -1,
-    department: ['management'],
+    department: ['maintenance'],
     labelOverrides: {
       vehicleId: 'Vehicle',
       employeeId: 'Driver (Employee)',
@@ -664,7 +664,7 @@ module.exports = {
     ],
     sortField: 'date',
     sortOrder: -1,
-    department: ['management'],
+    department: ['maintenance'],
     labelOverrides: {
       vehicleId: 'Vehicle',
       employeeId: 'Driver (Employee)',
@@ -732,7 +732,7 @@ module.exports = {
     ],
     sortField: 'date',
     sortOrder: -1,
-    department: ['management'],
+    department: ['maintenance'],
     labelOverrides: {
       vehicleId: 'Vehicle',
       serviceType: 'Type',
