@@ -6,6 +6,11 @@ const index = require("../controllers/indexController");
 router.get("/", authService.ensureRole("public"), index.renderIndex);
 router.get("/admin", authService.ensureRole("admin"), index.renderAdmin);
 router.get(
+  "/attendance",
+  authService.ensureRoles("admin", "employee", "subcontractor"),
+  index.renderAttendance,
+);
+router.get(
   "/construction-industry-scheme",
   authService.ensureRoles("admin", "accountant", "hmrc", "subcontractor"),
   index.renderConstructionIndustryScheme,

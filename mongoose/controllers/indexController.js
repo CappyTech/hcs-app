@@ -119,6 +119,7 @@ exports.renderIndex = async (req, res, next) => {
 
 const departments = [
   ["renderAdmin", "Admin", "admin"],
+  ["renderAttendance", "Attendance", "attendance"],
   [
     "renderConstructionIndustryScheme",
     "Construction Industry Scheme",

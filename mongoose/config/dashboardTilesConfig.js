@@ -13,6 +13,27 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    SubmitAttendance: {
+        title: 'Submit Attendance',
+        description: 'Submit your daily attendance records.',
+        link: '/attendance/submit',
+        department: ['attendance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800',
+    },
+    MyDailyAttendance: {
+        title: 'My Days',
+        description: 'View your daily attendance history.',
+        link: '/daily',
+        department: ['attendance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800',
+    },
+    MyWeeklyAttendance: {
+        title: 'My Weekly',
+        description: 'View your weekly attendance history.',
+        link: '/weekly',
+        department: ['attendance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800',
+    },
     WeeklyAttendance: {
         title: 'Weekly Attendance',
         description: 'View weekly attendance records',
@@ -133,6 +154,20 @@ module.exports = {
         department: ['maintenance'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    HolidayManagement: {
+        title: 'Holiday Management',
+        description: 'Manage holiday accrual, requests and approvals.',
+        link: '/holiday',
+        department: ['human-resources', 'management'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    FileManagement: {
+        title: 'File Management',
+        description: 'Upload, view and manage documents across models.',
+        link: '/files',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     UserProfile: {
         title: 'Profile',
         description: 'View and manage your profile information.',
@@ -144,6 +179,13 @@ module.exports = {
         title: 'Settings',
         description: 'Manage your account and preferences.',
         link: '/user/account',
+        department: ['user'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    TwoFactorAuth: {
+        title: 'Two-Factor Auth',
+        description: 'Set up or manage your TOTP two-factor authentication.',
+        link: '/user/2fa',
         department: ['user'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     }

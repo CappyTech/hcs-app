@@ -135,7 +135,13 @@
           <span class="hidden sm:inline">KashFlow</span>
         </a>
         <% } %>
-        <% if (isAdmin) { %>
+        <% if (canDept('attendance')) { %>
+        <a href="/attendance" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+          <i class="bi bi-calendar-check text-base"></i>
+          <span class="hidden sm:inline">Attendance</span>
+        </a>
+        <% } %>
+        <% if (canDept('admin')) { %>
         <a href="/create" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition font-medium">
           <i class="bi bi-plus-circle text-base"></i>
           <span class="hidden sm:inline">Create</span>
@@ -145,16 +151,6 @@
         <a href="/user" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
           <i class="bi bi-person-circle text-base"></i>
           <span class="hidden sm:inline">User</span>
-        </a>
-        <% } %>
-        <% if (isEmployee || isSubcontractor) { %>
-        <a href="/attendance/submit" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition font-medium">
-          <i class="bi bi-calendar-check text-base"></i>
-          <span class="hidden sm:inline">Attendance</span>
-        </a>
-        <a href="/daily" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
-          <i class="bi bi-calendar-day text-base"></i>
-          <span class="hidden sm:inline">My Days</span>
         </a>
         <% } %>
       </div>
@@ -171,23 +167,17 @@
         <!-- Bottom Nav -->
         <nav class="fixed bottom-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 z-50 print:hidden">
           <div class="max-w-7xl mx-auto flex items-center justify-around px-2 py-1.5">
+            <a href="/" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+              <i class="bi bi-house text-base"></i>
+              <span>Home</span>
+            </a>
             <button id="theme-toggle" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition cursor-pointer">
               <i id="theme-icon" class="bi bi-moon-stars text-base"></i>
               <span>Theme</span>
             </button>
-            <a href="/user/profile" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
-              <i class="bi bi-person text-base"></i>
-              <span>Profile</span>
-            </a>
-            <% if (isAdmin) { %>
-            <a href="/logs" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
-              <i class="bi bi-journal-text text-base"></i>
-              <span>Logs</span>
-            </a>
-            <% } %>
-            <a href="/user/account" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
-              <i class="bi bi-sliders text-base"></i>
-              <span>Settings</span>
+            <a href="/user" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition">
+              <i class="bi bi-person-circle text-base"></i>
+              <span>User</span>
             </a>
             <a href="/user/logout" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
               <i class="bi bi-box-arrow-right text-base"></i>

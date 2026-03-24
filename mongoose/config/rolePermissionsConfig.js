@@ -12,6 +12,7 @@ const roleDepartments = {
   none: [],
   admin: [
     'admin',
+    'attendance',
     'construction-industry-scheme',
     'management',
     'maintenance',
@@ -29,9 +30,11 @@ const roleDepartments = {
     'user',
   ],
   employee: [
+    'attendance',
     'user',
   ],
   subcontractor: [
+    'attendance',
     'construction-industry-scheme', // own CIS returns only
     'user',
   ],
@@ -162,6 +165,7 @@ const routeAccess = {
 
   // Department dashboards
   '/admin':               ['admin'],
+  '/attendance':          ['admin', 'employee', 'subcontractor'],
   '/construction-industry-scheme': ['admin', 'accountant', 'hmrc', 'subcontractor'],
   '/management':          ['admin'],
   '/maintenance':         ['admin'],
