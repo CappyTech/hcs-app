@@ -216,61 +216,6 @@
   </div>
 </div>
 
-<%# DEBUG PANEL — uncomment to inspect detected vs configured fields
-<%
-  const sampleRows = Array.isArray(rows) ? rows.slice(0, 10) : [];
-  const keySet = new Set();
-  sampleRows.forEach(r => {
-    if (r && typeof r === 'object') {
-      Object.keys(r).forEach(k => keySet.add(k));
-    }
-  });
-  const rowKeys = Array.from(keySet).sort();
-  const headerKeys = (Array.isArray(headers) ? headers.map(h => h.key) : []).sort();
-  const missing = rowKeys.filter(k => !headerKeys.includes(k));
-  const extra = headerKeys.filter(k => !rowKeys.includes(k));
-  const toLabel = k =>
-    k.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-     .replace(/[_\-]+/g, ' ')
-     .replace(/\s+/g, ' ')
-     .replace(/^\w/, c => c.toUpperCase());
-  const suggestedHeaders = (headerKeys.length ? headerKeys : rowKeys).map(k => ({ key: k, label: toLabel(k) }));
-  const snippet = `// listControllerConfig.js
-    module.exports = {
-      headers: ${JSON.stringify(suggestedHeaders, null, 2)},
-      linkField: '${linkField || 'uuid'}'
-    };`;
-%>
-<div class="mt-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-amber-900 dark:text-amber-200">
-  <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-    <div>
-      <div class="font-medium mb-1">Detected fields</div>
-      <ul class="list-disc pl-4 space-y-0.5">
-        <% rowKeys.forEach(k => { %><li><code><%= k %></code></li><% }) %>
-      </ul>
-    </div>
-    <div>
-      <div class="font-medium mb-1">Configured headers</div>
-      <ul class="list-disc pl-4 space-y-0.5">
-        <% headerKeys.forEach(k => { %><li><code><%= k %></code></li><% }) %>
-      </ul>
-      <% if (extra.length) { %>
-        <div class="mt-2 text-[11px]">Extra (no data): <code><%= extra.join(', ') %></code></div>
-      <% } %>
-    </div>
-    <div>
-      <div class="font-medium mb-1">Missing in headers</div>
-      <% if (missing.length) { %>
-        <ul class="list-disc pl-4 space-y-0.5">
-          <% missing.forEach(k => { %><li><code><%= k %></code></li><% }) %>
-        </ul>
-      <% } else { %>
-        <div>None</div>
-      <% } %>
-    </div>
-  </div>
-</div>
-%>
  
 
 <script>
