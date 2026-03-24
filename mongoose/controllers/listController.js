@@ -81,17 +81,23 @@ const generateHeaders = (firstDoc, config = {}) => {
 
       // Tabs (categorisation) support
       const tabsBy = config.tabsby || null; // field name to filter by
-      const tabsValues = Array.isArray(config.tabsValues)
+      let tabsValues = Array.isArray(config.tabsValues)
         ? config.tabsValues
         : [];
+      const tabsDynamic = !!config.tabsDynamic;
       const requestedTab = req.query.tab || null;
-      // activeTab is the tab shown as active in UI; allow 'all' to function even if not listed
-      const activeTab =
-        requestedTab &&
-        (String(requestedTab).toLowerCase() === "all" ||
-          tabsValues.some((tv) => String(tv.value) === String(requestedTab)))
-          ? requestedTab
-          : null;
+      // For dynamic tabs, defer activeTab validation until after distinct query
+      let activeTab = null;
+      if (requestedTab) {
+        if (String(requestedTab).toLowerCase() === "all") {
+          activeTab = requestedTab;
+        } else if (tabsDynamic) {
+          // Accept any non-empty tab value; will be validated after distinct query
+          activeTab = requestedTab;
+        } else if (tabsValues.some((tv) => String(tv.value) === String(requestedTab))) {
+          activeTab = requestedTab;
+        }
+      }
 
       let mongoFilter = {};
       if (query) {
@@ -145,6 +151,10 @@ const generateHeaders = (firstDoc, config = {}) => {
           if (hasNameField) {
             orConds.push({ [nameField]: activeTab });
           }
+          // Fallback for Mixed types or dot-notation paths (e.g. Category.Name)
+          if (!orConds.length) {
+            orConds.push({ [tabsBy]: activeTab });
+          }
 
           if (orConds.length) {
             const tabsFilter =
@@ -175,10 +185,29 @@ const generateHeaders = (firstDoc, config = {}) => {
         }
 
         const totalCount = await model.countDocuments(mongoFilter);
-        // Build tab metadata (no counts per tab for now unless cheap to derive)
+        // Build tab metadata
         let tabs = [];
+        if (tabsDynamic && tabsBy && !tabsValues.length) {
+          // Fetch distinct values from the database for dynamic tabs
+          const distinctVals = await model.distinct(tabsBy);
+          const sorted = distinctVals
+            .filter((v) => v != null && String(v).trim() !== "")
+            .map(String)
+            .sort((a, b) => a.localeCompare(b));
+          tabsValues = [
+            { value: "all", label: "All" },
+            ...sorted.map((v) => ({ value: v, label: v })),
+          ];
+          // Re-validate activeTab against the actual values
+          if (
+            activeTab &&
+            String(activeTab).toLowerCase() !== "all" &&
+            !sorted.includes(activeTab)
+          ) {
+            activeTab = null;
+          }
+        }
         if (tabsValues.length) {
-          // Optionally fetch counts per tab (can be expensive). Keep simple unless needed.
           tabs = tabsValues.map((tv) => ({
             value: tv.value,
             label: tv.label || String(tv.value),

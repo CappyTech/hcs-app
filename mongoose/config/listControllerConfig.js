@@ -267,6 +267,8 @@ module.exports = {
     sortOrder: -1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
+    tabsby: 'Category.Name',
+    tabsDynamic: true,
     labelOverrides: {
       Number: 'Quote Ref',
       CustomerId: 'Customer'
