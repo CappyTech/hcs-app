@@ -179,6 +179,7 @@ const main = async () => {
     appRouter.use(require('./services/maintenanceService'));
     // Session activity tracking (after auth)
     appRouter.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
+    appRouter.use(require('./mongoose/services/sessionActivityService').trackPageVisit);
 
     // Admin-only debug route to inspect forwarded headers and connection security
     appRouter.get('/__debug/headers', require('./services/authService').ensureRole('admin'), (req, res) => {
