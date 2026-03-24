@@ -78,6 +78,20 @@ const main = async () => {
     }
   });
 
+  // "I am stuck" — always shows the maintenance page (the upside-down heron)
+  app.get('/i-am-stuck', (req, res) => {
+    res.status(503);
+    try {
+      res.render(path.join('tailwindcss', 'maintenance'), {
+        layout: false,
+        title: 'I Am Stuck!',
+        message: 'You asked to see me stuck. Here I am, upside down!',
+      });
+    } catch (e) {
+      res.type('text/plain').send('503 - I am stuck!');
+    }
+  });
+
   // Early request blocklist for common scanner/probe paths
   app.use(require('./services/requestBlocklistService'));
 
@@ -96,16 +110,7 @@ const main = async () => {
   // Minimal error handler for the pre-DB phase
   app.use((err, req, res, _next) => {
     logger.error('[startup] Error before DB ready: ' + (err.message || err));
-    res.status(503);
-    try {
-      res.render(path.join('tailwindcss', 'maintenance'), {
-        layout: false,
-        title: 'Service Unavailable',
-        message: 'The service is starting up. Please retry in a few seconds.',
-      });
-    } catch (_) {
-      res.type('text/plain').send('503 - Service Unavailable: The service is starting up.');
-    }
+    return res.redirect(302, '/i-am-stuck');
   });
 
   // Start listening immediately

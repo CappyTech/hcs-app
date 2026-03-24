@@ -1,4 +1,3 @@
-const path = require("path");
 const logger = require("./loggerService");
 const mdb = require("../mongoose/services/mongooseDatabaseService");
 
@@ -14,6 +13,7 @@ module.exports = async function maintenanceService(req, res, next) {
     const p = req.path || "";
     if (
       p === "/healthz" ||
+      p === "/i-am-stuck" ||
       p === "/favicon.ico" ||
       p.startsWith("/resources/") ||
       p.startsWith("/robots.txt")
@@ -22,7 +22,7 @@ module.exports = async function maintenanceService(req, res, next) {
 
     // Explicit maintenance flag via env
     if (process.env.MAINTENANCE === "true") {
-      return renderMaintenance(res);
+      return renderMaintenance(req, res);
     }
 
     // Check Mongo connections; if any required DB is down, show maintenance
@@ -37,7 +37,7 @@ module.exports = async function maintenanceService(req, res, next) {
         internalReady,
         paperlessReady,
       });
-      return renderMaintenance(res);
+      return renderMaintenance(req, res);
     }
 
     return next();
@@ -48,27 +48,6 @@ module.exports = async function maintenanceService(req, res, next) {
   }
 };
 
-function renderMaintenance(res) {
-  // Ensure locals minimal defaults
-  res.locals.isAuthenticated ??= false;
-  res.locals.isAdmin ??= false;
-  res.locals.firstName ??= null;
-  res.locals.successMessage ??= null;
-  res.locals.errorMessage ??= null;
-  res.locals.flash ??= {};
-  res.locals.session ??= {};
-  res.status(503);
-  try {
-    res.render(path.join("tailwindcss", "maintenance"), {
-      layout: false,
-      title: "Service Unavailable",
-      message: "The service is restarting. Please retry in a few seconds.",
-    });
-  } catch (e) {
-    res
-      .type("text/plain")
-      .send(
-        "503 - Service Unavailable: The service is restarting. Please retry in a few seconds.",
-      );
-  }
+function renderMaintenance(req, res) {
+  return res.redirect(302, "/i-am-stuck");
 }

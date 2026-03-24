@@ -54,12 +54,8 @@ const errorHandlerService = (error, req, res, next) => {
     res.locals.flash ??= {};
     res.locals.session ??= req.session || {};
     if (statusCode === 503) {
-      // Use branded maintenance page for service unavailability
-      return res.render(path.join("tailwindcss", "maintenance"), {
-        layout: false,
-        title: "Service Unavailable",
-        message,
-      });
+      // Redirect to the friendly maintenance page
+      return res.redirect(302, "/i-am-stuck");
     }
     res.render(path.join("tailwindcss", "error"), {
       title,
