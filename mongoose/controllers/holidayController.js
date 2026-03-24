@@ -64,7 +64,7 @@ async function dismissHoliday(req, res, next) {
     logger.info(
       `Holiday Dismissed. ${holidayDetails.reason} | ${req.user?.username}`,
     );
-    req.flash("success", `Holiday Dismissed. ${holidayDetails.reason}`);
+    req.flash("success", "Holiday notification dismissed.");
     return res.redirect("/");
   } catch (err) {
     logger.error("Error dismissing holiday: " + err.message);

@@ -104,9 +104,11 @@ exports.uploadFiles = async (req, res, next) => {
       }
     }
 
+    req.flash('success', 'File uploaded successfully.');
     res.redirect(`/${modelName}/read/${uuid}`);
   } catch (err) {
     logger.error(`❌ Upload error for ${modelName}: ${err.message}`);
+    req.flash('error', 'Failed to upload file.');
     next(err);
   }
 };
@@ -144,9 +146,11 @@ exports.deleteFile = async (req, res, next) => {
   try {
     await fsp.unlink(filePath);
     logger.info(`🗑️ Deleted: ${sanitizedFile} from ${modelName}/${dirName}`);
+    req.flash('success', 'File deleted successfully.');
     res.redirect(`/${modelName}/read/${uuid}`);
   } catch (err) {
     logger.error(`❌ Delete error for ${modelName}: ${err.message}`);
+    req.flash('error', 'Failed to delete file.');
     next(err);
   }
 };

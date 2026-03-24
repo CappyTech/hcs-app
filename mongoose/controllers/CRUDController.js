@@ -614,9 +614,11 @@ for (const namespace of ["REST", "INTERNAL"]) {
           }
           // Hook: sync parent vehicle when creating sub-model records
           await syncVehicleFromSubModel(modelName, doc);
+          req.flash('success', `${baseName} created successfully.`);
           res.redirect(`/${modelName}s`);
         } catch (err) {
           logger.error(`❌ Error creating ${modelName}: ${err.message}`);
+          req.flash('error', `Failed to create ${baseName.toLowerCase()}.`);
           next(err);
         }
       };
@@ -742,9 +744,11 @@ for (const namespace of ["REST", "INTERNAL"]) {
           }
           // Hook: sync parent vehicle when updating sub-model records
           if (updated) await syncVehicleFromSubModel(modelName, updated);
+          req.flash('success', `${baseName} updated successfully.`);
           res.redirect(`/${modelName}s`);
         } catch (err) {
           logger.error(`❌ Error updating ${modelName}: ${err.message}`);
+          req.flash('error', `Failed to update ${baseName.toLowerCase()}.`);
           next(err);
         }
       };
@@ -788,9 +792,11 @@ for (const namespace of ["REST", "INTERNAL"]) {
 
         try {
           await Model.findOneAndDelete({ uuid: req.params.uuid });
+          req.flash('success', `${baseName} deleted successfully.`);
           res.redirect(`/${modelName}s`);
         } catch (err) {
           logger.error(`❌ Error deleting ${modelName}: ${err.message}`);
+          req.flash('error', `Failed to delete ${baseName.toLowerCase()}.`);
           next(err);
         }
       };
