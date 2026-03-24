@@ -139,7 +139,7 @@
     </div>
   <% } %>
 
-  <% if (activeProjects && activeProjects.length > 0) { %>
+  <% if (canDept('management') && activeProjects && activeProjects.length > 0) { %>
     <h3 class="mt-5 mb-3 text-xl font-semibold text-gray-900 dark:text-gray-100">
       Scheduled Projects
       <span class="ml-2 inline-flex items-center justify-center rounded-full bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 px-2 py-0.5 text-xs font-semibold">
