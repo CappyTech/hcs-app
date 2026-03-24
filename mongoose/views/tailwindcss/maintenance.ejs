@@ -1,5 +1,15 @@
-<%- include('tailwindcss/partials/head', { title: title || 'Service Unavailable' }) %>
-<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'Service Unavailable' %></title>
+  <meta http-equiv="refresh" content="10">
+  <link rel="stylesheet" href="/resources/css/output.css">
+  <script>if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark');</script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
   <div class="max-w-md w-full space-y-8 text-center">
     <div>
       <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -16,4 +26,5 @@
     </div>
   </div>
 </div>
-<%- include('tailwindcss/partials/foot') %>
+</body>
+</html>

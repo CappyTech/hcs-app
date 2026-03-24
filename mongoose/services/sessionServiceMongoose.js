@@ -30,7 +30,9 @@ module.exports = function createSessionService(mongoClient) {
 
         try {
             logger.info(`[session] cookie.secure=${cookieSecure} (COOKIE_SECURE=${cookieSecureEnv || 'unset'}) sameSite=lax domain=${cookieDomain || '-'} name=${COOKIE_NAME}`);
-        } catch (_) {}
+        } catch (e) {
+            logger.warn("[session] config logging failed: %s", e.message);
+        }
 
         return session({
         name: COOKIE_NAME,

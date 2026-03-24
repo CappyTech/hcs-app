@@ -32,8 +32,94 @@ process.on('uncaughtException', (err) => {
 });
 
 const main = async () => {
+  // ── Phase 1: Start HTTP server immediately ──────────────────────────
+  // The server must accept connections ASAP so Docker health checks pass
+  // and users see a friendly 503 maintenance page instead of Caddy's
+  // "Internal Server Error" while MongoDB is still coming up.
+
+  const app = express();
+  const http = require('http');
+
+  app.set('trust proxy', ['loopback', '127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
+  app.set('view engine', 'ejs');
+  app.set('views', [path.join(__dirname, 'mongoose/views')]);
+  app.set('layout', path.join('tailwindcss', 'layout'));
+  app.disable('x-powered-by');
+
+  // Static assets (no DB required)
+  app.use('/resources/css', express.static(path.join(__dirname, 'public', 'css')));
+  app.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'images', 'favicon.ico'));
+  });
+  app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.sendFile(path.join(__dirname, 'public', 'robots.txt'));
+  });
+
+  // Health check (no DB required — reports actual readiness)
+  app.get('/healthz', async (req, res) => {
+    const ra = (req.socket && req.socket.remoteAddress) || '';
+    const isLocal = ra === '127.0.0.1' || ra === '::1' || ra === '::ffff:127.0.0.1' || ra.startsWith('127.');
+    if (!isLocal) {
+      return res.status(403).json({ ok: false, error: 'forbidden' });
+    }
+    try {
+      const restReady = mdb.REST?.connection?.readyState === 1;
+      const internalReady = mdb.INTERNAL?.connection?.readyState === 1;
+      const paperlessReady = mdb.PAPERLESS?.connection?.readyState === 1;
+      const ok = restReady && internalReady && paperlessReady;
+      res.status(ok ? 200 : 503).json({
+        ok,
+        uptime: process.uptime(),
+        db: { REST: restReady, INTERNAL: internalReady, PAPERLESS: paperlessReady },
+      });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // Early request blocklist for common scanner/probe paths
+  app.use(require('./services/requestBlocklistService'));
+
+  // ── App router: empty until Phase 2 populates it ───────────────────
+  // All real middleware and routes are mounted here once MongoDB is ready.
+  // Before that, every request falls through to the maintenance guard below.
+  const appRouter = express.Router();
+  app.use(appRouter);
+
+  // Maintenance/availability guard — catches all requests that fall through
+  // the (initially empty) appRouter. Once Phase 2 mounts routes, only
+  // requests that genuinely have no matching route will reach this, and
+  // maintenanceService will pass them through to the 404 handler.
+  app.use(require('./services/maintenanceService'));
+
+  // Minimal error handler for the pre-DB phase
+  app.use((err, req, res, _next) => {
+    logger.error('[startup] Error before DB ready: ' + (err.message || err));
+    res.status(503);
+    try {
+      res.render(path.join('tailwindcss', 'maintenance'), {
+        title: 'Service Unavailable',
+        message: 'The service is starting up. Please retry in a few seconds.',
+      });
+    } catch (_) {
+      res.type('text/plain').send('503 - Service Unavailable: The service is starting up.');
+    }
+  });
+
+  // Start listening immediately
+  const server = http.createServer(app);
+  const port = Number(process.env.PORT) || 3000;
+  const host = process.env.HOST || '0.0.0.0';
+
+  server.listen(port, host, () => {
+    logger.info(`🚀 Server listening on ${host}:${port} (waiting for MongoDB…)`);
+  });
+
+  // ── Phase 2: Connect to MongoDB and mount full app ──────────────────
   try {
-    await mdb.connect(); // Wait for MongoDB/SSH tunnel
+    await mdb.connect();
+    logger.info('[startup] MongoDB connected — mounting full application');
 
     // One-time migration: mark existing users (without a verification token) as email-verified
     try {
@@ -57,95 +143,39 @@ const main = async () => {
       logger.error('[cis] Failed to load nominal codes from DB, using defaults', { error: cisErr.message });
     }
 
-    const app = express();
-    const http = require('http');
     const { initSocket } = require('./services/socketService');
 
-    // Get INTERNAL connection's client for session store
+    // Session store (requires INTERNAL connection)
     const internalClient = mdb.INTERNAL.connection.client;
     const createSessionService = require('./mongoose/services/sessionServiceMongoose');
     const sessionService = createSessionService(internalClient);
 
-    // Behind Caddy → FRP (multiple proxy hops): trust loopback and private IPv4 ranges
-    // This enables req.secure from X-Forwarded-Proto without permissive trust
-    app.set('trust proxy', ['loopback', '127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
-    app.set('view engine', 'ejs');
-    app.set('views', [
-      path.join(__dirname, 'mongoose/views')
-    ]);
-    app.set('layout', path.join('tailwindcss', 'layout'));
-    app.use(expressLayouts);
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
+    // Mount the full middleware + routes into appRouter
+    appRouter.use(expressLayouts);
+    appRouter.use(express.json());
+    appRouter.use(express.urlencoded({ extended: true }));
+    appRouter.use(cookieParser());
+    appRouter.use(sessionService);
+    appRouter.use(require('./services/csrfService'));
 
-    // Cookie parser and session handling
-    app.use(cookieParser());
-    app.use(sessionService);
-    // CSRF protection (transitional mode). Set STRICT_MODE=true to enforce rejection.
-    app.use(require('./services/csrfService'));
-
-    // Static assets
-    // Serve compiled Tailwind CSS publicly so the login page can load styles unauthenticated
-    app.use('/resources/css', express.static(path.join(__dirname, 'public', 'css')));
-    // Other static assets remain protected
-    app.use('/resources', authService.ensureAuthenticated, express.static(path.join(__dirname, 'public')));
-
-    // Serve favicon to avoid 404 errors
-    app.get('/favicon.ico', (req, res) => {
-      res.sendFile(path.join(__dirname, 'public', 'images', 'favicon.ico'));
-    });
-
-    // Serve robots.txt (unauthenticated)
-    app.get('/robots.txt', (req, res) => {
-      res.type('text/plain');
-      res.sendFile(path.join(__dirname, 'public', 'robots.txt'));
-    });
-
-    // Early request blocklist for common scanner/probe paths
-    app.use(require('./services/requestBlocklistService'));
-
-    // Health check endpoint (unauthenticated, local-only)
-    app.get('/healthz', async (req, res) => {
-      // Restrict to local connections only (bypass trust proxy)
-      const ra = (req.socket && req.socket.remoteAddress) || '';
-      const isLocal = ra === '127.0.0.1' || ra === '::1' || ra === '::ffff:127.0.0.1' || ra.startsWith('127.');
-      if (!isLocal) {
-        return res.status(403).json({ ok: false, error: 'forbidden' });
-      }
-      try {
-        const restReady = mdb.REST?.connection?.readyState === 1;
-        const internalReady = mdb.INTERNAL?.connection?.readyState === 1;
-        const paperlessReady = mdb.PAPERLESS?.connection?.readyState === 1;
-        const ok = restReady && internalReady && paperlessReady;
-        res.status(ok ? 200 : 503).json({
-          ok,
-          uptime: process.uptime(),
-          db: {
-            REST: restReady,
-            INTERNAL: internalReady,
-            PAPERLESS: paperlessReady
-          }
-        });
-      } catch (err) {
-        res.status(500).json({ ok: false, error: err.message });
-      }
-    });
+    // Protected static assets
+    appRouter.use('/resources', authService.ensureAuthenticated, express.static(path.join(__dirname, 'public')));
 
     // Core middleware
-    app.use(useragent.express());
-    app.use(require('./services/securityService'));
-    app.use(require('./services/flashService'));
-    app.use(authService.ensureAuthenticated);
-    app.use(authService.ensureRouteAccess);
-    app.use(require('./services/logRequestDetailsService'));
-    app.use(require('./services/rateLimiterService'));
-  // Maintenance/availability guard (friendly 503 when backing services are restarting)
-  app.use(require('./services/maintenanceService'));
+    appRouter.use(useragent.express());
+    appRouter.use(require('./services/securityService'));
+    appRouter.use(require('./services/flashService'));
+    appRouter.use(authService.ensureAuthenticated);
+    appRouter.use(authService.ensureRouteAccess);
+    appRouter.use(require('./services/logRequestDetailsService'));
+    appRouter.use(require('./services/rateLimiterService'));
+    // Maintenance/availability guard (friendly 503 when backing services restart mid-operation)
+    appRouter.use(require('./services/maintenanceService'));
     // Session activity tracking (after auth)
-    app.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
+    appRouter.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
 
     // Admin-only debug route to inspect forwarded headers and connection security
-    app.get('/__debug/headers', require('./services/authService').ensureRole('admin'), (req, res) => {
+    appRouter.get('/__debug/headers', require('./services/authService').ensureRole('admin'), (req, res) => {
       const { getClientIp } = require('./services/ipService');
       res.json({
         secure: req.secure,
@@ -168,7 +198,7 @@ const main = async () => {
 
     // Attach user info to templates
     const rbac = require('./mongoose/config/rolePermissionsConfig');
-    app.use((req, res, next) => {
+    appRouter.use((req, res, next) => {
       res.locals.isAuthenticated = !!req.user;
       res.locals.role = req.user && req.user.role || null;
       res.locals.isAdmin = req.user && req.user.role === 'admin';
@@ -208,7 +238,7 @@ const main = async () => {
     });
 
     // App-wide meta info (Mongo)
-    app.use(async (req, res, next) => {
+    appRouter.use(async (req, res, next) => {
       try {
         res.locals.lastfetched = await mdb.INTERNAL.meta.findOne().sort({ lastFetchedAt: -1 }) || null;
       } catch (err) {
@@ -218,8 +248,7 @@ const main = async () => {
     });
 
     // Cache control
-    app.disable('x-powered-by');
-    app.use((req, res, next) => {
+    appRouter.use((req, res, next) => {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
@@ -228,73 +257,61 @@ const main = async () => {
 
     // Holiday block page
     const holidayController = require('./mongoose/controllers/holidayController')
-    app.use(holidayController.checkHoliday);
+    appRouter.use(holidayController.checkHoliday);
 
     // Encryption key dev hint
     if (process.env.NODE_ENV === 'development' && !process.env.ENCRYPTION_KEY) {
       const newKey = crypto.randomBytes(32).toString('hex');
       const hex = Buffer.from(newKey, 'hex');
-      console.log('Generated ENCRYPTION_KEY (hex):', hex);
+      logger.info('Generated ENCRYPTION_KEY (hex): ' + hex.toString('hex'));
     }
 
-    //app.use(require ('./mongoose/services/uuidCheckServiceMongoose').ensureUUIDs);
-
-    app.use('/', require('./mongoose/routes/userRoutes'));
+    appRouter.use('/', require('./mongoose/routes/userRoutes'));
     // Routes
-    app.use('/', require('./mongoose/routes/attendanceRoutes'));
-    app.use('/', require('./mongoose/routes/cisRoutes'));
-    app.use('/', require('./mongoose/routes/CRUDRoutes'));
-    app.use('/', require('./mongoose/routes/indexRoutes'));
-    app.use('/', require('./mongoose/routes/listRoutes'));
-    app.use('/', require('./mongoose/routes/adminRoutes'));
-    app.use('/', require('./mongoose/routes/loggerRoutes'));
-    app.use('/', require('./mongoose/routes/returnsRoutes'));
-    app.use('/', require('./mongoose/routes/settingsRoutes'));
-    app.use('/', require('./mongoose/routes/twoFARoutes'));
-    app.use('/', require('./mongoose/routes/subcontractorRoutes'));
-    app.use('/', require('./mongoose/routes/submissionRoutes'));
-    app.use('/', require('./mongoose/routes/holidayRoutes'));
-    app.use('/', require('./mongoose/routes/fileRoutes'));
-    app.use('/', require('./mongoose/routes/paperlessRoutes'));
-    app.use('/', require('./mongoose/routes/fleetRoutes'));
-    app.use('/', require('./mongoose/routes/ssoRoutes'));
+    appRouter.use('/', require('./mongoose/routes/attendanceRoutes'));
+    appRouter.use('/', require('./mongoose/routes/cisRoutes'));
+    appRouter.use('/', require('./mongoose/routes/CRUDRoutes'));
+    appRouter.use('/', require('./mongoose/routes/indexRoutes'));
+    appRouter.use('/', require('./mongoose/routes/listRoutes'));
+    appRouter.use('/', require('./mongoose/routes/adminRoutes'));
+    appRouter.use('/', require('./mongoose/routes/loggerRoutes'));
+    appRouter.use('/', require('./mongoose/routes/returnsRoutes'));
+    appRouter.use('/', require('./mongoose/routes/settingsRoutes'));
+    appRouter.use('/', require('./mongoose/routes/twoFARoutes'));
+    appRouter.use('/', require('./mongoose/routes/subcontractorRoutes'));
+    appRouter.use('/', require('./mongoose/routes/submissionRoutes'));
+    appRouter.use('/', require('./mongoose/routes/holidayRoutes'));
+    appRouter.use('/', require('./mongoose/routes/fileRoutes'));
+    appRouter.use('/', require('./mongoose/routes/paperlessRoutes'));
+    appRouter.use('/', require('./mongoose/routes/fleetRoutes'));
+    appRouter.use('/', require('./mongoose/routes/ssoRoutes'));
 
     // Catch-all 404
-    app.use((req, res, next) => {
+    appRouter.use((req, res, next) => {
       const error = new Error(`Route not found: ${req.method} ${req.originalUrl}`);
       error.statusCode = 404;
       next(error);
     });
 
     // Global error handler
-    app.use(require('./services/errorHandlerService'));
+    appRouter.use(require('./services/errorHandlerService'));
 
-    // Create HTTP server from Express app
-    const server = http.createServer(app);
-
-    // Choose port/host (container-friendly defaults)
-    const port = Number(process.env.PORT) || 3000;
-    const host = process.env.HOST || '0.0.0.0';
-
-    // Start server
-    server.listen(port, host, () => {
-      logger.info(`🚀 Server running in ${process.env.NODE_ENV} on ${host}:${port}`);
-    });
-
+    // WebSocket
     const io = initSocket(server);
-
-    // Setup WebSocket with working sessionService
     const { setupWebSocket } = require('./mongoose/services/webSocketServiceMongoose');
     setupWebSocket(io, sessionService);
 
-    // Start periodic session cleanup
+    // Start periodic background services
     try { require('./mongoose/services/sessionCleanupService').start(); } catch (e) { logger.warn('Session cleanup start failed: ' + e.message); }
-
-    // Start periodic vehicle compliance checks (MOT, insurance, road tax)
     try { require('./mongoose/services/vehicleComplianceService').start(); } catch (e) { logger.warn('Vehicle compliance service start failed: ' + e.message); }
 
+    logger.info(`🚀 Application fully ready in ${process.env.NODE_ENV} on ${host}:${port}`);
+
   } catch (err) {
-    logger.error('❌ Failed to start application: ' + err + err.stack);
+    logger.error('❌ Failed to connect to MongoDB: ' + err.message);
+    logger.error('   Server remains running — showing maintenance page to all requests');
+    // Server keeps running; maintenanceService will show 503 for every request
+    // because mdb connections remain in non-ready state.
   }
 };
 

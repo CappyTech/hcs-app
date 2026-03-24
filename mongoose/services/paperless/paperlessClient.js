@@ -1,6 +1,7 @@
 // services/paperless/paperlessClient.js
 const axios = require("axios");
 const tunnel = require("tunnel-ssh");
+const logger = require("../../../services/loggerService");
 
 let sshServer = null;
 let localPort = null;
@@ -113,16 +114,16 @@ function makeClient() {
             level === "client-socket"
           ) {
             if (verbose)
-              console.warn(
-                "[paperlessClient] tunnel socket error ignored:",
+              logger.warn(
+                "[paperlessClient] tunnel socket error ignored: %s",
                 code || level,
               );
             return;
           }
-          console.error("[paperlessClient] tunnel server error:", e);
+          logger.error("[paperlessClient] tunnel server error: %s", e?.message || e);
         });
         if (verbose)
-          console.log(
+          logger.info(
             `[paperlessClient] 🔐 SSH tunnel established on ${sshConfig.localHost}:${localPort} → ${sshConfig.dstHost}:${sshConfig.dstPort}`,
           );
         resolve();
@@ -143,8 +144,7 @@ function makeClient() {
       headers: { Authorization: `Token ${token}`, Accept: accept },
     });
     if (verbose) {
-      // eslint-disable-next-line no-console
-      console.log(
+      logger.info(
         `[paperlessClient] baseURL=${baseURL} accept="${accept}"${useSsh ? " (via SSH tunnel)" : ""}`,
       );
     }
@@ -167,7 +167,7 @@ function makeClient() {
           (process.env.PAPERLESS_VERBOSE === "true" || process.env.DEBUG) &&
           status
         ) {
-          console.warn(
+          logger.warn(
             `[paperlessClient] HTTP ${status} on ${error?.config?.method?.toUpperCase?.() || ""} ${error?.config?.url || ""}${dataSnippet}`,
           );
         }
@@ -184,8 +184,8 @@ function makeClient() {
           delete cfg.headers.Accept;
           cfg.__acceptFallbackTried = true;
           if (process.env.PAPERLESS_VERBOSE === "true" || process.env.DEBUG) {
-            console.warn(
-              "[paperlessClient] 400 received; retrying without Accept header for",
+            logger.warn(
+              "[paperlessClient] 400 received; retrying without Accept header for %s",
               cfg.url || cfg.baseURL,
             );
           }

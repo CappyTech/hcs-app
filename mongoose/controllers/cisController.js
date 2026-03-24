@@ -498,7 +498,9 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       logger.info(
         `[CIS] query: purchasesRaw=${purchasesRaw.length}, notDeleted=${purchases.length}, paid=${paidPurchases.length}, suppliers=${subbieSuppliers.length}, filtered=${filteredPurchases.length}, includeAllSuppliers=${includeAllSuppliers}`,
       );
-    } catch (_) {}
+    } catch (e) {
+      logger.warn("[CIS] diagnostic logging failed: %s", e.message);
+    }
 
     res.render(path.join("tailwindcss", "cis", "cis"), {
       title: "CIS Submission Dashboard",
