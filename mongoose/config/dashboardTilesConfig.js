@@ -21,14 +21,14 @@ module.exports = {
         buttonClass: 'bg-green-700 hover:bg-green-800',
     },
     MyDailyAttendance: {
-        title: 'My Days',
+        title: 'Your Daily Attendance',
         description: 'View your daily attendance history.',
         link: '/daily',
         department: ['attendance'],
         buttonClass: 'bg-green-700 hover:bg-green-800',
     },
     MyWeeklyAttendance: {
-        title: 'My Weekly',
+        title: 'Your Weekly Attendance',
         description: 'View your weekly attendance history.',
         link: '/weekly',
         department: ['attendance'],
@@ -154,39 +154,11 @@ module.exports = {
         department: ['maintenance'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
-    FuelLogs: {
-        title: 'Fuel Logs',
-        description: 'Track fuel receipts, costs and consumption across the fleet.',
-        link: '/vehicleFuelLogs',
-        department: ['maintenance'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
-    MileageLogs: {
-        title: 'Mileage Logs',
-        description: 'Track mileage, trips and HMRC mileage claims.',
-        link: '/vehicleMileageLogs',
-        department: ['maintenance'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
-    ServiceHistory: {
-        title: 'Service History',
-        description: 'View and manage vehicle service history and costs.',
-        link: '/vehicleServices',
-        department: ['maintenance'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
     HolidayManagement: {
         title: 'Holiday Management',
         description: 'Manage holiday accrual, requests and approvals.',
         link: '/holiday',
         department: ['human-resources', 'management'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
-    FileManagement: {
-        title: 'File Management',
-        description: 'Upload, view and manage documents across models.',
-        link: '/files',
-        department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     UserProfile: {

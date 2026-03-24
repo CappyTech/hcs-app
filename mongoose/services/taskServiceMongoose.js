@@ -89,9 +89,31 @@ async function processRecurringTasks({ limit = 200 } = {}) {
   }
 }
 
+async function completeTask(uuid, userId) {
+  if (!uuid || !userId) throw new Error('uuid and userId are required.');
+  const task = await mdb.INTERNAL.task.findOneAndUpdate(
+    { uuid, userId, completed: false },
+    { completed: true },
+    { new: true },
+  );
+  return task ? task.toObject() : null;
+}
+
+async function getTaskCountsForUser(userId) {
+  if (!userId) return { total: 0, overdue: 0 };
+  const now = new Date();
+  const [total, overdue] = await Promise.all([
+    mdb.INTERNAL.task.countDocuments({ userId, completed: false }),
+    mdb.INTERNAL.task.countDocuments({ userId, completed: false, dueDate: { $lt: now } }),
+  ]);
+  return { total, overdue };
+}
+
 module.exports = {
   createTask,
+  completeTask,
   getPendingTasksForUser,
+  getTaskCountsForUser,
   processRecurringTasks,
   advanceDate // exported for potential testing
 };
