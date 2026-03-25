@@ -155,6 +155,22 @@ exports.getWeeklyAttendance = async (req, res, next) => {
     const filteredSubPay = subcontractorEntries.reduce((sum, [_, v]) => sum + (v.weeklyPay || 0), 0);
     const filteredSubDays = subcontractorEntries.reduce((sum, [_, v]) => sum + Object.keys(v.dailyRecords).length, 0);
 
+    // ── Fetch Paperless statements with linked purchases ──
+    const statements = await attendanceService.fetchStatementsForWeek(
+      moment(payrollWeekStart.format("YYYY-MM-DD")),
+      moment(endDate.format("YYYY-MM-DD"))
+    );
+
+    // Map purchaseUuid → statement paperlessId so weeklyTable can link due events
+    const purchaseStatementMap = {};
+    for (const entry of statements) {
+      const pid = entry.statement?.paperlessId;
+      if (!pid) continue;
+      for (const p of entry.purchases || []) {
+        if (p.uuid) purchaseStatementMap[p.uuid] = pid;
+      }
+    }
+
     const viewFile = isManagementView ? "weeklyManagement" : "weeklyAdmin";
     res.render(path.join("tailwindcss", "attendance", "weekly"), {
       title: `Tax Week ${taxWeekNumber} — ${payrollWeekStart.format("YYYY")}`,
@@ -185,6 +201,8 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       rejectedCount,
       typeBreakdown,
       dailyHeadcount,
+      statements,
+      purchaseStatementMap,
     });
   } catch (err) {
     next(err);
@@ -398,6 +416,135 @@ exports.submitAttendance = async (req, res, next) => {
       return res.redirect("/attendance/submit");
     }
     logger.error(`❌ Self-service attendance error: ${err.message}`);
+    next(err);
+  }
+};
+
+// ── Statement purchase management ──────────────────────────────────────
+
+/**
+ * Helper: read "Invoice Number" from an OcrDocument, return as array of trimmed strings.
+ */
+function parseStatementInvoiceNumbers(doc) {
+  const field = (doc.customFields || []).find(
+    (cf) => cf.fieldName === "Invoice Number",
+  );
+  const raw = field ? String(field.value || "") : "";
+  return raw
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Helper: persist updated invoice numbers to MongoDB OcrDocument and sync back to Paperless.
+ */
+async function saveStatementInvoiceNumbers(paperlessId, numbers) {
+  const csvValue = numbers.join(", ");
+
+  // Update the customFields array in MongoDB
+  await mdb.PAPERLESS.OcrDocument.updateOne(
+    { paperlessId, "customFields.fieldName": "Invoice Number" },
+    { $set: { "customFields.$.value": csvValue } },
+  );
+
+  // Best-effort sync back to Paperless-ngx
+  try {
+    const { updatePaperlessWithKashFlowInfo } = require("../services/paperless/paperlessUpdateService");
+    const { makeClient } = require("../services/paperless/paperlessClient");
+    const api = makeClient();
+    await api.updateDocumentCustomFields(paperlessId, {
+      "Invoice Number": csvValue,
+    });
+  } catch (err) {
+    logger.warn(
+      `[statement] Failed to sync Invoice Number to Paperless for doc ${paperlessId}: ${err.message}`,
+    );
+  }
+}
+
+/**
+ * POST /statement/:paperlessId/add-purchase
+ * Adds a purchase number to the statement's "Invoice Number" custom field.
+ */
+exports.addStatementPurchase = async (req, res, next) => {
+  try {
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    const purchaseNumber = String(req.body.purchaseNumber || "").trim();
+    if (!purchaseNumber) {
+      req.flash("error", "Purchase number is required.");
+      return res.redirect("back");
+    }
+
+    // Verify the purchase exists in REST
+    const purchase = await mdb.REST.purchase
+      .findOne({ Number: purchaseNumber })
+      .select("Number")
+      .lean();
+    if (!purchase) {
+      req.flash("error", `Purchase #${purchaseNumber} not found.`);
+      return res.redirect("back");
+    }
+
+    const doc = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).lean();
+    if (!doc || doc.documentType?.name !== "statement") {
+      return res.status(404).redirect("back");
+    }
+
+    const numbers = parseStatementInvoiceNumbers(doc);
+    if (numbers.includes(purchaseNumber)) {
+      req.flash("error", `Purchase #${purchaseNumber} is already on this statement.`);
+      return res.redirect("back");
+    }
+
+    numbers.push(purchaseNumber);
+    await saveStatementInvoiceNumbers(paperlessId, numbers);
+
+    logger.info(
+      `[statement] Added purchase #${purchaseNumber} to statement paperlessId=${paperlessId}`,
+    );
+    req.flash("success", `Purchase #${purchaseNumber} added to statement.`);
+    res.redirect("back");
+  } catch (err) {
+    logger.error(`[statement] Error adding purchase: ${err.message}`);
+    next(err);
+  }
+};
+
+/**
+ * POST /statement/:paperlessId/remove-purchase
+ * Removes a purchase number from the statement's "Invoice Number" custom field.
+ */
+exports.removeStatementPurchase = async (req, res, next) => {
+  try {
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    const purchaseNumber = String(req.body.purchaseNumber || "").trim();
+    if (!purchaseNumber) {
+      req.flash("error", "Purchase number is required.");
+      return res.redirect("back");
+    }
+
+    const doc = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).lean();
+    if (!doc || doc.documentType?.name !== "statement") {
+      return res.status(404).redirect("back");
+    }
+
+    const numbers = parseStatementInvoiceNumbers(doc);
+    const filtered = numbers.filter((n) => n !== purchaseNumber);
+    if (filtered.length === numbers.length) {
+      req.flash("error", `Purchase #${purchaseNumber} is not on this statement.`);
+      return res.redirect("back");
+    }
+
+    await saveStatementInvoiceNumbers(paperlessId, filtered);
+
+    logger.info(
+      `[statement] Removed purchase #${purchaseNumber} from statement paperlessId=${paperlessId}`,
+    );
+    req.flash("success", `Purchase #${purchaseNumber} removed from statement.`);
+    res.redirect("back");
+  } catch (err) {
+    logger.error(`[statement] Error removing purchase: ${err.message}`);
     next(err);
   }
 };

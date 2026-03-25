@@ -115,9 +115,156 @@
       isManagementView,
       dailyHeadcount: dailyHeadcount || {},
       showHeadcount: false,
-      sectionType: 'subcontractor'
+      sectionType: 'subcontractor',
+      purchaseStatementMap: typeof purchaseStatementMap !== 'undefined' ? purchaseStatementMap : {}
     }) %>
   </div>
+
+  <!-- Statements Section -->
+  <% if (typeof statements !== 'undefined' && statements.length > 0) { %>
+  <h3 id="statements" class="mt-5 mb-3 text-center text-2xl font-bold">Statements</h3>
+
+  <%/* Missing purchase alert */%>
+  <% const _stmtsWithMissing = statements.filter(e => (e.missingNumbers || []).length > 0); %>
+  <% if (_stmtsWithMissing.length > 0) { %>
+    <div class="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+      <h4 class="font-semibold text-red-800 dark:text-red-300 mb-1">
+        <i class="bi bi-exclamation-triangle-fill mr-1"></i> Missing Purchases
+      </h4>
+      <p class="text-sm text-red-600 dark:text-red-400 mb-2">
+        The following invoice numbers on statements have no matching purchase in KashFlow. Contact the supplier to request copies.
+      </p>
+      <% _stmtsWithMissing.forEach(entry => { %>
+        <div class="mb-2 last:mb-0">
+          <span class="font-medium text-sm text-red-800 dark:text-red-300">
+            <%= entry.statement.correspondent ? entry.statement.correspondent.name : (entry.statement.title || 'Statement') %>:
+          </span>
+          <% entry.missingNumbers.forEach(num => { %>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-[10px] font-medium ml-1">
+              #<%= num %>
+            </span>
+          <% }); %>
+          <%/* Show supplier contact info inline */%>
+          <% if (entry.supplier) { %>
+            <% const _contact = Array.isArray(entry.supplier.Contacts) && entry.supplier.Contacts[0]; %>
+            <% if (_contact) { %>
+              <span class="ml-2 text-xs text-gray-600 dark:text-gray-400">
+                —
+                <% if (_contact.Name) { %><span class="font-medium"><%= _contact.Name %></span><% } %>
+                <% if (_contact.Telephone) { %> <i class="bi bi-telephone text-[10px]"></i> <%= _contact.Telephone %><% } %>
+                <% if (_contact.Mobile) { %> <i class="bi bi-phone text-[10px]"></i> <%= _contact.Mobile %><% } %>
+                <% if (_contact.Email) { %> <a href="mailto:<%= _contact.Email %>" class="text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-envelope text-[10px]"></i> <%= _contact.Email %></a><% } %>
+              </span>
+            <% } %>
+          <% } %>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+
+  <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
+    <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
+      <thead>
+        <tr class="bg-gray-50 dark:bg-gray-800">
+          <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Supplier</th>
+          <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Statement</th>
+          <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Purchases</th>
+          <th class="text-right font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Statement Total</th>
+          <th class="text-right font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Total Paid</th>
+          <th class="text-right font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Outstanding</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+        <% statements.forEach(entry => { %>
+          <tr id="statement-<%= entry.statement.paperlessId %>" class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 <%= (entry.missingNumbers || []).length > 0 ? 'ring-2 ring-inset ring-red-300 dark:ring-red-600' : '' %>">
+            <td class="border border-gray-300 dark:border-gray-700 px-3 py-2">
+              <% const _corrName = entry.statement.correspondent ? entry.statement.correspondent.name : '—'; %>
+              <span class="font-medium"><%= _corrName %></span>
+              <% if (entry.supplier) { %>
+                <% const _c = Array.isArray(entry.supplier.Contacts) && entry.supplier.Contacts[0]; %>
+                <% if (_c) { %>
+                  <div class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
+                    <% if (_c.Name && _c.Name !== _corrName) { %><span><%= _c.Name %></span><br><% } %>
+                    <% if (_c.Telephone) { %><i class="bi bi-telephone"></i> <%= _c.Telephone %><br><% } %>
+                    <% if (_c.Mobile) { %><i class="bi bi-phone"></i> <%= _c.Mobile %><br><% } %>
+                    <% if (_c.Email) { %><a href="mailto:<%= _c.Email %>" class="text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-envelope"></i> <%= _c.Email %></a><% } %>
+                  </div>
+                <% } %>
+              <% } %>
+            </td>
+            <td class="border border-gray-300 dark:border-gray-700 px-3 py-2">
+              <a href="/paperless/ocr/<%= entry.statement.paperlessId %>" class="text-green-900 dark:text-green-400 hover:underline">
+                <%= entry.statement.title || entry.statement.originalFileName || 'Statement' %>
+              </a>
+              <span class="block text-xs text-gray-500 dark:text-gray-400">
+                Modified: <%= moment(entry.statement.modified).format('DD/MM/YYYY') %>
+              </span>
+            </td>
+            <td class="border border-gray-300 dark:border-gray-700 px-3 py-2">
+              <%/* Matched purchases with remove buttons */%>
+              <% if (entry.purchases && entry.purchases.length > 0) { %>
+                <div class="flex flex-wrap gap-1 mb-1">
+                  <% entry.purchases.forEach(p => { %>
+                    <span class="inline-flex items-center gap-0.5">
+                      <a href="/purchase/read/<%= p.uuid %>" class="inline-flex items-center px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400 text-[10px] font-medium hover:underline">
+                        #<%= p.Number %><% if (p.SupplierReference) { %> / <%= p.SupplierReference %><% } %>
+                      </a>
+                      <form action="/statement/<%= entry.statement.paperlessId %>/remove-purchase" method="POST" class="inline print:hidden">
+                        <%- include('../partials/csrfHidden.ejs') %>
+                        <input type="hidden" name="purchaseNumber" value="<%= p.Number %>">
+                        <button type="submit" class="text-red-500 hover:text-red-700 text-xs" title="Remove purchase #<%= p.Number %>">
+                          <i class="bi bi-x-circle"></i>
+                        </button>
+                      </form>
+                    </span>
+                  <% }); %>
+                </div>
+              <% } %>
+              <%/* Unmatched invoice numbers */%>
+              <% const _unmatchedNums = (entry.invoiceNumbers || []).filter(n => !(entry.purchases || []).some(p => String(p.Number) === n)); %>
+              <% if (_unmatchedNums.length > 0) { %>
+                <div class="flex flex-wrap gap-1 mb-1">
+                  <% _unmatchedNums.forEach(num => { %>
+                    <span class="inline-flex items-center gap-0.5">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-medium">
+                        #<%= num %> <span class="text-amber-500 ml-0.5">(not found)</span>
+                      </span>
+                      <form action="/statement/<%= entry.statement.paperlessId %>/remove-purchase" method="POST" class="inline print:hidden">
+                        <%- include('../partials/csrfHidden.ejs') %>
+                        <input type="hidden" name="purchaseNumber" value="<%= num %>">
+                        <button type="submit" class="text-red-500 hover:text-red-700 text-xs" title="Remove #<%= num %>">
+                          <i class="bi bi-x-circle"></i>
+                        </button>
+                      </form>
+                    </span>
+                  <% }); %>
+                </div>
+              <% } %>
+              <%/* Add purchase form */%>
+              <form action="/statement/<%= entry.statement.paperlessId %>/add-purchase" method="POST" class="inline-flex items-center gap-1 mt-1 print:hidden">
+                <%- include('../partials/csrfHidden.ejs') %>
+                <input type="text" name="purchaseNumber" placeholder="Purchase #" class="w-24 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" required>
+                <button type="submit" class="inline-flex items-center px-1.5 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-medium hover:bg-green-200 dark:hover:bg-green-900/50">
+                  <i class="bi bi-plus-lg mr-0.5"></i> Add
+                </button>
+              </form>
+            </td>
+            <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-right whitespace-nowrap font-semibold">
+              &pound;<%= (entry.statementTotal || 0).toFixed(2) %>
+            </td>
+            <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-right whitespace-nowrap">
+              &pound;<%= (entry.totalPaid || 0).toFixed(2) %>
+            </td>
+            <% const _outstanding = (entry.statementTotal || 0) - (entry.totalPaid || 0); %>
+            <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-right whitespace-nowrap font-semibold <%= _outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' %>">
+              &pound;<%= _outstanding.toFixed(2) %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
 
   <% if ((pendingCount || 0) > 0) { %>
     <div class="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 print:hidden">

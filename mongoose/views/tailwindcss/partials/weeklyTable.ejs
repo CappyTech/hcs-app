@@ -27,6 +27,7 @@
   };
   const _dh = typeof dailyHeadcount !== 'undefined' ? dailyHeadcount : {};
   const _showHC = typeof showHeadcount !== 'undefined' ? showHeadcount : false;
+  const _psMap = typeof purchaseStatementMap !== 'undefined' ? purchaseStatementMap : {};
 %>
 <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
   <thead>
@@ -81,8 +82,12 @@
             <% if (Object.keys(dailyRecords).length > 0) { %>
               <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
                 <% const isPurchase = recordId.startsWith('purchase-'); %>
+                <% const _isDue = record.paymentStatus === 'due'; %>
+                <% const _stmtAnchor = isPurchase && _isDue && _psMap[record.purchaseUuid]
+                  ? `#statement-${_psMap[record.purchaseUuid]}`
+                  : null; %>
                 <% const href = isPurchase
-                  ? `/purchase/read/${record.purchaseUuid}`
+                  ? (_stmtAnchor || `/purchase/read/${record.purchaseUuid}`)
                   : `/attendance/read/${record.uuid}`; %>
 
                 <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
@@ -94,7 +99,6 @@
                 <% } %>
 
                 <%/* Type badge */-%>
-                <% const _isDue = record.paymentStatus === 'due'; %>
                 <% const _effectiveType = _isDue ? 'PurchaseDue' : (record.type || 'Purchase'); %>
                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _badgeCls[_effectiveType] || 'bg-gray-100 text-gray-700' %> mb-0.5">
                   <%= record.type || 'Purchase' %><% if (_isDue) { %> <i class="bi bi-clock ml-0.5"></i><% } %>

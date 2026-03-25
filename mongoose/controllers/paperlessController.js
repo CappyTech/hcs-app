@@ -1,4 +1,18 @@
 "use strict";
+
+// NOTE: Statement document type handler implemented.
+//
+// Paperless setup required:
+//   - Document type: { name: "statement" }
+//   - Reuses existing custom field: "Invoice Number" (fieldId 1) — on statements
+//     this contains a comma-separated list of invoice numbers
+//     (e.g. "INV-19982, INV-20001, INV-20015").
+//
+// hcs-app implementation (attendanceServicesMongoose.fetchStatementsForWeek):
+//   - Queries OcrDocument where documentType.name === "statement" modified this week.
+//   - Parses "Invoice Number" custom field as comma-separated, looks up matching REST purchases.
+//   - Displayed as a separate "Statements" section on weekly payroll.
+
 const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
 const logger = require("../../services/loggerService");

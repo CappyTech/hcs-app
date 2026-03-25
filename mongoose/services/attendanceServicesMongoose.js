@@ -451,9 +451,114 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
   };
 };
 
+/**
+ * Fetch Paperless statements and their linked purchases for a given week.
+ *
+ * A "statement" is an OcrDocument with documentType.name === "statement" and a
+ * custom field "Invoice Numbers" (comma-separated). Each invoice number is
+ * matched against REST purchases by their Number field.
+ *
+ * Returns an array of statement objects, each containing the OcrDocument and
+ * the matched purchases.
+ */
+const fetchStatementsForWeek = async (payrollWeekStart, endDate) => {
+  if (!mdb.PAPERLESS || !mdb.PAPERLESS.OcrDocument) return [];
+
+  const start = payrollWeekStart.clone().startOf('day').toDate();
+  const end = endDate.clone().endOf('day').toDate();
+
+  // Find statements whose DueDate (from custom field "Invoice Due Date") falls
+  // within or overlaps the week, or that were created/modified this week.
+  // We fetch broadly and filter client-side to keep the query simple.
+  const statements = await mdb.PAPERLESS.OcrDocument.find({
+    'documentType.name': 'statement',
+    modified: { $gte: start, $lte: end }
+  }).lean();
+
+  if (!statements.length) return [];
+
+  // Extract all invoice numbers and statement totals
+  const statementData = statements.map(stmt => {
+    const invoiceField = (stmt.customFields || []).find(
+      cf => cf.fieldName === 'Invoice Number'
+    );
+    const totalField = (stmt.customFields || []).find(
+      cf => cf.fieldName === 'Invoice Total'
+    );
+    const raw = invoiceField ? String(invoiceField.value || '') : '';
+    const invoiceNumbers = raw
+      .split(',')
+      .map(n => n.trim())
+      .filter(Boolean);
+    // Parse "GBP108.93" or plain "108.93" → number
+    const statementTotal = totalField
+      ? parseFloat(String(totalField.value || '').replace(/[^0-9.\-]/g, '')) || 0
+      : 0;
+    return { statement: stmt, invoiceNumbers, statementTotal };
+  });
+
+  // Collect unique invoice numbers across all statements
+  const allInvoiceNumbers = [...new Set(
+    statementData.flatMap(d => d.invoiceNumbers)
+  )];
+
+  if (!allInvoiceNumbers.length) return statementData;
+
+  // Fetch matching purchases from REST
+  const purchases = await mdb.REST.purchase.find({
+    Number: { $in: allInvoiceNumbers }
+  }).select(
+    'uuid Number SupplierId SupplierName SupplierReference GrossAmount NetAmount ' +
+    'TotalPaidAmount PaidDate DueDate deletedAt'
+  ).lean();
+
+  const purchaseByNumber = new Map();
+  for (const p of purchases) {
+    purchaseByNumber.set(String(p.Number), p);
+  }
+
+  // Attach matched purchases to each statement
+  for (const entry of statementData) {
+    entry.purchases = entry.invoiceNumbers
+      .map(num => purchaseByNumber.get(num) || null)
+      .filter(Boolean);
+    entry.missingNumbers = entry.invoiceNumbers
+      .filter(num => !purchaseByNumber.has(num));
+    entry.totalGross = entry.purchases.reduce(
+      (sum, p) => sum + Number(p.GrossAmount || p.NetAmount || 0), 0
+    );
+    entry.totalPaid = entry.purchases.reduce(
+      (sum, p) => sum + Number(p.TotalPaidAmount || 0), 0
+    );
+    entry.totalOutstanding = entry.totalGross - entry.totalPaid;
+  }
+
+  // Resolve supplier contact details for each statement from its correspondent
+  // or from the first matched purchase's SupplierId
+  const supplierIds = [...new Set(
+    statementData.flatMap(d =>
+      (d.purchases || []).map(p => p.SupplierId).filter(id => id != null)
+    )
+  )];
+  const suppliers = supplierIds.length
+    ? await mdb.REST.supplier.find({ Id: { $in: supplierIds } })
+        .select('Id Name Code Contacts Address')
+        .lean()
+    : [];
+  const supplierById = new Map(suppliers.map(s => [s.Id, s]));
+
+  for (const entry of statementData) {
+    const firstSupplierId = (entry.purchases[0] || {}).SupplierId;
+    entry.supplier = firstSupplierId ? supplierById.get(firstSupplierId) || null : null;
+  }
+
+  return statementData;
+};
+
 module.exports = {
   getAttendanceForDay,
   fetchAttendanceForWeek,
   getAttendanceForWeek,
-  groupAttendanceByPerson
+  groupAttendanceByPerson,
+  fetchStatementsForWeek
 };

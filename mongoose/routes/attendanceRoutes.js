@@ -52,4 +52,16 @@ router.post(
   ctrl.rejectAttendance,
 );
 
+// Statement purchase management — admin only
+router.post(
+  "/statement/:paperlessId/add-purchase",
+  authService.ensureRole("admin"),
+  ctrl.addStatementPurchase,
+);
+router.post(
+  "/statement/:paperlessId/remove-purchase",
+  authService.ensureRole("admin"),
+  ctrl.removeStatementPurchase,
+);
+
 module.exports = router;
