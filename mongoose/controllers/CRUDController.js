@@ -601,6 +601,20 @@ for (const namespace of ["REST", "INTERNAL"]) {
           // Clean up submitted data: convert empty strings to undefined (supports nested objects)
           const cleanedData = cleanBodyForCreate(req.body);
 
+          // Strip hidden fields so stray form data cannot reach Mongoose
+          if (config.hideFields) {
+            for (const hf of config.hideFields) {
+              const dot = hf.indexOf('.');
+              if (dot > -1) {
+                const parent = hf.substring(0, dot);
+                const child = hf.substring(dot + 1);
+                if (cleanedData[parent]) delete cleanedData[parent][child];
+              } else {
+                delete cleanedData[hf];
+              }
+            }
+          }
+
           // Allow per-model pre-processing before document creation
           if (typeof config.beforeCreate === "function") {
             await config.beforeCreate(cleanedData, req);
@@ -617,6 +631,24 @@ for (const namespace of ["REST", "INTERNAL"]) {
           req.flash('success', `${baseName} created successfully.`);
           res.redirect(`/${modelName}s`);
         } catch (err) {
+          if (err.name === 'ValidationError') {
+            const errors = Object.values(err.errors).map(e => e.message);
+            const schema = extractSchema(Model, config);
+            const referenceData = await fetchReferenceData(schema, config);
+            return res.status(400).render(
+              path.join('tailwindcss', 'partials', 'form-create'),
+              {
+                title: `Create ${config.title || baseName}`,
+                formData: req.body,
+                schema,
+                referenceData,
+                formAction: `/${modelName}`,
+                basePath: modelName,
+                config,
+                errors,
+              },
+            );
+          }
           logger.error(`❌ Error creating ${modelName}: ${err.message}`);
           req.flash('error', `Failed to create ${baseName.toLowerCase()}.`);
           next(err);
