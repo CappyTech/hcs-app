@@ -326,7 +326,7 @@ module.exports = {
   user: {
     title: 'User',
     readOnly: ['uuid', 'createdAt'],
-    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'emailVerificationToken', 'emailVerificationExpires'],
+    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'emailVerificationToken', 'emailVerificationExpires', 'customPermissions.departments', 'customPermissions.models', 'customPermissions.routes'],
     fieldOrder: [
       'username', 'email', 'emailVerified', 'role',
       'employeeId', 'subcontractorId', 'clientId',
