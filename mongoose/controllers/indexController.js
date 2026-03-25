@@ -3,6 +3,7 @@ const listConfig = require("../config/listControllerConfig");
 const customTiles = require("../config/dashboardTilesConfig");
 const taskService = require("../services/taskServiceMongoose");
 const holidayService = require("../services/holidayServiceMongoose");
+const { getFrequentPages } = require("../services/sessionActivityService");
 const rbac = require("../config/rolePermissionsConfig");
 const { endOfToday, endOfWeek, endOfMonth } = require("date-fns");
 const moment = require("moment-timezone");
@@ -105,13 +106,64 @@ exports.renderIndex = async (req, res, next) => {
       );
     }
 
+    // Frequent pages (session-based)
+    const frequentPages = req.user ? getFrequentPages(req.session) : [];
+
+    // Task counts for summary badges
+    const taskCounts = req.user
+      ? await taskService.getTaskCountsForUser(req.user._id)
+      : { total: 0, overdue: 0 };
+
     res.render(path.join("tailwindcss", "index"), {
       title: "Home",
       tasks,
+      taskCounts,
+      frequentPages,
       isAuthenticated: !!req.user,
       nextHoliday,
       moment,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Quick-add task from home page
+exports.quickAddTask = async (req, res, next) => {
+  try {
+    const title = (req.body.title || "").trim();
+    if (!title) {
+      req.flash("error", "Task title is required.");
+      return res.redirect("/");
+    }
+    const data = {
+      title,
+      userId: req.user._id,
+    };
+    if (req.body.dueDate) {
+      data.dueDate = new Date(req.body.dueDate);
+    }
+    await taskService.createTask(data);
+    req.flash("success", "Task added.");
+    res.redirect("/");
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Complete a task from home page
+exports.completeTask = async (req, res, next) => {
+  try {
+    const result = await taskService.completeTask(
+      req.params.uuid,
+      req.user._id,
+    );
+    if (result) {
+      req.flash("success", "Task completed.");
+    } else {
+      req.flash("error", "Task not found.");
+    }
+    res.redirect("/");
   } catch (err) {
     next(err);
   }

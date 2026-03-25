@@ -4,6 +4,8 @@ const authService = require("../../services/authService");
 const index = require("../controllers/indexController");
 
 router.get("/", authService.ensureRole("public"), index.renderIndex);
+router.post("/quick-task", authService.ensureRole("public"), index.quickAddTask);
+router.post("/task/:uuid/complete", authService.ensureRole("public"), index.completeTask);
 router.get("/admin", authService.ensureRole("admin"), index.renderAdmin);
 router.get(
   "/attendance",
