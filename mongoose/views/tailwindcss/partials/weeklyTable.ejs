@@ -7,7 +7,8 @@
     holiday:  'bg-purple-50 dark:bg-purple-900/20',
     off:      'bg-gray-100 dark:bg-gray-800',
     leave:    'bg-yellow-50 dark:bg-yellow-900/20',
-    Purchase: 'bg-cyan-50 dark:bg-cyan-900/20'
+    Purchase: 'bg-cyan-50 dark:bg-cyan-900/20',
+    PurchaseDue: 'bg-amber-50 dark:bg-amber-900/20'
   };
   const _badgeCls = {
     work:     'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
@@ -16,7 +17,8 @@
     holiday:  'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
     off:      'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
     leave:    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-    Purchase: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400'
+    Purchase: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+    PurchaseDue: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
   };
   const _statusBadge = {
     pending:  'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
@@ -70,7 +72,9 @@
           <%
             /* Determine dominant type for cell color */
             const _recValues = Object.values(dailyRecords);
-            const _dominantType = _recValues.length > 0 ? (_recValues[0].type || '') : '';
+            const _dominantType = _recValues.length > 0
+              ? (_recValues[0].paymentStatus === 'due' ? 'PurchaseDue' : (_recValues[0].type || ''))
+              : '';
             const _cellClass = _recValues.length > 0 ? (_cellBg[_dominantType] || '') : '';
           %>
           <td class="border border-gray-300 dark:border-gray-700 text-center px-2 py-1.5 align-top <%= _cellClass %>">
@@ -90,8 +94,10 @@
                 <% } %>
 
                 <%/* Type badge */-%>
-                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _badgeCls[record.type] || 'bg-gray-100 text-gray-700' %> mb-0.5">
-                  <%= record.type || 'Purchase' %>
+                <% const _isDue = record.paymentStatus === 'due'; %>
+                <% const _effectiveType = _isDue ? 'PurchaseDue' : (record.type || 'Purchase'); %>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _badgeCls[_effectiveType] || 'bg-gray-100 text-gray-700' %> mb-0.5">
+                  <%= record.type || 'Purchase' %><% if (_isDue) { %> <i class="bi bi-clock ml-0.5"></i><% } %>
                 </span>
 
                 <a href="<%= href %>" class="block text-green-900 dark:text-green-400 hover:underline text-xs leading-tight">

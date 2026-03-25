@@ -153,6 +153,7 @@ module.exports = {
   },
   employee: {
     readOnly: ['uuid', 'createdAt'],
+    useSave: true, // use findOne+save so pre-validate rate computation hooks fire on update
     validators: {
       email: value => /\S+@\S+\.\S+/.test(value),
       startDate: value => !isNaN(Date.parse(value))

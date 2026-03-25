@@ -92,6 +92,50 @@ exports.getWeeklyAttendance = async (req, res, next) => {
     const stripPay =
       req.user && !["admin", "accountant"].includes(req.user.role);
 
+    // ── Filter purchase events by view type ──
+    // Management view: show only paid events (actual cash flow)
+    // Payroll view: show due events; fall back to paid if no due event for that purchase
+    const keepStatus = isManagementView ? "paid" : "due";
+    const filterPurchaseEvents = (person) => {
+      const clone = { ...person, dailyRecords: {} };
+      let recalcPay = 0;
+
+      // Collect which purchase UUIDs have a 'due' event (for payroll fallback logic)
+      const hasDueEvent = new Set();
+      if (!isManagementView) {
+        for (const recs of Object.values(person.dailyRecords)) {
+          for (const [rId, r] of Object.entries(recs)) {
+            if (rId.startsWith("purchase-") && r.paymentStatus === "due") {
+              hasDueEvent.add(r.purchaseUuid);
+            }
+          }
+        }
+      }
+
+      for (const [day, recs] of Object.entries(person.dailyRecords)) {
+        const filtered = {};
+        for (const [rId, r] of Object.entries(recs)) {
+          if (!rId.startsWith("purchase-")) {
+            // Non-purchase records pass through unchanged
+            filtered[rId] = r;
+            recalcPay += r.weeklyPay || 0;
+          } else if (r.paymentStatus === keepStatus) {
+            filtered[rId] = r;
+            recalcPay += r.weeklyPay || 0;
+          } else if (!isManagementView && r.paymentStatus === "paid" && !hasDueEvent.has(r.purchaseUuid)) {
+            // Payroll fallback: no DueDate for this purchase, show paid event instead
+            filtered[rId] = r;
+            recalcPay += r.weeklyPay || 0;
+          }
+        }
+        if (Object.keys(filtered).length > 0) {
+          clone.dailyRecords[day] = filtered;
+        }
+      }
+      clone.weeklyPay = recalcPay;
+      return clone;
+    };
+
     const employeeEntries = Object.entries(scopedGrouped)
       .filter(([_, v]) => v.type === "employee")
       .map(([uuid, v]) => [
@@ -101,10 +145,15 @@ exports.getWeeklyAttendance = async (req, res, next) => {
 
     const subcontractorEntries = Object.entries(scopedGrouped)
       .filter(([_, v]) => v.type === "subcontractor")
-      .map(([uuid, v]) => [
-        uuid,
-        isManagementView || stripPay ? stripPayroll(v) : v,
-      ]);
+      .map(([uuid, v]) => {
+        const filtered = filterPurchaseEvents(v);
+        return [uuid, isManagementView || stripPay ? stripPayroll(filtered) : filtered];
+      })
+      .filter(([_, v]) => Object.keys(v.dailyRecords).length > 0);
+
+    // Recalculate subcontractor totals from the filtered entries
+    const filteredSubPay = subcontractorEntries.reduce((sum, [_, v]) => sum + (v.weeklyPay || 0), 0);
+    const filteredSubDays = subcontractorEntries.reduce((sum, [_, v]) => sum + Object.keys(v.dailyRecords).length, 0);
 
     const viewFile = isManagementView ? "weeklyManagement" : "weeklyAdmin";
     res.render(path.join("tailwindcss", "attendance", "weekly"), {
@@ -121,8 +170,8 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       subcontractorCount,
       totalEmployeePay: isManagementView ? null : totalEmployeePay,
       totalEmployeeHours: isManagementView ? null : totalEmployeeHours,
-      totalSubcontractorPay: isManagementView ? null : totalSubcontractorPay,
-      totalSubcontractorDays: isManagementView ? null : totalSubcontractorDays,
+      totalSubcontractorPay: isManagementView ? null : filteredSubPay,
+      totalSubcontractorDays: isManagementView ? null : filteredSubDays,
       daysOfWeek,
       activeProjects,
       projectStatusFilter,

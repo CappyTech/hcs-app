@@ -629,7 +629,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
         if (req.method === "GET") {
           try {
             const item = await Model.findOne({ uuid: req.params.uuid }).lean();
-            if (!item) return res.status(404).render("mongoose/notFound");
+            if (!item) return res.status(404).render(path.join("tailwindcss", "error"), { title: '404 - Not Found', error: { title: '404 - Not Found', message: `${baseName} not found.` } });
 
             const schema = extractSchema(Model, config);
             const referenceData = await fetchReferenceData(schema, config);
@@ -733,11 +733,20 @@ for (const namespace of ["REST", "INTERNAL"]) {
           }
 
           // 3) actually update, dropping any undefined keys
-          const updated = await Model.findOneAndUpdate(
-            { uuid: req.params.uuid },
-            cleaned,
-            { new: true, runValidators: true, omitUndefined: true },
-          );
+          let updated;
+          if (config.useSave) {
+            // Use findOne + save so document middleware (pre-validate hooks) fires
+            const doc = await Model.findOne({ uuid: req.params.uuid });
+            if (!doc) return res.status(404).render(path.join("tailwindcss", "error"), { title: '404 - Not Found', error: { title: '404 - Not Found', message: `${baseName} not found.` } });
+            doc.set(cleaned);
+            updated = await doc.save();
+          } else {
+            updated = await Model.findOneAndUpdate(
+              { uuid: req.params.uuid },
+              cleaned,
+              { new: true, runValidators: true, omitUndefined: true },
+            );
+          }
           // Hook: update holiday accruals when updating attendance for an employee
           if (modelName === "attendance" && updated) {
             await holidayAccrualService.updateAccrualFromAttendance(updated);

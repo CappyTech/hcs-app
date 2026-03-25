@@ -55,13 +55,14 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
       }
     });
 
-    // Purchases with payments within the week (REST)
+    // Purchases with payments or due dates within the week (REST)
     const purchasesPromise = mdb.REST.purchase.find({
       $or: [
         { PaidDate: { $gte: start, $lte: end } },
+        { DueDate: { $gte: start, $lte: end } },
         { PaymentLines: { $elemMatch: { $or: [{ PayDate: { $gte: start, $lte: end } }, { Date: { $gte: start, $lte: end } }] } } }
       ]
-    }).select('uuid SupplierId SupplierName SupplierReference Number TotalPaidAmount PaidDate PaymentLines deletedAt');
+    }).select('uuid SupplierId SupplierName SupplierReference Number TotalPaidAmount PaidDate DueDate PaymentLines deletedAt NetAmount GrossAmount');
 
     const [attendanceRecords, allEmployees, allSubcontractors, purchases] = await Promise.all([
       attendancePromise,
@@ -113,6 +114,9 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
     };
 
     const buildEventsForPurchase = (p, supplierDoc) => {
+      const events = [];
+
+      // Payment-based events (paid this week)
       const lines = Array.isArray(p.PaymentLines) ? p.PaymentLines : [];
       const lineEvents = lines
         .map((pl, idx) => ({ pl, idx }))
@@ -124,21 +128,42 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
           AmountPaid: Number(pl.Amount || pl.Value || 0),
           InvoiceNumber: p.Number,
           SupplierReference: p.SupplierReference || null,
-          PurchaseUuid: p.uuid || null
+          PurchaseUuid: p.uuid || null,
+          paymentStatus: 'paid'
         }));
-      if (lineEvents.length) return lineEvents;
-      if (inRange(p.PaidDate) && (p.TotalPaidAmount || 0) > 0) {
-        return [{
+      if (lineEvents.length) {
+        events.push(...lineEvents);
+      } else if (inRange(p.PaidDate) && (p.TotalPaidAmount || 0) > 0) {
+        events.push({
           _id: `${p.uuid}-hdr`,
           CustomerID: supplierDoc,
           InvoiceDate: p.PaidDate,
           AmountPaid: Number(p.TotalPaidAmount || 0),
           InvoiceNumber: p.Number,
           SupplierReference: p.SupplierReference || null,
-          PurchaseUuid: p.uuid || null
-        }];
+          PurchaseUuid: p.uuid || null,
+          paymentStatus: 'paid'
+        });
       }
-      return [];
+
+      // Due-date event (due this week — independent of payment events)
+      if (inRange(p.DueDate)) {
+        const amount = Number(p.NetAmount || p.GrossAmount || p.TotalPaidAmount || 0);
+        if (amount > 0) {
+          events.push({
+            _id: `${p.uuid}-due`,
+            CustomerID: supplierDoc,
+            InvoiceDate: p.DueDate,
+            AmountPaid: amount,
+            InvoiceNumber: p.Number,
+            SupplierReference: p.SupplierReference || null,
+            PurchaseUuid: p.uuid || null,
+            paymentStatus: 'due'
+          });
+        }
+      }
+
+      return events;
     };
 
     const paidPurchases = filteredPurchases.reduce((acc, p) => {
@@ -224,7 +249,8 @@ const groupAttendanceByPerson = (
       weeklyPay: amount,
       invoiceNumber: purchase.InvoiceNumber || null,
       supplierReference: purchase.SupplierReference || null,
-      purchaseUuid: purchase.PurchaseUuid || null
+      purchaseUuid: purchase.PurchaseUuid || null,
+      paymentStatus: purchase.paymentStatus || 'paid'
     };
 
     totalSubcontractorPay += amount;
