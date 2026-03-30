@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const authService = require('./services/authService')
 
 const mdb = require('./mongoose/services/mongooseDatabaseService');
+const configService = require('./services/configService');
 
 // Process-level diagnostics for transient and unexpected errors
 process.on('unhandledRejection', (reason, promise) => {
@@ -95,6 +96,29 @@ const main = async () => {
   // Early request blocklist for common scanner/probe paths
   app.use(require('./services/requestBlocklistService'));
 
+  // ── First-run setup wizard ──────────────────────────────────────────────────
+  // Only active when neither env vars nor app-config.json supply the minimum
+  // required config (MONGO_URI/MONGO_HOST, SESSION_SECRET, ENCRYPTION_KEY).
+  // Existing deployments with env vars set skip this entirely.
+  if (!configService.isConfigured()) {
+    logger.warn('[startup] Application is not configured — mounting setup wizard at /setup');
+    const cookieParser = require('cookie-parser');
+    const session = require('express-session');
+    // Minimal in-memory session for wizard state (never persisted)
+    app.use(cookieParser());
+    app.use(session({
+      secret: 'setup-wizard-temporary-secret',
+      resave: false,
+      saveUninitialized: true,
+      cookie: { httpOnly: true, sameSite: 'lax' },
+    }));
+    app.use('/setup', require('./mongoose/routes/setupRoutes'));
+    app.get('/', (req, res) => res.redirect('/setup'));
+    app.use((req, res) => res.redirect('/setup'));
+    // Do not proceed to Phase 2 — wizard completion restarts the process
+    return;
+  }
+
   // ── App router: empty until Phase 2 populates it ───────────────────
   // All real middleware and routes are mounted here once MongoDB is ready.
   // Before that, every request falls through to the maintenance guard below.
@@ -138,6 +162,33 @@ const main = async () => {
       }
     } catch (migrationErr) {
       logger.error('[migration] Email verification backfill failed', { error: migrationErr.message });
+    }
+
+    // Bootstrap: create first admin from setup wizard credentials (app-config.json only)
+    try {
+      const bootstrap = configService.get('_bootstrapAdmin');
+      if (bootstrap) {
+        const parsed = typeof bootstrap === 'string' ? JSON.parse(bootstrap) : bootstrap;
+        const existingCount = await mdb.INTERNAL.user.countDocuments();
+        if (existingCount === 0 && parsed.username && parsed.password) {
+          const bcrypt = require('bcrypt');
+          const { v4: uuidv4 } = require('uuid');
+          const hashedPassword = await bcrypt.hash(parsed.password, 10);
+          await mdb.INTERNAL.user.create({
+            uuid: uuidv4(),
+            username: parsed.username,
+            email: parsed.email || '',
+            password: hashedPassword,
+            role: 'admin',
+            emailVerified: true,
+          });
+          logger.info(`[bootstrap] Created first admin user: ${parsed.username}`);
+        }
+        // Clear bootstrap credentials from the file regardless
+        configService.remove(['_bootstrapAdmin']);
+      }
+    } catch (bootstrapErr) {
+      logger.error('[bootstrap] Failed to create admin user: ' + bootstrapErr.message);
     }
 
     // Load CIS nominal code mappings from the database
@@ -236,10 +287,11 @@ const main = async () => {
       if (!res.locals.csrfToken && req.session?.csrfToken) {
         res.locals.csrfToken = req.session.csrfToken;
       }
-      res.locals.contactEmail = process.env.SUPPORTEMAIL;
+      res.locals.contactEmail = configService.get('SUPPORTEMAIL');
+      res.locals.companyName = configService.get('COMPANY_NAME', '');
       res.locals.lastfetched = null;
       res.locals.session = null;
-      res.locals.copyrightyearstart = process.env.INCORPORATION_YEAR;
+      res.locals.copyrightyearstart = configService.get('INCORPORATION_YEAR');
       res.locals.copyrightyear = new Date().getFullYear();
       next();
     });

@@ -1,0 +1,98 @@
+<%- include('./_header.ejs') %>
+
+<% if (error) { %>
+  <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-sm border border-red-200 dark:border-red-700">
+    <%= error %>
+  </div>
+<% } %>
+
+<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+  Set your company details and generate cryptographic secrets for this deployment.
+  <strong class="text-gray-800 dark:text-gray-200">Save these secrets somewhere safe</strong> — if lost, user sessions and encrypted data will be invalidated.
+</p>
+
+<form action="/setup/step2" method="POST" class="space-y-5">
+
+  <!-- Company Name -->
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Company Name</label>
+    <input type="text" name="companyName" placeholder="Acme Ltd"
+      value="<%= values.companyName || '' %>"
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+    <p class="mt-1 text-xs text-gray-400">Shown in page titles and the footer.</p>
+  </div>
+
+  <!-- Support Email -->
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Support Email</label>
+    <input type="email" name="supportEmail" placeholder="support@example.com"
+      value="<%= values.supportEmail || '' %>"
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+  </div>
+
+  <!-- Incorporation Year -->
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Incorporation Year</label>
+    <input type="number" name="incorporationYear" placeholder="<%= new Date().getFullYear() %>"
+      value="<%= values.incorporationYear || '' %>"
+      min="1900" max="<%= new Date().getFullYear() %>"
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+    <p class="mt-1 text-xs text-gray-400">Used in the footer copyright notice (e.g. © 2019–2026).</p>
+  </div>
+
+  <hr class="border-gray-200 dark:border-gray-700">
+
+  <!-- Session Secret -->
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+      Session Secret <span class="text-red-500">*</span>
+    </label>
+    <div class="flex gap-2">
+      <input type="text" name="sessionSecret" id="sessionSecret"
+        value="<%= values.sessionSecret || generatedSession %>"
+        required minlength="32"
+        class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+      <button type="button" onclick="regenerate('sessionSecret', 64)"
+        class="px-3 py-2 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
+        ↺ Generate
+      </button>
+    </div>
+    <p class="mt-1 text-xs text-gray-400">Signs session cookies. Min 32 chars. Change this to invalidate all existing sessions.</p>
+  </div>
+
+  <!-- Encryption Key -->
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+      Encryption Key <span class="text-red-500">*</span>
+    </label>
+    <div class="flex gap-2">
+      <input type="text" name="encryptionKey" id="encryptionKey"
+        value="<%= values.encryptionKey || generatedEncryption %>"
+        required minlength="64" maxlength="64"
+        class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+      <button type="button" onclick="regenerate('encryptionKey', 64)"
+        class="px-3 py-2 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
+        ↺ Generate
+      </button>
+    </div>
+    <p class="mt-1 text-xs text-gray-400">64-character hex (32 bytes). Used to encrypt TOTP secrets at rest. <strong>Do not lose this.</strong></p>
+  </div>
+
+  <div class="pt-2 flex justify-between items-center">
+    <a href="/setup" class="text-sm text-gray-500 dark:text-gray-400 hover:underline">← Back</a>
+    <button type="submit"
+      class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
+      Next: Admin Account →
+    </button>
+  </div>
+</form>
+
+<script>
+function regenerate(fieldId, hexBytes) {
+  const arr = new Uint8Array(hexBytes / 2);
+  crypto.getRandomValues(arr);
+  document.getElementById(fieldId).value = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+</script>
+
+<%- include('./_footer.ejs') %>

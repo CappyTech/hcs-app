@@ -6,12 +6,13 @@ const path = require('path');
 const tunnel = require('tunnel-ssh');
 const mongoose = require('mongoose');
 const logger = require('../../services/loggerService');
+const configService = require('../../services/configService');
 
 const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {} };
 let isConnected = false;
 let sshServer = null;
 
-const isTunnelEnabled = process.env.SSH_TUNNEL_ENABLED === 'true';
+const isTunnelEnabled = configService.get('SSH_TUNNEL_ENABLED') === 'true';
 
 function getUriWithDb(baseUri, dbName) {
   // Replace or append the db segment before query string, robust to URIs without a path
@@ -37,12 +38,12 @@ function getUriWithDb(baseUri, dbName) {
 }
 
 function buildBaseMongoUriFromParts() {
-  // Build a base Mongo URI from discrete env vars when MONGO_URI is not provided
-  const host = (process.env.MONGO_HOST || 'localhost').trim();
-  const port = parseInt(process.env.MONGO_PORT || '27017', 10);
-  const user = process.env.MONGO_USER ? String(process.env.MONGO_USER) : '';
-  const pass = process.env.MONGO_PASS ? String(process.env.MONGO_PASS) : '';
-  const authSource = (process.env.MONGO_AUTH_SOURCE || 'admin').trim();
+  // Build a base Mongo URI from discrete config values when MONGO_URI is not provided
+  const host = (configService.get('MONGO_HOST', 'localhost')).trim();
+  const port = parseInt(configService.get('MONGO_PORT', '27017'), 10);
+  const user = configService.get('MONGO_USER') ? String(configService.get('MONGO_USER')) : '';
+  const pass = configService.get('MONGO_PASS') ? String(configService.get('MONGO_PASS')) : '';
+  const authSource = (configService.get('MONGO_AUTH_SOURCE', 'admin')).trim();
 
   let left;
   if (user && pass) {
@@ -86,17 +87,17 @@ mdb.connect = async () => {
       const getPort = (await import('get-port')).default;
       localPort = await getPort({ port: Array.from({ length: 1000 }, (_, i) => 27000 + i) });
       const sshConfig = {
-        username: process.env.SSH_USER,
-        host: process.env.SSH_HOST,
-        port: parseInt(process.env.SSH_PORT || '22'),
-        dstHost: process.env.SSH_REMOTE_HOST || '127.0.0.1',
-        dstPort: parseInt(process.env.SSH_REMOTE_PORT || '27017'),
+        username: configService.get('SSH_USER'),
+        host: configService.get('SSH_HOST'),
+        port: parseInt(configService.get('SSH_PORT', '22')),
+        dstHost: configService.get('SSH_REMOTE_HOST', '127.0.0.1'),
+        dstPort: parseInt(configService.get('SSH_REMOTE_PORT', '27017')),
         localHost: '127.0.0.1',
         localPort,
         keepAlive: true,
       };
-      const sshKeyPath = process.env.SSH_KEY_PATH?.trim();
-      const sshPass = process.env.SSH_PASS?.trim();
+      const sshKeyPath = configService.get('SSH_KEY_PATH')?.trim();
+      const sshPass = configService.get('SSH_PASS')?.trim();
       if (sshKeyPath) {
         try { sshConfig.privateKey = fs.readFileSync(sshKeyPath); } catch (err) { logger.error(`❌ Failed to read SSH key at ${sshKeyPath}: ${err.message}`); throw err; }
       } else if (sshPass) {
@@ -132,24 +133,27 @@ mdb.connect = async () => {
     }
 
     // Build URIs per namespace
-    const restDb = process.env.MONGO_DBNAME_REST || process.env.MONGO_DBNAME || 'rest';
-    const internalDb = process.env.MONGO_DBNAME_INTERNAL || process.env.MONGO_DBNAME || 'internal';
-    const paperlessDb= process.env.MONGO_DBNAME_PAPERLESS || 'paperless';
+    const restDb = configService.get('MONGO_DBNAME_REST', configService.get('MONGO_DBNAME', 'rest'));
+    const internalDb = configService.get('MONGO_DBNAME_INTERNAL', configService.get('MONGO_DBNAME', 'internal'));
+    const paperlessDb = configService.get('MONGO_DBNAME_PAPERLESS', 'paperless');
 
     let restUri, internalUri, paperlessUri;
 
     if (isTunnelEnabled) {
-      restUri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${restDb}?authSource=admin`;
-      internalUri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${internalDb}?authSource=admin`;
-      paperlessUri = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@127.0.0.1:${localPort}/${paperlessDb}?authSource=admin`;
-      if (process.env.DEBUG) logger.info('✅ Connected to MongoDB via SSH tunnel');
+      const mongoUser = encodeURIComponent(configService.get('MONGO_USER', ''));
+      const mongoPass = encodeURIComponent(configService.get('MONGO_PASS', ''));
+      restUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${restDb}?authSource=admin`;
+      internalUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${internalDb}?authSource=admin`;
+      paperlessUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${paperlessDb}?authSource=admin`;
+      if (configService.get('DEBUG')) logger.info('✅ Connected to MongoDB via SSH tunnel');
     } else {
-      // Prefer explicit MONGO_URI; otherwise build from parts (MONGO_HOST/PORT/USER/PASS)
-      const baseUri = (process.env.MONGO_URI && process.env.MONGO_URI.trim()) || buildBaseMongoUriFromParts();
+      // Prefer explicit MONGO_URI; otherwise build from parts
+      const rawUri = configService.get('MONGO_URI', '');
+      const baseUri = (rawUri && rawUri.trim()) || buildBaseMongoUriFromParts();
       restUri = getUriWithDb(baseUri, restDb);
       internalUri = getUriWithDb(baseUri, internalDb);
       paperlessUri = getUriWithDb(baseUri, paperlessDb);
-      if (process.env.DEBUG) logger.info('✅ Connecting to MongoDB via ' + (process.env.MONGO_URI ? 'MONGO_URI' : 'MONGO_HOST/PORT/USER/PASS'));
+      if (configService.get('DEBUG')) logger.info('✅ Connecting to MongoDB via ' + (rawUri ? 'MONGO_URI' : 'MONGO_HOST/PORT/USER/PASS'));
     }
 
     const restConn = mongoose.createConnection(restUri);

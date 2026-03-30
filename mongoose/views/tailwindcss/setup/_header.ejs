@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'Application Setup' %></title>
+  <link rel="stylesheet" href="/resources/css/output.css">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (stored ? stored === 'dark' : prefersDark) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col items-center justify-center py-12 px-4">
+
+  <!-- Progress bar -->
+  <div class="w-full max-w-lg mb-8">
+    <div class="flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+      <span class="<%= step >= 1 ? 'text-green-600 dark:text-green-400 font-semibold' : '' %>">① Database</span>
+      <span class="<%= step >= 2 ? 'text-green-600 dark:text-green-400 font-semibold' : '' %>">② Company &amp; Secrets</span>
+      <span class="<%= step >= 3 ? 'text-green-600 dark:text-green-400 font-semibold' : '' %>">③ Admin Account</span>
+    </div>
+    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+      <div class="bg-green-500 h-1.5 rounded-full transition-all" style="width: <%= Math.round((step / 3) * 100) %>%"></div>
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div class="w-full max-w-lg bg-white dark:bg-gray-800 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <div>
+          <h1 class="text-xl font-bold leading-tight"><%= title %></h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400">First-run configuration wizard</p>
+        </div>
+      </div>

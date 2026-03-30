@@ -1,0 +1,122 @@
+<%- include('./_header.ejs') %>
+
+<% if (error) { %>
+  <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-sm border border-red-200 dark:border-red-700">
+    <%= error %>
+  </div>
+<% } %>
+
+<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+  Enter the connection details for your MongoDB instance. You can provide a full URI
+  or fill in the individual fields.
+</p>
+
+<form action="/setup/step1" method="POST" class="space-y-5" id="dbForm">
+
+  <!-- MongoDB URI -->
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+      MongoDB URI <span class="text-gray-400 text-xs">(optional — overrides fields below)</span>
+    </label>
+    <input type="text" name="mongoUri" id="mongoUri" placeholder="mongodb://user:pass@host:27017/"
+      value="<%= values.mongoUri || '' %>"
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+  </div>
+
+  <div class="relative flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+    <div class="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+    <span>or fill individually</span>
+    <div class="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+  </div>
+
+  <!-- Host + Port -->
+  <div class="grid grid-cols-3 gap-3">
+    <div class="col-span-2">
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Host</label>
+      <input type="text" name="mongoHost" placeholder="localhost"
+        value="<%= values.mongoHost || '' %>"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Port</label>
+      <input type="number" name="mongoPort" placeholder="27017"
+        value="<%= values.mongoPort || '27017' %>"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+    </div>
+  </div>
+
+  <!-- Username + Password -->
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+      <input type="text" name="mongoUser" placeholder="admin"
+        value="<%= values.mongoUser || '' %>"
+        autocomplete="off"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+      <input type="password" name="mongoPass"
+        value="<%= values.mongoPass || '' %>"
+        autocomplete="new-password"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+    </div>
+  </div>
+
+  <!-- Auth source -->
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Auth Source</label>
+    <input type="text" name="mongoAuthSource" placeholder="admin"
+      value="<%= values.mongoAuthSource || 'admin' %>"
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+  </div>
+
+  <!-- Test connection -->
+  <div>
+    <button type="button" id="testBtn"
+      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+      <svg id="testSpinner" class="hidden animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      </svg>
+      Test Connection
+    </button>
+    <span id="testResult" class="ml-3 text-sm"></span>
+  </div>
+
+  <div class="pt-2 flex justify-end">
+    <button type="submit"
+      class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
+      Next: Company &amp; Secrets →
+    </button>
+  </div>
+</form>
+
+<script>
+document.getElementById('testBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('testBtn');
+  const spinner = document.getElementById('testSpinner');
+  const result = document.getElementById('testResult');
+  btn.disabled = true;
+  spinner.classList.remove('hidden');
+  result.textContent = '';
+
+  const form = document.getElementById('dbForm');
+  const data = new URLSearchParams(new FormData(form));
+
+  try {
+    const resp = await fetch('/setup/test-db', { method: 'POST', body: data,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    const json = await resp.json();
+    result.textContent = json.ok ? '✓ Connected successfully' : '✗ ' + json.error;
+    result.className = 'ml-3 text-sm ' + (json.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400');
+  } catch (e) {
+    result.textContent = '✗ Request failed';
+    result.className = 'ml-3 text-sm text-red-600 dark:text-red-400';
+  }
+
+  spinner.classList.add('hidden');
+  btn.disabled = false;
+});
+</script>
+
+<%- include('./_footer.ejs') %>

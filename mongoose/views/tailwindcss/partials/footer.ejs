@@ -9,7 +9,7 @@
       <small>&copy; <%= copyrightyearstart %>–<%= copyrightyear %></small>
       <img src="/resources/images/HCS-Logo-v4-Icon32.png" alt="Logo" class="w-4 h-4" />
       <a href="https://www.heroncs.co.uk" class="text-green-600 hover:underline whitespace-nowrap">
-        Heron Constructive Solutions LTD
+        <%= (typeof companyName !== 'undefined' && companyName) ? companyName : 'Heron Constructive Solutions LTD' %>
       </a>
     </div>
     <div>

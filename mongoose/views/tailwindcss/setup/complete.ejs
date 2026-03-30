@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup Complete — Restarting</title>
+  <meta http-equiv="refresh" content="8;url=/">
+  <link rel="stylesheet" href="/resources/css/output.css">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (stored ? stored === 'dark' : prefersDark) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
+  <div class="max-w-md w-full text-center space-y-6">
+
+    <!-- Animated tick -->
+    <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 dark:bg-green-900/30">
+      <svg class="h-10 w-10 text-green-600 dark:text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+      </svg>
+    </div>
+
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Setup Complete!</h1>
+    <p class="text-gray-600 dark:text-gray-400">
+      Your configuration has been saved. The application is restarting now&hellip;
+    </p>
+
+    <!-- Countdown -->
+    <p class="text-sm text-gray-500 dark:text-gray-500">
+      Redirecting to login in <span id="countdown" class="font-semibold text-green-600 dark:text-green-400">8</span>s
+    </p>
+
+    <!-- Spinner -->
+    <div class="flex justify-center">
+      <svg class="animate-spin h-6 w-6 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+    </div>
+
+    <a href="/" class="inline-block text-sm text-green-600 dark:text-green-400 hover:underline">
+      Click here if not redirected automatically
+    </a>
+  </div>
+
+  <script>
+    let n = 8;
+    const el = document.getElementById('countdown');
+    const t = setInterval(() => { n--; if (el) el.textContent = n; if (n <= 0) clearInterval(t); }, 1000);
+  </script>
+</body>
+</html>
