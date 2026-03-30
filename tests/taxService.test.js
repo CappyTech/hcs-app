@@ -17,8 +17,8 @@ describe('getCurrentTaxYear', () => {
   });
 
   // Tax year 2025/26 runs from 6 Apr 2025 to 5 Apr 2026.
-  // Today is 25 Mar 2026, which is inside tax year 2025.
-  it('current date (25 Mar 2026) is in tax year 2025', () => {
+  // Today is 30 Mar 2026, which is inside tax year 2025.
+  it('current date (30 Mar 2026) is in tax year 2025', () => {
     assert.equal(getCurrentTaxYear(), 2025);
   });
 });
@@ -50,7 +50,7 @@ describe('getTaxYearStartEnd', () => {
     assert.equal(m.year(), 2024);
   });
 
-  it('start and end span exactly 365 or 366 days', () => {
+  it('start and end span exactly 364 or 365 days', () => {
     const { start, end } = getTaxYearStartEnd(2025);
     const days = moment(end).diff(moment(start), 'days');
     assert.ok(days === 364 || days === 365, `Expected 364 or 365 days, got ${days}`);

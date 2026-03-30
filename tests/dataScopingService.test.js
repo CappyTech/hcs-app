@@ -114,9 +114,9 @@ describe('dataScopingService', () => {
       });
       const req = makeReq({ role: 'employee', employeeId: 'emp1' });
       const result = await scopeQuery(req, 'attendance');
-      // employee attendance ownOnly is employeeId; IR35 dual-role adds subcontractor filter
-      // The specific shape depends on whether subcontractor has attendance ownership mapping
-      assert.ok(result, 'should return a filter');
+      // Primary filter: { employeeId: 'emp1' }
+      // Secondary (IR35 subcontractor): { subcontractorId: 'suppId99' }
+      assert.deepStrictEqual(result, { $or: [{ employeeId: 'emp1' }, { subcontractorId: 'suppId99' }] });
     });
 
     it('skips IR35 when employee lacks ir35 flag', async () => {
@@ -127,7 +127,7 @@ describe('dataScopingService', () => {
     });
 
     it('accepts custom operation parameter', async () => {
-      // accountant has 'rl' on invoice — 'u' should be denied
+      // accountant has 'r,l' on invoice — 'u' (update) should be denied
       const result = await scopeQuery(makeReq({ role: 'accountant' }), 'invoice', 'u');
       assert.equal(result, null);
     });
