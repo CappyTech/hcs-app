@@ -1,5 +1,6 @@
 const { describe, it, beforeEach, mock } = require('node:test');
 const assert = require('node:assert/strict');
+const logger = require('../services/loggerService');
 
 /*
  * csrfService only requires logger at top level — real logger is fine.
@@ -206,6 +207,7 @@ describe('csrfService', () => {
 
   describe('error handling', () => {
     it('calls next() on internal error', (_, done) => {
+      logger.info('(intentional error log follows — CSRF middleware error path)');
       const req = {
         method: 'POST',
         path: '/',

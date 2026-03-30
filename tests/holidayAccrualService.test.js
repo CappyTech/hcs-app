@@ -1,5 +1,6 @@
 const { describe, it, beforeEach, mock } = require('node:test');
 const assert = require('node:assert/strict');
+const logger = require('../services/loggerService');
 
 /*
  * holidayAccrualService requires mdb at top-level (patch singleton)
@@ -227,6 +228,7 @@ describe('holidayAccrualService', () => {
 
     it('swallows errors without throwing', async () => {
       patchMdb();
+      logger.info('(intentional warn log follows — holidayAccrualService DB error path)');
       mdb.INTERNAL.employeeHoliday.findOne = mock.fn(() => { throw new Error('DB fail'); });
 
       await updateAccrualFromAttendance({
