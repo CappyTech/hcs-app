@@ -16,10 +16,11 @@ describe('getCurrentTaxYear', () => {
     assert.equal(typeof year, 'number');
   });
 
-  // Tax year 2025/26 runs from 6 Apr 2025 to 5 Apr 2026.
-  // Today is 30 Mar 2026, which is inside tax year 2025.
-  it('current date (30 Mar 2026) is in tax year 2025', () => {
-    assert.equal(getCurrentTaxYear(), 2025);
+  it('returns the correct tax year for today', () => {
+    const today = moment.tz('Europe/London');
+    const cutoff = moment.tz({ year: today.year(), month: 3, day: 6 }, 'Europe/London');
+    const expected = today.isBefore(cutoff) ? today.year() - 1 : today.year();
+    assert.equal(getCurrentTaxYear(), expected);
   });
 });
 

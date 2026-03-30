@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
  */
 const mdb = require('../mongoose/services/mongooseDatabaseService');
 const taskService = require('../mongoose/services/taskServiceMongoose');
+const logger = require('../services/loggerService');
 
 let createTaskCalls = [];
 const origCreateTask = taskService.createTask;
@@ -155,7 +156,9 @@ describe('vehicleComplianceService', () => {
       });
       taskService.createTask = mock.fn(() => Promise.reject(new Error('fail')));
 
+      logger.info('(intentional error log follows — task creation failure path)');
       const stats = await checkComplianceAndCreateTasks();
+
       assert.equal(stats.errors, 1);
     });
   });
