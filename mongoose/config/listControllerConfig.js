@@ -193,7 +193,7 @@ module.exports = {
     sortField: 'Number',
     sortOrder: -1,
     department: ['kashflow'],
-    deny: ['c', 'd'],
+    deny: ['c', 'u', 'd'],
     labelOverrides: {
       Number: 'KashFlow Number',
       CustomerId: 'Customer'
