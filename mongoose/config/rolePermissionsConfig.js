@@ -62,14 +62,14 @@ const roleModelAccess = {
   },
 
   accountant: {
-    invoice:    'rl',
-    purchase:   'rl',     // listed as "supplier" receipts in KashFlow
-    supplier:   'rl',
-    customer:   'rl',
-    project:    'rl',
-    quote:      'rl',
-    nominal:    'rl',
-    note:       'rl',
+    invoice:    'r,l',
+    purchase:   'r,l',    // listed as "supplier" receipts in KashFlow
+    supplier:   'r,l',
+    customer:   'r,l',
+    project:    'r,l',
+    quote:      'r,l',
+    nominal:    'r,l',
+    note:       'r,l',
   },
 
   employee: {
@@ -98,7 +98,7 @@ const roleModelAccess = {
   },
 
   hmrc: {
-    supplier: 'rl',   // subcontractor verification data
+    supplier: 'r,l',  // subcontractor verification data
   },
 };
 
