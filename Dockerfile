@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Use a slim Node LTS image
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Set working directory
 WORKDIR /mnt/data/hcs/app
