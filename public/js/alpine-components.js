@@ -48,4 +48,56 @@ document.addEventListener('alpine:init', function () {
     };
   });
 
+  /**
+   * helpDocs – search + active-link highlighting for /help
+   */
+  Alpine.data('helpDocs', function () {
+    return {
+      q: '',
+      noResults: false,
+
+      search: function () {
+        var q = this.q.toLowerCase().trim();
+        var anyVisible = false;
+
+        var sections = document.querySelectorAll('[data-help-section]');
+        sections.forEach(function (section) {
+          var sectionVisible = false;
+          var articles = section.querySelectorAll('[data-help-article]');
+          articles.forEach(function (article) {
+            var text = article.getAttribute('data-search-text') || '';
+            var visible = !q || text.indexOf(q) !== -1;
+            article.style.display = visible ? '' : 'none';
+            if (visible) {
+              sectionVisible = true;
+              anyVisible = true;
+            }
+          });
+          section.style.display = sectionVisible ? '' : 'none';
+          var navCat = document.querySelector('[data-nav-cat="' + section.getAttribute('data-help-section') + '"]');
+          if (navCat) navCat.style.display = sectionVisible ? '' : 'none';
+        });
+
+        var navArts = document.querySelectorAll('[data-nav-art]');
+        navArts.forEach(function (navArt) {
+          var id = navArt.getAttribute('data-nav-art');
+          var article = document.getElementById(id);
+          navArt.style.display = (!article || article.style.display === 'none') ? 'none' : '';
+        });
+
+        this.noResults = !anyVisible && q.length > 0;
+      },
+
+      highlightActive: function (id) {
+        document.querySelectorAll('[data-nav-art] a').forEach(function (a) {
+          a.classList.remove('text-green-600', 'dark:text-green-400', 'bg-green-50', 'dark:bg-green-900/20', 'font-medium');
+        });
+        var link = document.querySelector('[data-nav-art="' + id + '"] a');
+        if (link) {
+          link.classList.add('text-green-600', 'font-medium', 'bg-green-50');
+        }
+      }
+    };
+  });
+
 });

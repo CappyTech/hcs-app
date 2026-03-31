@@ -12,6 +12,7 @@
         type="text"
         x-model="q"
         x-on:input="search()"
+        x-on:keydown.enter.prevent="search()"
         placeholder="Search topics…"
         class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
         autocomplete="off"
@@ -61,6 +62,7 @@
         type="text"
         x-model="q"
         x-on:input="search()"
+        x-on:keydown.enter.prevent="search()"
         placeholder="Search topics…"
         class="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
         autocomplete="off"
@@ -69,7 +71,7 @@
     </div>
 
     <%# No results notice %>
-    <div x-show="noResults" x-cloak class="mb-8 flex items-center gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-sm">
+    <div x-show="noResults" style="display:none" class="mb-8 flex items-center gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-sm">
       <i class="bi bi-search text-lg flex-shrink-0"></i>
       <span>No topics found for &ldquo;<span x-text="q" class="font-semibold"></span>&rdquo;. Try a different keyword.</span>
     </div>
@@ -194,59 +196,5 @@
 
   </main>
 
+
 </div>
-
-<script>
-  document.addEventListener('alpine:init', function () {
-    Alpine.data('helpDocs', function () {
-      return {
-        q: '',
-        noResults: false,
-
-        search: function () {
-          var q = this.q.toLowerCase().trim();
-          var anyVisible = false;
-
-          var sections = document.querySelectorAll('[data-help-section]');
-          sections.forEach(function (section) {
-            var sectionVisible = false;
-            var articles = section.querySelectorAll('[data-help-article]');
-            articles.forEach(function (article) {
-              var text = article.getAttribute('data-search-text') || '';
-              var visible = !q || text.indexOf(q) !== -1;
-              article.style.display = visible ? '' : 'none';
-              if (visible) {
-                sectionVisible = true;
-                anyVisible = true;
-              }
-            });
-            section.style.display = sectionVisible ? '' : 'none';
-            // Mirror visibility to sidebar nav category
-            var navCat = document.querySelector('[data-nav-cat="' + section.getAttribute('data-help-section') + '"]');
-            if (navCat) navCat.style.display = sectionVisible ? '' : 'none';
-          });
-
-          // Sidebar article links
-          var navArts = document.querySelectorAll('[data-nav-art]');
-          navArts.forEach(function (navArt) {
-            var id = navArt.getAttribute('data-nav-art');
-            var article = document.getElementById(id);
-            navArt.style.display = (!article || article.style.display === 'none') ? 'none' : '';
-          });
-
-          this.noResults = !anyVisible && q.length > 0;
-        },
-
-        highlightActive: function (id) {
-          document.querySelectorAll('[data-nav-art] a').forEach(function (a) {
-            a.classList.remove('text-green-600', 'dark:text-green-400', 'bg-green-50', 'dark:bg-green-900/20', 'font-medium');
-          });
-          var link = document.querySelector('[data-nav-art="' + id + '"] a');
-          if (link) {
-            link.classList.add('text-green-600', 'font-medium', 'bg-green-50');
-          }
-        }
-      };
-    });
-  });
-</script>
