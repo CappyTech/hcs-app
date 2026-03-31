@@ -3,12 +3,21 @@ const assert = require('node:assert/strict');
 
 /*
  * totpService requires speakeasy, qrcode, encryptionService, logger.
- * All are installed and work — test with real deps.
- * encryptionService needs ENCRYPTION_KEY env.
+ * speakeasy and encryptionService run with real deps.
+ * qrcode is stubbed: its toDataURL() uses native/canvas internals that
+ * produce non-cloneable objects, causing the Node test-runner IPC channel
+ * to fail with ERR_TEST_FAILURE / "Unable to deserialize cloned data".
+ * Stubbing before totpService loads ensures the CJS require cache delivers
+ * the same patched instance to totpService.
  */
 if (!process.env.ENCRYPTION_KEY) {
   process.env.ENCRYPTION_KEY = 'test-key-for-totp-service-unit-tests-32ch';
 }
+
+// Patch qrcode BEFORE totpService is required so it picks up the stub.
+const qrcode = require('qrcode');
+const FAKE_QR_URL = 'data:image/png;base64,' + 'A'.repeat(128);
+mock.method(qrcode, 'toDataURL', async () => FAKE_QR_URL);
 
 const { generateTOTPSecret, generateQRCode } = require('../services/totpService');
 
@@ -45,10 +54,9 @@ describe('totpService', () => {
       assert.ok(url.startsWith('data:image/png;base64,'));
     });
 
-    it('includes the username in the QR code URL', async () => {
-      // We can't easily inspect the QR content, but we verify it returns without error
+    it('returns the value from qrcode.toDataURL', async () => {
       const url = await generateQRCode('ABCDEFGH', { username: 'alice' });
-      assert.ok(url.length > 100, 'data URL should be substantial');
+      assert.equal(url, FAKE_QR_URL);
     });
   });
 });
