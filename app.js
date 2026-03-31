@@ -344,6 +344,7 @@ const main = async () => {
     appRouter.use('/', require('./mongoose/routes/paperlessRoutes'));
     appRouter.use('/', require('./mongoose/routes/fleetRoutes'));
     appRouter.use('/', require('./mongoose/routes/ssoRoutes'));
+    appRouter.use('/', require('./mongoose/routes/helpRoutes'));
 
     // Catch-all 404
     appRouter.use((req, res, next) => {

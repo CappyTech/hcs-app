@@ -239,6 +239,9 @@
       displayValue = value.length ? value.join(', ') : '—';
     } else if (typeof value === 'string' || typeof value === 'number') {
       displayValue = value || '—';
+    } else if (value && typeof value === 'object' && typeof value.toString === 'function' && !isNaN(Number(value.toString())) && !(value instanceof Date)) {
+      // Decimal128 (and similar BSON numeric types) — convert to number string
+      displayValue = String(Number(value.toString()));
     } else if (value && typeof value === 'object') {
       displayValue = null; // rendered as key-value pairs in the template below
     }

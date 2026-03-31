@@ -1,0 +1,252 @@
+<%# ─── /help ── User-facing knowledge base / UX docs ─────────────────────── %>
+
+<div x-data="helpDocs" class="-mx-4 sm:-mx-6 lg:-mx-8 flex min-h-[calc(100vh-4rem)]">
+
+  <%# ─── Left sidebar ────────────────────────────────────────────────────── %>
+  <aside class="hidden lg:flex flex-col w-64 xl:w-72 flex-shrink-0 sticky top-16 self-start h-[calc(100vh-4rem)] overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-6 space-y-5">
+
+    <%# Search %>
+    <div class="relative">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none text-sm"></i>
+      <input
+        type="text"
+        x-model="q"
+        x-on:input="search()"
+        placeholder="Search topics…"
+        class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+        autocomplete="off"
+        spellcheck="false"
+      >
+    </div>
+
+    <%# Category nav %>
+    <nav class="space-y-4 text-sm">
+      <% helpContent.forEach(function(cat) { %>
+        <div data-nav-cat="<%= cat.id %>">
+          <p class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1 px-1">
+            <i class="bi <%= cat.icon %> <%= cat.colorClass %>"></i>
+            <%= cat.title %>
+          </p>
+          <ul class="space-y-0.5">
+            <% cat.articles.forEach(function(art) { %>
+              <li data-nav-art="<%= art.id %>">
+                <a href="#<%= art.id %>"
+                   class="block px-2 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition truncate"
+                   x-on:click="highlightActive('<%= art.id %>')"
+                ><%= art.title %></a>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+      <% }); %>
+    </nav>
+
+  </aside>
+
+  <%# ─── Main content ────────────────────────────────────────────────────── %>
+  <main class="flex-1 min-w-0 px-6 lg:px-10 py-8">
+
+    <%# Page header %>
+    <div class="mb-10">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+        <i class="bi bi-question-circle text-green-500"></i> Help Centre
+      </h1>
+      <p class="mt-2 text-gray-500 dark:text-gray-400">Find guidance on every feature of the platform.</p>
+    </div>
+
+    <%# Mobile search %>
+    <div class="lg:hidden mb-8 relative">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm"></i>
+      <input
+        type="text"
+        x-model="q"
+        x-on:input="search()"
+        placeholder="Search topics…"
+        class="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+        autocomplete="off"
+        spellcheck="false"
+      >
+    </div>
+
+    <%# No results notice %>
+    <div x-show="noResults" x-cloak class="mb-8 flex items-center gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-sm">
+      <i class="bi bi-search text-lg flex-shrink-0"></i>
+      <span>No topics found for &ldquo;<span x-text="q" class="font-semibold"></span>&rdquo;. Try a different keyword.</span>
+    </div>
+
+    <%# ── Categories ── %>
+    <% helpContent.forEach(function(cat) { %>
+      <section data-help-section="<%= cat.id %>" class="mb-16">
+
+        <%# Category heading %>
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-1 h-8 rounded-full <%= cat.bgClass %>"></div>
+          <i class="bi <%= cat.icon %> text-xl <%= cat.colorClass %>"></i>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white"><%= cat.title %></h2>
+        </div>
+
+        <%# Articles %>
+        <div class="space-y-5">
+          <% cat.articles.forEach(function(art) { %>
+
+            <%# Build search text for data attribute (stripped of special chars) %>
+            <% var searchText = (art.title + ' ' + art.description + ' ' +
+               (art.steps || []).join(' ') + ' ' +
+               (art.notes || []).join(' ') + ' ' +
+               (art.fields || []).map(function(f){ return f.name + ' ' + f.description; }).join(' ')
+             ).toLowerCase().replace(/'/g, ' ').replace(/\n/g, ' '); %>
+
+            <div
+              id="<%= art.id %>"
+              data-help-article="<%= art.id %>"
+              data-search-text="<%= searchText %>"
+              class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden scroll-mt-20"
+            >
+              <%# Article header — coloured left border strip %>
+              <div class="border-l-4 <%= cat.borderClass %> px-6 py-4">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <h3 class="text-base font-semibold text-gray-900 dark:text-white"><%= art.title %></h3>
+                  <% if (art.badge) { %>
+                    <span class="flex-shrink-0 text-xs px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium border border-gray-200 dark:border-gray-700">
+                      <i class="bi bi-person text-xs mr-1"></i><%= art.badge %>
+                    </span>
+                  <% } %>
+                </div>
+                <p class="mt-1.5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed"><%= art.description %></p>
+              </div>
+
+              <%# Article body %>
+              <% var hasBody = (art.steps && art.steps.length) || (art.fields && art.fields.length) || (art.notes && art.notes.length); %>
+              <% if (hasBody) { %>
+                <div class="px-6 py-5 space-y-6 border-t border-gray-100 dark:border-gray-800">
+
+                  <%# Steps %>
+                  <% if (art.steps && art.steps.length) { %>
+                    <div>
+                      <h4 class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">How to</h4>
+                      <ol class="space-y-2 list-none">
+                        <% art.steps.forEach(function(step, i) { %>
+                          <li class="flex gap-3 text-sm text-gray-700 dark:text-gray-300">
+                            <span class="flex-shrink-0 w-5 h-5 rounded-full <%= cat.bgClass %> bg-opacity-10 dark:bg-opacity-20 text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center justify-center mt-0.5 border border-gray-200 dark:border-gray-700"><%= i + 1 %></span>
+                            <span class="leading-relaxed"><%= step %></span>
+                          </li>
+                        <% }); %>
+                      </ol>
+                    </div>
+                  <% } %>
+
+                  <%# Fields table %>
+                  <% if (art.fields && art.fields.length) { %>
+                    <div>
+                      <h4 class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Fields</h4>
+                      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+                        <table class="w-full text-sm">
+                          <thead>
+                            <tr class="bg-gray-50 dark:bg-gray-800 text-left">
+                              <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-40">Field</th>
+                              <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-28">Required</th>
+                              <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300">Description</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            <% art.fields.forEach(function(f) { %>
+                              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
+                                <td class="px-4 py-2.5 font-mono text-xs text-gray-800 dark:text-gray-200 font-medium"><%= f.name %></td>
+                                <td class="px-4 py-2.5">
+                                  <% if (f.required === true || f.required === 'Yes') { %>
+                                    <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium">Required</span>
+                                  <% } else if (f.required && f.required !== false && f.required !== '') { %>
+                                    <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium"><%= f.required %></span>
+                                  <% } else { %>
+                                    <span class="text-xs text-gray-400 dark:text-gray-600">Optional</span>
+                                  <% } %>
+                                </td>
+                                <td class="px-4 py-2.5 text-gray-600 dark:text-gray-400 leading-relaxed"><%= f.description %></td>
+                              </tr>
+                            <% }); %>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  <% } %>
+
+                  <%# Notes / callouts %>
+                  <% if (art.notes && art.notes.length) { %>
+                    <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 px-4 py-3 space-y-2">
+                      <% art.notes.forEach(function(note) { %>
+                        <p class="flex gap-2 text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                          <i class="bi bi-info-circle flex-shrink-0 mt-0.5"></i>
+                          <span><%= note %></span>
+                        </p>
+                      <% }); %>
+                    </div>
+                  <% } %>
+
+                </div>
+              <% } %>
+            </div>
+
+          <% }); %>
+        </div>
+
+      </section>
+    <% }); %>
+
+  </main>
+
+</div>
+
+<script>
+  document.addEventListener('alpine:init', function () {
+    Alpine.data('helpDocs', function () {
+      return {
+        q: '',
+        noResults: false,
+
+        search: function () {
+          var q = this.q.toLowerCase().trim();
+          var anyVisible = false;
+
+          var sections = document.querySelectorAll('[data-help-section]');
+          sections.forEach(function (section) {
+            var sectionVisible = false;
+            var articles = section.querySelectorAll('[data-help-article]');
+            articles.forEach(function (article) {
+              var text = article.getAttribute('data-search-text') || '';
+              var visible = !q || text.indexOf(q) !== -1;
+              article.style.display = visible ? '' : 'none';
+              if (visible) {
+                sectionVisible = true;
+                anyVisible = true;
+              }
+            });
+            section.style.display = sectionVisible ? '' : 'none';
+            // Mirror visibility to sidebar nav category
+            var navCat = document.querySelector('[data-nav-cat="' + section.getAttribute('data-help-section') + '"]');
+            if (navCat) navCat.style.display = sectionVisible ? '' : 'none';
+          });
+
+          // Sidebar article links
+          var navArts = document.querySelectorAll('[data-nav-art]');
+          navArts.forEach(function (navArt) {
+            var id = navArt.getAttribute('data-nav-art');
+            var article = document.getElementById(id);
+            navArt.style.display = (!article || article.style.display === 'none') ? 'none' : '';
+          });
+
+          this.noResults = !anyVisible && q.length > 0;
+        },
+
+        highlightActive: function (id) {
+          document.querySelectorAll('[data-nav-art] a').forEach(function (a) {
+            a.classList.remove('text-green-600', 'dark:text-green-400', 'bg-green-50', 'dark:bg-green-900/20', 'font-medium');
+          });
+          var link = document.querySelector('[data-nav-art="' + id + '"] a');
+          if (link) {
+            link.classList.add('text-green-600', 'font-medium', 'bg-green-50');
+          }
+        }
+      };
+    });
+  });
+</script>
