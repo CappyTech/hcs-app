@@ -96,6 +96,13 @@ document.addEventListener('alpine:init', function () {
         if (link) {
           link.classList.add('text-green-600', 'font-medium', 'bg-green-50');
         }
+        var article = document.getElementById(id);
+        if (article) {
+          article.classList.add('ring-2', 'ring-green-400', 'ring-offset-2', 'dark:ring-offset-gray-950');
+          setTimeout(function () {
+            article.classList.remove('ring-2', 'ring-green-400', 'ring-offset-2', 'dark:ring-offset-gray-950');
+          }, 800);
+        }
       }
     };
   });
