@@ -64,6 +64,22 @@ const helpContent = [
           'If you lose access to your authenticator, contact your administrator to reset 2FA on your account.',
         ],
       },
+      {
+        id: 'hmrc-role',
+        title: 'HMRC User Access',
+        badge: 'HMRC',
+        description: 'The HMRC role provides read-only access to supplier (subcontractor) records and the full CIS dashboard and returns — for verification and compliance audit purposes.',
+        fields: [
+          { name: 'Supplier Records', required: '', description: 'Read-only access to all supplier records — verify CIS numbers (UTRs), withholding tax flags, and HMRC verification numbers.' },
+          { name: 'CIS Dashboard', required: '', description: 'View monthly CIS deduction summaries for all subcontractors at /CIS/Dashboard/:year/:month.' },
+          { name: 'CIS Returns', required: '', description: 'Access the returns form (/CIS/returns/form) and view all monthly and yearly CIS return reports.' },
+          { name: 'Subcontractors Overview', required: '', description: 'The overview at /overview/subcontractors shows all CIS subcontractors with rates, verification numbers, and payment totals.' },
+        ],
+        notes: [
+          'The HMRC role is read-only — no records can be created, edited, or deleted.',
+          'If data appears out of date, ask your administrator to trigger a KashFlow sync from the sync dashboard.',
+        ],
+      },
     ],
   },
 
@@ -123,6 +139,24 @@ const helpContent = [
         ],
         notes: [
           'Your administrator may have pre-linked your account to an employee, supplier, or customer record. If this link is missing, some features may not work correctly.',
+        ],
+      },
+      {
+        id: 'list-views',
+        title: 'List Views, Search & Filters',
+        badge: 'All roles',
+        description: 'Every entity in the system — employees, invoices, suppliers, vehicles, and more — has a paginated list view with built-in search, filters, and tabs.',
+        steps: [
+          'Navigate to any list page (e.g. /invoices, /suppliers, /employees).',
+          'Use the search box at the top to filter records by keyword — searches key fields such as name, number, or reference.',
+          'Apply column filters to narrow results by status, date range, or other criteria specific to that entity.',
+          'Switch between tabs (e.g. All, Pending, Approved, Overdue) to see predefined subsets of the data.',
+          'Results are paginated — use the Previous / Next buttons or page number links at the bottom to navigate.',
+          'Click any row to open the full detail view for that record.',
+        ],
+        notes: [
+          'Non-admin users only see records scoped to their own account — the same list view is reused for all roles.',
+          'Search and filter state is not saved between page loads — re-enter criteria if you navigate away.',
         ],
       },
     ],
@@ -834,6 +868,51 @@ const helpContent = [
           'The OCR content is searchable — use keywords from the supplier name, amount, or invoice number to find the right purchase.',
         ],
       },
+      {
+        id: 'paperless-kashflow-draft',
+        title: 'Sending an OCR Document to KashFlow',
+        badge: 'Admin',
+        description: 'Once a document is ingested from Paperless-ngx, you can use the OCR-extracted data to generate a purchase invoice draft and send it directly to KashFlow — avoiding manual data entry.',
+        steps: [
+          'Go to Documents → OCR Documents (/paperless/ocr).',
+          'Click on a document to open it.',
+          'Click Create Draft to navigate to the draft form (/paperless/ocr/:id/draft).',
+          'The form pre-populates with data extracted by OCR: supplier name, amounts, invoice date, and line items.',
+          'Review and correct any fields where the OCR may have misread the document.',
+          'Use the supplier search to find and select the matching KashFlow supplier — this links the purchase to the correct supplier account.',
+          'When satisfied, click Send to KashFlow. The draft is submitted as a new purchase invoice.',
+          'A success banner will show the new KashFlow purchase number created.',
+        ],
+        notes: [
+          'OCR accuracy depends on scan quality — always review extracted values before sending.',
+          'Sending a draft to KashFlow is irreversible — a new purchase record will be created and will appear in the system after the next sync.',
+          'Supplier search queries KashFlow directly for up-to-date supplier names and IDs.',
+        ],
+      },
+      {
+        id: 'file-attachments',
+        title: 'Attaching Files to Records',
+        badge: 'Admin',
+        description: 'Files (images, PDFs, and Word documents) can be uploaded directly against any record that supports attachments — employees, vehicles, suppliers, and others.',
+        steps: [
+          'Open any record that supports file attachments — look for a Documents section or Upload button on the detail page.',
+          'Click Upload Documents to open the upload form for that record.',
+          'Select up to 10 files. Allowed types: JPEG, PNG, PDF, DOC, DOCX. Maximum size: 5 MB per file.',
+          'Click Upload. Files are saved immediately and appear in the Documents section of the record.',
+          'To view a file, click its name — images and PDFs open in the browser; other formats download automatically.',
+          'To download a file without opening it, use the Download link beside the file.',
+          'To delete a file, click the Delete button beside the file and confirm.',
+        ],
+        fields: [
+          { name: 'Allowed Types', required: '', description: 'JPEG, JPG, PNG, PDF, DOC, DOCX.' },
+          { name: 'Max File Size', required: '', description: '5 MB per file.' },
+          { name: 'Max Files Per Upload', required: '', description: '10 files per upload batch.' },
+        ],
+        notes: [
+          'Files are stored on the server under public/<model>/<uuid>/.',
+          'Deleting a record does not automatically remove its attached files — contact your administrator to clean up orphaned files.',
+        ],
+      },
     ],
   },
 
@@ -893,15 +972,18 @@ const helpContent = [
         id: 'system-status',
         title: 'System Status & Logs',
         badge: 'Admin',
-        description: 'Monitor the health of all connected services and view live application logs.',
+        description: 'Monitor the health of all connected services and manage the live application log stream.',
         steps: [
           'Go to Admin → System Status to see the current state of MongoDB, KashFlow sync, and the session store.',
           'Go to Admin → Logs (/logs) to view the live application log stream.',
           'Logs are colour-coded by severity: info (blue), warn (amber), error (red).',
           'Use the search box in the log viewer to filter for specific events or error messages.',
+          'To download logs, click Download Logs — optionally filter by level using /logs/download?level=error (or info / warn).',
+          'To clear the log file, click Clear Logs. This permanently removes the on-disk log — download a copy first if you need to retain the history.',
         ],
         notes: [
           'The log viewer requires WebSocket support in your browser — use a modern browser for the best experience.',
+          'Clearing the log only removes the current on-disk file. Previously streamed entries visible in the UI are not affected until you reload.',
         ],
       },
       {
@@ -917,6 +999,81 @@ const helpContent = [
         ],
         notes: [
           'Maintenance mode (MAINTENANCE_MODE env var) returns a 503 page to all non-admin users. Admin users can still access the app.',
+        ],
+      },
+      {
+        id: 'custom-permissions',
+        title: 'Custom Permissions',
+        badge: 'Admin',
+        description: 'Custom permissions let you grant an individual user access beyond their standard RBAC role without changing the role itself.',
+        steps: [
+          'Open the user record you want to adjust (Admin → Users → click the user).',
+          'Scroll to the Custom Permissions panel.',
+          'Grant model access: specify a model name and the operations to allow — l (list), r (read), c (create), u (update), d (delete).',
+          'Grant department access: add a department slug to give access to a department dashboard not normally included in the user\'s role.',
+          'Grant route access: add a specific route path to allow access to one page regardless of role.',
+          'Save the user record. The permissions take effect immediately on the next page load.',
+        ],
+        fields: [
+          { name: 'Model Permission', required: false, description: 'Specify the model and allowed operations — e.g. grant list and read on invoices.' },
+          { name: 'Department Permission', required: false, description: 'Add a department slug (e.g. finance) to grant access to that department dashboard and its tiles.' },
+          { name: 'Route Permission', required: false, description: 'Add a specific path (e.g. /CIS/Dashboard/) to allow access to that route regardless of role.' },
+        ],
+        notes: [
+          'Custom permissions extend the standard role — they cannot remove access that the role already grants.',
+          'Changes take effect on the user\'s next page load; sessions are re-evaluated per request.',
+          'Use custom permissions sparingly — prefer assigning the correct role where possible.',
+        ],
+      },
+      {
+        id: 'overview-dashboards',
+        title: 'Overview Dashboards',
+        badge: 'Admin',
+        description: 'Each department has a dedicated overview that summarises key metrics and alerts at a glance. Overviews are accessible from the home page grid and via direct URL.',
+        fields: [
+          { name: 'Fleet Overview', required: '', description: '/overview/fleet — vehicles with MOT, insurance, or road tax expiring within the selected threshold (default 30 days). Accepts ?days= to adjust the window.' },
+          { name: 'Human Resources Overview', required: '', description: '/overview/human — employees with contracts ending within 60 days, holiday balances, and headcount by status. Accepts ?days= for the contract-end window.' },
+          { name: 'Finance Overview', required: '', description: '/overview/finance — outstanding invoice totals, overdue invoices, recent payments. Accessible to admin and accountant.' },
+          { name: 'Projects Overview', required: '', description: '/overview/projects — active KashFlow projects with linked contracts and assigned subcontractors.' },
+          { name: 'Admin Overview', required: '', description: '/overview/admin — open tasks, pending attendance records, user account summary, and system health indicators.' },
+          { name: 'Documents Overview', required: '', description: '/overview/documents — unlinked OCR documents and recent Paperless-ngx ingest activity.' },
+          { name: 'Subcontractors Overview', required: '', description: '/overview/subcontractors — all CIS subcontractors with rates, HMRC verification numbers, and outstanding purchase totals. Accessible to admin, accountant, and hmrc.' },
+        ],
+        notes: [
+          'Overview tiles only appear on the dashboard home page if your role has access to that department.',
+          'The Finance and Subcontractors overviews are also accessible to the accountant and hmrc roles respectively.',
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  KEY CONCEPTS & REFERENCE
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'key-concepts',
+    title: 'Key Concepts & Reference',
+    icon: 'bi-bookmark-check',
+    colorClass: 'text-slate-600 dark:text-slate-400',
+    bgClass: 'bg-slate-500',
+    borderClass: 'border-slate-500',
+    articles: [
+      {
+        id: 'uk-tax-year',
+        title: 'UK Tax Year, Months & Weeks',
+        badge: 'All roles',
+        description: 'The UK tax year runs April–March. Understanding tax months and tax weeks is essential for reading payroll summaries, CIS returns, and holiday balances correctly.',
+        fields: [
+          { name: 'Tax Year', required: '', description: 'Runs 6 April to 5 April the following year. Referred to by the start year — "2025/26" covers April 2025 to March 2026.' },
+          { name: 'Tax Month 1', required: '', description: 'April. Tax Month 12 is March. The monthly count resets every April.' },
+          { name: 'Tax Week', required: '', description: 'Runs Saturday–Friday. Tax Week 1 starts the first Saturday on or after 6 April.' },
+          { name: 'Holiday Year', required: '', description: 'Aligns with the tax year — entitlement resets each April and any unused days carry over up to the limit set on the employee record.' },
+          { name: 'CIS Return Month', required: '', description: 'Filed monthly to HMRC, aligned to tax months. Month 1 (April) is due by 19 May.' },
+        ],
+        notes: [
+          'In URL patterns, :year refers to the tax year start — e.g. /CIS/Dashboard/2025/1 is April 2025 (month 1 of the 2025/26 tax year).',
+          'The weekly payroll view uses Saturday–Friday weeks. Week 1 of the tax year always begins in April.',
+          'All date arithmetic in the system accounts for UK daylight saving time.',
         ],
       },
     ],
@@ -941,6 +1098,7 @@ exports.getHelp = function (req, res) {
     'Admin / Employee / Subcontractor': ['admin', 'employee', 'subcontractor'],
     'Subcontractor':                    ['admin', 'subcontractor'],
     'Client':                           ['admin', 'client'],
+    'HMRC':                             ['admin', 'hmrc'],
   };
 
   const filtered = helpContent
