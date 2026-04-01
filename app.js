@@ -115,6 +115,13 @@ const main = async () => {
     app.use('/setup', require('./mongoose/routes/setupRoutes'));
     app.get('/', (req, res) => res.redirect('/setup'));
     app.use((req, res) => res.redirect('/setup'));
+    // Start the HTTP server so the process stays alive to serve the wizard
+    const server = http.createServer(app);
+    const port = Number(process.env.PORT) || 3000;
+    const host = process.env.HOST || '0.0.0.0';
+    server.listen(port, host, () => {
+      logger.info(`🚀 Setup wizard listening on ${host}:${port} — visit /setup to configure`);
+    });
     // Do not proceed to Phase 2 — wizard completion restarts the process
     return;
   }
