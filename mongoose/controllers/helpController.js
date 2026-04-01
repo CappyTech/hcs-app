@@ -611,24 +611,6 @@ const helpContent = [
   {
     id: 'hr',
     title: 'HR & People',
-        title: 'Compliance Alerts & Tasks',
-        badge: 'Admin',
-        description: 'The system monitors MOT, insurance, and road tax expiry dates across all vehicles and automatically creates tasks for administrators when action is needed.',
-        steps: [
-          'The compliance check runs automatically every 24 hours.',
-          'Any compliance date that is expired or within 30 days triggers task creation.',
-          'Tasks are generated for every admin user and labelled [EXPIRED] or [EXPIRING] with the vehicle registration and compliance type.',
-          'View and dismiss these tasks from the dashboard.',
-        ],
-        notes: [
-          'The compliance check is idempotent — duplicate tasks are not created if one already exists for the same vehicle and expiry event.',
-        ],
-      },
-    ],
-  },
-  {
-    id: 'hr',
-    title: 'HR & People',
     icon: 'bi-people',
     colorClass: 'text-pink-600 dark:text-pink-400',
     bgClass: 'bg-pink-500',
