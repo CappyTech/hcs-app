@@ -13,6 +13,13 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    AdminSettings: {
+        title: 'Settings',
+        description: 'Configure application-wide settings including email, sessions, and maintenance mode.',
+        link: '/settings',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     SubmitAttendance: {
         title: 'Submit Attendance',
         description: 'Submit your daily attendance records.',
