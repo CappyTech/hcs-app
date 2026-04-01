@@ -15,8 +15,8 @@ module.exports = {
     },
     AdminSettings: {
         title: 'Settings',
-        description: 'Configure application-wide settings including email, sessions, and maintenance mode.',
-        link: '/settings',
+        description: 'Manage your account settings, password, and preferences.',
+        link: '/user/account',
         department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
