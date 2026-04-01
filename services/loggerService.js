@@ -38,8 +38,6 @@ class WebSocketTransport extends Transport {
           ...(info.user && { user: info.user }),
           ...(info.route && { route: info.route }),
         });
-      } else {
-        console.log("⚠️ io is null, log not emitted");
       }
     });
 
