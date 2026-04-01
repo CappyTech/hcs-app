@@ -1078,6 +1078,116 @@ const helpContent = [
       },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  UK STATUTORY COMPLIANCE
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'compliance',
+    title: 'UK Statutory Compliance',
+    icon: 'bi-calendar-check',
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    bgClass: 'bg-rose-500',
+    borderClass: 'border-rose-500',
+    articles: [
+      {
+        id: 'compliance-monthly',
+        title: 'Monthly Obligations',
+        badge: 'Admin',
+        description: 'These tasks fall on or before the 19th of every month (22nd for electronic payment). They recur every tax month without exception.',
+        fields: [
+          { name: 'CIS300 Return', required: '19th', description: 'File the monthly CIS return covering all payments made to subcontractors in the preceding tax month (6th–5th). Include all subcontractors paid, even at 0% deduction.' },
+          { name: 'CIS Deduction Payment', required: '19th / 22nd*', description: 'Pay all CIS deductions withheld from subcontractors to HMRC. Can be combined with the PAYE/NIC payment.' },
+          { name: 'CIS Payment Statements', required: '19th', description: 'Issue a written payment and deduction statement to every subcontractor paid that month. Must show gross amount, materials, and the deduction applied.' },
+          { name: 'PAYE / NIC Payment', required: '19th / 22nd*', description: 'Pay all employee Income Tax and National Insurance contributions for the preceding payroll month. Electronic payment deadline is the 22nd.' },
+          { name: 'Full Payment Submission (FPS)', required: 'On or before payday', description: 'Submit the FPS to HMRC on or before each pay date. Late FPS triggers automatic penalty notices of £100–£400 per month depending on employee count.' },
+          { name: 'Pension Contributions', required: 'Per scheme rules', description: 'Pay employer and employee pension contributions to the pension provider — typically by the 19th or 22nd. Late payment is reported to The Pensions Regulator.' },
+        ],
+        notes: [
+          '* Electronic payment deadline. Cheque/postal payments are due the 19th.',
+          'A missed or late CIS300 return attracts penalties starting at £100, rising to £3,000+ depending on how many months late.',
+          'Use recurring tasks in this system to surface each obligation on the correct date automatically.',
+        ],
+      },
+      {
+        id: 'compliance-annual',
+        title: 'Annual Obligations',
+        badge: 'Admin',
+        description: 'These deadlines fall once per year. Missing any of them carries statutory penalties — several escalate daily.',
+        fields: [
+          { name: 'P60 to Employees', required: '31 May', description: 'Issue a P60 to every employee who was on the payroll on 5 April. Failure to issue by this date is a statutory offence (£300 penalty + up to £60/day).' },
+          { name: 'P11D (Benefits)', required: '6 July', description: 'File P11D forms with HMRC for all employees and directors who received taxable benefits in the previous tax year (company cars, private fuel, loans, private medical). Issue copies to each affected person.' },
+          { name: 'P11D(b) + Class 1A NIC', required: '6 July (pay 22 July)', description: 'File the P11D(b) Class 1A NIC declaration and pay the resulting NIC by 22 July electronically. Interest applies on late payment.' },
+          { name: 'Corporation Tax Payment', required: '9 months + 1 day after year end', description: 'For a 31 March year end, payment is due 1 January. Small companies pay in one lump sum.' },
+          { name: 'CT600 Return', required: '12 months after year end', description: 'For a 31 March year end, the CT600 must be filed by 31 March the following year. £100 penalty immediately; £500 after 6 months.' },
+          { name: 'Statutory Accounts (Companies House)', required: '9 months after year end', description: 'For a 31 March year end, file by 31 December. Late filing penalties range from £150 to £1,500 and escalate with delay.' },
+          { name: 'Confirmation Statement', required: 'Within 14 days of review date', description: 'File the CS01 with Companies House annually confirming directors, shareholders, and SIC codes. Failure to file is a criminal offence and can result in the company being struck off.' },
+          { name: 'Directors\' Self Assessment', required: '31 January (online)', description: 'Both directors must file their Self Assessment return and pay any balancing tax by 31 January. £100 penalty immediately; £10/day after 3 months. A Payment on Account is also due 31 January and 31 July.' },
+          { name: 'CIS Gross Payment Status Review', required: 'Each April (HMRC-initiated)', description: 'HMRC reviews GPS annually. Every PAYE, CIS, VAT, and Corporation Tax return and payment must have been on time in the preceding 12 months — a single late payment can trigger automatic withdrawal.' },
+        ],
+        notes: [
+          'CIS Gross Payment Status allows you to receive payments from contractors without deductions (i.e. the full pound rather than 80p). Losing it has an immediate cash flow impact — treat GPS compliance as a board-level priority.',
+          'Directors\' P11D information must be passed to them before they can complete their Self Assessment returns.',
+        ],
+      },
+      {
+        id: 'compliance-vat',
+        title: 'Quarterly VAT',
+        badge: 'Admin',
+        description: 'VAT returns are filed quarterly. The examples below assume quarters ending March / June / September / December — confirm your own quarter dates with your accountant.',
+        fields: [
+          { name: 'Q1 (Apr–Jun)', required: 'File and pay by 7 August', description: 'Reconcile VAT records at 30 June and submit via MTD-compliant software. Both the return and payment are due 7 August.' },
+          { name: 'Q2 (Jul–Sep)', required: 'File and pay by 7 November', description: 'Return and payment due 7 November.' },
+          { name: 'Q3 (Oct–Dec)', required: 'File and pay by 7 February', description: 'Return and payment due 7 February.' },
+          { name: 'Q4 (Jan–Mar)', required: 'File and pay by 7 May', description: 'Return and payment due 7 May.' },
+          { name: 'VAT Reverse Charge', required: '', description: 'When supplying CIS construction services to another VAT-registered contractor, the domestic reverse charge applies — the customer accounts for VAT, not the supplier. Apply this correctly on all relevant invoices.' },
+        ],
+        notes: [
+          'Making Tax Digital (MTD) requires VAT records to be kept in MTD-compliant software and returns submitted through it.',
+          'Retain VAT invoices and receipts for 6 years.',
+          'The VAT reverse charge and CIS deductions are separate calculations — a subcontractor invoice may be subject to both.',
+        ],
+      },
+      {
+        id: 'compliance-triggered',
+        title: 'Triggered & Ongoing Obligations',
+        badge: 'Admin',
+        description: 'These obligations arise when a specific event occurs — a new subcontractor, a new employee, a payment dispute, or a change in company size. They have no fixed calendar date.',
+        fields: [
+          { name: 'CIS Subcontractor Verification', required: 'Before first payment', description: 'Verify every new subcontractor with HMRC before making any payment. HMRC confirms the correct deduction rate: 0% (gross), 20% (standard), or 30% (unmatched). Retain the verification reference. Failure to verify means a 30% deduction rate must be applied.' },
+          { name: 'Re-verification', required: 'Every 2 years or on status change', description: 'Re-verify subcontractors whose verification is more than 2 years old, or whose tax status has changed.' },
+          { name: 'New Employee (FPS)', required: 'On or before first pay date', description: 'Include new starter details on the next FPS. Collect a starter checklist and apply the correct tax code before the first payment.' },
+          { name: 'Leaver (FPS + P45)', required: 'On or before final pay date', description: 'Submit an FPS with the leaving date on or before the final pay date. Issue a P45 to the employee.' },
+          { name: 'Auto-enrolment Assessment', required: 'Each pay run', description: 'Assess all workers for pension eligibility on every pay run. Auto-enrol any eligible worker aged 22–State Pension age earning above £10,000/year who has not opted out. Write to each newly enrolled worker within 6 weeks.' },
+          { name: 'Re-enrolment', required: 'Every 3 years', description: 'Re-enrol any workers who previously opted out and still meet eligibility criteria. Submit a re-declaration of compliance to The Pensions Regulator within 5 months of the re-enrolment date.' },
+          { name: 'IR35 Status Assessment', required: 'Before each new engagement', description: 'Assess employment status for each subcontractor engaged through their own limited company. Use HMRC\'s CEST tool and retain the output. CIS registration is not a proxy for self-employment — the two assessments are entirely separate.' },
+          { name: 'Construction Act — Payment Notices', required: 'Within 5 days of payment due date', description: 'Issue a payment notice within 5 days of the payment due date stating the sum due. If you intend to pay less, a pay-less notice must be issued before the prescribed period expires — typically 5–7 days before the final payment date. Failure to issue a pay-less notice makes the full notified sum automatically payable.' },
+          { name: 'Waste Transfer Notes', required: 'At every collection', description: 'Obtain a signed waste transfer note for every waste collection. Verify the carrier\'s Environment Agency registration number and retain the paperwork for a minimum of 2 years. Breach of duty of care can result in an unlimited fine.' },
+        ],
+        notes: [
+          'CIS and IR35 must be assessed independently. Being deducted at 20% CIS does not mean a worker is self-employed for IR35 purposes.',
+          'Pay-when-paid clauses are largely unenforceable under the Construction Act. You cannot withhold payment from a subcontractor solely because your own client has not paid you.',
+          'If a retention is not released after the defects liability period without a valid pay-less notice, the full retention is likely payable — adjudication is often the most effective route to recovery.',
+        ],
+      },
+      {
+        id: 'compliance-cis-scope',
+        title: 'CIS Scope — Landscaping & External Works',
+        badge: 'Admin',
+        description: 'Not all landscaping and external works activity falls within CIS. Over-deducting damages subcontractor cash flow; under-deducting creates HMRC liability. Assess each contract before invoicing.',
+        fields: [
+          { name: 'Within CIS', required: '', description: 'Site clearance and preparation; groundworks (drainage, ducting, kerbing); hard landscaping (paths, driveways, patios, retaining walls, steps) forming part of a construction project; external works packages on new-build or refurbishment contracts; fencing and boundary structures; irrigation systems, external lighting, and underground services; any landscaping subcontracted as part of a wider construction contract.' },
+          { name: 'Outside CIS', required: '', description: 'Pure horticultural work (planting, maintenance, mowing, pruning, seasonal bedding) where not part of a construction project; grounds maintenance contracts with no construction activity; tree surgery not incidental to a construction operation; supply-only of plants, turf, or materials.' },
+          { name: 'Mixed Contracts', required: '', description: 'Where a single contract includes both CIS and non-CIS work, CIS applies only to the construction element. Document the split in the contract and on invoices. If in doubt, treating the whole contract as within CIS is the lower-risk position.' },
+          { name: 'Housing Association Contracts', required: '', description: 'Work on HA development sites — even purely soft landscaping — is likely within CIS because it is incidental to a construction project. The test is whether the work is part of or incidental to a construction operation, not the nature of the work itself.' },
+        ],
+        notes: [
+          'Document your CIS scope assessment for each new contract and retain it with the contract file.',
+          'HMRC penalties for failing to deduct are more severe than those for over-deducting (which is recoverable by the subcontractor).',
+        ],
+      },
+    ],
+  },
 ];
 
 exports.getHelp = function (req, res) {
