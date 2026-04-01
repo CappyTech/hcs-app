@@ -1,6 +1,6 @@
 const path = require("path");
 const moment = require("moment-timezone");
-const attendanceService = require("../services/attendanceServicesMongoose");
+const attendanceService = require("../services/attendanceService");
 const mdb = require("../services/mongooseDatabaseService");
 const logger = require("../../services/loggerService");
 const { scopeQuery } = require("../../services/dataScopingService");

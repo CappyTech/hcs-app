@@ -1,7 +1,7 @@
 'use strict';
 
 const mdb = require('./mongooseDatabaseService');
-const taskService = require('./taskServiceMongoose');
+const taskService = require('./taskService');
 const logger = require('../../services/loggerService');
 
 const DEFAULT_DAYS_AHEAD = 30;

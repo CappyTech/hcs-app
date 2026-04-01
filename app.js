@@ -204,7 +204,7 @@ const main = async () => {
 
     // Session store (requires INTERNAL connection)
     const internalClient = mdb.INTERNAL.connection.client;
-    const createSessionService = require('./mongoose/services/sessionServiceMongoose');
+    const createSessionService = require('./mongoose/services/sessionService');
     const sessionService = createSessionService(internalClient);
 
     // Mount the full middleware + routes into appRouter
@@ -342,7 +342,7 @@ const main = async () => {
     appRouter.use('/', require('./mongoose/routes/holidayRoutes'));
     appRouter.use('/', require('./mongoose/routes/fileRoutes'));
     appRouter.use('/', require('./mongoose/routes/paperlessRoutes'));
-    appRouter.use('/', require('./mongoose/routes/fleetRoutes'));
+    appRouter.use('/', require('./mongoose/routes/overviewRoutes'));
     appRouter.use('/', require('./mongoose/routes/ssoRoutes'));
     appRouter.use('/', require('./mongoose/routes/helpRoutes'));
 
@@ -358,7 +358,7 @@ const main = async () => {
 
     // WebSocket
     const io = initSocket(server);
-    const { setupWebSocket } = require('./mongoose/services/webSocketServiceMongoose');
+    const { setupWebSocket } = require('./mongoose/services/webSocketService');
     setupWebSocket(io, sessionService);
 
     // Start periodic background services

@@ -159,6 +159,36 @@
   </div>
 <% } %>
 
+<!-- Overview Shortcuts -->
+<% if (isAuthenticated) {
+  const overviews = [];
+  if (canDept('maintenance'))                    overviews.push({ href: '/overview/fleet',            icon: '&#128663;', label: 'Fleet',            desc: 'Vehicles, compliance & assignments' });
+  if (canDept('human-resources'))                overviews.push({ href: '/overview/human',            icon: '&#128101;', label: 'Human Resources',  desc: 'Employees, attendance & holidays' });
+  if (canDept('finance'))                        overviews.push({ href: '/overview/finance',          icon: '&#128176;', label: 'Finance',          desc: 'Invoices, purchases & overdue' });
+  if (canDept('management'))                     overviews.push({ href: '/overview/projects',         icon: '&#128203;', label: 'Projects',         desc: 'Contracts, assignments & KF projects' });
+  if (canDept('paperless'))                      overviews.push({ href: '/overview/documents',        icon: '&#128196;', label: 'Documents',        desc: 'OCR documents & paperless sync' });
+  if (canDept('construction-industry-scheme'))   overviews.push({ href: '/overview/subcontractors',  icon: '&#128221;', label: 'Subcontractors',   desc: 'CIS rates, IR35 & portal users' });
+  if (canDept('admin'))                          overviews.push({ href: '/overview/admin',            icon: '&#9881;',   label: 'Admin',            desc: 'Users, roles, 2FA & sessions' });
+%>
+<% if (overviews.length > 0) { %>
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
+      <i class="bi bi-speedometer2 text-green-600 dark:text-green-400"></i> Overviews
+    </div>
+    <div class="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <% for (const ov of overviews) { %>
+        <a href="<%= ov.href %>"
+           class="flex flex-col gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-700 p-4 transition">
+          <span class="text-2xl"><%= ov.icon %></span>
+          <span class="font-semibold text-sm text-gray-900 dark:text-gray-100"><%= ov.label %></span>
+          <span class="text-xs text-gray-500 dark:text-gray-400"><%= ov.desc %></span>
+        </a>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+<% } %>
+
 <!-- Public Feature Highlights -->
 <% if (!isAuthenticated) { %>
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">

@@ -1,0 +1,138 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6 print:hidden">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Documents Overview</h1>
+    <div class="flex gap-2">
+      <a href="/paperless/ocr" class="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">Manage Documents</a>
+      <a href="/ocrDocuments" class="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">All OCR Docs</a>
+    </div>
+  </div>
+
+  <!-- Summary Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Docs</p>
+      <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><%= totalDocs %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">KF Linked</p>
+      <p class="text-3xl font-bold text-green-600"><%= linkedDocs %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Unlinked</p>
+      <p class="text-3xl font-bold text-yellow-600"><%= unlinkedDocs %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Errors</p>
+      <p class="text-3xl font-bold <%= errorDocs > 0 ? 'text-red-600' : 'text-gray-400' %>"><%= errorDocs %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Never Sent</p>
+      <p class="text-3xl font-bold text-gray-600 dark:text-gray-300"><%= neverSent %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Ingest Errors</p>
+      <p class="text-3xl font-bold <%= ingestStats.error > 0 ? 'text-red-600' : 'text-gray-400' %>"><%= ingestStats.error || 0 %></p>
+    </div>
+  </div>
+
+  <!-- Send Mode Summary -->
+  <div class="mb-6">
+    <div class="flex flex-wrap gap-3">
+      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
+        Direct: <strong class="ml-1"><%= sentDirect %></strong>
+      </span>
+      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400">
+        Webhook: <strong class="ml-1"><%= sentWebhook %></strong>
+      </span>
+      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+        Never Sent: <strong class="ml-1"><%= neverSent %></strong>
+      </span>
+      <% if (ingestStats.total > 0) { %>
+      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-400">
+        Ingest Records: <strong class="ml-1"><%= ingestStats.total %></strong>
+      </span>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- By Document Type -->
+  <% if (byDocType.length > 0) { %>
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">By Document Type</h2>
+    <div class="flex flex-wrap gap-3">
+      <% for (const dt of byDocType) { %>
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300">
+          <%= dt._id || 'Uncategorised' %>: <strong class="ml-1"><%= dt.count %></strong>
+        </span>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Error Documents -->
+  <% if (errorDocsList.length > 0) { %>
+  <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
+    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Documents With Errors (<%= errorDocsList.length %>)</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead><tr class="bg-red-100 dark:bg-red-800/30">
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">ID</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Title</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Error</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Fetched</th>
+        </tr></thead>
+        <tbody class="divide-y divide-red-200 dark:divide-red-800">
+          <% for (const d of errorDocsList) { %>
+          <tr>
+            <td class="px-4 py-2 font-mono"><%= d.paperlessId %></td>
+            <td class="px-4 py-2"><%= d.title || '—' %></td>
+            <td class="px-4 py-2 text-red-600 text-xs max-w-xs truncate" title="<%= d.error %>"><%= d.error %></td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(d.fetchedAt) %></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Recent Documents -->
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Recently Added (<%= recentLimit %>)</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
+        <thead><tr class="bg-gray-50 dark:bg-gray-800">
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">ID</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Title</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Type</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Correspondent</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Added</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">KF Purchase</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Last Sent</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <% for (const d of recentDocs) { %>
+          <tr>
+            <td class="px-4 py-2 font-mono text-xs text-gray-500 dark:text-gray-400"><%= d.paperlessId %></td>
+            <td class="px-4 py-2 font-medium max-w-xs truncate" title="<%= d.title %>"><%= d.title || '—' %></td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= d.documentType?.name || '—' %></td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= d.correspondent?.name || '—' %></td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(d.added) %></td>
+            <td class="px-4 py-2">
+              <% if (d.kashflowPurchaseNumber) { %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">#<%= d.kashflowPurchaseNumber %></span>
+              <% } else { %>
+                <span class="text-gray-400 text-xs">—</span>
+              <% } %>
+            </td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= d.lastSentAt ? slimDateTime(d.lastSentAt) : '—' %></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

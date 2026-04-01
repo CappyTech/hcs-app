@@ -1,7 +1,7 @@
 const path = require("path");
 const moment = require("moment-timezone");
 const logger = require("../../services/loggerService");
-const holidayService = require("../services/holidayServiceMongoose");
+const holidayService = require("../services/holidayService");
 const mdb = require("../services/mongooseDatabaseService");
 
 async function checkHoliday(req, res, next) {

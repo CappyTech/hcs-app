@@ -1,0 +1,195 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6 print:hidden">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Finance Overview</h1>
+    <div class="flex gap-2">
+      <a href="/invoices" class="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">All Invoices</a>
+      <a href="/purchases" class="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">All Purchases</a>
+    </div>
+  </div>
+
+  <!-- Invoice Summary Stats -->
+  <div class="mb-2">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Invoices (<%= invoiceTotalCount %>)</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><%= invoiceTotalCount %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Gross</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= formatCurrency(invoiceTotalGross) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Outstanding</p>
+        <p class="text-2xl font-bold text-red-600"><%= formatCurrency(invoiceTotalDue) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Overdue</p>
+        <p class="text-3xl font-bold <%= overdueInvoices.length > 0 ? 'text-red-600' : 'text-gray-400' %>"><%= overdueInvoices.length %></p>
+      </div>
+    </div>
+
+    <!-- Invoice status breakdown -->
+    <% if (Object.keys(invoiceByStatus).length > 0) { %>
+    <div class="flex flex-wrap gap-3 mb-6">
+      <% const invColour = { Paid: 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400', Outstanding: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400', Overdue: 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' }; %>
+      <% for (const [status, data] of Object.entries(invoiceByStatus)) { %>
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium <%= invColour[status] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>">
+          <%= status %>: <strong class="ml-1"><%= data.count %></strong>
+          <span class="ml-1 opacity-70">(<%= formatCurrency(data.totalGross) %>)</span>
+        </span>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+
+  <!-- Overdue Invoices -->
+  <% if (overdueInvoices.length > 0) { %>
+  <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
+    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Overdue Invoices (<%= overdueInvoices.length %>)</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead><tr class="bg-red-100 dark:bg-red-800/30">
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Customer</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due Date</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due Amount</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
+        </tr></thead>
+        <tbody class="divide-y divide-red-200 dark:divide-red-800">
+          <% for (const inv of overdueInvoices) { %>
+          <tr>
+            <td class="px-4 py-2 font-mono"><a href="/invoice/read/<%= inv.uuid %>" class="text-blue-600 hover:underline"><%= inv.Number %></a></td>
+            <td class="px-4 py-2"><%= inv.CustomerName || '—' %></td>
+            <td class="px-4 py-2 text-red-600 font-semibold"><%= slimDateTime(inv.DueDate) %></td>
+            <td class="px-4 py-2 font-semibold"><%= formatCurrency(inv.DueAmount) %></td>
+            <td class="px-4 py-2"><%= inv.Status %></td>
+            <td class="px-4 py-2"><a href="/invoice/read/<%= inv.uuid %>" class="text-blue-600 hover:underline text-xs">View</a></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Recent Invoices -->
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Invoices</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
+        <thead><tr class="bg-gray-50 dark:bg-gray-800">
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Customer</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Issued</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Gross</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <% for (const inv of recentInvoices) { %>
+          <tr>
+            <td class="px-4 py-2 font-mono"><a href="/invoice/read/<%= inv.uuid %>" class="text-blue-600 hover:underline"><%= inv.Number %></a></td>
+            <td class="px-4 py-2"><%= inv.CustomerName || '—' %></td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(inv.IssuedDate) %></td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(inv.DueDate) %></td>
+            <td class="px-4 py-2 font-medium"><%= formatCurrency(inv.GrossAmount) %></td>
+            <td class="px-4 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= inv.Status === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : inv.Status === 'Outstanding' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>"><%= inv.Status %></span></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Purchase Summary Stats -->
+  <div class="mb-2">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Purchases (<%= purchaseTotalCount %>)</h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total</p>
+        <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><%= purchaseTotalCount %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Gross</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= formatCurrency(purchaseTotalGross) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Overdue</p>
+        <p class="text-3xl font-bold <%= overduePurchases.length > 0 ? 'text-red-600' : 'text-gray-400' %>"><%= overduePurchases.length %></p>
+      </div>
+    </div>
+    <% if (Object.keys(purchaseByStatus).length > 0) { %>
+    <div class="flex flex-wrap gap-3 mb-6">
+      <% for (const [status, data] of Object.entries(purchaseByStatus)) { %>
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+          <%= status || 'Unknown' %>: <strong class="ml-1"><%= data.count %></strong>
+          <span class="ml-1 opacity-70">(<%= formatCurrency(data.totalGross) %>)</span>
+        </span>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+
+  <!-- Overdue Purchases -->
+  <% if (overduePurchases.length > 0) { %>
+  <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
+    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Overdue Purchases (<%= overduePurchases.length %>)</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead><tr class="bg-red-100 dark:bg-red-800/30">
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Supplier</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due Date</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Gross</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
+        </tr></thead>
+        <tbody class="divide-y divide-red-200 dark:divide-red-800">
+          <% for (const p of overduePurchases) { %>
+          <tr>
+            <td class="px-4 py-2 font-mono"><a href="/purchase/read/<%= p.uuid %>" class="text-blue-600 hover:underline"><%= p.Number %></a></td>
+            <td class="px-4 py-2"><%= p.SupplierName || '—' %></td>
+            <td class="px-4 py-2 text-red-600 font-semibold"><%= slimDateTime(p.DueDate) %></td>
+            <td class="px-4 py-2 font-semibold"><%= formatCurrency(p.GrossAmount) %></td>
+            <td class="px-4 py-2"><a href="/purchase/read/<%= p.uuid %>" class="text-blue-600 hover:underline text-xs">View</a></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Recent Purchases -->
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Purchases</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
+        <thead><tr class="bg-gray-50 dark:bg-gray-800">
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Supplier</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Issued</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Gross</th>
+          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <% for (const p of recentPurchases) { %>
+          <tr>
+            <td class="px-4 py-2 font-mono"><a href="/purchase/read/<%= p.uuid %>" class="text-blue-600 hover:underline"><%= p.Number %></a></td>
+            <td class="px-4 py-2"><%= p.SupplierName || '—' %></td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(p.IssuedDate) %></td>
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(p.DueDate) %></td>
+            <td class="px-4 py-2 font-medium"><%= formatCurrency(p.GrossAmount) %></td>
+            <td class="px-4 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><%= p.Status || '—' %></span></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

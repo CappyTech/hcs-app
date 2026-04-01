@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
  * Patch mdb singleton; patch taskService exports; logger is fine as-is.
  */
 const mdb = require('../mongoose/services/mongooseDatabaseService');
-const taskService = require('../mongoose/services/taskServiceMongoose');
+const taskService = require('../mongoose/services/taskService');
 const logger = require('../services/loggerService');
 
 let createTaskCalls = [];

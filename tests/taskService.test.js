@@ -2,7 +2,7 @@ const { describe, it, beforeEach, mock } = require('node:test');
 const assert = require('node:assert/strict');
 
 /*
- * taskServiceMongoose requires mdb at top-level.
+ * taskService requires mdb at top-level.
  * Patch the mdb singleton before tests.
  */
 const mdb = require('../mongoose/services/mongooseDatabaseService');
@@ -58,10 +58,10 @@ const {
   getTaskCountsForUser,
   processRecurringTasks,
   advanceDate,
-} = require('../mongoose/services/taskServiceMongoose');
+} = require('../mongoose/services/taskService');
 
 /* ── tests ─────────────────────────────────────────────────────────── */
-describe('taskServiceMongoose', () => {
+describe('taskService', () => {
   beforeEach(patchMdb);
 
   describe('advanceDate (pure)', () => {

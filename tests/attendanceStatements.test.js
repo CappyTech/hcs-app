@@ -48,7 +48,7 @@ function stubModels({ ocrDocs = [], purchases = [], suppliers = [] } = {}) {
 // Require the service AFTER patching mdb so it picks up our stubs
 const {
   fetchStatementsForWeek,
-} = require('../mongoose/services/attendanceServicesMongoose');
+} = require('../mongoose/services/attendanceService');
 const attendanceController = require('../mongoose/controllers/attendanceController');
 
 const moment = require('moment');

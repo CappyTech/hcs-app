@@ -1,8 +1,8 @@
 const path = require("path");
 const listConfig = require("../config/listControllerConfig");
 const customTiles = require("../config/dashboardTilesConfig");
-const taskService = require("../services/taskServiceMongoose");
-const holidayService = require("../services/holidayServiceMongoose");
+const taskService = require("../services/taskService");
+const holidayService = require("../services/holidayService");
 const { getFrequentPages } = require("../services/sessionActivityService");
 const rbac = require("../config/rolePermissionsConfig");
 const { endOfToday, endOfWeek, endOfMonth } = require("date-fns");
