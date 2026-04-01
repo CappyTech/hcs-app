@@ -19,10 +19,34 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 const configService = require('../../services/configService');
 const logger = require('../../services/loggerService');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+const DRAFT_FILE = path.join(__dirname, '..', '..', 'config', 'wizard-draft.json');
+
+function readDraft() {
+  try {
+    if (fs.existsSync(DRAFT_FILE)) return JSON.parse(fs.readFileSync(DRAFT_FILE, 'utf8'));
+  } catch (_) {}
+  return {};
+}
+
+function writeDraft(data) {
+  try {
+    const dir = path.dirname(DRAFT_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(DRAFT_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    logger.warn('[setup] Could not write wizard draft: ' + err.message);
+  }
+}
+
+function deleteDraft() {
+  try { if (fs.existsSync(DRAFT_FILE)) fs.unlinkSync(DRAFT_FILE); } catch (_) {}
+}
 
 function renderSetup(res, view, locals = {}) {
   res.render(path.join('tailwindcss', 'setup', view), {
@@ -32,7 +56,11 @@ function renderSetup(res, view, locals = {}) {
 }
 
 function sessionWizard(req) {
-  if (!req.session.setupWizard) req.session.setupWizard = {};
+  if (!req.session.setupWizard) {
+    // Restore from server-side draft if the session was lost (e.g. container restart).
+    // Client localStorage takes precedence — it overwrites these values in the browser.
+    req.session.setupWizard = readDraft();
+  }
   return req.session.setupWizard;
 }
 
@@ -60,7 +88,9 @@ exports.postStep1 = (req, res) => {
     });
   }
 
-  sessionWizard(req).step1 = { mongoUri, mongoHost, mongoPort, mongoUser, mongoPass, mongoAuthSource };
+  const w = sessionWizard(req);
+  w.step1 = { mongoUri, mongoHost, mongoPort, mongoUser, mongoPass, mongoAuthSource };
+  writeDraft(w);
   res.redirect('/setup/step2');
 };
 
@@ -143,7 +173,9 @@ exports.postStep2 = (req, res) => {
     });
   }
 
-  sessionWizard(req).step2 = { companyName, supportEmail, incorporationYear, sessionSecret, encryptionKey };
+  const w = sessionWizard(req);
+  w.step2 = { companyName, supportEmail, incorporationYear, sessionSecret, encryptionKey };
+  writeDraft(w);
   res.redirect('/setup/step3');
 };
 
@@ -238,7 +270,8 @@ exports.postComplete = (req, res) => {
     });
   }
 
-  // Destroy wizard session then render the "restart" page before exiting
+  // Clean up server draft, destroy wizard session, then render the "restart" page before exiting
+  deleteDraft();
   try { req.session.destroy(() => {}); } catch (_) {}
 
   renderSetup(res, 'complete', {
@@ -251,4 +284,12 @@ exports.postComplete = (req, res) => {
     logger.info('[setup] Exiting process for clean restart…');
     process.exit(0);
   }, 1500);
+};
+
+// ── clear draft ───────────────────────────────────────────────────────────────
+
+exports.postClearDraft = (req, res) => {
+  deleteDraft();
+  try { if (req.session.setupWizard) delete req.session.setupWizard; } catch (_) {}
+  res.json({ ok: true });
 };

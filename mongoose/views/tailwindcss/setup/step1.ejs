@@ -20,7 +20,7 @@
     </label>
     <input type="text" name="mongoUri" id="mongoUri" placeholder="mongodb://user:pass@host:27017/"
       value="<%= values.mongoUri || '' %>"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
   </div>
 
   <div class="relative flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
@@ -35,13 +35,13 @@
       <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Host</label>
       <input type="text" name="mongoHost" placeholder="localhost"
         value="<%= values.mongoHost || '' %>"
-        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
     </div>
     <div>
       <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Port</label>
       <input type="number" name="mongoPort" placeholder="27017"
         value="<%= values.mongoPort || '27017' %>"
-        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
     </div>
   </div>
 
@@ -52,14 +52,14 @@
       <input type="text" name="mongoUser" placeholder="admin"
         value="<%= values.mongoUser || '' %>"
         autocomplete="off"
-        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
     </div>
     <div>
       <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
       <input type="password" name="mongoPass"
         value="<%= values.mongoPass || '' %>"
         autocomplete="new-password"
-        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
     </div>
   </div>
 
@@ -68,7 +68,7 @@
     <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Auth Source</label>
     <input type="text" name="mongoAuthSource" placeholder="admin"
       value="<%= values.mongoAuthSource || 'admin' %>"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
   </div>
 
   <!-- Test connection -->
@@ -92,6 +92,24 @@
 </form>
 
 <script>
+// Restore saved values — localStorage takes precedence over server-restored values.
+// Falls back to server-side wizard-draft.json (via session) if localStorage is empty.
+const _s1 = JSON.parse(localStorage.getItem('hcs_setup_step1') || '{}');
+['mongoUri','mongoHost','mongoPort','mongoUser','mongoAuthSource'].forEach(id => {
+  const el = document.querySelector(`[name="${id}"]`);
+  if (el && _s1[id]) el.value = _s1[id];
+});
+
+// Save on change
+document.getElementById('dbForm').addEventListener('input', () => {
+  const data = {};
+  ['mongoUri','mongoHost','mongoPort','mongoUser','mongoAuthSource'].forEach(id => {
+    const el = document.querySelector(`[name="${id}"]`);
+    if (el) data[id] = el.value;
+  });
+  localStorage.setItem('hcs_setup_step1', JSON.stringify(data));
+});
+
 document.getElementById('testBtn').addEventListener('click', async () => {
   const btn = document.getElementById('testBtn');
   const spinner = document.getElementById('testSpinner');

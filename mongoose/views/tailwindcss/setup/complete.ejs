@@ -50,6 +50,7 @@
   </div>
 
   <script>
+    ['hcs_setup_step1','hcs_setup_step2','hcs_setup_step3'].forEach(k => localStorage.removeItem(k));
     let n = 8;
     const el = document.getElementById('countdown');
     const t = setInterval(() => { n--; if (el) el.textContent = n; if (n <= 0) clearInterval(t); }, 1000);

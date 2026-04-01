@@ -1,10 +1,38 @@
     </div><!-- /p-8 -->
   </div><!-- /card -->
 
-  <p class="mt-6 text-xs text-gray-400 dark:text-gray-600 text-center">
-    Configuration is saved to <code class="font-mono">config/app-config.json</code>.
-    Environment variables always take priority over this file.
-  </p>
+  <div class="mt-6 w-full max-w-lg text-xs text-gray-400 dark:text-gray-500 space-y-1 text-center">
+    <p>
+      <strong class="text-gray-500 dark:text-gray-400">Progress is saved automatically.</strong>
+      Non-sensitive form fields (connection details, company info, username) are stored in your
+      browser&rsquo;s <code class="font-mono">localStorage</code> and in a server-side
+      <code class="font-mono">config/wizard-draft.json</code> file after each step.
+      Passwords are never stored in either location.
+    </p>
+    <p>
+      If you return after a browser restart, <code class="font-mono">localStorage</code> is used first;
+      if that&rsquo;s empty, the server draft is used as a fallback.
+      Both are deleted permanently when setup completes.
+    </p>
+    <p class="pt-1">
+      The final configuration is written to <code class="font-mono">config/app-config.json</code>.
+      Environment variables always take priority over this file.
+    </p>
+    <p class="pt-2">
+      <button type="button" onclick="clearWizardDraft()"
+        class="text-red-400 dark:text-red-500 hover:underline hover:text-red-600 dark:hover:text-red-400 transition">
+        Clear saved progress
+      </button>
+      — removes browser localStorage and asks the server to delete its draft too.
+    </p>
+  </div>
+
+  <script>
+  function clearWizardDraft() {
+    ['hcs_setup_step1','hcs_setup_step2','hcs_setup_step3'].forEach(k => localStorage.removeItem(k));
+    fetch('/setup/clear-draft', { method: 'POST' }).finally(() => location.reload());
+  }
+  </script>
 
 </body>
 </html>

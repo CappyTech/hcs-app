@@ -19,12 +19,13 @@ function sameOriginOnly(req, res, next) {
 
 router.use(sameOriginOnly);
 
-router.get('/',           setup.getStep1);
-router.post('/step1',     setup.postStep1);
-router.post('/test-db',   setup.postTestDb);
-router.get('/step2',      setup.getStep2);
-router.post('/step2',     setup.postStep2);
-router.get('/step3',      setup.getStep3);
-router.post('/complete',  setup.postComplete);
+router.get('/',              setup.getStep1);
+router.post('/step1',        setup.postStep1);
+router.post('/test-db',      setup.postTestDb);
+router.get('/step2',         setup.getStep2);
+router.post('/step2',        setup.postStep2);
+router.get('/step3',         setup.getStep3);
+router.post('/complete',     setup.postComplete);
+router.post('/clear-draft',  setup.postClearDraft);
 
 module.exports = router;

@@ -1,0 +1,36 @@
+services:
+  hcs-app:
+    # Pull the latest CI image; override APP_IMAGE / APP_IMAGE_TAG env vars to use a specific build
+    image: ${APP_IMAGE:-ghcr.io/cappytech/hcs-app}:${APP_IMAGE_TAG:-ci-latest}
+    restart: unless-stopped  # auto-restarts after wizard exit(0) so new config is picked up
+    ports:
+      - "3000:3000"   # app is accessible at http://localhost:3000
+    environment:
+      # Required for plain HTTP — both default to true in production, which breaks local HTTP
+      - ENABLE_HSTS=false      # prevents browser forcing HTTPS via HSTS header
+      - COOKIE_SECURE=false    # allows session cookie to be sent over HTTP
+      # Without SESSION_SECRET, ENCRYPTION_KEY, and MONGO_HOST the app boots into
+      # the setup wizard at http://localhost:3000/setup — fill them in there.
+      # Once the wizard writes config/app-config.json, restart the container to start the full app.
+    volumes:
+      - ./uploads:/uploads  # user-uploaded files persisted on host
+      - ./logs:/logs        # app logs persisted on host
+      - ./config:/app/config  # persists app-config.json written by the setup wizard (/setup)
+    depends_on:
+      mongodb:
+        condition: service_healthy  # wait for MongoDB to be ready before starting the app
+
+  mongodb:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db  # database files persisted in a named volume
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s  # give mongod time to initialise before first check
+
+volumes:
+  mongo_data:  # managed by Docker; survives container restarts and re-creates

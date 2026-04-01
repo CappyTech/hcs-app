@@ -21,7 +21,7 @@
     <input type="text" name="adminUsername" required
       placeholder="admin" value="<%= values.adminUsername || '' %>"
       autocomplete="username"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     <p class="mt-1 text-xs text-gray-400">Lowercase, no spaces (e.g. <code>john.smith</code>).</p>
   </div>
 
@@ -31,7 +31,7 @@
     <input type="email" name="adminEmail"
       placeholder="admin@example.com" value="<%= values.adminEmail || '' %>"
       autocomplete="email"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
   </div>
 
   <!-- Password -->
@@ -41,7 +41,7 @@
     </label>
     <input type="password" name="adminPassword" required minlength="8"
       autocomplete="new-password"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     <p class="mt-1 text-xs text-gray-400">Minimum 8 characters.</p>
   </div>
 
@@ -52,7 +52,7 @@
     </label>
     <input type="password" name="adminPasswordConfirm" required
       autocomplete="new-password"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
   </div>
 
   <div class="pt-2 flex justify-between items-center">
@@ -63,5 +63,24 @@
     </button>
   </div>
 </form>
+
+<script>
+// Restore non-sensitive fields only (no passwords stored).
+// localStorage takes precedence over server-restored values.
+const _s3 = JSON.parse(localStorage.getItem('hcs_setup_step3') || '{}');
+['adminUsername','adminEmail'].forEach(name => {
+  const el = document.querySelector(`[name="${name}"]`);
+  if (el && _s3[name]) el.value = _s3[name];
+});
+
+document.querySelector('form').addEventListener('input', () => {
+  const data = {};
+  ['adminUsername','adminEmail'].forEach(name => {
+    const el = document.querySelector(`[name="${name}"]`);
+    if (el) data[name] = el.value;
+  });
+  localStorage.setItem('hcs_setup_step3', JSON.stringify(data));
+});
+</script>
 
 <%- include('./_footer.ejs') %>

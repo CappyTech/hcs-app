@@ -18,7 +18,7 @@
     <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Company Name</label>
     <input type="text" name="companyName" placeholder="Acme Ltd"
       value="<%= values.companyName || '' %>"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     <p class="mt-1 text-xs text-gray-400">Shown in page titles and the footer.</p>
   </div>
 
@@ -27,7 +27,7 @@
     <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Support Email</label>
     <input type="email" name="supportEmail" placeholder="support@example.com"
       value="<%= values.supportEmail || '' %>"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
   </div>
 
   <!-- Incorporation Year -->
@@ -36,7 +36,7 @@
     <input type="number" name="incorporationYear" placeholder="<%= new Date().getFullYear() %>"
       value="<%= values.incorporationYear || '' %>"
       min="1900" max="<%= new Date().getFullYear() %>"
-      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm">
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     <p class="mt-1 text-xs text-gray-400">Used in the footer copyright notice (e.g. © 2019–2026).</p>
   </div>
 
@@ -51,7 +51,7 @@
       <input type="text" name="sessionSecret" id="sessionSecret"
         value="<%= values.sessionSecret || generatedSession %>"
         required minlength="32"
-        class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+        class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
       <button type="button" onclick="regenerate('sessionSecret', 64)"
         class="px-3 py-2 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
         ↺ Generate
@@ -69,7 +69,7 @@
       <input type="text" name="encryptionKey" id="encryptionKey"
         value="<%= values.encryptionKey || generatedEncryption %>"
         required minlength="64" maxlength="64"
-        class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-900 text-sm font-mono">
+        class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
       <button type="button" onclick="regenerate('encryptionKey', 64)"
         class="px-3 py-2 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
         ↺ Generate
@@ -92,7 +92,26 @@ function regenerate(fieldId, hexBytes) {
   const arr = new Uint8Array(hexBytes / 2);
   crypto.getRandomValues(arr);
   document.getElementById(fieldId).value = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  saveStep2();
 }
+
+function saveStep2() {
+  const data = {};
+  ['companyName','supportEmail','incorporationYear','sessionSecret','encryptionKey'].forEach(name => {
+    const el = document.querySelector(`[name="${name}"]`);
+    if (el) data[name] = el.value;
+  });
+  localStorage.setItem('hcs_setup_step2', JSON.stringify(data));
+}
+
+// Restore saved values — localStorage takes precedence over server-restored values.
+const _s2 = JSON.parse(localStorage.getItem('hcs_setup_step2') || '{}');
+['companyName','supportEmail','incorporationYear','sessionSecret','encryptionKey'].forEach(name => {
+  const el = document.querySelector(`[name="${name}"]`);
+  if (el && _s2[name]) el.value = _s2[name];
+});
+
+document.querySelector('form').addEventListener('input', saveStep2);
 </script>
 
 <%- include('./_footer.ejs') %>
