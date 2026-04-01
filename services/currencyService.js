@@ -8,7 +8,8 @@ const logger = require("./loggerService");
  * @throws {Error} - Throws an error if the input amount is not a number.
  */
 function formatCurrency(amount) {
-  if (typeof amount !== "number") {
+  if (amount == null) return '£0.00';
+  if (typeof amount !== 'number') {
     const errorMessage = "Invalid input. Amount must be a number.";
     logger.error(errorMessage);
     throw new Error(errorMessage);

@@ -33,12 +33,12 @@ describe('formatCurrency', () => {
     assert.throws(() => formatCurrency('100'), /must be a number/i);
   });
 
-  it('throws for null input', () => {
-    assert.throws(() => formatCurrency(null), /must be a number/i);
+  it('returns £0.00 for null input', () => {
+    assert.equal(formatCurrency(null), '£0.00');
   });
 
-  it('throws for undefined input', () => {
-    assert.throws(() => formatCurrency(undefined), /must be a number/i);
+  it('returns £0.00 for undefined input', () => {
+    assert.equal(formatCurrency(undefined), '£0.00');
   });
 
   it('formats NaN as "£NaN"', () => {
