@@ -4,7 +4,7 @@ module.exports = {
   assignment: {
     title: 'Assignments',
     linkField: 'title',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'description'],
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
@@ -100,7 +100,8 @@ module.exports = {
       projectId: 'Project',
       locationId: 'Location'
     },
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'quoteId'],
+    fieldOrder: ['title', 'status', 'startDate', 'endDate', 'location', 'projectId', 'locationId', 'notes'],
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
@@ -122,8 +123,13 @@ module.exports = {
   customer: {
     title: 'Customers',
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Website'],
-    fieldOrder: ['Name', 'Code', 'DisplayName', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstInvoiceDate', 'LastInvoiceDate', 'InvoiceCount', 'InvoicedNetAmount', 'InvoicedVATAmount', 'OutstandingBalance', 'TotalPaidAmount', 'DiscountRate', 'DefaultNominalCode', 'DefaultCustomerReference', 'VATNumber', 'IsRegisteredInEC', 'IsRegisteredOutsideEC', 'IsArchived', 'ReceivesWholesalePricing', 'ApplyWHT', 'WHTRate', 'PaymentTerms', 'Currency', 'Contacts', 'Addresses', 'DeliveryAddresses', 'CustomCheckBoxes', 'CustomTextBoxes', 'Email', 'EmailTemplateNumber', 'FaxNumber', 'MobileNumber'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Website',
+      'Contacts', 'Addresses', 'DeliveryAddresses', 'CustomCheckBoxes', 'CustomTextBoxes', 'PaymentTerms', 'Currency',
+      'Id', 'WHTReferences', 'AutoIncludeVATNumber', 'AverageDaysToPay', 'UseCustomDeliveryAddress',
+      'AutomaticCreditControlEnabled', 'IsGoCardlessMandateSet', 'Key', 'Source',
+      'ShowDiscount', 'CreateCustomerCodeIfDuplicate', 'CreateCustomerNameIfEmptyOrNull',
+      'InvoiceFileFormat', 'OverrideInvoiceFileFormat', 'EnvelopeUrl', 'PDFThemeId', 'TelephoneNumber', 'UniqueEntityNumber'],
+    fieldOrder: ['Name', 'Code', 'DisplayName', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstInvoiceDate', 'LastInvoiceDate', 'InvoiceCount', 'InvoicedNetAmount', 'InvoicedVATAmount', 'OutstandingBalance', 'TotalPaidAmount', 'DiscountRate', 'DefaultNominalCode', 'DefaultCustomerReference', 'VATNumber', 'IsRegisteredInEC', 'IsRegisteredOutsideEC', 'IsArchived', 'ReceivesWholesalePricing', 'ApplyWHT', 'WHTRate', 'Email', 'EmailTemplateNumber', 'FaxNumber', 'MobileNumber'],
     sortField: 'Name',
     sortOrder: 1,
     department: ['kashflow'],
@@ -132,7 +138,7 @@ module.exports = {
   employee: {
     title: 'Employees',
     linkField: 'name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'contactName', 'contactNumber', 'contract', 'holidayPolicy'],
     fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type', 'ir35', 'definedRate', 'dailyRate', 'weeklyRate', 'monthlyRate', 'yearlyRate', 'hourlyRate', 'hireDate', 'managerId', 'subcontractorSupplierId'],
     sortField: 'name',
     sortOrder: 1,
@@ -168,7 +174,7 @@ module.exports = {
   holiday: {
     title: ' Government Holidays',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
-    fieldOrder: ['title', 'date', 'bunting', 'notes'],
+    fieldOrder: ['title', 'date', 'division', 'bunting', 'notes'],
     linkField: 'title',
     sortField: 'title',
     sortOrder: -1,
@@ -186,10 +192,17 @@ module.exports = {
     ],
   },
   invoice: {
-    fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerReference', 'Currency', 'NetAmount', 'GrossAmount', 'VATAmount', 'AmountPaid', 'TotalPaidAmount', 'Paid', 'IssuedDate', 'DueDate', 'PaidDate', 'LastPaymentDate', 'Status', 'LineItems', 'PaymentLines', 'DeliveryAddress', 'Address', 'UseCustomDeliveryAddress', 'Permalink', 'PackingSlipPermalink', 'ReminderLetters', 'PreviousNumber', 'NextNumber', 'OverdueDays', 'AutomaticCreditControlEnabled', 'CustomerDiscount', 'EmailCount', 'InvoiceInECMemberState', 'InvoiceOutsideECMemberState', 'SuppressNumber', 'UpdateCustomerAddress'],
     title: 'Invoices',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'DeliveryAddress', 'UseCustomDeliveryAddress', 'Paid'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'DeliveryAddress', 'UseCustomDeliveryAddress', 'Paid',
+      'LineItems', 'PaymentLines', 'Address', 'Permalink', 'PackingSlipPermalink', 'ReminderLetters',
+      'Id', 'CustomerCode', 'CustomerKey', 'CustomerContactName', 'CustomerContactFirstName', 'CustomerContactLastName',
+      'CreatedDate', 'HomeCurrencyGrossAmount', 'HomeCurrencyVATAmount', 'DueAmount', 'FormattedDueAmount',
+      'Type', 'FileCount', 'IsArchived', 'IsCISReverseCharge', 'IsWhtDeductionToBeApplied',
+      'CISRCNetAmount', 'CISRCVatAmount', 'PayOnlinePaymentProcessor',
+      'ProjectNumber', 'ProjectName', 'ProjectGrossAmount', 'TradeBorderType',
+      'UpdateCustomerDeliveryAddress', 'VATNumber', 'VATReturnId'],
+    fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerReference', 'Currency', 'NetAmount', 'GrossAmount', 'VATAmount', 'AmountPaid', 'TotalPaidAmount', 'IssuedDate', 'DueDate', 'PaidDate', 'LastPaymentDate', 'Status', 'OverdueDays', 'AutomaticCreditControlEnabled', 'CustomerDiscount', 'EmailCount', 'InvoiceInECMemberState', 'InvoiceOutsideECMemberState', 'SuppressNumber', 'UpdateCustomerAddress'],
     sortField: 'Number',
     sortOrder: -1,
     department: ['kashflow'],
@@ -261,8 +274,11 @@ module.exports = {
   quote: {
     title: 'Quotes',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
-    fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'Date', 'GrossAmount', 'NetAmount', 'VATAmount', 'CustomerReference', 'LineItems', 'Permalink', 'PreviousNumber', 'NextNumber', 'Status', 'Category', 'Currency', 'CustomerCode'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      'LineItems', 'Addresses', 'DeliveryAddresses', 'UseCustomDeliveryAddress',
+      'Id', 'HomeCurrencyGrossAmount', 'FileCount', 'IsEmailSent', 'SuppressAmount',
+      'ProjectNumber', 'ProjectName'],
+    fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'Date', 'GrossAmount', 'NetAmount', 'VATAmount', 'CustomerReference', 'Permalink', 'PreviousNumber', 'NextNumber', 'Status', 'Category', 'Currency', 'CustomerCode'],
     sortField: 'Number',
     sortOrder: -1,
     department: ['kashflow'],
@@ -286,7 +302,8 @@ module.exports = {
     title: 'Purchases',
     flattenField: 'data',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ReadableString','CISRCNetAmount', 'CISRCVatAmount','Permalink', 'PreviousNumber','IsCISReverseCharge','Type','SupplierCode', 'NextNumber', 'StockManagementApplicable', 'ProjectName','ProjectNumber', 'AdditionalFieldValue','SupplierId','FileCount', 'HomeCurrencyGrossAmount','IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent', 'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId', 'deletedAt', 'lastSeenRun', 'Currency', 'number', 'syncedAt'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ReadableString','CISRCNetAmount', 'CISRCVatAmount','Permalink', 'PreviousNumber','IsCISReverseCharge','Type','SupplierCode', 'NextNumber', 'StockManagementApplicable', 'ProjectName','ProjectNumber', 'AdditionalFieldValue','SupplierId','FileCount', 'HomeCurrencyGrossAmount','IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent', 'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId', 'deletedAt', 'lastSeenRun', 'Currency', 'number', 'syncedAt',
+      'LineItems', 'PaymentLines', 'OverdueDays', 'SubmissionDate', 'TaxMonth', 'TaxYear', 'PurchaseInECMemberState'],
     fieldOrder: ['Number', 'SupplierName', 'SupplierReference','GrossAmount', 'NetAmount', 'VATAmount', 'Status', 'TotalPaidAmount', 'IssuedDate','DueAmount', 'DueDate'],
     searchFields: ['number'],
     sortField: 'number',
@@ -319,9 +336,14 @@ module.exports = {
     title: 'Subcontractors',
     linkField: 'Name',
     // OLD: hideFields included 'Subcontractor', 'IsSubcontractor' and hid 'WithholdingTaxRate', 'WithholdingTaxReferences'
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id', 'IsRegisteredInEC', 'IsArchived', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id', 'IsRegisteredInEC', 'IsArchived', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull',
+      'WithholdingTaxReferences', 'Contacts', 'Address', 'DeliveryAddresses', 'BankAccount',
+      'ApplyWithholdingTax', 'BilledNetAmount', 'BilledVatAmount', 'DefaultVatRate',
+      'DoesSupplierHasTransactionsInVATReturn', 'IsCISReverseCharge', 'IsVatRateEnabled',
+      'SourceName', 'TradeBorderType', 'UsesDefaultPdftTheme', 'VatExempt',
+      'Subcontractor', 'IsSubcontractor', 'CISRate', 'CISNumber'],
     // OLD: fieldOrder: ['Name', 'Code', 'CISRate', 'CISNumber', ...],
-    fieldOrder: ['Name', 'Code', 'WithholdingTaxRate', 'WithholdingTaxReferences', 'Note', 'OutstandingBalance', 'TotalPaidAmount', 'VatNumber', 'Contacts', 'Address'],
+    fieldOrder: ['Name', 'Code', 'WithholdingTaxRate', 'Note', 'OutstandingBalance', 'TotalPaidAmount', 'VatNumber'],
     // OLD: searchFields: ['Name', 'Code', 'CISNumber'],
     searchFields: ['Name', 'Code'],
     sortField: 'Name',
@@ -338,8 +360,13 @@ module.exports = {
   supplier: {
     title: 'Suppliers',
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency','DefaultPdfTheme','PaymentMethod','Id'],
-    fieldOrder: ['Name', 'Id', 'Code', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstPurchaseDate', 'LastPurchaseDate', 'OutstandingBalance', 'TotalPaidAmount', 'DefaultNominalCode', 'VatNumber', 'IsRegisteredInEC', 'IsArchived', 'PaymentTerms', 'Currency', 'Contacts', 'Address', 'DeliveryAddresses', 'DefaultPdfTheme', 'PaymentMethod', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull', 'UniqueEntityNumber', 'WithholdingTaxRate', 'WithholdingTaxReferences'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id',
+      'Contacts', 'Address', 'DeliveryAddresses', 'WithholdingTaxReferences', 'BankAccount',
+      'ApplyWithholdingTax', 'BilledNetAmount', 'BilledVatAmount', 'DefaultVatRate',
+      'DoesSupplierHasTransactionsInVATReturn', 'IsCISReverseCharge', 'IsVatRateEnabled',
+      'SourceName', 'TradeBorderType', 'UsesDefaultPdftTheme', 'VatExempt',
+      'Subcontractor', 'IsSubcontractor', 'CISRate', 'CISNumber'],
+    fieldOrder: ['Name', 'Code', 'Note', 'CreatedDate', 'LastUpdatedDate', 'FirstPurchaseDate', 'LastPurchaseDate', 'OutstandingBalance', 'TotalPaidAmount', 'DefaultNominalCode', 'VatNumber', 'IsRegisteredInEC', 'IsArchived', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull', 'UniqueEntityNumber', 'WithholdingTaxRate'],
     sortField: 'Name',
     sortOrder: 1,
     department: ['kashflow', 'construction-industry-scheme'],
@@ -351,10 +378,30 @@ module.exports = {
   task: {
     title: 'Tasks',
     linkField: 'title',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'password'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    fieldOrder: ['title', 'description', 'dueDate', 'recurrence', 'completed', 'userId', 'contractId'],
     sortField: 'title',
     sortOrder: -1,
     department: ['human-resources'],
+    labelOverrides: {
+      userId: 'User',
+      contractId: 'Contract',
+      dueDate: 'Due Date'
+    },
+    fieldTransforms: {
+      userId: {
+        fromModel: 'user',
+        matchField: '_id',
+        returnField: 'username',
+        linkTo: (matched) => `/user/read/${matched.uuid}`
+      },
+      contractId: {
+        fromModel: 'contract',
+        matchField: '_id',
+        returnField: 'title',
+        linkTo: (matched) => `/contract/read/${matched.uuid}`
+      }
+    }
   },
   user: {
     title: 'Users',
@@ -445,7 +492,8 @@ module.exports = {
     linkField: 'registrationNumber',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'vin', 'engineNumber',
       'motCertificateNumber', 'insuranceCost', 'purchasePrice', 'leaseMonthlyCost',
-      'leaseProvider', 'grossWeight', 'payload', 'lastServiceMileage', 'nextServiceDueMileage', 'notes'],
+      'leaseProvider', 'grossWeight', 'payload', 'lastServiceMileage', 'nextServiceDueMileage',
+      'lastMileageUpdate', 'insurancePolicyNumber', 'notes'],
     fieldOrder: [
       'registrationNumber', 'make', 'model', 'year', 'color',
       'fuelType', 'bodyType', 'transmission', 'engineSize',
@@ -513,10 +561,31 @@ module.exports = {
       manage: 'Manage company holidays'
     },
     linkField: 'uuid',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    fieldOrder: ['userId', 'holidayId', 'dismissedAt'],
     sortField: 'dismissedAt',
     sortOrder: -1,
     department: ['human-resources'],
     deny: ['c', 'u'],
+    labelOverrides: {
+      userId: 'User',
+      holidayId: 'Holiday',
+      dismissedAt: 'Dismissed'
+    },
+    fieldTransforms: {
+      userId: {
+        fromModel: 'user',
+        matchField: '_id',
+        returnField: 'username',
+        linkTo: (matched) => `/user/read/${matched.uuid}`
+      },
+      holidayId: {
+        fromModel: 'holiday',
+        matchField: '_id',
+        returnField: 'title',
+        linkTo: (matched) => `/holiday/read/${matched.uuid}`
+      }
+    }
   },
   holidayCustom: {
     title: 'Company Holidays',
@@ -721,7 +790,7 @@ module.exports = {
       manage: 'View and manage vehicle service history and costs.',
     },
     linkField: 'date',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'notes',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'notes', 'description',
       'providerContact', 'providerReference', 'invoiceReference',
       'partsReplaced', 'advisories'],
     fieldOrder: [
