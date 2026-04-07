@@ -23,10 +23,6 @@
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Non-CIS</p>
       <p class="text-3xl font-bold text-gray-400"><%= nonCIS %></p>
     </div>
-    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Missing CIS No.</p>
-      <p class="text-3xl font-bold <%= missingCISNumber.length > 0 ? 'text-yellow-600' : 'text-gray-400' %>"><%= missingCISNumber.length %></p>
-    </div>
   </div>
 
   <!-- CIS Rate Breakdown -->
@@ -42,24 +38,6 @@
       <% } %>
     </div>
   </div>
-
-  <!-- Missing CIS Numbers -->
-  <% if (missingCISNumber.length > 0) { %>
-  <div class="mb-8 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-3">&#9888; CIS Applicable — Missing CIS Number (<%= missingCISNumber.length %>)</h2>
-    <ul class="divide-y divide-yellow-200 dark:divide-yellow-800">
-      <% for (const s of missingCISNumber) { %>
-      <li class="flex items-center justify-between py-1.5 text-sm">
-        <a href="/supplier/read/<%= s.uuid %>" class="font-medium text-blue-600 hover:underline"><%= s.Name %></a>
-        <div class="flex items-center gap-3">
-          <span class="text-gray-500 text-xs"><%= s.CISRate != null ? (s.CISRate * 100) + '%' : '' %></span>
-          <a href="/supplier/update/<%= s.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
-        </div>
-      </li>
-      <% } %>
-    </ul>
-  </div>
-  <% } %>
 
   <!-- IR35 Linked Employees -->
   <% if (ir35Linked.length > 0) { %>

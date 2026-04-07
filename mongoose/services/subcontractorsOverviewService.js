@@ -19,11 +19,6 @@ async function getSubcontractorsOverview() {
     else cisRateCounts['Not Set']++;
   }
 
-  // ── Missing CIS number ─────────────────────────────────────────────────────
-  const missingCISNumber = allSuppliers.filter(s =>
-    s.ApplyWithholdingTax && (!s.CISNumber || s.CISNumber === '')
-  );
-
   // ── CIS-applicable (ApplyWithholdingTax = true) ─────────────────────────────
   const cisApplicable = allSuppliers.filter(s => s.ApplyWithholdingTax === true);
   const nonCIS = allSuppliers.filter(s => !s.ApplyWithholdingTax);
@@ -82,7 +77,7 @@ async function getSubcontractorsOverview() {
   const recentSuppliers = await Supplier.find({})
     .sort({ updatedAt: -1 })
     .limit(10)
-    .select('uuid Name CISRate CISNumber ApplyWithholdingTax updatedAt')
+    .select('uuid Name CISRate ApplyWithholdingTax updatedAt')
     .lean();
 
   return {
@@ -90,7 +85,6 @@ async function getSubcontractorsOverview() {
     cisRateCounts,
     cisApplicable: cisApplicable.length,
     nonCIS: nonCIS.length,
-    missingCISNumber,
     ir35Linked,
     subcontractorUsers,
     recentSuppliers,

@@ -1,38 +1,137 @@
-<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
   <% if (isAuthenticated) { %>
-    <!-- Authenticated Welcome Card -->
+
+    <!-- Welcome + Holiday -->
     <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
       <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
-      <div class="p-6 sm:p-8 text-center">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Welcome, <%= firstName %>.</h1>
-        <p class="text-lg text-gray-500 dark:text-gray-400 mt-2">
-          Role: <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"><i class="bi bi-person-check"></i> <%= role.charAt(0).toUpperCase() + role.slice(1) %></span>
-        </p>
+      <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome, <%= firstName %>.</h1>
+          <span class="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <i class="bi bi-person-check"></i> <%= role.charAt(0).toUpperCase() + role.slice(1) %>
+          </span>
+        </div>
+        <% if (nextHoliday) { %>
+        <div class="text-sm text-right text-gray-600 dark:text-gray-400">
+          <div class="font-semibold text-gray-900 dark:text-gray-100">Next Bank Holiday</div>
+          <div><%= nextHoliday.reason %></div>
+          <div class="text-green-600 dark:text-green-400 font-medium">
+            <% if (nextHoliday.startDate === nextHoliday.endDate) { %>
+              <%= slimDateTime(nextHoliday.startDate, ['displayFormat']) %>
+            <% } else { %>
+              <%= slimDateTime(nextHoliday.startDate, ['displayFormat']) %> – <%= slimDateTime(nextHoliday.endDate, ['displayFormat']) %>
+            <% } %>
+          </div>
+        </div>
+        <% } %>
       </div>
     </div>
 
-    <% if (nextHoliday) { %>
-      <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-        <div class="p-6 sm:p-8 text-center">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Next Holiday
-            <%= nextHoliday.division === 'england-and-wales' ? 'for England and Wales' : '' %>
-            <%= nextHoliday.division === 'scotland' ? 'for Scotland' : '' %>
-            <%= nextHoliday.division === 'northern-ireland' ? 'for Northern Ireland' : '' %></h2>
-          <p class="text-lg text-gray-700 dark:text-gray-300 mb-1">
-            <strong><%= nextHoliday.reason %></strong>
-          </p>
-          <p class="text-xl font-semibold">
-            <% if (nextHoliday.startDate === nextHoliday.endDate) { %>
-              <span class="text-green-600 dark:text-green-400"><%= slimDateTime(nextHoliday.startDate, ['displayFormat']) %></span>
-            <% } else { %>
-              from <span class="text-green-600 dark:text-green-400"><%= slimDateTime(nextHoliday.startDate, ['displayFormat']) %></span><br />
-              to <span class="text-green-600 dark:text-green-400"><%= slimDateTime(nextHoliday.endDate, ['displayFormat']) %></span>
-            <% } %>
-          </p>
+    <!-- Overviews -->
+    <%
+      const overviews = [];
+      if (canDept('maintenance'))                    overviews.push({ href: '/overview/fleet',           icon: 'bi-truck',             label: 'Fleet',           desc: 'Vehicles, compliance & assignments' });
+      if (canDept('human-resources'))                overviews.push({ href: '/overview/human',           icon: 'bi-people',            label: 'Human Resources', desc: 'Employees, attendance & holidays' });
+      if (canDept('finance'))                        overviews.push({ href: '/overview/finance',         icon: 'bi-wallet2',           label: 'Finance',         desc: 'Invoices, purchases & overdue' });
+      if (canDept('management'))                     overviews.push({ href: '/overview/projects',        icon: 'bi-clipboard-check',   label: 'Projects',        desc: 'Contracts & assignments' });
+      if (canDept('paperless'))                      overviews.push({ href: '/overview/documents',       icon: 'bi-file-earmark-text', label: 'Documents',       desc: 'OCR & paperless sync' });
+      if (canDept('construction-industry-scheme'))   overviews.push({ href: '/overview/subcontractors', icon: 'bi-person-gear',       label: 'Subcontractors',  desc: 'CIS rates & IR35' });
+      if (canDept('admin'))                          overviews.push({ href: '/overview/admin',           icon: 'bi-shield-check',      label: 'Admin',           desc: 'Users, roles & 2FA' });
+    %>
+    <% if (overviews.length > 0) { %>
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-speedometer2 text-green-600 dark:text-green-400"></i> Overviews
+      </div>
+      <div class="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <% for (const ov of overviews) { %>
+          <a href="<%= ov.href %>" class="flex flex-col gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-700 p-4 transition">
+            <i class="bi <%= ov.icon %> text-2xl text-green-600 dark:text-green-400"></i>
+            <span class="font-semibold text-sm text-gray-900 dark:text-gray-100"><%= ov.label %></span>
+            <span class="text-xs text-gray-500 dark:text-gray-400"><%= ov.desc %></span>
+          </a>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- Frequently Visited -->
+    <% if (frequentPages && frequentPages.length > 0) { %>
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-clock-history text-green-600 dark:text-green-400"></i> Frequently Visited
+      </div>
+      <div class="px-4 py-3 flex flex-wrap gap-2">
+        <% frequentPages.forEach(function(page) { %>
+          <a href="<%= page.path %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400 transition">
+            <%= page.label %>
+            <span class="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums"><%= page.count %></span>
+          </a>
+        <% }); %>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- Tasks -->
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="flex items-center gap-3 flex-grow">
+          <span class="font-bold text-gray-900 dark:text-gray-100">Your Tasks</span>
+          <% if (taskCounts.overdue > 0) { %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"><%= taskCounts.overdue %> overdue</span>
+          <% } %>
+          <% if (tasks.today.length > 0) { %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"><%= tasks.today.length %> today</span>
+          <% } %>
+          <% if (taskCounts.total > 0) { %>
+            <span class="text-xs text-gray-400 dark:text-gray-500"><%= taskCounts.total %> open</span>
+          <% } %>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/tasks" class="text-xs text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:underline">View all</a>
+          <a href="/task/create" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition"><i class="bi bi-plus-lg"></i> New Task</a>
         </div>
       </div>
-    <% } %>
+      <!-- Quick Add -->
+      <form action="/quick-task" method="POST" class="px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-2 items-end">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="flex-grow">
+          <label for="qt-title" class="sr-only">Task title</label>
+          <input type="text" id="qt-title" name="title" required maxlength="200" placeholder="Quick add a task…"
+                 class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+        </div>
+        <div class="w-full sm:w-40">
+          <label for="qt-due" class="sr-only">Due date</label>
+          <input type="date" id="qt-due" name="dueDate"
+                 class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+        </div>
+        <button type="submit" class="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition whitespace-nowrap">
+          <i class="bi bi-plus-lg"></i> Add
+        </button>
+      </form>
+      <!-- Task columns — only render non-empty groups -->
+      <% const taskGroups = [
+        { title: 'Overdue',       list: tasks.overdue,   id: 'overdue'   },
+        { title: 'Today',         list: tasks.today,     id: 'today'     },
+        { title: 'This Week',     list: tasks.week,      id: 'week'      },
+        { title: 'This Month',    list: tasks.month,     id: 'month'     },
+        { title: 'General',       list: tasks.general,   id: 'general'   },
+        { title: 'Recurring',     list: tasks.recurring, id: 'recurring' },
+      ].filter(g => g.list.length > 0); %>
+      <% if (taskGroups.length > 0) { %>
+        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <% for (const g of taskGroups) { %>
+            <%- include('partials/taskCard', { title: g.title, tasks: g.list, emptyMsg: '', showRecurrence: true }) %>
+          <% } %>
+        </div>
+      <% } else { %>
+        <p class="px-6 py-6 text-sm text-gray-500 dark:text-gray-400 italic">No open tasks. Add one above.</p>
+      <% } %>
+    </div>
+
   <% } else { %>
+
     <!-- Public Hero -->
     <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
       <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
@@ -42,185 +141,34 @@
             <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100"><%= (typeof companyName !== 'undefined' && companyName) ? companyName + ' Management System' : 'Heron Management System' %></h1>
             <p class="text-lg text-gray-500 dark:text-gray-400 mt-2">
               Developed by
-              <a href="https://heroncs.co.uk" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium">
-                Heron Constructive Solutions LTD
-              </a>
+              <a href="https://heroncs.co.uk" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium">Heron Constructive Solutions LTD</a>
             </p>
             <p class="text-base text-gray-600 dark:text-gray-300 mt-4">
-              Streamline subcontractor management, compliance, and documentation—built for the modern construction team.
+              Streamline subcontractor management, compliance, and documentation — built for the modern construction team.
             </p>
-            <a href="/user/login"
-               class="inline-flex items-center gap-1.5 mt-6 px-6 py-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
+            <a href="/user/login" class="inline-flex items-center gap-1.5 mt-6 px-6 py-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
               <i class="bi bi-box-arrow-in-right"></i> Log In
             </a>
           </div>
-          <div class="lg:w-1/2 hidden lg:block">
-            <img src="https://placehold.co/600x300"
-                 class="rounded-xl shadow-lg" alt="Dashboard Screenshot">
-          </div>
         </div>
       </div>
     </div>
+
+    <!-- Public Feature Highlights -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
+        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1">Manage Subcontractors</h5>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Store and track contact, compliance, and CIS employment details.</p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
+        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1">Upload Documents</h5>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Centralised uploads for job documents, expenses, and evidence.</p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
+        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1">Generate CIS Reports</h5>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Build and export monthly or yearly HMRC-ready CIS summaries.</p>
+      </div>
+    </div>
+
   <% } %>
-
-<!-- Authenticated Dashboard Cards -->
-<% if (isAuthenticated) { %>
-
-  <!-- Task Summary Strip -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-    <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-4 text-center">
-      <div class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= taskCounts.total %></div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Open Tasks</div>
-    </div>
-    <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-4 text-center">
-      <div class="text-2xl font-bold <%= taskCounts.overdue > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100' %>"><%= taskCounts.overdue %></div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Overdue</div>
-    </div>
-    <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-4 text-center">
-      <div class="text-2xl font-bold text-green-600 dark:text-green-400"><%= tasks.today.length %></div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Due Today</div>
-    </div>
-    <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-4 text-center">
-      <div class="text-2xl font-bold text-blue-600 dark:text-blue-400"><%= tasks.week.length %></div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">This Week</div>
-    </div>
-  </div>
-
-  <!-- Quick Add Task -->
-  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-    <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
-      <i class="bi bi-plus-circle text-green-600 dark:text-green-400"></i> Quick Add Task
-    </div>
-    <form action="/quick-task" method="POST" class="p-4 flex flex-col sm:flex-row gap-3 items-end">
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <div class="flex-grow w-full sm:w-auto">
-        <label for="qt-title" class="sr-only">Task title</label>
-        <input type="text" id="qt-title" name="title" required maxlength="200" placeholder="What needs doing?"
-               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
-      </div>
-      <div class="w-full sm:w-44">
-        <label for="qt-due" class="sr-only">Due date</label>
-        <input type="date" id="qt-due" name="dueDate"
-               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
-      </div>
-      <button type="submit"
-              class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 shadow-sm transition whitespace-nowrap">
-        <i class="bi bi-plus-lg"></i> Add
-      </button>
-    </form>
-  </div>
-
-  <!-- Frequently Visited Pages -->
-  <% if (frequentPages && frequentPages.length > 0) { %>
-    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-      <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
-        <i class="bi bi-clock-history text-green-600 dark:text-green-400"></i> Frequently Visited
-      </div>
-      <div class="p-4">
-        <div class="flex flex-wrap gap-2">
-          <% frequentPages.forEach(function(page) { %>
-            <a href="<%= page.path %>"
-               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400 transition">
-              <%= page.label %>
-              <span class="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums"><%= page.count %></span>
-            </a>
-          <% }); %>
-        </div>
-      </div>
-    </div>
-  <% } %>
-
-  <!-- Task Cards -->
-  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-    <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4 font-bold text-lg text-gray-900 dark:text-gray-100 flex items-center justify-between">
-      <span>Your Tasks</span>
-      <% if (taskCounts.total > 0) { %>
-        <span class="text-xs font-medium text-gray-500 dark:text-gray-400"><%= taskCounts.total %> open</span>
-      <% } %>
-    </div>
-    <div class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <%- include('partials/taskCard', { title: 'Overdue Tasks', tasks: tasks.overdue, emptyMsg: 'No overdue tasks', showRecurrence: true }) %>
-      <%- include('partials/taskCard', { title: 'Today', tasks: tasks.today, emptyMsg: 'No tasks today', showRecurrence: true }) %>
-      <%- include('partials/taskCard', { title: 'This Week', tasks: tasks.week, emptyMsg: 'No tasks this week', showRecurrence: true }) %>
-      <%- include('partials/taskCard', { title: 'This Month', tasks: tasks.month, emptyMsg: 'No tasks this month', showRecurrence: true }) %>
-      <%- include('partials/taskCard', { title: 'General Tasks', tasks: tasks.general, emptyMsg: 'No general tasks', showRecurrence: true }) %>
-      <%- include('partials/taskCard', { title: 'Recurring Tasks', tasks: tasks.recurring, emptyMsg: 'No recurring tasks', showRecurrence: true }) %>
-    </div>
-    <div class="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-center gap-3">
-      <a href="/tasks"
-         class="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-        <i class="bi bi-list-task"></i> View All Tasks
-      </a>
-      <a href="/task/create"
-         class="inline-flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800 rounded-lg px-4 py-2 hover:bg-green-50 dark:hover:bg-green-900/30 transition">
-        <i class="bi bi-plus-circle"></i> New Task
-      </a>
-    </div>
-  </div>
-<% } %>
-
-<!-- Overview Shortcuts -->
-<% if (isAuthenticated) {
-  const overviews = [];
-  if (canDept('maintenance'))                    overviews.push({ href: '/overview/fleet',            icon: 'bi-truck',             label: 'Fleet',            desc: 'Vehicles, compliance & assignments' });
-  if (canDept('human-resources'))                overviews.push({ href: '/overview/human',            icon: 'bi-people',            label: 'Human Resources',  desc: 'Employees, attendance & holidays' });
-  if (canDept('finance'))                        overviews.push({ href: '/overview/finance',          icon: 'bi-wallet2',           label: 'Finance',          desc: 'Invoices, purchases & overdue' });
-  if (canDept('management'))                     overviews.push({ href: '/overview/projects',         icon: 'bi-clipboard-check',   label: 'Projects',         desc: 'Contracts, assignments & KF projects' });
-  if (canDept('paperless'))                      overviews.push({ href: '/overview/documents',        icon: 'bi-file-earmark-text', label: 'Documents',        desc: 'OCR documents & paperless sync' });
-  if (canDept('construction-industry-scheme'))   overviews.push({ href: '/overview/subcontractors',  icon: 'bi-person-gear',       label: 'Subcontractors',   desc: 'CIS rates, IR35 & portal users' });
-  if (canDept('admin'))                          overviews.push({ href: '/overview/admin',            icon: 'bi-shield-check',      label: 'Admin',            desc: 'Users, roles, 2FA & sessions' });
-%>
-<% if (overviews.length > 0) { %>
-  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-    <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
-      <i class="bi bi-speedometer2 text-green-600 dark:text-green-400"></i> Overviews
-    </div>
-    <div class="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-      <% for (const ov of overviews) { %>
-        <a href="<%= ov.href %>"
-           class="flex flex-col gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-700 p-4 transition">
-          <i class="bi <%= ov.icon %> text-2xl text-green-600 dark:text-green-400"></i>
-          <span class="font-semibold text-sm text-gray-900 dark:text-gray-100"><%= ov.label %></span>
-          <span class="text-xs text-gray-500 dark:text-gray-400"><%= ov.desc %></span>
-        </a>
-      <% } %>
-    </div>
-  </div>
-<% } %>
-<% } %>
-
-<!-- Public Feature Highlights -->
-<% if (!isAuthenticated) { %>
-  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-    <div class="p-8 sm:p-12 text-center">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8">Why Use Our System?</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
-          <img src="https://placehold.co/200x150"
-               class="mx-auto rounded-lg shadow mb-4" alt="Subcontractor Profiles">
-          <h5 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Manage Subcontractors</h5>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Easily store and track contact, compliance, and employment details.
-          </p>
-        </div>
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
-          <img src="https://placehold.co/200x150"
-               class="mx-auto rounded-lg shadow mb-4" alt="Purchases">
-          <h5 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Documents</h5>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Centralised uploads for job documents, expenses, and evidence.
-          </p>
-        </div>
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
-          <img src="https://placehold.co/200x150"
-               class="mx-auto rounded-lg shadow mb-4" alt="CIS Reports">
-          <h5 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Generate CIS Reports</h5>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Automatically build and export monthly or yearly HMRC-ready summaries.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-<% } %>
 </div>
