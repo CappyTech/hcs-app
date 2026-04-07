@@ -1,0 +1,11 @@
+const mongoose = require('mongoose');
+const p = require('@cappytech/hcs-schemas').purchase;
+const { schema } = require('./mongoose/models/mongoose/REST/purchase');
+console.log('fields:', JSON.stringify(Object.keys(p.fields)));
+console.log('indexes:', JSON.stringify(p.indexes));
+console.log('Schema paths:', Object.keys(schema.paths));
+console.log('Number path instance:', schema.path('Number')?.instance);
+console.log('number path instance:', schema.path('number')?.instance);
+console.log('data path instance:', schema.path('data')?.instance);
+console.log('data.Number path instance:', schema.path('data.Number')?.instance);
+console.log('schema options:', JSON.stringify(schema.options));

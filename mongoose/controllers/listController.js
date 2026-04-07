@@ -71,8 +71,9 @@ const generateHeaders = (firstDoc, config = {}) => {
     if (listController[functionName]) continue; // avoid duplicates if name exists in both namespaces
 
     listController[functionName] = async (req, res, next) => {
-      const sortField = config.sortField || "createdAt";
-      const sortOrder = config.sortOrder ?? -1;
+      const rawSort = req.query.sort;
+      const sortField = (rawSort && /^[a-zA-Z0-9_.]+$/.test(rawSort)) ? rawSort : (config.sortField || "createdAt");
+      const sortOrder = req.query.order === 'asc' ? 1 : req.query.order === 'desc' ? -1 : (config.sortOrder ?? -1);
       // Pagination & search
       const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 500);
       const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -252,7 +253,7 @@ const generateHeaders = (firstDoc, config = {}) => {
             page,
             totalPages,
             query,
-            model: modelName,
+          reqQuery: req.query,
             actions: config.actions || [],
             headerActions: config.headerActions || [],
             fieldLinks: config.fieldLinks || null,
@@ -415,7 +416,7 @@ const generateHeaders = (firstDoc, config = {}) => {
           limit,
           page,
           totalPages,
-          query,
+          query,          reqQuery: req.query,          reqQuery: req.query,
           model: modelName,
           actions: config.actions || [],
           headerActions: config.headerActions || [],
@@ -456,8 +457,9 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
   if (denyGuard(config, "l")) continue;
 
   listController[functionName] = async (req, res, next) => {
-    const sortField = config.sortField || "createdAt";
-    const sortOrder = config.sortOrder ?? -1;
+    const rawSort = req.query.sort;
+    const sortField = (rawSort && /^[a-zA-Z0-9_.]+$/.test(rawSort)) ? rawSort : (config.sortField || "createdAt");
+    const sortOrder = req.query.order === 'asc' ? 1 : req.query.order === 'desc' ? -1 : (config.sortOrder ?? -1);
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 500);
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const rawSearch = (req.query.search || "").trim();
@@ -573,6 +575,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
           page,
           totalPages,
           query,
+          reqQuery: req.query,
           model: aliasName,
           actions: config.actions || [],
           headerActions: config.headerActions || [],

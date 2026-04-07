@@ -104,10 +104,10 @@
         <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
             <% headers.forEach(h => { 
-                const isSorted = query.sort === h.key;
-                const isAsc = query.order === 'asc';
+                const isSorted = (typeof reqQuery !== 'undefined' ? reqQuery.sort : '') === h.key;
+                const isAsc = (typeof reqQuery !== 'undefined' ? reqQuery.order : '') === 'asc';
                 const newOrder = isSorted && isAsc ? 'desc' : 'asc';
-                const url = new URLSearchParams(query);
+                const url = new URLSearchParams(typeof reqQuery !== 'undefined' ? reqQuery : {});
                 url.set('sort', h.key);
                 url.set('order', newOrder);
             %>
