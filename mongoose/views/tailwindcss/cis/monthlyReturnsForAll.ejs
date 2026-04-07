@@ -1,6 +1,8 @@
 <div class="text-center mt-10 max-w-5xl mx-auto px-4">
   <h1 class="text-3xl font-semibold mb-6">Month <%= month %> Report</h1>
 
+  <%- include('./partials/_printButton') %>
+
   <% subcontractors.forEach((sub, subIdx) => { %>
     <div class="sub-section mb-10 text-left">
       <!-- Subcontractor Info -->
