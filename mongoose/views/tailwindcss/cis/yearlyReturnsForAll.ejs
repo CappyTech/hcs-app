@@ -1,100 +1,90 @@
-<div class="text-center mt-10 max-w-6xl mx-auto px-4">
-  <h1 class="text-3xl font-semibold mb-6">CIS Yearly Returns - <%= year %></h1>
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold text-center border-b-2 border-black pb-2 mb-6">
+    Construction Industry Scheme — Yearly Return<br>
+    Tax Year <%= year %>/<%= (parseInt(year) + 1).toString().slice(-2) %>
+  </h1>
 
   <%- include('./partials/_printButton') %>
 
   <% subcontractors.forEach((sub, subIdx) => { %>
-    <div class="sub-section mb-10 text-left">
+    <div class="sub-section avoid-page-break mb-8 text-left">
       <!-- Subcontractor Header -->
-      <div class="mb-2 text-lg font-medium">
-        <% if (sub.name) { %>
-          | <%= sub.name %>
-        <% } %>
-        <% if (sub.company) { %>
-          | <%= sub.company %>
-        <% } %>
-        <% if (sub.deductionLabel && sub.deductionLabel !== '—') { %>
-          | <%= sub.deductionLabel %>
-        <% } %>
-        <% if (sub.isGross) { %>
-          | GROSS
-        <% } %>
-        <% if (sub.cisNumber) { %>
-          | <%= sub.cisNumber %>
-        <% } %>
-        <% if (sub.isReverseCharge) { %>
-          | Reverse Charge
-        <% } %>
+      <div class="mb-2 text-sm font-semibold">
+        <% if (sub.name) { %>| <%= sub.name %> <% } %>
+        <% if (sub.company) { %>| <%= sub.company %> <% } %>
+        <% if (sub.deductionLabel && sub.deductionLabel !== '—') { %>| <%= sub.deductionLabel %> <% } %>
+        <% if (sub.isGross) { %>| GROSS <% } %>
+        <% if (sub.cisNumber) { %>| <%= sub.cisNumber %> <% } %>
+        <% if (sub.isReverseCharge) { %>| Reverse Charge <% } %>
       </div>
 
       <% if (sub.invoices.length > 0) { %>
-        <div class="overflow-x-auto">
-          <table class="min-w-full border border-gray-300 dark:border-gray-700 text-sm">
-            <thead class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-              <tr>
-                <th class="border px-2 py-1">Inv</th>
-                <th class="border px-2 py-1">KF</th>
-                <th class="border px-2 py-1">Invoiced</th>
-                <th class="border px-2 py-1">Paid</th>
-                <th class="border px-2 py-1 text-right">Gross</th>
-                <th class="border px-2 py-1 text-right">Labour</th>
-                <th class="border px-2 py-1 text-right">Material</th>
-                <th class="border px-2 py-1 text-right">CIS</th>
-                <th class="border px-2 py-1 text-right">Net</th>
-                <% if (sub.isReverseCharge) { %>
-                  <th class="border px-2 py-1 text-right">RC</th>
-                <% } %>
-                <th class="border px-2 py-1 text-center">Month</th>
-                <th class="border px-2 py-1 text-center">Year</th>
-                <th class="border px-2 py-1">Submission</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-              <% let total = { gross: 0, labour: 0, material: 0, cis: 0, net: 0, rc: 0 }; %>
-              <% sub.invoices.forEach(inv => {
-                   total.gross += inv.grossAmount;
-                   total.labour += inv.labourCost;
-                   total.material += inv.materialCost;
-                   total.cis += inv.cisAmount;
-                   total.net += inv.netAmount;
-                   total.rc += inv.reverseCharge || 0;
-              %>
-                <tr class="border-b hover:bg-gray-50">
-                  <td class="border px-2 py-1"><%= inv.invoiceNumber %></td>
-                  <td class="border px-2 py-1"><%= inv.kashflowNumber %></td>
-                  <td class="border px-2 py-1"><%= slimDateTime(inv.invoiceDate) %></td>
-                  <td class="border px-2 py-1"><%= slimDateTime(inv.remittanceDate) %></td>
-                  <td class="border px-2 py-1 text-right"><%= formatCurrency(inv.grossAmount) %></td>
-                  <td class="border px-2 py-1 text-right"><%= formatCurrency(inv.labourCost) %></td>
-                  <td class="border px-2 py-1 text-right"><%= formatCurrency(inv.materialCost) %></td>
-                  <td class="border px-2 py-1 text-right"><%= formatCurrency(inv.cisAmount) %></td>
-                  <td class="border px-2 py-1 text-right"><%= formatCurrency(inv.netAmount) %></td>
-                  <% if (sub.isReverseCharge) { %>
-                    <td class="border px-2 py-1 text-right"><%= formatCurrency(inv.reverseCharge) %></td>
-                  <% } %>
-                  <td class="border px-2 py-1 text-center"><%= inv.month %></td>
-                  <td class="border px-2 py-1 text-center"><%= inv.year %></td>
-                  <td class="border px-2 py-1"><%= slimDateTime(inv.submissionDate) %></td>
-                </tr>
-              <% }); %>
-              <!-- Totals -->
-              <tr class="bg-gray-200 font-semibold">
-                <td colspan="4" class="border px-2 py-1 text-right">Total:</td>
-                <td class="border px-2 py-1 text-right"><%= formatCurrency(total.gross) %></td>
-                <td class="border px-2 py-1 text-right"><%= formatCurrency(total.labour) %></td>
-                <td class="border px-2 py-1 text-right"><%= formatCurrency(total.material) %></td>
-                <td class="border px-2 py-1 text-right"><%= formatCurrency(total.cis) %></td>
-                <td class="border px-2 py-1 text-right"><%= formatCurrency(total.net) %></td>
-                <% if (sub.isReverseCharge) { %>
-                  <td class="border px-2 py-1 text-right"><%= formatCurrency(total.rc) %></td>
-                <% } %>
-                <td colspan="3" class="border px-2 py-1"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <table class="w-full text-xs border-collapse border border-black cis-table">
+          <thead>
+            <tr>
+              <th class="border border-black px-1 py-0.5 text-left">Invoice</th>
+              <th class="border border-black px-1 py-0.5 text-left">KF</th>
+              <th class="border border-black px-1 py-0.5 text-left">Invoiced</th>
+              <th class="border border-black px-1 py-0.5 text-left">Paid</th>
+              <th class="border border-black px-1 py-0.5 text-right">Gross</th>
+              <th class="border border-black px-1 py-0.5 text-right">Labour</th>
+              <th class="border border-black px-1 py-0.5 text-right">Material</th>
+              <th class="border border-black px-1 py-0.5 text-right">CIS</th>
+              <th class="border border-black px-1 py-0.5 text-right">Net</th>
+              <% if (sub.isReverseCharge) { %>
+              <th class="border border-black px-1 py-0.5 text-right">RC</th>
+              <% } %>
+              <th class="border border-black px-1 py-0.5 text-center">Month</th>
+              <th class="border border-black px-1 py-0.5 text-center">Year</th>
+              <th class="border border-black px-1 py-0.5 text-left">Submission</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% let total = { gross: 0, labour: 0, material: 0, cis: 0, net: 0, rc: 0 }; %>
+            <% sub.invoices.forEach(inv => {
+                 total.gross += inv.grossAmount;
+                 total.labour += inv.labourCost;
+                 total.material += inv.materialCost;
+                 total.cis += inv.cisAmount;
+                 total.net += inv.netAmount;
+                 total.rc += inv.reverseCharge || 0;
+            %>
+            <tr>
+              <td class="border border-black px-1 py-0.5"><%= inv.invoiceNumber %></td>
+              <td class="border border-black px-1 py-0.5"><%= inv.kashflowNumber %></td>
+              <td class="border border-black px-1 py-0.5"><%= slimDateTime(inv.invoiceDate) %></td>
+              <td class="border border-black px-1 py-0.5"><%= slimDateTime(inv.remittanceDate) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(inv.grossAmount) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(inv.labourCost) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(inv.materialCost) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(inv.cisAmount) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(inv.netAmount) %></td>
+              <% if (sub.isReverseCharge) { %>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(inv.reverseCharge) %></td>
+              <% } %>
+              <td class="border border-black px-1 py-0.5 text-center"><%= inv.month %></td>
+              <td class="border border-black px-1 py-0.5 text-center"><%= inv.year %></td>
+              <td class="border border-black px-1 py-0.5"><%= slimDateTime(inv.submissionDate) %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+          <tfoot>
+            <tr class="font-bold">
+              <td colspan="4" class="border border-black px-1 py-0.5">Total (<%= sub.invoices.length %> invoice<%= sub.invoices.length !== 1 ? 's' : '' %>)</td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(total.gross) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(total.labour) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(total.material) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(total.cis) %></td>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(total.net) %></td>
+              <% if (sub.isReverseCharge) { %>
+              <td class="border border-black px-1 py-0.5 text-right"><%= formatCurrency(total.rc) %></td>
+              <% } %>
+              <td colspan="3" class="border border-black px-1 py-0.5"></td>
+            </tr>
+          </tfoot>
+        </table>
       <% } else { %>
-        <p class="text-gray-500 italic text-center">No invoices available for <%= sub.name %>.</p>
+        <p class="text-sm italic text-center">No invoices available for <%= sub.name %>.</p>
       <% } %>
     </div>
   <% }); %>
