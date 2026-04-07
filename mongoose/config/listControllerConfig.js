@@ -359,8 +359,8 @@ module.exports = {
   user: {
     title: 'Users',
     linkField: 'username',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'password', 'totpSecret', 'totpEnabled'],
-    fieldOrder: ['username', 'email', 'role', 'employeeId', 'subcontractorId', 'clientId'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'password', 'totpSecret', 'totpEnabled', 'emailVerificationToken', 'emailVerificationExpires', 'customPermissions'],
+    fieldOrder: ['username', 'email', 'emailVerified', 'role', 'employeeId', 'subcontractorId', 'clientId'],
     sortField: 'username',
     sortOrder: 1,
     department: ['human-resources'],
