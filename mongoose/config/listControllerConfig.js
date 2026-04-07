@@ -300,11 +300,11 @@ module.exports = {
   },
   purchase: {
     title: 'Purchases',
-    flattenField: 'data',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ReadableString','CISRCNetAmount', 'CISRCVatAmount','Permalink', 'PreviousNumber','IsCISReverseCharge','Type','SupplierCode', 'NextNumber', 'StockManagementApplicable', 'ProjectName','ProjectNumber', 'AdditionalFieldValue','SupplierId','FileCount', 'HomeCurrencyGrossAmount','IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent', 'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId', 'deletedAt', 'lastSeenRun', 'Currency', 'number', 'syncedAt',
-      'LineItems', 'PaymentLines', 'OverdueDays', 'SubmissionDate', 'TaxMonth', 'TaxYear', 'PurchaseInECMemberState'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ReadableString','CISRCNetAmount', 'CISRCVatAmount','Permalink', 'PreviousNumber','IsCISReverseCharge','Type','SupplierCode', 'NextNumber', 'StockManagementApplicable', 'ProjectName','ProjectNumber', 'AdditionalFieldValue','SupplierId','FileCount', 'HomeCurrencyGrossAmount','IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent', 'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId', 'deletedAt', 'lastSeenRun', 'Currency', 'number',
+      'OverdueDays', 'SubmissionDate', 'TaxMonth', 'TaxYear', 'PurchaseInECMemberState', 'createdByRunId'],
     fieldOrder: ['Number', 'SupplierName', 'SupplierReference','GrossAmount', 'NetAmount', 'VATAmount', 'Status', 'TotalPaidAmount', 'IssuedDate','DueAmount', 'DueDate'],
+    strictOrder: true,
     searchFields: ['Number'],
     sortField: 'Number',
     sortOrder: -1,
@@ -314,7 +314,9 @@ module.exports = {
       Number: 'KashFlow Number',
       LineItems: 'Line Items',
       PaymentLines: 'Payments',
-      SupplierId: 'Supplier'
+      SupplierId: 'Supplier',
+      syncedAt: 'Last Synced',
+      detailSyncedAt: 'Detail Last Synced',
     },
     fieldTransforms: {
       SupplierId: {
