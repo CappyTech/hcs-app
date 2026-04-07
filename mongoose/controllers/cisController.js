@@ -502,7 +502,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       logger.warn("[CIS] diagnostic logging failed: %s", e.message);
     }
 
-    res.render(path.join("tailwindcss", "cis", "cis"), {
+    res.render(path.join("tailwindcss", "cis", "cisDashboard"), {
       title: "CIS Submission Dashboard",
       supplierCount: subbieSuppliers.length,
       purchaseCount: filteredPurchases.length,

@@ -46,127 +46,43 @@
   <!-- Missing CIS Numbers -->
   <% if (missingCISNumber.length > 0) { %>
   <div class="mb-8 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-4">&#9888; CIS Applicable — Missing CIS Number (<%= missingCISNumber.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead><tr class="bg-yellow-100 dark:bg-yellow-800/30">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Supplier</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">CIS Rate</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-        </tr></thead>
-        <tbody class="divide-y divide-yellow-200 dark:divide-yellow-800">
-          <% for (const s of missingCISNumber) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/supplier/read/<%= s.uuid %>" class="text-blue-600 hover:underline"><%= s.Name %></a></td>
-            <td class="px-4 py-2"><%= s.CISRate != null ? (s.CISRate * 100) + '%' : '—' %></td>
-            <td class="px-4 py-2"><a href="/supplier/update/<%= s.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-3">&#9888; CIS Applicable — Missing CIS Number (<%= missingCISNumber.length %>)</h2>
+    <ul class="divide-y divide-yellow-200 dark:divide-yellow-800">
+      <% for (const s of missingCISNumber) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <a href="/supplier/read/<%= s.uuid %>" class="font-medium text-blue-600 hover:underline"><%= s.Name %></a>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-500 text-xs"><%= s.CISRate != null ? (s.CISRate * 100) + '%' : '' %></span>
+          <a href="/supplier/update/<%= s.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- IR35 Linked Employees -->
   <% if (ir35Linked.length > 0) { %>
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">IR35 Off-Payroll Subcontractors (<%= ir35Linked.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Supplier</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">CIS Rate</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">CIS No.</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Linked Employee</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const s of ir35Linked) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/supplier/read/<%= s.uuid %>" class="text-blue-600 hover:underline"><%= s.Name %></a></td>
-            <td class="px-4 py-2"><%= s.CISRate != null ? (s.CISRate * 100) + '%' : '—' %></td>
-            <td class="px-4 py-2 font-mono text-sm"><%= s.CISNumber || '—' %></td>
-            <td class="px-4 py-2">
-              <% if (s._employee) { %>
-                <a href="/employee/read/<%= s._employee.uuid %>" class="text-blue-600 hover:underline"><%= s._employee.name %></a>
-              <% } else { %>
-                <span class="text-gray-400">—</span>
-              <% } %>
-            </td>
-          </tr>
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">IR35 Off-Payroll Subcontractors (<%= ir35Linked.length %>)</h2>
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% for (const s of ir35Linked) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/supplier/read/<%= s.uuid %>" class="font-medium text-blue-600 hover:underline"><%= s.Name %></a>
+          <span class="ml-2 font-mono text-xs text-gray-500"><%= s.CISNumber || '' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-500 text-xs"><%= s.CISRate != null ? (s.CISRate * 100) + '%' : '' %></span>
+          <% if (s._employee) { %>
+            <a href="/employee/read/<%= s._employee.uuid %>" class="text-blue-600 hover:underline text-xs"><%= s._employee.name %></a>
           <% } %>
-        </tbody>
-      </table>
-    </div>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
-  <!-- Subcontractor Portal Users -->
-  <% if (subcontractorUsers.length > 0) { %>
-  <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Subcontractor Portal Users (<%= subcontractorUsers.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Username</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Email</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Linked Supplier</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Verified</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const u of subcontractorUsers) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/user/update/<%= u.uuid %>" class="text-blue-600 hover:underline"><%= u.username %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= u.email %></td>
-            <td class="px-4 py-2">
-              <% if (u._supplierUuid) { %>
-                <a href="/supplier/read/<%= u._supplierUuid %>" class="text-blue-600 hover:underline"><%= u._supplierName %></a>
-              <% } else { %>
-                <span class="text-gray-400">Not linked</span>
-              <% } %>
-            </td>
-            <td class="px-4 py-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= u.emailVerified ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' %>">
-                <%= u.emailVerified ? 'Verified' : 'Unverified' %>
-              </span>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <% } %>
-
-  <!-- Recently Synced Suppliers -->
-  <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Recently Synced</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Supplier</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">CIS Rate</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">CIS No.</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">CIS Applicable</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Last Updated</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const s of recentSuppliers) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/supplier/read/<%= s.uuid %>" class="text-blue-600 hover:underline"><%= s.Name %></a></td>
-            <td class="px-4 py-2"><%= s.CISRate != null ? (s.CISRate * 100) + '%' : '—' %></td>
-            <td class="px-4 py-2 font-mono text-sm"><%= s.CISNumber || '—' %></td>
-            <td class="px-4 py-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= s.ApplyWithholdingTax ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' %>">
-                <%= s.ApplyWithholdingTax ? 'Yes' : 'No' %>
-              </span>
-            </td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(s.updatedAt) %></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
 </div>

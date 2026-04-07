@@ -1,0 +1,33 @@
+<div class="flex justify-between text-sm mb-6">
+  <!-- Subcontractor -->
+  <div class="w-1/2 pr-4">
+    <table class="w-full text-sm">
+      <tr><td colspan="2" class="font-bold border-b border-black pb-1 mb-1">Subcontractor</td></tr>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top w-28">Name</td><td class="py-0.5"><%= supplier.Name %></td></tr>
+      <% if (supplier.Code) { %>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top">Code</td><td class="py-0.5"><%= supplier.Code %></td></tr>
+      <% } %>
+      <% if (addrParts.length) { %>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top">Address</td><td class="py-0.5"><%= addrParts.join(', ') %></td></tr>
+      <% } %>
+      <% if (verificationRef && verificationRef.Value) { %>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top">Verification No.</td><td class="py-0.5 font-mono"><%= verificationRef.Value %></td></tr>
+      <% } %>
+      <% if (utrRef && utrRef.Value) { %>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top">UTR</td><td class="py-0.5 font-mono"><%= utrRef.Value %></td></tr>
+      <% } %>
+      <% if (niRef && niRef.Value) { %>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top">NI Number</td><td class="py-0.5 font-mono"><%= niRef.Value %></td></tr>
+      <% } %>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top">Deduction Rate</td><td class="py-0.5"><%= cisRateLabel %></td></tr>
+    </table>
+  </div>
+  <!-- Contractor -->
+  <div class="w-1/2 pl-4">
+    <table class="w-full text-sm">
+      <tr><td colspan="2" class="font-bold border-b border-black pb-1 mb-1">Contractor</td></tr>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top w-28">Name</td><td class="py-0.5">Heron Constructive Solutions LTD</td></tr>
+      <tr><td class="py-0.5 pr-2 font-semibold align-top">Address</td><td class="py-0.5">103 Herondale Road, Mossley Hill, Liverpool, Merseyside, L18 1JZ</td></tr>
+    </table>
+  </div>
+</div>

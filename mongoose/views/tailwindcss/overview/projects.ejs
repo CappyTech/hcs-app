@@ -33,184 +33,101 @@
   <!-- Overdue Contracts -->
   <% if (overdueContracts.length > 0) { %>
   <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Overdue Contracts (<%= overdueContracts.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead><tr class="bg-red-100 dark:bg-red-800/30">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Title</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Location</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">End Date</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-        </tr></thead>
-        <tbody class="divide-y divide-red-200 dark:divide-red-800">
-          <% for (const c of overdueContracts) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/contract/read/<%= c.uuid %>" class="text-blue-600 hover:underline"><%= c.title %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= c.location || '—' %></td>
-            <td class="px-4 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400"><%= c.status %></span></td>
-            <td class="px-4 py-2 text-red-600 font-semibold"><%= slimDateTime(c.endDate) %></td>
-            <td class="px-4 py-2"><a href="/contract/update/<%= c.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-3">&#9888; Overdue Contracts (<%= overdueContracts.length %>)</h2>
+    <ul class="divide-y divide-red-200 dark:divide-red-800">
+      <% for (const c of overdueContracts) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/contract/read/<%= c.uuid %>" class="font-medium text-blue-600 hover:underline"><%= c.title %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= c.location || '' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400"><%= c.status %></span>
+          <span class="text-red-600 text-xs font-semibold"><%= slimDateTime(c.endDate) %></span>
+          <a href="/contract/update/<%= c.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Contracts Ending Soon -->
   <% if (contractsEndingSoon.length > 0) { %>
   <div class="mb-8 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-4">&#9888; Ending Within 30 Days (<%= contractsEndingSoon.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead><tr class="bg-yellow-100 dark:bg-yellow-800/30">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Title</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Location</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">End Date</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Days Left</th>
-        </tr></thead>
-        <tbody class="divide-y divide-yellow-200 dark:divide-yellow-800">
-          <% for (const c of contractsEndingSoon) {
-            const daysLeft = Math.ceil((new Date(c.endDate) - new Date()) / (1000 * 60 * 60 * 24));
-          %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/contract/read/<%= c.uuid %>" class="text-blue-600 hover:underline"><%= c.title %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= c.location || '—' %></td>
-            <td class="px-4 py-2"><%= slimDateTime(c.endDate) %></td>
-            <td class="px-4 py-2 font-semibold <%= daysLeft <= 7 ? 'text-red-600' : 'text-yellow-600' %>"><%= daysLeft %></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-3">&#9888; Ending Within 30 Days (<%= contractsEndingSoon.length %>)</h2>
+    <ul class="divide-y divide-yellow-200 dark:divide-yellow-800">
+      <% for (const c of contractsEndingSoon) {
+        const daysLeft = Math.ceil((new Date(c.endDate) - new Date()) / (1000 * 60 * 60 * 24));
+      %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/contract/read/<%= c.uuid %>" class="font-medium text-blue-600 hover:underline"><%= c.title %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= c.location || '' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-500 text-xs"><%= slimDateTime(c.endDate) %></span>
+          <span class="font-semibold text-xs <%= daysLeft <= 7 ? 'text-red-600' : 'text-yellow-600' %>"><%= daysLeft %>d</span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Active Contracts Without Assignments -->
   <% if (contractsWithoutAssignments.length > 0) { %>
   <div class="mb-8 border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-4">&#9888; In Progress — No Active Assignments (<%= contractsWithoutAssignments.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead><tr class="bg-orange-100 dark:bg-orange-800/30">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Title</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Location</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Start</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-        </tr></thead>
-        <tbody class="divide-y divide-orange-200 dark:divide-orange-800">
-          <% for (const c of contractsWithoutAssignments) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/contract/read/<%= c.uuid %>" class="text-blue-600 hover:underline"><%= c.title %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= c.location || '—' %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(c.startDate) %></td>
-            <td class="px-4 py-2"><a href="/assignment/create" class="text-blue-600 hover:underline text-xs">+ Assign</a></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-3">&#9888; In Progress — No Active Assignments (<%= contractsWithoutAssignments.length %>)</h2>
+    <ul class="divide-y divide-orange-200 dark:divide-orange-800">
+      <% for (const c of contractsWithoutAssignments) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/contract/read/<%= c.uuid %>" class="font-medium text-blue-600 hover:underline"><%= c.title %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= c.location || '' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-500 text-xs"><%= slimDateTime(c.startDate) %></span>
+          <a href="/assignment/create" class="text-blue-600 hover:underline text-xs">+ Assign</a>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Active Contracts -->
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Active Contracts (<%= activeContracts.length %>)</h2>
-    <% if (activeContracts.length > 0) { %>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Title</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Location</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Start</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">End</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Assignments</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const c of activeContracts) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/contract/read/<%= c.uuid %>" class="text-blue-600 hover:underline"><%= c.title %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= c.location || '—' %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(c.startDate) %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(c.endDate) %></td>
-            <td class="px-4 py-2 text-center"><%= assignmentsByContract[c._id.toString()] || 0 %></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <div class="flex justify-between items-center">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Active Contracts (<%= activeContracts.length %>)</h2>
+      <a href="/contracts" class="text-sm text-blue-600 hover:underline">View all contracts &rarr;</a>
     </div>
-    <% } else { %>
-      <p class="text-gray-500 dark:text-gray-400">No active contracts.</p>
-    <% } %>
   </div>
 
   <!-- Recent Assignments -->
-  <% if (recentAssignments.length > 0) { %>
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Assignments</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Title</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Contract</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Week Start</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Staff</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const a of recentAssignments) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/assignment/read/<%= a.uuid %>" class="text-blue-600 hover:underline"><%= a.title %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400">
-              <% if (a._contractUuid) { %><a href="/contract/read/<%= a._contractUuid %>" class="text-blue-600 hover:underline text-xs"><%= a._contractTitle %></a><% } else { %><%= a._contractTitle %><% } %>
-            </td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(a.weekStart) %></td>
-            <td class="px-4 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= a.status === 'Done' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : a.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>"><%= a.status %></span></td>
-            <td class="px-4 py-2 text-center"><%= (a.assignedEmployees || []).length + (a.assignedSubcontractors || []).length %></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <div class="flex justify-between items-center">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Recent Assignments</h2>
+      <a href="/assignments" class="text-sm text-blue-600 hover:underline">View all assignments &rarr;</a>
     </div>
   </div>
-  <% } %>
 
   <!-- KashFlow Projects -->
   <% if (restProjects.length > 0) { %>
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">KashFlow Projects
-      <% if (Object.keys(restProjectByStatus).length > 0) { %>
-        <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
-          <% for (const [s, c] of Object.entries(restProjectByStatus)) { %><span class="mr-2"><%= s %>: <%= c %></span><% } %>
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">KashFlow Projects (<%= restProjects.length %>)</h2>
+      <a href="/projects" class="text-sm text-blue-600 hover:underline">View all projects &rarr;</a>
+    </div>
+    <% if (Object.keys(restProjectByStatus).length > 0) { %>
+    <div class="flex flex-wrap gap-3">
+      <% for (const [s, c] of Object.entries(restProjectByStatus)) { %>
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+          <%= s %>: <strong class="ml-1"><%= c %></strong>
         </span>
       <% } %>
-    </h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Name</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Customer</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Sales</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Purchases</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const p of restProjects) { %>
-          <tr>
-            <td class="px-4 py-2 font-mono"><a href="/project/read/<%= p.uuid %>" class="text-blue-600 hover:underline"><%= p.Number %></a></td>
-            <td class="px-4 py-2 font-medium"><%= p.Name %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= p.CustomerName || '—' %></td>
-            <td class="px-4 py-2"><%= p.Status || '—' %></td>
-            <td class="px-4 py-2"><%= formatCurrency(p.ActualSalesAmount) %></td>
-            <td class="px-4 py-2"><%= formatCurrency(p.ActualPurchasesAmount) %></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
     </div>
+    <% } %>
   </div>
   <% } %>
 

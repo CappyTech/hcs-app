@@ -98,40 +98,7 @@
   <% }); %>
 </div>
 
-<div class="print-footer">
-  CIS Return &mdash; All Subcontractors &mdash; Tax Year <%= year %>/<%= (parseInt(year) + 1).toString().slice(-2) %> &mdash; Printed <%= new Date().toLocaleDateString('en-GB') %><br>
-  Heron Constructive Solutions LTD &bull; 103 Herondale Road, Mossley Hill, Liverpool, L18 1JZ &bull; admin@heroncs.co.uk
-</div>
+<% var footerTitle = 'CIS Return &mdash; All Subcontractors &mdash; Tax Year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2) + ' &mdash; Printed ' + new Date().toLocaleDateString('en-GB'); %>
+<%- include('./partials/_printFooter', { footerTitle }) %>
 
-<style>
-  .print-footer { display: none; }
-  @page {
-    margin-bottom: 18mm;
-    @bottom-right {
-      content: "Page " counter(page) " of " counter(pages);
-      font-size: 7pt;
-      color: #999;
-    }
-  }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    table { page-break-inside: auto; border-collapse: collapse; }
-    tr { page-break-inside: avoid; }
-    thead { display: table-header-group; }
-    tfoot { display: table-footer-group; }
-    .sub-section { page-break-inside: avoid; break-inside: avoid; }
-    .sub-section + .sub-section { page-break-before: always; break-before: page; }
-    .print-footer {
-      display: block;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 7pt;
-      color: #666;
-      border-top: 0.5pt solid #ccc;
-      padding: 2pt 0 0;
-    }
-  }
-</style>
+<%- include('./partials/_printStyles') %>

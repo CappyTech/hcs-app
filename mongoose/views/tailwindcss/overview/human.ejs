@@ -84,140 +84,90 @@
   <!-- Expired Fixed-Term Contracts Alert -->
   <% if (contractExpired.length > 0) { %>
   <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Expired Fixed-Term Contracts (<%= contractExpired.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="bg-red-100 dark:bg-red-800/30">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Employee</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Position</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Contract Ended</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-red-200 dark:divide-red-800">
-          <% for (const e of contractExpired) { %>
-          <tr>
-            <td class="px-4 py-2">
-              <a href="/employee/read/<%= e.uuid %>" class="text-blue-600 hover:underline font-medium"><%= e.name %></a>
-            </td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= e.position || '—' %></td>
-            <td class="px-4 py-2 text-red-600 font-semibold"><%= slimDateTime(e.contract.endDate) %></td>
-            <td class="px-4 py-2">
-              <a href="/employee/update/<%= e.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-3">&#9888; Expired Fixed-Term Contracts (<%= contractExpired.length %>)</h2>
+    <ul class="divide-y divide-red-200 dark:divide-red-800">
+      <% for (const e of contractExpired) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/employee/read/<%= e.uuid %>" class="font-medium text-blue-600 hover:underline"><%= e.name %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= e.position || '—' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-red-600 text-xs font-semibold"><%= slimDateTime(e.contract.endDate) %></span>
+          <a href="/employee/update/<%= e.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Fixed-Term Contracts Ending Soon -->
   <% if (endingSoon.length > 0) { %>
   <div class="mb-8 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-4">&#9888; Fixed-Term Contracts Ending Within <%= contractEndDays %> Days (<%= endingSoon.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="bg-yellow-100 dark:bg-yellow-800/30">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Employee</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Position</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Ends</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Days Left</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-yellow-200 dark:divide-yellow-800">
-          <% for (const e of endingSoon) {
-            const daysLeft = Math.ceil((new Date(e.contract.endDate) - new Date()) / (1000 * 60 * 60 * 24));
-          %>
-          <tr>
-            <td class="px-4 py-2">
-              <a href="/employee/read/<%= e.uuid %>" class="text-blue-600 hover:underline font-medium"><%= e.name %></a>
-            </td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= e.position || '—' %></td>
-            <td class="px-4 py-2"><%= slimDateTime(e.contract.endDate) %></td>
-            <td class="px-4 py-2 font-semibold <%= daysLeft <= 14 ? 'text-red-600' : 'text-yellow-600' %>"><%= daysLeft %></td>
-            <td class="px-4 py-2">
-              <a href="/employee/update/<%= e.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-3">&#9888; Fixed-Term Contracts Ending Within <%= contractEndDays %> Days (<%= endingSoon.length %>)</h2>
+    <ul class="divide-y divide-yellow-200 dark:divide-yellow-800">
+      <% for (const e of endingSoon) {
+        const daysLeft = Math.ceil((new Date(e.contract.endDate) - new Date()) / (1000 * 60 * 60 * 24));
+      %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/employee/read/<%= e.uuid %>" class="font-medium text-blue-600 hover:underline"><%= e.name %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= e.position || '—' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-500 text-xs"><%= slimDateTime(e.contract.endDate) %></span>
+          <span class="font-semibold text-xs <%= daysLeft <= 14 ? 'text-red-600' : 'text-yellow-600' %>"><%= daysLeft %>d</span>
+          <a href="/employee/update/<%= e.uuid %>" class="text-blue-600 hover:underline text-xs">Update</a>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Pending Attendance Approvals -->
   <% if (pendingAttendance.length > 0) { %>
   <div class="mb-8 border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-4">&#9203; Pending Attendance Approvals (<%= pendingAttendance.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="bg-orange-100 dark:bg-orange-800/30">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Employee</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Date</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Type</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Hours</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-orange-200 dark:divide-orange-800">
-          <% for (const a of pendingAttendance) { %>
-          <tr>
-            <td class="px-4 py-2">
-              <% if (a._employeeUuid) { %>
-                <a href="/employee/read/<%= a._employeeUuid %>" class="text-blue-600 hover:underline"><%= a._employeeName %></a>
-              <% } else { %>
-                <%= a._employeeName %>
-              <% } %>
-            </td>
-            <td class="px-4 py-2"><%= slimDateTime(a.date) %></td>
-            <td class="px-4 py-2 capitalize"><%= a.type %></td>
-            <td class="px-4 py-2"><%= a.hoursWorked != null ? Number(a.hoursWorked.toString()).toFixed(1) : '—' %></td>
-            <td class="px-4 py-2">
-              <a href="/attendance/update/<%= a.uuid %>" class="text-blue-600 hover:underline text-xs">Review</a>
-            </td>
-          </tr>
+    <h2 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-3">&#9203; Pending Attendance Approvals (<%= pendingAttendance.length %>)</h2>
+    <ul class="divide-y divide-orange-200 dark:divide-orange-800">
+      <% for (const a of pendingAttendance) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <% if (a._employeeUuid) { %>
+            <a href="/employee/read/<%= a._employeeUuid %>" class="font-medium text-blue-600 hover:underline"><%= a._employeeName %></a>
+          <% } else { %>
+            <span class="font-medium text-gray-700 dark:text-gray-300"><%= a._employeeName %></span>
           <% } %>
-        </tbody>
-      </table>
-    </div>
+          <span class="ml-2 text-gray-500 dark:text-gray-400 capitalize"><%= a.type %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-500 text-xs"><%= slimDateTime(a.date) %></span>
+          <span class="text-gray-500 text-xs"><%= a.hoursWorked != null ? Number(a.hoursWorked.toString()).toFixed(1) + 'h' : '' %></span>
+          <a href="/attendance/update/<%= a.uuid %>" class="text-blue-600 hover:underline text-xs">Review</a>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Low Holiday Balance -->
   <% if (lowBalanceEmployees.length > 0) { %>
   <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#128197; Low Holiday Balance (&le; 3 days/24 hrs) (<%= lowBalanceEmployees.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="bg-red-100 dark:bg-red-800/30">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Employee</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Entitlement</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Taken</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Remaining</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-red-200 dark:divide-red-800">
-          <% for (const h of lowBalanceEmployees) { %>
-          <tr>
-            <td class="px-4 py-2">
-              <a href="/employee/read/<%= h.employee.uuid %>" class="text-blue-600 hover:underline font-medium"><%= h.employee.name %></a>
-            </td>
-            <td class="px-4 py-2"><%= h.entitlement %> <%= h.type %></td>
-            <td class="px-4 py-2"><%= h.taken %> <%= h.type %></td>
-            <td class="px-4 py-2 text-red-600 font-semibold"><%= h.remaining %> <%= h.type %></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-3">&#128197; Low Holiday Balance (&le; 3 days/24 hrs) (<%= lowBalanceEmployees.length %>)</h2>
+    <ul class="divide-y divide-red-200 dark:divide-red-800">
+      <% for (const h of lowBalanceEmployees) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <a href="/employee/read/<%= h.employee.uuid %>" class="font-medium text-blue-600 hover:underline"><%= h.employee.name %></a>
+        <div class="flex items-center gap-3 text-xs">
+          <span class="text-gray-500"><%= h.entitlement %> entitled</span>
+          <span class="text-gray-500"><%= h.taken %> taken</span>
+          <span class="text-red-600 font-semibold"><%= h.remaining %> <%= h.type %> left</span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
@@ -237,40 +187,27 @@
 
   <!-- Currently Assigned Employees -->
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Currently Assigned (<%= currentlyAssigned.length %>)</h2>
-    <% if (currentlyAssigned.length > 0) { %>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Name</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Position</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Type</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Assignments</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const e of currentlyAssigned) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium">
-              <a href="/employee/read/<%= e.uuid %>" class="text-blue-600 hover:underline"><%= e.name %></a>
-            </td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= e.position || '—' %></td>
-            <td class="px-4 py-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= e.type === 'full-time' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-400' %>">
-                <%= e.type %>
-              </span>
-            </td>
-            <td class="px-4 py-2 text-center"><%= e._assignmentCount %></td>
-            <td class="px-4 py-2">
-              <a href="/employee/update/<%= e.uuid %>" class="text-blue-600 hover:underline text-xs">Edit</a>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Currently Assigned (<%= currentlyAssigned.length %>)</h2>
+      <a href="/assignments" class="text-sm text-blue-600 hover:underline">View all assignments &rarr;</a>
     </div>
+    <% if (currentlyAssigned.length > 0) { %>
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% for (const e of currentlyAssigned) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/employee/read/<%= e.uuid %>" class="font-medium text-blue-600 hover:underline"><%= e.name %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= e.position || '—' %></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= e.type === 'full-time' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-400' %>">
+            <%= e.type %>
+          </span>
+          <span class="text-gray-400 text-xs"><%= e._assignmentCount %> assignments</span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
     <% } else { %>
       <p class="text-gray-500 dark:text-gray-400">No employees currently on active assignments.</p>
     <% } %>
@@ -278,187 +215,39 @@
 
   <!-- Active Employees Without Assignments -->
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Active &amp; Unassigned (<%= unassigned.length %>)</h2>
-    <% if (unassigned.length > 0) { %>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Name</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Position</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Type</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Hired</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const e of unassigned) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium">
-              <a href="/employee/read/<%= e.uuid %>" class="text-blue-600 hover:underline"><%= e.name %></a>
-            </td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= e.position || '—' %></td>
-            <td class="px-4 py-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= e.type === 'full-time' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-400' %>">
-                <%= e.type %>
-              </span>
-            </td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(e.hireDate) %></td>
-            <td class="px-4 py-2">
-              <a href="/employee/update/<%= e.uuid %>" class="text-blue-600 hover:underline text-xs">Edit</a>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <div class="flex justify-between items-center">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Active &amp; Unassigned (<%= unassigned.length %>)</h2>
+      <a href="/employees" class="text-sm text-blue-600 hover:underline">View all employees &rarr;</a>
     </div>
-    <% } else { %>
-      <p class="text-gray-500 dark:text-gray-400">All active employees are currently assigned.</p>
-    <% } %>
   </div>
 
-  <!-- Vehicles Assigned to Employees -->
-  <% if (employeeVehicles.length > 0) { %>
-  <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">&#128663; Vehicles Assigned to Employees (<%= employeeVehicles.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Reg</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Vehicle</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Assigned To</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Usage</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const v of employeeVehicles) { %>
-          <tr>
-            <td class="px-4 py-2 font-mono font-bold">
-              <a href="/vehicle/read/<%= v.uuid %>" class="text-blue-600 hover:underline"><%= v.registrationNumber %></a>
-            </td>
-            <td class="px-4 py-2"><%= v.make %> <%= v.model %></td>
-            <td class="px-4 py-2">
-              <% if (v._employeeUuid) { %>
-                <a href="/employee/read/<%= v._employeeUuid %>" class="text-blue-600 hover:underline"><%= v._employeeName %></a>
-              <% } else { %>
-                <%= v._employeeName %>
-              <% } %>
-            </td>
-            <td class="px-4 py-2"><%= v.availabilityStatus || 'Available' %></td>
-            <td class="px-4 py-2"><%= v.vehicleUsage || '—' %></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <% } %>
 
-  <!-- Recent Hires -->
-  <% if (recentHires.length > 0) { %>
-  <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">&#127381; Recent Hires (last <%= recentDays %> days) (<%= recentHires.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Name</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Position</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Type</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Hired</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Contract</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const e of recentHires) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium">
-              <a href="/employee/read/<%= e.uuid %>" class="text-blue-600 hover:underline"><%= e.name %></a>
-            </td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= e.position || '—' %></td>
-            <td class="px-4 py-2 capitalize"><%= e.type %></td>
-            <td class="px-4 py-2"><%= slimDateTime(e.hireDate) %></td>
-            <td class="px-4 py-2 capitalize"><%= (e.contract?.termsType || 'permanent').replace('-', ' ') %></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <% } %>
+
+
 
   <!-- IR35 Employees -->
   <% if (ir35Employees.length > 0) { %>
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">IR35 Off-Payroll Employees (<%= ir35Employees.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Name</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Position</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const e of ir35Employees) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium">
-              <a href="/employee/read/<%= e.uuid %>" class="text-blue-600 hover:underline"><%= e.name %></a>
-            </td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= e.position || '—' %></td>
-            <td class="px-4 py-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= e.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' %>">
-                <%= e.status %>
-              </span>
-            </td>
-            <td class="px-4 py-2">
-              <a href="/employee/read/<%= e.uuid %>" class="text-blue-600 hover:underline text-xs">View</a>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">IR35 Off-Payroll Employees (<%= ir35Employees.length %>)</h2>
+    <div class="flex flex-wrap gap-2">
+      <% for (const e of ir35Employees) { %>
+        <a href="/employee/read/<%= e.uuid %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 text-gray-700 dark:text-gray-300 hover:bg-yellow-100 dark:hover:bg-yellow-800/30">
+          <%= e.name %>
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium <%= e.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' %>">
+            <%= e.status %>
+          </span>
+        </a>
+      <% } %>
     </div>
   </div>
   <% } %>
 
   <!-- Holiday Balances -->
-  <% if (holidayBalances.length > 0) { %>
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Holiday Balances — Current Period (<%= holidayBalances.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Employee</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Entitlement</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Carry Over</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Taken</th>
-            <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Remaining</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const h of holidayBalances) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium">
-              <a href="/employee/read/<%= h.employee.uuid %>" class="text-blue-600 hover:underline"><%= h.employee.name %></a>
-            </td>
-            <td class="px-4 py-2"><%= h.entitlement %> <%= h.type %></td>
-            <td class="px-4 py-2"><%= h.carryOver %> <%= h.type %></td>
-            <td class="px-4 py-2"><%= h.taken %> <%= h.type %></td>
-            <td class="px-4 py-2 font-semibold <%= h.remaining <= 3 ? 'text-red-600' : h.remaining <= 7 ? 'text-yellow-600' : 'text-green-600' %>">
-              <%= h.remaining %> <%= h.type %>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <div class="flex justify-between items-center">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Holiday Balances</h2>
+      <a href="/employeeHolidays" class="text-sm text-blue-600 hover:underline">View all holiday records &rarr;</a>
     </div>
   </div>
-  <% } %>
 
 </div>

@@ -49,84 +49,53 @@
   <!-- Pending Role Assignment -->
   <% if (pendingRoleUsers.length > 0) { %>
   <div class="mb-8 border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-4">&#9203; Awaiting Role Assignment (<%= pendingRoleUsers.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead><tr class="bg-orange-100 dark:bg-orange-800/30">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Username</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Email</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Registered</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-        </tr></thead>
-        <tbody class="divide-y divide-orange-200 dark:divide-orange-800">
-          <% for (const u of pendingRoleUsers) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/user/update/<%= u.uuid %>" class="text-blue-600 hover:underline"><%= u.username %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= u.email %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(u.createdAt) %></td>
-            <td class="px-4 py-2"><a href="/user/update/<%= u.uuid %>" class="text-blue-600 hover:underline text-xs">Assign Role</a></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-3">&#9203; Awaiting Role Assignment (<%= pendingRoleUsers.length %>)</h2>
+    <ul class="divide-y divide-orange-200 dark:divide-orange-800">
+      <% for (const u of pendingRoleUsers) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/user/update/<%= u.uuid %>" class="font-medium text-blue-600 hover:underline"><%= u.username %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= u.email %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-400 text-xs"><%= slimDateTime(u.createdAt) %></span>
+          <a href="/user/update/<%= u.uuid %>" class="text-blue-600 hover:underline text-xs">Assign Role</a>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Email Unverified -->
   <% if (unverifiedUsers.length > 0) { %>
   <div class="mb-8 border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-4">&#9888; Email Not Verified (<%= unverifiedUsers.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead><tr class="bg-yellow-100 dark:bg-yellow-800/30">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Username</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Email</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Role</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-        </tr></thead>
-        <tbody class="divide-y divide-yellow-200 dark:divide-yellow-800">
-          <% for (const u of unverifiedUsers) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><%= u.username %></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= u.email %></td>
-            <td class="px-4 py-2 capitalize"><%= u.role %></td>
-            <td class="px-4 py-2"><a href="/user/update/<%= u.uuid %>" class="text-blue-600 hover:underline text-xs">View</a></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-3">&#9888; Email Not Verified (<%= unverifiedUsers.length %>)</h2>
+    <ul class="divide-y divide-yellow-200 dark:divide-yellow-800">
+      <% for (const u of unverifiedUsers) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <span class="font-medium text-gray-900 dark:text-gray-100"><%= u.username %></span>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= u.email %></span>
+          <span class="ml-2 capitalize text-gray-400 text-xs"><%= u.role %></span>
+        </div>
+        <a href="/user/update/<%= u.uuid %>" class="text-blue-600 hover:underline text-xs">View</a>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- No 2FA -->
   <% if (without2FA.length > 0) { %>
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">&#128274; No 2FA Setup (<%= without2FA.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Username</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Email</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Role</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Verified</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const u of without2FA) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/user/update/<%= u.uuid %>" class="text-blue-600 hover:underline"><%= u.username %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= u.email %></td>
-            <td class="px-4 py-2 capitalize"><%= u.role %></td>
-            <td class="px-4 py-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= u.emailVerified ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' %>">
-                <%= u.emailVerified ? 'Verified' : 'Unverified' %>
-              </span>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">&#128274; No 2FA Setup (<%= without2FA.length %>)</h2>
+    <div class="flex flex-wrap gap-2">
+      <% for (const u of without2FA) { %>
+        <a href="/user/update/<%= u.uuid %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <%= u.username %><span class="text-xs capitalize text-gray-400 ml-1"><%= u.role %></span>
+        </a>
+      <% } %>
     </div>
   </div>
   <% } %>
@@ -134,32 +103,18 @@
   <!-- Recent Registrations -->
   <% if (recentUsers.length > 0) { %>
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">&#127381; Recent Registrations (last <%= recentDays %> days) (<%= recentUsers.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Username</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Email</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Role</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Registered</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">2FA</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const u of recentUsers) { %>
-          <tr>
-            <td class="px-4 py-2 font-medium"><a href="/user/update/<%= u.uuid %>" class="text-blue-600 hover:underline"><%= u.username %></a></td>
-            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= u.email %></td>
-            <td class="px-4 py-2 capitalize"><%= u.role %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(u.createdAt) %></td>
-            <td class="px-4 py-2">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= u.totpSecret ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' %>">
-                <%= u.totpSecret ? 'On' : 'Off' %>
-              </span>
-            </td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">&#127381; Recent Registrations (last <%= recentDays %> days) (<%= recentUsers.length %>)</h2>
+      <a href="/users" class="text-sm text-blue-600 hover:underline">View all users &rarr;</a>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <% for (const u of recentUsers) { %>
+        <a href="/user/update/<%= u.uuid %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <%= u.username %>
+          <span class="text-xs text-gray-400"><%= slimDateTime(u.createdAt) %></span>
+          <% if (u.totpSecret) { %><span class="text-xs text-green-600">2FA</span><% } %>
+        </a>
+      <% } %>
     </div>
   </div>
   <% } %>

@@ -31,39 +31,7 @@
     Tax Year <%= year %>/<%= (parseInt(year) + 1).toString().slice(-2) %>
   </h1>
 
-  <div class="flex justify-between text-sm mb-6">
-    <!-- Subcontractor -->
-    <div class="w-1/2 pr-4">
-      <table class="w-full text-sm">
-        <tr><td colspan="2" class="font-bold border-b border-black pb-1 mb-1">Subcontractor</td></tr>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top w-28">Name</td><td class="py-0.5"><%= supplier.Name %></td></tr>
-        <% if (supplier.Code) { %>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top">Code</td><td class="py-0.5"><%= supplier.Code %></td></tr>
-        <% } %>
-        <% if (addrParts.length) { %>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top">Address</td><td class="py-0.5"><%= addrParts.join(', ') %></td></tr>
-        <% } %>
-        <% if (verificationRef && verificationRef.Value) { %>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top">Verification No.</td><td class="py-0.5 font-mono"><%= verificationRef.Value %></td></tr>
-        <% } %>
-        <% if (utrRef && utrRef.Value) { %>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top">UTR</td><td class="py-0.5 font-mono"><%= utrRef.Value %></td></tr>
-        <% } %>
-        <% if (niRef && niRef.Value) { %>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top">NI Number</td><td class="py-0.5 font-mono"><%= niRef.Value %></td></tr>
-        <% } %>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top">Deduction Rate</td><td class="py-0.5"><%= cisRateLabel %></td></tr>
-      </table>
-    </div>
-    <!-- Contractor -->
-    <div class="w-1/2 pl-4">
-      <table class="w-full text-sm">
-        <tr><td colspan="2" class="font-bold border-b border-black pb-1 mb-1">Contractor</td></tr>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top w-28">Name</td><td class="py-0.5">Heron Constructive Solutions LTD</td></tr>
-        <tr><td class="py-0.5 pr-2 font-semibold align-top">Address</td><td class="py-0.5">103 Herondale Road, Mossley Hill, Liverpool, Merseyside, L18 1JZ</td></tr>
-      </table>
-    </div>
-  </div>
+  <%- include('./partials/_subcontractorInfo') %>
 
   <!-- Annual Summary -->
   <table class="w-full text-sm border-collapse border border-black mb-6">
@@ -103,9 +71,7 @@
   </details>
   <% } %>
 
-  <button id="printBtn" type="button" class="print:hidden mb-4 border border-black px-4 py-1 text-sm hover:bg-gray-100 cursor-pointer">
-    Print Report
-  </button>
+  <%- include('./partials/_printButton') %>
 </div>
 
 <div class="page-break"></div>
@@ -217,55 +183,9 @@
 </div>
 </div>
 
-<div class="print-footer">
-  CIS Return &mdash; <%= supplier.Name %> &mdash; Tax Year <%= year %>/<%= (parseInt(year) + 1).toString().slice(-2) %> &mdash; Printed <%= new Date().toLocaleDateString('en-GB') %><br>
-  Heron Constructive Solutions LTD &bull; 103 Herondale Road, Mossley Hill, Liverpool, L18 1JZ &bull; admin@heroncs.co.uk
-</div>
+<% var footerTitle = 'CIS Return &mdash; ' + supplier.Name + ' &mdash; Tax Year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2) + ' &mdash; Printed ' + new Date().toLocaleDateString('en-GB'); %>
+<%- include('./partials/_printFooter', { footerTitle }) %>
 
-<style>
-  .print-footer { display: none; }
-  @page {
-    margin-bottom: 18mm;
-    @bottom-right {
-      content: "Page " counter(page) " of " counter(pages);
-      font-size: 7pt;
-      color: #999;
-    }
-  }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .print\:hidden { display: none !important; }
-    table { page-break-inside: auto; border-collapse: collapse; }
-    tr { page-break-inside: avoid; }
-    thead { display: table-header-group; }
-    tfoot { display: table-footer-group; }
-    .avoid-page-break { page-break-inside: avoid; break-inside: avoid; }
-    .page-break { page-break-before: always; break-before: page; }
-    .cis-table { font-size: 9px !important; }
-    .cis-table th, .cis-table td { padding: 1px 3px !important; }
-    .print-footer {
-      display: block;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 7pt;
-      color: #666;
-      border-top: 0.5pt solid #ccc;
-      padding: 2pt 0 0;
-    }
-  }
-</style>
-
-<script>
-  document.getElementById('printBtn').addEventListener('click', function () {
-    var root = document.documentElement;
-    var wasDark = root.classList.contains('dark');
-    if (wasDark) root.classList.remove('dark');
-    window.print();
-    if (wasDark) root.classList.add('dark');
-  });
-</script>
+<%- include('./partials/_printStyles') %>
 
 

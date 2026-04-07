@@ -103,7 +103,7 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
       });
     }
 
-    return res.render(path.join("tailwindcss", "cis", "monthlyReturnsForm"), {
+    return res.render(path.join("tailwindcss", "cis", "cisList"), {
       title: "Monthly Returns",
       suppliersWithMonths,
       monthNames,
@@ -220,7 +220,7 @@ exports.renderMonthlyReturns = async (req, res, next) => {
     const nextYearShortM = (Number(year) + 1).toString().slice(-2);
     const dynamicTitleM = `${supplier.Name} | Heron Constructive Solutions LTD | ${year}-${nextYearShortM} CIS Returns — ${monthName}`;
     return res.render(
-      path.join("tailwindcss", "cis", "monthlyReturnsForOneSubcontractor"),
+      path.join("tailwindcss", "cis", "monthlyReturns"),
       {
         title: dynamicTitleM,
         supplier,

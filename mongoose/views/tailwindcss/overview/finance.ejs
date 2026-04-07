@@ -48,60 +48,29 @@
   <!-- Overdue Invoices -->
   <% if (overdueInvoices.length > 0) { %>
   <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Overdue Invoices (<%= overdueInvoices.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead><tr class="bg-red-100 dark:bg-red-800/30">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Customer</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due Date</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due Amount</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-        </tr></thead>
-        <tbody class="divide-y divide-red-200 dark:divide-red-800">
-          <% for (const inv of overdueInvoices) { %>
-          <tr>
-            <td class="px-4 py-2 font-mono"><a href="/invoice/read/<%= inv.uuid %>" class="text-blue-600 hover:underline"><%= inv.Number %></a></td>
-            <td class="px-4 py-2"><%= inv.CustomerName || '—' %></td>
-            <td class="px-4 py-2 text-red-600 font-semibold"><%= slimDateTime(inv.DueDate) %></td>
-            <td class="px-4 py-2 font-semibold"><%= formatCurrency(inv.DueAmount) %></td>
-            <td class="px-4 py-2"><%= inv.Status %></td>
-            <td class="px-4 py-2"><a href="/invoice/read/<%= inv.uuid %>" class="text-blue-600 hover:underline text-xs">View</a></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-3">&#9888; Overdue Invoices (<%= overdueInvoices.length %>)</h2>
+    <ul class="divide-y divide-red-200 dark:divide-red-800">
+      <% for (const inv of overdueInvoices) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/invoice/read/<%= inv.uuid %>" class="font-mono font-medium text-blue-600 hover:underline"><%= inv.Number %></a>
+          <span class="ml-2 text-gray-700 dark:text-gray-300"><%= inv.CustomerName || '—' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-red-600 text-xs font-semibold"><%= slimDateTime(inv.DueDate) %></span>
+          <span class="font-semibold text-xs"><%= formatCurrency(inv.DueAmount) %></span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Recent Invoices -->
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Invoices</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Customer</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Issued</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Gross</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const inv of recentInvoices) { %>
-          <tr>
-            <td class="px-4 py-2 font-mono"><a href="/invoice/read/<%= inv.uuid %>" class="text-blue-600 hover:underline"><%= inv.Number %></a></td>
-            <td class="px-4 py-2"><%= inv.CustomerName || '—' %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(inv.IssuedDate) %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(inv.DueDate) %></td>
-            <td class="px-4 py-2 font-medium"><%= formatCurrency(inv.GrossAmount) %></td>
-            <td class="px-4 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= inv.Status === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : inv.Status === 'Outstanding' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>"><%= inv.Status %></span></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <div class="flex justify-between items-center">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Recent Invoices</h2>
+      <a href="/invoices" class="text-sm text-blue-600 hover:underline">View all invoices &rarr;</a>
     </div>
   </div>
 
@@ -137,58 +106,29 @@
   <!-- Overdue Purchases -->
   <% if (overduePurchases.length > 0) { %>
   <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-4">&#9888; Overdue Purchases (<%= overduePurchases.length %>)</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead><tr class="bg-red-100 dark:bg-red-800/30">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Supplier</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due Date</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Gross</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
-        </tr></thead>
-        <tbody class="divide-y divide-red-200 dark:divide-red-800">
-          <% for (const p of overduePurchases) { %>
-          <tr>
-            <td class="px-4 py-2 font-mono"><a href="/purchase/read/<%= p.uuid %>" class="text-blue-600 hover:underline"><%= p.Number %></a></td>
-            <td class="px-4 py-2"><%= p.SupplierName || '—' %></td>
-            <td class="px-4 py-2 text-red-600 font-semibold"><%= slimDateTime(p.DueDate) %></td>
-            <td class="px-4 py-2 font-semibold"><%= formatCurrency(p.GrossAmount) %></td>
-            <td class="px-4 py-2"><a href="/purchase/read/<%= p.uuid %>" class="text-blue-600 hover:underline text-xs">View</a></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
-    </div>
+    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-3">&#9888; Overdue Purchases (<%= overduePurchases.length %>)</h2>
+    <ul class="divide-y divide-red-200 dark:divide-red-800">
+      <% for (const p of overduePurchases) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/purchase/read/<%= p.uuid %>" class="font-mono font-medium text-blue-600 hover:underline"><%= p.Number %></a>
+          <span class="ml-2 text-gray-700 dark:text-gray-300"><%= p.SupplierName || '—' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-red-600 text-xs font-semibold"><%= slimDateTime(p.DueDate) %></span>
+          <span class="font-semibold text-xs"><%= formatCurrency(p.GrossAmount) %></span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
   <% } %>
 
   <!-- Recent Purchases -->
   <div class="mb-8">
-    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Purchases</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
-        <thead><tr class="bg-gray-50 dark:bg-gray-800">
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">#</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Supplier</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Issued</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Due</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Gross</th>
-          <th class="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Status</th>
-        </tr></thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <% for (const p of recentPurchases) { %>
-          <tr>
-            <td class="px-4 py-2 font-mono"><a href="/purchase/read/<%= p.uuid %>" class="text-blue-600 hover:underline"><%= p.Number %></a></td>
-            <td class="px-4 py-2"><%= p.SupplierName || '—' %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(p.IssuedDate) %></td>
-            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= slimDateTime(p.DueDate) %></td>
-            <td class="px-4 py-2 font-medium"><%= formatCurrency(p.GrossAmount) %></td>
-            <td class="px-4 py-2"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><%= p.Status || '—' %></span></td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+    <div class="flex justify-between items-center">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Recent Purchases</h2>
+      <a href="/purchases" class="text-sm text-blue-600 hover:underline">View all purchases &rarr;</a>
     </div>
   </div>
 

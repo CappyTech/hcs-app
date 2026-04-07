@@ -1,0 +1,13 @@
+<button id="printBtn" type="button" class="print:hidden mb-4 border border-black px-4 py-1 text-sm hover:bg-gray-100 cursor-pointer">
+  Print Report
+</button>
+
+<script>
+  document.getElementById('printBtn').addEventListener('click', function () {
+    var root = document.documentElement;
+    var wasDark = root.classList.contains('dark');
+    if (wasDark) root.classList.remove('dark');
+    window.print();
+    if (wasDark) root.classList.add('dark');
+  });
+</script>
