@@ -1011,6 +1011,28 @@ exports.repairDrift = async (req, res) => {
             { Id: doc.kashflowPurchaseId, Number: doc.kashflowPurchaseNumber, Permalink: doc.kashflowPermalink },
             doc.lastSendStatus,
           );
+          // Mirror the written values into MongoDB's customFields so the drift check
+          // reflects the fix immediately without waiting for the next grab run
+          const cfUpdates = [
+            { fieldName: 'KashFlow Purchase Id',        value: String(doc.kashflowPurchaseId) },
+            { fieldName: 'KashFlow Purchase Number',    value: doc.kashflowPurchaseNumber != null ? String(doc.kashflowPurchaseNumber) : null },
+            { fieldName: 'KashFlow Purchase Permalink', value: doc.kashflowPermalink || null },
+            { fieldName: 'KashFlow Last Send Status',   value: doc.lastSendStatus != null ? String(doc.lastSendStatus) : null },
+          ].filter(f => f.value != null);
+          for (const { fieldName, value } of cfUpdates) {
+            await OcrDocument.updateOne(
+              { paperlessId: doc.paperlessId, 'customFields.fieldName': fieldName },
+              { $set: { 'customFields.$.value': value } },
+            ).then(r => {
+              if (r.matchedCount === 0) {
+                // Field entry doesn't exist in the array yet — push it
+                return OcrDocument.updateOne(
+                  { paperlessId: doc.paperlessId },
+                  { $push: { customFields: { fieldName, value } } },
+                );
+              }
+            });
+          }
           ok++;
         } catch (e) {
           fail++;
