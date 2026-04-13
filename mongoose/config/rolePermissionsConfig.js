@@ -196,7 +196,15 @@ const routeAccess = {
   '/files':               ['admin'],
 
   // Paperless OCR
-  '/paperless/ocr':       ['admin'],
+  '/paperless/ocr':                    ['admin'],
+  '/paperless/ocr/:paperlessId':       ['admin'],
+  '/paperless/ocr/:paperlessId/draft': ['admin'],
+  '/paperless/ocr/:paperlessId/send':  ['admin'],
+  '/paperless/ocr/:paperlessId/ingest':['admin'],
+  '/paperless/ocr/:paperlessId/unlink':['admin'],
+  '/paperless/suppliers':              ['admin'],
+  '/paperless/ingest':                 ['admin'],
+  '/paperless/ingest/trigger':         ['admin'],
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────
