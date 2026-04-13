@@ -40,6 +40,27 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     .select('paperlessId title error fetchedAt')
     .lean();
 
+  // ── Orphaned links (linked OcrDocs whose REST purchase is gone/soft-deleted) ──
+  let orphanedDocs = 0;
+  const Purchase = mdb.REST?.purchase;
+  if (Purchase && linkedDocs > 0) {
+    const linked = await OcrDocument
+      .find({ kashflowPurchaseId: { $ne: null } })
+      .select('kashflowPurchaseId')
+      .lean();
+    const allPurchases = await Purchase
+      .find({})
+      .select('Id deletedAt DeletedAt')
+      .lean();
+    const activePurchaseIds = new Set(
+      allPurchases
+        .filter(p => !p.deletedAt && !p.DeletedAt)
+        .map(p => p.Id)
+        .filter(id => id != null),
+    );
+    orphanedDocs = linked.filter(d => !activePurchaseIds.has(d.kashflowPurchaseId)).length;
+  }
+
   // ── Ingest stats ───────────────────────────────────────────────────────────
   let ingestStats = { total: 0, fetched: 0, skipped: 0, error: 0 };
   if (OcrDocumentIngest) {
@@ -58,6 +79,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     totalDocs,
     linkedDocs,
     unlinkedDocs,
+    orphanedDocs,
     errorDocs,
     sentDirect,
     sentWebhook,

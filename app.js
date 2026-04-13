@@ -371,6 +371,7 @@ const main = async () => {
     // Start periodic background services
     try { require('./mongoose/services/sessionCleanupService').start(); } catch (e) { logger.warn('Session cleanup start failed: ' + e.message); }
     try { require('./mongoose/services/vehicleComplianceService').start(); } catch (e) { logger.warn('Vehicle compliance service start failed: ' + e.message); }
+    try { require('./mongoose/services/ocrOrphanService').start(); } catch (e) { logger.warn('OCR orphan service start failed: ' + e.message); }
 
     logger.info(`🚀 Application fully ready in ${process.env.NODE_ENV} on ${host}:${port}`);
 

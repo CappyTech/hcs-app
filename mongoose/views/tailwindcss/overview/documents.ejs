@@ -19,6 +19,10 @@
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">KF Linked</p>
       <p class="text-3xl font-bold text-green-600"><%= linkedDocs %></p>
     </div>
+    <div class="bg-white dark:bg-gray-900 border <%- orphanedDocs > 0 ? 'border-orange-400 dark:border-orange-600' : 'border-gray-200 dark:border-gray-700' %> rounded-2xl shadow-lg p-4 text-center" title="OcrDocuments whose linked KashFlow purchase has been deleted or is no longer active">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Stale Links</p>
+      <p class="text-3xl font-bold <%- orphanedDocs > 0 ? 'text-orange-600' : 'text-gray-400' %>"><%= orphanedDocs %></p>
+    </div>
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Unlinked</p>
       <p class="text-3xl font-bold text-yellow-600"><%= unlinkedDocs %></p>
@@ -68,6 +72,17 @@
         </span>
       <% } %>
     </div>
+  </div>
+  <% } %>
+
+  <!-- Orphaned Links Warning -->
+  <% if (orphanedDocs > 0) { %>
+  <div class="mb-8 border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4">
+    <h2 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-2">&#9888; Stale KashFlow Links (<%= orphanedDocs %>)</h2>
+    <p class="text-sm text-orange-800 dark:text-orange-300">
+      <%= orphanedDocs %> document<%= orphanedDocs !== 1 ? 's have' : ' has' %> a KashFlow purchase link that no longer exists or has been deleted in KashFlow.
+      The nightly cleanup job will remove these links automatically. You can also re-send the affected documents to create a fresh purchase.
+    </p>
   </div>
   <% } %>
 
