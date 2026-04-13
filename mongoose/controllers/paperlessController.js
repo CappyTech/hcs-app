@@ -960,27 +960,51 @@ exports.unlinkKashflow = async (req, res, next) => {
 /** POST /paperless/repair-drift — bulk write-back KashFlow custom fields to Paperless for drifted docs */
 exports.repairDrift = async (req, res) => {
   res.redirect('/overview/documents');
-  // Fire-and-forget after redirect
   setImmediate(async () => {
     try {
       await mdb.connect();
       const { OcrDocument } = mdb.PAPERLESS;
-      // Find all linked docs whose stored customFields lack a 'KashFlow Purchase Id' value
-      const linked = await OcrDocument
-        .find({ kashflowPurchaseId: { $ne: null } })
-        .select('paperlessId kashflowPurchaseId kashflowPurchaseNumber kashflowPermalink lastSendStatus customFields')
-        .lean();
 
-      const drifted = linked.filter(doc => {
-        const cf = (doc.customFields || []).find(
-          f => f.fieldName && f.fieldName.trim().toLowerCase() === 'kashflow purchase id'
-        );
-        return !cf || cf.value == null || cf.value === '';
-      });
+      // Use the same aggregation pipeline as the overview drift count to find drifted docs
+      const drifted = await OcrDocument.aggregate([
+        { $addFields: {
+          _cfKfId: {
+            $let: {
+              vars: {
+                found: { $arrayElemAt: [
+                  { $filter: {
+                    input: { $ifNull: ['$customFields', []] },
+                    cond:  { $eq: [
+                      { $toLower: { $ifNull: ['$$this.fieldName', ''] } },
+                      'kashflow purchase id',
+                    ]},
+                  }},
+                  0,
+                ]},
+              },
+              in: { $ifNull: ['$$found.value', null] },
+            },
+          },
+        }},
+        { $match: { $or: [
+          { kashflowPurchaseId: { $ne: null }, $or: [{ _cfKfId: null }, { _cfKfId: '' }] },
+          { kashflowPurchaseId: null, _cfKfId: { $nin: [null, ''] } },
+        ]}},
+        { $project: {
+          paperlessId: 1,
+          kashflowPurchaseId: 1,
+          kashflowPurchaseNumber: 1,
+          kashflowPermalink: 1,
+          lastSendStatus: 1,
+          _cfKfId: 1,
+        }},
+      ]);
 
-      logger.info(`[repairDrift] Linked docs: ${linked.length}, drifted (missing CF): ${drifted.length}`);
+      logger.info(`[repairDrift] Found ${drifted.length} drifted documents to repair`);
       let ok = 0, fail = 0;
       for (const doc of drifted) {
+        // Only write-back for linked docs (MongoDB has ID but Paperless doesn't)
+        if (doc.kashflowPurchaseId == null) continue;
         try {
           await updatePaperlessWithKashFlowInfo(
             doc.paperlessId,
