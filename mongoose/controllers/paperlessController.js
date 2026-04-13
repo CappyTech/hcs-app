@@ -978,7 +978,7 @@ exports.repairDrift = async (req, res) => {
         return !cf || cf.value == null || cf.value === '';
       });
 
-      logger.info(`[repairDrift] Starting bulk write-back for ${drifted.length} drifted documents`);
+      logger.info(`[repairDrift] Linked docs: ${linked.length}, drifted (missing CF): ${drifted.length}`);
       let ok = 0, fail = 0;
       for (const doc of drifted) {
         try {
