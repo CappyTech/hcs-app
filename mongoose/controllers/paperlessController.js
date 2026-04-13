@@ -957,6 +957,49 @@ exports.unlinkKashflow = async (req, res, next) => {
 };
 
 /** DELETE /paperless/ocr/:paperlessId — remove an OcrDocument (and its ingest record) */
+/** POST /paperless/repair-drift — bulk write-back KashFlow custom fields to Paperless for drifted docs */
+exports.repairDrift = async (req, res) => {
+  res.redirect('/overview/documents');
+  // Fire-and-forget after redirect
+  setImmediate(async () => {
+    try {
+      await mdb.connect();
+      const { OcrDocument } = mdb.PAPERLESS;
+      // Find all linked docs whose stored customFields lack a 'KashFlow Purchase Id' value
+      const linked = await OcrDocument
+        .find({ kashflowPurchaseId: { $ne: null } })
+        .select('paperlessId kashflowPurchaseId kashflowPurchaseNumber kashflowPermalink lastSendStatus customFields')
+        .lean();
+
+      const drifted = linked.filter(doc => {
+        const cf = (doc.customFields || []).find(
+          f => f.fieldName && f.fieldName.trim().toLowerCase() === 'kashflow purchase id'
+        );
+        return !cf || cf.value == null || cf.value === '';
+      });
+
+      logger.info(`[repairDrift] Starting bulk write-back for ${drifted.length} drifted documents`);
+      let ok = 0, fail = 0;
+      for (const doc of drifted) {
+        try {
+          await updatePaperlessWithKashFlowInfo(
+            doc.paperlessId,
+            { Id: doc.kashflowPurchaseId, Number: doc.kashflowPurchaseNumber, Permalink: doc.kashflowPermalink },
+            doc.lastSendStatus,
+          );
+          ok++;
+        } catch (e) {
+          fail++;
+          logger.warn(`[repairDrift] Failed for paperlessId=${doc.paperlessId}: ${e.message}`);
+        }
+      }
+      logger.info(`[repairDrift] Complete. ok=${ok} failed=${fail}`);
+    } catch (err) {
+      logger.error(`[repairDrift] Fatal error: ${err.message}`);
+    }
+  });
+};
+
 exports.deleteOcrDocument = async (req, res, next) => {
   try {
     await mdb.connect();

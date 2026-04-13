@@ -82,12 +82,21 @@
   <!-- Custom Field Drift Warning -->
   <% if (driftedDocs > 0) { %>
   <div class="mb-8 border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">&#9888; Custom Field Drift (<%= driftedDocs %>)</h2>
-    <p class="text-sm text-purple-800 dark:text-purple-300">
-      <%= driftedDocs %> document<%= driftedDocs !== 1 ? 's have' : ' has' %> a mismatch between the KashFlow link stored in MongoDB and the <em>KashFlow Purchase Id</em> custom field stored in Paperless-ngx.
-      This can happen if a write-back failed after sending, or if a document was unlinked while offline.
-      Re-ingesting the affected document or using the unlink action will resolve the drift.
-    </p>
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div class="flex-1 min-w-0">
+        <h2 class="text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">&#9888; Custom Field Drift (<%= driftedDocs %>)</h2>
+        <p class="text-sm text-purple-800 dark:text-purple-300">
+          <%= driftedDocs %> document<%= driftedDocs !== 1 ? 's have' : ' has' %> a mismatch between the KashFlow link stored in MongoDB and the <em>KashFlow Purchase Id</em> custom field stored in Paperless-ngx.
+          This can happen if a write-back failed after sending, or if a document was unlinked while offline.
+        </p>
+      </div>
+      <form method="POST" action="/paperless/repair-drift" class="shrink-0" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Running…';">
+        <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
+        <button type="submit" class="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
+          Fix All
+        </button>
+      </form>
+    </div>
   </div>
   <% } %>
 
