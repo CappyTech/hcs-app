@@ -372,13 +372,17 @@ function makeClient() {
         return null;
       };
 
-      // Merge updates into existing map
+      // Merge updates into existing map; null value removes the field (clears it)
       for (const [name, value] of Object.entries(nameValuePairs || {})) {
-        if (value == null) continue;
         const key = String(name).trim().toLowerCase();
         let fid = idByName.get(key) || existingByName.get(key) || null;
-        if (fid == null) fid = await resolveFieldId(name);
-        if (fid != null) existing.set(Number(fid), String(value));
+        if (fid == null && value != null) fid = await resolveFieldId(name);
+        if (fid == null) continue;
+        if (value == null) {
+          existing.delete(Number(fid));
+        } else {
+          existing.set(Number(fid), String(value));
+        }
       }
 
       // Build payload array

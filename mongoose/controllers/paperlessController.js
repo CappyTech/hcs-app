@@ -935,6 +935,18 @@ exports.unlinkKashflow = async (req, res, next) => {
         },
       },
     );
+    // Clear the matching custom fields on the Paperless-ngx document too
+    try {
+      const { makeClient } = require('../services/paperless/paperlessClient');
+      await makeClient().updateDocumentCustomFields(paperlessId, {
+        'KashFlow Purchase Id':        null,
+        'KashFlow Purchase Number':    null,
+        'KashFlow Purchase Permalink': null,
+        'KashFlow Last Send Status':   null,
+      });
+    } catch (updateErr) {
+      logger.warn(`[paperless] Could not clear Paperless custom fields for doc ${paperlessId}: ${updateErr.message}`);
+    }
     logger.info(`[paperless] Unlinked KashFlow linkage for paperlessId=${paperlessId}`);
     req.flash('success', `KashFlow link removed from document #${paperlessId}.`);
     res.redirect(`/paperless/ocr/${paperlessId}`);

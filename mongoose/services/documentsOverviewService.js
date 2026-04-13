@@ -17,6 +17,35 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       direct:   [{ $match: { lastSendMode: 'direct' } }, { $count: 'n' }],
       webhook:  [{ $match: { lastSendMode: 'webhook' } }, { $count: 'n' }],
       neverSent:[{ $match: { lastSentAt: null } }, { $count: 'n' }],
+      // Drift: MongoDB kashflowPurchaseId disagrees with stored Paperless custom field value
+      drifted: [
+        { $addFields: {
+          _cfKfId: {
+            $let: {
+              vars: {
+                found: { $arrayElemAt: [
+                  { $filter: {
+                    input: { $ifNull: ['$customFields', []] },
+                    cond:  { $eq: [
+                      { $toLower: { $ifNull: ['$$this.fieldName', ''] } },
+                      'kashflow purchase id'
+                    ]},
+                  }},
+                  0,
+                ]},
+              },
+              in: { $ifNull: ['$$found.value', null] },
+            },
+          },
+        }},
+        { $match: { $or: [
+          // MongoDB says linked but Paperless field is absent/empty
+          { kashflowPurchaseId: { $ne: null }, $or: [{ _cfKfId: null }, { _cfKfId: '' }] },
+          // MongoDB says unlinked but Paperless field is set
+          { kashflowPurchaseId: null, _cfKfId: { $nin: [null, ''] } },
+        ]}},
+        { $count: 'n' },
+      ],
     }},
   ]);
   const totalDocs    = facetResult?.total?.[0]?.n    ?? 0;
@@ -26,6 +55,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const sentDirect   = facetResult?.direct?.[0]?.n   ?? 0;
   const sentWebhook  = facetResult?.webhook?.[0]?.n  ?? 0;
   const neverSent    = facetResult?.neverSent?.[0]?.n ?? 0;
+  const driftedDocs  = facetResult?.drifted?.[0]?.n  ?? 0;
 
   // ── By document type ───────────────────────────────────────────────────────
   const byDocType = await OcrDocument.aggregate([
@@ -84,6 +114,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     linkedDocs,
     unlinkedDocs,
     orphanedDocs,
+    driftedDocs,
     errorDocs,
     sentDirect,
     sentWebhook,

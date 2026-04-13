@@ -27,6 +27,10 @@
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Unlinked</p>
       <p class="text-3xl font-bold text-yellow-600"><%= unlinkedDocs %></p>
     </div>
+    <div class="bg-white dark:bg-gray-900 border <%- driftedDocs > 0 ? 'border-purple-400 dark:border-purple-600' : 'border-gray-200 dark:border-gray-700' %> rounded-2xl shadow-lg p-4 text-center" title="Documents where MongoDB and Paperless-ngx disagree on the KashFlow link">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">CF Drift</p>
+      <p class="text-3xl font-bold <%- driftedDocs > 0 ? 'text-purple-600' : 'text-gray-400' %>"><%= driftedDocs %></p>
+    </div>
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Errors</p>
       <p class="text-3xl font-bold <%= errorDocs > 0 ? 'text-red-600' : 'text-gray-400' %>"><%= errorDocs %></p>
@@ -72,6 +76,18 @@
         </span>
       <% } %>
     </div>
+  </div>
+  <% } %>
+
+  <!-- Custom Field Drift Warning -->
+  <% if (driftedDocs > 0) { %>
+  <div class="mb-8 border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4">
+    <h2 class="text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">&#9888; Custom Field Drift (<%= driftedDocs %>)</h2>
+    <p class="text-sm text-purple-800 dark:text-purple-300">
+      <%= driftedDocs %> document<%= driftedDocs !== 1 ? 's have' : ' has' %> a mismatch between the KashFlow link stored in MongoDB and the <em>KashFlow Purchase Id</em> custom field stored in Paperless-ngx.
+      This can happen if a write-back failed after sending, or if a document was unlinked while offline.
+      Re-ingesting the affected document or using the unlink action will resolve the drift.
+    </p>
   </div>
   <% } %>
 

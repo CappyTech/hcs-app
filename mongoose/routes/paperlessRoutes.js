@@ -32,3 +32,5 @@ router.delete("/paperless/ocr/:paperlessId", ...paperlessGuard, ctrl.deleteOcrDo
 router.get("/paperless/suppliers", ...paperlessGuard, ctrl.searchSuppliers);
 router.get("/paperless/ingest", ...paperlessGuard, ctrl.listIngest);
 router.post("/paperless/ingest/trigger", ...paperlessGuard, grabLimiter, ctrl.triggerGrab);
+
+module.exports = router;
