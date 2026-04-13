@@ -34,7 +34,7 @@ const OcrDocumentSchema = new mongoose.Schema({
   lastSentAt:             { type: Date,   default: null, index: true },
   lastSendMode:           { type: String, enum: ['direct', 'webhook', null], default: null, index: true },
   lastSendStatus:         { type: Number, default: null },
-  sendCount:              { type: Number, default: 0 },
+  sendCount:              { type: Number },
   fetchedAt:              { type: Date, default: () => new Date() },
   error: { type: String, default: null },
 }, { timestamps: true });
