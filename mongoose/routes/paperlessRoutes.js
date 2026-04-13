@@ -27,6 +27,24 @@ router.post(
   authService.ensureRole(),
   ctrl.sendDraftToKashflow,
 );
+router.post(
+  "/paperless/ocr/:paperlessId/ingest",
+  authService.ensureAuthenticated,
+  authService.ensureRole(),
+  ctrl.reIngestOne,
+);
+router.post(
+  "/paperless/ocr/:paperlessId/unlink",
+  authService.ensureAuthenticated,
+  authService.ensureRole(),
+  ctrl.unlinkKashflow,
+);
+router.delete(
+  "/paperless/ocr/:paperlessId",
+  authService.ensureAuthenticated,
+  authService.ensureRole(),
+  ctrl.deleteOcrDocument,
+);
 router.get(
   "/paperless/suppliers",
   authService.ensureAuthenticated,

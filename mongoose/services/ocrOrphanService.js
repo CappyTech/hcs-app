@@ -34,20 +34,16 @@ async function detectAndClearOrphans() {
   if (linked.length === 0) return stats;
   stats.checked = linked.length;
 
-  // 2. Build the set of active (non-soft-deleted) REST purchase KashFlow IDs.
-  //    hcs-sync soft-deletes by setting deletedAt / DeletedAt; use .lean() so
-  //    those extra fields are returned even though they aren't in the hcs-app schema.
-  const allPurchases = await Purchase
-    .find({})
-    .select('Id deletedAt DeletedAt')
-    .lean();
+  // 2. Build the set of KashFlow IDs actually referenced by those docs
+  const linkedIds = [...new Set(linked.map(d => d.kashflowPurchaseId).filter(id => id != null))];
 
-  const activePurchaseIds = new Set(
-    allPurchases
-      .filter(p => !p.deletedAt && !p.DeletedAt)
-      .map(p => p.Id)
-      .filter(id => id != null),
-  );
+  // 3. Query only the referenced purchases (avoids loading the full collection into memory).
+  //    deletedAt: null / DeletedAt: null matches both null and missing field in MongoDB.
+  const activePurchases = await Purchase
+    .find({ Id: { $in: linkedIds }, deletedAt: null, DeletedAt: null })
+    .select('Id')
+    .lean();
+  const activePurchaseIds = new Set(activePurchases.map(p => p.Id));
 
   // 3. Identify orphans — linked OcrDocs whose purchase is gone or soft-deleted
   const orphanIds = linked

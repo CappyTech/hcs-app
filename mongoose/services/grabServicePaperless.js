@@ -8,14 +8,16 @@ const logger = require('../../services/loggerService'); // your existing logger
 
 const VERBOSE = process.env.PAPERLESS_VERBOSE === 'true' || process.env.DEBUG;
 
+// Module-level guard: prevents concurrent grab runs
+let grabRunning = false;
+function isGrabRunning() { return grabRunning; }
+
 // Stable stringify: sorts object keys and normalizes dates/arrays for consistent hashing
 function stableStringify(value) {
   const seen = new WeakSet();
   const normalize = (v) => {
-    if (v === null || typeof v !== 'object') {
-      if (v instanceof Date) return v.toISOString();
-      return v;
-    }
+    if (v instanceof Date) return v.toISOString();
+    if (v === null || typeof v !== 'object') return v;
     if (seen.has(v)) return undefined; // break cycles
     seen.add(v);
     if (Array.isArray(v)) {
@@ -35,6 +37,12 @@ function sha256(str) {
 
 // Options: { since, query, pageSize, concurrency }
 async function grabPaperlessOCR(options = {}) {
+  if (grabRunning) {
+    logger.warn('[paperless] Grab already in progress — skipping concurrent run.');
+    return { processed: 0, skipped: 0, failed: 0 };
+  }
+  grabRunning = true;
+  try {
   const {
     since = process.env.PAPERLESS_SINCE || null,     // ISO string or null
     query = process.env.PAPERLESS_QUERY || null,     // Paperless search string
@@ -48,6 +56,32 @@ async function grabPaperlessOCR(options = {}) {
 
   await mdb.connect();
   const api = makeClient();
+
+  // Per-run memoization — each unique correspondent/type/tag fetched at most once per grab
+  const corrCache = new Map();
+  const typeCache = new Map();
+  const tagCache  = new Map();
+  const getCorrCached = async (id) => {
+    if (!id) return null;
+    if (corrCache.has(id)) return corrCache.get(id);
+    const val = await api.getCorrespondent(id).catch(() => null);
+    corrCache.set(id, val);
+    return val;
+  };
+  const getTypeCached = async (id) => {
+    if (!id) return null;
+    if (typeCache.has(id)) return typeCache.get(id);
+    const val = await api.getDocumentType(id).catch(() => null);
+    typeCache.set(id, val);
+    return val;
+  };
+  const getTagCached = async (id) => {
+    if (!id) return null;
+    if (tagCache.has(id)) return tagCache.get(id);
+    const val = await api.getTag(id).catch(() => null);
+    tagCache.set(id, val);
+    return val;
+  };
 
   // Prefetch all custom field definitions (id -> name) to ensure we can label values without per-doc expands
   async function fetchAllCustomFieldsMap() {
@@ -102,9 +136,9 @@ async function grabPaperlessOCR(options = {}) {
         // Resolve related entities and custom fields BEFORE skip decision so any change triggers processing
           const [correspondent, docType, tagsResolved, customFields] = await (async () => {
           const [corr, dtype, tags] = await Promise.all([
-            api.getCorrespondent(doc.correspondent).catch(() => null),
-            api.getDocumentType(doc.document_type).catch(() => null),
-            Promise.all((doc.tags || []).map(id => api.getTag(id).catch(() => null))).then(a => a.filter(Boolean)),
+            getCorrCached(doc.correspondent),
+            getTypeCached(doc.document_type),
+            Promise.all((doc.tags || []).map(id => getTagCached(id))).then(a => a.filter(Boolean)),
           ]);
 
           // Custom fields: prefer presence on list payload; else fetch full document (expand)
@@ -253,6 +287,9 @@ async function grabPaperlessOCR(options = {}) {
 
   logger.info(`Paperless grab complete. processed=${processed} skipped=${skipped} failed=${failed}`);
   return { processed, skipped, failed };
+  } finally {
+    grabRunning = false;
+  }
 }
 
 // Ingest a single Paperless document by ID and upsert into Mongo
@@ -334,4 +371,4 @@ async function ingestOnePaperlessDoc(paperlessId) {
   return { paperlessId: doc.id, status: 'fetched' };
 }
 
-module.exports = { grabPaperlessOCR, ingestOnePaperlessDoc };
+module.exports = { grabPaperlessOCR, ingestOnePaperlessDoc, isGrabRunning };

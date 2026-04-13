@@ -2,7 +2,7 @@
 	<a href="/paperless/ocr/<%= paperlessId %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Back to document</a>
 	<h1 class="text-2xl font-bold mt-2 mb-6"><%= title %></h1>
 	<div class="m-2 flex flex-wrap items-center gap-3">
-		<a href="https://docs.heroncs.co.uk/documents/<%= paperlessId %>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-green-900/30 focus:outline-none focus:ring-2 focus:ring-green-600">
+		<a href="<%= paperlessUiBase %>/documents/<%= paperlessId %>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-green-900/30 focus:outline-none focus:ring-2 focus:ring-green-600">
 			<i class="bi bi-box-arrow-up-right text-xs"></i>
 			<span>View Document</span>
 		</a>
@@ -23,22 +23,7 @@
 	<% const hasSupplierRef = !!draft.SupplierReference; %>
 	<% const hasIssuedDate = !!draft.IssuedDate; %>
 	<%
-	  // Lock sending if this appears already sent successfully and only the 'added' tag is present
-	  const __tags = Array.isArray(doc && doc.tags) ? doc.tags : [];
-	  const __tagNames = __tags
-	    .map(t => {
-	      if (typeof t === 'string') return t;
-	      if (t && (t.name || t.Name)) return String(t.name || t.Name);
-	      return '';
-	    })
-	    .filter(Boolean)
-	    .map(s => s.trim().toLowerCase());
-	  const __uniqTagNames = Array.from(new Set(__tagNames));
-	  const __onlyAddedTag = __uniqTagNames.length > 0 && __uniqTagNames.every(n => n === 'added');
-	  const __hasKfNumber = !!(doc && ((typeof doc.kashflowPurchaseNumber === 'number') || (typeof doc.kashflowPurchaseNumber === 'string' && doc.kashflowPurchaseNumber.trim() !== '')));
-	  const __sentCreated201 = !!(doc && Number(doc.lastSendStatus) === 201);
-	  const alreadySentLock = __hasKfNumber && __onlyAddedTag && __sentCreated201;
-	  const canSend = hasSupplier && hasLineItems && hasNominalPerLine && hasCurrency && totalsConsistent && !alreadySentLock;
+	  // canSend and alreadySentLock are computed in getPurchaseDraft controller and passed as template vars
 	%>
 	<% const usedCustomFieldLines = (draft.Debug && Array.isArray(draft.Debug.EnumeratedLineItems) && draft.Debug.EnumeratedLineItems.length > 0); %>
 	<% const sumNet = +lineItems.reduce((a,li)=>{ const n = toNum(li.NetAmount); return a + (n ?? 0); }, 0).toFixed(2); %>

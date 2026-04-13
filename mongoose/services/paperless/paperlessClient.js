@@ -122,6 +122,11 @@ function makeClient() {
           }
           logger.error("[paperlessClient] tunnel server error: %s", e?.message || e);
         });
+        server.on("close", () => {
+          logger.warn("[paperlessClient] SSH tunnel closed — will reconnect on next request.");
+          sshServer = null;
+          localPort = null;
+        });
         if (verbose)
           logger.info(
             `[paperlessClient] 🔐 SSH tunnel established on ${sshConfig.localHost}:${localPort} → ${sshConfig.dstHost}:${sshConfig.dstPort}`,
@@ -193,6 +198,26 @@ function makeClient() {
             return await axios(cfg);
           } catch (e) {
             throw e;
+          }
+        }
+        // Retry on rate-limit (429) and transient server errors (502/503/504) with back-off
+        if (
+          (status === 429 || status === 502 || status === 503 || status === 504) &&
+          error?.config
+        ) {
+          error.config.__retryCount = (error.config.__retryCount || 0) + 1;
+          if (error.config.__retryCount <= 3) {
+            const retryAfterMs =
+              status === 429
+                ? parseInt(error.response?.headers?.['retry-after'] || '5', 10) * 1000
+                : error.config.__retryCount * 2000;
+            const delay = Math.min(retryAfterMs, 30000);
+            if (verbose)
+              logger.warn(
+                `[paperlessClient] HTTP ${status}; retry ${error.config.__retryCount}/3 after ${delay}ms`,
+              );
+            await new Promise((r) => setTimeout(r, delay));
+            return axios(error.config);
           }
         }
         return Promise.reject(error);
@@ -309,23 +334,28 @@ function makeClient() {
           existingByName.set(fname.trim().toLowerCase(), Number(fid));
       }
 
-      // Fetch all custom field definitions to resolve names to ids
-      const allDefs = await this.listCustomFields({
-        page: 1,
-        pageSize: 1000,
-        ordering: "name",
-      });
-      const defs = Array.isArray(allDefs?.results) ? allDefs.results : [];
+      // Paginate through all custom field definitions (avoids silent truncation beyond 1000)
+      const defs = [];
+      {
+        let cfPage = 1;
+        while (true) {
+          const chunk = await this.listCustomFields({ page: cfPage, pageSize: 100, ordering: "name" });
+          const results = Array.isArray(chunk?.results) ? chunk.results : [];
+          defs.push(...results);
+          if (!chunk?.next || results.length === 0) break;
+          cfPage++;
+        }
+      }
       const idByName = new Map();
       for (const d of defs) {
         if (d?.name && typeof d.id === "number")
           idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
       }
 
-      // Resolve names to ids; create if missing
       const resolveFieldId = async (name) => {
         const key = String(name).trim().toLowerCase();
         if (idByName.has(key)) return idByName.get(key);
+        logger.warn(`[paperlessClient] Custom field "${name}" not found — creating it. Verify spelling to avoid duplicate fields.`);
         // Try to create the custom field (string type)
         try {
           const created = await this.createCustomField({

@@ -20,6 +20,7 @@ const axios = require("axios");
 const {
   grabPaperlessOCR,
   ingestOnePaperlessDoc,
+  isGrabRunning,
 } = require("../services/grabServicePaperless");
 const {
   buildPurchaseDraftById,
@@ -198,12 +199,8 @@ exports.listIngest = async (req, res, next) => {
 
     // Optional JSON mode for lightweight status polling
     if (asJson) {
-      // Consider statuses that indicate work in progress
-      const runningStatuses = ["running", "in-progress", "working", "grabbing"];
-      const runningCount = await OcrDocumentIngest.countDocuments({
-        status: { $in: runningStatuses },
-      });
-      return res.json({ running: runningCount > 0, runningCount, total });
+      const running = isGrabRunning();
+      return res.json({ running, runningCount: running ? 1 : 0, total });
     }
 
     res.render(path.join("tailwindcss", "paperless", "ingest"), {
@@ -411,6 +408,36 @@ exports.getPurchaseDraft = async (req, res, next) => {
       sendDirectEnabled: hasDirectAuth,
       sendWebhookEnabled: !!webhookUrl,
       kashflowApiBaseUrl: KF_BASE,
+      paperlessUiBase: (
+        process.env.PAPERLESS_UI_URL ||
+        (process.env.PAPERLESS_BASE_URL || '').replace(/\/api\/?$/i, '').replace(/\/+$/, '')
+      ),
+      canSend: (() => {
+        const hasSupplier = !!(selectedSupplier || draft.SupplierId || draft.SupplierName);
+        const lineItems = Array.isArray(draft.LineItems) ? draft.LineItems : [];
+        const supplierDefaultNominal =
+          (selectedSupplier && typeof selectedSupplier.DefaultNominalCode === 'number')
+            ? selectedSupplier.DefaultNominalCode
+            : (typeof draft.DefaultNominalCode === 'number' ? draft.DefaultNominalCode : null);
+        const hasNominalPerLine =
+          lineItems.length > 0 &&
+          (lineItems.every((li) => typeof li.NominalCode === 'number') ||
+            typeof supplierDefaultNominal === 'number');
+        const toNum = (v) => { if (v == null || v === '') return null; const n = (typeof v === 'number') ? v : parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
+        const _n = toNum(draft.NetAmount), _v = toNum(draft.VATAmount), _g = toNum(draft.GrossAmount);
+        const totalsConsistent = (_n != null && _v != null && _g != null) ? Math.abs((_n + _v) - _g) < 0.01 : true;
+        const tags = Array.isArray(doc?.tags) ? doc.tags : [];
+        const tagNames = [...new Set(tags.map((t) => (typeof t === 'string' ? t : String(t?.name || t?.Name || '')).trim().toLowerCase()).filter(Boolean))];
+        const hasKfNumber = !!(doc && (typeof doc.kashflowPurchaseNumber === 'number' || (typeof doc.kashflowPurchaseNumber === 'string' && doc.kashflowPurchaseNumber.trim() !== '')));
+        const alreadySentLock = hasKfNumber && tagNames.length > 0 && tagNames.every((n) => n === 'added') && Number(doc?.lastSendStatus) === 201;
+        return hasSupplier && lineItems.length > 0 && hasNominalPerLine && !!draft.Currency && totalsConsistent && !alreadySentLock;
+      })(),
+      alreadySentLock: (() => {
+        const tags = Array.isArray(doc?.tags) ? doc.tags : [];
+        const tagNames = [...new Set(tags.map((t) => (typeof t === 'string' ? t : String(t?.name || t?.Name || '')).trim().toLowerCase()).filter(Boolean))];
+        const hasKfNumber = !!(doc && (typeof doc.kashflowPurchaseNumber === 'number' || (typeof doc.kashflowPurchaseNumber === 'string' && doc.kashflowPurchaseNumber.trim() !== '')));
+        return hasKfNumber && tagNames.length > 0 && tagNames.every((n) => n === 'added') && Number(doc?.lastSendStatus) === 201;
+      })(),
     });
   } catch (err) {
     logger.error("getPurchaseDraft error:", err);
@@ -426,6 +453,18 @@ exports.sendDraftToKashflow = async (req, res, next) => {
     const dryRun = ["true", "on", "1", "yes"].includes(
       String(req.body?.dryRun || "").toLowerCase(),
     );
+
+    // Server-side idempotency check — reject if already linked to KashFlow
+    if (!dryRun) {
+      await mdb.connect();
+      const { OcrDocument } = mdb.PAPERLESS;
+      const existingDoc = await OcrDocument.findOne({ paperlessId }).select('kashflowPurchaseId lastSendStatus').lean();
+      if (existingDoc?.kashflowPurchaseId && existingDoc?.lastSendStatus === 201) {
+        req.flash('error', `This document is already linked to KashFlow purchase #${existingDoc.kashflowPurchaseId}. Unlink it first before re-sending.`);
+        return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+      }
+    }
+
     // Rebuild draft server-side to avoid trusting client payload
     const draft = await buildPurchaseDraftById(paperlessId);
     // If a supplier is selected, merge its identifiers
@@ -620,6 +659,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
                 lastSendMode: "direct",
                 lastSendStatus: resp.status,
               },
+              $inc: { sendCount: 1 },
             },
           );
         } catch (persistErr) {
@@ -724,6 +764,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
                   lastSendMode: "webhook",
                   lastSendStatus: resp.status,
                 },
+                $inc: { sendCount: 1 },
               },
             );
           } else {
@@ -846,14 +887,81 @@ exports.searchSuppliers = async (req, res, next) => {
             { Name: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },
             { Code: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },
           ],
+          IsArchived: { $ne: true },
         }
-      : {};
+      : { IsArchived: { $ne: true } };
     const docs = await Supplier.find(filter)
       .select("uuid Id Code Name IsArchived DefaultNominalCode")
       .limit(limit)
       .lean();
     res.json({ items: docs });
   } catch (err) {
+    next(err);
+  }
+};
+
+/** POST /paperless/ocr/:paperlessId/ingest — re-ingest a single document from Paperless */
+exports.reIngestOne = async (req, res, next) => {
+  try {
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    if (!Number.isFinite(paperlessId)) {
+      return res.status(400).json({ error: 'Invalid paperlessId' });
+    }
+    const result = await ingestOnePaperlessDoc(paperlessId);
+    req.flash('success', `Document #${paperlessId} re-ingested successfully.`);
+    res.redirect(`/paperless/ocr/${paperlessId}`);
+  } catch (err) {
+    logger.error(`reIngestOne error for paperlessId=${req.params.paperlessId}: ${err.message}`);
+    next(err);
+  }
+};
+
+/** POST /paperless/ocr/:paperlessId/unlink — clear stale KashFlow linkage */
+exports.unlinkKashflow = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const { OcrDocument } = mdb.PAPERLESS;
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    if (!Number.isFinite(paperlessId)) {
+      return res.status(400).json({ error: 'Invalid paperlessId' });
+    }
+    await OcrDocument.updateOne(
+      { paperlessId },
+      {
+        $set: {
+          kashflowPurchaseId:     null,
+          kashflowPurchaseNumber: null,
+          kashflowPermalink:      null,
+        },
+      },
+    );
+    logger.info(`[paperless] Unlinked KashFlow linkage for paperlessId=${paperlessId}`);
+    req.flash('success', `KashFlow link removed from document #${paperlessId}.`);
+    res.redirect(`/paperless/ocr/${paperlessId}`);
+  } catch (err) {
+    logger.error(`unlinkKashflow error for paperlessId=${req.params.paperlessId}: ${err.message}`);
+    next(err);
+  }
+};
+
+/** DELETE /paperless/ocr/:paperlessId — remove an OcrDocument (and its ingest record) */
+exports.deleteOcrDocument = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const { OcrDocument, OcrDocumentIngest } = mdb.PAPERLESS;
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    if (!Number.isFinite(paperlessId)) {
+      return res.status(400).json({ error: 'Invalid paperlessId' });
+    }
+    await Promise.all([
+      OcrDocument.deleteOne({ paperlessId }),
+      OcrDocumentIngest.deleteOne({ paperlessId }),
+    ]);
+    logger.info(`[paperless] Deleted OcrDocument + ingest record for paperlessId=${paperlessId}`);
+    req.flash('success', `Document #${paperlessId} deleted.`);
+    res.redirect('/paperless/ocr');
+  } catch (err) {
+    logger.error(`deleteOcrDocument error for paperlessId=${req.params.paperlessId}: ${err.message}`);
     next(err);
   }
 };

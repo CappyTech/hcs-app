@@ -8,16 +8,24 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
 
   if (!OcrDocument) throw new Error('OcrDocument model not loaded');
 
-  // ── Totals ─────────────────────────────────────────────────────────────────
-  const totalDocs = await OcrDocument.countDocuments();
-  const linkedDocs = await OcrDocument.countDocuments({ kashflowPurchaseId: { $ne: null } });
+  // ── All counts in a single aggregation pass ───────────────────────────────
+  const [facetResult] = await OcrDocument.aggregate([
+    { $facet: {
+      total:    [{ $count: 'n' }],
+      linked:   [{ $match: { kashflowPurchaseId: { $ne: null } } }, { $count: 'n' }],
+      error:    [{ $match: { error: { $ne: null } } }, { $count: 'n' }],
+      direct:   [{ $match: { lastSendMode: 'direct' } }, { $count: 'n' }],
+      webhook:  [{ $match: { lastSendMode: 'webhook' } }, { $count: 'n' }],
+      neverSent:[{ $match: { lastSentAt: null } }, { $count: 'n' }],
+    }},
+  ]);
+  const totalDocs    = facetResult?.total?.[0]?.n    ?? 0;
+  const linkedDocs   = facetResult?.linked?.[0]?.n   ?? 0;
   const unlinkedDocs = totalDocs - linkedDocs;
-  const errorDocs = await OcrDocument.countDocuments({ error: { $ne: null } });
-
-  // ── By last send status ────────────────────────────────────────────────────
-  const sentDirect = await OcrDocument.countDocuments({ lastSendMode: 'direct' });
-  const sentWebhook = await OcrDocument.countDocuments({ lastSendMode: 'webhook' });
-  const neverSent = await OcrDocument.countDocuments({ lastSentAt: null });
+  const errorDocs    = facetResult?.error?.[0]?.n    ?? 0;
+  const sentDirect   = facetResult?.direct?.[0]?.n   ?? 0;
+  const sentWebhook  = facetResult?.webhook?.[0]?.n  ?? 0;
+  const neverSent    = facetResult?.neverSent?.[0]?.n ?? 0;
 
   // ── By document type ───────────────────────────────────────────────────────
   const byDocType = await OcrDocument.aggregate([
@@ -40,7 +48,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     .select('paperlessId title error fetchedAt')
     .lean();
 
-  // ── Orphaned links (linked OcrDocs whose REST purchase is gone/soft-deleted) ──
+  // ── Orphaned links: query only the referenced purchases (not the full collection) ──
   let orphanedDocs = 0;
   const Purchase = mdb.REST?.purchase;
   if (Purchase && linkedDocs > 0) {
@@ -48,16 +56,12 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       .find({ kashflowPurchaseId: { $ne: null } })
       .select('kashflowPurchaseId')
       .lean();
-    const allPurchases = await Purchase
-      .find({})
-      .select('Id deletedAt DeletedAt')
+    const linkedIds = [...new Set(linked.map(d => d.kashflowPurchaseId).filter(id => id != null))];
+    const activePurchases = await Purchase
+      .find({ Id: { $in: linkedIds }, deletedAt: null, DeletedAt: null })
+      .select('Id')
       .lean();
-    const activePurchaseIds = new Set(
-      allPurchases
-        .filter(p => !p.deletedAt && !p.DeletedAt)
-        .map(p => p.Id)
-        .filter(id => id != null),
-    );
+    const activePurchaseIds = new Set(activePurchases.map(p => p.Id));
     orphanedDocs = linked.filter(d => !activePurchaseIds.has(d.kashflowPurchaseId)).length;
   }
 

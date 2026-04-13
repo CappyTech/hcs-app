@@ -10,7 +10,7 @@ const OcrDocumentIngestSchema = new mongoose.Schema({
   lastFetchedAt: { type: Date },                 // when we last pulled it
 
   // Optional bookkeeping for downstream usage
-  status: { type: String, default: 'fetched', enum: ['fetched', 'skipped', 'error'] },
+  status: { type: String, default: 'fetched', enum: ['running', 'fetched', 'skipped', 'error'] },
   error: { type: String, default: null },
 }, { timestamps: true });
 
