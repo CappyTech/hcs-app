@@ -104,7 +104,7 @@ const extractSchema = (model, config = {}) => {
   const paths = model.schema.paths;
 
   Object.entries(paths).forEach(([field, path]) => {
-    if ((config.hideFields || []).includes(field) || field === "__v") return;
+    if ((config.hideFields || []).includes(field) || field === "__v" || field === "createdAt" || field === "updatedAt") return;
 
     schema[field] = {
       type: path.instance,
