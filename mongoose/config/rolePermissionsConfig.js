@@ -196,6 +196,9 @@ const routeAccess = {
   // Files
   '/files':               ['admin'],
 
+  // External connection settings
+  '/settings/connections': ['admin'],
+
   // Paperless OCR
   '/paperless/ocr':                    ['admin'],
   '/paperless/ocr/:paperlessId':       ['admin'],

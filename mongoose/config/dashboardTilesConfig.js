@@ -20,6 +20,13 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    ConnectionSettings: {
+        title: 'External Connections',
+        description: 'Configure KashFlow API, SMTP email, and Paperless-ngx credentials.',
+        link: '/settings/connections',
+        department: ['admin'],
+        buttonClass: 'bg-indigo-700 hover:bg-indigo-800'
+    },
     SubmitAttendance: {
         title: 'Submit Attendance',
         description: 'Submit your daily attendance records.',

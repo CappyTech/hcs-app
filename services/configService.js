@@ -5,7 +5,7 @@
  *
  * Priority order (highest to lowest):
  *   1. Environment variables  (process.env)
- *   2. app-config.json        (written by the setup wizard)
+ *   2. app-config.json        (written by the setup wizard or connections settings UI)
  *   3. Caller-supplied default
  *
  * Existing single-tenant deployments are unaffected: their env vars
@@ -15,6 +15,13 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+
+// Keys present in process.env at module load time (i.e. set by docker-compose / OS env).
+// Used by the connections settings UI to show an "Env" badge and warn that these
+// cannot be overridden without redeploying.
+const _startupEnvKeys = new Set(
+  Object.keys(process.env).filter(k => process.env[k] !== undefined && process.env[k] !== '')
+);
 
 const CONFIG_FILE = path.join(__dirname, '..', 'config', 'app-config.json');
 
@@ -93,4 +100,31 @@ function generateSecret(bytes = 32) {
   return crypto.randomBytes(bytes).toString('hex');
 }
 
-module.exports = { get, isConfigured, save, remove, generateSecret };
+/**
+ * Bootstrap: copy all app-config.json values into process.env for any key
+ * not already set by the OS / docker-compose environment.
+ * Call once at application startup (after dotenv.config()).
+ * This allows settings saved via the connections settings UI to take effect
+ * on the next application restart without requiring environment variable changes.
+ */
+function bootstrap() {
+  const fc = loadFileConfig();
+  for (const [key, value] of Object.entries(fc)) {
+    if (value !== undefined && value !== '' && !process.env[key]) {
+      process.env[key] = String(value);
+    }
+  }
+}
+
+/**
+ * Returns true if the key was present in process.env at module load time
+ * (i.e. set by docker-compose / OS, not by bootstrap or the UI).
+ * Used by the connections settings UI to render an "Env" lock badge.
+ * @param {string} key
+ * @returns {boolean}
+ */
+function isFromStartupEnv(key) {
+  return _startupEnvKeys.has(key);
+}
+
+module.exports = { get, isConfigured, save, remove, generateSecret, bootstrap, isFromStartupEnv };

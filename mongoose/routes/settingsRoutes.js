@@ -2,6 +2,16 @@ const express = require("express");
 const router = express.Router();
 const authService = require("../../services/authService");
 const settings = require("../controllers/settingsController");
+const connSettings = require("../controllers/connectionSettingsController");
+
+// ── External connection settings (admin only) ─────────────────────────────────
+router.get('/settings/connections', authService.ensureRoles('admin'), connSettings.getConnectionsHub);
+router.get('/settings/connections/kashflow', authService.ensureRoles('admin'), connSettings.getKashflowSettings);
+router.post('/settings/connections/kashflow', authService.ensureRoles('admin'), connSettings.postKashflowSettings);
+router.get('/settings/connections/smtp', authService.ensureRoles('admin'), connSettings.getSmtpSettings);
+router.post('/settings/connections/smtp', authService.ensureRoles('admin'), connSettings.postSmtpSettings);
+router.get('/settings/connections/paperless', authService.ensureRoles('admin'), connSettings.getPaperlessSettings);
+router.post('/settings/connections/paperless', authService.ensureRoles('admin'), connSettings.postPaperlessSettings);
 
 // All authenticated users can access their own profile/account
 router.get(

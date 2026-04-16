@@ -1,6 +1,9 @@
 'use strict';
 
 require('dotenv').config();
+// Apply any values saved via the connections settings UI (app-config.json) for
+// keys not already set by the OS / docker-compose environment.
+require('./services/configService').bootstrap();
 const express = require('express');
 const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
