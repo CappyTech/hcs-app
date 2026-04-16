@@ -1,0 +1,289 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <%
+    const statusColors = {
+      draft:     'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+      locked:    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      submitted: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+    };
+    const csrf = typeof csrfToken !== 'undefined' ? csrfToken : '';
+  %>
+
+  <!-- Run header card -->
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+    <div class="p-6 sm:p-8">
+      <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+        <div>
+          <a href="/payroll/runs" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline mb-2 inline-block">← All Runs</a>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <%= run.taxYear %> / <%= run.frequency.charAt(0).toUpperCase() + run.frequency.slice(1) %> Payroll
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <%= new Date(run.periodStart).toLocaleDateString('en-GB') %> – <%= new Date(run.periodEnd).toLocaleDateString('en-GB') %>
+            &nbsp;&middot;&nbsp; Payment: <strong><%= new Date(run.paymentDate).toLocaleDateString('en-GB') %></strong>
+            <% if (run.taxMonth) { %> &nbsp;&middot;&nbsp; Tax Month <%= run.taxMonth %><% } %>
+            <% if (run.taxWeek) { %> &nbsp;&middot;&nbsp; Tax Week <%= run.taxWeek %><% } %>
+          </p>
+        </div>
+        <span class="px-3 py-1.5 text-sm rounded-full font-semibold <%= statusColors[run.status] || '' %>">
+          <%= run.status.charAt(0).toUpperCase() + run.status.slice(1) %>
+        </span>
+      </div>
+
+      <!-- Totals row -->
+      <% const totalFields = [
+        { label: 'Gross Pay',        key: 'grossPay',        color: 'indigo' },
+        { label: 'Tax Deducted',     key: 'taxDeducted',     color: 'red'    },
+        { label: 'Employee NI',      key: 'employeeNI',      color: 'orange' },
+        { label: 'Employer NI',      key: 'employerNI',      color: 'amber'  },
+        { label: 'Emp. Pension',     key: 'employeePension', color: 'blue'   },
+        { label: 'Erp. Pension',     key: 'employerPension', color: 'teal'   },
+        { label: 'Student Loan',     key: 'studentLoan',     color: 'violet' },
+        { label: 'Net Pay',          key: 'netPay',          color: 'green'  }
+      ] %>
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+        <% totalFields.forEach(f => { %>
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-1"><%= f.label %></p>
+          <p class="text-base font-semibold text-gray-900 dark:text-gray-100 font-mono">£<%= fmt(toNum(run.totals?.[f.key])) %></p>
+        </div>
+        <% }) %>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex flex-wrap gap-2">
+        <% if (run.status === 'draft') { %>
+          <form method="POST" action="/payroll/run/<%= run.uuid %>/calculate">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+              <i class="bi bi-calculator"></i> Calculate
+            </button>
+          </form>
+          <form method="POST" action="/payroll/run/<%= run.uuid %>/lock">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+              <i class="bi bi-lock"></i> Lock
+            </button>
+          </form>
+        <% } else if (run.status === 'locked') { %>
+          <form method="POST" action="/payroll/run/<%= run.uuid %>/unlock">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+              <i class="bi bi-unlock"></i> Unlock
+            </button>
+          </form>
+          <% if (!run.kashflowJournalRef) { %>
+          <form method="POST" action="/payroll/run/<%= run.uuid %>/post-journal">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+              <i class="bi bi-journal-check"></i> Post Journal
+            </button>
+          </form>
+          <% } else { %>
+          <span class="inline-flex items-center gap-1.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 px-4 py-2 rounded-lg text-sm font-medium">
+            <i class="bi bi-check-circle-fill"></i> Journal Posted (<%= run.kashflowJournalRef %>)
+          </span>
+          <% } %>
+          <a href="/payroll/run/<%= run.uuid %>/fps/download"
+            class="inline-flex items-center gap-1.5 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <i class="bi bi-download"></i> Download FPS
+          </a>
+          <form method="POST" action="/payroll/run/<%= run.uuid %>/fps/submit">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+              <i class="bi bi-send"></i> Submit FPS to HMRC
+            </button>
+          </form>
+          <a href="/payroll/run/<%= run.uuid %>/pension/csv"
+            class="inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Pension CSV
+          </a>
+          <form method="POST" action="/payroll/run/<%= run.uuid %>/pension/submit">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+              <i class="bi bi-cloud-upload"></i> Submit Pension
+            </button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entries table -->
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="p-6 sm:p-8">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+        Employee Entries <span class="text-sm font-normal text-gray-500 dark:text-gray-400">(<%= entries.length %>)</span>
+      </h2>
+
+      <% if (entries.length === 0) { %>
+        <div class="text-center py-12 text-gray-500 dark:text-gray-400">
+          <i class="bi bi-people text-4xl mb-2 block"></i>
+          <p>No entries yet. Click <strong>Calculate</strong> to compute payroll for all active employees.</p>
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase">
+              <tr>
+                <th class="px-3 py-3 text-left">Employee</th>
+                <th class="px-3 py-3 text-right">Gross</th>
+                <th class="px-3 py-3 text-right">Tax</th>
+                <th class="px-3 py-3 text-right">Emp NI</th>
+                <th class="px-3 py-3 text-right">Erp NI</th>
+                <th class="px-3 py-3 text-right">Emp Pension</th>
+                <th class="px-3 py-3 text-right">Erp Pension</th>
+                <th class="px-3 py-3 text-right">SL</th>
+                <th class="px-3 py-3 text-right font-bold">Net Pay</th>
+                <th class="px-3 py-3 text-center">Code</th>
+                <th class="px-3 py-3 text-center">Flags</th>
+                <% if (run.status === 'draft') { %><th class="px-3 py-3"></th><% } %>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% entries.forEach(entry => { %>
+              <tr class="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition" id="entry-<%= entry.uuid %>">
+                <td class="px-3 py-3 text-gray-900 dark:text-gray-100 font-medium">
+                  <%= entry.employeeId?.name || 'Unknown' %>
+                </td>
+                <td class="px-3 py-3 text-right font-mono text-gray-900 dark:text-gray-100">£<%= fmt(toNum(entry.grossPay)) %></td>
+                <td class="px-3 py-3 text-right font-mono text-red-600 dark:text-red-400">£<%= fmt(toNum(entry.taxDeducted)) %></td>
+                <td class="px-3 py-3 text-right font-mono text-orange-600 dark:text-orange-400">£<%= fmt(toNum(entry.employeeNI)) %></td>
+                <td class="px-3 py-3 text-right font-mono text-amber-600 dark:text-amber-400">£<%= fmt(toNum(entry.employerNI)) %></td>
+                <td class="px-3 py-3 text-right font-mono text-blue-600 dark:text-blue-400">£<%= fmt(toNum(entry.employeePension)) %></td>
+                <td class="px-3 py-3 text-right font-mono text-teal-600 dark:text-teal-400">£<%= fmt(toNum(entry.employerPension)) %></td>
+                <td class="px-3 py-3 text-right font-mono text-violet-600 dark:text-violet-400">£<%= fmt(toNum(entry.studentLoanDeduction) + toNum(entry.postgradLoanDeduction)) %></td>
+                <td class="px-3 py-3 text-right font-mono font-bold text-green-700 dark:text-green-400">£<%= fmt(toNum(entry.netPay)) %></td>
+                <td class="px-3 py-3 text-center text-xs text-gray-500 dark:text-gray-400"><%= entry.taxCode %></td>
+                <td class="px-3 py-3 text-center">
+                  <% if (entry.overrideFlags && entry.overrideFlags.length > 0) { %>
+                    <span class="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 rounded-full" title="<%= entry.overrideFlags.join(', ') %>">
+                      <i class="bi bi-pencil-square"></i> <%= entry.overrideFlags.length %>
+                    </span>
+                  <% } else { %>
+                    <span class="text-gray-300 dark:text-gray-600">—</span>
+                  <% } %>
+                </td>
+                <% if (run.status === 'draft') { %>
+                <td class="px-3 py-3 text-center">
+                  <button onclick="openOverrideModal('<%= entry.uuid %>', '<%= entry.employeeId?.name || '' %>')"
+                    class="text-indigo-600 hover:underline dark:text-indigo-400 text-xs">Edit</button>
+                </td>
+                <% } %>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- HMRC Submissions for this run -->
+  <% if (submissions && submissions.length > 0) { %>
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="p-6 sm:p-8">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">HMRC Submissions</h2>
+      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase">
+            <tr>
+              <th class="px-4 py-3 text-left">Type</th>
+              <th class="px-4 py-3 text-left">Status</th>
+              <th class="px-4 py-3 text-left">Submitted</th>
+              <th class="px-4 py-3 text-left">Correlation ID</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% const subColors = { generated: 'bg-gray-100 text-gray-700', submitted: 'bg-blue-100 text-blue-800', accepted: 'bg-green-100 text-green-800', rejected: 'bg-red-100 text-red-800' }; %>
+            <% submissions.forEach(sub => { %>
+            <tr class="bg-white dark:bg-gray-900">
+              <td class="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100"><%= sub.type %></td>
+              <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs rounded-full font-medium <%= subColors[sub.status] || '' %>"><%= sub.status %></span></td>
+              <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><%= sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('en-GB') : '—' %></td>
+              <td class="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400"><%= sub.hmrcCorrelationId || '—' %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<!-- Override modal -->
+<div id="overrideModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg p-6 sm:p-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">Override Entry</h2>
+    <p id="overrideEmployeeName" class="text-sm text-gray-500 dark:text-gray-400 mb-5"></p>
+    <div class="grid grid-cols-2 gap-4" id="overrideFields">
+      <% [
+        { key: 'grossPayManualAdjustment', label: 'Gross Adj.' },
+        { key: 'taxDeducted', label: 'Tax Deducted' },
+        { key: 'employeeNI', label: 'Employee NI' },
+        { key: 'employerNI', label: 'Employer NI' },
+        { key: 'employeePension', label: 'Employee Pension' },
+        { key: 'employerPension', label: 'Employer Pension' },
+        { key: 'studentLoanDeduction', label: 'Student Loan' },
+        { key: 'postgradLoanDeduction', label: 'Postgrad Loan' },
+        { key: 'netPay', label: 'Net Pay' }
+      ].forEach(f => { %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"><%= f.label %></label>
+        <input type="number" step="0.01" name="<%= f.key %>" data-field="<%= f.key %>"
+          class="override-field w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+      </div>
+      <% }) %>
+    </div>
+    <div class="mt-4">
+      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
+      <textarea id="overrideNotes" rows="2" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+    </div>
+    <div class="flex justify-end gap-3 mt-6">
+      <button type="button" onclick="document.getElementById('overrideModal').classList.add('hidden')"
+        class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition">
+        Cancel
+      </button>
+      <button type="button" onclick="saveOverride()"
+        class="px-5 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition">
+        Save Override
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentEntryUuid = null;
+function openOverrideModal(uuid, name) {
+  currentEntryUuid = uuid;
+  document.getElementById('overrideEmployeeName').textContent = name;
+  document.querySelectorAll('.override-field').forEach(f => f.value = '');
+  document.getElementById('overrideNotes').value = '';
+  document.getElementById('overrideModal').classList.remove('hidden');
+}
+async function saveOverride() {
+  if (!currentEntryUuid) return;
+  const body = { _csrf: '<%= csrf %>' };
+  document.querySelectorAll('.override-field').forEach(f => {
+    if (f.value !== '') body[f.dataset.field] = f.value;
+  });
+  const notes = document.getElementById('overrideNotes').value;
+  if (notes) body.notes = notes;
+  try {
+    const res = await fetch(`/payroll/run/<%= run.uuid %>/entry/${currentEntryUuid}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrf %>' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      document.getElementById('overrideModal').classList.add('hidden');
+      window.location.reload();
+    } else {
+      const data = await res.json();
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) { alert('Network error: ' + e.message); }
+}
+</script>

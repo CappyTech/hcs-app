@@ -1,0 +1,222 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6 print:hidden">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Payroll Overview</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Tax Year <strong><%= taxYear %></strong> &mdash; Month <strong><%= taxMonth %></strong></p>
+    </div>
+    <div class="flex gap-2">
+      <a href="/payroll/runs/create" class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">
+        + New Run
+      </a>
+      <a href="/payroll" class="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">
+        Payroll Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Quick links -->
+  <div class="flex flex-wrap gap-2 mb-4 print:hidden">
+    <a href="/payroll/runs" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">&#128197; Runs</a>
+    <a href="/payroll/submissions" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">&#128228; HMRC Submissions</a>
+    <a href="/settings/payroll" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">&#9881;&#65039; Settings</a>
+    <a href="/settings/payroll/tax-rates" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">&#128190; Tax Rates</a>
+  </div>
+
+  <!-- Next RTI deadline banner -->
+  <% if (nextDeadline) { %>
+  <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl p-4 flex items-center justify-between">
+    <div>
+      <p class="text-sm font-semibold text-yellow-800 dark:text-yellow-300">&#9203; Next RTI Deadline</p>
+      <p class="text-xs text-yellow-700 dark:text-yellow-400 mt-0.5">
+        FPS due by the payment date — EPS by 19th of each month
+        <% if (nextDeadline.periodEnd) { %> &mdash; Period ends <strong><%= new Date(nextDeadline.periodEnd).toLocaleDateString('en-GB') %></strong><% } %>
+      </p>
+    </div>
+    <a href="/payroll/submissions" class="text-xs text-yellow-700 dark:text-yellow-400 underline hover:no-underline">View Submissions</a>
+  </div>
+  <% } %>
+
+  <!-- YTD summary stats -->
+  <div>
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">Year-to-Date Totals (<%= taxYear %>)</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Gross Pay</p>
+        <p class="text-xl font-bold text-gray-900 dark:text-gray-100"><%= formatCurrency(ytdTotals.grossPay) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">PAYE Tax Deducted</p>
+        <p class="text-xl font-bold text-red-600 dark:text-red-400"><%= formatCurrency(ytdTotals.taxDeducted) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Employee NI</p>
+        <p class="text-xl font-bold text-orange-600 dark:text-orange-400"><%= formatCurrency(ytdTotals.employeeNI) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Employer NI</p>
+        <p class="text-xl font-bold text-orange-500 dark:text-orange-300"><%= formatCurrency(ytdTotals.employerNI) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Employee Pension</p>
+        <p class="text-xl font-bold text-blue-600 dark:text-blue-400"><%= formatCurrency(ytdTotals.employeePension) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Employer Pension</p>
+        <p class="text-xl font-bold text-blue-500 dark:text-blue-300"><%= formatCurrency(ytdTotals.employerPension) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Net Pay</p>
+        <p class="text-xl font-bold text-green-600 dark:text-green-400"><%= formatCurrency(ytdTotals.netPay) %></p>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Employer Cost</p>
+        <p class="text-xl font-bold text-gray-900 dark:text-gray-100"><%= formatCurrency(ytdTotals.grossPay + ytdTotals.employerNI + ytdTotals.employerPension) %></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Run status + employee summary -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Run status -->
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">Runs This Tax Year (<%= allRuns.length %>)</h3>
+      <div class="flex gap-4 flex-wrap">
+        <% [['draft','bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-300'],['locked','bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-300'],['submitted','bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-300']].forEach(([s,cls]) => { %>
+          <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium <%= cls %>">
+            <%= s.charAt(0).toUpperCase() + s.slice(1) %>: <strong class="ml-1"><%= statusCounts[s] || 0 %></strong>
+          </span>
+        <% }); %>
+      </div>
+    </div>
+
+    <!-- Employees -->
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">Active Employees</h3>
+      <div class="flex gap-4 flex-wrap">
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-300">
+          On Payroll: <strong class="ml-1"><%= enrolledCount %></strong>
+        </span>
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-300">
+          Pension Enrolled: <strong class="ml-1"><%= pensionEnrolledCount %></strong>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly breakdown table -->
+  <% if (monthlyRows.length > 0) { %>
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 pt-5 pb-3">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200">Monthly Breakdown</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Month</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Runs</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Gross Pay</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Tax</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Emp NI</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Er NI</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Net Pay</th>
+            <th class="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-300">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <% const taxMonthLabel = m => { const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar']; return `M${m} — ${months[(m-1) % 12]}`; }; %>
+          <% for (const row of monthlyRows) { %>
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 <%= row.taxMonth === taxMonth ? 'bg-indigo-50 dark:bg-indigo-900/20' : '' %>">
+            <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+              <%= taxMonthLabel(row.taxMonth) %>
+              <% if (row.taxMonth === taxMonth) { %><span class="ml-1 text-xs text-indigo-500">current</span><% } %>
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= row.runs %></td>
+            <td class="px-4 py-3 text-right text-gray-900 dark:text-gray-100 font-mono text-xs"><%= formatCurrency(row.grossPay) %></td>
+            <td class="px-4 py-3 text-right text-red-600 dark:text-red-400 font-mono text-xs"><%= formatCurrency(row.taxDeducted) %></td>
+            <td class="px-4 py-3 text-right text-orange-600 dark:text-orange-400 font-mono text-xs"><%= formatCurrency(row.employeeNI) %></td>
+            <td class="px-4 py-3 text-right text-orange-500 dark:text-orange-300 font-mono text-xs"><%= formatCurrency(row.employerNI) %></td>
+            <td class="px-4 py-3 text-right text-green-600 dark:text-green-400 font-mono text-xs"><%= formatCurrency(row.netPay) %></td>
+            <td class="px-4 py-3 text-center">
+              <% const hasSubmitted = row.statuses.includes('submitted'); const hasLocked = row.statuses.includes('locked'); const allDraft = row.statuses.every(s => s === 'draft'); %>
+              <% if (hasSubmitted) { %>
+                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-800/20 dark:text-green-400">Submitted</span>
+              <% } else if (hasLocked) { %>
+                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-800/20 dark:text-blue-300">Locked</span>
+              <% } else if (allDraft) { %>
+                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-800/20 dark:text-yellow-300">Draft</span>
+              <% } else { %>
+                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Mixed</span>
+              <% } %>
+            </td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } else { %>
+  <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center">
+    <p class="text-gray-500 dark:text-gray-400 text-sm">No payroll runs found for <strong><%= taxYear %></strong>.</p>
+    <a href="/payroll/runs/create" class="mt-4 inline-block text-sm text-indigo-600 hover:underline dark:text-indigo-400">Create first run &rarr;</a>
+  </div>
+  <% } %>
+
+  <!-- Recent runs -->
+  <% if (recentRuns.length > 0) { %>
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 pt-5 pb-3 flex justify-between items-center">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200">Recent Runs</h3>
+      <a href="/payroll/runs" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View all</a>
+    </div>
+    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+      <% for (const run of recentRuns) { %>
+      <li class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800">
+        <div>
+          <a href="/payroll/run/<%= run.uuid %>" class="font-medium text-sm text-indigo-600 hover:underline dark:text-indigo-400">
+            <%= run.taxYear %> M<%= run.taxMonth || '?' %> — <%= run.frequency %>
+          </a>
+          <span class="ml-2 text-xs text-gray-400">Paid <%= run.paymentDate ? new Date(run.paymentDate).toLocaleDateString('en-GB') : '—' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="font-mono text-sm text-gray-800 dark:text-gray-200"><%= formatCurrency(run.totals?.grossPay ? Number(run.totals.grossPay.toString ? run.totals.grossPay.toString() : run.totals.grossPay) : 0) %></span>
+          <% const sc = {draft:'bg-yellow-100 text-yellow-700 dark:bg-yellow-800/20 dark:text-yellow-300',locked:'bg-blue-100 text-blue-700 dark:bg-blue-800/20 dark:text-blue-300',submitted:'bg-green-100 text-green-700 dark:bg-green-800/20 dark:text-green-300'}; %>
+          <span class="px-2 py-0.5 text-xs rounded-full <%= sc[run.status] || 'bg-gray-100 text-gray-500' %>"><%= run.status %></span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
+  </div>
+  <% } %>
+
+  <!-- Recent HMRC submissions -->
+  <% if (recentSubmissions.length > 0) { %>
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 pt-5 pb-3 flex justify-between items-center">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200">Recent HMRC Submissions</h3>
+      <a href="/payroll/submissions" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View all</a>
+    </div>
+    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+      <% for (const sub of recentSubmissions) { %>
+      <li class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800">
+        <div>
+          <span class="inline-block px-2 py-0.5 text-xs font-bold rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-800/20 dark:text-indigo-300 mr-2"><%= sub.type %></span>
+          <span class="text-sm text-gray-800 dark:text-gray-200"><%= sub.taxYear %> M<%= sub.taxMonth || '?' %></span>
+          <% if (sub.submittedAt) { %><span class="ml-2 text-xs text-gray-400"><%= new Date(sub.submittedAt).toLocaleDateString('en-GB') %></span><% } %>
+        </div>
+        <% const ss = {generated:'bg-gray-100 text-gray-600',submitted:'bg-blue-100 text-blue-700 dark:bg-blue-800/20 dark:text-blue-300',accepted:'bg-green-100 text-green-700 dark:bg-green-800/20 dark:text-green-300',rejected:'bg-red-100 text-red-700 dark:bg-red-800/20 dark:text-red-300'}; %>
+        <span class="px-2 py-0.5 text-xs rounded-full <%= ss[sub.status] || 'bg-gray-100 text-gray-500' %>"><%= sub.status %></span>
+      </li>
+      <% } %>
+    </ul>
+  </div>
+  <% } else { %>
+  <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 text-center">
+    <p class="text-gray-500 dark:text-gray-400 text-sm">No HMRC submissions yet for <strong><%= taxYear %></strong>.</p>
+  </div>
+  <% } %>
+
+</div>

@@ -1,0 +1,116 @@
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-red-500 to-orange-400"></div>
+    <div class="p-6 sm:p-8">
+
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">HMRC RTI Submissions</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Full Payment Submissions and Employer Payment Summaries</p>
+        </div>
+        <a href="/payroll" class="inline-flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+          <i class="bi bi-house"></i> Dashboard
+        </a>
+      </div>
+
+      <!-- EPS quick-submit -->
+      <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+        <h3 class="font-semibold text-blue-800 dark:text-blue-300 mb-3">Submit Employer Payment Summary (EPS)</h3>
+        <form method="POST" id="epsForm" class="flex flex-wrap gap-3 items-end">
+          <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+          <div>
+            <label class="block text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Tax Year</label>
+            <input type="text" id="epsYear" placeholder="2025/26" pattern="\d{4}/\d{2}"
+              class="border border-blue-300 dark:border-blue-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-28">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Tax Month (1–12)</label>
+            <input type="number" id="epsMonth" min="1" max="12"
+              class="border border-blue-300 dark:border-blue-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-20">
+          </div>
+          <button type="button" onclick="submitEPS('download')"
+            class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <i class="bi bi-download"></i> Download EPS
+          </button>
+          <button type="button" onclick="submitEPS('submit')"
+            class="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <i class="bi bi-send"></i> Submit EPS to HMRC
+          </button>
+        </form>
+      </div>
+
+      <!-- Submissions table -->
+      <% if (submissions.length === 0) { %>
+        <div class="text-center py-16 text-gray-500 dark:text-gray-400">
+          <i class="bi bi-send text-5xl mb-3 block"></i>
+          <p>No HMRC submissions yet.</p>
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase">
+              <tr>
+                <th class="px-4 py-3 text-left">Type</th>
+                <th class="px-4 py-3 text-left">Tax Year</th>
+                <th class="px-4 py-3 text-left">Period</th>
+                <th class="px-4 py-3 text-left">Run</th>
+                <th class="px-4 py-3 text-center">Status</th>
+                <th class="px-4 py-3 text-left">Submitted</th>
+                <th class="px-4 py-3 text-left">Correlation ID</th>
+                <th class="px-4 py-3 text-left">Errors</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% const subColors = { generated: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300', submitted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', accepted: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' }; %>
+              <% submissions.forEach(sub => { %>
+              <tr class="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                <td class="px-4 py-3 font-bold text-gray-900 dark:text-gray-100"><%= sub.type %></td>
+                <td class="px-4 py-3 text-gray-600 dark:text-gray-400"><%= sub.taxYear %></td>
+                <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+                  <% if (sub.taxMonth) { %>M<%= sub.taxMonth %><% } %>
+                  <% if (sub.taxWeek) { %> W<%= sub.taxWeek %><% } %>
+                </td>
+                <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <% if (sub.runId) { %>
+                    <a href="/payroll/run/<%= sub.runId.uuid %>" class="text-indigo-600 hover:underline dark:text-indigo-400"><%= sub.runId.uuid?.slice(0,8) %>…</a>
+                  <% } else { %>—<% } %>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="px-2 py-0.5 text-xs rounded-full font-medium <%= subColors[sub.status] || '' %>"><%= sub.status %></span>
+                </td>
+                <td class="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap"><%= sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('en-GB') : '—' %></td>
+                <td class="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400"><%= sub.hmrcCorrelationId || '—' %></td>
+                <td class="px-4 py-3 text-xs text-red-600 dark:text-red-400">
+                  <%= (sub.errorMessages || []).join('; ') || '—' %>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+function submitEPS(action) {
+  const year = document.getElementById('epsYear').value;
+  const month = document.getElementById('epsMonth').value;
+  if (!year || !month) { alert('Please enter tax year and month.'); return; }
+  const encodedYear = encodeURIComponent(year);
+  if (action === 'download') {
+    window.location.href = `/payroll/hmrc/eps/${encodedYear}/${month}/download`;
+  } else {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/payroll/hmrc/eps/${encodedYear}/${month}/submit`;
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden'; csrf.name = '_csrf';
+    csrf.value = '<%= typeof csrfToken !== "undefined" ? csrfToken : "" %>';
+    form.appendChild(csrf);
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+</script>

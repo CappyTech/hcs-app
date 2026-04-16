@@ -140,6 +140,20 @@ module.exports = {
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
 
     },
+    PayrollOverview: {
+        title: 'Payroll Overview',
+        description: 'Tax year summary, monthly breakdown, and HMRC submissions.',
+        link: '/overview/payroll',
+        department: ['payroll', 'finance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    InternalPayroll: {
+        title: 'Payroll',
+        description: 'Run payroll, view submissions, and manage PAYE settings.',
+        link: '/payroll',
+        department: ['payroll', 'finance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     ExternalPayroll: {
         title: 'KashFlow Payroll',
         description: 'Access the external payroll management system.',

@@ -64,6 +64,53 @@ employeeSchema.add({
   subcontractorSupplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier', default: null }
 });
 
+// ── Payroll / PAYE fields ────────────────────────────────────────────────────
+employeeSchema.add({
+  payroll: {
+    // HMRC identifiers
+    niNumber: { type: String, default: null },           // encrypted at rest (AES-256-CBC via encryptionService)
+    niCategory: {
+      type: String,
+      enum: ['A', 'B', 'C', 'H', 'J', 'M', 'Z'],
+      default: 'A'
+    },
+    taxCode: { type: String, default: '1257L' },         // e.g. 1257L, BR, D0, NT
+    taxBasis: {
+      type: String,
+      enum: ['cumulative', 'week1/month1'],
+      default: 'cumulative'
+    },
+    payeStartDate: { type: Date, default: null },
+    payrollId: { type: String, default: null },          // internal payroll number
+    starterDeclaration: {
+      type: String,
+      enum: ['A', 'B', 'C', null],
+      default: null
+    },
+
+    // Year-to-date carry-forward (seeded from prior system at start)
+    ytdGrossPay:     { type: mongoose.Decimal128, default: 0 },
+    ytdTaxPaid:      { type: mongoose.Decimal128, default: 0 },
+    ytdEmployeeNI:   { type: mongoose.Decimal128, default: 0 },
+    ytdEmployerNI:   { type: mongoose.Decimal128, default: 0 },
+
+    // Student / postgrad loan
+    studentLoanPlan: {
+      type: String,
+      enum: ['none', 'Plan1', 'Plan2', 'Plan4', 'Postgrad'],
+      default: 'none'
+    },
+    postgradLoan: { type: Boolean, default: false },
+
+    // Auto-enrolment pension
+    pensionEnrolled:      { type: Boolean, default: false },
+    pensionOptOutDate:    { type: Date, default: null },
+    employeePensionRate:  { type: mongoose.Decimal128, default: null },  // % override; null → use config default
+    employerPensionRate:  { type: mongoose.Decimal128, default: null },  // % override; null → use config default
+    salarySacrifice:      { type: Boolean, default: false }              // true → employee pension reduces taxable gross
+  }
+});
+
 employeeSchema.pre('validate', function (next) {
   if (this.ir35 && !this.subcontractorSupplierId) {
     return next(new Error('IR35 employees must be linked to a supplier record (subcontractorSupplierId).'));

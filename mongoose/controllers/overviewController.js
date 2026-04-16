@@ -8,6 +8,7 @@ const projectsOverviewService = require('../services/projectsOverviewService');
 const adminOverviewService = require('../services/adminOverviewService');
 const documentsOverviewService = require('../services/documentsOverviewService');
 const subcontractorsOverviewService = require('../services/subcontractorsOverviewService');
+const payrollOverviewService        = require('../services/payrollOverviewService');
 
 exports.getFleetOverview = async (req, res, next) => {
   try {
@@ -89,6 +90,20 @@ exports.getSubcontractorsOverview = async (req, res, next) => {
     res.render(path.join('tailwindcss', 'overview', 'subcontractors'), {
       title: 'Subcontractors Overview',
       ...overview,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getPayrollOverview = async (req, res, next) => {
+  try {
+    const overview = await payrollOverviewService.getPayrollOverview();
+    const currencyService = require('../../services/currencyService');
+    res.render(path.join('tailwindcss', 'overview', 'payroll'), {
+      title: `Payroll Overview — ${overview.taxYear}`,
+      formatCurrency: currencyService.formatCurrency,
+      ...overview
     });
   } catch (err) {
     next(err);

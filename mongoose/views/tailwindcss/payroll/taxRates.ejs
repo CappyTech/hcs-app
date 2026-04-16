@@ -1,0 +1,62 @@
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+    <div class="p-6 sm:p-8">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Payroll Tax Rate Tables</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">UK income tax bands, NI thresholds, pension AE limits, and student loan rates by tax year</p>
+        </div>
+        <div class="flex gap-2">
+          <a href="/settings/payroll" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm">← Settings</a>
+          <a href="/settings/payroll/tax-rates/new"
+            class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition ml-4">
+            <i class="bi bi-plus-circle"></i> Add Year
+          </a>
+        </div>
+      </div>
+
+      <% if (rates.length === 0) { %>
+        <div class="text-center py-16 text-gray-500 dark:text-gray-400">
+          <i class="bi bi-table text-5xl mb-3 block"></i>
+          <p>No tax rate tables found. Run <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">scripts/seed-payroll-tax-rates.js</code> to seed defaults.</p>
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase">
+              <tr>
+                <th class="px-4 py-3 text-left">Tax Year</th>
+                <th class="px-4 py-3 text-right">Personal Allow.</th>
+                <th class="px-4 py-3 text-right">Basic Rate</th>
+                <th class="px-4 py-3 text-right">Higher Rate</th>
+                <th class="px-4 py-3 text-right">NI PT</th>
+                <th class="px-4 py-3 text-right">NI ST</th>
+                <th class="px-4 py-3 text-right">Emp NI Main</th>
+                <th class="px-4 py-3 text-right">Erp NI Rate</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% rates.forEach(r => { %>
+              <tr class="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                <td class="px-4 py-3 font-bold text-gray-900 dark:text-gray-100"><%= r.taxYear %></td>
+                <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">£<%= (r.personalAllowance || 0).toLocaleString() %></td>
+                <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300"><%= ((r.basicRate || 0) * 100).toFixed(0) %>%</td>
+                <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300"><%= ((r.higherRate || 0) * 100).toFixed(0) %>%</td>
+                <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">£<%= (r.niPT || 0).toLocaleString() %></td>
+                <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300">£<%= (r.niST || 0).toLocaleString() %></td>
+                <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300"><%= ((r.niEmployeeMain || 0) * 100).toFixed(0) %>%</td>
+                <td class="px-4 py-3 text-right font-mono text-gray-700 dark:text-gray-300"><%= ((r.niEmployerRate || 0) * 100).toFixed(1) %>%</td>
+                <td class="px-4 py-3 text-right">
+                  <a href="/settings/payroll/tax-rates/<%= encodeURIComponent(r.taxYear) %>" class="text-indigo-600 hover:underline dark:text-indigo-400 text-xs">Edit</a>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>

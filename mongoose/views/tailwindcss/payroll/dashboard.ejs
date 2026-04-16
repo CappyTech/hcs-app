@@ -1,0 +1,162 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+    <div class="p-6 sm:p-8">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Payroll Dashboard</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Tax Year <%= taxYear %></p>
+        </div>
+        <a href="/payroll/runs" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+          <i class="bi bi-list-ul"></i> All Runs
+        </a>
+      </div>
+
+      <!-- Year-to-date totals -->
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+        <% const tiles = [
+          { label: 'Gross Pay',        value: yearTotals.grossPay,        color: 'indigo' },
+          { label: 'Tax Deducted',     value: yearTotals.taxDeducted,     color: 'red'    },
+          { label: 'Employee NI',      value: yearTotals.employeeNI,      color: 'orange' },
+          { label: 'Employer NI',      value: yearTotals.employerNI,      color: 'amber'  },
+          { label: 'Employee Pension', value: yearTotals.employeePension, color: 'blue'   },
+          { label: 'Employer Pension', value: yearTotals.employerPension, color: 'teal'   },
+          { label: 'Net Pay',          value: yearTotals.netPay,          color: 'green'  }
+        ] %>
+        <% tiles.forEach(tile => { %>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center shadow-sm">
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"><%= tile.label %></p>
+          <p class="text-xl font-bold text-gray-900 dark:text-gray-100">£<%= fmt(tile.value) %></p>
+        </div>
+        <% }) %>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="flex flex-wrap gap-3 mb-8">
+        <button onclick="document.getElementById('createRunModal').classList.remove('hidden')"
+          class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+          <i class="bi bi-plus-circle"></i> New Payroll Run
+        </button>
+        <a href="/settings/payroll" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+          <i class="bi bi-gear"></i> Settings
+        </a>
+        <a href="/settings/payroll/tax-rates" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+          <i class="bi bi-table"></i> Tax Rates
+        </a>
+        <a href="/payroll/submissions" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+          <i class="bi bi-send"></i> HMRC Submissions
+        </a>
+      </div>
+
+      <!-- Recent runs -->
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">Recent Runs — <%= taxYear %></h2>
+      <% if (recentRuns.length === 0) { %>
+        <div class="text-center py-10 text-gray-500 dark:text-gray-400">
+          <i class="bi bi-inbox text-4xl mb-2 block"></i>
+          No payroll runs yet for this tax year.
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase">
+              <tr>
+                <th class="px-4 py-3 text-left">Period</th>
+                <th class="px-4 py-3 text-left">Frequency</th>
+                <th class="px-4 py-3 text-right">Gross</th>
+                <th class="px-4 py-3 text-right">Tax</th>
+                <th class="px-4 py-3 text-right">NI</th>
+                <th class="px-4 py-3 text-right">Net</th>
+                <th class="px-4 py-3 text-center">Status</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% recentRuns.forEach(run => { %>
+              <% const statusColors = { draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', locked: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', submitted: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' }; %>
+              <tr class="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100">
+                  <%= new Date(run.periodStart).toLocaleDateString('en-GB') %> – <%= new Date(run.periodEnd).toLocaleDateString('en-GB') %>
+                </td>
+                <td class="px-4 py-3 capitalize text-gray-600 dark:text-gray-400"><%= run.frequency %></td>
+                <td class="px-4 py-3 text-right font-mono text-gray-900 dark:text-gray-100">£<%= fmt(toNum(run.totals?.grossPay)) %></td>
+                <td class="px-4 py-3 text-right font-mono text-red-600 dark:text-red-400">£<%= fmt(toNum(run.totals?.taxDeducted)) %></td>
+                <td class="px-4 py-3 text-right font-mono text-orange-600 dark:text-orange-400">£<%= fmt(toNum(run.totals?.employeeNI)) %></td>
+                <td class="px-4 py-3 text-right font-mono font-semibold text-green-700 dark:text-green-400">£<%= fmt(toNum(run.totals?.netPay)) %></td>
+                <td class="px-4 py-3 text-center">
+                  <span class="px-2 py-1 text-xs rounded-full font-medium <%= statusColors[run.status] || '' %>"><%= run.status %></span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a href="/payroll/run/<%= run.uuid %>" class="text-indigo-600 hover:underline dark:text-indigo-400 font-medium">View</a>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-3 text-right">
+          <a href="/payroll/runs" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm">View all runs →</a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Create Run Modal -->
+<div id="createRunModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg p-6 sm:p-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-5">New Payroll Run</h2>
+    <form method="POST" action="/payroll/runs/create">
+      <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency</label>
+          <select name="frequency" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <option value="">Select…</option>
+            <option value="weekly">Weekly</option>
+            <option value="fortnightly">Fortnightly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period Start</label>
+            <input type="date" name="periodStart" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period End</label>
+            <input type="date" name="periodEnd" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Date</label>
+          <input type="date" name="paymentDate" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Year</label>
+            <input type="text" name="taxYear" placeholder="2025/26" required pattern="\d{4}/\d{2}" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Month (1–12)</label>
+            <input type="number" name="taxMonth" min="1" max="12" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Week (1–56)</label>
+            <input type="number" name="taxWeek" min="1" max="56" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button type="button" onclick="document.getElementById('createRunModal').classList.add('hidden')"
+          class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition">
+          Cancel
+        </button>
+        <button type="submit" class="px-5 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition">
+          Create Run
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
