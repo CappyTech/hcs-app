@@ -278,7 +278,7 @@
           <input type="hidden" name="weekStart" value="<%= startDate %>">
           <input type="hidden" name="weekEnd" value="<%= endDate %>">
           <button type="submit" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm"
-                  onclick="return confirm('Approve all <%= pendingCount %> pending attendance records for this week?')">
+                  data-confirm="Approve all <%= pendingCount %> pending attendance records for this week?">
             <i class="bi bi-check-all"></i> Approve All (<%= pendingCount %>)
           </button>
         </form>

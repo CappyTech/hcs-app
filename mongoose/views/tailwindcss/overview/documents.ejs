@@ -90,9 +90,9 @@
           This can happen if a write-back failed after sending, or if a document was unlinked while offline.
         </p>
       </div>
-      <form method="POST" action="/paperless/repair-drift" class="shrink-0" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Running…';">
+      <form method="POST" action="/paperless/repair-drift" class="shrink-0" data-submit-once>
         <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
-        <button type="submit" class="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
+          <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
           Fix All
         </button>
       </form>

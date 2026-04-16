@@ -167,7 +167,9 @@
                 </td>
                 <% if (run.status === 'draft') { %>
                 <td class="px-3 py-3 text-center">
-                  <button onclick="openOverrideModal('<%= entry.uuid %>', '<%= entry.employeeId?.name || '' %>')"
+                  <button data-modal-open="overrideModal"
+                    data-modal-param-uuid="<%= entry.uuid %>"
+                    data-modal-param-name="<%= entry.employeeId?.name || '' %>"
                     class="text-indigo-600 hover:underline dark:text-indigo-400 text-xs">Edit</button>
                 </td>
                 <% } %>
@@ -242,11 +244,11 @@
       <textarea id="overrideNotes" rows="2" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
     </div>
     <div class="flex justify-end gap-3 mt-6">
-      <button type="button" onclick="document.getElementById('overrideModal').classList.add('hidden')"
+      <button type="button" data-modal-close="overrideModal"
         class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition">
         Cancel
       </button>
-      <button type="button" onclick="saveOverride()"
+      <button type="button" id="saveOverrideBtn"
         class="px-5 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition">
         Save Override
       </button>
@@ -256,13 +258,22 @@
 
 <script>
 let currentEntryUuid = null;
-function openOverrideModal(uuid, name) {
-  currentEntryUuid = uuid;
-  document.getElementById('overrideEmployeeName').textContent = name;
-  document.querySelectorAll('.override-field').forEach(f => f.value = '');
+
+// ui-helpers.js opens the modal and sets data-modal-param-* inputs,
+// but overrideModal needs extra setup (clearing fields, setting the label).
+// Observe modal becoming visible to finish setup.
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-modal-open="overrideModal"]');
+  if (!btn) return;
+  currentEntryUuid = btn.getAttribute('data-modal-param-uuid');
+  var name = btn.getAttribute('data-modal-param-name');
+  document.getElementById('overrideEmployeeName').textContent = name || '';
+  document.querySelectorAll('.override-field').forEach(function (f) { f.value = ''; });
   document.getElementById('overrideNotes').value = '';
-  document.getElementById('overrideModal').classList.remove('hidden');
-}
+});
+
+document.getElementById('saveOverrideBtn').addEventListener('click', saveOverride);
+
 async function saveOverride() {
   if (!currentEntryUuid) return;
   const body = { _csrf: '<%= csrf %>' };

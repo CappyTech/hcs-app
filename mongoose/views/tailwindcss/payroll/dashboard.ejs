@@ -35,7 +35,7 @@
 
       <!-- Quick actions -->
       <div class="flex flex-wrap gap-3 mb-8">
-        <button onclick="document.getElementById('createRunModal').classList.remove('hidden')"
+        <button data-modal-open="createRunModal"
           class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
           <i class="bi bi-plus-circle"></i> New Payroll Run
         </button>
@@ -149,7 +149,7 @@
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">
-        <button type="button" onclick="document.getElementById('createRunModal').classList.add('hidden')"
+        <button type="button" data-modal-close="createRunModal"
           class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition">
           Cancel
         </button>

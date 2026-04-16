@@ -94,7 +94,7 @@
                 </a>
               <% } %>
               <% if (canDelete) { %>
-                <form method="POST" action="/user/<%= user.uuid %>/delete" class="inline" onsubmit="return confirm('Permanently delete this user?');">
+                <form method="POST" action="/user/<%= user.uuid %>/delete" class="inline" data-confirm="Permanently delete this user?">
                   <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
                   <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition shadow-sm">
                     <i class="bi bi-trash"></i> Delete

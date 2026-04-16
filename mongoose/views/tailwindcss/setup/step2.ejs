@@ -52,7 +52,7 @@
         value="<%= values.sessionSecret || generatedSession %>"
         required minlength="32"
         class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
-      <button type="button" onclick="regenerate('sessionSecret', 64)"
+      <button type="button" id="regenSessionSecret"
         class="px-3 py-2 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
         ↺ Generate
       </button>
@@ -70,7 +70,7 @@
         value="<%= values.encryptionKey || generatedEncryption %>"
         required minlength="64" maxlength="64"
         class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
-      <button type="button" onclick="regenerate('encryptionKey', 64)"
+      <button type="button" id="regenEncryptionKey"
         class="px-3 py-2 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
         ↺ Generate
       </button>
@@ -88,6 +88,8 @@
 </form>
 
 <script>
+document.getElementById('regenSessionSecret').addEventListener('click', function() { regenerate('sessionSecret', 64); });
+document.getElementById('regenEncryptionKey').addEventListener('click', function() { regenerate('encryptionKey', 64); });
 function regenerate(fieldId, hexBytes) {
   const arr = new Uint8Array(hexBytes / 2);
   crypto.getRandomValues(arr);
