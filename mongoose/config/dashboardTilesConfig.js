@@ -157,7 +157,7 @@ module.exports = {
     InternalPayroll: {
         title: 'Payroll',
         description: 'Run payroll, view submissions, and manage PAYE settings.',
-        link: '/payroll',
+        link: '/payroll/dashboard',
         department: ['payroll', 'finance'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },

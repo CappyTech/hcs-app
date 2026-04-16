@@ -170,7 +170,7 @@ const routeAccess = {
   '/construction-industry-scheme': ['admin', 'accountant', 'hmrc', 'subcontractor'],
   '/management':          ['admin'],
   '/maintenance':         ['admin'],
-  '/payroll':             ['admin', 'accountant'],
+  '/payroll/dashboard':   ['admin', 'accountant'],
   '/human-resources':     ['admin'],
   '/kashflow':            ['admin', 'accountant'],
   '/create':              ['admin'],

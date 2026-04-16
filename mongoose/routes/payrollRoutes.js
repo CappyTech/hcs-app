@@ -6,7 +6,7 @@ const authService = require('../../services/authService');
 const ctrl = require('../controllers/payrollController');
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-router.get('/payroll',
+router.get('/payroll/dashboard',
   authService.ensureRoles('admin', 'accountant'),
   ctrl.renderDashboard
 );
