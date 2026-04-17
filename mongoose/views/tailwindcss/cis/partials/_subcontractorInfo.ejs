@@ -1,3 +1,12 @@
+<%
+  const _refs = Array.isArray(supplier.WithholdingTaxReferences) ? supplier.WithholdingTaxReferences : [];
+  const verificationRef = _refs.find(r => r && r.Name === 'Verification Number');
+  const utrRef = _refs.find(r => r && r.Name === 'UTR Number');
+  const niRef = _refs.find(r => r && r.Name === 'NI Number');
+  const _A = supplier.Address || {};
+  const addrParts = [_A.Line1, _A.Line2, _A.Line3, _A.Line4, _A.PostCode].map(s => (s || '').trim()).filter(Boolean);
+  const cisRateLabel = whtRateLabel(supplier.WithholdingTaxRate) || '—';
+%>
 <div class="flex justify-between text-sm mb-6">
   <!-- Subcontractor -->
   <div class="w-1/2 pr-4">
