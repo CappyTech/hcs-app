@@ -148,39 +148,6 @@
   </div>
   <% } %>
 <% } %>
-
-<!-- Annual Totals (repeated at end for easy reference) -->
-<div class="avoid-page-break mt-4 border-t-2 border-black pt-2">
-  <table class="w-full text-sm border-collapse border border-black">
-    <caption class="text-left font-bold text-base mb-1">Annual Total — Tax Year <%= year %>/<%= (parseInt(year) + 1).toString().slice(-2) %></caption>
-    <thead>
-      <tr>
-        <th class="border border-black px-2 py-1 text-left">Invoices</th>
-        <th class="border border-black px-2 py-1 text-right">Gross</th>
-        <th class="border border-black px-2 py-1 text-right">Labour</th>
-        <th class="border border-black px-2 py-1 text-right">Materials</th>
-        <th class="border border-black px-2 py-1 text-right">CIS Deducted</th>
-        <th class="border border-black px-2 py-1 text-right">Net Paid</th>
-        <% if (annualRC > 0) { %>
-        <th class="border border-black px-2 py-1 text-right">Reverse Charge</th>
-        <% } %>
-      </tr>
-    </thead>
-    <tbody>
-      <tr class="font-bold">
-        <td class="border border-black px-2 py-1"><%= annualCount %></td>
-        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualGross) %></td>
-        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualLabour) %></td>
-        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualMaterial) %></td>
-        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualCIS) %></td>
-        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualNet) %></td>
-        <% if (annualRC > 0) { %>
-        <td class="border border-black px-2 py-1 text-right"><%= formatCurrency(annualRC) %></td>
-        <% } %>
-      </tr>
-    </tbody>
-  </table>
-</div>
 </div>
 
 <% var footerTitle = 'CIS Return &mdash; ' + supplier.Name + ' &mdash; Tax Year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2) + ' &mdash; Printed ' + new Date().toLocaleDateString('en-GB'); %>
