@@ -51,7 +51,7 @@
   </details>
   <% } %>
 
-  <%- include('./partials/_printButton') %>
+  <%- include('./partials/_printButton', { printTitle: 'CIS_' + supplier.Name.replace(/[^A-Za-z0-9]+/g, '_') + '_' + monthName + '_' + year + '-' + (parseInt(year)+1).toString().slice(-2) }) %>
 
   <!-- Invoice Detail Table -->
   <table class="w-full text-xs border-collapse border border-black cis-table">

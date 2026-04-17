@@ -4,7 +4,7 @@
     <%= monthName %> <%= year %>
   </h1>
 
-  <%- include('./partials/_printButton') %>
+  <%- include('./partials/_printButton', { printTitle: 'CIS_All_Subcontractors_' + monthName + '_' + year + '-' + (parseInt(year)+1).toString().slice(-2) }) %>
 
   <% subcontractors.forEach((sub, subIdx) => { %>
     <div class="sub-section avoid-page-break mb-8 text-left">

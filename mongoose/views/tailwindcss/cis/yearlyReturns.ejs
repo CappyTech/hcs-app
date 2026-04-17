@@ -71,7 +71,7 @@
   </details>
   <% } %>
 
-  <%- include('./partials/_printButton') %>
+  <%- include('./partials/_printButton', { printTitle: 'CIS_' + supplier.Name.replace(/[^A-Za-z0-9]+/g, '_') + '_' + year + '-' + (parseInt(year)+1).toString().slice(-2) }) %>
 </div>
 
 <div class="page-break"></div>

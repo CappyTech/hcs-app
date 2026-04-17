@@ -7,7 +7,14 @@
     var root = document.documentElement;
     var wasDark = root.classList.contains('dark');
     if (wasDark) root.classList.remove('dark');
+    <% if (typeof printTitle !== 'undefined' && printTitle) { %>
+    var _prevTitle = document.title;
+    document.title = '<%= printTitle %>';
     window.print();
+    document.title = _prevTitle;
+    <% } else { %>
+    window.print();
+    <% } %>
     if (wasDark) root.classList.add('dark');
   });
 </script>
