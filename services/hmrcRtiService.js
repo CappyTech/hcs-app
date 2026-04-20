@@ -16,9 +16,73 @@
  */
 
 const axios   = require('axios');
+const os      = require('os');
 const mdb     = require('../mongoose/services/mongooseDatabaseService');
 const logger  = require('./loggerService');
 const encSvc  = require('./encryptionService');
+
+// ── Package version (used in Gov-Vendor-Version header) ───────────────────────
+let _appVersion = '0.0.0';
+try { _appVersion = require('../package.json').version; } catch { /* ignore */ }
+
+// ── Persistent server device ID (stable across restarts) ─────────────────────
+// Derived from the first non-internal MAC address; falls back to hostname hash.
+function _deriveDeviceId() {
+  try {
+    const ifaces = os.networkInterfaces();
+    for (const iface of Object.values(ifaces)) {
+      for (const addr of iface) {
+        if (!addr.internal && addr.mac && addr.mac !== '00:00:00:00:00:00') {
+          return addr.mac.replace(/:/g, '').toLowerCase();
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  // Fallback: deterministic hash of hostname
+  const h = os.hostname();
+  let hash = 5381;
+  for (let i = 0; i < h.length; i++) hash = ((hash << 5) + hash) ^ h.charCodeAt(i);
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+const SERVER_DEVICE_ID = _deriveDeviceId();
+
+// ── London UTC offset string (handles BST/GMT automatically) ─────────────────
+function _londonOffset() {
+  const now = new Date();
+  const londonTime = new Date(now.toLocaleString('en-GB', { timeZone: 'Europe/London' }));
+  const utcTime    = new Date(now.toLocaleString('en-GB', { timeZone: 'UTC' }));
+  const diffMins   = Math.round((londonTime - utcTime) / 60000);
+  const sign       = diffMins >= 0 ? '+' : '-';
+  const abs        = Math.abs(diffMins);
+  const hh         = String(Math.floor(abs / 60)).padStart(2, '0');
+  const mm         = String(abs % 60).padStart(2, '0');
+  return `UTC${sign}${hh}:${mm}`;
+}
+
+/**
+ * Build the HMRC Fraud Prevention headers required on every GG submission.
+ *
+ * @param {object} context
+ * @param {string} [context.clientIp]   – IP of the user who triggered the submission
+ * @param {string} [context.userId]     – hcs-app username of the submitting user
+ * @param {string} [context.serverIp]   – public IP of this server (optional)
+ * @returns {object} Headers object ready to spread into axios config
+ */
+function buildFraudHeaders(context = {}) {
+  const clientIp = context.clientIp || '0.0.0.0';
+  const userId   = context.userId   || os.userInfo().username || 'system';
+  const serverIp = context.serverIp || '0.0.0.0';
+
+  return {
+    'Gov-Client-Connection-Method': 'WEB_APP_VIA_SERVER',
+    'Gov-Client-Public-IP':         clientIp,
+    'Gov-Client-User-IDs':          `{"os":${JSON.stringify(userId)}}`,
+    'Gov-Client-Timezone':          _londonOffset(),
+    'Gov-Client-Device-ID':         SERVER_DEVICE_ID,
+    'Gov-Vendor-Version':           `{"hcs-app":${JSON.stringify(_appVersion)}}`,
+    'Gov-Vendor-Public-IP':         serverIp,
+  };
+}
 
 // ── Government Gateway endpoint ───────────────────────────────────────────────
 
@@ -263,9 +327,10 @@ async function buildEPS(taxYear, taxMonth) {
  * @param {'fps'|'eps'} type
  * @param {object} config             – config with gatewayUserId/Password/payeRef
  * @param {string} correlationId
+ * @param {object} [context]          – { clientIp, userId, serverIp } for fraud prevention headers
  * @returns {Promise<{ status: string, correlationId: string, errors: string[], rawResponse: string }>}
  */
-async function submitToGateway(xmlPayload, type, config, correlationId) {
+async function submitToGateway(xmlPayload, type, config, correlationId, context = {}) {
   const txClass = type === 'fps'
     ? 'HMRC-PAYE-RTI-FPS'
     : 'HMRC-PAYE-RTI-EPS';
@@ -315,7 +380,8 @@ ${xmlBody}
     const resp = await axios.post(ggUrl(), soapEnvelope, {
       headers: {
         'Content-Type': 'application/xml; charset=UTF-8',
-        'Accept': 'application/xml'
+        'Accept':        'application/xml',
+        ...buildFraudHeaders(context),
       },
       timeout: 60000,
       responseType: 'text'
@@ -354,8 +420,11 @@ ${xmlBody}
 
 /**
  * Builds and submits a FPS for a run to HMRC, saves a PayrollSubmission record.
+ *
+ * @param {string} runUuid
+ * @param {object} [context]  – { clientIp, userId, serverIp } for fraud prevention headers
  */
-async function submitFPSForRun(runUuid) {
+async function submitFPSForRun(runUuid, context = {}) {
   const PayrollRun        = mdb.INTERNAL?.payrollRun;
   const PayrollSubmission = mdb.INTERNAL?.payrollSubmission;
   if (!PayrollRun || !PayrollSubmission) throw new Error('Database not ready');
@@ -381,7 +450,7 @@ async function submitFPSForRun(runUuid) {
     hmrcCorrelationId: correlationId
   });
 
-  const result = await submitToGateway(xmlBuffer, 'fps', config, correlationId);
+  const result = await submitToGateway(xmlBuffer, 'fps', config, correlationId, context);
 
   submission.status             = result.status;
   submission.submittedAt        = new Date();
@@ -405,8 +474,12 @@ async function submitFPSForRun(runUuid) {
 
 /**
  * Builds and submits an EPS to HMRC, saves a PayrollSubmission record.
+ *
+ * @param {string} taxYear
+ * @param {number} taxMonth
+ * @param {object} [context]  – { clientIp, userId, serverIp } for fraud prevention headers
  */
-async function submitEPS(taxYear, taxMonth) {
+async function submitEPS(taxYear, taxMonth, context = {}) {
   const PayrollSubmission = mdb.INTERNAL?.payrollSubmission;
   if (!PayrollSubmission) throw new Error('Database not ready');
 
@@ -424,7 +497,7 @@ async function submitEPS(taxYear, taxMonth) {
     hmrcCorrelationId: correlationId
   });
 
-  const result = await submitToGateway(xmlBuffer, 'eps', config, correlationId);
+  const result = await submitToGateway(xmlBuffer, 'eps', config, correlationId, context);
 
   submission.status             = result.status;
   submission.submittedAt        = new Date();
@@ -446,5 +519,6 @@ module.exports = {
   buildFPSForRun,
   buildEPS,
   submitFPSForRun,
-  submitEPS
+  submitEPS,
+  buildFraudHeaders,
 };

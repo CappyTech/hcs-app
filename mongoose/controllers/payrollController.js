@@ -8,6 +8,7 @@ const encryptionService = require('../../services/encryptionService');
 const payrollCalc = require('../services/payrollCalculationService');
 const payrollJournal = require('../services/payrollJournalService');
 const hmrcRti = require('../../services/hmrcRtiService');
+const { getClientIp } = require('../../services/ipService');
 const peoplesPension = require('../../services/peoplesPensionService');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -310,7 +311,8 @@ exports.downloadFPS = async (req, res, next) => {
 
 exports.submitFPS = async (req, res, next) => {
   try {
-    const result = await hmrcRti.submitFPSForRun(req.params.uuid);
+    const context = { clientIp: getClientIp(req), userId: req.user?.username || req.user?.email || 'unknown' };
+    const result = await hmrcRti.submitFPSForRun(req.params.uuid, context);
     if (result.status === 'accepted') {
       req.flash?.('success', `FPS accepted by HMRC. Correlation ID: ${result.correlationId}`);
     } else {
@@ -338,7 +340,8 @@ exports.downloadEPS = async (req, res, next) => {
 
 exports.submitEPS = async (req, res, next) => {
   try {
-    const result = await hmrcRti.submitEPS(req.params.year, parseInt(req.params.month));
+    const context = { clientIp: getClientIp(req), userId: req.user?.username || req.user?.email || 'unknown' };
+    const result = await hmrcRti.submitEPS(req.params.year, parseInt(req.params.month), context);
     if (result.status === 'accepted') {
       req.flash?.('success', `EPS accepted by HMRC. Correlation ID: ${result.correlationId}`);
     } else {
