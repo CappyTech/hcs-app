@@ -49,6 +49,7 @@
     "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0",
     "tunnel-ssh": "^4.1.6",
+    "twilio": "^6.0.0",
     "winston": "^3.14.1",
     "xss": "^1.0.15"
   },

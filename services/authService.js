@@ -6,6 +6,11 @@ const PUBLIC_PATHS = new Set([
   "/user/login",
   "/user/register",
   "/user/verify-email",
+  "/user/forgot-password",
+  "/user/forgot-password/choose",
+  "/user/reset-password",
+  "/user/verify-sms-otp",
+  "/user/verify-totp-reset",
   "/health",
 ]);
 const PUBLIC_PREFIXES = ["/resources/", "/manifest/"];

@@ -1,0 +1,84 @@
+<%
+function srcBadge(f) {
+  if (f.fromEnv) return '<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-100"><i class="bi bi-lock-fill"></i> Env</span>';
+  if (f.isSet)  return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"><i class="bi bi-check-circle-fill"></i> Set</span>';
+  return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">Not set</span>';
+}
+%>
+
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-violet-500 to-purple-500"></div>
+    <div class="p-6 sm:p-8">
+
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <i class="bi bi-phone-fill text-violet-500"></i> SMS (Twilio)
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Outbound SMS for password reset one-time codes.
+          </p>
+        </div>
+        <a href="/settings/connections" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Connections</a>
+      </div>
+
+      <form method="POST" action="/settings/connections/sms">
+        <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3">
+          <i class="bi bi-info-circle"></i>
+          Leave any field <strong>blank</strong> to keep the existing value. If SMS is not configured,
+          the code is logged to the console only (suitable for development). Obtain credentials from
+          <a href="https://www.twilio.com/console" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-indigo-400 hover:underline">twilio.com/console</a>.
+        </p>
+
+        <!-- Account -->
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Account</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_ACCOUNT_SID</label>
+              <%- srcBadge(fields.TWILIO_ACCOUNT_SID) %>
+            </div>
+            <input type="text" name="TWILIO_ACCOUNT_SID" autocomplete="off"
+              placeholder="<%= fields.TWILIO_ACCOUNT_SID.display || 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' %>"
+              <% if (fields.TWILIO_ACCOUNT_SID.fromEnv) { %>disabled<% } %>
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <p class="text-xs text-gray-400 mt-1">Your Twilio Account SID (starts with AC).</p>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_AUTH_TOKEN</label>
+              <%- srcBadge(fields.TWILIO_AUTH_TOKEN) %>
+            </div>
+            <input type="password" name="TWILIO_AUTH_TOKEN" autocomplete="new-password"
+              placeholder="<%= fields.TWILIO_AUTH_TOKEN.isSet ? '••••••••' : 'Auth token' %>"
+              <% if (fields.TWILIO_AUTH_TOKEN.fromEnv) { %>disabled<% } %>
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+            <p class="text-xs text-gray-400 mt-1">Stored encrypted. Leave blank to keep the current value.</p>
+          </div>
+        </div>
+
+        <!-- Sender -->
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Sender</h2>
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_FROM_NUMBER</label>
+            <%- srcBadge(fields.TWILIO_FROM_NUMBER) %>
+          </div>
+          <input type="tel" name="TWILIO_FROM_NUMBER"
+            placeholder="<%= fields.TWILIO_FROM_NUMBER.display || '+441234567890' %>"
+            <% if (fields.TWILIO_FROM_NUMBER.fromEnv) { %>disabled<% } %>
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+          <p class="text-xs text-gray-400 mt-1">Twilio phone number in E.164 format (e.g. <code>+441234567890</code>).</p>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <a href="/settings/connections" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition">Cancel</a>
+          <button type="submit" class="px-5 py-2 rounded-lg text-sm font-medium bg-violet-600 hover:bg-violet-700 text-white transition">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

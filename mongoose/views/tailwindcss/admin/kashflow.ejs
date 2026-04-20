@@ -1,0 +1,140 @@
+<%
+/* ── Helper: render a source badge ──────────────────────────────────── */
+function srcBadge(f) {
+  if (f.fromEnv) return '<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-100"><i class="bi bi-lock-fill"></i> Env</span>';
+  if (f.isSet)  return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"><i class="bi bi-check-circle-fill"></i> Set</span>';
+  return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">Not set</span>';
+}
+%>
+
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
+    <div class="p-6 sm:p-8">
+
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <i class="bi bi-bank2 text-indigo-500"></i> KashFlow API
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Credentials used by hcs-app to post journals, query VAT rates, and manage sessions.
+          </p>
+        </div>
+        <a href="/admin/connections" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Connections</a>
+      </div>
+
+      <form method="POST" action="/admin/connections/kashflow">
+        <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3">
+          <i class="bi bi-info-circle"></i>
+          Leave any field <strong>blank</strong> to keep the existing value.
+          Fields marked <span class="inline-flex items-center gap-0.5 px-1 rounded text-xs font-medium bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-100"><i class="bi bi-lock-fill"></i> Env</span>
+          are set by the container environment and will revert on restart.
+        </p>
+
+        <!-- API Endpoint -->
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">API Endpoint</h2>
+        <div class="mb-6">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_BASE_URL</label>
+              <%- srcBadge(fields.KASHFLOW_API_BASE_URL) %>
+            </div>
+            <input type="url" name="KASHFLOW_API_BASE_URL"
+              placeholder="<%= fields.KASHFLOW_API_BASE_URL.display || 'https://api.kashflow.com/v2' %>"
+              <% if (fields.KASHFLOW_API_BASE_URL.fromEnv) { %>disabled<% } %>
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+            <p class="text-xs text-gray-400 mt-1">Override only if using a custom or test KashFlow endpoint.</p>
+          </div>
+        </div>
+
+        <!-- Auth: username + password -->
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Username / Password Auth</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_USERNAME</label>
+              <%- srcBadge(fields.KASHFLOW_API_USERNAME) %>
+            </div>
+            <input type="text" name="KASHFLOW_API_USERNAME" autocomplete="off"
+              placeholder="<%= fields.KASHFLOW_API_USERNAME.display || 'KashFlow username' %>"
+              <% if (fields.KASHFLOW_API_USERNAME.fromEnv) { %>disabled<% } %>
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_PASSWORD</label>
+              <%- srcBadge(fields.KASHFLOW_API_PASSWORD) %>
+            </div>
+            <input type="password" name="KASHFLOW_API_PASSWORD" autocomplete="new-password"
+              placeholder="<%= fields.KASHFLOW_API_PASSWORD.isSet ? '••••••••' : 'Enter password' %>"
+              <% if (fields.KASHFLOW_API_PASSWORD.fromEnv) { %>disabled<% } %>
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+          </div>
+          <div class="sm:col-span-2">
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_MEMORABLE</label>
+              <%- srcBadge(fields.KASHFLOW_MEMORABLE) %>
+            </div>
+            <input type="password" name="KASHFLOW_MEMORABLE" autocomplete="new-password"
+              placeholder="<%= fields.KASHFLOW_MEMORABLE.isSet ? '••••••••' : 'Memorable word' %>"
+              <% if (fields.KASHFLOW_MEMORABLE.fromEnv) { %>disabled<% } %>
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+          </div>
+        </div>
+
+        <!-- Session token (alternative auth) -->
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Session Token (Alternative)</h2>
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_SESSION_TOKEN</label>
+            <%- srcBadge(fields.KASHFLOW_SESSION_TOKEN) %>
+          </div>
+          <input type="password" name="KASHFLOW_SESSION_TOKEN" autocomplete="new-password"
+            placeholder="<%= fields.KASHFLOW_SESSION_TOKEN.isSet ? '••••••••' : 'Pre-obtained session token (optional)' %>"
+            <% if (fields.KASHFLOW_SESSION_TOKEN.fromEnv) { %>disabled<% } %>
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+          <p class="text-xs text-gray-400 mt-1">If set, bypasses username/password auth. Takes precedence.</p>
+        </div>
+
+        <!-- Debug flags -->
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Debug Flags</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_DEBUG_SESSION</label>
+              <%- srcBadge(fields.KASHFLOW_DEBUG_SESSION) %>
+            </div>
+            <select name="KASHFLOW_DEBUG_SESSION"
+              <% if (fields.KASHFLOW_DEBUG_SESSION.fromEnv) { %>disabled<% } %>
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="">— keep existing (<%= fields.KASHFLOW_DEBUG_SESSION.display || 'not set' %>) —</option>
+              <option value="1">1 (enabled)</option>
+              <option value="0">0 (disabled)</option>
+            </select>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_DEFER_DEFAULTS</label>
+              <%- srcBadge(fields.KASHFLOW_DEFER_DEFAULTS) %>
+            </div>
+            <select name="KASHFLOW_DEFER_DEFAULTS"
+              <% if (fields.KASHFLOW_DEFER_DEFAULTS.fromEnv) { %>disabled<% } %>
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="">— keep existing (<%= fields.KASHFLOW_DEFER_DEFAULTS.display || 'not set' %>) —</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <a href="/admin/connections" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition">Cancel</a>
+          <button type="submit" class="px-5 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

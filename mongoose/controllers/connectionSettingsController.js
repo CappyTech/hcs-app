@@ -29,6 +29,7 @@ const SECRET_KEYS = new Set([
   'KASHFLOW_SESSION_TOKEN',
   'SMTP_PASS',
   'PAPERLESS_TOKEN',
+  'TWILIO_AUTH_TOKEN',
 ]);
 
 /**
@@ -88,13 +89,15 @@ exports.getConnectionsHub = (req, res, next) => {
     const kashflowOk = !!(configService.get('KASHFLOW_API_USERNAME') || configService.get('KASHFLOW_SESSION_TOKEN'));
     const smtpOk = !!(configService.get('SMTP_HOST') && configService.get('SMTP_USER'));
     const paperlessOk = !!configService.get('PAPERLESS_TOKEN');
+    const smsOk = !!(configService.get('TWILIO_ACCOUNT_SID') && configService.get('TWILIO_AUTH_TOKEN') && configService.get('TWILIO_FROM_NUMBER'));
 
-    res.render(path.join('tailwindcss', 'settings', 'connections'), {
+    res.render(path.join('tailwindcss', 'admin', 'connections'), {
       title: 'External Connections',
       mongo,
       kashflowOk,
       smtpOk,
       paperlessOk,
+      smsOk,
     });
   } catch (err) {
     logger.error(`[connectionSettings] hub error: ${err.message}`);
@@ -117,7 +120,7 @@ const KASHFLOW_KEYS = [
 exports.getKashflowSettings = (req, res, next) => {
   try {
     const fields = Object.fromEntries(KASHFLOW_KEYS.map(k => [k, field(k)]));
-    res.render(path.join('tailwindcss', 'settings', 'kashflow'), {
+    res.render(path.join('tailwindcss', 'admin', 'kashflow'), {
       title: 'KashFlow API Settings',
       fields,
     });
@@ -134,7 +137,7 @@ exports.postKashflowSettings = (req, res, next) => {
     req.flash('success', saved
       ? `KashFlow settings saved (${saved} value${saved !== 1 ? 's' : ''} updated).`
       : 'No changes — all fields were left blank.');
-    res.redirect('/settings/connections/kashflow');
+    res.redirect('/admin/connections/kashflow');
   } catch (err) {
     logger.error(`[connectionSettings] kashflow POST error: ${err.message}`);
     next(err);
@@ -155,7 +158,7 @@ const SMTP_KEYS = [
 exports.getSmtpSettings = (req, res, next) => {
   try {
     const fields = Object.fromEntries(SMTP_KEYS.map(k => [k, field(k)]));
-    res.render(path.join('tailwindcss', 'settings', 'smtp'), {
+    res.render(path.join('tailwindcss', 'admin', 'smtp'), {
       title: 'Email (SMTP) Settings',
       fields,
     });
@@ -172,7 +175,7 @@ exports.postSmtpSettings = (req, res, next) => {
     req.flash('success', saved
       ? `Email settings saved (${saved} value${saved !== 1 ? 's' : ''} updated).`
       : 'No changes — all fields were left blank.');
-    res.redirect('/settings/connections/smtp');
+    res.redirect('/admin/connections/smtp');
   } catch (err) {
     logger.error(`[connectionSettings] smtp POST error: ${err.message}`);
     next(err);
@@ -195,7 +198,7 @@ const PAPERLESS_KEYS = [
 exports.getPaperlessSettings = (req, res, next) => {
   try {
     const fields = Object.fromEntries(PAPERLESS_KEYS.map(k => [k, field(k)]));
-    res.render(path.join('tailwindcss', 'settings', 'paperless'), {
+    res.render(path.join('tailwindcss', 'admin', 'paperless'), {
       title: 'Paperless-ngx & Other Connections',
       fields,
     });
@@ -212,9 +215,47 @@ exports.postPaperlessSettings = (req, res, next) => {
     req.flash('success', saved
       ? `Settings saved (${saved} value${saved !== 1 ? 's' : ''} updated).`
       : 'No changes — all fields were left blank.');
-    res.redirect('/settings/connections/paperless');
+    res.redirect('/admin/connections/paperless');
   } catch (err) {
     logger.error(`[connectionSettings] paperless POST error: ${err.message}`);
+    next(err);
+  }
+};
+
+// ── SMS (Twilio) ──────────────────────────────────────────────────────────────
+
+const TWILIO_KEYS = [
+  'TWILIO_ACCOUNT_SID',
+  'TWILIO_AUTH_TOKEN',
+  'TWILIO_FROM_NUMBER',
+];
+
+exports.getSmsSettings = (req, res, next) => {
+  try {
+    const fields = Object.fromEntries(TWILIO_KEYS.map(k => [k, field(k)]));
+    res.render(path.join('tailwindcss', 'admin', 'sms'), {
+      title: 'SMS (Twilio) Settings',
+      fields,
+    });
+  } catch (err) {
+    logger.error(`[connectionSettings] sms GET error: ${err.message}`);
+    next(err);
+  }
+};
+
+exports.postSmsSettings = (req, res, next) => {
+  try {
+    const saved = applySettings(req.body, TWILIO_KEYS);
+    // Reset the cached Twilio client so it picks up the new credentials
+    const smsService = require('../../services/smsService');
+    if (typeof smsService.resetClient === 'function') smsService.resetClient();
+    logger.info(`[connectionSettings] SMS settings updated: ${saved} key(s) changed`);
+    req.flash('success', saved
+      ? `SMS settings saved (${saved} value${saved !== 1 ? 's' : ''} updated).`
+      : 'No changes — all fields were left blank.');
+    res.redirect('/admin/connections/sms');
+  } catch (err) {
+    logger.error(`[connectionSettings] sms POST error: ${err.message}`);
     next(err);
   }
 };

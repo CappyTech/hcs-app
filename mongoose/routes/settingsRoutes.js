@@ -5,13 +5,15 @@ const settings = require("../controllers/settingsController");
 const connSettings = require("../controllers/connectionSettingsController");
 
 // ── External connection settings (admin only) ─────────────────────────────────
-router.get('/settings/connections', authService.ensureRoles('admin'), connSettings.getConnectionsHub);
-router.get('/settings/connections/kashflow', authService.ensureRoles('admin'), connSettings.getKashflowSettings);
-router.post('/settings/connections/kashflow', authService.ensureRoles('admin'), connSettings.postKashflowSettings);
-router.get('/settings/connections/smtp', authService.ensureRoles('admin'), connSettings.getSmtpSettings);
-router.post('/settings/connections/smtp', authService.ensureRoles('admin'), connSettings.postSmtpSettings);
-router.get('/settings/connections/paperless', authService.ensureRoles('admin'), connSettings.getPaperlessSettings);
-router.post('/settings/connections/paperless', authService.ensureRoles('admin'), connSettings.postPaperlessSettings);
+router.get('/admin/connections', authService.ensureRoles('admin'), connSettings.getConnectionsHub);
+router.get('/admin/connections/kashflow', authService.ensureRoles('admin'), connSettings.getKashflowSettings);
+router.post('/admin/connections/kashflow', authService.ensureRoles('admin'), connSettings.postKashflowSettings);
+router.get('/admin/connections/smtp', authService.ensureRoles('admin'), connSettings.getSmtpSettings);
+router.post('/admin/connections/smtp', authService.ensureRoles('admin'), connSettings.postSmtpSettings);
+router.get('/admin/connections/paperless', authService.ensureRoles('admin'), connSettings.getPaperlessSettings);
+router.post('/admin/connections/paperless', authService.ensureRoles('admin'), connSettings.postPaperlessSettings);
+router.get('/admin/connections/sms', authService.ensureRoles('admin'), connSettings.getSmsSettings);
+router.post('/admin/connections/sms', authService.ensureRoles('admin'), connSettings.postSmsSettings);
 
 // All authenticated users can access their own profile/account
 router.get(

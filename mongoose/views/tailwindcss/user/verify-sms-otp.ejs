@@ -1,0 +1,81 @@
+<div class="max-w-md mx-auto py-10 px-4">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+
+    <div class="p-8">
+      <h1 class="text-2xl font-bold text-center text-gray-900 dark:text-gray-100 mb-2">Verify your phone</h1>
+      <p class="text-center text-sm text-gray-500 dark:text-gray-400 mb-6">
+        Enter the 6-digit code sent to <strong><%= maskedPhone %></strong> and choose a new password.
+      </p>
+
+      <form action="/user/verify-sms-otp" method="POST" class="space-y-6">
+        <%- include('../partials/csrfHidden.ejs') %>
+
+        <!-- OTP -->
+        <div>
+          <label for="otp" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Verification code:
+          </label>
+          <input
+            type="text"
+            id="otp"
+            name="otp"
+            required
+            maxlength="6"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            placeholder="123456"
+            class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 tracking-widest text-lg text-center font-mono"
+          >
+        </div>
+
+        <!-- New password -->
+        <div>
+          <label for="password" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+            New password:
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            minlength="6"
+            autocomplete="new-password"
+            class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          >
+        </div>
+
+        <!-- Confirm password -->
+        <div>
+          <label for="confirmPassword" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Confirm new password:
+          </label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            required
+            minlength="6"
+            autocomplete="new-password"
+            class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          >
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
+          <button type="submit"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
+            <i class="bi bi-shield-lock"></i> Reset Password
+          </button>
+          <a href="/user/forgot-password"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 text-center text-sm font-medium border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+            <i class="bi bi-arrow-left"></i> Start over
+          </a>
+        </div>
+      </form>
+
+      <p class="mt-5 text-center text-xs text-gray-400 dark:text-gray-500">
+        This code expires in 10 minutes.
+      </p>
+    </div>
+  </div>
+</div>

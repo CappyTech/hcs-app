@@ -23,7 +23,7 @@ module.exports = {
     ConnectionSettings: {
         title: 'External Connections',
         description: 'Configure KashFlow API, SMTP email, and Paperless-ngx credentials.',
-        link: '/settings/connections',
+        link: '/admin/connections',
         department: ['admin'],
         buttonClass: 'bg-indigo-700 hover:bg-indigo-800'
     },

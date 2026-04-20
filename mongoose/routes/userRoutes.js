@@ -39,4 +39,56 @@ router.post(
   ctrl.resendVerification,
 );
 
+// Forgot / reset password
+router.get(
+  "/user/forgot-password",
+  authService.ensureRole("public"),
+  ctrl.renderForgotPasswordForm,
+);
+router.post(
+  "/user/forgot-password",
+  authService.ensureRole("public"),
+  ctrl.sendPasswordReset,
+);
+router.get(
+  "/user/forgot-password/choose",
+  authService.ensureRole("public"),
+  ctrl.renderChooseResetMethod,
+);
+router.post(
+  "/user/forgot-password/choose",
+  authService.ensureRole("public"),
+  ctrl.dispatchResetMethod,
+);
+router.get(
+  "/user/reset-password",
+  authService.ensureRole("public"),
+  ctrl.renderResetPasswordForm,
+);
+router.post(
+  "/user/reset-password",
+  authService.ensureRole("public"),
+  ctrl.resetPassword,
+);
+router.get(
+  "/user/verify-sms-otp",
+  authService.ensureRole("public"),
+  ctrl.renderVerifySmsOtp,
+);
+router.post(
+  "/user/verify-sms-otp",
+  authService.ensureRole("public"),
+  ctrl.verifySmsOtp,
+);
+router.get(
+  "/user/verify-totp-reset",
+  authService.ensureRole("public"),
+  ctrl.renderVerifyTotpReset,
+);
+router.post(
+  "/user/verify-totp-reset",
+  authService.ensureRole("public"),
+  ctrl.verifyTotpReset,
+);
+
 module.exports = router;

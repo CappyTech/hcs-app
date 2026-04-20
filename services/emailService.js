@@ -82,7 +82,37 @@ async function sendVerificationEmail(email, token) {
   return sendMail({ to: email, subject, html, text });
 }
 
+// ── Send password reset email ────────────────────────────────────────
+async function sendPasswordResetEmail(email, token) {
+  const baseUrl =
+    process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const resetUrl = `${baseUrl}/user/reset-password?token=${encodeURIComponent(token)}`;
+
+  const subject = "Reset your password — Heron CS";
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #15803d;">Reset Your Password</h2>
+      <p>We received a request to reset the password for your account. Click the button below to choose a new password:</p>
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="${resetUrl}"
+           style="background-color: #15803d; color: #fff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-size: 16px;">
+          Reset Password
+        </a>
+      </p>
+      <p style="color: #666; font-size: 13px;">
+        Or copy this link into your browser:<br>
+        <a href="${resetUrl}">${resetUrl}</a>
+      </p>
+      <p style="color: #999; font-size: 12px;">This link expires in 1 hour. If you did not request a password reset, you can safely ignore this email.</p>
+    </div>
+  `;
+  const text = `Reset your password by visiting: ${resetUrl}\n\nThis link expires in 1 hour. If you did not request a password reset, you can safely ignore this email.`;
+
+  return sendMail({ to: email, subject, html, text });
+}
+
 module.exports = {
   sendMail,
   sendVerificationEmail,
+  sendPasswordResetEmail,
 };

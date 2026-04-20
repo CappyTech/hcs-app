@@ -4,8 +4,11 @@ const logger = require("../../services/loggerService");
 const axios = require("axios");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const speakeasy = require("speakeasy");
+const encryptionService = require("../../services/encryptionService");
 const { getClientIp } = require("../../services/ipService");
 const emailService = require("../../services/emailService");
+const smsService = require("../../services/smsService");
 
 function hasCookie(req, cookieName) {
   try {
@@ -443,5 +446,404 @@ exports.resendVerification = async (req, res) => {
     logger.error(`Resend verification error: ${err.message}`);
     req.flash("error", "Failed to resend verification email.");
     return res.redirect("/user/verify-pending");
+  }
+};
+
+// ── Mask a phone number for display (show last 4 digits only) ────────
+function maskPhone(phone) {
+  if (!phone || phone.length < 4) return "***";
+  return "*".repeat(phone.length - 4) + phone.slice(-4);
+}
+
+// ── Forgot password — render form ────────────────────────────────────
+exports.renderForgotPasswordForm = (req, res) => {
+  res.render(path.join("tailwindcss", "user", "forgot-password"), {
+    title: "Forgot Password",
+  });
+};
+
+// ── Forgot password — look up user, route to choice or send email ────
+exports.sendPasswordReset = async (req, res) => {
+  const identifier = (req.body.usernameOrEmail || "").trim();
+  const genericMsg =
+    "If that account is registered, you will receive reset instructions shortly.";
+
+  try {
+    if (!identifier) {
+      req.flash("error", "Please enter your username or email address.");
+      return res.redirect("/user/forgot-password");
+    }
+
+    const user = await mdb.INTERNAL.user.findOne({
+      $or: [{ username: identifier }, { email: identifier.toLowerCase() }],
+    });
+
+    if (user && user.phoneNumber) {
+      // Store pending reset in session and redirect to method-choice page
+      req.session.passwordResetPending = {
+        userId: user._id.toString(),
+        maskedPhone: maskPhone(user.phoneNumber),
+        hasTOTP: !!(user.totpEnabled && user.totpSecret),
+      };
+      await new Promise((resolve, reject) =>
+        req.session.save((err) => (err ? reject(err) : resolve())),
+      );
+      return res.redirect("/user/forgot-password/choose");
+    }
+
+    // No phone but has TOTP — still offer the choice
+    if (user && user.totpEnabled && user.totpSecret) {
+      req.session.passwordResetPending = {
+        userId: user._id.toString(),
+        maskedPhone: null,
+        hasTOTP: true,
+      };
+      await new Promise((resolve, reject) =>
+        req.session.save((err) => (err ? reject(err) : resolve())),
+      );
+      return res.redirect("/user/forgot-password/choose");
+    }
+
+    // No phone (or user not found) — send email silently
+    if (user) {
+      const resetToken = crypto.randomBytes(48).toString("hex");
+      user.passwordResetToken = resetToken;
+      user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
+      await user.save();
+      try {
+        await emailService.sendPasswordResetEmail(user.email, resetToken);
+      } catch (emailErr) {
+        logger.error(
+          `Failed to send password reset email to ${user.email}: ${emailErr.message}`,
+        );
+      }
+      logger.info(`Password reset email issued for ${user.email}`);
+    } else {
+      logger.info(
+        `Password reset requested for unknown identifier: ${maskIdentifier(identifier)}`,
+      );
+    }
+
+    req.flash("success", genericMsg);
+    return res.redirect("/user/forgot-password");
+  } catch (err) {
+    logger.error(`Forgot password error: ${err.message}`);
+    req.flash("success", genericMsg);
+    return res.redirect("/user/forgot-password");
+  }
+};
+
+// ── Forgot password — render method-choice page ───────────────────────
+exports.renderChooseResetMethod = (req, res) => {
+  const pending = req.session.passwordResetPending;
+  if (!pending) {
+    req.flash("error", "Session expired. Please try again.");
+    return res.redirect("/user/forgot-password");
+  }
+  res.render(path.join("tailwindcss", "user", "forgot-password-choose"), {
+    title: "Reset Password",
+    maskedPhone: pending.maskedPhone,
+    hasTOTP: pending.hasTOTP || false,
+  });
+};
+
+// ── Forgot password — dispatch chosen method ──────────────────────────
+exports.dispatchResetMethod = async (req, res) => {
+  const pending = req.session.passwordResetPending;
+  if (!pending) {
+    req.flash("error", "Session expired. Please try again.");
+    return res.redirect("/user/forgot-password");
+  }
+
+  const method = req.body.method;
+  const genericMsg =
+    "If that account is registered, you will receive reset instructions shortly.";
+
+  try {
+    const user = await mdb.INTERNAL.user.findById(pending.userId);
+
+    if (!user) {
+      delete req.session.passwordResetPending;
+      req.flash("success", genericMsg);
+      return res.redirect("/user/forgot-password");
+    }
+
+    if (method === "totp") {
+      // No token to issue — just redirect to the TOTP verify form
+      logger.info(
+        `TOTP reset path selected for user ID ${pending.userId}`,
+      );
+      return res.redirect("/user/verify-totp-reset");
+    }
+
+    if (method === "sms") {
+      // Generate 6-digit OTP
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      user.smsResetOtp = otp;
+      user.smsResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await user.save();
+
+      try {
+        await smsService.sendPasswordResetOtp(user.phoneNumber, otp);
+      } catch (smsErr) {
+        logger.error(
+          `Failed to send SMS OTP to ${maskPhone(user.phoneNumber)}: ${smsErr.message}`,
+        );
+      }
+
+      logger.info(
+        `SMS OTP issued for user ${user.username} → ${maskPhone(user.phoneNumber)}`,
+      );
+      return res.redirect("/user/verify-sms-otp");
+    }
+
+    // Default: email
+    const resetToken = crypto.randomBytes(48).toString("hex");
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await user.save();
+
+    try {
+      await emailService.sendPasswordResetEmail(user.email, resetToken);
+    } catch (emailErr) {
+      logger.error(
+        `Failed to send password reset email to ${user.email}: ${emailErr.message}`,
+      );
+    }
+
+    logger.info(`Password reset email issued for ${user.email}`);
+    delete req.session.passwordResetPending;
+    req.flash("success", genericMsg);
+    return res.redirect("/user/forgot-password");
+  } catch (err) {
+    logger.error(`Dispatch reset method error: ${err.message}`);
+    req.flash("success", genericMsg);
+    return res.redirect("/user/forgot-password");
+  }
+};
+
+// ── Reset password — render form ─────────────────────────────────────
+exports.renderResetPasswordForm = async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    req.flash("error", "Invalid or missing reset link.");
+    return res.redirect("/user/login");
+  }
+
+  const user = await mdb.INTERNAL.user.findOne({
+    passwordResetToken: token,
+    passwordResetExpires: { $gt: new Date() },
+  });
+
+  if (!user) {
+    req.flash("error", "Password reset link is invalid or has expired.");
+    return res.redirect("/user/forgot-password");
+  }
+
+  res.render(path.join("tailwindcss", "user", "reset-password"), {
+    title: "Reset Password",
+    token,
+  });
+};
+
+// ── Reset password — update password ─────────────────────────────────
+exports.resetPassword = async (req, res) => {
+  const { token, password, confirmPassword } = req.body;
+
+  if (!token) {
+    req.flash("error", "Invalid or missing reset link.");
+    return res.redirect("/user/login");
+  }
+
+  if (!password || password.length < 6) {
+    req.flash("error", "Password must be at least 6 characters.");
+    return res.redirect(
+      `/user/reset-password?token=${encodeURIComponent(token)}`,
+    );
+  }
+
+  if (password !== confirmPassword) {
+    req.flash("error", "Passwords do not match.");
+    return res.redirect(
+      `/user/reset-password?token=${encodeURIComponent(token)}`,
+    );
+  }
+
+  try {
+    const user = await mdb.INTERNAL.user.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      req.flash("error", "Password reset link is invalid or has expired.");
+      return res.redirect("/user/forgot-password");
+    }
+
+    const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+    user.password = await bcrypt.hash(password, saltRounds);
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+    await user.save();
+
+    logger.info(`Password reset successfully for ${user.email}`);
+    req.flash(
+      "success",
+      "Your password has been reset. You can now log in with your new password.",
+    );
+    return res.redirect("/user/login");
+  } catch (err) {
+    logger.error(`Reset password error: ${err.message}`);
+    req.flash("error", "Failed to reset password. Please try again.");
+    return res.redirect("/user/forgot-password");
+  }
+};
+
+// ── SMS OTP — render verification form ───────────────────────────────
+exports.renderVerifySmsOtp = (req, res) => {
+  if (!req.session.passwordResetPending) {
+    req.flash("error", "Session expired. Please try again.");
+    return res.redirect("/user/forgot-password");
+  }
+  res.render(path.join("tailwindcss", "user", "verify-sms-otp"), {
+    title: "Enter Verification Code",
+    maskedPhone: req.session.passwordResetPending.maskedPhone,
+  });
+};
+
+// ── SMS OTP — verify code and reset password ──────────────────────────
+exports.verifySmsOtp = async (req, res) => {
+  const pending = req.session.passwordResetPending;
+  if (!pending) {
+    req.flash("error", "Session expired. Please try again.");
+    return res.redirect("/user/forgot-password");
+  }
+
+  const { otp, password, confirmPassword } = req.body;
+
+  if (!otp || otp.trim().length !== 6 || !/^\d{6}$/.test(otp.trim())) {
+    req.flash("error", "Please enter the 6-digit code sent to your phone.");
+    return res.redirect("/user/verify-sms-otp");
+  }
+
+  if (!password || password.length < 6) {
+    req.flash("error", "Password must be at least 6 characters.");
+    return res.redirect("/user/verify-sms-otp");
+  }
+
+  if (password !== confirmPassword) {
+    req.flash("error", "Passwords do not match.");
+    return res.redirect("/user/verify-sms-otp");
+  }
+
+  try {
+    const user = await mdb.INTERNAL.user.findOne({
+      _id: pending.userId,
+      smsResetOtp: otp.trim(),
+      smsResetExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      req.flash("error", "Invalid or expired verification code.");
+      return res.redirect("/user/verify-sms-otp");
+    }
+
+    const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+    user.password = await bcrypt.hash(password, saltRounds);
+    user.smsResetOtp = null;
+    user.smsResetExpires = null;
+    await user.save();
+
+    delete req.session.passwordResetPending;
+
+    logger.info(`Password reset via SMS OTP for ${user.username}`);
+    req.flash(
+      "success",
+      "Your password has been reset. You can now log in with your new password.",
+    );
+    return res.redirect("/user/login");
+  } catch (err) {
+    logger.error(`SMS OTP verify error: ${err.message}`);
+    req.flash("error", "Failed to reset password. Please try again.");
+    return res.redirect("/user/forgot-password");
+  }
+};
+
+// ── TOTP reset — render form ────────────────────────────────────
+exports.renderVerifyTotpReset = (req, res) => {
+  if (!req.session.passwordResetPending) {
+    req.flash("error", "Session expired. Please try again.");
+    return res.redirect("/user/forgot-password");
+  }
+  res.render(path.join("tailwindcss", "user", "verify-totp-reset"), {
+    title: "Authenticator Verification",
+  });
+};
+
+// ── TOTP reset — verify code and reset password ──────────────────────
+exports.verifyTotpReset = async (req, res) => {
+  const pending = req.session.passwordResetPending;
+  if (!pending) {
+    req.flash("error", "Session expired. Please try again.");
+    return res.redirect("/user/forgot-password");
+  }
+
+  const { totpToken, password, confirmPassword } = req.body;
+
+  if (!totpToken || !/^\d{6}$/.test(totpToken.trim())) {
+    req.flash("error", "Please enter the 6-digit code from your authenticator app.");
+    return res.redirect("/user/verify-totp-reset");
+  }
+
+  if (!password || password.length < 6) {
+    req.flash("error", "Password must be at least 6 characters.");
+    return res.redirect("/user/verify-totp-reset");
+  }
+
+  if (password !== confirmPassword) {
+    req.flash("error", "Passwords do not match.");
+    return res.redirect("/user/verify-totp-reset");
+  }
+
+  try {
+    const user = await mdb.INTERNAL.user.findById(pending.userId);
+
+    if (!user || !user.totpEnabled || !user.totpSecret) {
+      req.flash("error", "Authenticator verification unavailable.");
+      return res.redirect("/user/forgot-password");
+    }
+
+    // totpSecret getter auto-decrypts, but we need the raw decrypted value for speakeasy
+    const decryptedSecret = encryptionService.decrypt(user.totpSecret);
+
+    const isValid = speakeasy.totp.verify({
+      secret: decryptedSecret,
+      encoding: "base32",
+      token: totpToken.trim(),
+      window: 1,
+    });
+
+    if (!isValid) {
+      req.flash("error", "Invalid authenticator code. Please try again.");
+      return res.redirect("/user/verify-totp-reset");
+    }
+
+    const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+    user.password = await bcrypt.hash(password, saltRounds);
+    await user.save();
+
+    delete req.session.passwordResetPending;
+
+    logger.info(`Password reset via TOTP for ${user.username}`);
+    req.flash(
+      "success",
+      "Your password has been reset. You can now log in with your new password.",
+    );
+    return res.redirect("/user/login");
+  } catch (err) {
+    logger.error(`TOTP reset verify error: ${err.message}`);
+    req.flash("error", "Failed to reset password. Please try again.");
+    return res.redirect("/user/forgot-password");
   }
 };
