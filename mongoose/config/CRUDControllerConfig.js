@@ -9,6 +9,9 @@ module.exports = {
     ownershipFields: {
       subcontractor: 'SupplierId',
     },
+    // listControllerConfig sets strictOrder:true to limit list columns, but the read
+    // view needs all fields (including LineItems and PaymentLines for the sidebar).
+    strictOrder: false,
   },
   default: {
     middleware: {
