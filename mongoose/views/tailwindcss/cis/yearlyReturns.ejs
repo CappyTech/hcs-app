@@ -150,7 +150,7 @@
 <% } %>
 </div>
 
-<% var footerTitle = 'CIS Return &mdash; ' + supplier.Name + ' &mdash; Tax Year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2) + ' &mdash; Printed ' + new Date().toLocaleDateString('en-GB'); %>
+<% var footerTitle = 'CIS Yearly Return ' + supplier.Name + ' Tax Year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2) + ' Printed ' + new Date().toLocaleDateString('en-GB'); %>
 <%- include('./partials/_printFooter', { footerTitle }) %>
 
 <%- include('./partials/_printStyles') %>
