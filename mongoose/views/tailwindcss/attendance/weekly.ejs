@@ -87,21 +87,61 @@
     </div>
   <% } %>
 
-  <!-- Employee Table -->
-  <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Employees</h3>
-  <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
-    <%- include('../partials/weeklyTable', {
-      entries: employeeEntries,
-      daysOfWeek,
-      startDate,
-      endDate,
-      moment,
-      isManagementView,
-      dailyHeadcount: dailyHeadcount || {},
-      showHeadcount: true,
-      sectionType: 'employee'
-    }) %>
-  </div>
+  <!-- Employee Table(s) -->
+  <% if (isManagementView) {
+    // Group employees by department for management view
+    const _deptOrder = ['Landscaping', 'Office', 'Other'];
+    const _deptGroups = {};
+    _deptOrder.forEach(d => { _deptGroups[d] = []; });
+    employeeEntries.forEach(entry => {
+      const dept = entry[1].department || 'Other';
+      if (!_deptGroups[dept]) _deptGroups[dept] = [];
+      _deptGroups[dept].push(entry);
+    });
+    const _hbMap = typeof holidayBalanceMap !== 'undefined' ? holidayBalanceMap : {};
+  %>
+    <% _deptOrder.forEach(dept => { %>
+      <% if (_deptGroups[dept] && _deptGroups[dept].length > 0) { %>
+        <h3 class="mt-5 mb-2 text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700 pb-1">
+          <%= dept %>
+        </h3>
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-4">
+          <%- include('../partials/weeklyTable', {
+            entries: _deptGroups[dept],
+            daysOfWeek,
+            startDate,
+            endDate,
+            moment,
+            isManagementView,
+            dailyHeadcount: dailyHeadcount || {},
+            showHeadcount: dept === 'Landscaping',
+            sectionType: 'employee',
+            holidayBalanceMap: _hbMap,
+            showHolidayBalance: true,
+            purchaseStatementMap: typeof purchaseStatementMap !== 'undefined' ? purchaseStatementMap : {}
+          }) %>
+        </div>
+      <% } %>
+    <% }); %>
+  <% } else { %>
+    <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Employees</h3>
+    <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
+      <%- include('../partials/weeklyTable', {
+        entries: employeeEntries,
+        daysOfWeek,
+        startDate,
+        endDate,
+        moment,
+        isManagementView,
+        dailyHeadcount: dailyHeadcount || {},
+        showHeadcount: true,
+        sectionType: 'employee',
+        holidayBalanceMap: {},
+        showHolidayBalance: false,
+        purchaseStatementMap: typeof purchaseStatementMap !== 'undefined' ? purchaseStatementMap : {}
+      }) %>
+    </div>
+  <% } %>
 
   <!-- Subcontractor Table -->
   <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Subcontractors</h3>
@@ -116,9 +156,76 @@
       dailyHeadcount: dailyHeadcount || {},
       showHeadcount: false,
       sectionType: 'subcontractor',
+      holidayBalanceMap: {},
+      showHolidayBalance: false,
       purchaseStatementMap: typeof purchaseStatementMap !== 'undefined' ? purchaseStatementMap : {}
     }) %>
   </div>
+
+  <!-- Fleet Compliance (Management view only) -->
+  <% if (isManagementView && typeof fleetCompliance !== 'undefined' && fleetCompliance.length > 0) {
+    const _today = new Date();
+    const _warnMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+    const _complianceCls = (date) => {
+      if (!date) return 'text-gray-400 dark:text-gray-500';
+      const d = new Date(date);
+      if (d < _today) return 'text-red-600 dark:text-red-400 font-semibold';
+      if (d - _today < _warnMs) return 'text-amber-600 dark:text-amber-400 font-semibold';
+      return 'text-gray-800 dark:text-gray-200';
+    };
+  %>
+    <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Fleet Compliance</h3>
+    <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
+      <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
+        <thead>
+          <tr class="bg-gray-50 dark:bg-gray-800">
+            <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Registration</th>
+            <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Type</th>
+            <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">TAX</th>
+            <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">MOT</th>
+            <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Insurance</th>
+            <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Breakdown</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+          <% fleetCompliance.forEach(v => { %>
+            <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap font-medium">
+                <a href="/vehicle/read/<%= v._id %>" class="text-green-900 dark:text-green-400 hover:underline">
+                  <%= v.registrationNumber || '—' %>
+                </a>
+              </td>
+              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-600 dark:text-gray-400">
+                <%= v.bodyType || '—' %>
+              </td>
+              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center <%= _complianceCls(v.roadTaxExpiryDate) %>">
+                <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : '—' %>
+              </td>
+              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center <%= _complianceCls(v.motExpiryDate) %>">
+                <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : '—' %>
+              </td>
+              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center">
+                <span class="<%= _complianceCls(v.insuranceExpiryDate) %>">
+                  <%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : '—' %>
+                </span>
+                <% if (v.insuranceProvider) { %>
+                  <span class="block text-[10px] text-gray-500 dark:text-gray-400"><%= v.insuranceProvider %></span>
+                <% } %>
+              </td>
+              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center">
+                <span class="<%= _complianceCls(v.breakdownExpiryDate) %>">
+                  <%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : '—' %>
+                </span>
+                <% if (v.breakdownProvider) { %>
+                  <span class="block text-[10px] text-gray-500 dark:text-gray-400"><%= v.breakdownProvider %></span>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
 
   <!-- Statements Section -->
   <% if (typeof statements !== 'undefined' && statements.length > 0) { %>
