@@ -207,6 +207,8 @@ const groupAttendanceByPerson = (
     groupedAttendance[emp.name] = {
       name: emp.name,
       employeeId: emp.uuid,
+      employeeMongoId: emp._id,
+      department: emp.department || null,
       subcontractorId: null,
       totalHoursWorked: 0,
       weeklyPay: 0,
@@ -269,7 +271,10 @@ const groupAttendanceByPerson = (
 
     if (!groupedAttendance[name]) {
       groupedAttendance[name] = {
+        name,
         employeeId: employee.uuid,
+        employeeMongoId: employee._id,
+        department: employee.department || null,
         subcontractorId: null,
         totalHoursWorked: 0,
         weeklyPay: 0,
