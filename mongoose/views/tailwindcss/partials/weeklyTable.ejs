@@ -28,6 +28,8 @@
   const _dh = typeof dailyHeadcount !== 'undefined' ? dailyHeadcount : {};
   const _showHC = typeof showHeadcount !== 'undefined' ? showHeadcount : false;
   const _psMap = typeof purchaseStatementMap !== 'undefined' ? purchaseStatementMap : {};
+  const _showHB = typeof showHolidayBalance !== 'undefined' ? showHolidayBalance : false;
+  const _hbMap = typeof holidayBalanceMap !== 'undefined' ? holidayBalanceMap : {};
 %>
 <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
   <thead>
@@ -44,6 +46,11 @@
       <% if (!isManagementView) { %>
         <th class="text-center font-normal border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">
           Weekly Pay
+        </th>
+      <% } %>
+      <% if (_showHB && sectionType === 'employee') { %>
+        <th class="text-center font-normal border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">
+          Holiday Balance
         </th>
       <% } %>
     </tr>
@@ -160,6 +167,23 @@
             <% } %>
           </td>
         <% } %>
+        <% if (_showHB && sectionType === 'employee') {
+          const _hbKey = details.employeeMongoId ? String(details.employeeMongoId) : null;
+          const _hbEntry = _hbKey && _hbMap[_hbKey];
+        %>
+          <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 whitespace-nowrap">
+            <% if (_hbEntry) { %>
+              <span class="font-semibold <%= _hbEntry.remaining <= 2 ? 'text-red-600 dark:text-red-400' : _hbEntry.remaining <= 5 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-800 dark:text-gray-200' %>">
+                <%= _hbEntry.remaining %> days
+              </span>
+              <span class="block text-[10px] text-gray-500 dark:text-gray-400">
+                exp. <%= moment(_hbEntry.periodEnd).format('DD/MM/YY') %>
+              </span>
+            <% } else { %>
+              <span class="text-gray-400 dark:text-gray-500 text-xs">—</span>
+            <% } %>
+          </td>
+        <% } %>
       </tr>
     <% }); %>
   </tbody>
@@ -177,6 +201,9 @@
         </td>
       <% }); %>
       <% if (!isManagementView) { %>
+        <td class="border border-gray-300 dark:border-gray-700"></td>
+      <% } %>
+      <% if (_showHB && sectionType === 'employee') { %>
         <td class="border border-gray-300 dark:border-gray-700"></td>
       <% } %>
     </tr>
