@@ -9,6 +9,11 @@ const employeeSchema = new mongoose.Schema({
   contactName: { type: String },
   contactNumber: { type: String },
   position: { type: String },
+  department: {
+    type: String,
+    enum: ['Landscaping', 'Office', 'Other'],
+    default: null
+  },
   status: {
     type: String,
     enum: ['active', 'inactive'],
