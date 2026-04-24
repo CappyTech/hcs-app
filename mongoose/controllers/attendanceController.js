@@ -171,6 +171,50 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       }
     }
 
+    // ── Management-only: holiday balances + fleet compliance ──────────────
+    let holidayBalanceMap = {};
+    let fleetCompliance = [];
+    if (isManagementView) {
+      const today = moment().toDate();
+
+      // Collect employee Mongo ObjectIds from the filtered entries
+      const empMongoIds = employeeEntries
+        .map(([, v]) => v.employeeMongoId)
+        .filter(Boolean);
+
+      // Holiday balances: find active period for each employee
+      const holidayRecords = empMongoIds.length
+        ? await mdb.INTERNAL.employeeHoliday
+            .find({
+              employeeId: { $in: empMongoIds },
+              periodStart: { $lte: today },
+              periodEnd: { $gte: today },
+            })
+            .lean()
+        : [];
+
+      holidayBalanceMap = holidayRecords.reduce((map, h) => {
+        const entitlement =
+          h.entitlementDays != null ? h.entitlementDays : (h.accruedDays || 0);
+        const carryOver = h.carryOverDays || 0;
+        const taken = h.takenDays || 0;
+        map[String(h.employeeId)] = {
+          remaining: Math.max(0, entitlement + carryOver - taken),
+          periodEnd: h.periodEnd,
+        };
+        return map;
+      }, {});
+
+      // Fleet compliance — active (non-disposed) vehicles only
+      fleetCompliance = await mdb.INTERNAL.vehicle
+        .find({ ownershipStatus: { $nin: ['Scrapped', 'Sold'] } })
+        .select(
+          "registrationNumber make model bodyType roadTaxExpiryDate motExpiryDate " +
+          "insuranceExpiryDate insuranceProvider breakdownProvider breakdownExpiryDate ownershipStatus"
+        )
+        .lean();
+    }
+
     const viewFile = isManagementView ? "weeklyManagement" : "weeklyAdmin";
     res.render(path.join("tailwindcss", "attendance", "weekly"), {
       title: `Tax Week ${taxWeekNumber} — ${payrollWeekStart.format("YYYY")}`,
@@ -203,6 +247,8 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       dailyHeadcount,
       statements,
       purchaseStatementMap,
+      holidayBalanceMap,
+      fleetCompliance,
     });
   } catch (err) {
     next(err);
