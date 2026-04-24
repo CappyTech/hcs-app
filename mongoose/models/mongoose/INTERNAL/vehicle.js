@@ -42,7 +42,7 @@ const vehicleSchema = new mongoose.Schema({
     },
     bodyType: {
         type: String,
-        enum: ['Car', 'Van', 'Pickup', 'Tipper', 'Flatbed', 'Minibus', 'HGV', 'Other']
+        enum: ['Car', 'Van', 'Pickup', 'Tipper', 'Flatbed', 'Minibus', 'HGV', 'Welfare Unit', 'Other']
     },
     grossWeight: { type: Number, min: 0 },            // kg
     payload: { type: Number, min: 0 },                 // kg
@@ -62,6 +62,10 @@ const vehicleSchema = new mongoose.Schema({
     motCertificateNumber: { type: String, trim: true },
     roadTaxExpiryDate: { type: Date },
     roadTaxAmount: { type: mongoose.Decimal128, default: 0.0 },
+
+    // ── Breakdown cover ─────────────────────────────────────────────────
+    breakdownProvider: { type: String, trim: true },
+    breakdownExpiryDate: { type: Date },
 
     // ── Ownership / lease ───────────────────────────────────────────────
     ownershipStatus: {
