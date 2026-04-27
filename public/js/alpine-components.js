@@ -107,4 +107,225 @@ document.addEventListener('alpine:init', function () {
     };
   });
 
+  /**
+   * attendanceCell – inline Excel-like cell editor for the weekly attendance grid.
+   *
+   * Usage: <td x-data="attendanceCell({...props})">
+   *
+   * Props (all passed as plain JS object from the EJS template):
+   *   uuid          {string|null}  — existing attendance UUID, null for new records
+   *   isNew         {boolean}      — true when the cell is currently empty (create mode)
+   *   isPending     {boolean}      — true when the record status is 'pending'
+   *   isSubcontractor {boolean}    — true for subcontractor rows (uses dayRate not hoursWorked)
+   *   employeeId    {string|null}  — mongo ObjectId string, for new records
+   *   subcontractorId {string|null}
+   *   date          {string}       — YYYY-MM-DD
+   *   initType      {string}       — initial type value
+   *   initHours     {number|null}
+   *   initDayRate   {number|null}
+   *   initLocationId {string|null}
+   *   initProjectId  {string|null}
+   *
+   * REVERT: remove this component and the x-data attributes from weeklyTable-excel.ejs.
+   */
+  Alpine.data('attendanceCell', function (props) {
+    return {
+      editing: false,
+      saving: false,
+      error: null,
+
+      // Live display values (updated after a successful save)
+      displayType: props.initType || 'work',
+      displayHours: props.initHours || null,
+      displayDayRate: props.initDayRate || null,
+      displayLocationId: props.initLocationId || null,
+      displayProjectId: props.initProjectId || null,
+
+      // Form scratch state while editing
+      form: {
+        type: props.initType || 'work',
+        hours: props.initHours || '',
+        dayRate: props.initDayRate || '',
+        locationId: props.initLocationId || '',
+        projectId: props.initProjectId || '',
+      },
+
+      // Reference data loaded once from embedded JSON blobs
+      locations: [],
+      projects: [],
+
+      // Persisted server state for cancel/rollback
+      _saved: null,
+
+      init: function () {
+        // Load location/project options from CSP-safe JSON blobs
+        try {
+          var locEl = document.getElementById('attendance-locations-json');
+          if (locEl) this.locations = JSON.parse(locEl.textContent) || [];
+        } catch (e) { /* ignore */ }
+        try {
+          var projEl = document.getElementById('attendance-projects-json');
+          if (projEl) this.projects = JSON.parse(projEl.textContent) || [];
+        } catch (e) { /* ignore */ }
+
+        // Snapshot initial form state for cancel
+        this._saved = Object.assign({}, this.form);
+      },
+
+      get needsLocationProject() {
+        return this.form.type === 'work' || this.form.type === 'training';
+      },
+
+      get locationName() {
+        var loc = this.locations.find(function (l) {
+          return String(l._id) === this.displayLocationId;
+        }.bind(this));
+        return loc ? loc.name : '';
+      },
+
+      startEdit: function () {
+        if (!props.isPending && !props.isNew) return; // read-only guard
+        // Sync form to current display values before opening
+        this.form.type = this.displayType;
+        this.form.hours = this.displayHours != null ? this.displayHours : '';
+        this.form.dayRate = this.displayDayRate != null ? this.displayDayRate : '';
+        this.form.locationId = this.displayLocationId || '';
+        this.form.projectId = this.displayProjectId || '';
+        this.error = null;
+        this.editing = true;
+        var self = this;
+        this.$nextTick(function () {
+          var first = self.$el.querySelector('select, input');
+          if (first) first.focus();
+        });
+      },
+
+      cancel: function () {
+        // Rollback form to last-saved snapshot
+        this.form = Object.assign({}, this._saved);
+        this.editing = false;
+        this.error = null;
+      },
+
+      handleKey: function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.save();
+        } else if (e.key === 'Escape') {
+          this.cancel();
+        }
+      },
+
+      _unchanged: function () {
+        return (
+          this.form.type === this._saved.type &&
+          String(this.form.hours) === String(this._saved.hours || '') &&
+          String(this.form.dayRate) === String(this._saved.dayRate || '') &&
+          String(this.form.locationId) === String(this._saved.locationId || '') &&
+          String(this.form.projectId) === String(this._saved.projectId || '')
+        );
+      },
+
+      save: function () {
+        if (this._unchanged() && !props.isNew) {
+          this.editing = false;
+          return;
+        }
+        this.saving = true;
+        this.error = null;
+
+        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+        var self = this;
+
+        if (props.isNew) {
+          // ── CREATE ──────────────────────────────────────────────────────
+          var body = {
+            date: props.date,
+            type: self.form.type,
+          };
+          if (props.employeeId) body.employeeId = props.employeeId;
+          if (props.subcontractorId) body.subcontractorId = props.subcontractorId;
+          if (props.isSubcontractor) {
+            if (self.form.dayRate !== '') body.dayRate = Number(self.form.dayRate);
+          } else {
+            if (self.form.hours !== '') body.hoursWorked = Number(self.form.hours);
+          }
+          if (self.form.locationId) body.locationId = self.form.locationId;
+          if (self.form.projectId) body.projectId = self.form.projectId;
+
+          fetch('/attendance/inline', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+            body: JSON.stringify(body),
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              self.saving = false;
+              if (!data.success) {
+                self.error = data.error || 'Save failed.';
+                return;
+              }
+              // Update display + props for subsequent edits
+              self._applyServerRecord(data.record);
+              props.isNew = false;
+              props.isPending = true;
+              props.uuid = data.record.uuid;
+              self._saved = Object.assign({}, self.form);
+              self.editing = false;
+              // Reload page so row totals, headcount etc. reflect the new record
+              window.location.reload();
+            })
+            .catch(function (err) {
+              self.saving = false;
+              self.error = 'Network error. Please try again.';
+            });
+        } else {
+          // ── UPDATE ──────────────────────────────────────────────────────
+          var updateBody = { type: self.form.type };
+          if (props.isSubcontractor) {
+            updateBody.dayRate = self.form.dayRate !== '' ? Number(self.form.dayRate) : null;
+          } else {
+            updateBody.hoursWorked = self.form.hours !== '' ? Number(self.form.hours) : null;
+          }
+          updateBody.locationId = self.form.locationId || null;
+          updateBody.projectId = self.form.projectId || null;
+
+          fetch('/attendance/' + props.uuid, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+            body: JSON.stringify(updateBody),
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              self.saving = false;
+              if (!data.success) {
+                self.error = data.error || 'Save failed.';
+                return;
+              }
+              self._applyServerRecord(data.record);
+              self._saved = Object.assign({}, self.form);
+              self.editing = false;
+            })
+            .catch(function (err) {
+              self.saving = false;
+              self.error = 'Network error. Please try again.';
+            });
+        }
+      },
+
+      _applyServerRecord: function (rec) {
+        this.displayType = rec.type;
+        this.displayHours = rec.hoursWorked;
+        this.displayDayRate = rec.dayRate;
+        this.displayLocationId = rec.locationId;
+        this.displayProjectId = rec.projectId;
+        this.form.type = rec.type;
+        this.form.hours = rec.hoursWorked != null ? rec.hoursWorked : '';
+        this.form.dayRate = rec.dayRate != null ? rec.dayRate : '';
+        this.form.locationId = rec.locationId || '';
+        this.form.projectId = rec.projectId || '';
+      },
+    };
+  });
+
 });

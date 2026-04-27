@@ -1,0 +1,442 @@
+<%
+  /* Type → color mapping for cell backgrounds and badges */
+  const _cellBg = {
+    work:     'bg-green-50 dark:bg-green-900/20',
+    training: 'bg-blue-50 dark:bg-blue-900/20',
+    sick:     'bg-red-50 dark:bg-red-900/20',
+    holiday:  'bg-purple-50 dark:bg-purple-900/20',
+    off:      'bg-gray-100 dark:bg-gray-800',
+    leave:    'bg-yellow-50 dark:bg-yellow-900/20',
+    Purchase: 'bg-cyan-50 dark:bg-cyan-900/20',
+    PurchaseDue: 'bg-amber-50 dark:bg-amber-900/20'
+  };
+  const _badgeCls = {
+    work:     'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    training: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    sick:     'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    holiday:  'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+    off:      'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    leave:    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    Purchase: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+    PurchaseDue: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+  };
+  const _statusBadge = {
+    pending:  'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+  };
+  const _dh = typeof dailyHeadcount !== 'undefined' ? dailyHeadcount : {};
+  const _showHC = typeof showHeadcount !== 'undefined' ? showHeadcount : false;
+  const _psMap = typeof purchaseStatementMap !== 'undefined' ? purchaseStatementMap : {};
+  const _showHB = typeof showHolidayBalance !== 'undefined' ? showHolidayBalance : false;
+  const _hbMap = typeof holidayBalanceMap !== 'undefined' ? holidayBalanceMap : {};
+%>
+<table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
+  <thead>
+    <tr class="bg-gray-50 dark:bg-gray-800">
+      <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Name</th>
+      <% daysOfWeek.forEach(day => { %>
+        <th class="text-center text-xs font-normal border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-700 dark:text-gray-300">
+          <a href="/daily/<%= day %>" class="hover:underline hover:text-green-700 dark:hover:text-green-300">
+            <%= moment(day).format('DD/MM/YYYY') %>
+          </a><br>
+          <span class="text-gray-600 dark:text-gray-400 font-bold"><%= moment(day).format('dddd') %></span>
+        </th>
+      <% }); %>
+      <% if (!isManagementView) { %>
+        <th class="text-center font-normal border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">
+          Weekly Pay
+        </th>
+      <% } %>
+      <% if (_showHB && sectionType === 'employee') { %>
+        <th class="text-center font-normal border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">
+          Holiday Balance
+        </th>
+      <% } %>
+    </tr>
+  </thead>
+  <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+    <% entries.forEach(([, details]) => {
+      /* Check if any record for this person is pending */
+      const _hasPending = Object.values(details.dailyRecords || {}).some(recs =>
+        Object.values(recs).some(r => r.status === 'pending')
+      );
+    %>
+      <tr class="font-light border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 <%= _hasPending ? 'ring-2 ring-inset ring-amber-300 dark:ring-amber-600' : '' %>">
+        <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap">
+          <% if (details.employeeId) { %>
+            <a href="/employee/read/<%= details.employeeId %>" class="text-green-900 dark:text-green-400 hover:underline">
+              <%= details.name || 'Unnamed Employee' %>
+            </a>
+          <% } else { %>
+            <a href="/supplier/read/<%= details.subcontractorId %>" class="text-green-900 dark:text-green-400 hover:underline">
+              <%= details.name || 'Unnamed Subcontractor' %>
+            </a>
+          <% } %>
+        </td>
+
+        <% daysOfWeek.forEach(day => { %>
+          <% const dailyRecords = details.dailyRecords[day] || {}; %>
+          <%
+            /* Determine dominant type for cell color */
+            const _recValues = Object.values(dailyRecords);
+            const _dominantType = _recValues.length > 0
+              ? (_recValues[0].paymentStatus === 'due' ? 'PurchaseDue' : (_recValues[0].type || ''))
+              : '';
+            const _cellClass = _recValues.length > 0 ? (_cellBg[_dominantType] || '') : '';
+          %>
+          <td class="border border-gray-300 dark:border-gray-700 text-center px-2 py-1.5 align-top <%= _cellClass %>">
+            <% if (Object.keys(dailyRecords).length > 0) { %>
+              <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
+                <% const isPurchase = recordId.startsWith('purchase-'); %>
+                <% const _isDue = record.paymentStatus === 'due'; %>
+                <% const _stmtAnchor = isPurchase && _isDue && _psMap[record.purchaseUuid]
+                  ? `#statement-${_psMap[record.purchaseUuid]}`
+                  : null; %>
+                <% const href = isPurchase
+                  ? (_stmtAnchor || `/purchase/read/${record.purchaseUuid}`)
+                  : `/attendance/read/${record.uuid}`; %>
+
+                <%# Pending non-purchase records get Alpine inline-edit wrapper. %>
+                <% if (!isPurchase && record.status === 'pending') { %>
+                  <div
+                    x-data="attendanceCell({
+                      uuid: '<%= record.uuid %>',
+                      isPending: true,
+                      isNew: false,
+                      isSubcontractor: <%= sectionType === 'subcontractor' %>,
+                      employeeId: null,
+                      subcontractorId: null,
+                      date: '<%= day %>',
+                      initType: '<%= record.type || 'work' %>',
+                      initHours: <%= record.hoursWorked != null ? record.hoursWorked : 'null' %>,
+                      initDayRate: <%= record.dayRate != null ? record.dayRate : 'null' %>,
+                      initLocationId: '<%= record.location?._id || record.locationId || '' %>',
+                      initProjectId: '<%= record.projectId || '' %>'
+                    })"
+                    @keydown="handleKey($event)"
+                    class="mb-1"
+                  >
+                    <%# ── Read mode ── %>
+                    <div x-show="!editing" @click="startEdit()" class="cursor-pointer select-none" title="Click to edit">
+
+                      <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
+                        <a
+                          href="/assignment/read/<%= record.contractAssignmentId.uuid %>"
+                          class="text-green-600 dark:text-green-400 text-xs font-semibold hover:underline block"
+                          @click.stop>
+                          <%= record.contractAssignmentId.title %>
+                        </a>
+                      <% } %>
+
+                      <%# Type badge — updates from Alpine display state %>
+                      <span
+                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5"
+                        :class="{
+                          'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400': displayType === 'work',
+                          'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400': displayType === 'training',
+                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400': displayType === 'sick',
+                          'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400': displayType === 'holiday',
+                          'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300': displayType === 'off',
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400': displayType === 'leave'
+                        }"
+                        x-text="displayType || '<%= record.type %>'">
+                      </span>
+
+                      <span class="block text-green-900 dark:text-green-400 text-xs leading-tight">
+                        <span x-text="displayLocationId ? (locations.find(l => String(l._id) === displayLocationId) || {}).name || '' : '<%= record.location?.name || '' %>'"></span>
+                      </span>
+
+                      <span x-show="displayHours > 0" class="block text-gray-600 dark:text-gray-400 text-[10px]" x-text="displayHours + 'h'"></span>
+                      <span x-show="!displayHours && <%= record.hoursWorked > 0 %>" class="block text-gray-600 dark:text-gray-400 text-[10px]"><%= record.hoursWorked %>h</span>
+
+                      <div class="mt-0.5">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                          pending
+                        </span>
+                        <span class="inline-flex gap-1 ml-0.5 print:hidden" @click.stop>
+                          <form action="/attendance/<%= record.uuid %>/approve" method="POST" class="inline">
+                            <%- include('./csrfHidden.ejs') %>
+                            <button type="submit" class="text-green-600 hover:text-green-800 text-xs" title="Approve"><i class="bi bi-check-lg"></i></button>
+                          </form>
+                          <form action="/attendance/<%= record.uuid %>/reject" method="POST" class="inline">
+                            <%- include('./csrfHidden.ejs') %>
+                            <button type="submit" class="text-red-600 hover:text-red-800 text-xs" title="Reject"><i class="bi bi-x-lg"></i></button>
+                          </form>
+                        </span>
+                      </div>
+                    </div>
+
+                    <%# ── Edit mode form ── %>
+                    <div x-show="editing" x-cloak class="text-left space-y-1 min-w-[110px]">
+
+                      <%# Type select %>
+                      <select
+                        x-model="form.type"
+                        @blur="save()"
+                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                        <option value="work">work</option>
+                        <option value="training">training</option>
+                        <option value="sick">sick</option>
+                        <option value="holiday">holiday</option>
+                        <option value="off">off</option>
+                        <option value="leave">leave</option>
+                      </select>
+
+                      <%# Hours (employees) or Day Rate (subcontractors) — only for work/training %>
+                      <% if (sectionType === 'subcontractor') { %>
+                        <input
+                          type="number"
+                          x-model="form.dayRate"
+                          x-show="needsLocationProject"
+                          @blur="save()"
+                          min="0" step="0.01"
+                          placeholder="Day rate"
+                          class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                      <% } else { %>
+                        <input
+                          type="number"
+                          x-model="form.hours"
+                          x-show="needsLocationProject"
+                          @blur="save()"
+                          min="0" step="0.25"
+                          placeholder="Hours"
+                          class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                      <% } %>
+
+                      <%# Location select — for work/training only %>
+                      <select
+                        x-model="form.locationId"
+                        x-show="needsLocationProject"
+                        @blur="save()"
+                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                        <option value="">— Location —</option>
+                        <template x-for="loc in locations" :key="loc._id">
+                          <option :value="String(loc._id)" x-text="loc.name"></option>
+                        </template>
+                      </select>
+
+                      <%# Project select — for work/training only %>
+                      <select
+                        x-model="form.projectId"
+                        x-show="needsLocationProject"
+                        @blur="save()"
+                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                        <option value="">— Project —</option>
+                        <template x-for="proj in projects" :key="proj._id">
+                          <option :value="String(proj._id)" x-text="proj.name"></option>
+                        </template>
+                      </select>
+
+                      <%# Saving indicator + error + cancel %>
+                      <div class="flex items-center justify-between gap-1 mt-0.5">
+                        <span x-show="saving" class="text-[9px] text-amber-600 dark:text-amber-400">saving…</span>
+                        <span x-show="error" x-text="error" class="text-[9px] text-red-600 dark:text-red-400 leading-tight"></span>
+                        <button
+                          type="button"
+                          @click="cancel()"
+                          class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs print:hidden"
+                          title="Cancel (Esc)">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                <% } else { %>
+                  <%# ── Static record (approved, rejected, or purchase) ── %>
+
+                  <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
+                    <a
+                      href="/assignment/read/<%= record.contractAssignmentId.uuid %>"
+                      class="text-green-600 dark:text-green-400 text-xs font-semibold hover:underline block">
+                      <%= record.contractAssignmentId.title %>
+                    </a>
+                  <% } %>
+
+                  <% const _effectiveType = _isDue ? 'PurchaseDue' : (record.type || 'Purchase'); %>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _badgeCls[_effectiveType] || 'bg-gray-100 text-gray-700' %> mb-0.5">
+                    <%= record.type || 'Purchase' %><% if (_isDue) { %> <i class="bi bi-clock ml-0.5"></i><% } %>
+                  </span>
+
+                  <a href="<%= href %>" class="block text-green-900 dark:text-green-400 hover:underline text-xs leading-tight">
+                    <% if (isPurchase) { %>
+                      KF#: <%= record.invoiceNumber || '—' %> SF#: <%= record.supplierReference || '—' %>
+                      <% if (!isManagementView && record.weeklyPay) { %>
+                        – £<%= record.weeklyPay.toFixed(2) %>
+                      <% } %>
+                    <% } else { %>
+                      <%= record.location?.name || '' %><% if (record.location?.name) { %> <% } %>
+                      <% if (!isManagementView && record.weeklyPay) { %>
+                        £<%= record.weeklyPay.toFixed(2) %>
+                      <% } %>
+                    <% } %>
+                  </a>
+
+                  <% if (record.hoursWorked > 0) { %>
+                    <span class="block text-gray-600 dark:text-gray-400 text-[10px]"><%= record.hoursWorked %>h</span>
+                  <% } %>
+
+                  <% if (record.status && !isPurchase) { %>
+                    <div class="mt-0.5">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _statusBadge[record.status] || '' %>">
+                        <%= record.status %>
+                      </span>
+                    </div>
+                  <% } %>
+                <% } %>
+
+              <% }); %>
+
+            <% } else { %>
+              <%# ── Empty cell — inline create widget ── %>
+              <% const _entityMongoId = details.employeeMongoId ? String(details.employeeMongoId) : null; %>
+              <% const _subUuid = details.subcontractorId || null; %>
+              <% if (_entityMongoId || _subUuid) { %>
+                <div
+                  x-data="attendanceCell({
+                    uuid: null,
+                    isPending: false,
+                    isNew: true,
+                    isSubcontractor: <%= sectionType === 'subcontractor' %>,
+                    employeeId: <%= _entityMongoId ? `'${_entityMongoId}'` : 'null' %>,
+                    subcontractorId: <%= _subUuid ? `'${_subUuid}'` : 'null' %>,
+                    date: '<%= day %>',
+                    initType: 'work',
+                    initHours: null,
+                    initDayRate: null,
+                    initLocationId: '',
+                    initProjectId: ''
+                  })"
+                  @keydown="handleKey($event)"
+                >
+                  <%# + Add trigger %>
+                  <div x-show="!editing" @click="startEdit()" class="cursor-pointer print:hidden" title="Add attendance">
+                    <span class="text-gray-400 dark:text-gray-500 text-[10px] hover:text-gray-600 dark:hover:text-gray-300">+ Add</span>
+                  </div>
+
+                  <%# Create form (same layout as edit form) %>
+                  <div x-show="editing" x-cloak class="text-left space-y-1 min-w-[110px]">
+                    <select
+                      x-model="form.type"
+                      @blur="save()"
+                      class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                      <option value="work">work</option>
+                      <option value="training">training</option>
+                      <option value="sick">sick</option>
+                      <option value="holiday">holiday</option>
+                      <option value="off">off</option>
+                      <option value="leave">leave</option>
+                    </select>
+
+                    <% if (sectionType === 'subcontractor') { %>
+                      <input
+                        type="number"
+                        x-model="form.dayRate"
+                        x-show="needsLocationProject"
+                        @blur="save()"
+                        min="0" step="0.01"
+                        placeholder="Day rate"
+                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                    <% } else { %>
+                      <input
+                        type="number"
+                        x-model="form.hours"
+                        x-show="needsLocationProject"
+                        @blur="save()"
+                        min="0" step="0.25"
+                        placeholder="Hours"
+                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                    <% } %>
+
+                    <select
+                      x-model="form.locationId"
+                      x-show="needsLocationProject"
+                      @blur="save()"
+                      class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                      <option value="">— Location —</option>
+                      <template x-for="loc in locations" :key="loc._id">
+                        <option :value="String(loc._id)" x-text="loc.name"></option>
+                      </template>
+                    </select>
+
+                    <select
+                      x-model="form.projectId"
+                      x-show="needsLocationProject"
+                      @blur="save()"
+                      class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                      <option value="">— Project —</option>
+                      <template x-for="proj in projects" :key="proj._id">
+                        <option :value="String(proj._id)" x-text="proj.name"></option>
+                      </template>
+                    </select>
+
+                    <div class="flex items-center justify-between gap-1 mt-0.5">
+                      <span x-show="saving" class="text-[9px] text-amber-600 dark:text-amber-400">saving…</span>
+                      <span x-show="error" x-text="error" class="text-[9px] text-red-600 dark:text-red-400 leading-tight"></span>
+                      <button
+                        type="button"
+                        @click="cancel()"
+                        class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs print:hidden"
+                        title="Cancel (Esc)">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              <% } %>
+            <% } %>
+          </td>
+        <% }); %>
+
+        <% if (!isManagementView) { %>
+          <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 font-semibold whitespace-nowrap">
+            £<%= details.weeklyPay.toFixed(2) %><br>
+            <% if (details.totalHoursWorked > 0) { %>
+            <span class="text-xs font-normal text-gray-700 dark:text-gray-300"><%= details.totalHoursWorked %>h</span>
+            <% } %>
+          </td>
+        <% } %>
+        <% if (_showHB && sectionType === 'employee') {
+          const _hbKey = details.employeeMongoId ? String(details.employeeMongoId) : null;
+          const _hbEntry = _hbKey && _hbMap[_hbKey];
+        %>
+          <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 whitespace-nowrap">
+            <% if (_hbEntry) { %>
+              <span class="font-semibold <%= _hbEntry.remaining <= 2 ? 'text-red-600 dark:text-red-400' : _hbEntry.remaining <= 5 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-800 dark:text-gray-200' %>">
+                <%= _hbEntry.remaining %> days
+              </span>
+              <span class="block text-[10px] text-gray-500 dark:text-gray-400">
+                exp. <%= moment(_hbEntry.periodEnd).format('DD/MM/YY') %>
+              </span>
+            <% } else { %>
+              <span class="text-gray-400 dark:text-gray-500 text-xs">—</span>
+            <% } %>
+          </td>
+        <% } %>
+      </tr>
+    <% }); %>
+  </tbody>
+
+  <%/* Daily totals footer row */%>
+  <% if (_showHC) { %>
+  <tfoot>
+    <tr class="bg-gray-50 dark:bg-gray-800 font-medium">
+      <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-right text-xs text-gray-600 dark:text-gray-400">
+        Daily headcount
+      </td>
+      <% daysOfWeek.forEach(day => { %>
+        <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <%= _dh[day] || 0 %>
+        </td>
+      <% }); %>
+      <% if (!isManagementView) { %>
+        <td class="border border-gray-300 dark:border-gray-700"></td>
+      <% } %>
+      <% if (_showHB && sectionType === 'employee') { %>
+        <td class="border border-gray-300 dark:border-gray-700"></td>
+      <% } %>
+    </tr>
+  </tfoot>
+  <% } %>
+</table>

@@ -215,8 +215,16 @@ exports.getWeeklyAttendance = async (req, res, next) => {
         .lean();
     }
 
+    // ── Locations for inline cell editor ──────────────────────────────────
+    const locations = await mdb.INTERNAL.location
+      .find({})
+      .select("_id uuid name")
+      .sort({ name: 1 })
+      .lean();
+
     const viewFile = isManagementView ? "weeklyManagement" : "weeklyAdmin";
-    res.render(path.join("tailwindcss", "attendance", "weekly"), {
+    // REVERT: change 'weekly-excel' back to 'weekly' to disable inline cell editing
+    res.render(path.join("tailwindcss", "attendance", "weekly-excel"), {
       title: `Tax Week ${taxWeekNumber} — ${payrollWeekStart.format("YYYY")}`,
       moment,
       groupedAttendance: scopedGrouped,
@@ -249,6 +257,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       purchaseStatementMap,
       holidayBalanceMap,
       fleetCompliance,
+      locations,
     });
   } catch (err) {
     next(err);
@@ -594,3 +603,194 @@ exports.removeStatementPurchase = async (req, res, next) => {
     next(err);
   }
 };
+
+// ── Inline cell editing API ─────────────────────────────────────────────
+
+const VALID_TYPES = ["work", "training", "sick", "holiday", "off", "leave"];
+
+/**
+ * PATCH /attendance/:uuid
+ * Update fields on a pending attendance record. Returns JSON.
+ * Only admin/accountant may call this (enforced in routes).
+ */
+exports.updateAttendance = async (req, res, next) => {
+  try {
+    const record = await mdb.INTERNAL.attendance
+      .findOne({ uuid: req.params.uuid })
+      .lean();
+
+    if (!record) {
+      return res.status(404).json({ success: false, error: "Record not found." });
+    }
+    if (record.status !== "pending") {
+      return res.status(403).json({
+        success: false,
+        error: "Only pending records can be edited.",
+      });
+    }
+
+    const { type, hoursWorked, dayRate, locationId, projectId } = req.body;
+
+    if (type !== undefined && !VALID_TYPES.includes(type)) {
+      return res.status(400).json({ success: false, error: "Invalid type." });
+    }
+
+    // hoursWorked and dayRate are mutually exclusive
+    if (hoursWorked != null && dayRate != null) {
+      return res.status(400).json({
+        success: false,
+        error: "hoursWorked and dayRate are mutually exclusive.",
+      });
+    }
+
+    const update = {};
+    if (type !== undefined) update.type = type;
+    if (hoursWorked != null) {
+      update.hoursWorked = Number(hoursWorked);
+      update.dayRate = undefined; // clear the other
+    }
+    if (dayRate != null) {
+      update.dayRate = Number(dayRate);
+      update.$unset = { hoursWorked: 1 };
+    }
+    if (hoursWorked == null && dayRate == null && type !== undefined) {
+      // type-only change — don't touch pay fields
+    }
+    if (locationId !== undefined) update.locationId = locationId || null;
+    if (projectId !== undefined) update.projectId = projectId || null;
+
+    const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
+      { uuid: req.params.uuid, status: "pending" },
+      update,
+      { new: true, runValidators: true },
+    );
+
+    if (!updated) {
+      return res.status(409).json({
+        success: false,
+        error: "Record was modified concurrently. Please refresh.",
+      });
+    }
+
+    logger.info(`✏️  Inline updated attendance ${req.params.uuid}`);
+    return res.json({
+      success: true,
+      record: {
+        uuid: updated.uuid,
+        type: updated.type,
+        hoursWorked: updated.hoursWorked != null ? Number(updated.hoursWorked) : null,
+        dayRate: updated.dayRate != null ? Number(updated.dayRate) : null,
+        locationId: updated.locationId ? String(updated.locationId) : null,
+        projectId: updated.projectId ? String(updated.projectId) : null,
+        status: updated.status,
+      },
+    });
+  } catch (err) {
+    logger.error(`❌ Inline update attendance error: ${err.message}`);
+    next(err);
+  }
+};
+
+/**
+ * POST /attendance/inline
+ * Create a new pending attendance record via inline cell editor. Returns JSON.
+ * Only admin/accountant may call this (enforced in routes).
+ */
+exports.inlineCreateAttendance = async (req, res, next) => {
+  try {
+    const {
+      employeeId,
+      subcontractorId,
+      date,
+      type,
+      hoursWorked,
+      dayRate,
+      locationId,
+      projectId,
+    } = req.body;
+
+    // Validate: exactly one entity
+    if ((!employeeId && !subcontractorId) || (employeeId && subcontractorId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Provide exactly one of employeeId or subcontractorId.",
+      });
+    }
+
+    // Validate date
+    if (!date || !moment(date, "YYYY-MM-DD", true).isValid()) {
+      return res.status(400).json({ success: false, error: "Invalid date." });
+    }
+
+    if (type && !VALID_TYPES.includes(type)) {
+      return res.status(400).json({ success: false, error: "Invalid type." });
+    }
+
+    if (hoursWorked != null && dayRate != null) {
+      return res.status(400).json({
+        success: false,
+        error: "hoursWorked and dayRate are mutually exclusive.",
+      });
+    }
+
+    const data = {
+      date: moment(date, "YYYY-MM-DD").toDate(),
+      type: type || "work",
+      status: "pending",
+    };
+
+    if (employeeId) {
+      // employeeId is always passed as a MongoDB ObjectId string from the template
+      data.employeeId = employeeId;
+    }
+    if (subcontractorId) {
+      // subcontractorId may be a UUID (from the weekly table) — look up the supplier ObjectId
+      const mongoose = require("mongoose");
+      if (mongoose.Types.ObjectId.isValid(subcontractorId)) {
+        data.subcontractorId = subcontractorId;
+      } else {
+        const supplier = await mdb.REST.supplier
+          .findOne({ uuid: subcontractorId })
+          .select("_id")
+          .lean();
+        if (!supplier) {
+          return res.status(400).json({ success: false, error: "Subcontractor not found." });
+        }
+        data.subcontractorId = supplier._id;
+      }
+    }
+    if (hoursWorked != null) data.hoursWorked = Number(hoursWorked);
+    if (dayRate != null) data.dayRate = Number(dayRate);
+    if (locationId) data.locationId = locationId;
+    if (projectId) data.projectId = projectId;
+
+    const record = new mdb.INTERNAL.attendance(data);
+    await record.save();
+
+    logger.info(`✏️  Inline created attendance ${record.uuid} for date ${date}`);
+    return res.status(201).json({
+      success: true,
+      record: {
+        uuid: record.uuid,
+        type: record.type,
+        hoursWorked: record.hoursWorked != null ? Number(record.hoursWorked) : null,
+        dayRate: record.dayRate != null ? Number(record.dayRate) : null,
+        locationId: record.locationId ? String(record.locationId) : null,
+        projectId: record.projectId ? String(record.projectId) : null,
+        status: record.status,
+        date,
+      },
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        error:
+          "An attendance record already exists for this person on this date with the same location/project.",
+      });
+    }
+    logger.error(`❌ Inline create attendance error: ${err.message}`);
+    next(err);
+  }
+};
+

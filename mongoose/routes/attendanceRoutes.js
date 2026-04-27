@@ -35,6 +35,18 @@ router.post(
   ctrl.submitAttendance,
 );
 
+// Inline editing API — admin/accountant only (must come before /:uuid wildcard routes)
+router.post(
+  "/attendance/inline",
+  authService.ensureRoles("admin", "accountant"),
+  ctrl.inlineCreateAttendance,
+);
+router.patch(
+  "/attendance/:uuid",
+  authService.ensureRoles("admin", "accountant"),
+  ctrl.updateAttendance,
+);
+
 // Approval workflow — admin only
 router.post(
   "/attendance/bulk-approve",
