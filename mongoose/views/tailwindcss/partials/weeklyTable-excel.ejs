@@ -315,11 +315,10 @@
                     <span class="text-gray-400 dark:text-gray-500 text-[10px] hover:text-gray-600 dark:hover:text-gray-300">+ Add</span>
                   </div>
 
-                  <%# Create form (same layout as edit form) %>
+                  <%# Create form — save on Enter or Save button; NO blur-to-save (multi-field form) %>
                   <div x-show="editing" x-cloak class="text-left space-y-1 min-w-[110px]">
                     <select
                       x-model="form.type"
-                      @blur="save()"
                       class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
                       <option value="work">work</option>
                       <option value="training">training</option>
@@ -334,7 +333,6 @@
                         type="number"
                         x-model="form.dayRate"
                         x-show="needsLocationProject"
-                        @blur="save()"
                         min="0" step="0.01"
                         placeholder="Day rate"
                         class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
@@ -343,7 +341,6 @@
                         type="number"
                         x-model="form.hours"
                         x-show="needsLocationProject"
-                        @blur="save()"
                         min="0" step="0.25"
                         placeholder="Hours"
                         class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
@@ -352,7 +349,6 @@
                     <select
                       x-model="form.locationId"
                       x-show="needsLocationProject"
-                      @blur="save()"
                       class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
                       <option value="">— Location —</option>
                       <template x-for="loc in locations" :key="loc._id">
@@ -363,7 +359,6 @@
                     <select
                       x-model="form.contractId"
                       x-show="needsLocationProject"
-                      @blur="save()"
                       class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
                       <option value="">— Contract —</option>
                       <template x-for="contract in contracts" :key="contract._id">
@@ -374,13 +369,19 @@
                     <div class="flex items-center justify-between gap-1 mt-0.5">
                       <span x-show="saving" class="text-[9px] text-amber-600 dark:text-amber-400">saving…</span>
                       <span x-show="error" x-text="error" class="text-[9px] text-red-600 dark:text-red-400 leading-tight"></span>
-                      <button
-                        type="button"
-                        @click="cancel()"
-                        class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs print:hidden"
-                        title="Cancel (Esc)">
-                        <i class="bi bi-x-lg"></i>
-                      </button>
+                      <div class="flex gap-1 ml-auto">
+                        <button
+                          type="button"
+                          @click="save()"
+                          :disabled="saving"
+                          class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 text-xs disabled:opacity-50 print:hidden"
+                          title="Save (Enter)"><i class="bi bi-check-lg"></i></button>
+                        <button
+                          type="button"
+                          @click="cancel()"
+                          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs print:hidden"
+                          title="Cancel (Esc)"><i class="bi bi-x-lg"></i></button>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -39,6 +39,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
       .populate('employeeId')
       .populate('subcontractorId')
       .populate('locationId')
+      .populate('contractId')
       .populate('contractAssignmentId')
       .sort({ date: 1 });
 
