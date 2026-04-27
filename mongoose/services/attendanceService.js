@@ -37,6 +37,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
     const attendancePromise = mdb.INTERNAL.attendance
       .find({ date: { $gte: start, $lte: end } })
       .populate('employeeId')
+      .populate('subcontractorId')
       .populate('locationId')
       .populate('contractAssignmentId')
       .sort({ date: 1 });
@@ -176,9 +177,9 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
     return {
       attendanceRecords,
       employeeCount: allEmployees.length,
-        subcontractorCount: allowedSubcontractorIds.size,
+      subcontractorCount: allSubcontractors.length,
       allEmployees,
-        allSubcontractors: suppliers,
+      allSubcontractors, // all verified subcontractors, not just those with purchases this week
       paidPurchases
     };
   } catch (error) {
@@ -215,6 +216,22 @@ const groupAttendanceByPerson = (
       dailyRecords: {},
       type: 'employee'
     };
+  });
+
+  // Init subcontractors — ensures a row exists even if no purchases fall in this week
+  (allSubcontractors || []).forEach(sup => {
+    if (!groupedAttendance[sup.Name]) {
+      groupedAttendance[sup.Name] = {
+        name: sup.Name,
+        employeeId: null,
+        employeeMongoId: null,
+        subcontractorId: sup.uuid,
+        totalDaysWorked: 0,
+        weeklyPay: 0,
+        dailyRecords: {},
+        type: 'subcontractor'
+      };
+    }
   });
 
   // Add subcontractors from purchases
@@ -256,6 +273,49 @@ const groupAttendanceByPerson = (
     };
 
     totalSubcontractorPay += amount;
+  });
+
+  // Add subcontractor attendance records (created via inline edit)
+  attendanceRecords.forEach(record => {
+    if (record.employeeId) return; // handled separately below
+    const supplier = record.subcontractorId;
+    if (!supplier) return;
+
+    const name = supplier.Name;
+    const dateKey = moment(record.date).format('YYYY-MM-DD');
+    const dayRate = parseFloat(record.dayRate || 0);
+
+    if (!groupedAttendance[name]) {
+      groupedAttendance[name] = {
+        name,
+        employeeId: null,
+        employeeMongoId: null,
+        subcontractorId: supplier.uuid,
+        totalDaysWorked: 0,
+        weeklyPay: 0,
+        dailyRecords: {},
+        type: 'subcontractor'
+      };
+    }
+
+    if (!groupedAttendance[name].dailyRecords[dateKey]) {
+      groupedAttendance[name].dailyRecords[dateKey] = {};
+    }
+
+    groupedAttendance[name].dailyRecords[dateKey][record._id] = {
+      uuid: record.uuid,
+      location: record.locationId || null,
+      type: record.type,
+      status: record.status || 'pending',
+      hoursWorked: parseFloat(record.hoursWorked || 0) || null,
+      dayRate: dayRate || null,
+      weeklyPay: dayRate,
+      projectId: record.projectId || null,
+      contractAssignmentId: record.contractAssignmentId || null
+    };
+
+    groupedAttendance[name].weeklyPay += dayRate;
+    if (dayRate > 0) groupedAttendance[name].totalDaysWorked = (groupedAttendance[name].totalDaysWorked || 0) + 1;
   });
 
   // Add employee attendance
