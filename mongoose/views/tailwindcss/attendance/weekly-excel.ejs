@@ -418,6 +418,6 @@
       type="application/json" is never executed by browsers — no unsafe-inline needed.
       REVERT: remove these two script tags if rolling back the inline-edit feature. %>
   <script type="application/json" id="attendance-locations-json"><%- JSON.stringify(locations || []) %></script>
-  <script type="application/json" id="attendance-projects-json"><%- JSON.stringify((activeProjects || []).map(function(p){ return { _id: p._id, name: p.Name }; })) %></script>
+  <script type="application/json" id="attendance-contracts-json"><%- JSON.stringify((activeContracts || []).map(function(c){ return { _id: c._id, title: c.title, location: c.location }; })) %></script>
 
 </div>

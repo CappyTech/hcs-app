@@ -20,6 +20,7 @@ const attendanceSchema = new mongoose.Schema({
     // ── References ──────────────────────────────────────────────────────
     locationId: { type: mongoose.Schema.Types.ObjectId, ref: 'location' },
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'project' },
+    contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'contract' },
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'employee' },
     subcontractorId: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
     contractAssignmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'assignment' },
@@ -52,6 +53,15 @@ attendanceSchema.index(
     { subcontractorId: 1, date: 1, locationId: 1, projectId: 1 },
     { unique: true, sparse: true, name: 'unique_subcontractor_day_location_project' }
 );
+// Duplicate-prevention: one attendance per person per date per location/contract
+attendanceSchema.index(
+    { employeeId: 1, date: 1, locationId: 1, contractId: 1 },
+    { unique: true, sparse: true, name: 'unique_employee_day_location_contract' }
+);
+attendanceSchema.index(
+    { subcontractorId: 1, date: 1, locationId: 1, contractId: 1 },
+    { unique: true, sparse: true, name: 'unique_subcontractor_day_location_contract' }
+);
 
 // ── Pre-validate ─────────────────────────────────────────────────────────
 attendanceSchema.pre('validate', function (next) {
@@ -65,10 +75,10 @@ attendanceSchema.pre('validate', function (next) {
         return next(new Error('Attendance should have hoursWorked or dayRate, not both.'));
     }
 
-    // For work/training types, require at least a location or project
+    // For work/training types, require at least a location, project, or contract
     const workTypes = ['work', 'training'];
-    if (workTypes.includes(this.type) && !this.locationId && !this.projectId) {
-        return next(new Error('Work or training attendance must have at least a location or project.'));
+    if (workTypes.includes(this.type) && !this.locationId && !this.projectId && !this.contractId) {
+        return next(new Error('Work or training attendance must have at least a location, project, or contract.'));
     }
 
     // overtimeHours requires overtimeRate and vice versa

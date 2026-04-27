@@ -112,7 +112,7 @@
                       initHours: <%= record.hoursWorked != null ? record.hoursWorked : 'null' %>,
                       initDayRate: <%= record.dayRate != null ? record.dayRate : 'null' %>,
                       initLocationId: '<%= record.location?._id || record.locationId || '' %>',
-                      initProjectId: '<%= record.projectId || '' %>'
+                      initContractId: '<%= record.contractId || '' %>'
                     })"
                     @keydown="handleKey($event)"
                     class="mb-1"
@@ -216,15 +216,15 @@
                         </template>
                       </select>
 
-                      <%# Project select — for work/training only %>
+                      <%# Contract select — for work/training only %>
                       <select
-                        x-model="form.projectId"
+                        x-model="form.contractId"
                         x-show="needsLocationProject"
                         @blur="save()"
                         class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                        <option value="">— Project —</option>
-                        <template x-for="proj in projects" :key="proj._id">
-                          <option :value="String(proj._id)" x-text="proj.name"></option>
+                        <option value="">— Contract —</option>
+                        <template x-for="contract in contracts" :key="contract._id">
+                          <option :value="String(contract._id)" x-text="contract.title"></option>
                         </template>
                       </select>
 
@@ -306,7 +306,7 @@
                     initHours: null,
                     initDayRate: null,
                     initLocationId: '',
-                    initProjectId: ''
+                    initContractId: ''
                   })"
                   @keydown="handleKey($event)"
                 >
@@ -361,13 +361,13 @@
                     </select>
 
                     <select
-                      x-model="form.projectId"
+                      x-model="form.contractId"
                       x-show="needsLocationProject"
                       @blur="save()"
                       class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                      <option value="">— Project —</option>
-                      <template x-for="proj in projects" :key="proj._id">
-                        <option :value="String(proj._id)" x-text="proj.name"></option>
+                      <option value="">— Contract —</option>
+                      <template x-for="contract in contracts" :key="contract._id">
+                        <option :value="String(contract._id)" x-text="contract.title"></option>
                       </template>
                     </select>
 

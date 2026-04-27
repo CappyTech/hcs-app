@@ -310,7 +310,8 @@ const groupAttendanceByPerson = (
       hoursWorked: parseFloat(record.hoursWorked || 0) || null,
       dayRate: dayRate || null,
       weeklyPay: dayRate,
-      projectId: record.projectId || null,
+      contractId: record.contractId ? String(record.contractId) : null,
+      projectId: record.projectId ? String(record.projectId) : null,
       contractAssignmentId: record.contractAssignmentId || null
     };
 
@@ -355,8 +356,9 @@ const groupAttendanceByPerson = (
       status: record.status || 'approved',
       hoursWorked,
       weeklyPay: calculatedPay,
-      contractAssignmentId: record.contractAssignmentId || null,
-      projectId: record.projectId || null
+      contractId: record.contractId ? String(record.contractId) : null,
+      projectId: record.projectId ? String(record.projectId) : null,
+      contractAssignmentId: record.contractAssignmentId || null
     };
 
     groupedAttendance[name].totalHoursWorked += hoursWorked;
@@ -472,21 +474,17 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     dailyHeadcount
   } = groupAttendanceByPerson(attendanceRecords, payrollWeekStart, endDate, allEmployees, allSubcontractors, paidPurchases);
 
-  // INTERNAL.job was replaced with REST.project — surface "active jobs" from active REST projects
-  let activeProjects = [];
-  const projectStatusFilter = ['Active'];
+  // INTERNAL contracts — surfaced instead of REST projects for inline cell editor
+  let activeContracts = [];
   try {
-    const projects = await mdb.REST.project
-      .find({
-        deletedAt: null,
-        Status: { $in: projectStatusFilter }
-      })
-      .sort({ Number: 1 })
+    activeContracts = await mdb.INTERNAL.contract
+      .find({ status: { $in: ['Planned', 'In Progress'] } })
+      .select('_id uuid title location status')
+      .sort({ title: 1 })
       .lean();
-    activeProjects = projects || [];
   } catch (e) {
-    logger.warn('Active projects lookup skipped: ' + e.message);
-    activeProjects = [];
+    logger.warn('Active contracts lookup skipped: ' + e.message);
+    activeContracts = [];
   }
 
   return {
@@ -504,8 +502,9 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     totalSubcontractorPay,
     totalSubcontractorDays,
     daysOfWeek,
-    activeProjects,
-    projectStatusFilter,
+    activeProjects: activeContracts, // kept for backward compat with other views that read activeProjects
+    activeContracts,
+    projectStatusFilter: ['Planned', 'In Progress'],
     taxWeekNumber: requestedWeekNumber,
     taxYear: year,
     pendingCount,

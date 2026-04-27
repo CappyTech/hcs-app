@@ -58,6 +58,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       totalSubcontractorDays,
       daysOfWeek,
       activeProjects,
+      activeContracts,
       projectStatusFilter,
       taxWeekNumber,
       taxYear,
@@ -242,6 +243,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       totalSubcontractorDays: isManagementView ? null : filteredSubDays,
       daysOfWeek,
       activeProjects,
+      activeContracts,
       projectStatusFilter,
       employeeEntries,
       subcontractorEntries,
@@ -629,7 +631,7 @@ exports.updateAttendance = async (req, res, next) => {
       });
     }
 
-    const { type, hoursWorked, dayRate, locationId, projectId } = req.body;
+    const { type, hoursWorked, dayRate, locationId, contractId } = req.body;
 
     if (type !== undefined && !VALID_TYPES.includes(type)) {
       return res.status(400).json({ success: false, error: "Invalid type." });
@@ -657,7 +659,7 @@ exports.updateAttendance = async (req, res, next) => {
       // type-only change — don't touch pay fields
     }
     if (locationId !== undefined) update.locationId = locationId || null;
-    if (projectId !== undefined) update.projectId = projectId || null;
+    if (contractId !== undefined) update.contractId = contractId || null;
 
     const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
       { uuid: req.params.uuid, status: "pending" },
@@ -681,7 +683,7 @@ exports.updateAttendance = async (req, res, next) => {
         hoursWorked: updated.hoursWorked != null ? Number(updated.hoursWorked) : null,
         dayRate: updated.dayRate != null ? Number(updated.dayRate) : null,
         locationId: updated.locationId ? String(updated.locationId) : null,
-        projectId: updated.projectId ? String(updated.projectId) : null,
+        contractId: updated.contractId ? String(updated.contractId) : null,
         status: updated.status,
       },
     });
@@ -706,7 +708,7 @@ exports.inlineCreateAttendance = async (req, res, next) => {
       hoursWorked,
       dayRate,
       locationId,
-      projectId,
+      contractId,
     } = req.body;
 
     // Validate: exactly one entity
@@ -762,7 +764,7 @@ exports.inlineCreateAttendance = async (req, res, next) => {
     if (hoursWorked != null) data.hoursWorked = Number(hoursWorked);
     if (dayRate != null) data.dayRate = Number(dayRate);
     if (locationId) data.locationId = locationId;
-    if (projectId) data.projectId = projectId;
+    if (contractId) data.contractId = contractId;
 
     const record = new mdb.INTERNAL.attendance(data);
     await record.save();
@@ -776,7 +778,7 @@ exports.inlineCreateAttendance = async (req, res, next) => {
         hoursWorked: record.hoursWorked != null ? Number(record.hoursWorked) : null,
         dayRate: record.dayRate != null ? Number(record.dayRate) : null,
         locationId: record.locationId ? String(record.locationId) : null,
-        projectId: record.projectId ? String(record.projectId) : null,
+        contractId: record.contractId ? String(record.contractId) : null,
         status: record.status,
         date,
       },

@@ -124,7 +124,7 @@ document.addEventListener('alpine:init', function () {
    *   initHours     {number|null}
    *   initDayRate   {number|null}
    *   initLocationId {string|null}
-   *   initProjectId  {string|null}
+   *   initContractId  {string|null}
    *
    * REVERT: remove this component and the x-data attributes from weeklyTable-excel.ejs.
    */
@@ -139,7 +139,7 @@ document.addEventListener('alpine:init', function () {
       displayHours: props.initHours || null,
       displayDayRate: props.initDayRate || null,
       displayLocationId: props.initLocationId || null,
-      displayProjectId: props.initProjectId || null,
+      displayContractId: props.initContractId || null,
 
       // Form scratch state while editing
       form: {
@@ -147,12 +147,12 @@ document.addEventListener('alpine:init', function () {
         hours: props.initHours || '',
         dayRate: props.initDayRate || '',
         locationId: props.initLocationId || '',
-        projectId: props.initProjectId || '',
+        contractId: props.initContractId || '',
       },
 
       // Reference data loaded once from embedded JSON blobs
       locations: [],
-      projects: [],
+      contracts: [],
 
       // Persisted server state for cancel/rollback
       _saved: null,
@@ -164,8 +164,8 @@ document.addEventListener('alpine:init', function () {
           if (locEl) this.locations = JSON.parse(locEl.textContent) || [];
         } catch (e) { /* ignore */ }
         try {
-          var projEl = document.getElementById('attendance-projects-json');
-          if (projEl) this.projects = JSON.parse(projEl.textContent) || [];
+          var contractEl = document.getElementById('attendance-contracts-json');
+          if (contractEl) this.contracts = JSON.parse(contractEl.textContent) || [];
         } catch (e) { /* ignore */ }
 
         // Snapshot initial form state for cancel
@@ -190,7 +190,7 @@ document.addEventListener('alpine:init', function () {
         this.form.hours = this.displayHours != null ? this.displayHours : '';
         this.form.dayRate = this.displayDayRate != null ? this.displayDayRate : '';
         this.form.locationId = this.displayLocationId || '';
-        this.form.projectId = this.displayProjectId || '';
+        this.form.contractId = this.displayContractId || '';
         this.error = null;
         this.editing = true;
         var self = this;
@@ -222,7 +222,7 @@ document.addEventListener('alpine:init', function () {
           String(this.form.hours) === String(this._saved.hours || '') &&
           String(this.form.dayRate) === String(this._saved.dayRate || '') &&
           String(this.form.locationId) === String(this._saved.locationId || '') &&
-          String(this.form.projectId) === String(this._saved.projectId || '')
+          String(this.form.contractId) === String(this._saved.contractId || '')
         );
       },
 
@@ -251,7 +251,7 @@ document.addEventListener('alpine:init', function () {
             if (self.form.hours !== '') body.hoursWorked = Number(self.form.hours);
           }
           if (self.form.locationId) body.locationId = self.form.locationId;
-          if (self.form.projectId) body.projectId = self.form.projectId;
+          if (self.form.contractId) body.contractId = self.form.contractId;
 
           fetch('/attendance/inline', {
             method: 'POST',
@@ -288,7 +288,7 @@ document.addEventListener('alpine:init', function () {
             updateBody.hoursWorked = self.form.hours !== '' ? Number(self.form.hours) : null;
           }
           updateBody.locationId = self.form.locationId || null;
-          updateBody.projectId = self.form.projectId || null;
+          updateBody.contractId = self.form.contractId || null;
 
           fetch('/attendance/' + props.uuid, {
             method: 'PATCH',
@@ -318,12 +318,12 @@ document.addEventListener('alpine:init', function () {
         this.displayHours = rec.hoursWorked;
         this.displayDayRate = rec.dayRate;
         this.displayLocationId = rec.locationId;
-        this.displayProjectId = rec.projectId;
+        this.displayContractId = rec.contractId;
         this.form.type = rec.type;
         this.form.hours = rec.hoursWorked != null ? rec.hoursWorked : '';
         this.form.dayRate = rec.dayRate != null ? rec.dayRate : '';
         this.form.locationId = rec.locationId || '';
-        this.form.projectId = rec.projectId || '';
+        this.form.contractId = rec.contractId || '';
       },
     };
   });
