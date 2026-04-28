@@ -81,17 +81,10 @@
             </td>
             <td class="border border-gray-100 dark:border-gray-800 px-3 py-2" colspan="<%= (canDept('management') || canDept('admin')) ? 6 : 5 %>">
               <% if (canDept('management') || canDept('admin')) { %>
-                <div x-data="assignmentCell({
-                  isNew: true,
-                  uuid: null,
-                  contractId: '<%= _c._id %>',
-                  weekStart: '<%= _ws %>',
-                  initTitle: '',
-                  initStatus: 'Planned',
-                  initEmployeeIds: [],
-                  initSubIds: [],
-                  initEstHours: null
-                })" class="print:hidden">
+                <div x-data="assignmentCell({isNew:true,uuid:null,contractId:'<%= _c._id %>',weekStart:'<%= _ws %>',initTitle:'',initStatus:'Planned',initEstHours:null})"
+                  data-emp-ids="[]"
+                  data-sub-ids="[]"
+                  class="print:hidden">
                   <%- include('./assignmentCellEditor.ejs') %>
                 </div>
               <% } %>
@@ -141,17 +134,9 @@
               </td>
               <% if (canDept('management') || canDept('admin')) { %>
                 <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center print:hidden">
-                  <div x-data="assignmentCell({
-                    isNew: false,
-                    uuid: '<%= asgn.uuid %>',
-                    contractId: '<%= _c._id %>',
-                    weekStart: '<%= _ws %>',
-                    initTitle: '<%= (asgn.title || '').replace(/'/g, '\\\'') %>',
-                    initStatus: '<%= asgn.status %>',
-                    initEmployeeIds: <%- JSON.stringify((asgn.assignedEmployees || []).map(function(e){return String(e._id);})) %>,
-                    initSubIds: <%- JSON.stringify((asgn.assignedSubcontractors || []).map(function(s){return String(s._id);})) %>,
-                    initEstHours: <%= asgn.estimatedHours != null ? asgn.estimatedHours : 'null' %>
-                  })">
+                  <div x-data="assignmentCell({isNew:false,uuid:'<%= asgn.uuid %>',contractId:'<%= _c._id %>',weekStart:'<%= _ws %>',initTitle:'<%= (asgn.title || '').replace(/'/g, '\\\'') %>',initStatus:'<%= asgn.status %>',initEstHours:<%= asgn.estimatedHours != null ? asgn.estimatedHours : 'null' %>})"
+                    data-emp-ids="<%= JSON.stringify((asgn.assignedEmployees || []).map(function(e){return String(e._id);})) %>"
+                    data-sub-ids="<%= JSON.stringify((asgn.assignedSubcontractors || []).map(function(s){return String(s._id);})) %>">
                     <%- include('./assignmentCellEditor.ejs') %>
                   </div>
                 </td>

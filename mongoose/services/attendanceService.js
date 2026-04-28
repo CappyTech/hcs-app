@@ -524,6 +524,19 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     logger.warn('Vehicles lookup skipped: ' + e.message);
   }
 
+  // All REST suppliers (unfiltered) for the assignment cell editor — broader than the
+  // CIS-verified allSubcontractors used for the attendance grid.
+  let allSuppliersForAssignment = [];
+  try {
+    allSuppliersForAssignment = await mdb.REST.supplier
+      .find({})
+      .select('_id uuid Name')
+      .sort({ Name: 1 })
+      .lean();
+  } catch (e) {
+    logger.warn('allSuppliersForAssignment lookup skipped: ' + e.message);
+  }
+
   return {
     groupedAttendance,
     payrollWeekStart,
@@ -551,6 +564,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     dailyHeadcount,
     allEmployees,
     allSubcontractors,
+    allSuppliersForAssignment,
     contractsForWeek,
     vehicles,
     vehicleDeploymentsByVehicleDate

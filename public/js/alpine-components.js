@@ -351,8 +351,8 @@ document.addEventListener('alpine:init', function () {
       form: {
         title: props.initTitle || '',
         status: props.initStatus || 'Planned',
-        employeeIds: (props.initEmployeeIds || []).slice(),
-        subIds: (props.initSubIds || []).slice(),
+        employeeIds: [],   // populated in init() from data-emp-ids attribute
+        subIds: [],        // populated in init() from data-sub-ids attribute
         estimatedHours: props.initEstHours != null ? props.initEstHours : '',
       },
 
@@ -368,6 +368,16 @@ document.addEventListener('alpine:init', function () {
         try {
           var el2 = document.getElementById('weekly-subcontractors-json');
           if (el2) this.subcontractors = JSON.parse(el2.textContent) || [];
+        } catch (e) { /* ignore */ }
+        // Pre-selected IDs are stored as HTML-encoded JSON in data attributes
+        // to avoid Alpine CSP expression-evaluator limitations with array literals.
+        try {
+          var empAttr = this.$el.getAttribute('data-emp-ids');
+          if (empAttr) this.form.employeeIds = JSON.parse(empAttr);
+        } catch (e) { /* ignore */ }
+        try {
+          var subAttr = this.$el.getAttribute('data-sub-ids');
+          if (subAttr) this.form.subIds = JSON.parse(subAttr);
         } catch (e) { /* ignore */ }
         this._saved = {
           title: this.form.title,
