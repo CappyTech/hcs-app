@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Alpine.js CSP-safe component registrations.
  * This file MUST be loaded before alpine-csp.min.js so that
  * Alpine.data() calls are registered before Alpine.start().
@@ -6,10 +6,10 @@
 document.addEventListener('alpine:init', function () {
 
   /**
-   * profileTabs – tabbed panel switcher used on the user profile page.
+   * profileTabs â€“ tabbed panel switcher used on the user profile page.
    * Usage:  <div x-data="profileTabs">
-   *           <button x-bind="tab('employee')">…</button>
-   *           <div x-bind="panel('employee')">…</div>
+   *           <button x-bind="tab('employee')">â€¦</button>
+   *           <div x-bind="panel('employee')">â€¦</div>
    *         </div>
    *
    * The first tab declared in the markup is auto-activated on init.
@@ -49,7 +49,7 @@ document.addEventListener('alpine:init', function () {
   });
 
   /**
-   * helpDocs – search + active-link highlighting for /help
+   * helpDocs â€“ search + active-link highlighting for /help
    */
   Alpine.data('helpDocs', function () {
     return {
@@ -108,19 +108,19 @@ document.addEventListener('alpine:init', function () {
   });
 
   /**
-   * attendanceCell – inline Excel-like cell editor for the weekly attendance grid.
+   * attendanceCell â€“ inline Excel-like cell editor for the weekly attendance grid.
    *
    * Usage: <td x-data="attendanceCell({...props})">
    *
    * Props (all passed as plain JS object from the EJS template):
-   *   uuid          {string|null}  — existing attendance UUID, null for new records
-   *   isNew         {boolean}      — true when the cell is currently empty (create mode)
-   *   isPending     {boolean}      — true when the record status is 'pending'
-   *   isSubcontractor {boolean}    — true for subcontractor rows (uses dayRate not hoursWorked)
-   *   employeeId    {string|null}  — mongo ObjectId string, for new records
+   *   uuid          {string|null}  â€” existing attendance UUID, null for new records
+   *   isNew         {boolean}      â€” true when the cell is currently empty (create mode)
+   *   isPending     {boolean}      â€” true when the record status is 'pending'
+   *   isSubcontractor {boolean}    â€” true for subcontractor rows (uses dayRate not hoursWorked)
+   *   employeeId    {string|null}  â€” mongo ObjectId string, for new records
    *   subcontractorId {string|null}
-   *   date          {string}       — YYYY-MM-DD
-   *   initType      {string}       — initial type value
+   *   date          {string}       â€” YYYY-MM-DD
+   *   initType      {string}       â€” initial type value
    *   initHours     {number|null}
    *   initDayRate   {number|null}
    *   initLocationId {string|null}
@@ -238,7 +238,7 @@ document.addEventListener('alpine:init', function () {
         var self = this;
 
         if (props.isNew) {
-          // ── CREATE ──────────────────────────────────────────────────────
+          // â”€â”€ CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           var body = {
             date: props.date,
             type: self.form.type,
@@ -280,7 +280,7 @@ document.addEventListener('alpine:init', function () {
               self.error = 'Network error. Please try again.';
             });
         } else {
-          // ── UPDATE ──────────────────────────────────────────────────────
+          // â”€â”€ UPDATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           var updateBody = { type: self.form.type };
           if (props.isSubcontractor) {
             updateBody.dayRate = self.form.dayRate !== '' ? Number(self.form.dayRate) : null;
@@ -324,296 +324,6 @@ document.addEventListener('alpine:init', function () {
         this.form.dayRate = rec.dayRate != null ? rec.dayRate : '';
         this.form.locationId = rec.locationId || '';
         this.form.contractId = rec.contractId || '';
-      },
-    };
-  });
-
-  /**
-   * assignmentCell – inline row editor for the weekly contracts grid.
-   *
-   * Props:
-   *   uuid            {string|null}  — existing assignment UUID, null for new records
-   *   isNew           {boolean}
-   *   contractId      {string}       — MongoDB ObjectId string of the parent contract
-   *   weekStart       {string}       — YYYY-MM-DD (Saturday of payroll week)
-   *   initTitle       {string}
-   *   initStatus      {string}       — 'Planned' | 'In Progress' | 'Done'
-   *   initEmployeeIds {string[]}     — array of MongoDB ObjectId strings
-   *   initSubIds      {string[]}     — array of MongoDB ObjectId strings (suppliers)
-   *   initEstHours    {number|null}
-   */
-  Alpine.data('assignmentCell', function (props) {
-    return {
-      editing: false,
-      saving: false,
-      error: null,
-
-      form: {
-        title: props.initTitle || '',
-        status: props.initStatus || 'Planned',
-        employeeIds: [],   // populated in init() from data-emp-ids attribute
-        subIds: [],        // populated in init() from data-sub-ids attribute
-        estimatedHours: props.initEstHours != null ? props.initEstHours : '',
-      },
-
-      employees: [],
-      subcontractors: [],
-      _saved: null,
-
-      init: function () {
-        try {
-          var el = document.getElementById('weekly-employees-json');
-          if (el) this.employees = JSON.parse(el.textContent) || [];
-        } catch (e) { /* ignore */ }
-        try {
-          var el2 = document.getElementById('weekly-subcontractors-json');
-          if (el2) this.subcontractors = JSON.parse(el2.textContent) || [];
-        } catch (e) { /* ignore */ }
-        // Pre-selected IDs are stored as HTML-encoded JSON in data attributes
-        // to avoid Alpine CSP expression-evaluator limitations with array literals.
-        try {
-          var empAttr = this.$el.getAttribute('data-emp-ids');
-          if (empAttr) this.form.employeeIds = JSON.parse(empAttr);
-        } catch (e) { /* ignore */ }
-        try {
-          var subAttr = this.$el.getAttribute('data-sub-ids');
-          if (subAttr) this.form.subIds = JSON.parse(subAttr);
-        } catch (e) { /* ignore */ }
-        this._saved = {
-          title: this.form.title,
-          status: this.form.status,
-          employeeIds: this.form.employeeIds.slice(),
-          subIds: this.form.subIds.slice(),
-          estimatedHours: this.form.estimatedHours,
-        };
-      },
-
-      toggleEmployee: function (id) {
-        var idx = this.form.employeeIds.indexOf(id);
-        if (idx === -1) this.form.employeeIds.push(id);
-        else this.form.employeeIds.splice(idx, 1);
-      },
-
-      toggleSub: function (id) {
-        var idx = this.form.subIds.indexOf(id);
-        if (idx === -1) this.form.subIds.push(id);
-        else this.form.subIds.splice(idx, 1);
-      },
-
-      startEdit: function () {
-        this.error = null;
-        this.editing = true;
-        var self = this;
-        this.$nextTick(function () {
-          var first = self.$el.querySelector('input, select');
-          if (first) first.focus();
-        });
-      },
-
-      cancel: function () {
-        this.form.title = this._saved.title;
-        this.form.status = this._saved.status;
-        this.form.employeeIds = this._saved.employeeIds.slice();
-        this.form.subIds = this._saved.subIds.slice();
-        this.form.estimatedHours = this._saved.estimatedHours;
-        this.editing = false;
-        this.error = null;
-      },
-
-      handleKey: function (e) {
-        if (e.key === 'Escape') this.cancel();
-      },
-
-      save: function () {
-        if (!this.form.title.trim()) {
-          this.error = 'Title is required.';
-          return;
-        }
-        this.saving = true;
-        this.error = null;
-        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-        var self = this;
-
-        if (props.isNew) {
-          var body = {
-            contractId: props.contractId,
-            weekStart: props.weekStart,
-            title: self.form.title.trim(),
-            status: self.form.status,
-            assignedEmployees: self.form.employeeIds,
-            assignedSubcontractors: self.form.subIds,
-          };
-          if (self.form.estimatedHours !== '') body.estimatedHours = Number(self.form.estimatedHours);
-
-          fetch('/assignment/inline', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-            body: JSON.stringify(body),
-          })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-              self.saving = false;
-              if (!data.success) { self.error = data.error || 'Save failed.'; return; }
-              window.location.reload();
-            })
-            .catch(function () { self.saving = false; self.error = 'Network error. Please try again.'; });
-        } else {
-          fetch('/assignment/' + props.uuid, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-            body: JSON.stringify({
-              title: self.form.title.trim(),
-              status: self.form.status,
-              assignedEmployees: self.form.employeeIds,
-              assignedSubcontractors: self.form.subIds,
-              estimatedHours: self.form.estimatedHours !== '' ? Number(self.form.estimatedHours) : null,
-            }),
-          })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-              self.saving = false;
-              if (!data.success) { self.error = data.error || 'Save failed.'; return; }
-              window.location.reload();
-            })
-            .catch(function () { self.saving = false; self.error = 'Network error. Please try again.'; });
-        }
-      },
-    };
-  });
-
-  /**
-   * vehicleDeploymentCell – inline Excel-like cell editor for the weekly vehicles grid.
-   *
-   * Props:
-   *   uuid                  {string|null}  — existing deployment UUID, null for new records
-   *   isNew                 {boolean}
-   *   vehicleId             {string}       — MongoDB ObjectId string of the vehicle
-   *   date                  {string}       — YYYY-MM-DD
-   *   initDriverEmployeeId  {string|null}
-   *   initDriverSubId       {string|null}
-   *   initLocationId        {string|null}
-   *   initContractId        {string|null}
-   *   initStartMileage      {number|null}
-   *   initEndMileage        {number|null}
-   *   initUsageType         {string}
-   */
-  Alpine.data('vehicleDeploymentCell', function (props) {
-    return {
-      editing: false,
-      saving: false,
-      error: null,
-
-      display: {
-        driverName: props.initDriverName || null,
-        usageType: props.initUsageType || null,
-      },
-
-      form: {
-        driverType: props.initDriverEmployeeId ? 'employee' : (props.initDriverSubId ? 'subcontractor' : 'none'),
-        driverEmployeeId: props.initDriverEmployeeId || '',
-        driverSubId: props.initDriverSubId || '',
-        locationId: props.initLocationId || '',
-        contractId: props.initContractId || '',
-        startMileage: props.initStartMileage != null ? props.initStartMileage : '',
-        endMileage: props.initEndMileage != null ? props.initEndMileage : '',
-        usageType: props.initUsageType || 'site',
-      },
-
-      employees: [],
-      subcontractors: [],
-      locations: [],
-      contracts: [],
-      _saved: null,
-
-      init: function () {
-        try {
-          var el = document.getElementById('weekly-employees-json');
-          if (el) this.employees = JSON.parse(el.textContent) || [];
-        } catch (e) { /* ignore */ }
-        try {
-          var el2 = document.getElementById('weekly-subcontractors-json');
-          if (el2) this.subcontractors = JSON.parse(el2.textContent) || [];
-        } catch (e) { /* ignore */ }
-        try {
-          var el3 = document.getElementById('attendance-locations-json');
-          if (el3) this.locations = JSON.parse(el3.textContent) || [];
-        } catch (e) { /* ignore */ }
-        try {
-          var el4 = document.getElementById('attendance-contracts-json');
-          if (el4) this.contracts = JSON.parse(el4.textContent) || [];
-        } catch (e) { /* ignore */ }
-        this._saved = Object.assign({}, this.form);
-      },
-
-      startEdit: function () {
-        this.error = null;
-        this.editing = true;
-        var self = this;
-        this.$nextTick(function () {
-          var first = self.$el.querySelector('select, input');
-          if (first) first.focus();
-        });
-      },
-
-      cancel: function () {
-        this.form = Object.assign({}, this._saved);
-        this.editing = false;
-        this.error = null;
-      },
-
-      handleKey: function (e) {
-        if (e.key === 'Escape') this.cancel();
-        if (e.key === 'Enter') { e.preventDefault(); this.save(); }
-      },
-
-      save: function () {
-        this.saving = true;
-        this.error = null;
-        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-        var self = this;
-
-        var body = {
-          vehicleId: props.vehicleId,
-          date: props.date,
-          usageType: self.form.usageType,
-        };
-        if (self.form.driverType === 'employee' && self.form.driverEmployeeId) {
-          body.driverEmployeeId = self.form.driverEmployeeId;
-        }
-        if (self.form.driverType === 'subcontractor' && self.form.driverSubId) {
-          body.driverSubcontractorId = self.form.driverSubId;
-        }
-        if (self.form.locationId) body.locationId = self.form.locationId;
-        if (self.form.contractId) body.contractId = self.form.contractId;
-        if (self.form.startMileage !== '') body.startMileage = Number(self.form.startMileage);
-        if (self.form.endMileage !== '') body.endMileage = Number(self.form.endMileage);
-
-        var url = props.isNew ? '/vehicle-deployment/inline' : '/vehicle-deployment/' + props.uuid;
-        var method = props.isNew ? 'POST' : 'PATCH';
-
-        fetch(url, {
-          method: method,
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-          body: JSON.stringify(body),
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            self.saving = false;
-            if (!data.success) { self.error = data.error || 'Save failed.'; return; }
-            var rec = data.record;
-            // Update display
-            var driverEmp = rec.driverEmployeeId;
-            var driverSub = rec.driverSubcontractorId;
-            self.display.driverName = driverEmp ? driverEmp.name : (driverSub ? driverSub.Name : null);
-            self.display.usageType = rec.usageType;
-            // Update props for subsequent edits
-            props.isNew = false;
-            props.uuid = rec.uuid;
-            self._saved = Object.assign({}, self.form);
-            self.editing = false;
-            if (props.isNew) window.location.reload();
-          })
-          .catch(function () { self.saving = false; self.error = 'Network error. Please try again.'; });
       },
     };
   });

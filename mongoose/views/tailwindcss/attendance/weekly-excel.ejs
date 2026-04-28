@@ -93,7 +93,9 @@
     <%- include('../partials/contractsTable-excel', {
       contractsForWeek: typeof contractsForWeek !== 'undefined' ? contractsForWeek : [],
       weekStart: startDate,
-      isManagementView
+      isManagementView,
+      allEmployees: typeof allEmployees !== 'undefined' ? allEmployees : [],
+      allSubcontractors: typeof allSubcontractors !== 'undefined' ? allSubcontractors : []
     }) %>
   </div>
 
@@ -180,7 +182,11 @@
       vehicleDeploymentsByVehicleDate: typeof vehicleDeploymentsByVehicleDate !== 'undefined' ? vehicleDeploymentsByVehicleDate : {},
       daysOfWeek,
       isManagementView,
-      moment
+      moment,
+      allEmployees: typeof allEmployees !== 'undefined' ? allEmployees : [],
+      allSubcontractors: typeof allSubcontractors !== 'undefined' ? allSubcontractors : [],
+      locations: typeof locations !== 'undefined' ? locations : [],
+      activeContracts: typeof activeContracts !== 'undefined' ? activeContracts : []
     }) %>
   </div>
 
@@ -353,7 +359,5 @@
   <%# CSP-safe data blobs — type="application/json" is never executed by browsers. %>
   <script type="application/json" id="attendance-locations-json"><%- JSON.stringify(locations || []) %></script>
   <script type="application/json" id="attendance-contracts-json"><%- JSON.stringify((activeContracts || []).map(function(c){ return { _id: c._id, title: c.title, location: c.location }; })) %></script>
-  <script type="application/json" id="weekly-employees-json"><%- JSON.stringify(typeof allEmployees !== 'undefined' ? allEmployees : []) %></script>
-  <script type="application/json" id="weekly-subcontractors-json"><%- JSON.stringify(typeof allSubcontractors !== 'undefined' ? allSubcontractors : []) %></script>
 
 </div>

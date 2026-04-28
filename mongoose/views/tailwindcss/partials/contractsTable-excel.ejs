@@ -2,18 +2,280 @@
   /*
    * contractsTable-excel.ejs
    *
-   * Props (passed from weekly-excel.ejs):
-   *   contractsForWeek  — array of { contract, assignments[] }
-   *   weekStart         — YYYY-MM-DD string (Saturday of payroll week)
-   *   isManagementView  — boolean
-   *
-   * Displays active contracts with their week's assignments.
-   * Assignments are week-scoped, not day-scoped — no day columns here.
-   * Each assignment shows: title, status badge, employee chips, subcontractor chips,
-   * estimated hours, and an Edit button for admin/accountant.
+   * Props:
+   *   contractsForWeek  — [{contract, assignments[]}]
+   *   weekStart         — YYYY-MM-DD
+   *   allEmployees      — [{_id, uuid, name}]
+   *   allSubcontractors — [{_id, uuid, Name}]
    */
+  const _cfWeek  = typeof contractsForWeek  !== 'undefined' ? contractsForWeek  : [];
+  const _ws      = typeof weekStart         !== 'undefined' ? weekStart          : '';
+  const _emps    = typeof allEmployees      !== 'undefined' ? allEmployees       : [];
+  const _subs    = typeof allSubcontractors !== 'undefined' ? allSubcontractors  : [];
+  const _canEdit = canDept('management') || canDept('admin');
+  const _colspan = _canEdit ? 7 : 6;
+  const _sBadge  = {
+    'Planned':     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    'In Progress': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    'Done':        'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  };
+  const _cBadge  = {
+    'Planned':     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'In Progress': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    'Completed':   'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  };
+%>
 
-  const _assignmentStatusBadge = {
+<% if (_cfWeek.length === 0) { %>
+  <div class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">No active contracts.</div>
+<% } else { %>
+<table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
+  <thead>
+    <tr class="bg-gray-50 dark:bg-gray-800">
+      <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 w-48">Contract</th>
+      <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Assignment</th>
+      <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Status</th>
+      <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Employees</th>
+      <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Subcontractors</th>
+      <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 w-20">Est. Hours</th>
+      <% if (_canEdit) { %>
+        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 w-20 print:hidden">Actions</th>
+      <% } %>
+    </tr>
+  </thead>
+  <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+    <% _cfWeek.forEach(function(cw) { %>
+      <%
+        const _c     = cw.contract;
+        const _asgns = cw.assignments || [];
+        const _cid   = String(_c._id);
+      %>
+      <!-- Contract header row -->
+      <tr class="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
+        <td class="border border-gray-200 dark:border-gray-700 px-3 py-2" colspan="<%= _colspan %>">
+          <div class="flex items-center gap-2 flex-wrap">
+            <a href="/contract/read/<%= _c.uuid %>" class="font-semibold text-green-900 dark:text-green-400 hover:underline"><%= _c.title %></a>
+            <% if (_c.location) { %><span class="text-xs text-gray-500 dark:text-gray-400">— <%= _c.location %></span><% } %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= _cBadge[_c.status] || 'bg-gray-100 text-gray-700' %>"><%= _c.status %></span>
+            <span class="ml-auto text-xs text-gray-400 dark:text-gray-500"><%= _asgns.length %> assignment<%= _asgns.length === 1 ? '' : 's' %> this week</span>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Assignment rows -->
+      <% if (!_asgns.length) { %>
+        <tr class="border-b border-gray-100 dark:border-gray-800">
+          <td colspan="<%= _colspan %>" class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-gray-400 dark:text-gray-500 text-xs italic">No assignments this week</td>
+        </tr>
+      <% } else { %>
+        <% _asgns.forEach(function(asgn) { %>
+          <%
+            const _empIds = (asgn.assignedEmployees || []).map(function(e){ return String(e._id); });
+            const _subIds = (asgn.assignedSubcontractors || []).map(function(s){ return String(s._id); });
+          %>
+          <!-- Read row -->
+          <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+            <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-gray-400 text-xs"></td>
+            <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 font-medium">
+              <%= asgn.title %>
+              <% if (asgn.description) { %><span class="block text-xs text-gray-400 font-normal mt-0.5"><%= asgn.description %></span><% } %>
+            </td>
+            <td class="border border-gray-100 dark:border-gray-800 px-3 py-2">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= _sBadge[asgn.status] || 'bg-gray-100 text-gray-700' %>"><%= asgn.status %></span>
+            </td>
+            <td class="border border-gray-100 dark:border-gray-800 px-3 py-2">
+              <% (asgn.assignedEmployees || []).forEach(function(e) { %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300 mr-1 mb-1"><%= e.name %></span>
+              <% }); %>
+              <% if (!(asgn.assignedEmployees || []).length) { %><span class="text-xs text-gray-400 italic">None</span><% } %>
+            </td>
+            <td class="border border-gray-100 dark:border-gray-800 px-3 py-2">
+              <% (asgn.assignedSubcontractors || []).forEach(function(s) { %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300 mr-1 mb-1"><%= s.Name %></span>
+              <% }); %>
+              <% if (!(asgn.assignedSubcontractors || []).length) { %><span class="text-xs text-gray-400 italic">None</span><% } %>
+            </td>
+            <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center text-sm text-gray-600 dark:text-gray-400">
+              <%= asgn.estimatedHours != null ? asgn.estimatedHours + 'h' : '—' %>
+            </td>
+            <% if (_canEdit) { %>
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center print:hidden">
+                <button type="button" class="asgn-tog text-xs text-gray-500 hover:text-green-700 dark:hover:text-green-400 underline" data-target="ar-<%= asgn.uuid %>">Edit</button>
+              </td>
+            <% } %>
+          </tr>
+
+          <!-- Edit form row (hidden) -->
+          <% if (_canEdit) { %>
+            <tr id="ar-<%= asgn.uuid %>" style="display:none" class="print:hidden">
+              <td colspan="<%= _colspan %>" class="border-l-4 border-green-400 dark:border-green-600 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
+                <form class="asgn-form" data-uuid="<%= asgn.uuid %>" data-is-new="false">
+                  <div class="flex flex-wrap gap-2 mb-3">
+                    <input type="text" name="title" value="<%= asgn.title.replace(/"/g, '&quot;') %>" required placeholder="Title"
+                      class="flex-1 min-w-[160px] text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                    <select name="status" class="text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                      <option value="Planned"     <%= asgn.status === 'Planned'     ? 'selected' : '' %>>Planned</option>
+                      <option value="In Progress" <%= asgn.status === 'In Progress' ? 'selected' : '' %>>In Progress</option>
+                      <option value="Done"        <%= asgn.status === 'Done'        ? 'selected' : '' %>>Done</option>
+                    </select>
+                    <input type="number" name="estimatedHours" value="<%= asgn.estimatedHours != null ? asgn.estimatedHours : '' %>" min="0" step="0.5" placeholder="Est. hrs"
+                      class="w-20 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                  </div>
+                  <div class="flex flex-wrap gap-5 mb-3">
+                    <div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Employees</p>
+                      <div class="flex flex-wrap gap-x-3 gap-y-1 max-h-28 overflow-y-auto">
+                        <% _emps.forEach(function(emp) { %>
+                          <label class="inline-flex items-center gap-1 text-xs cursor-pointer">
+                            <input type="checkbox" name="assignedEmployees" value="<%= emp._id %>" <%= _empIds.includes(String(emp._id)) ? 'checked' : '' %> class="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500">
+                            <span class="text-gray-700 dark:text-gray-300"><%= emp.name %></span>
+                          </label>
+                        <% }); %>
+                        <% if (!_emps.length) { %><span class="text-xs text-gray-400 italic">None</span><% } %>
+                      </div>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Subcontractors</p>
+                      <div class="flex flex-wrap gap-x-3 gap-y-1 max-h-28 overflow-y-auto">
+                        <% _subs.forEach(function(sub) { %>
+                          <label class="inline-flex items-center gap-1 text-xs cursor-pointer">
+                            <input type="checkbox" name="assignedSubcontractors" value="<%= sub._id %>" <%= _subIds.includes(String(sub._id)) ? 'checked' : '' %> class="w-3.5 h-3.5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+                            <span class="text-gray-700 dark:text-gray-300"><%= sub.Name %></span>
+                          </label>
+                        <% }); %>
+                        <% if (!_subs.length) { %><span class="text-xs text-gray-400 italic">None</span><% } %>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button type="submit" class="px-3 py-1.5 rounded text-xs font-medium bg-green-600 hover:bg-green-700 text-white transition-colors">Save changes</button>
+                    <button type="button" class="asgn-cancel px-3 py-1.5 rounded text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors" data-target="ar-<%= asgn.uuid %>">Cancel</button>
+                    <span class="asgn-err text-xs text-red-600 dark:text-red-400" style="display:none"></span>
+                  </div>
+                </form>
+              </td>
+            </tr>
+          <% } %>
+        <% }); %>
+      <% } %>
+
+      <!-- Add assignment (hidden form + trigger) -->
+      <% if (_canEdit) { %>
+        <tr id="ar-new-<%= _cid %>" style="display:none" class="print:hidden">
+          <td colspan="<%= _colspan %>" class="border-l-4 border-green-400 dark:border-green-600 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
+            <form class="asgn-form" data-contract-id="<%= _cid %>" data-week-start="<%= _ws %>" data-is-new="true">
+              <div class="flex flex-wrap gap-2 mb-3">
+                <input type="text" name="title" required placeholder="Assignment title"
+                  class="flex-1 min-w-[160px] text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                <select name="status" class="text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                  <option value="Planned">Planned</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Done">Done</option>
+                </select>
+                <input type="number" name="estimatedHours" min="0" step="0.5" placeholder="Est. hrs"
+                  class="w-20 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+              </div>
+              <div class="flex flex-wrap gap-5 mb-3">
+                <div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Employees</p>
+                  <div class="flex flex-wrap gap-x-3 gap-y-1 max-h-28 overflow-y-auto">
+                    <% _emps.forEach(function(emp) { %>
+                      <label class="inline-flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="checkbox" name="assignedEmployees" value="<%= emp._id %>" class="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500">
+                        <span class="text-gray-700 dark:text-gray-300"><%= emp.name %></span>
+                      </label>
+                    <% }); %>
+                    <% if (!_emps.length) { %><span class="text-xs text-gray-400 italic">None</span><% } %>
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Subcontractors</p>
+                  <div class="flex flex-wrap gap-x-3 gap-y-1 max-h-28 overflow-y-auto">
+                    <% _subs.forEach(function(sub) { %>
+                      <label class="inline-flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="checkbox" name="assignedSubcontractors" value="<%= sub._id %>" class="w-3.5 h-3.5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+                        <span class="text-gray-700 dark:text-gray-300"><%= sub.Name %></span>
+                      </label>
+                    <% }); %>
+                    <% if (!_subs.length) { %><span class="text-xs text-gray-400 italic">None</span><% } %>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="submit" class="px-3 py-1.5 rounded text-xs font-medium bg-green-600 hover:bg-green-700 text-white transition-colors">Add Assignment</button>
+                <button type="button" class="asgn-cancel px-3 py-1.5 rounded text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors" data-target="ar-new-<%= _cid %>">Cancel</button>
+                <span class="asgn-err text-xs text-red-600 dark:text-red-400" style="display:none"></span>
+              </div>
+            </form>
+          </td>
+        </tr>
+        <tr class="print:hidden">
+          <td colspan="<%= _colspan %>" class="border border-gray-100 dark:border-gray-800 px-3 py-1.5">
+            <button type="button" class="asgn-tog text-xs text-gray-400 dark:text-gray-500 hover:text-green-700 dark:hover:text-green-400 transition-colors" data-target="ar-new-<%= _cid %>">+ Add assignment</button>
+          </td>
+        </tr>
+      <% } %>
+    <% }); %>
+  </tbody>
+</table>
+
+<script>
+(function () {
+  document.querySelectorAll('.asgn-tog').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var row = document.getElementById(btn.dataset.target);
+      if (!row) return;
+      var open = row.style.display !== 'none';
+      row.style.display = open ? 'none' : '';
+      if (!open) { var f = row.querySelector('input[type="text"]'); if (f) f.focus(); }
+    });
+  });
+  document.querySelectorAll('.asgn-cancel').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var row = document.getElementById(btn.dataset.target);
+      if (row) row.style.display = 'none';
+    });
+  });
+  document.querySelectorAll('.asgn-form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var sub   = form.querySelector('[type="submit"]');
+      var err   = form.querySelector('.asgn-err');
+      var isNew = form.dataset.isNew === 'true';
+      if (err) { err.textContent = ''; err.style.display = 'none'; }
+      if (sub) { sub.disabled = true; sub.textContent = '…'; }
+      var fd = new FormData(form);
+      var payload = {
+        title:                  fd.get('title') || '',
+        status:                 fd.get('status') || 'Planned',
+        assignedEmployees:      fd.getAll('assignedEmployees'),
+        assignedSubcontractors: fd.getAll('assignedSubcontractors'),
+      };
+      var hrs = fd.get('estimatedHours');
+      if (hrs !== '' && hrs !== null) payload.estimatedHours = Number(hrs);
+      if (isNew) { payload.contractId = form.dataset.contractId; payload.weekStart = form.dataset.weekStart; }
+      var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+      fetch(isNew ? '/assignment/inline' : '/assignment/' + form.dataset.uuid, {
+        method: isNew ? 'POST' : 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify(payload),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.success) { window.location.reload(); return; }
+          if (sub) { sub.disabled = false; sub.textContent = isNew ? 'Add Assignment' : 'Save changes'; }
+          if (err) { err.textContent = d.error || 'Save failed.'; err.style.display = ''; }
+        })
+        .catch(function () {
+          if (sub) { sub.disabled = false; sub.textContent = isNew ? 'Add Assignment' : 'Save changes'; }
+          if (err) { err.textContent = 'Network error.'; err.style.display = ''; }
+        });
+    });
+  });
+})();
+</script>
+<% } %>
+
     'Planned':     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
     'In Progress': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
     'Done':        'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
