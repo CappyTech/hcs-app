@@ -1,16 +1,16 @@
-<%
+﻿<%
   /*
    * vehiclesTable-excel.ejs
    *
    * Props:
-   *   vehicles                        — array of vehicle docs
-   *   vehicleDeploymentsByVehicleDate — { [vehicleId]: { [YYYY-MM-DD]: deploymentDoc } }
-   *   daysOfWeek                      — array of YYYY-MM-DD strings
-   *   allEmployees                    — [{_id, uuid, name}]
-   *   allSubcontractors               — [{_id, uuid, Name}]
-   *   locations                       — [{_id, uuid, name}]
-   *   activeContracts                 — [{_id, uuid, title}]
-   *   moment                          — moment.js
+   *   vehicles                        â€” array of vehicle docs
+   *   vehicleDeploymentsByVehicleDate â€” { [vehicleId]: { [YYYY-MM-DD]: deploymentDoc } }
+   *   daysOfWeek                      â€” array of YYYY-MM-DD strings
+   *   allEmployees                    â€” [{_id, uuid, name}]
+   *   allSubcontractors               â€” [{_id, uuid, Name}]
+   *   locations                       â€” [{_id, uuid, name}]
+   *   activeContracts                 â€” [{_id, uuid, title}]
+   *   moment                          â€” moment.js
    */
   const _vByD   = typeof vehicleDeploymentsByVehicleDate !== 'undefined' ? vehicleDeploymentsByVehicleDate : {};
   const _today  = new Date();
@@ -68,11 +68,11 @@
       <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
         <!-- Registration -->
         <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap">
-          <a href="/vehicle/read/<%= v._id %>" class="font-medium text-green-900 dark:text-green-400 hover:underline"><%= v.registrationNumber || '—' %></a>
+          <a href="/vehicle/read/<%= v._id %>" class="font-medium text-green-900 dark:text-green-400 hover:underline"><%= v.registrationNumber || 'â€”' %></a>
           <% if (v.make || v.model) { %><span class="block text-[10px] text-gray-400 dark:text-gray-500"><%= [v.make, v.model].filter(Boolean).join(' ') %></span><% } %>
         </td>
         <!-- Body type -->
-        <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= v.bodyType || '—' %></td>
+        <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= v.bodyType || 'â€”' %></td>
 
         <!-- Day cells -->
         <% _dows.forEach(function(day) { %>
@@ -114,7 +114,7 @@
                   <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 <%= _usageBadge[_dep.usageType] || 'bg-gray-100 text-gray-700' %>"><%= _dep.usageType %></span>
                 </div>
               <% } else { %>
-                <div class="px-2 py-1.5 text-xs text-gray-200 dark:text-gray-700 text-center">—</div>
+                <div class="px-2 py-1.5 text-xs text-gray-200 dark:text-gray-700 text-center">â€”</div>
               <% } %>
             <% } %>
           </td>
@@ -122,17 +122,17 @@
 
         <!-- Compliance columns -->
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.roadTaxExpiryDate) %>">
-          <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : '—' %>
+          <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : 'â€”' %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.motExpiryDate) %>">
-          <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : '—' %>
+          <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : 'â€”' %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
-          <span class="<%= _complianceCls(v.insuranceExpiryDate) %>"><%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : '—' %></span>
+          <span class="<%= _complianceCls(v.insuranceExpiryDate) %>"><%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : 'â€”' %></span>
           <% if (v.insuranceProvider) { %><span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.insuranceProvider %></span><% } %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
-          <span class="<%= _complianceCls(v.breakdownExpiryDate) %>"><%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : '—' %></span>
+          <span class="<%= _complianceCls(v.breakdownExpiryDate) %>"><%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : 'â€”' %></span>
           <% if (v.breakdownProvider) { %><span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.breakdownProvider %></span><% } %>
         </td>
       </tr>
@@ -141,7 +141,7 @@
 </table>
 
 <% if (_canEdit) { %>
-<!-- ── Vehicle Deployment Modal ─────────────────────────────────────── -->
+<!-- â”€â”€ Vehicle Deployment Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <dialog id="vdep-modal" class="rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-0 max-w-md w-full">
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
     <h3 id="vdep-modal-title" class="text-sm font-semibold">Vehicle Deployment</h3>
@@ -156,7 +156,7 @@
     <div class="flex items-center gap-3">
       <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Driver</label>
       <select id="vdep-driver-ref" class="flex-1 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-        <option value="">— Unassigned —</option>
+        <option value="">â€” Unassigned â€”</option>
         <optgroup label="Employees">
           <% _emps.forEach(function(emp) { %>
             <option value="emp-<%= emp._id %>"><%= emp.name %></option>
@@ -184,7 +184,7 @@
     <div class="flex items-center gap-3">
       <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Location</label>
       <select id="vdep-location" class="flex-1 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-        <option value="">— None —</option>
+        <option value="">â€” None â€”</option>
         <% _locs.forEach(function(loc) { %>
           <option value="<%= loc._id %>"><%= loc.name %></option>
         <% }); %>
@@ -194,7 +194,7 @@
     <div class="flex items-center gap-3">
       <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Contract</label>
       <select id="vdep-contract" class="flex-1 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-        <option value="">— None —</option>
+        <option value="">â€” None â€”</option>
         <% _conts.forEach(function(c) { %>
           <option value="<%= c._id %>"><%= c.title %></option>
         <% }); %>
@@ -205,7 +205,7 @@
       <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Mileage</label>
       <input type="number" id="vdep-start-mi" min="0" placeholder="Start"
         class="w-28 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-      <span class="text-xs text-gray-400">→</span>
+      <span class="text-xs text-gray-400">â†’</span>
       <input type="number" id="vdep-end-mi" min="0" placeholder="End"
         class="w-28 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
     </div>
@@ -247,7 +247,7 @@
       document.getElementById('vdep-start-mi').value   = d.startMileage || '';
       document.getElementById('vdep-end-mi').value     = d.endMileage   || '';
       document.getElementById('vdep-modal-title').textContent =
-        (d.isNew === 'true' ? 'Add Deployment' : 'Edit Deployment') + ' — ' + d.date;
+        (d.isNew === 'true' ? 'Add Deployment' : 'Edit Deployment') + ' â€” ' + d.date;
       errEl.style.display = 'none';
       submitBtn.disabled = false; submitBtn.textContent = 'Save';
       modal.showModal();
@@ -256,7 +256,7 @@
 
   document.getElementById('vdep-form').addEventListener('submit', function (e) {
     e.preventDefault();
-    submitBtn.disabled = true; submitBtn.textContent = '…';
+    submitBtn.disabled = true; submitBtn.textContent = 'â€¦';
     errEl.style.display = 'none';
     var isNew  = document.getElementById('vdep-is-new').value === 'true';
     var uuid   = document.getElementById('vdep-uuid').value;
@@ -294,340 +294,4 @@
 })();
 </script>
 <% } %>
-<% } %>
-
-
-  const _vByD  = typeof vehicleDeploymentsByVehicleDate !== 'undefined' ? vehicleDeploymentsByVehicleDate : {};
-  const _today = new Date();
-  const _warnMs = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-  const _complianceCls = (date) => {
-    if (!date) return 'text-gray-400 dark:text-gray-500';
-    const d = new Date(date);
-    if (d < _today) return 'text-red-600 dark:text-red-400 font-semibold';
-    if (d - _today < _warnMs) return 'text-amber-600 dark:text-amber-400 font-semibold';
-    return 'text-gray-700 dark:text-gray-300';
-  };
-
-  const _usageBadge = {
-    site:         'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    delivery:     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    maintenance:  'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-    office:       'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-    other:        'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  };
-
-  const _vList = typeof vehicles !== 'undefined' ? vehicles : [];
-  const _dows  = typeof daysOfWeek !== 'undefined' ? daysOfWeek : [];
-  const _canEdit = canDept('management') || canDept('admin');
-%>
-
-<% if (_vList.length === 0) { %>
-  <div class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
-    No active vehicles in the fleet.
-  </div>
-<% } else { %>
-  <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
-    <thead>
-      <tr class="bg-gray-50 dark:bg-gray-800">
-        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">Registration</th>
-        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Type</th>
-        <% _dows.forEach(function(day) { %>
-          <th class="text-center text-xs font-normal border border-gray-300 dark:border-gray-700 px-2 py-2 text-gray-700 dark:text-gray-300 min-w-[90px]">
-            <a href="/daily/<%= day %>" class="hover:underline hover:text-green-700 dark:hover:text-green-300">
-              <%= moment(day).format('DD/MM') %>
-            </a><br>
-            <span class="font-bold text-gray-600 dark:text-gray-400"><%= moment(day).format('ddd') %></span>
-          </th>
-        <% }); %>
-        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">TAX</th>
-        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">MOT</th>
-        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">Insurance</th>
-        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">Breakdown</th>
-      </tr>
-    </thead>
-    <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-      <% _vList.forEach(function(v) { %>
-        <%
-          const _vId = String(v._id);
-          const _vDeps = _vByD[_vId] || {};
-        %>
-        <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-
-          <!-- Registration -->
-          <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap">
-            <a href="/vehicle/read/<%= v._id %>"
-               class="font-medium text-green-900 dark:text-green-400 hover:underline">
-              <%= v.registrationNumber || '—' %>
-            </a>
-            <% if (v.make || v.model) { %>
-              <span class="block text-[10px] text-gray-400 dark:text-gray-500"><%= [v.make, v.model].filter(Boolean).join(' ') %></span>
-            <% } %>
-          </td>
-
-          <!-- Body type -->
-          <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-            <%= v.bodyType || '—' %>
-          </td>
-
-          <!-- Day cells -->
-          <% _dows.forEach(function(day) { %>
-            <%
-              const _dep = _vDeps[day];
-              const _driverName = _dep
-                ? (_dep.driverEmployeeId ? _dep.driverEmployeeId.name : (_dep.driverSubcontractorId ? _dep.driverSubcontractorId.Name : null))
-                : null;
-            %>
-            <td class="border border-gray-300 dark:border-gray-700 p-0 align-top min-w-[90px]">
-              <% if (_canEdit) { %>
-                <button type="button" class="vdep-open w-full min-h-[42px] text-left px-2 py-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                  data-vehicle-id="<%= _vId %>"
-                  data-date="<%= day %>"
-                  data-uuid="<%= _dep ? _dep.uuid : '' %>"
-                  data-is-new="<%= _dep ? 'false' : 'true' %>"
-                  data-driver-employee-id="<%= (_dep && _dep.driverEmployeeId) ? String(_dep.driverEmployeeId._id) : '' %>"
-                  data-driver-sub-id="<%= (_dep && _dep.driverSubcontractorId) ? String(_dep.driverSubcontractorId._id) : '' %>"
-                  data-usage-type="<%= _dep ? _dep.usageType : 'site' %>"
-                  data-location-id="<%= (_dep && _dep.locationId) ? String(_dep.locationId._id) : '' %>"
-                  data-contract-id="<%= (_dep && _dep.contractId) ? String(_dep.contractId._id) : '' %>"
-                  data-start-mileage="<%= (_dep && _dep.startMileage != null) ? _dep.startMileage : '' %>"
-                  data-end-mileage="<%= (_dep && _dep.endMileage != null) ? _dep.endMileage : '' %>">
-                  <% if (_dep) { %>
-                    <% if (_driverName) { %>
-                      <span class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate"><%= _driverName %></span>
-                    <% } %>
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 <%= _usageBadge[_dep.usageType] || 'bg-gray-100 text-gray-700' %>">
-                      <%= _dep.usageType %>
-                    </span>
-                  <% } else { %>
-                    <span class="text-gray-300 dark:text-gray-600 text-xs">+</span>
-                  <% } %>
-                </button>
-              <% } else { %>
-                <!-- Read-only: show deployment info or empty -->
-                <% if (_dep) { %>
-                  <div class="px-2 py-1.5 text-xs">
-                    <% if (_driverName) { %>
-                      <span class="block font-medium text-gray-700 dark:text-gray-300 truncate"><%= _driverName %></span>
-                    <% } %>
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 <%= _usageBadge[_dep.usageType] || 'bg-gray-100 text-gray-700' %>">
-                      <%= _dep.usageType %>
-                    </span>
-                  </div>
-                <% } else { %>
-                  <div class="px-2 py-1.5 text-xs text-gray-200 dark:text-gray-700 text-center">—</div>
-                <% } %>
-              <% } %>
-            </td>
-          <% }); %>
-
-          <!-- Compliance: TAX -->
-          <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.roadTaxExpiryDate) %>">
-            <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : '—' %>
-          </td>
-
-          <!-- Compliance: MOT -->
-          <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.motExpiryDate) %>">
-            <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : '—' %>
-          </td>
-
-          <!-- Compliance: Insurance -->
-          <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
-            <span class="<%= _complianceCls(v.insuranceExpiryDate) %>">
-              <%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : '—' %>
-            </span>
-            <% if (v.insuranceProvider) { %>
-              <span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.insuranceProvider %></span>
-            <% } %>
-          </td>
-
-          <!-- Compliance: Breakdown -->
-          <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
-            <span class="<%= _complianceCls(v.breakdownExpiryDate) %>">
-              <%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : '—' %>
-            </span>
-            <% if (v.breakdownProvider) { %>
-              <span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.breakdownProvider %></span>
-            <% } %>
-          </td>
-
-        </tr>
-      <% }); %>
-    </tbody>
-  </table>
-
-<% if (_canEdit) { %>
-<!-- Vehicle deployment dialog modal -->
-<style>#vdep-modal::backdrop { background: rgba(0,0,0,0.5); }</style>
-<dialog id="vdep-modal" class="rounded-xl shadow-2xl bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-0 w-full max-w-md border border-gray-200 dark:border-gray-700">
-  <form id="vdep-form" method="dialog" novalidate>
-    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-      <h3 class="font-semibold text-base" id="vdep-modal-title">Vehicle Deployment</h3>
-      <button type="button" id="vdep-close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
-    </div>
-    <div class="px-5 py-4 space-y-3">
-      <!-- Driver -->
-      <div>
-        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Driver</label>
-        <select id="vdep-driver" name="driver" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-          <option value="">— None —</option>
-          <optgroup label="Employees">
-            <% _emps.forEach(function(emp) { %>
-              <option value="emp-<%= emp._id %>"><%= emp.name %></option>
-            <% }); %>
-          </optgroup>
-          <optgroup label="Subcontractors">
-            <% _subs.forEach(function(sub) { %>
-              <option value="sub-<%= sub._id %>"><%= sub.Name %></option>
-            <% }); %>
-          </optgroup>
-        </select>
-      </div>
-      <!-- Usage type -->
-      <div>
-        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Usage Type</label>
-        <select id="vdep-usage" name="usageType" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-          <option value="site">Site</option>
-          <option value="delivery">Delivery</option>
-          <option value="maintenance">Maintenance</option>
-          <option value="office">Office</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <!-- Location -->
-      <div>
-        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Location</label>
-        <select id="vdep-location" name="locationId" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-          <option value="">— None —</option>
-          <% _locs.forEach(function(loc) { %>
-            <option value="<%= loc._id %>"><%= loc.name %></option>
-          <% }); %>
-        </select>
-      </div>
-      <!-- Contract -->
-      <div>
-        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Contract</label>
-        <select id="vdep-contract" name="contractId" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-          <option value="">— None —</option>
-          <% _conts.forEach(function(c) { %>
-            <option value="<%= c._id %>"><%= c.title %></option>
-          <% }); %>
-        </select>
-      </div>
-      <!-- Mileage -->
-      <div class="flex gap-3">
-        <div class="flex-1">
-          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Mileage</label>
-          <input type="number" id="vdep-start-mileage" name="startMileage" min="0" step="1" placeholder="e.g. 12000"
-            class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-        </div>
-        <div class="flex-1">
-          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">End Mileage</label>
-          <input type="number" id="vdep-end-mileage" name="endMileage" min="0" step="1" placeholder="e.g. 12150"
-            class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-        </div>
-      </div>
-      <!-- Error -->
-      <p id="vdep-err" class="text-xs text-red-600 dark:text-red-400" style="display:none"></p>
-    </div>
-    <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
-      <button type="button" id="vdep-save" class="px-4 py-1.5 rounded text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors">Save</button>
-      <button type="button" id="vdep-close2" class="px-4 py-1.5 rounded text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors">Cancel</button>
-    </div>
-  </form>
-</dialog>
-
-<script>
-(function () {
-  var modal     = document.getElementById('vdep-modal');
-  var driverSel = document.getElementById('vdep-driver');
-  var usageSel  = document.getElementById('vdep-usage');
-  var locSel    = document.getElementById('vdep-location');
-  var contSel   = document.getElementById('vdep-contract');
-  var startIn   = document.getElementById('vdep-start-mileage');
-  var endIn     = document.getElementById('vdep-end-mileage');
-  var titleEl   = document.getElementById('vdep-modal-title');
-  var errEl     = document.getElementById('vdep-err');
-  var saveBtn   = document.getElementById('vdep-save');
-  var _state    = {};
-
-  function closeModal() { modal.close(); }
-  document.getElementById('vdep-close').addEventListener('click', closeModal);
-  document.getElementById('vdep-close2').addEventListener('click', closeModal);
-
-  document.querySelectorAll('.vdep-open').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var d = btn.dataset;
-      _state.vehicleId = d.vehicleId;
-      _state.date = d.date;
-      _state.uuid = d.uuid;
-      _state.isNew = d.isNew === 'true';
-
-      titleEl.textContent = (_state.isNew ? 'Add Deployment' : 'Edit Deployment') + ' — ' + d.date;
-      errEl.style.display = 'none';
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save';
-
-      // Populate driver
-      var driverVal = '';
-      if (d.driverEmployeeId) driverVal = 'emp-' + d.driverEmployeeId;
-      else if (d.driverSubId) driverVal = 'sub-' + d.driverSubId;
-      driverSel.value = driverVal;
-
-      usageSel.value  = d.usageType  || 'site';
-      locSel.value    = d.locationId || '';
-      contSel.value   = d.contractId || '';
-      startIn.value   = d.startMileage || '';
-      endIn.value     = d.endMileage   || '';
-
-      modal.showModal();
-    });
-  });
-
-  saveBtn.addEventListener('click', function () {
-    errEl.style.display = 'none';
-    saveBtn.disabled = true;
-    saveBtn.textContent = '…';
-
-    var driverVal = driverSel.value;
-    var payload = {
-      vehicleId:   _state.vehicleId,
-      date:        _state.date,
-      usageType:   usageSel.value  || undefined,
-      locationId:  locSel.value    || undefined,
-      contractId:  contSel.value   || undefined,
-    };
-    if (startIn.value !== '') payload.startMileage = Number(startIn.value);
-    if (endIn.value   !== '') payload.endMileage   = Number(endIn.value);
-    if (driverVal.startsWith('emp-')) payload.driverEmployeeId      = driverVal.slice(4);
-    else if (driverVal.startsWith('sub-')) payload.driverSubcontractorId = driverVal.slice(4);
-
-    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-    var url    = _state.isNew ? '/vehicle-deployment/inline' : '/vehicle-deployment/' + _state.uuid;
-    var method = _state.isNew ? 'POST' : 'PATCH';
-
-    fetch(url, {
-      method: method,
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-      body: JSON.stringify(payload),
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (d.success) { window.location.reload(); return; }
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save';
-        errEl.textContent = d.error || 'Save failed.';
-        errEl.style.display = '';
-      })
-      .catch(function () {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save';
-        errEl.textContent = 'Network error. Please try again.';
-        errEl.style.display = '';
-      });
-  });
-})();
-</script>
-<% } %>
-
 <% } %>
