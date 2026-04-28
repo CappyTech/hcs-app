@@ -96,7 +96,7 @@
               <% if (!(asgn.assignedSubcontractors || []).length) { %><span class="text-xs text-gray-400 italic">None</span><% } %>
             </td>
             <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center text-sm text-gray-600 dark:text-gray-400">
-              <%= asgn.estimatedHours != null ? asgn.estimatedHours + 'h' : '"”' %>
+              <%= asgn.estimatedHours != null ? asgn.estimatedHours + 'h' : '' %>
             </td>
             <% if (_canEdit) { %>
               <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center print:hidden">
