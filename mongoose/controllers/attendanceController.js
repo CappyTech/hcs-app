@@ -267,7 +267,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       fleetCompliance,
       locations,
       allEmployees: allEmployees.map(e => ({ _id: e._id, uuid: e.uuid, name: e.name })),
-      allSubcontractors: allSuppliersForAssignment.map(s => ({ _id: s._id, uuid: s.uuid, Name: s.Name })),
+      allSubcontractors: allSubcontractors.map(s => ({ _id: s._id, uuid: s.uuid, Name: s.Name })),
       contractsForWeek,
       vehicles,
       vehicleDeploymentsByVehicleDate,
