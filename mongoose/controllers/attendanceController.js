@@ -155,8 +155,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       .map(([uuid, v]) => {
         const filtered = filterPurchaseEvents(v);
         return [uuid, isManagementView || stripPay ? stripPayroll(filtered) : filtered];
-      })
-      .filter(([_, v]) => Object.keys(v.dailyRecords).length > 0);
+      });
 
     // Recalculate subcontractor totals from the filtered entries
     const filteredSubPay = subcontractorEntries.reduce((sum, [_, v]) => sum + (v.weeklyPay || 0), 0);
