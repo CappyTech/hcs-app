@@ -399,8 +399,8 @@ const groupAttendanceByPerson = (
         const t = rec.type || 'unknown';
         typeBreakdown[t] = (typeBreakdown[t] || 0) + 1;
       });
-      // Headcount: count unique people present per day
-      if (Object.keys(records).length > 0) {
+      // Headcount: count unique employees present per day (not subcontractors/purchases)
+      if (person.type === 'employee' && Object.keys(records).length > 0) {
         dailyHeadcount[day] = (dailyHeadcount[day] || 0) + 1;
       }
     });

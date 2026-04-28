@@ -1,5 +1,5 @@
-<%
-  /* Type → color mapping for cell backgrounds and badges */
+﻿<%
+  /* Type â†’ color mapping for cell backgrounds and badges */
   const _cellBg = {
     work:     'bg-green-50 dark:bg-green-900/20',
     training: 'bg-blue-50 dark:bg-blue-900/20',
@@ -98,7 +98,7 @@
                   ? (_stmtAnchor || `/purchase/read/${record.purchaseUuid}`)
                   : `/attendance/read/${record.uuid}`; %>
 
-                <%# Pending record — click to edit via shared dialog %>
+                <%# Pending record â€” click to edit via shared dialog %>
                 <% if (!isPurchase && record.status === 'pending') { %>
                   <div class="mb-1">
                     <% if (record.contractAssignmentId && record.contractAssignmentId.title && record.contractAssignmentId.uuid) { %>
@@ -144,7 +144,7 @@
                   </div>
 
                 <% } else { %>
-                  <%# ── Static record (approved, rejected, or purchase) ── %>
+                  <%# â”€â”€ Static record (approved, rejected, or purchase) â”€â”€ %>
 
                   <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
                     <a
@@ -161,14 +161,14 @@
 
                   <a href="<%= href %>" class="block text-green-900 dark:text-green-400 hover:underline text-xs leading-tight">
                     <% if (isPurchase) { %>
-                      KF#: <%= record.invoiceNumber || '—' %> SF#: <%= record.supplierReference || '—' %>
+                      KF#: <%= record.invoiceNumber || 'â€”' %> SF#: <%= record.supplierReference || 'â€”' %>
                       <% if (!isManagementView && record.weeklyPay) { %>
-                        – £<%= record.weeklyPay.toFixed(2) %>
+                        â€“ Â£<%= record.weeklyPay.toFixed(2) %>
                       <% } %>
                     <% } else { %>
                       <%= record.location?.name || '' %><% if (record.location?.name) { %> <% } %>
                       <% if (!isManagementView && record.weeklyPay) { %>
-                        £<%= record.weeklyPay.toFixed(2) %>
+                        Â£<%= record.weeklyPay.toFixed(2) %>
                       <% } %>
                     <% } %>
                   </a>
@@ -189,7 +189,7 @@
               <% }); %>
 
             <% } else { %>
-              <%# ── Empty cell — open dialog to create ── %>
+              <%# â”€â”€ Empty cell â€” open dialog to create â”€â”€ %>
               <% const _entityMongoId = details.employeeMongoId ? String(details.employeeMongoId) : null; %>
               <% const _subUuid = details.subcontractorId || null; %>
               <% if (_canEdit && (_entityMongoId || _subUuid)) { %>
@@ -215,7 +215,7 @@
 
         <% if (!isManagementView) { %>
           <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 font-semibold whitespace-nowrap">
-            £<%= details.weeklyPay.toFixed(2) %><br>
+            Â£<%= details.weeklyPay.toFixed(2) %><br>
             <% if (details.totalHoursWorked > 0) { %>
             <span class="text-xs font-normal text-gray-700 dark:text-gray-300"><%= details.totalHoursWorked %>h</span>
             <% } %>
@@ -234,7 +234,7 @@
                 exp. <%= moment(_hbEntry.periodEnd).format('DD/MM/YY') %>
               </span>
             <% } else { %>
-              <span class="text-gray-400 dark:text-gray-500 text-xs">—</span>
+              <span class="text-gray-400 dark:text-gray-500 text-xs">â€”</span>
             <% } %>
           </td>
         <% } %>
@@ -264,166 +264,3 @@
   </tfoot>
   <% } %>
 </table>
-
-<% if (_canEdit) { %>
-<style>#att-modal::backdrop { background: rgba(0,0,0,0.5); }</style>
-<dialog id="att-modal" class="rounded-xl shadow-2xl bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-0 w-full max-w-md border border-gray-200 dark:border-gray-700">
-  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-    <h3 class="font-semibold text-base" id="att-modal-title">Attendance</h3>
-    <button type="button" id="att-close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
-  </div>
-  <div class="px-5 py-4 space-y-3">
-    <div>
-      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Type</label>
-      <select id="att-type" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-        <option value="work">Work</option>
-        <option value="training">Training</option>
-        <option value="sick">Sick</option>
-        <option value="holiday">Holiday</option>
-        <option value="off">Off</option>
-        <option value="leave">Leave</option>
-      </select>
-    </div>
-    <div id="att-hours-row">
-      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1" id="att-hours-label">Hours</label>
-      <input type="number" id="att-hours" min="0" step="0.25" placeholder="e.g. 8"
-        class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-    </div>
-    <div id="att-location-row">
-      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Location</label>
-      <select id="att-location" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-        <option value="">— None —</option>
-      </select>
-    </div>
-    <div id="att-contract-row">
-      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Contract</label>
-      <select id="att-contract" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-        <option value="">— None —</option>
-      </select>
-    </div>
-    <p id="att-err" class="text-xs text-red-600 dark:text-red-400" style="display:none"></p>
-  </div>
-  <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
-    <button type="button" id="att-save" class="px-4 py-1.5 rounded text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors">Save</button>
-    <button type="button" id="att-cancel" class="px-4 py-1.5 rounded text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors">Cancel</button>
-  </div>
-</dialog>
-
-<script>
-(function () {
-  var modal    = document.getElementById('att-modal');
-  if (!modal) return;
-  var titleEl  = document.getElementById('att-modal-title');
-  var typeSel  = document.getElementById('att-type');
-  var hoursIn  = document.getElementById('att-hours');
-  var hoursLbl = document.getElementById('att-hours-label');
-  var hoursRow = document.getElementById('att-hours-row');
-  var locSel   = document.getElementById('att-location');
-  var contSel  = document.getElementById('att-contract');
-  var errEl    = document.getElementById('att-err');
-  var saveBtn  = document.getElementById('att-save');
-  var _state   = {};
-
-  // Populate location options from JSON blob
-  try {
-    var locsData = JSON.parse((document.getElementById('attendance-locations-json') || {}).textContent || '[]');
-    locsData.forEach(function (l) {
-      var o = document.createElement('option');
-      o.value = l._id; o.textContent = l.name;
-      locSel.appendChild(o);
-    });
-  } catch (e) {}
-
-  // Populate contract options from JSON blob
-  try {
-    var contrData = JSON.parse((document.getElementById('attendance-contracts-json') || {}).textContent || '[]');
-    contrData.forEach(function (c) {
-      var o = document.createElement('option');
-      o.value = c._id; o.textContent = c.title;
-      contSel.appendChild(o);
-    });
-  } catch (e) {}
-
-  function toggleWorkFields() {
-    var show = typeSel.value === 'work' || typeSel.value === 'training';
-    hoursRow.style.display = show ? '' : 'none';
-    document.getElementById('att-location-row').style.display = show ? '' : 'none';
-    document.getElementById('att-contract-row').style.display = show ? '' : 'none';
-  }
-  typeSel.addEventListener('change', toggleWorkFields);
-
-  function closeModal() { modal.close(); }
-  document.getElementById('att-close').addEventListener('click', closeModal);
-  document.getElementById('att-cancel').addEventListener('click', closeModal);
-
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.att-open');
-    if (!btn) return;
-    var d = btn.dataset;
-    _state.uuid          = d.uuid;
-    _state.isNew         = d.isNew === 'true';
-    _state.isSubcontractor = d.isSubcontractor === 'true';
-    _state.employeeId    = d.employeeId;
-    _state.subcontractorId = d.subcontractorId;
-    _state.date          = d.date;
-
-    titleEl.textContent = (_state.isNew ? 'Add Attendance' : 'Edit Attendance') + ' — ' + d.date;
-    errEl.style.display = 'none';
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Save';
-
-    typeSel.value = d.type || 'work';
-    hoursLbl.textContent = _state.isSubcontractor ? 'Day Rate (£)' : 'Hours';
-    hoursIn.step  = _state.isSubcontractor ? '0.01' : '0.25';
-    hoursIn.value = _state.isSubcontractor ? (d.dayRate || '') : (d.hours || '');
-    locSel.value  = d.locationId  || '';
-    contSel.value = d.contractId  || '';
-    toggleWorkFields();
-
-    modal.showModal();
-  });
-
-  saveBtn.addEventListener('click', function () {
-    errEl.style.display = 'none';
-    saveBtn.disabled = true;
-    saveBtn.textContent = '…';
-
-    var payload = { date: _state.date, type: typeSel.value };
-    if (_state.employeeId) payload.employeeId = _state.employeeId;
-    if (_state.subcontractorId) payload.subcontractorId = _state.subcontractorId;
-    if (typeSel.value === 'work' || typeSel.value === 'training') {
-      if (hoursIn.value !== '') {
-        if (_state.isSubcontractor) payload.dayRate = Number(hoursIn.value);
-        else payload.hoursWorked = Number(hoursIn.value);
-      }
-      if (locSel.value)  payload.locationId  = locSel.value;
-      if (contSel.value) payload.contractId  = contSel.value;
-    }
-
-    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-    var url    = _state.isNew ? '/attendance/inline' : '/attendance/' + _state.uuid;
-    var method = _state.isNew ? 'POST' : 'PATCH';
-
-    fetch(url, {
-      method: method,
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-      body: JSON.stringify(payload),
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.success) { window.location.reload(); return; }
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save';
-        errEl.textContent = data.error || 'Save failed.';
-        errEl.style.display = '';
-      })
-      .catch(function () {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save';
-        errEl.textContent = 'Network error. Please try again.';
-        errEl.style.display = '';
-      });
-  });
-})();
-</script>
-<% } %>
