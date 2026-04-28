@@ -380,22 +380,29 @@
             %>
             <td class="border border-gray-300 dark:border-gray-700 p-0 align-top min-w-[90px]">
               <% if (_canEdit) { %>
-                <div x-data="vehicleDeploymentCell({
-                  isNew: <%= _dep ? 'false' : 'true' %>,
-                  uuid: '<%= _dep ? _dep.uuid : '' %>',
-                  vehicleId: '<%= _vId %>',
-                  date: '<%= day %>',
-                  initDriverName: '<%= _driverName ? _driverName.replace(/'/g, "\\'") : '' %>',
-                  initDriverEmployeeId: '<%= (_dep && _dep.driverEmployeeId) ? String(_dep.driverEmployeeId._id) : '' %>',
-                  initDriverSubId: '<%= (_dep && _dep.driverSubcontractorId) ? String(_dep.driverSubcontractorId._id) : '' %>',
-                  initLocationId: '<%= (_dep && _dep.locationId) ? String(_dep.locationId._id) : '' %>',
-                  initContractId: '<%= (_dep && _dep.contractId) ? String(_dep.contractId._id) : '' %>',
-                  initStartMileage: <%= (_dep && _dep.startMileage != null) ? _dep.startMileage : 'null' %>,
-                  initEndMileage: <%= (_dep && _dep.endMileage != null) ? _dep.endMileage : 'null' %>,
-                  initUsageType: '<%= _dep ? _dep.usageType : 'site' %>'
-                })">
-                  <%- include('./vehicleDeploymentCellEditor.ejs') %>
-                </div>
+                <button type="button" class="vdep-open w-full min-h-[42px] text-left px-2 py-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                  data-vehicle-id="<%= _vId %>"
+                  data-date="<%= day %>"
+                  data-uuid="<%= _dep ? _dep.uuid : '' %>"
+                  data-is-new="<%= _dep ? 'false' : 'true' %>"
+                  data-driver-employee-id="<%= (_dep && _dep.driverEmployeeId) ? String(_dep.driverEmployeeId._id) : '' %>"
+                  data-driver-sub-id="<%= (_dep && _dep.driverSubcontractorId) ? String(_dep.driverSubcontractorId._id) : '' %>"
+                  data-usage-type="<%= _dep ? _dep.usageType : 'site' %>"
+                  data-location-id="<%= (_dep && _dep.locationId) ? String(_dep.locationId._id) : '' %>"
+                  data-contract-id="<%= (_dep && _dep.contractId) ? String(_dep.contractId._id) : '' %>"
+                  data-start-mileage="<%= (_dep && _dep.startMileage != null) ? _dep.startMileage : '' %>"
+                  data-end-mileage="<%= (_dep && _dep.endMileage != null) ? _dep.endMileage : '' %>">
+                  <% if (_dep) { %>
+                    <% if (_driverName) { %>
+                      <span class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate"><%= _driverName %></span>
+                    <% } %>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 <%= _usageBadge[_dep.usageType] || 'bg-gray-100 text-gray-700' %>">
+                      <%= _dep.usageType %>
+                    </span>
+                  <% } else { %>
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">+</span>
+                  <% } %>
+                </button>
               <% } else { %>
                 <!-- Read-only: show deployment info or empty -->
                 <% if (_dep) { %>
@@ -448,4 +455,179 @@
       <% }); %>
     </tbody>
   </table>
+
+<% if (_canEdit) { %>
+<!-- Vehicle deployment dialog modal -->
+<style>#vdep-modal::backdrop { background: rgba(0,0,0,0.5); }</style>
+<dialog id="vdep-modal" class="rounded-xl shadow-2xl bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-0 w-full max-w-md border border-gray-200 dark:border-gray-700">
+  <form id="vdep-form" method="dialog" novalidate>
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h3 class="font-semibold text-base" id="vdep-modal-title">Vehicle Deployment</h3>
+      <button type="button" id="vdep-close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
+    </div>
+    <div class="px-5 py-4 space-y-3">
+      <!-- Driver -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Driver</label>
+        <select id="vdep-driver" name="driver" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+          <option value="">— None —</option>
+          <optgroup label="Employees">
+            <% _emps.forEach(function(emp) { %>
+              <option value="emp-<%= emp._id %>"><%= emp.name %></option>
+            <% }); %>
+          </optgroup>
+          <optgroup label="Subcontractors">
+            <% _subs.forEach(function(sub) { %>
+              <option value="sub-<%= sub._id %>"><%= sub.Name %></option>
+            <% }); %>
+          </optgroup>
+        </select>
+      </div>
+      <!-- Usage type -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Usage Type</label>
+        <select id="vdep-usage" name="usageType" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+          <option value="site">Site</option>
+          <option value="delivery">Delivery</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="office">Office</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <!-- Location -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Location</label>
+        <select id="vdep-location" name="locationId" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+          <option value="">— None —</option>
+          <% _locs.forEach(function(loc) { %>
+            <option value="<%= loc._id %>"><%= loc.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <!-- Contract -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Contract</label>
+        <select id="vdep-contract" name="contractId" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+          <option value="">— None —</option>
+          <% _conts.forEach(function(c) { %>
+            <option value="<%= c._id %>"><%= c.title %></option>
+          <% }); %>
+        </select>
+      </div>
+      <!-- Mileage -->
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Mileage</label>
+          <input type="number" id="vdep-start-mileage" name="startMileage" min="0" step="1" placeholder="e.g. 12000"
+            class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+        </div>
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">End Mileage</label>
+          <input type="number" id="vdep-end-mileage" name="endMileage" min="0" step="1" placeholder="e.g. 12150"
+            class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+        </div>
+      </div>
+      <!-- Error -->
+      <p id="vdep-err" class="text-xs text-red-600 dark:text-red-400" style="display:none"></p>
+    </div>
+    <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <button type="button" id="vdep-save" class="px-4 py-1.5 rounded text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors">Save</button>
+      <button type="button" id="vdep-close2" class="px-4 py-1.5 rounded text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var modal     = document.getElementById('vdep-modal');
+  var driverSel = document.getElementById('vdep-driver');
+  var usageSel  = document.getElementById('vdep-usage');
+  var locSel    = document.getElementById('vdep-location');
+  var contSel   = document.getElementById('vdep-contract');
+  var startIn   = document.getElementById('vdep-start-mileage');
+  var endIn     = document.getElementById('vdep-end-mileage');
+  var titleEl   = document.getElementById('vdep-modal-title');
+  var errEl     = document.getElementById('vdep-err');
+  var saveBtn   = document.getElementById('vdep-save');
+  var _state    = {};
+
+  function closeModal() { modal.close(); }
+  document.getElementById('vdep-close').addEventListener('click', closeModal);
+  document.getElementById('vdep-close2').addEventListener('click', closeModal);
+
+  document.querySelectorAll('.vdep-open').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var d = btn.dataset;
+      _state.vehicleId = d.vehicleId;
+      _state.date = d.date;
+      _state.uuid = d.uuid;
+      _state.isNew = d.isNew === 'true';
+
+      titleEl.textContent = (_state.isNew ? 'Add Deployment' : 'Edit Deployment') + ' — ' + d.date;
+      errEl.style.display = 'none';
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+
+      // Populate driver
+      var driverVal = '';
+      if (d.driverEmployeeId) driverVal = 'emp-' + d.driverEmployeeId;
+      else if (d.driverSubId) driverVal = 'sub-' + d.driverSubId;
+      driverSel.value = driverVal;
+
+      usageSel.value  = d.usageType  || 'site';
+      locSel.value    = d.locationId || '';
+      contSel.value   = d.contractId || '';
+      startIn.value   = d.startMileage || '';
+      endIn.value     = d.endMileage   || '';
+
+      modal.showModal();
+    });
+  });
+
+  saveBtn.addEventListener('click', function () {
+    errEl.style.display = 'none';
+    saveBtn.disabled = true;
+    saveBtn.textContent = '…';
+
+    var driverVal = driverSel.value;
+    var payload = {
+      vehicleId:   _state.vehicleId,
+      date:        _state.date,
+      usageType:   usageSel.value  || undefined,
+      locationId:  locSel.value    || undefined,
+      contractId:  contSel.value   || undefined,
+    };
+    if (startIn.value !== '') payload.startMileage = Number(startIn.value);
+    if (endIn.value   !== '') payload.endMileage   = Number(endIn.value);
+    if (driverVal.startsWith('emp-')) payload.driverEmployeeId      = driverVal.slice(4);
+    else if (driverVal.startsWith('sub-')) payload.driverSubcontractorId = driverVal.slice(4);
+
+    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    var url    = _state.isNew ? '/vehicle-deployment/inline' : '/vehicle-deployment/' + _state.uuid;
+    var method = _state.isNew ? 'POST' : 'PATCH';
+
+    fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify(payload),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.success) { window.location.reload(); return; }
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        errEl.textContent = d.error || 'Save failed.';
+        errEl.style.display = '';
+      })
+      .catch(function () {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = '';
+      });
+  });
+})();
+</script>
+<% } %>
+
 <% } %>
