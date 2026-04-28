@@ -63,14 +63,16 @@ const roleModelAccess = {
   },
 
   accountant: {
-    invoice:    'r,l',
-    purchase:   'r,l',    // listed as "supplier" receipts in KashFlow
-    supplier:   'r,l',
-    customer:   'r,l',
-    project:    'r,l',
-    quote:      'r,l',
-    nominal:    'r,l',
-    note:       'r,l',
+    invoice:            'r,l',
+    purchase:           'r,l',    // listed as "supplier" receipts in KashFlow
+    supplier:           'r,l',
+    customer:           'r,l',
+    project:            'r,l',
+    quote:              'r,l',
+    nominal:            'r,l',
+    note:               'r,l',
+    vehicleDeployment:  'c,r,u,l',
+    assignment:         'c,r,u,l',
   },
 
   employee: {

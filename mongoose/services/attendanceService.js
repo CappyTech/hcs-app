@@ -488,6 +488,42 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     activeContracts = [];
   }
 
+  // Assignments for this week — grouped under their contract
+  const weekAssignments = await fetchAssignmentsForWeek(payrollWeekStart);
+  const contractsForWeek = activeContracts.map(c => ({
+    contract: c,
+    assignments: weekAssignments.filter(a =>
+      a.contractId && String(a.contractId._id || a.contractId) === String(c._id)
+    )
+  }));
+
+  // Vehicle deployments — per-day per-vehicle
+  const weekDeployments = await fetchVehicleDeploymentsForWeek(
+    payrollWeekStart.clone().startOf('day').toDate(),
+    endDate.clone().endOf('day').toDate()
+  );
+  const vehicleDeploymentsByVehicleDate = {};
+  for (const d of weekDeployments) {
+    const vKey = String(d.vehicleId._id || d.vehicleId);
+    const dateKey = moment(d.date).format('YYYY-MM-DD');
+    if (!vehicleDeploymentsByVehicleDate[vKey]) vehicleDeploymentsByVehicleDate[vKey] = {};
+    vehicleDeploymentsByVehicleDate[vKey][dateKey] = d;
+  }
+
+  // Active fleet for the vehicles table (exclude scrapped/sold)
+  let vehicles = [];
+  try {
+    vehicles = await mdb.INTERNAL.vehicle
+      .find({ ownershipStatus: { $nin: ['Scrapped', 'Sold'] } })
+      .select('_id uuid registrationNumber make model bodyType ownershipStatus availabilityStatus ' +
+              'roadTaxExpiryDate motExpiryDate insuranceExpiryDate insuranceProvider ' +
+              'breakdownExpiryDate breakdownProvider')
+      .sort({ registrationNumber: 1 })
+      .lean();
+  } catch (e) {
+    logger.warn('Vehicles lookup skipped: ' + e.message);
+  }
+
   return {
     groupedAttendance,
     payrollWeekStart,
@@ -512,7 +548,12 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     approvedCount,
     rejectedCount,
     typeBreakdown,
-    dailyHeadcount
+    dailyHeadcount,
+    allEmployees,
+    allSubcontractors,
+    contractsForWeek,
+    vehicles,
+    vehicleDeploymentsByVehicleDate
   };
 };
 
@@ -620,10 +661,52 @@ const fetchStatementsForWeek = async (payrollWeekStart, endDate) => {
   return statementData;
 };
 
+/**
+ * Fetch assignments for the week that starts on a given date (Saturday-based payroll week).
+ */
+const fetchAssignmentsForWeek = async (payrollWeekStart) => {
+  try {
+    const dayStart = payrollWeekStart.clone().startOf('day').toDate();
+    const dayEnd = payrollWeekStart.clone().endOf('day').toDate();
+    return await mdb.INTERNAL.assignment
+      .find({ weekStart: { $gte: dayStart, $lte: dayEnd } })
+      .populate('contractId', '_id uuid title location status')
+      .populate('assignedEmployees', '_id uuid name department')
+      .populate('assignedSubcontractors', '_id uuid Name')
+      .sort({ 'contractId.title': 1, title: 1 })
+      .lean();
+  } catch (e) {
+    logger.warn('Assignments lookup skipped: ' + e.message);
+    return [];
+  }
+};
+
+/**
+ * Fetch vehicle deployments between two dates.
+ */
+const fetchVehicleDeploymentsForWeek = async (start, end) => {
+  try {
+    return await mdb.INTERNAL.vehicleDeployment
+      .find({ date: { $gte: start, $lte: end } })
+      .populate('vehicleId', '_id uuid registrationNumber make model bodyType')
+      .populate('driverEmployeeId', '_id uuid name')
+      .populate('driverSubcontractorId', '_id uuid Name')
+      .populate('locationId', '_id uuid name')
+      .populate('contractId', '_id uuid title location')
+      .sort({ date: 1 })
+      .lean();
+  } catch (e) {
+    logger.warn('Vehicle deployments lookup skipped: ' + e.message);
+    return [];
+  }
+};
+
 module.exports = {
   getAttendanceForDay,
   fetchAttendanceForWeek,
   getAttendanceForWeek,
   groupAttendanceByPerson,
-  fetchStatementsForWeek
+  fetchStatementsForWeek,
+  fetchAssignmentsForWeek,
+  fetchVehicleDeploymentsForWeek
 };

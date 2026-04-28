@@ -1,0 +1,166 @@
+<%
+  /*
+   * vehiclesTable-excel.ejs
+   *
+   * Props (passed from weekly-excel.ejs):
+   *   vehicles                       — array of vehicle docs (registration, compliance dates, etc.)
+   *   vehicleDeploymentsByVehicleDate — { [vehicleId]: { [YYYY-MM-DD]: deploymentDoc } }
+   *   daysOfWeek                     — array of YYYY-MM-DD strings
+   *   isManagementView               — boolean
+   *   moment                         — moment.js
+   *
+   * Columns: Registration | Body Type | Mon–Sun (7 day cells) | TAX | MOT | Insurance | Breakdown
+   */
+
+  const _vByD  = typeof vehicleDeploymentsByVehicleDate !== 'undefined' ? vehicleDeploymentsByVehicleDate : {};
+  const _today = new Date();
+  const _warnMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+  const _complianceCls = (date) => {
+    if (!date) return 'text-gray-400 dark:text-gray-500';
+    const d = new Date(date);
+    if (d < _today) return 'text-red-600 dark:text-red-400 font-semibold';
+    if (d - _today < _warnMs) return 'text-amber-600 dark:text-amber-400 font-semibold';
+    return 'text-gray-700 dark:text-gray-300';
+  };
+
+  const _usageBadge = {
+    site:         'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    delivery:     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    maintenance:  'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    office:       'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    other:        'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  };
+
+  const _vList = typeof vehicles !== 'undefined' ? vehicles : [];
+  const _dows  = typeof daysOfWeek !== 'undefined' ? daysOfWeek : [];
+  const _canEdit = canDept('management') || canDept('admin');
+%>
+
+<% if (_vList.length === 0) { %>
+  <div class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+    No active vehicles in the fleet.
+  </div>
+<% } else { %>
+  <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
+    <thead>
+      <tr class="bg-gray-50 dark:bg-gray-800">
+        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">Registration</th>
+        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Type</th>
+        <% _dows.forEach(function(day) { %>
+          <th class="text-center text-xs font-normal border border-gray-300 dark:border-gray-700 px-2 py-2 text-gray-700 dark:text-gray-300 min-w-[90px]">
+            <a href="/daily/<%= day %>" class="hover:underline hover:text-green-700 dark:hover:text-green-300">
+              <%= moment(day).format('DD/MM') %>
+            </a><br>
+            <span class="font-bold text-gray-600 dark:text-gray-400"><%= moment(day).format('ddd') %></span>
+          </th>
+        <% }); %>
+        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">TAX</th>
+        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">MOT</th>
+        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">Insurance</th>
+        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">Breakdown</th>
+      </tr>
+    </thead>
+    <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+      <% _vList.forEach(function(v) { %>
+        <%
+          const _vId = String(v._id);
+          const _vDeps = _vByD[_vId] || {};
+        %>
+        <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+
+          <!-- Registration -->
+          <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap">
+            <a href="/vehicle/read/<%= v._id %>"
+               class="font-medium text-green-900 dark:text-green-400 hover:underline">
+              <%= v.registrationNumber || '—' %>
+            </a>
+            <% if (v.make || v.model) { %>
+              <span class="block text-[10px] text-gray-400 dark:text-gray-500"><%= [v.make, v.model].filter(Boolean).join(' ') %></span>
+            <% } %>
+          </td>
+
+          <!-- Body type -->
+          <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            <%= v.bodyType || '—' %>
+          </td>
+
+          <!-- Day cells -->
+          <% _dows.forEach(function(day) { %>
+            <%
+              const _dep = _vDeps[day];
+              const _driverName = _dep
+                ? (_dep.driverEmployeeId ? _dep.driverEmployeeId.name : (_dep.driverSubcontractorId ? _dep.driverSubcontractorId.Name : null))
+                : null;
+            %>
+            <td class="border border-gray-300 dark:border-gray-700 p-0 align-top min-w-[90px]">
+              <% if (_canEdit) { %>
+                <div x-data="vehicleDeploymentCell({
+                  isNew: <%= _dep ? 'false' : 'true' %>,
+                  uuid: '<%= _dep ? _dep.uuid : '' %>',
+                  vehicleId: '<%= _vId %>',
+                  date: '<%= day %>',
+                  initDriverName: '<%= _driverName ? _driverName.replace(/'/g, "\\'") : '' %>',
+                  initDriverEmployeeId: '<%= (_dep && _dep.driverEmployeeId) ? String(_dep.driverEmployeeId._id) : '' %>',
+                  initDriverSubId: '<%= (_dep && _dep.driverSubcontractorId) ? String(_dep.driverSubcontractorId._id) : '' %>',
+                  initLocationId: '<%= (_dep && _dep.locationId) ? String(_dep.locationId._id) : '' %>',
+                  initContractId: '<%= (_dep && _dep.contractId) ? String(_dep.contractId._id) : '' %>',
+                  initStartMileage: <%= (_dep && _dep.startMileage != null) ? _dep.startMileage : 'null' %>,
+                  initEndMileage: <%= (_dep && _dep.endMileage != null) ? _dep.endMileage : 'null' %>,
+                  initUsageType: '<%= _dep ? _dep.usageType : 'site' %>'
+                })">
+                  <%- include('./vehicleDeploymentCellEditor.ejs') %>
+                </div>
+              <% } else { %>
+                <!-- Read-only: show deployment info or empty -->
+                <% if (_dep) { %>
+                  <div class="px-2 py-1.5 text-xs">
+                    <% if (_driverName) { %>
+                      <span class="block font-medium text-gray-700 dark:text-gray-300 truncate"><%= _driverName %></span>
+                    <% } %>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 <%= _usageBadge[_dep.usageType] || 'bg-gray-100 text-gray-700' %>">
+                      <%= _dep.usageType %>
+                    </span>
+                  </div>
+                <% } else { %>
+                  <div class="px-2 py-1.5 text-xs text-gray-200 dark:text-gray-700 text-center">—</div>
+                <% } %>
+              <% } %>
+            </td>
+          <% }); %>
+
+          <!-- Compliance: TAX -->
+          <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.roadTaxExpiryDate) %>">
+            <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : '—' %>
+          </td>
+
+          <!-- Compliance: MOT -->
+          <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.motExpiryDate) %>">
+            <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : '—' %>
+          </td>
+
+          <!-- Compliance: Insurance -->
+          <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
+            <span class="<%= _complianceCls(v.insuranceExpiryDate) %>">
+              <%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : '—' %>
+            </span>
+            <% if (v.insuranceProvider) { %>
+              <span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.insuranceProvider %></span>
+            <% } %>
+          </td>
+
+          <!-- Compliance: Breakdown -->
+          <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
+            <span class="<%= _complianceCls(v.breakdownExpiryDate) %>">
+              <%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : '—' %>
+            </span>
+            <% if (v.breakdownProvider) { %>
+              <span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.breakdownProvider %></span>
+            <% } %>
+          </td>
+
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+<% } %>

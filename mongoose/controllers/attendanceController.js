@@ -67,6 +67,11 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       rejectedCount,
       typeBreakdown,
       dailyHeadcount,
+      allEmployees,
+      allSubcontractors,
+      contractsForWeek,
+      vehicles,
+      vehicleDeploymentsByVehicleDate,
     } = await attendanceService.getAttendanceForWeek(yearParam, weekParam);
 
     const isManagementView = req.isManagementView === true;
@@ -260,6 +265,11 @@ exports.getWeeklyAttendance = async (req, res, next) => {
       holidayBalanceMap,
       fleetCompliance,
       locations,
+      allEmployees: allEmployees.map(e => ({ _id: e._id, uuid: e.uuid, name: e.name })),
+      allSubcontractors: allSubcontractors.map(s => ({ _id: s._id, uuid: s.uuid, Name: s.Name })),
+      contractsForWeek,
+      vehicles,
+      vehicleDeploymentsByVehicleDate,
     });
   } catch (err) {
     next(err);
@@ -792,6 +802,196 @@ exports.inlineCreateAttendance = async (req, res, next) => {
       });
     }
     logger.error(`❌ Inline create attendance error: ${err.message}`);
+    next(err);
+  }
+};
+
+// ── Inline assignment editing API ───────────────────────────────────────
+
+/**
+ * POST /assignment/inline
+ * Create a new assignment for this week's contract. Returns JSON.
+ */
+exports.inlineCreateAssignment = async (req, res, next) => {
+  try {
+    const { contractId, weekStart, title, description, assignedEmployees, assignedSubcontractors, estimatedHours, status } = req.body;
+
+    if (!contractId) return res.status(400).json({ success: false, error: 'contractId is required.' });
+    if (!weekStart || !moment(weekStart, 'YYYY-MM-DD', true).isValid()) {
+      return res.status(400).json({ success: false, error: 'Invalid weekStart date.' });
+    }
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ success: false, error: 'title is required.' });
+    }
+
+    const data = {
+      contractId,
+      weekStart: moment(weekStart, 'YYYY-MM-DD').toDate(),
+      title: String(title).trim(),
+    };
+    if (description) data.description = String(description).trim();
+    if (Array.isArray(assignedEmployees)) data.assignedEmployees = assignedEmployees;
+    if (Array.isArray(assignedSubcontractors)) data.assignedSubcontractors = assignedSubcontractors;
+    if (estimatedHours != null) data.estimatedHours = Number(estimatedHours);
+    if (status) data.status = status;
+
+    const record = new mdb.INTERNAL.assignment(data);
+    await record.save();
+
+    const populated = await mdb.INTERNAL.assignment
+      .findById(record._id)
+      .populate('contractId', '_id uuid title location status')
+      .populate('assignedEmployees', '_id uuid name department')
+      .populate('assignedSubcontractors', '_id uuid Name')
+      .lean();
+
+    logger.info(`✏️  Inline created assignment ${record.uuid} for contract ${contractId}`);
+    return res.status(201).json({ success: true, record: populated });
+  } catch (err) {
+    logger.error(`❌ Inline create assignment error: ${err.message}`);
+    next(err);
+  }
+};
+
+/**
+ * PATCH /assignment/:uuid
+ * Update fields on an assignment. Returns JSON.
+ */
+exports.updateAssignment = async (req, res, next) => {
+  try {
+    const record = await mdb.INTERNAL.assignment.findOne({ uuid: req.params.uuid }).lean();
+    if (!record) return res.status(404).json({ success: false, error: 'Assignment not found.' });
+
+    const { title, description, assignedEmployees, assignedSubcontractors, estimatedHours, status } = req.body;
+    const VALID_STATUSES = ['Planned', 'In Progress', 'Done'];
+
+    const update = {};
+    if (title !== undefined) update.title = String(title).trim();
+    if (description !== undefined) update.description = String(description).trim();
+    if (Array.isArray(assignedEmployees)) update.assignedEmployees = assignedEmployees;
+    if (Array.isArray(assignedSubcontractors)) update.assignedSubcontractors = assignedSubcontractors;
+    if (estimatedHours != null) update.estimatedHours = Number(estimatedHours);
+    if (status !== undefined) {
+      if (!VALID_STATUSES.includes(status)) return res.status(400).json({ success: false, error: 'Invalid status.' });
+      update.status = status;
+    }
+
+    const updated = await mdb.INTERNAL.assignment
+      .findOneAndUpdate({ uuid: req.params.uuid }, update, { new: true, runValidators: true })
+      .populate('contractId', '_id uuid title location status')
+      .populate('assignedEmployees', '_id uuid name department')
+      .populate('assignedSubcontractors', '_id uuid Name')
+      .lean();
+
+    if (!updated) return res.status(404).json({ success: false, error: 'Assignment not found.' });
+
+    logger.info(`✏️  Inline updated assignment ${req.params.uuid}`);
+    return res.json({ success: true, record: updated });
+  } catch (err) {
+    logger.error(`❌ Inline update assignment error: ${err.message}`);
+    next(err);
+  }
+};
+
+// ── Inline vehicle deployment editing API ───────────────────────────────
+
+const VALID_USAGE_TYPES = ['site', 'delivery', 'maintenance', 'office', 'other'];
+
+/**
+ * POST /vehicle-deployment/inline
+ * Create a new vehicle deployment record for a specific vehicle and date. Returns JSON.
+ */
+exports.inlineCreateVehicleDeployment = async (req, res, next) => {
+  try {
+    const { vehicleId, date, driverEmployeeId, driverSubcontractorId, locationId, contractId, startMileage, endMileage, usageType, notes } = req.body;
+
+    if (!vehicleId) return res.status(400).json({ success: false, error: 'vehicleId is required.' });
+    if (!date || !moment(date, 'YYYY-MM-DD', true).isValid()) {
+      return res.status(400).json({ success: false, error: 'Invalid date.' });
+    }
+    if (driverEmployeeId && driverSubcontractorId) {
+      return res.status(400).json({ success: false, error: 'Provide at most one of driverEmployeeId or driverSubcontractorId.' });
+    }
+    if (usageType && !VALID_USAGE_TYPES.includes(usageType)) {
+      return res.status(400).json({ success: false, error: 'Invalid usageType.' });
+    }
+
+    const data = {
+      vehicleId,
+      date: moment(date, 'YYYY-MM-DD').toDate(),
+      usageType: usageType || 'site',
+    };
+    if (driverEmployeeId) data.driverEmployeeId = driverEmployeeId;
+    if (driverSubcontractorId) data.driverSubcontractorId = driverSubcontractorId;
+    if (locationId) data.locationId = locationId;
+    if (contractId) data.contractId = contractId;
+    if (startMileage != null) data.startMileage = Number(startMileage);
+    if (endMileage != null) data.endMileage = Number(endMileage);
+    if (notes) data.notes = String(notes).trim();
+
+    const record = new mdb.INTERNAL.vehicleDeployment(data);
+    await record.save();
+
+    const populated = await mdb.INTERNAL.vehicleDeployment
+      .findById(record._id)
+      .populate('vehicleId', '_id uuid registrationNumber make model bodyType')
+      .populate('driverEmployeeId', '_id uuid name')
+      .populate('driverSubcontractorId', '_id uuid Name')
+      .populate('locationId', '_id uuid name')
+      .populate('contractId', '_id uuid title location')
+      .lean();
+
+    logger.info(`✏️  Inline created vehicle deployment ${record.uuid} for vehicle ${vehicleId} on ${date}`);
+    return res.status(201).json({ success: true, record: populated });
+  } catch (err) {
+    logger.error(`❌ Inline create vehicle deployment error: ${err.message}`);
+    next(err);
+  }
+};
+
+/**
+ * PATCH /vehicle-deployment/:uuid
+ * Update a vehicle deployment record. Returns JSON.
+ */
+exports.updateVehicleDeployment = async (req, res, next) => {
+  try {
+    const record = await mdb.INTERNAL.vehicleDeployment.findOne({ uuid: req.params.uuid }).lean();
+    if (!record) return res.status(404).json({ success: false, error: 'Vehicle deployment not found.' });
+
+    const { driverEmployeeId, driverSubcontractorId, locationId, contractId, startMileage, endMileage, usageType, notes } = req.body;
+
+    if (driverEmployeeId && driverSubcontractorId) {
+      return res.status(400).json({ success: false, error: 'Provide at most one of driverEmployeeId or driverSubcontractorId.' });
+    }
+    if (usageType && !VALID_USAGE_TYPES.includes(usageType)) {
+      return res.status(400).json({ success: false, error: 'Invalid usageType.' });
+    }
+
+    const update = {};
+    if (driverEmployeeId !== undefined) update.driverEmployeeId = driverEmployeeId || null;
+    if (driverSubcontractorId !== undefined) update.driverSubcontractorId = driverSubcontractorId || null;
+    if (locationId !== undefined) update.locationId = locationId || null;
+    if (contractId !== undefined) update.contractId = contractId || null;
+    if (startMileage != null) update.startMileage = Number(startMileage);
+    if (endMileage != null) update.endMileage = Number(endMileage);
+    if (usageType !== undefined) update.usageType = usageType;
+    if (notes !== undefined) update.notes = String(notes || '').trim() || null;
+
+    const updated = await mdb.INTERNAL.vehicleDeployment
+      .findOneAndUpdate({ uuid: req.params.uuid }, update, { new: true, runValidators: true })
+      .populate('vehicleId', '_id uuid registrationNumber make model bodyType')
+      .populate('driverEmployeeId', '_id uuid name')
+      .populate('driverSubcontractorId', '_id uuid Name')
+      .populate('locationId', '_id uuid name')
+      .populate('contractId', '_id uuid title location')
+      .lean();
+
+    if (!updated) return res.status(404).json({ success: false, error: 'Vehicle deployment not found.' });
+
+    logger.info(`✏️  Inline updated vehicle deployment ${req.params.uuid}`);
+    return res.json({ success: true, record: updated });
+  } catch (err) {
+    logger.error(`❌ Inline update vehicle deployment error: ${err.message}`);
     next(err);
   }
 };

@@ -1,0 +1,92 @@
+<%
+  /*
+   * assignmentCellEditor.ejs
+   *
+   * Reusable Alpine.js editor fragment for assignmentCell component.
+   * Must be included inside an element with x-data="assignmentCell({...})".
+   */
+%>
+<!-- Collapsed: show Add/Edit trigger -->
+<div x-show="!editing" @click="startEdit()" class="cursor-pointer group">
+  <span x-show="editing === false"
+    class="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-green-700 dark:hover:text-green-400 transition-colors">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    <span x-text="editing ? '' : 'Add assignment'"></span>
+  </span>
+</div>
+
+<!-- Expanded editor -->
+<div x-show="editing" @keydown.escape.window="cancel()" class="py-2 space-y-2">
+  <div x-show="error" x-text="error" class="text-xs text-red-600 dark:text-red-400 font-medium"></div>
+
+  <!-- Title -->
+  <div class="flex items-center gap-2 flex-wrap">
+    <label class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0">Title</label>
+    <input type="text" x-model="form.title" @keydown="handleKey($event)"
+      placeholder="Assignment title"
+      class="flex-1 min-w-[140px] text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+    <select x-model="form.status" class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+      <option value="Planned">Planned</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Done">Done</option>
+    </select>
+    <input type="number" x-model="form.estimatedHours" min="0" step="0.5"
+      placeholder="Est. hrs"
+      class="w-20 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+  </div>
+
+  <!-- Employees -->
+  <div class="flex items-start gap-2 flex-wrap">
+    <label class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0 pt-0.5">Employees</label>
+    <div class="flex flex-wrap gap-1 flex-1">
+      <template x-for="emp in employees" :key="emp._id">
+        <label class="inline-flex items-center gap-1 cursor-pointer select-none">
+          <input type="checkbox"
+            :checked="form.employeeIds.includes(String(emp._id))"
+            @change="toggleEmployee(String(emp._id))"
+            class="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500">
+          <span class="text-xs text-gray-700 dark:text-gray-300" x-text="emp.name"></span>
+        </label>
+      </template>
+      <span x-show="employees.length === 0" class="text-xs text-gray-400 dark:text-gray-500 italic">No employees found</span>
+    </div>
+  </div>
+
+  <!-- Subcontractors -->
+  <div class="flex items-start gap-2 flex-wrap">
+    <label class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0 pt-0.5">Subcons</label>
+    <div class="flex flex-wrap gap-1 flex-1">
+      <template x-for="sub in subcontractors" :key="sub._id">
+        <label class="inline-flex items-center gap-1 cursor-pointer select-none">
+          <input type="checkbox"
+            :checked="form.subIds.includes(String(sub._id))"
+            @change="toggleSub(String(sub._id))"
+            class="w-3.5 h-3.5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+          <span class="text-xs text-gray-700 dark:text-gray-300" x-text="sub.Name"></span>
+        </label>
+      </template>
+      <span x-show="subcontractors.length === 0" class="text-xs text-gray-400 dark:text-gray-500 italic">No subcontractors found</span>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="flex items-center gap-2">
+    <button type="button" @click="save()" :disabled="saving"
+      class="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-medium bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 transition-colors">
+      <svg x-show="!saving" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+      <svg x-show="saving" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+      </svg>
+      <span x-text="saving ? 'Saving…' : 'Save'"></span>
+    </button>
+    <button type="button" @click="cancel()" :disabled="saving"
+      class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 transition-colors">
+      Cancel
+    </button>
+  </div>
+</div>

@@ -1,0 +1,186 @@
+<%
+  /*
+   * contractsTable-excel.ejs
+   *
+   * Props (passed from weekly-excel.ejs):
+   *   contractsForWeek  — array of { contract, assignments[] }
+   *   weekStart         — YYYY-MM-DD string (Saturday of payroll week)
+   *   isManagementView  — boolean
+   *
+   * Displays active contracts with their week's assignments.
+   * Assignments are week-scoped, not day-scoped — no day columns here.
+   * Each assignment shows: title, status badge, employee chips, subcontractor chips,
+   * estimated hours, and an Edit button for admin/accountant.
+   */
+
+  const _assignmentStatusBadge = {
+    'Planned':     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    'In Progress': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    'Done':        'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  };
+  const _contractStatusBadge = {
+    'Planned':     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'In Progress': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    'Completed':   'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  };
+  const _cfWeek = typeof contractsForWeek !== 'undefined' ? contractsForWeek : [];
+  const _ws = typeof weekStart !== 'undefined' ? weekStart : '';
+%>
+
+<% if (_cfWeek.length === 0) { %>
+  <div class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+    No active contracts.
+  </div>
+<% } else { %>
+  <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
+    <thead>
+      <tr class="bg-gray-50 dark:bg-gray-800">
+        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 w-48">Contract</th>
+        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Assignment</th>
+        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Status</th>
+        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Employees</th>
+        <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Subcontractors</th>
+        <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 w-20">Est. Hours</th>
+        <% if (canDept('management') || canDept('admin')) { %>
+          <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 w-20 print:hidden">Actions</th>
+        <% } %>
+      </tr>
+    </thead>
+    <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+      <% _cfWeek.forEach(function(cw) { %>
+        <%
+          const _c = cw.contract;
+          const _assignments = cw.assignments || [];
+        %>
+        <!-- Contract header row -->
+        <tr class="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
+          <td class="border border-gray-200 dark:border-gray-700 px-3 py-2" colspan="<%= (canDept('management') || canDept('admin')) ? 7 : 6 %>">
+            <div class="flex items-center gap-2 flex-wrap">
+              <a href="/contract/read/<%= _c.uuid %>"
+                 class="font-semibold text-green-900 dark:text-green-400 hover:underline">
+                <%= _c.title %>
+              </a>
+              <% if (_c.location) { %>
+                <span class="text-xs text-gray-500 dark:text-gray-400">— <%= _c.location %></span>
+              <% } %>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= _contractStatusBadge[_c.status] || 'bg-gray-100 text-gray-700' %>">
+                <%= _c.status %>
+              </span>
+              <span class="ml-auto text-xs text-gray-400 dark:text-gray-500">
+                <%= _assignments.length %> assignment<%= _assignments.length === 1 ? '' : 's' %> this week
+              </span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Assignment rows -->
+        <% if (_assignments.length === 0) { %>
+          <tr class="border-b border-gray-100 dark:border-gray-800">
+            <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-gray-400 dark:text-gray-500 text-xs italic">
+              No assignments this week
+            </td>
+            <td class="border border-gray-100 dark:border-gray-800 px-3 py-2" colspan="<%= (canDept('management') || canDept('admin')) ? 6 : 5 %>">
+              <% if (canDept('management') || canDept('admin')) { %>
+                <div x-data="assignmentCell({
+                  isNew: true,
+                  uuid: null,
+                  contractId: '<%= _c._id %>',
+                  weekStart: '<%= _ws %>',
+                  initTitle: '',
+                  initStatus: 'Planned',
+                  initEmployeeIds: [],
+                  initSubIds: [],
+                  initEstHours: null
+                })" class="print:hidden">
+                  <%- include('./assignmentCellEditor.ejs') %>
+                </div>
+              <% } %>
+            </td>
+          </tr>
+        <% } else { %>
+          <% _assignments.forEach(function(asgn) { %>
+            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-gray-400 dark:text-gray-500 text-xs"></td>
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 font-medium">
+                <%= asgn.title %>
+                <% if (asgn.description) { %>
+                  <span class="block text-xs text-gray-400 dark:text-gray-500 font-normal mt-0.5"><%= asgn.description %></span>
+                <% } %>
+              </td>
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= _assignmentStatusBadge[asgn.status] || 'bg-gray-100 text-gray-700' %>">
+                  <%= asgn.status %>
+                </span>
+              </td>
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-2">
+                <div class="flex flex-wrap gap-1">
+                  <% (asgn.assignedEmployees || []).forEach(function(emp) { %>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                      <%= emp.name %>
+                    </span>
+                  <% }); %>
+                  <% if (!(asgn.assignedEmployees || []).length) { %>
+                    <span class="text-xs text-gray-400 dark:text-gray-500 italic">None</span>
+                  <% } %>
+                </div>
+              </td>
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-2">
+                <div class="flex flex-wrap gap-1">
+                  <% (asgn.assignedSubcontractors || []).forEach(function(sub) { %>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300">
+                      <%= sub.Name %>
+                    </span>
+                  <% }); %>
+                  <% if (!(asgn.assignedSubcontractors || []).length) { %>
+                    <span class="text-xs text-gray-400 dark:text-gray-500 italic">None</span>
+                  <% } %>
+                </div>
+              </td>
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center text-sm text-gray-600 dark:text-gray-400">
+                <%= asgn.estimatedHours != null ? asgn.estimatedHours + 'h' : '—' %>
+              </td>
+              <% if (canDept('management') || canDept('admin')) { %>
+                <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center print:hidden">
+                  <div x-data="assignmentCell({
+                    isNew: false,
+                    uuid: '<%= asgn.uuid %>',
+                    contractId: '<%= _c._id %>',
+                    weekStart: '<%= _ws %>',
+                    initTitle: '<%= (asgn.title || '').replace(/'/g, '\\\'') %>',
+                    initStatus: '<%= asgn.status %>',
+                    initEmployeeIds: <%- JSON.stringify((asgn.assignedEmployees || []).map(function(e){return String(e._id);})) %>,
+                    initSubIds: <%- JSON.stringify((asgn.assignedSubcontractors || []).map(function(s){return String(s._id);})) %>,
+                    initEstHours: <%= asgn.estimatedHours != null ? asgn.estimatedHours : 'null' %>
+                  })">
+                    <%- include('./assignmentCellEditor.ejs') %>
+                  </div>
+                </td>
+              <% } %>
+            </tr>
+          <% }); %>
+          <!-- Add another assignment row -->
+          <% if (canDept('management') || canDept('admin')) { %>
+            <tr class="border-b border-gray-100 dark:border-gray-800">
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-1 text-gray-300 dark:text-gray-600 text-xs"></td>
+              <td class="border border-gray-100 dark:border-gray-800 px-3 py-1" colspan="6">
+                <div x-data="assignmentCell({
+                  isNew: true,
+                  uuid: null,
+                  contractId: '<%= _c._id %>',
+                  weekStart: '<%= _ws %>',
+                  initTitle: '',
+                  initStatus: 'Planned',
+                  initEmployeeIds: [],
+                  initSubIds: [],
+                  initEstHours: null
+                })" class="print:hidden">
+                  <%- include('./assignmentCellEditor.ejs') %>
+                </div>
+              </td>
+            </tr>
+          <% } %>
+        <% } %>
+      <% }); %>
+    </tbody>
+  </table>
+<% } %>

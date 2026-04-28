@@ -87,6 +87,16 @@
     </div>
   <% } %>
 
+  <!-- Contracts — weekly assignments per contract (planning layer, no day columns) -->
+  <h3 class="mt-8 mb-3 text-center text-2xl font-bold">Contracts</h3>
+  <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
+    <%- include('../partials/contractsTable-excel', {
+      contractsForWeek: typeof contractsForWeek !== 'undefined' ? contractsForWeek : [],
+      weekStart: startDate,
+      isManagementView
+    }) %>
+  </div>
+
   <!-- Employee Table(s) -->
   <% if (isManagementView) {
     // Group employees by department for management view
@@ -162,70 +172,17 @@
     }) %>
   </div>
 
-  <!-- Fleet Compliance (Management view only) -->
-  <% if (isManagementView && typeof fleetCompliance !== 'undefined' && fleetCompliance.length > 0) {
-    const _today = new Date();
-    const _warnMs = 30 * 24 * 60 * 60 * 1000; // 30 days
-    const _complianceCls = (date) => {
-      if (!date) return 'text-gray-400 dark:text-gray-500';
-      const d = new Date(date);
-      if (d < _today) return 'text-red-600 dark:text-red-400 font-semibold';
-      if (d - _today < _warnMs) return 'text-amber-600 dark:text-amber-400 font-semibold';
-      return 'text-gray-800 dark:text-gray-200';
-    };
-  %>
-    <h3 class="mt-5 mb-3 text-center text-2xl font-bold">Fleet Compliance</h3>
-    <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
-      <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800">
-            <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Registration</th>
-            <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Type</th>
-            <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">TAX</th>
-            <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">MOT</th>
-            <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Insurance</th>
-            <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Breakdown</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-          <% fleetCompliance.forEach(v => { %>
-            <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap font-medium">
-                <a href="/vehicle/read/<%= v._id %>" class="text-green-900 dark:text-green-400 hover:underline">
-                  <%= v.registrationNumber || '—' %>
-                </a>
-              </td>
-              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-600 dark:text-gray-400">
-                <%= v.bodyType || '—' %>
-              </td>
-              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center <%= _complianceCls(v.roadTaxExpiryDate) %>">
-                <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : '—' %>
-              </td>
-              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center <%= _complianceCls(v.motExpiryDate) %>">
-                <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : '—' %>
-              </td>
-              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center">
-                <span class="<%= _complianceCls(v.insuranceExpiryDate) %>">
-                  <%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : '—' %>
-                </span>
-                <% if (v.insuranceProvider) { %>
-                  <span class="block text-[10px] text-gray-500 dark:text-gray-400"><%= v.insuranceProvider %></span>
-                <% } %>
-              </td>
-              <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center">
-                <span class="<%= _complianceCls(v.breakdownExpiryDate) %>">
-                  <%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : '—' %>
-                </span>
-                <% if (v.breakdownProvider) { %>
-                  <span class="block text-[10px] text-gray-500 dark:text-gray-400"><%= v.breakdownProvider %></span>
-                <% } %>
-              </td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    </div>
-  <% } %>
+  <!-- Vehicles — daily deployment grid + compliance columns -->
+  <h3 class="mt-8 mb-3 text-center text-2xl font-bold">Vehicles</h3>
+  <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-5">
+    <%- include('../partials/vehiclesTable-excel', {
+      vehicles: typeof vehicles !== 'undefined' ? vehicles : [],
+      vehicleDeploymentsByVehicleDate: typeof vehicleDeploymentsByVehicleDate !== 'undefined' ? vehicleDeploymentsByVehicleDate : {},
+      daysOfWeek,
+      isManagementView,
+      moment
+    }) %>
+  </div>
 
   <!-- Statements Section -->
   <% if (typeof statements !== 'undefined' && statements.length > 0) { %>
@@ -393,31 +350,10 @@
     </div>
   <% } %>
 
-  <% if (canDept('management') && activeProjects && activeProjects.length > 0) { %>
-    <h3 class="mt-5 mb-3 text-xl font-semibold text-gray-900 dark:text-gray-100">
-      Scheduled Projects
-      <span class="ml-2 inline-flex items-center justify-center rounded-full bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 px-2 py-0.5 text-xs font-semibold">
-        <%= activeProjects.length %>
-      </span>
-      <span class="ml-2 text-xs text-gray-600 dark:text-gray-300">
-        (<%= (projectStatusFilter && projectStatusFilter.length ? projectStatusFilter.join(', ') : 'All') %>)
-      </span>
-    </h3>
-    <ul class="divide-y divide-gray-200 dark:divide-gray-700 mb-5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-      <% activeProjects.forEach(project => { %>
-        <li class="flex justify-between items-center px-4 py-3 bg-white dark:bg-gray-900">
-          <a href="/project/read/<%= project.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">
-            <%= project.Name %>
-          </a>
-        </li>
-      <% }) %>
-    </ul>
-  <% } %>
-
-  <%# CSP-safe data blobs for the attendanceCell Alpine component.
-      type="application/json" is never executed by browsers — no unsafe-inline needed.
-      REVERT: remove these two script tags if rolling back the inline-edit feature. %>
+  <%# CSP-safe data blobs — type="application/json" is never executed by browsers. %>
   <script type="application/json" id="attendance-locations-json"><%- JSON.stringify(locations || []) %></script>
   <script type="application/json" id="attendance-contracts-json"><%- JSON.stringify((activeContracts || []).map(function(c){ return { _id: c._id, title: c.title, location: c.location }; })) %></script>
+  <script type="application/json" id="weekly-employees-json"><%- JSON.stringify(typeof allEmployees !== 'undefined' ? allEmployees : []) %></script>
+  <script type="application/json" id="weekly-subcontractors-json"><%- JSON.stringify(typeof allSubcontractors !== 'undefined' ? allSubcontractors : []) %></script>
 
 </div>

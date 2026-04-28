@@ -1,0 +1,132 @@
+<%
+  /*
+   * vehicleDeploymentCellEditor.ejs
+   *
+   * Reusable Alpine.js editor fragment for vehicleDeploymentCell component.
+   * Must be included inside an element with x-data="vehicleDeploymentCell({...})".
+   */
+%>
+<!-- Collapsed view -->
+<div x-show="!editing" @click="startEdit()" class="px-2 py-1.5 cursor-pointer group min-h-[2.5rem] flex flex-col justify-center">
+  <!-- Has a deployment: show driver + usage -->
+  <template x-if="display.usageType">
+    <div class="text-xs">
+      <span x-show="display.driverName" x-text="display.driverName"
+        class="block font-medium text-gray-700 dark:text-gray-300 truncate group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors"></span>
+      <span x-text="display.usageType"
+        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"></span>
+    </div>
+  </template>
+  <!-- Empty cell: faint + trigger -->
+  <template x-if="!display.usageType">
+    <div class="flex items-center justify-center h-full opacity-0 group-hover:opacity-100 transition-opacity">
+      <svg class="w-4 h-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+    </div>
+  </template>
+</div>
+
+<!-- Editor panel -->
+<div x-show="editing" @keydown="handleKey($event)" class="p-2 space-y-1.5 bg-white dark:bg-gray-900 border border-green-300 dark:border-green-700 rounded shadow-lg z-10 min-w-[200px]">
+  <div x-show="error" x-text="error" class="text-[10px] text-red-600 dark:text-red-400 font-medium"></div>
+
+  <!-- Driver type -->
+  <div class="flex items-center gap-1.5">
+    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Driver</label>
+    <select x-model="form.driverType"
+      class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+      <option value="none">Unassigned</option>
+      <option value="employee">Employee</option>
+      <option value="subcontractor">Subcontractor</option>
+    </select>
+  </div>
+
+  <!-- Employee picker -->
+  <div x-show="form.driverType === 'employee'" class="flex items-center gap-1.5">
+    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0"></label>
+    <select x-model="form.driverEmployeeId"
+      class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+      <option value="">— Select employee —</option>
+      <template x-for="emp in employees" :key="emp._id">
+        <option :value="String(emp._id)" x-text="emp.name"></option>
+      </template>
+    </select>
+  </div>
+
+  <!-- Subcontractor picker -->
+  <div x-show="form.driverType === 'subcontractor'" class="flex items-center gap-1.5">
+    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0"></label>
+    <select x-model="form.driverSubId"
+      class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+      <option value="">— Select subcontractor —</option>
+      <template x-for="sub in subcontractors" :key="sub._id">
+        <option :value="String(sub._id)" x-text="sub.Name"></option>
+      </template>
+    </select>
+  </div>
+
+  <!-- Usage type -->
+  <div class="flex items-center gap-1.5">
+    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Usage</label>
+    <select x-model="form.usageType"
+      class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+      <option value="site">Site</option>
+      <option value="delivery">Delivery</option>
+      <option value="maintenance">Maintenance</option>
+      <option value="office">Office</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+
+  <!-- Location / Contract -->
+  <div class="flex items-center gap-1.5">
+    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Location</label>
+    <select x-model="form.locationId"
+      class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+      <option value="">— None —</option>
+      <template x-for="loc in locations" :key="loc._id">
+        <option :value="String(loc._id)" x-text="loc.name"></option>
+      </template>
+    </select>
+  </div>
+  <div class="flex items-center gap-1.5">
+    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Contract</label>
+    <select x-model="form.contractId"
+      class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+      <option value="">— None —</option>
+      <template x-for="c in contracts" :key="c._id">
+        <option :value="String(c._id)" x-text="c.title"></option>
+      </template>
+    </select>
+  </div>
+
+  <!-- Mileage -->
+  <div class="flex items-center gap-1.5">
+    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Mileage</label>
+    <input type="number" x-model="form.startMileage" min="0" placeholder="Start"
+      class="w-16 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+    <span class="text-[10px] text-gray-400">→</span>
+    <input type="number" x-model="form.endMileage" min="0" placeholder="End"
+      class="w-16 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+  </div>
+
+  <!-- Action buttons -->
+  <div class="flex items-center gap-1.5 pt-0.5">
+    <button type="button" @click="save()" :disabled="saving"
+      class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 transition-colors">
+      <svg x-show="!saving" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+      <svg x-show="saving" class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+      </svg>
+      <span x-text="saving ? '…' : 'Save'"></span>
+    </button>
+    <button type="button" @click="cancel()" :disabled="saving"
+      class="px-2.5 py-1 rounded text-[11px] font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 transition-colors">
+      Cancel
+    </button>
+  </div>
+</div>

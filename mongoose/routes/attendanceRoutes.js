@@ -76,4 +76,28 @@ router.post(
   ctrl.removeStatementPurchase,
 );
 
+// Inline assignment editing — admin/accountant only
+router.post(
+  "/assignment/inline",
+  authService.ensureRoles("admin", "accountant"),
+  ctrl.inlineCreateAssignment,
+);
+router.patch(
+  "/assignment/:uuid",
+  authService.ensureRoles("admin", "accountant"),
+  ctrl.updateAssignment,
+);
+
+// Inline vehicle deployment editing — admin/accountant only
+router.post(
+  "/vehicle-deployment/inline",
+  authService.ensureRoles("admin", "accountant"),
+  ctrl.inlineCreateVehicleDeployment,
+);
+router.patch(
+  "/vehicle-deployment/:uuid",
+  authService.ensureRoles("admin", "accountant"),
+  ctrl.updateVehicleDeployment,
+);
+
 module.exports = router;
