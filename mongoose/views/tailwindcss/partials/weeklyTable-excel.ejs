@@ -144,7 +144,7 @@
                   </div>
 
                 <% } else { %>
-                  <%# â”€â”€ Static record (approved, rejected, or purchase) â”€â”€ %>
+                  <%# Static record (approved, rejected, or purchase) %>
 
                   <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
                     <a
@@ -161,7 +161,7 @@
 
                   <a href="<%= href %>" class="block text-green-900 dark:text-green-400 hover:underline text-xs leading-tight">
                     <% if (isPurchase) { %>
-                      KF#: <%= record.invoiceNumber || '"”' %> SF#: <%= record.supplierReference || '"”' %>
+                      KF#: <%= record.invoiceNumber || '' %> SF#: <%= record.supplierReference || '' %>
                       <% if (!isManagementView && record.weeklyPay) { %>
                         "“ £<%= record.weeklyPay.toFixed(2) %>
                       <% } %>
@@ -189,7 +189,7 @@
               <% }); %>
 
             <% } else { %>
-              <%# â”€â”€ Empty cell "” open dialog to create â”€â”€ %>
+              <%# Empty cell open dialog to create %>
               <% const _entityMongoId = details.employeeMongoId ? String(details.employeeMongoId) : null; %>
               <% const _subUuid = details.subcontractorId || null; %>
               <% if (_canEdit && (_entityMongoId || _subUuid)) { %>
@@ -234,7 +234,7 @@
                 exp. <%= moment(_hbEntry.periodEnd).format('DD/MM/YY') %>
               </span>
             <% } else { %>
-              <span class="text-gray-400 dark:text-gray-500 text-xs">"”</span>
+              <span class="text-gray-400 dark:text-gray-500 text-xs"></span>
             <% } %>
           </td>
         <% } %>

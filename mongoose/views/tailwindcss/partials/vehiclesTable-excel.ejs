@@ -68,11 +68,11 @@
       <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
         <!-- Registration -->
         <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap">
-          <a href="/vehicle/read/<%= v._id %>" class="font-medium text-green-900 dark:text-green-400 hover:underline"><%= v.registrationNumber || '"”' %></a>
+          <a href="/vehicle/read/<%= v._id %>" class="font-medium text-green-900 dark:text-green-400 hover:underline"><%= v.registrationNumber || '' %></a>
           <% if (v.make || v.model) { %><span class="block text-[10px] text-gray-400 dark:text-gray-500"><%= [v.make, v.model].filter(Boolean).join(' ') %></span><% } %>
         </td>
         <!-- Body type -->
-        <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= v.bodyType || '"”' %></td>
+        <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= v.bodyType || '' %></td>
 
         <!-- Day cells -->
         <% _dows.forEach(function(day) { %>
@@ -114,7 +114,7 @@
                   <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 <%= _usageBadge[_dep.usageType] || 'bg-gray-100 text-gray-700' %>"><%= _dep.usageType %></span>
                 </div>
               <% } else { %>
-                <div class="px-2 py-1.5 text-xs text-gray-200 dark:text-gray-700 text-center">"”</div>
+                <div class="px-2 py-1.5 text-xs text-gray-200 dark:text-gray-700 text-center"></div>
               <% } %>
             <% } %>
           </td>
@@ -122,17 +122,17 @@
 
         <!-- Compliance columns -->
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.roadTaxExpiryDate) %>">
-          <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : '"”' %>
+          <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : '' %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.motExpiryDate) %>">
-          <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : '"”' %>
+          <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : '' %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
-          <span class="<%= _complianceCls(v.insuranceExpiryDate) %>"><%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : '"”' %></span>
+          <span class="<%= _complianceCls(v.insuranceExpiryDate) %>"><%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : '' %></span>
           <% if (v.insuranceProvider) { %><span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.insuranceProvider %></span><% } %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
-          <span class="<%= _complianceCls(v.breakdownExpiryDate) %>"><%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : '"”' %></span>
+          <span class="<%= _complianceCls(v.breakdownExpiryDate) %>"><%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : '' %></span>
           <% if (v.breakdownProvider) { %><span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.breakdownProvider %></span><% } %>
         </td>
       </tr>
@@ -141,7 +141,7 @@
 </table>
 
 <% if (_canEdit) { %>
-<!-- â”€â”€ Vehicle Deployment Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- Vehicle Deployment Modal -->
 <dialog id="vdep-modal" class="rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-0 max-w-md w-full">
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
     <h3 id="vdep-modal-title" class="text-sm font-semibold">Vehicle Deployment</h3>
@@ -205,7 +205,7 @@
       <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Mileage</label>
       <input type="number" id="vdep-start-mi" min="0" placeholder="Start"
         class="w-28 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-      <span class="text-xs text-gray-400">â†’</span>
+      <span class="text-xs text-gray-400"></span>
       <input type="number" id="vdep-end-mi" min="0" placeholder="End"
         class="w-28 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
     </div>
@@ -247,7 +247,7 @@
       document.getElementById('vdep-start-mi').value   = d.startMileage || '';
       document.getElementById('vdep-end-mi').value     = d.endMileage   || '';
       document.getElementById('vdep-modal-title').textContent =
-        (d.isNew === 'true' ? 'Add Deployment' : 'Edit Deployment') + ' "” ' + d.date;
+        (d.isNew === 'true' ? 'Add Deployment' : 'Edit Deployment') + ' ' + d.date;
       errEl.style.display = 'none';
       submitBtn.disabled = false; submitBtn.textContent = 'Save';
       modal.showModal();
