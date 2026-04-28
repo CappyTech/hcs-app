@@ -30,6 +30,7 @@
   const _psMap = typeof purchaseStatementMap !== 'undefined' ? purchaseStatementMap : {};
   const _showHB = typeof showHolidayBalance !== 'undefined' ? showHolidayBalance : false;
   const _hbMap = typeof holidayBalanceMap !== 'undefined' ? holidayBalanceMap : {};
+  const _canEdit = canDept('management') || canDept('admin');
 %>
 <table class="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm rounded-xl overflow-hidden">
   <thead>
@@ -97,149 +98,48 @@
                   ? (_stmtAnchor || `/purchase/read/${record.purchaseUuid}`)
                   : `/attendance/read/${record.uuid}`; %>
 
-                <%# Pending non-purchase records get Alpine inline-edit wrapper. %>
+                <%# Pending record — click to edit via shared dialog %>
                 <% if (!isPurchase && record.status === 'pending') { %>
-                  <div
-                    x-data="attendanceCell({
-                      uuid: '<%= record.uuid %>',
-                      isPending: true,
-                      isNew: false,
-                      isSubcontractor: <%= sectionType === 'subcontractor' %>,
-                      employeeId: null,
-                      subcontractorId: null,
-                      date: '<%= day %>',
-                      initType: '<%= record.type || 'work' %>',
-                      initHours: <%= record.hoursWorked != null ? record.hoursWorked : 'null' %>,
-                      initDayRate: <%= record.dayRate != null ? record.dayRate : 'null' %>,
-                      initLocationId: '<%= record.location?._id || record.locationId || '' %>',
-                      initContractId: '<%= record.contractId || '' %>'
-                    })"
-                    @keydown="handleKey($event)"
-                    class="mb-1"
-                  >
-                    <%# ── Read mode ── %>
-                    <div x-show="!editing" @click="startEdit()" class="cursor-pointer select-none" title="Click to edit">
-
-                      <% if (record.contractAssignmentId?.title && record.contractAssignmentId?.uuid) { %>
-                        <a
-                          href="/assignment/read/<%= record.contractAssignmentId.uuid %>"
-                          class="text-green-600 dark:text-green-400 text-xs font-semibold hover:underline block"
-                          @click.stop>
-                          <%= record.contractAssignmentId.title %>
-                        </a>
-                      <% } %>
-
-                      <%# Type badge — updates from Alpine display state %>
-                      <span
-                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5"
-                        :class="{
-                          'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400': displayType === 'work',
-                          'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400': displayType === 'training',
-                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400': displayType === 'sick',
-                          'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400': displayType === 'holiday',
-                          'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300': displayType === 'off',
-                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400': displayType === 'leave'
-                        }"
-                        x-text="displayType || '<%= record.type %>'">
+                  <div class="mb-1">
+                    <% if (record.contractAssignmentId && record.contractAssignmentId.title && record.contractAssignmentId.uuid) { %>
+                      <a href="/assignment/read/<%= record.contractAssignmentId.uuid %>" class="text-green-600 dark:text-green-400 text-xs font-semibold hover:underline block">
+                        <%= record.contractAssignmentId.title %>
+                      </a>
+                    <% } %>
+                    <button type="button" class="att-open block text-left w-full hover:opacity-75 transition-opacity print:hidden"
+                      data-uuid="<%= record.uuid %>"
+                      data-is-new="false"
+                      data-is-subcontractor="<%= sectionType === 'subcontractor' %>"
+                      data-employee-id=""
+                      data-subcontractor-id=""
+                      data-date="<%= day %>"
+                      data-type="<%= record.type || 'work' %>"
+                      data-hours="<%= record.hoursWorked != null ? record.hoursWorked : '' %>"
+                      data-day-rate="<%= record.dayRate != null ? record.dayRate : '' %>"
+                      data-location-id="<%= record.location && record.location._id ? record.location._id : (record.locationId || '') %>"
+                      data-contract-id="<%= record.contractId || '' %>">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _badgeCls[record.type] || 'bg-gray-100 text-gray-700' %> mb-0.5">
+                        <%= record.type || 'work' %>
                       </span>
-
-                      <span class="block text-green-900 dark:text-green-400 text-xs leading-tight">
-                        <span x-text="displayLocationId ? (locations.find(l => String(l._id) === displayLocationId) || {}).name || '' : '<%= record.location?.name || '' %>'"></span>
-                      </span>
-
-                      <span x-show="displayHours > 0" class="block text-gray-600 dark:text-gray-400 text-[10px]" x-text="displayHours + 'h'"></span>
-                      <span x-show="!displayHours && <%= record.hoursWorked > 0 %>" class="block text-gray-600 dark:text-gray-400 text-[10px]"><%= record.hoursWorked %>h</span>
-
-                      <div class="mt-0.5">
-                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                          pending
-                        </span>
-                        <span class="inline-flex gap-1 ml-0.5 print:hidden" @click.stop>
-                          <form action="/attendance/<%= record.uuid %>/approve" method="POST" class="inline">
-                            <%- include('./csrfHidden.ejs') %>
-                            <button type="submit" class="text-green-600 hover:text-green-800 text-xs" title="Approve"><i class="bi bi-check-lg"></i></button>
-                          </form>
-                          <form action="/attendance/<%= record.uuid %>/reject" method="POST" class="inline">
-                            <%- include('./csrfHidden.ejs') %>
-                            <button type="submit" class="text-red-600 hover:text-red-800 text-xs" title="Reject"><i class="bi bi-x-lg"></i></button>
-                          </form>
-                        </span>
-                      </div>
-                    </div>
-
-                    <%# ── Edit mode form ── %>
-                    <div x-show="editing" x-cloak class="text-left space-y-1 min-w-[110px]">
-
-                      <%# Type select %>
-                      <select
-                        x-model="form.type"
-                        @blur="save()"
-                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                        <option value="work">work</option>
-                        <option value="training">training</option>
-                        <option value="sick">sick</option>
-                        <option value="holiday">holiday</option>
-                        <option value="off">off</option>
-                        <option value="leave">leave</option>
-                      </select>
-
-                      <%# Hours (employees) or Day Rate (subcontractors) — only for work/training %>
-                      <% if (sectionType === 'subcontractor') { %>
-                        <input
-                          type="number"
-                          x-model="form.dayRate"
-                          x-show="needsLocationProject"
-                          @blur="save()"
-                          min="0" step="0.01"
-                          placeholder="Day rate"
-                          class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                      <% } else { %>
-                        <input
-                          type="number"
-                          x-model="form.hours"
-                          x-show="needsLocationProject"
-                          @blur="save()"
-                          min="0" step="0.25"
-                          placeholder="Hours"
-                          class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                      <% if (record.location && record.location.name) { %>
+                        <span class="block text-green-900 dark:text-green-400 text-xs leading-tight"><%= record.location.name %></span>
                       <% } %>
-
-                      <%# Location select — for work/training only %>
-                      <select
-                        x-model="form.locationId"
-                        x-show="needsLocationProject"
-                        @blur="save()"
-                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                        <option value="">— Location —</option>
-                        <template x-for="loc in locations" :key="loc._id">
-                          <option :value="String(loc._id)" x-text="loc.name"></option>
-                        </template>
-                      </select>
-
-                      <%# Contract select — for work/training only %>
-                      <select
-                        x-model="form.contractId"
-                        x-show="needsLocationProject"
-                        @blur="save()"
-                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                        <option value="">— Contract —</option>
-                        <template x-for="contract in contracts" :key="contract._id">
-                          <option :value="String(contract._id)" x-text="contract.title"></option>
-                        </template>
-                      </select>
-
-                      <%# Saving indicator + error + cancel %>
-                      <div class="flex items-center justify-between gap-1 mt-0.5">
-                        <span x-show="saving" class="text-[9px] text-amber-600 dark:text-amber-400">saving…</span>
-                        <span x-show="error" x-text="error" class="text-[9px] text-red-600 dark:text-red-400 leading-tight"></span>
-                        <button
-                          type="button"
-                          @click="cancel()"
-                          class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs print:hidden"
-                          title="Cancel (Esc)">
-                          <i class="bi bi-x-lg"></i>
-                        </button>
-                      </div>
+                      <% if (record.hoursWorked > 0) { %>
+                        <span class="block text-gray-600 dark:text-gray-400 text-[10px]"><%= record.hoursWorked %>h</span>
+                      <% } %>
+                    </button>
+                    <div class="mt-0.5">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">pending</span>
+                      <span class="inline-flex gap-1 ml-0.5 print:hidden">
+                        <form action="/attendance/<%= record.uuid %>/approve" method="POST" class="inline">
+                          <%- include('./csrfHidden.ejs') %>
+                          <button type="submit" class="text-green-600 hover:text-green-800 text-xs" title="Approve"><i class="bi bi-check-lg"></i></button>
+                        </form>
+                        <form action="/attendance/<%= record.uuid %>/reject" method="POST" class="inline">
+                          <%- include('./csrfHidden.ejs') %>
+                          <button type="submit" class="text-red-600 hover:text-red-800 text-xs" title="Reject"><i class="bi bi-x-lg"></i></button>
+                        </form>
+                      </span>
                     </div>
                   </div>
 
@@ -289,102 +189,25 @@
               <% }); %>
 
             <% } else { %>
-              <%# ── Empty cell — inline create widget ── %>
+              <%# ── Empty cell — open dialog to create ── %>
               <% const _entityMongoId = details.employeeMongoId ? String(details.employeeMongoId) : null; %>
               <% const _subUuid = details.subcontractorId || null; %>
-              <% if (_entityMongoId || _subUuid) { %>
-                <div
-                  x-data="attendanceCell({
-                    uuid: null,
-                    isPending: false,
-                    isNew: true,
-                    isSubcontractor: <%= sectionType === 'subcontractor' %>,
-                    employeeId: <%= _entityMongoId ? `'${_entityMongoId}'` : 'null' %>,
-                    subcontractorId: <%= _subUuid ? `'${_subUuid}'` : 'null' %>,
-                    date: '<%= day %>',
-                    initType: 'work',
-                    initHours: null,
-                    initDayRate: null,
-                    initLocationId: '',
-                    initContractId: ''
-                  })"
-                  @keydown="handleKey($event)"
-                >
-                  <%# + Add trigger %>
-                  <div x-show="!editing" @click="startEdit()" class="cursor-pointer print:hidden" title="Add attendance">
-                    <span class="text-gray-400 dark:text-gray-500 text-[10px] hover:text-gray-600 dark:hover:text-gray-300">+ Add</span>
-                  </div>
-
-                  <%# Create form — save on Enter or Save button; NO blur-to-save (multi-field form) %>
-                  <div x-show="editing" x-cloak class="text-left space-y-1 min-w-[110px]">
-                    <select
-                      x-model="form.type"
-                      class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                      <option value="work">work</option>
-                      <option value="training">training</option>
-                      <option value="sick">sick</option>
-                      <option value="holiday">holiday</option>
-                      <option value="off">off</option>
-                      <option value="leave">leave</option>
-                    </select>
-
-                    <% if (sectionType === 'subcontractor') { %>
-                      <input
-                        type="number"
-                        x-model="form.dayRate"
-                        x-show="needsLocationProject"
-                        min="0" step="0.01"
-                        placeholder="Day rate"
-                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                    <% } else { %>
-                      <input
-                        type="number"
-                        x-model="form.hours"
-                        x-show="needsLocationProject"
-                        min="0" step="0.25"
-                        placeholder="Hours"
-                        class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                    <% } %>
-
-                    <select
-                      x-model="form.locationId"
-                      x-show="needsLocationProject"
-                      class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                      <option value="">— Location —</option>
-                      <template x-for="loc in locations" :key="loc._id">
-                        <option :value="String(loc._id)" x-text="loc.name"></option>
-                      </template>
-                    </select>
-
-                    <select
-                      x-model="form.contractId"
-                      x-show="needsLocationProject"
-                      class="w-full text-[10px] border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-                      <option value="">— Contract —</option>
-                      <template x-for="contract in contracts" :key="contract._id">
-                        <option :value="String(contract._id)" x-text="contract.title"></option>
-                      </template>
-                    </select>
-
-                    <div class="flex items-center justify-between gap-1 mt-0.5">
-                      <span x-show="saving" class="text-[9px] text-amber-600 dark:text-amber-400">saving…</span>
-                      <span x-show="error" x-text="error" class="text-[9px] text-red-600 dark:text-red-400 leading-tight"></span>
-                      <div class="flex gap-1 ml-auto">
-                        <button
-                          type="button"
-                          @click="save()"
-                          :disabled="saving"
-                          class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 text-xs disabled:opacity-50 print:hidden"
-                          title="Save (Enter)"><i class="bi bi-check-lg"></i></button>
-                        <button
-                          type="button"
-                          @click="cancel()"
-                          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs print:hidden"
-                          title="Cancel (Esc)"><i class="bi bi-x-lg"></i></button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <% if (_canEdit && (_entityMongoId || _subUuid)) { %>
+                <button type="button" class="att-open print:hidden w-full text-center"
+                  data-uuid=""
+                  data-is-new="true"
+                  data-is-subcontractor="<%= sectionType === 'subcontractor' %>"
+                  data-employee-id="<%= _entityMongoId || '' %>"
+                  data-subcontractor-id="<%= _subUuid || '' %>"
+                  data-date="<%= day %>"
+                  data-type="work"
+                  data-hours=""
+                  data-day-rate=""
+                  data-location-id=""
+                  data-contract-id=""
+                  title="Add attendance">
+                  <span class="text-gray-400 dark:text-gray-500 text-[10px] hover:text-gray-600 dark:hover:text-gray-300">+ Add</span>
+                </button>
               <% } %>
             <% } %>
           </td>
@@ -441,3 +264,166 @@
   </tfoot>
   <% } %>
 </table>
+
+<% if (_canEdit) { %>
+<style>#att-modal::backdrop { background: rgba(0,0,0,0.5); }</style>
+<dialog id="att-modal" class="rounded-xl shadow-2xl bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-0 w-full max-w-md border border-gray-200 dark:border-gray-700">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+    <h3 class="font-semibold text-base" id="att-modal-title">Attendance</h3>
+    <button type="button" id="att-close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
+  </div>
+  <div class="px-5 py-4 space-y-3">
+    <div>
+      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Type</label>
+      <select id="att-type" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+        <option value="work">Work</option>
+        <option value="training">Training</option>
+        <option value="sick">Sick</option>
+        <option value="holiday">Holiday</option>
+        <option value="off">Off</option>
+        <option value="leave">Leave</option>
+      </select>
+    </div>
+    <div id="att-hours-row">
+      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1" id="att-hours-label">Hours</label>
+      <input type="number" id="att-hours" min="0" step="0.25" placeholder="e.g. 8"
+        class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+    </div>
+    <div id="att-location-row">
+      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Location</label>
+      <select id="att-location" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+        <option value="">— None —</option>
+      </select>
+    </div>
+    <div id="att-contract-row">
+      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Contract</label>
+      <select id="att-contract" class="w-full text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+        <option value="">— None —</option>
+      </select>
+    </div>
+    <p id="att-err" class="text-xs text-red-600 dark:text-red-400" style="display:none"></p>
+  </div>
+  <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <button type="button" id="att-save" class="px-4 py-1.5 rounded text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors">Save</button>
+    <button type="button" id="att-cancel" class="px-4 py-1.5 rounded text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors">Cancel</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  var modal    = document.getElementById('att-modal');
+  if (!modal) return;
+  var titleEl  = document.getElementById('att-modal-title');
+  var typeSel  = document.getElementById('att-type');
+  var hoursIn  = document.getElementById('att-hours');
+  var hoursLbl = document.getElementById('att-hours-label');
+  var hoursRow = document.getElementById('att-hours-row');
+  var locSel   = document.getElementById('att-location');
+  var contSel  = document.getElementById('att-contract');
+  var errEl    = document.getElementById('att-err');
+  var saveBtn  = document.getElementById('att-save');
+  var _state   = {};
+
+  // Populate location options from JSON blob
+  try {
+    var locsData = JSON.parse((document.getElementById('attendance-locations-json') || {}).textContent || '[]');
+    locsData.forEach(function (l) {
+      var o = document.createElement('option');
+      o.value = l._id; o.textContent = l.name;
+      locSel.appendChild(o);
+    });
+  } catch (e) {}
+
+  // Populate contract options from JSON blob
+  try {
+    var contrData = JSON.parse((document.getElementById('attendance-contracts-json') || {}).textContent || '[]');
+    contrData.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = c._id; o.textContent = c.title;
+      contSel.appendChild(o);
+    });
+  } catch (e) {}
+
+  function toggleWorkFields() {
+    var show = typeSel.value === 'work' || typeSel.value === 'training';
+    hoursRow.style.display = show ? '' : 'none';
+    document.getElementById('att-location-row').style.display = show ? '' : 'none';
+    document.getElementById('att-contract-row').style.display = show ? '' : 'none';
+  }
+  typeSel.addEventListener('change', toggleWorkFields);
+
+  function closeModal() { modal.close(); }
+  document.getElementById('att-close').addEventListener('click', closeModal);
+  document.getElementById('att-cancel').addEventListener('click', closeModal);
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.att-open');
+    if (!btn) return;
+    var d = btn.dataset;
+    _state.uuid          = d.uuid;
+    _state.isNew         = d.isNew === 'true';
+    _state.isSubcontractor = d.isSubcontractor === 'true';
+    _state.employeeId    = d.employeeId;
+    _state.subcontractorId = d.subcontractorId;
+    _state.date          = d.date;
+
+    titleEl.textContent = (_state.isNew ? 'Add Attendance' : 'Edit Attendance') + ' — ' + d.date;
+    errEl.style.display = 'none';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+
+    typeSel.value = d.type || 'work';
+    hoursLbl.textContent = _state.isSubcontractor ? 'Day Rate (£)' : 'Hours';
+    hoursIn.step  = _state.isSubcontractor ? '0.01' : '0.25';
+    hoursIn.value = _state.isSubcontractor ? (d.dayRate || '') : (d.hours || '');
+    locSel.value  = d.locationId  || '';
+    contSel.value = d.contractId  || '';
+    toggleWorkFields();
+
+    modal.showModal();
+  });
+
+  saveBtn.addEventListener('click', function () {
+    errEl.style.display = 'none';
+    saveBtn.disabled = true;
+    saveBtn.textContent = '…';
+
+    var payload = { date: _state.date, type: typeSel.value };
+    if (_state.employeeId) payload.employeeId = _state.employeeId;
+    if (_state.subcontractorId) payload.subcontractorId = _state.subcontractorId;
+    if (typeSel.value === 'work' || typeSel.value === 'training') {
+      if (hoursIn.value !== '') {
+        if (_state.isSubcontractor) payload.dayRate = Number(hoursIn.value);
+        else payload.hoursWorked = Number(hoursIn.value);
+      }
+      if (locSel.value)  payload.locationId  = locSel.value;
+      if (contSel.value) payload.contractId  = contSel.value;
+    }
+
+    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    var url    = _state.isNew ? '/attendance/inline' : '/attendance/' + _state.uuid;
+    var method = _state.isNew ? 'POST' : 'PATCH';
+
+    fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify(payload),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success) { window.location.reload(); return; }
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        errEl.textContent = data.error || 'Save failed.';
+        errEl.style.display = '';
+      })
+      .catch(function () {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = '';
+      });
+  });
+})();
+</script>
+<% } %>
