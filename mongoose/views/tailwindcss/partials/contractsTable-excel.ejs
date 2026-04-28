@@ -3,10 +3,10 @@
    * contractsTable-excel.ejs
    *
    * Props:
-   *   contractsForWeek  â€” [{contract, assignments[]}]
-   *   weekStart         â€” YYYY-MM-DD
-   *   allEmployees      â€” [{_id, uuid, name}]
-   *   allSubcontractors â€” [{_id, uuid, Name}]
+   *   contractsForWeek  "” [{contract, assignments[]}]
+   *   weekStart         "” YYYY-MM-DD
+   *   allEmployees      "” [{_id, uuid, name}]
+   *   allSubcontractors "” [{_id, uuid, Name}]
    */
   const _cfWeek  = typeof contractsForWeek  !== 'undefined' ? contractsForWeek  : [];
   const _ws      = typeof weekStart         !== 'undefined' ? weekStart          : '';
@@ -55,7 +55,7 @@
         <td class="border border-gray-200 dark:border-gray-700 px-3 py-2" colspan="<%= _colspan %>">
           <div class="flex items-center gap-2 flex-wrap">
             <a href="/contract/read/<%= _c.uuid %>" class="font-semibold text-green-900 dark:text-green-400 hover:underline"><%= _c.title %></a>
-            <% if (_c.location) { %><span class="text-xs text-gray-500 dark:text-gray-400">â€” <%= _c.location %></span><% } %>
+            <% if (_c.location) { %><span class="text-xs text-gray-500 dark:text-gray-400">"” <%= _c.location %></span><% } %>
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= _cBadge[_c.status] || 'bg-gray-100 text-gray-700' %>"><%= _c.status %></span>
             <span class="ml-auto text-xs text-gray-400 dark:text-gray-500"><%= _asgns.length %> assignment<%= _asgns.length === 1 ? '' : 's' %> this week</span>
           </div>
@@ -96,7 +96,7 @@
               <% if (!(asgn.assignedSubcontractors || []).length) { %><span class="text-xs text-gray-400 italic">None</span><% } %>
             </td>
             <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center text-sm text-gray-600 dark:text-gray-400">
-              <%= asgn.estimatedHours != null ? asgn.estimatedHours + 'h' : 'â€”' %>
+              <%= asgn.estimatedHours != null ? asgn.estimatedHours + 'h' : '"”' %>
             </td>
             <% if (_canEdit) { %>
               <td class="border border-gray-100 dark:border-gray-800 px-3 py-2 text-center print:hidden">
@@ -254,7 +254,7 @@
       var err   = form.querySelector('.asgn-err');
       var isNew = form.dataset.isNew === 'true';
       if (err) { err.textContent = ''; err.style.display = 'none'; }
-      if (sub) { sub.disabled = true; sub.textContent = 'â€¦'; }
+      if (sub) { sub.disabled = true; sub.textContent = '…'; }
       var fd = new FormData(form);
       var payload = {
         title:                  fd.get('title') || '',

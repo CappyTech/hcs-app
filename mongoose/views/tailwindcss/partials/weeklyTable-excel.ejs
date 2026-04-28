@@ -98,7 +98,7 @@
                   ? (_stmtAnchor || `/purchase/read/${record.purchaseUuid}`)
                   : `/attendance/read/${record.uuid}`; %>
 
-                <%# Pending record â€” click to edit via shared dialog %>
+                <%# Pending record "” click to edit via shared dialog %>
                 <% if (!isPurchase && record.status === 'pending') { %>
                   <div class="mb-1">
                     <% if (record.contractAssignmentId && record.contractAssignmentId.title && record.contractAssignmentId.uuid) { %>
@@ -161,14 +161,14 @@
 
                   <a href="<%= href %>" class="block text-green-900 dark:text-green-400 hover:underline text-xs leading-tight">
                     <% if (isPurchase) { %>
-                      KF#: <%= record.invoiceNumber || 'â€”' %> SF#: <%= record.supplierReference || 'â€”' %>
+                      KF#: <%= record.invoiceNumber || '"”' %> SF#: <%= record.supplierReference || '"”' %>
                       <% if (!isManagementView && record.weeklyPay) { %>
-                        â€“ Â£<%= record.weeklyPay.toFixed(2) %>
+                        "“ £<%= record.weeklyPay.toFixed(2) %>
                       <% } %>
                     <% } else { %>
                       <%= record.location?.name || '' %><% if (record.location?.name) { %> <% } %>
                       <% if (!isManagementView && record.weeklyPay) { %>
-                        Â£<%= record.weeklyPay.toFixed(2) %>
+                        £<%= record.weeklyPay.toFixed(2) %>
                       <% } %>
                     <% } %>
                   </a>
@@ -189,7 +189,7 @@
               <% }); %>
 
             <% } else { %>
-              <%# â”€â”€ Empty cell â€” open dialog to create â”€â”€ %>
+              <%# â”€â”€ Empty cell "” open dialog to create â”€â”€ %>
               <% const _entityMongoId = details.employeeMongoId ? String(details.employeeMongoId) : null; %>
               <% const _subUuid = details.subcontractorId || null; %>
               <% if (_canEdit && (_entityMongoId || _subUuid)) { %>
@@ -215,7 +215,7 @@
 
         <% if (!isManagementView) { %>
           <td class="border border-gray-300 dark:border-gray-700 text-center px-3 py-2 font-semibold whitespace-nowrap">
-            Â£<%= details.weeklyPay.toFixed(2) %><br>
+            £<%= details.weeklyPay.toFixed(2) %><br>
             <% if (details.totalHoursWorked > 0) { %>
             <span class="text-xs font-normal text-gray-700 dark:text-gray-300"><%= details.totalHoursWorked %>h</span>
             <% } %>
@@ -234,7 +234,7 @@
                 exp. <%= moment(_hbEntry.periodEnd).format('DD/MM/YY') %>
               </span>
             <% } else { %>
-              <span class="text-gray-400 dark:text-gray-500 text-xs">â€”</span>
+              <span class="text-gray-400 dark:text-gray-500 text-xs">"”</span>
             <% } %>
           </td>
         <% } %>
