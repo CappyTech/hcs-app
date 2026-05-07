@@ -33,7 +33,7 @@
       </div>
       <div class="mt-4">
         <a href="/paperless/ocr/<%= doc.paperlessId %>/draft" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm">
-          Open Purchase Draft
+          <%= /subcontract/i.test(doc.documentType?.name || '') ? 'Open Subcontractor Invoice Draft' : 'Open Purchase Draft' %>
         </a>
         <div class="m-2 flex flex-wrap items-center gap-3">
           <a href="https://docs.heroncs.co.uk/documents/<%= doc.paperlessId %>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium bg-slate-100 text-slate-700 hover:bg-green-50 hover:text-green-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-green-900/30 focus:outline-none focus:ring-2 focus:ring-green-600">

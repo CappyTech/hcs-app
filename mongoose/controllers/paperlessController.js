@@ -374,6 +374,22 @@ exports.getPurchaseDraft = async (req, res, next) => {
       }
     }
 
+    // Load active KashFlow projects for per-line project assignment
+    let activeProjects = [];
+    const Project = mdb.REST && mdb.REST.project;
+    if (Project) {
+      try {
+        activeProjects = await Project.find({
+          $or: [{ Status: "Pending" }, { Status: "In Progress" }],
+        })
+          .select("Number Name Status")
+          .sort({ Number: 1 })
+          .lean();
+      } catch (e) {
+        logger.warn("Failed to load active projects for draft view: " + e.message);
+      }
+    }
+
     const payloadPreview = (() => {
       try {
         return buildKashFlowPayloadFromDraft(draft);
@@ -395,9 +411,13 @@ exports.getPurchaseDraft = async (req, res, next) => {
         (process.env.KASHFLOW_MEMORABLE || process.env.KFMEMORABLE))
     );
     const webhookUrl = process.env.KASHFLOW_CREATOR_WEBHOOK_URL || "";
+    const isSubcontractor = /subcontract/i.test(doc?.documentType?.name || "");
     res.render(path.join("tailwindcss", "paperless", "draft"), {
-      title: `Purchase Draft • #${paperlessId}`,
+      title: isSubcontractor
+        ? `Subcontractor Invoice Draft • #${paperlessId}`
+        : `Purchase Draft • #${paperlessId}`,
       paperlessId,
+      isSubcontractor,
       doc,
       draft,
       suppliers,
@@ -405,6 +425,7 @@ exports.getPurchaseDraft = async (req, res, next) => {
       payloadPreview,
       sources,
       nominalMap,
+      activeProjects,
       sendDirectEnabled: hasDirectAuth,
       sendWebhookEnabled: !!webhookUrl,
       kashflowApiBaseUrl: KF_BASE,
@@ -466,7 +487,12 @@ exports.sendDraftToKashflow = async (req, res, next) => {
     }
 
     // Rebuild draft server-side to avoid trusting client payload
+    await mdb.connect();
     const draft = await buildPurchaseDraftById(paperlessId);
+    // Detect document type for subcontractor mode
+    const { OcrDocument: OcrDocumentSend } = mdb.PAPERLESS;
+    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType').lean();
+    const isSubcontractor = /subcontract/i.test(sendDoc?.documentType?.name || "");
     // If a supplier is selected, merge its identifiers
     const supplierUuid =
       req.body && req.body.supplierUuid
@@ -515,6 +541,29 @@ exports.sendDraftToKashflow = async (req, res, next) => {
       : typeof postedNominalRaw === "string"
         ? [postedNominalRaw]
         : [];
+
+    // For subcontractor documents with a single fallback line, expand to labour + materials
+    // so the server payload mirrors exactly what the draft view showed the user.
+    if (
+      isSubcontractor &&
+      Array.isArray(draft.LineItems) &&
+      draft.LineItems.length === 1 &&
+      !( draft.Debug && Array.isArray(draft.Debug.EnumeratedLineItems) && draft.Debug.EnumeratedLineItems.length > 0 )
+    ) {
+      const labourLine = Object.assign({}, draft.LineItems[0], {
+        Description: draft.LineItems[0].Description || "Sub-contractor Labour",
+      });
+      const materialsLine = {
+        Description: "Materials",
+        Quantity: 1,
+        UnitPrice: null,
+        NetAmount: null,
+        VATAmount: null,
+        GrossAmount: null,
+      };
+      draft.LineItems = [labourLine, materialsLine];
+    }
+
     if (
       Array.isArray(draft.LineItems) &&
       draft.LineItems.length > 0 &&
@@ -547,6 +596,33 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         draft.LineItems[i] = li;
       }
     }
+
+    // Apply per-line project numbers posted from the draft view (projectNumbers[])
+    const postedProjectRaw =
+      (req.body && (req.body["projectNumbers[]"] ?? req.body.projectNumbers)) ?? [];
+    const postedProjects = Array.isArray(postedProjectRaw)
+      ? postedProjectRaw
+      : typeof postedProjectRaw === "string"
+        ? [postedProjectRaw]
+        : [];
+    if (Array.isArray(draft.LineItems) && postedProjects.length > 0) {
+      for (let i = 0; i < draft.LineItems.length && i < postedProjects.length; i++) {
+        const li = draft.LineItems[i] || {};
+        const txt = String(postedProjects[i] || "").trim();
+        if (txt === "") {
+          delete li.ProjectNumber;
+        } else {
+          const pn = parseInt(txt, 10);
+          if (Number.isFinite(pn) && pn > 0) {
+            li.ProjectNumber = pn;
+          } else {
+            delete li.ProjectNumber;
+          }
+        }
+        draft.LineItems[i] = li;
+      }
+    }
+
     const webhookUrl = process.env.KASHFLOW_CREATOR_WEBHOOK_URL;
     const webhookToken = process.env.KASHFLOW_CREATOR_WEBHOOK_TOKEN;
 

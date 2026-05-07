@@ -34,11 +34,36 @@
 	<% const headerVsLinesVatOk = (_vatH == null) || Math.abs(_vatH - sumVAT) < 0.01; %>
 	<% const headerVsLinesGrossOk = (_grossH == null) || Math.abs(_grossH - sumGrossDerived) < 0.01; %>
 
+	<%
+	// Subcontractor mode — detect sub-contractor and materials nominal codes from the nominal map
+	let _subcontrNomCode = null, _materialsNomCode = null;
+	if (isSubcontractor && nominalMap) {
+		Object.keys(nominalMap).forEach(function(_c) {
+			const _i = nominalMap[_c] || {};
+			const _n = (_i.Name || _i.Description || '').toLowerCase();
+			if (!_subcontrNomCode && /subcontract|sub.?contr/.test(_n)) _subcontrNomCode = parseInt(_c, 10);
+			if (!_materialsNomCode && /material/.test(_n)) _materialsNomCode = parseInt(_c, 10);
+		});
+	}
+	// For subcontractor: if only the single fallback line, expand to labour + materials rows
+	const _fallbackExpanded = isSubcontractor && lineItems.length === 1 && !usedCustomFieldLines;
+	let displayLineItems = lineItems;
+	if (_fallbackExpanded) {
+		displayLineItems = [
+			Object.assign({}, lineItems[0], {
+				Description: lineItems[0].Description || 'Sub-contractor Labour',
+				NominalCode: lineItems[0].NominalCode != null ? lineItems[0].NominalCode : (_subcontrNomCode != null ? _subcontrNomCode : undefined)
+			}),
+			{ Description: 'Materials', NetAmount: null, VATAmount: null, GrossAmount: null, Quantity: 1, UnitPrice: null, NominalCode: _materialsNomCode != null ? _materialsNomCode : undefined }
+		];
+	}
+	%>
+
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
-		<!-- Left: Purchase Invoice -->
+		<!-- Left: Purchase / Subcontractor Invoice -->
 		<div class="space-y-4 min-w-0">
 			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
-				<h2 class="font-semibold mb-2">Purchase Invoice</h2>
+				<h2 class="font-semibold mb-2"><%= isSubcontractor ? 'Subcontractor Invoice' : 'Purchase Invoice' %></h2>
 				<div class="text-sm space-y-1">
 					<div><span class="font-medium">Supplier Name:</span> <span id="supplier-name-display"><%= draft.SupplierName || (selectedSupplier && selectedSupplier.Name) || '-' %></span></div>
 					<div><span class="font-medium">Supplier Code:</span> <span id="supplier-code-display"><%= draft.SupplierCode || (selectedSupplier && selectedSupplier.Code) || '-' %></span></div>
@@ -108,14 +133,15 @@
 								<th class="p-2">Net</th>
 								<th class="p-2">VAT</th>
 								<th class="p-2">Gross</th>
+								<th class="p-2">Project</th>
 								<th class="p-2">Nominal</th>
 							</tr>
 						</thead>
 						<tbody>
-							<% lineItems.forEach((li, idx) => { %>
+						<% displayLineItems.forEach((li, idx) => { %>
 								<tr class="border-b last:border-0">
 									<td class="p-2"><%= idx + 1 %></td>
-									<% const __rowCode = (typeof li.NominalCode === 'number') ? li.NominalCode : (supplierDefaultNominal ?? null); %>
+									<% const __rowCode = (typeof li.NominalCode === 'number') ? li.NominalCode : (isSubcontractor ? (idx === 0 ? _subcontrNomCode : (idx === 1 ? _materialsNomCode : null)) ?? supplierDefaultNominal ?? null : supplierDefaultNominal ?? null); %>
 									<% const __nomInfo = (__rowCode != null && nominalMap) ? nominalMap[__rowCode] : null; %>
 									<% const __descFromNominal = __nomInfo ? (__nomInfo.Description || __nomInfo.Name || null) : null; %>
 									<td class="p-2 desc-cell" data-has-desc="<%= (li.Description && String(li.Description).trim() !== '') ? 'true' : 'false' %>"><%= li.Description || __descFromNominal || '-' %></td>
@@ -163,13 +189,20 @@
 											<span class="text-[10px] text-slate-500" title="Derived from Net + VAT">(calc)</span>
 										<% } %>
 										<i title="Row consistency" class="bi <%= __rowOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
-									</td>
-									<td class="p-2 nominal-cell" data-explicit="<%= (typeof li.NominalCode === 'number') ? 'true' : 'false' %>">
+									</td>								<td class="p-2 project-cell">
+									<% const __rowProject = li.ProjectNumber != null ? li.ProjectNumber : null; %>
+									<select class="project-select w-full rounded-xl border-gray-200 dark:border-gray-700 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:focus:ring-green-500 dark:focus:border-green-500">
+										<option value="">— None —</option>
+										<% (activeProjects || []).forEach(function(proj) { %>
+											<option value="<%= proj.Number %>" <%= (__rowProject != null && __rowProject === proj.Number) ? 'selected' : '' %>><%= proj.Number %> — <%= proj.Name || '(unnamed)' %><% if (proj.Status) { %> (<%= proj.Status %>)<% } %></option>
+										<% }); %>
+									</select>
+								</td>									<td class="p-2 nominal-cell" data-explicit="<%= (typeof li.NominalCode === 'number') ? 'true' : 'false' %>">
 										<select class="nominal-select w-full rounded-xl border-gray-200 dark:border-gray-700 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:focus:ring-green-500 dark:focus:border-green-500">
 											<option value="">— Choose nominal —</option>
 											<%
 											  const __codes = Object.keys(nominalMap || {}).sort((a,b)=>Number(a)-Number(b));
-											  const __currentNominal = (typeof li.NominalCode === 'number') ? String(li.NominalCode) : (supplierDefaultNominal != null ? String(supplierDefaultNominal) : '');
+										  const __currentNominal = __rowCode != null ? String(__rowCode) : '';
 											  __codes.forEach(code => {
 											    const info = nominalMap[code] || {};
 											%>
@@ -205,7 +238,7 @@
 										<span class="text-red-600">(Δ <%= (draft.GrossAmount - sumGrossDerived).toFixed(2) %>)</span>
 									<% } %>
 								</td>
-								<td class="p-2"></td>
+								<td class="p-2" colspan="2"></td>
 							</tr>
 						</tfoot>
 				</div>
@@ -213,7 +246,7 @@
 
 			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<h2 class="font-semibold mb-2">Notes</h2>
-				<div class="text-sm whitespace-pre-wrap">This purchase invoice was created automatically, with manual oversight and checks.</div>
+				<div class="text-sm whitespace-pre-wrap"><%= isSubcontractor ? 'This subcontractor invoice was created automatically, with manual oversight and checks.' : 'This purchase invoice was created automatically, with manual oversight and checks.' %></div>
 			</div>
 
 			<form id="send-form" method="post" action="/paperless/ocr/<%= paperlessId %>/send" class="mt-2 space-y-3">
@@ -226,8 +259,14 @@
 				</label>
 				<div>
 						<button id="send-button" type="submit" class="inline-flex items-center px-4 py-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700 shadow-sm font-medium transition" <%= canSend ? '' : 'disabled' %>>
-						Send to KashFlow (Create a Purchase Invoice)
-					</button>
+							<%= isSubcontractor ? 'Send to KashFlow (Create a Subcontractor Invoice)' : 'Send to KashFlow (Create a Purchase Invoice)' %>
+						</button>
+						<% if (isSubcontractor) { %>
+							<div class="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-300">
+								<i class="bi bi-exclamation-triangle-fill mr-1"></i>
+								<strong>CIS Reminder:</strong> After creating this purchase in KashFlow, go to KashFlow and add any CIS deductions needed against this invoice.
+							</div>
+						<% } %>
 						<% if (!canSend) { %>
 							<% if (alreadySentLock) { %>
 								<div class="text-xs text-slate-700 dark:text-slate-300 mt-1">
@@ -514,12 +553,13 @@
 		  	});
 		  });
 
-		  // On submit, copy selected nominal codes into hidden inputs inside the form
+		  // On submit, copy selected nominal codes and project numbers into hidden inputs inside the form
 		  const $form = document.getElementById('send-form');
 		  if ($form) {
 		  	$form.addEventListener('submit', () => {
-		  		// remove previous ones
+		  		// remove previous hidden inputs
 		  		$form.querySelectorAll('input[name="nominalCodes[]"]').forEach(n => n.remove());
+		  		$form.querySelectorAll('input[name="projectNumbers[]"]').forEach(n => n.remove());
 		  		const rows = document.querySelectorAll('tbody tr');
 		  		rows.forEach((tr) => {
 		  			const sel = tr.querySelector('select.nominal-select');
@@ -529,6 +569,14 @@
 		  			hid.name = 'nominalCodes[]';
 		  			hid.value = val;
 		  			$form.appendChild(hid);
+
+		  			const projSel = tr.querySelector('select.project-select');
+		  			const projVal = projSel ? (projSel.value || '').trim() : '';
+		  			const projHid = document.createElement('input');
+		  			projHid.type = 'hidden';
+		  			projHid.name = 'projectNumbers[]';
+		  			projHid.value = projVal;
+		  			$form.appendChild(projHid);
 		  		});
 		  	});
 		  }
