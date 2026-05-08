@@ -514,7 +514,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
   let vehicles = [];
   try {
     vehicles = await mdb.INTERNAL.vehicle
-      .find({ ownershipStatus: { $nin: ['Scrapped', 'Sold'] } })
+      .find({ availabilityStatus: { $ne: 'Disposed' } })
       .select('_id uuid registrationNumber make model bodyType ownershipStatus availabilityStatus ' +
               'roadTaxExpiryDate motExpiryDate insuranceExpiryDate insuranceProvider ' +
               'breakdownExpiryDate breakdownProvider')

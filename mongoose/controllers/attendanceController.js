@@ -213,7 +213,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
 
       // Fleet compliance — active (non-disposed) vehicles only
       fleetCompliance = await mdb.INTERNAL.vehicle
-        .find({ ownershipStatus: { $nin: ['Scrapped', 'Sold'] } })
+        .find({ availabilityStatus: { $ne: 'Disposed' } })
         .select(
           "registrationNumber make model bodyType roadTaxExpiryDate motExpiryDate " +
           "insuranceExpiryDate insuranceProvider breakdownProvider breakdownExpiryDate ownershipStatus"
@@ -386,7 +386,7 @@ exports.renderSubmitAttendance = async (req, res, next) => {
     // Fetch reference data for the form
     const [projects, locations] = await Promise.all([
       mdb.REST?.project
-        ?.find({ $or: [{ Status: 0 }, { Status: 2 }] })
+        ?.find({ Status: { $nin: ['Archived', 'Completed'] } })
         .select("uuid Name Number Status")
         .lean() || [],
       mdb.INTERNAL?.location?.find({}).select("uuid name").lean() || [],
