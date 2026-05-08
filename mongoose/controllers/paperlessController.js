@@ -611,16 +611,50 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         const txt = String(postedProjects[i] || "").trim();
         if (txt === "") {
           delete li.ProjectNumber;
+          delete li.ProjectName;
         } else {
           const pn = parseInt(txt, 10);
           if (Number.isFinite(pn) && pn > 0) {
             li.ProjectNumber = pn;
           } else {
             delete li.ProjectNumber;
+            delete li.ProjectName;
           }
         }
         draft.LineItems[i] = li;
       }
+    }
+
+    // Look up project names for any line-level project numbers and propagate to header
+    try {
+      const projectNumbersInUse = new Set(
+        (draft.LineItems || []).map(li => li.ProjectNumber).filter(n => typeof n === 'number' && n > 0)
+      );
+      if (projectNumbersInUse.size > 0) {
+        const RestProject = mdb.REST && mdb.REST.project;
+        if (RestProject) {
+          const projects = await RestProject.find({ Number: { $in: Array.from(projectNumbersInUse) } })
+            .select('Number Name')
+            .lean();
+          const projectNameMap = {};
+          for (const p of projects) {
+            if (p.Number != null) projectNameMap[p.Number] = p.Name || '';
+          }
+          for (const li of (draft.LineItems || [])) {
+            if (typeof li.ProjectNumber === 'number' && li.ProjectNumber > 0) {
+              li.ProjectName = projectNameMap[li.ProjectNumber] ?? '';
+            }
+          }
+          // Set header-level project when all lines share the same project
+          const uniqueNums = Array.from(projectNumbersInUse);
+          if (uniqueNums.length === 1) {
+            draft.ProjectNumber = uniqueNums[0];
+            draft.ProjectName = projectNameMap[uniqueNums[0]] ?? '';
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('Failed to look up project names for KashFlow payload: ' + e.message);
     }
 
     const webhookUrl = process.env.KASHFLOW_CREATOR_WEBHOOK_URL;
@@ -745,30 +779,25 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         }
         req.flash("success", "Purchase created in KashFlow.");
 
-        updatePaperlessWithKashFlowInfo(
-          paperlessId,
-          resp.data,
-          resp.status,
-        ).catch((e) => {
-          logger.warn(
-            `Async updatePaperlessWithKashFlowInfo failed for paperlessId=${paperlessId}: ${e.message}`,
-          );
+        // Run both Paperless updates, then ingest so the DB copy reflects the final state
+        Promise.allSettled([
+          updatePaperlessWithKashFlowInfo(paperlessId, resp.data, resp.status).catch((e) => {
+            logger.warn(
+              `Async updatePaperlessWithKashFlowInfo failed for paperlessId=${paperlessId}: ${e.message}`,
+            );
+          }),
+          updatePaperlessDocumentTags(paperlessId, ["added"]).catch((e) => {
+            logger.warn(
+              `Async updatePaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,
+            );
+          }),
+        ]).then(() => {
+          ingestOnePaperlessDoc(paperlessId).catch((e) => {
+            logger.warn(
+              `Post-send ingest failed for paperlessId=${paperlessId}: ${e.message}`,
+            );
+          });
         });
-
-        await updatePaperlessDocumentTags(paperlessId, ["added"]).catch((e) => {
-          logger.warn(
-            `Async updatePaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,
-          );
-        });
-
-        // Immediately ingest the same file back into our database so UI reflects latest tags/fields
-        try {
-          await ingestOnePaperlessDoc(paperlessId);
-        } catch (e) {
-          logger.warn(
-            `Post-send ingest failed for paperlessId=${paperlessId}: ${e.message}`,
-          );
-        }
       } catch (sendErr) {
         const status = sendErr?.response?.status;
         const data = sendErr?.response?.data;

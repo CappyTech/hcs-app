@@ -1,0 +1,398 @@
+'use strict';
+
+/**
+ * Internal KashFlow API reference.
+ *
+ * Structure:
+ *   group        — sidebar category (tag)
+ *   operations[] — individual endpoints
+ *     .id           unique anchor slug
+ *     .method       HTTP verb (GET | POST | PUT | DELETE | PATCH)
+ *     .path         e.g. /purchases
+ *     .summary      one-liner title
+ *     .description  longer prose
+ *     .request       { fields[] }   — fields that CAN be sent in the request body
+ *     .response      { status, fields[] } — response-only fields (read-back only)
+ *     .notes[]       freeform callouts
+ *
+ *   field shape:
+ *     { name, type, required, description, readOnly?, children? }
+ *     required: true | false | 'conditional'
+ *     readOnly: true  — returned in responses but MUST NOT be sent in requests
+ */
+
+const apiDocs = [
+  // ─────────────────────────────────────────────────────────────────────────
+  //  PURCHASES
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'purchases',
+    tag: 'Purchases',
+    icon: 'bi-receipt',
+    colorClass: 'text-blue-600 dark:text-blue-400',
+    bgClass: 'bg-blue-500',
+    borderClass: 'border-blue-500',
+    operations: [
+      {
+        id: 'purchases-create',
+        method: 'POST',
+        path: '/purchases',
+        summary: 'Create Purchase',
+        description: 'Creates a new purchase invoice in KashFlow. Returns the full purchase object with server-assigned fields on success (HTTP 201).',
+        request: {
+          fields: [
+            { name: 'Number',               type: 'integer', required: false,         description: 'Purchase number. Omit to let KashFlow auto-assign the next available number.' },
+            { name: 'IssuedDate',           type: 'string',  required: false,         description: 'Invoice date. Format: "YYYY-MM-DD HH:mm:ss" (UTC). Recommended.' },
+            { name: 'DueDate',              type: 'string',  required: false,         description: 'Payment due date. Format: "YYYY-MM-DD HH:mm:ss" (UTC). Recommended.' },
+            { name: 'SupplierCode',         type: 'string',  required: 'conditional', description: 'Supplier code (e.g. "MICR01"). Must be provided to link the purchase to a supplier.' },
+            { name: 'SupplierReference',    type: 'string',  required: false,         description: 'Invoice reference from the supplier. Strongly recommended to avoid duplicates.' },
+            { name: 'ProjectNumber',        type: 'integer', required: false,         description: 'Header-level project number. Applied to all lines unless overridden per line. Omit or set 0 for no project.' },
+            { name: 'AdditionalFieldValue', type: 'string',  required: false,         description: 'Custom additional field value.' },
+            { name: 'IsCISReverseCharge',   type: 'boolean', required: false,         description: 'Set true for CIS reverse charge invoices.' },
+            { name: 'Type',                 type: 'string',  required: false,         description: 'Purchase type string (e.g. "Purchase").' },
+            { name: 'Currency',             type: 'object',  required: false,         description: 'Currency object. Defaults to GBP if omitted.',
+              children: [
+                { name: 'Code',             type: 'string',  required: false,         description: 'ISO 4217 currency code (e.g. "GBP", "USD").' },
+                { name: 'ExchangeRate',     type: 'number',  required: false,         description: 'Exchange rate to base currency. Omit for 1:1.' },
+              ]
+            },
+            { name: 'LineItems',            type: 'array',   required: true,          description: 'At least one line item is required.',
+              children: [
+                { name: 'Number',           type: 'integer', required: false,         description: 'Line number. Omit to let KashFlow assign.' },
+                { name: 'Description',      type: 'string',  required: false,         description: 'Line description shown on the invoice.' },
+                { name: 'Quantity',         type: 'number',  required: false,         description: 'Quantity. Defaults to 1.' },
+                { name: 'Rate',             type: 'number',  required: false,         description: 'Unit price (net).' },
+                { name: 'VATLevel',         type: 'integer', required: false,         description: 'VAT percentage as a whole number (e.g. 20 for 20%). Must match a valid KashFlow VAT level.' },
+                { name: 'VATAmount',        type: 'number',  required: false,         description: 'VAT monetary amount for the line.' },
+                { name: 'VATExempt',        type: 'boolean', required: false,         description: 'Set true if this line is VAT exempt.' },
+                { name: 'NominalCode',      type: 'integer', required: false,         description: 'Nominal account code. Should be a "Purchases" classification nominal.' },
+                { name: 'NominalName',      type: 'string',  required: false,         description: 'Nominal account name. Informational; KashFlow resolves by NominalCode.' },
+                { name: 'ProductCode',      type: 'string',  required: false,         description: 'Product/stock code.' },
+                { name: 'TaxCode',          type: 'string',  required: false,         description: 'Tax code string.' },
+                { name: 'Disallowed',       type: 'boolean', required: false,         description: 'Mark the line as disallowed for tax purposes.' },
+                { name: 'ProjectNumber',    type: 'integer', required: false,         description: 'Project number for this line. Takes precedence over the header-level ProjectNumber.' },
+                { name: 'ImportDuty',       type: 'number',  required: false,         description: 'Import duty amount for the line.' },
+                { name: 'StockInfo',        type: 'object',  required: false,         description: 'Stock management info. Only relevant when StockManagementApplicable is true.',
+                  children: [
+                    { name: 'Name',           type: 'string',  required: false, description: 'Stock item name.' },
+                    { name: 'QuantityInStock',type: 'number',  required: false, description: 'Current quantity in stock.' },
+                    { name: 'ApplicableOn',   type: 'string',  required: false, description: 'Date the stock movement applies on.' },
+                    { name: 'Received',       type: 'boolean', required: false, description: 'Whether stock has been received.' },
+                    { name: 'StockReceivedOn',type: 'string',  required: false, description: 'Date stock was received.' },
+                  ]
+                },
+              ]
+            },
+            { name: 'PaymentLines',         type: 'array',   required: false,         description: 'Payment lines to attach. Typically empty on creation.',
+              children: [
+                { name: 'Id',               type: 'integer', required: false,         description: 'Payment line ID. Omit when creating; used when updating.' },
+                { name: 'AccountId',        type: 'integer', required: false,         description: 'Bank account ID the payment was made from.' },
+                { name: 'Amount',           type: 'number',  required: false,         description: 'Payment amount.' },
+                { name: 'Date',             type: 'string',  required: false,         description: 'Payment date. Format: "YYYY-MM-DD HH:mm:ss".' },
+                { name: 'Method',           type: 'integer', required: false,         description: 'Payment method enum value.' },
+                { name: 'Note',             type: 'string',  required: false,         description: 'Payment note.' },
+                { name: 'BankTransactionId',type: 'integer', required: false,         description: 'Linked bank transaction ID.' },
+                { name: 'BulkId',           type: 'integer', required: false,         description: 'Bulk payment group ID.' },
+                { name: 'BFSTransactionId', type: 'integer', required: false,         description: 'BFS transaction ID.' },
+                { name: 'PaymentProcessor', type: 'integer', required: false,         description: 'Payment processor enum.' },
+              ]
+            },
+          ],
+        },
+        response: {
+          status: 201,
+          description: 'Returns the created purchase. Fields below are server-assigned and read-only — do not send in requests.',
+          fields: [
+            { name: 'Id',                            type: 'integer', description: 'Internal KashFlow purchase ID.' },
+            { name: 'SupplierName',                  type: 'string',  description: 'Resolved supplier name.' },
+            { name: 'GrossAmount',                   type: 'number',  description: 'Gross total computed by KashFlow.' },
+            { name: 'NetAmount',                     type: 'number',  description: 'Net total computed by KashFlow.' },
+            { name: 'VATAmount',                     type: 'number',  description: 'Header-level VAT total computed by KashFlow.' },
+            { name: 'TotalPaidAmount',               type: 'number',  description: 'Total payments applied.' },
+            { name: 'DueAmount',                     type: 'number',  description: 'Outstanding balance.' },
+            { name: 'PaidDate',                      type: 'string',  description: 'Date fully paid, or null.' },
+            { name: 'OverdueDays',                   type: 'integer', description: 'Days overdue (0 if not overdue).' },
+            { name: 'Status',                        type: 'string',  description: 'Payment status: "Active", "Archived", "Completed", "Overdue" etc.' },
+            { name: 'ProjectName',                   type: 'string',  description: 'Resolved header-level project name. Send ProjectNumber instead.' },
+            { name: 'PreviousNumber',                type: 'integer', description: 'Previous purchase number in sequence.' },
+            { name: 'NextNumber',                    type: 'integer', description: 'Next purchase number in sequence (0 if latest).' },
+            { name: 'Permalink',                     type: 'string',  description: 'Absolute URL to view this purchase in KashFlow.' },
+            { name: 'HomeCurrencyGrossAmount',       type: 'number',  description: 'Gross in base currency.' },
+            { name: 'CISRCNetAmount',                type: 'number',  description: 'CIS reverse charge net amount.' },
+            { name: 'CISRCVatAmount',                type: 'number',  description: 'CIS reverse charge VAT amount.' },
+            { name: 'TradeBorderType',               type: 'string',  description: '"Domestic", "EU", or "Rest of World".' },
+            { name: 'FileCount',                     type: 'integer', description: 'Number of attached files.' },
+            { name: 'IsEmailSent',                   type: 'boolean', description: 'Whether an email has been sent for this purchase.' },
+            { name: 'VATReturnId',                   type: 'integer', description: 'ID of the VAT return this purchase belongs to (0 if unsubmitted).' },
+            { name: 'IsWhtDeductionToBeApplied',     type: 'boolean', description: 'Withholding tax deduction flag.' },
+            { name: 'StockManagementApplicable',     type: 'boolean', description: 'Whether stock management applies to this purchase.' },
+            { name: 'Currency.Name',                 type: 'string',  description: 'Full currency name (e.g. "British Pounds").' },
+            { name: 'Currency.Symbol',               type: 'string',  description: 'Currency symbol (e.g. "£").' },
+            { name: 'Currency.DisplaySymbolOnRight', type: 'boolean', description: 'Symbol display position preference.' },
+            { name: 'LineItems[].NominalId',         type: 'integer', description: 'Internal KashFlow nominal ID (resolved from NominalCode).' },
+            { name: 'LineItems[].ProductName',       type: 'string',  description: 'Resolved product name.' },
+            { name: 'LineItems[].ProjectName',       type: 'string',  description: 'Resolved project name for the line. Send ProjectNumber instead.' },
+            { name: 'LineItems[].HomeCurrencyRate',  type: 'number',  description: 'Line rate in base currency.' },
+            { name: 'LineItems[].HomeCurrencyImportDuty', type: 'number', description: 'Import duty in base currency.' },
+            { name: 'LineItems[].DisableDisallowed', type: 'boolean', description: 'Server-controlled flag that disables the Disallowed field.' },
+            { name: 'PaymentLines[].BulkPaymentNumber',      type: 'integer', description: 'Bulk payment number if part of a bulk payment run.' },
+            { name: 'PaymentLines[].Permalink',              type: 'string',  description: 'Absolute URL to view this payment line in KashFlow.' },
+            { name: 'PaymentLines[].PaymentProcessorEnumValue', type: 'integer', description: 'Server-resolved payment processor enum value.' },
+            { name: 'PaymentLines[].IsPaymentCreditNote',    type: 'boolean', description: 'Whether this payment line is a credit note.' },
+            { name: 'PaymentLines[].VATReturnId',            type: 'integer', description: 'ID of the VAT return this payment belongs to.' },
+          ],
+        },
+        notes: [
+          'SupplierCode is required in practice to link the purchase to a supplier. Without it KashFlow may create an unlinked purchase.',
+          'ProjectNumber at header level is applied to all lines. Set ProjectNumber per line item to override for individual lines.',
+          'VATLevel must be a whole number (e.g. 20, not 0.20). Snap to the nearest valid rate from the /vatrates endpoint.',
+          'NominalCode must reference a "Purchases" classification nominal. Using an incorrect type may cause silent failure.',
+          'SupplierId is not part of the documented schema. Use SupplierCode only.',
+        ],
+      },
+      {
+        id: 'purchases-reverse',
+        method: 'POST',
+        path: '/purchases/{number}/reverse',
+        summary: 'Reverse Purchase',
+        description: 'Reverses a purchase that has already been included in a submitted VAT return. Creates a new reversal purchase and returns it (HTTP 201). No request body — the purchase to reverse is identified by its number in the URL path.',
+        request: {
+          fields: [
+            { name: 'number', type: 'integer', required: true, description: 'Path parameter. The purchase number to reverse. Must correspond to a purchase already included in a submitted VAT return.' },
+          ],
+        },
+        response: {
+          status: 201,
+          description: 'Returns the newly created reversal purchase. All fields are server-assigned and read-only.',
+          fields: [
+            { name: 'Id',                            type: 'integer', description: 'Internal KashFlow purchase ID of the reversal.' },
+            { name: 'Number',                        type: 'integer', description: 'Auto-assigned purchase number for the reversal.' },
+            { name: 'SupplierName',                  type: 'string',  description: 'Resolved supplier name.' },
+            { name: 'SupplierCode',                  type: 'string',  description: 'Supplier code copied from the original purchase.' },
+            { name: 'SupplierReference',             type: 'string',  description: 'Supplier reference copied from the original purchase.' },
+            { name: 'IssuedDate',                    type: 'string',  description: 'Date the reversal was issued.' },
+            { name: 'DueDate',                       type: 'string',  description: 'Due date of the reversal.' },
+            { name: 'GrossAmount',                   type: 'number',  description: 'Gross total (negative of the original).' },
+            { name: 'NetAmount',                     type: 'number',  description: 'Net total (negative of the original).' },
+            { name: 'VATAmount',                     type: 'number',  description: 'VAT total (negative of the original).' },
+            { name: 'TotalPaidAmount',               type: 'number',  description: 'Total payments applied.' },
+            { name: 'DueAmount',                     type: 'number',  description: 'Outstanding balance.' },
+            { name: 'PaidDate',                      type: 'string',  description: 'Date fully paid, or null.' },
+            { name: 'OverdueDays',                   type: 'integer', description: 'Days overdue (0 if not overdue).' },
+            { name: 'Status',                        type: 'string',  description: 'Payment status of the reversal purchase.' },
+            { name: 'ProjectNumber',                 type: 'integer', description: 'Project number copied from the original.' },
+            { name: 'ProjectName',                   type: 'string',  description: 'Resolved project name.' },
+            { name: 'AdditionalFieldValue',          type: 'string',  description: 'Additional field value copied from the original.' },
+            { name: 'PreviousNumber',                type: 'integer', description: 'Previous purchase number in sequence.' },
+            { name: 'NextNumber',                    type: 'integer', description: 'Next purchase number in sequence.' },
+            { name: 'Permalink',                     type: 'string',  description: 'Absolute URL to view the reversal in KashFlow.' },
+            { name: 'HomeCurrencyGrossAmount',       type: 'number',  description: 'Gross in base currency.' },
+            { name: 'CISRCNetAmount',                type: 'number',  description: 'CIS reverse charge net amount.' },
+            { name: 'CISRCVatAmount',                type: 'number',  description: 'CIS reverse charge VAT amount.' },
+            { name: 'IsCISReverseCharge',            type: 'boolean', description: 'Whether this is a CIS reverse charge purchase.' },
+            { name: 'TradeBorderType',               type: 'string',  description: '"Domestic", "EU", or "Rest of World".' },
+            { name: 'FileCount',                     type: 'integer', description: 'Number of attached files.' },
+            { name: 'IsEmailSent',                   type: 'boolean', description: 'Whether an email has been sent.' },
+            { name: 'VATReturnId',                   type: 'integer', description: 'ID of the VAT return this reversal is submitted to.' },
+            { name: 'IsWhtDeductionToBeApplied',     type: 'boolean', description: 'Withholding tax deduction flag.' },
+            { name: 'StockManagementApplicable',     type: 'boolean', description: 'Whether stock management applies.' },
+            { name: 'Type',                          type: 'string',  description: 'Purchase type.' },
+            { name: 'Currency.Name',                 type: 'string',  description: 'Full currency name.' },
+            { name: 'Currency.Symbol',               type: 'string',  description: 'Currency symbol.' },
+            { name: 'Currency.Code',                 type: 'string',  description: 'ISO 4217 currency code.' },
+            { name: 'Currency.ExchangeRate',         type: 'number',  description: 'Exchange rate used.' },
+            { name: 'Currency.DisplaySymbolOnRight', type: 'boolean', description: 'Symbol display position preference.' },
+            { name: 'LineItems[].NominalId',         type: 'integer', description: 'Internal KashFlow nominal ID.' },
+            { name: 'LineItems[].NominalName',       type: 'string',  description: 'Resolved nominal account name.' },
+            { name: 'LineItems[].ProductName',       type: 'string',  description: 'Resolved product name.' },
+            { name: 'LineItems[].ProjectName',       type: 'string',  description: 'Resolved project name for the line.' },
+            { name: 'LineItems[].HomeCurrencyRate',  type: 'number',  description: 'Line rate in base currency.' },
+            { name: 'LineItems[].HomeCurrencyImportDuty', type: 'number', description: 'Import duty in base currency.' },
+            { name: 'LineItems[].DisableDisallowed', type: 'boolean', description: 'Server-controlled disallowed flag.' },
+            { name: 'PaymentLines[].BulkPaymentNumber',         type: 'integer', description: 'Bulk payment number.' },
+            { name: 'PaymentLines[].Permalink',                 type: 'string',  description: 'Absolute URL to this payment line.' },
+            { name: 'PaymentLines[].PaymentProcessorEnumValue', type: 'integer', description: 'Server-resolved payment processor enum value.' },
+            { name: 'PaymentLines[].IsPaymentCreditNote',       type: 'boolean', description: 'Whether this payment line is a credit note.' },
+            { name: 'PaymentLines[].VATReturnId',               type: 'integer', description: 'ID of the VAT return this payment belongs to.' },
+          ],
+        },
+        notes: [
+          'This endpoint can only be called on purchases that are part of a submitted VAT return. Calling it on an unsubmitted purchase will return a 400 error.',
+          'The reversal is a mirror of the original with negated amounts. It is automatically linked to a new VAT return period.',
+          'No request body is accepted. All parameters are passed via the URL path.',
+        ],
+      },
+      {
+        id: 'purchases-create-batch',
+        method: 'POST',
+        path: '/purchaselist',
+        summary: 'Create Multiple Purchases',
+        description: 'Creates multiple purchase invoices in a single request. The body is an array of purchase objects using the same schema as POST /purchases. Returns an array of per-purchase result objects (HTTP 200).',
+        request: {
+          fields: [
+            { name: '[] (array)',           type: 'array',   required: true,  description: 'Array of purchase objects. Each item follows the same schema as the POST /purchases request body. See that operation for the full field list.' },
+          ],
+        },
+        response: {
+          status: 200,
+          description: 'Returns one result object per purchase submitted. These are server-generated status indicators — not the full purchase objects.',
+          fields: [
+            { name: '[].BankTransactionId', type: 'integer', description: 'ID of the bank transaction created for this purchase, if applicable.' },
+            { name: '[].ErrorCode',         type: 'string',  description: 'Error code if this purchase failed to create. Empty string on success.' },
+            { name: '[].Reason',            type: 'string',  description: 'Human-readable reason for failure. Empty string on success.' },
+          ],
+        },
+        notes: [
+          'Each element in the response array corresponds positionally to the same element in the request array.',
+          'A 200 status does not mean all purchases succeeded — check ErrorCode/Reason on each result object.',
+          'Individual purchase failures do not abort the batch; other purchases in the array may still be created.',
+          'For the full list of accepted fields per purchase, see POST /purchases above.',
+        ],
+      },
+      {
+        id: 'purchases-convert',
+        method: 'POST',
+        path: '/internal/purchases',
+        summary: 'Convert Purchase Order to Purchase',
+        description: 'Converts one or more existing purchase orders into purchases. The entity type to convert from is specified as a query parameter; the entity numbers to convert are provided in the request body. Returns a mapping of source → destination numbers (HTTP 201).',
+        request: {
+          fields: [
+            { name: 'convertfrom', type: 'string',  required: true, description: 'Query parameter. The entity type to convert from (e.g. "purchaseorder"). Passed in the URL query string: ?convertfrom=purchaseorder' },
+            { name: 'entityNumbers', type: 'array', required: true, description: 'Request body. Array of integers — the entity numbers (purchase order numbers) to convert.' },
+          ],
+        },
+        response: {
+          status: 201,
+          description: 'Returns an array of conversion result objects — one per converted entity.',
+          fields: [
+            { name: '[].Source',      type: 'integer', description: 'The source entity number (purchase order number that was converted).' },
+            { name: '[].Destination', type: 'integer', description: 'The destination entity number (purchase number that was created).' },
+          ],
+        },
+        notes: [
+          'This is an internal KashFlow endpoint (/internal/purchases), not the same as the public /purchases create endpoint.',
+          'convertfrom is a query string parameter, not a body field. Example: POST /internal/purchases?convertfrom=purchaseorder',
+          'The response array is positionally matched to the request array.',
+        ],
+      },
+      {
+        id: 'purchases-update',
+        method: 'PUT',
+        path: '/purchases/{number}',
+        summary: 'Update Purchase',
+        description: 'Updates an existing purchase by its number. The full purchase object should be sent — this is a full replacement, not a partial update. Returns the updated purchase (HTTP 200), or HTTP 201 if the update caused the purchase to be assigned a new number.',
+        request: {
+          fields: [
+            { name: 'number',               type: 'integer', required: true,          description: 'Path parameter. The purchase number to update.' },
+            { name: 'Number',               type: 'integer', required: false,          description: 'Purchase number in the body. Can be changed to renumber the purchase (results in HTTP 201 with the new purchase).' },
+            { name: 'IssuedDate',           type: 'string',  required: false,          description: 'Invoice date. Format: "YYYY-MM-DD HH:mm:ss" (UTC).' },
+            { name: 'DueDate',              type: 'string',  required: false,          description: 'Payment due date. Format: "YYYY-MM-DD HH:mm:ss" (UTC).' },
+            { name: 'SupplierCode',         type: 'string',  required: 'conditional',  description: 'Supplier code. Required if changing the supplier.' },
+            { name: 'SupplierReference',    type: 'string',  required: false,          description: 'Invoice reference from the supplier.' },
+            { name: 'ProjectNumber',        type: 'integer', required: false,          description: 'Header-level project number. Applied to all lines unless overridden per line.' },
+            { name: 'AdditionalFieldValue', type: 'string',  required: false,          description: 'Custom additional field value.' },
+            { name: 'IsCISReverseCharge',   type: 'boolean', required: false,          description: 'Set true for CIS reverse charge invoices.' },
+            { name: 'Type',                 type: 'string',  required: false,          description: 'Purchase type string.' },
+            { name: 'Currency',             type: 'object',  required: false,          description: 'Currency object.',
+              children: [
+                { name: 'Code',             type: 'string',  required: false,          description: 'ISO 4217 currency code.' },
+                { name: 'ExchangeRate',     type: 'number',  required: false,          description: 'Exchange rate to base currency.' },
+              ]
+            },
+            { name: 'LineItems',            type: 'array',   required: false,          description: 'Full replacement of all line items. Omitting this will clear all lines.',
+              children: [
+                { name: 'Number',           type: 'integer', required: false,          description: 'Line number. Include to update an existing line; omit to create a new one.' },
+                { name: 'Description',      type: 'string',  required: false,          description: 'Line description.' },
+                { name: 'Quantity',         type: 'number',  required: false,          description: 'Quantity.' },
+                { name: 'Rate',             type: 'number',  required: false,          description: 'Unit price (net).' },
+                { name: 'VATLevel',         type: 'integer', required: false,          description: 'VAT percentage as a whole number (e.g. 20).' },
+                { name: 'VATAmount',        type: 'number',  required: false,          description: 'VAT monetary amount for the line.' },
+                { name: 'VATExempt',        type: 'boolean', required: false,          description: 'Set true if VAT exempt.' },
+                { name: 'NominalCode',      type: 'integer', required: false,          description: 'Nominal account code.' },
+                { name: 'NominalName',      type: 'string',  required: false,          description: 'Nominal account name. Informational; KashFlow resolves by NominalCode.' },
+                { name: 'ProductCode',      type: 'string',  required: false,          description: 'Product/stock code.' },
+                { name: 'TaxCode',          type: 'string',  required: false,          description: 'Tax code string.' },
+                { name: 'Disallowed',       type: 'boolean', required: false,          description: 'Mark the line as disallowed for tax purposes.' },
+                { name: 'ProjectNumber',    type: 'integer', required: false,          description: 'Project number for this line.' },
+                { name: 'ImportDuty',       type: 'number',  required: false,          description: 'Import duty amount for the line.' },
+                { name: 'StockInfo',        type: 'object',  required: false,          description: 'Stock management info.',
+                  children: [
+                    { name: 'Name',            type: 'string',  required: false, description: 'Stock item name.' },
+                    { name: 'QuantityInStock', type: 'number',  required: false, description: 'Current quantity in stock.' },
+                    { name: 'ApplicableOn',    type: 'string',  required: false, description: 'Date the stock movement applies on.' },
+                    { name: 'Received',        type: 'boolean', required: false, description: 'Whether stock has been received.' },
+                    { name: 'StockReceivedOn', type: 'string',  required: false, description: 'Date stock was received.' },
+                  ]
+                },
+              ]
+            },
+            { name: 'PaymentLines',         type: 'array',   required: false,          description: 'Full replacement of all payment lines.',
+              children: [
+                { name: 'Id',               type: 'integer', required: false,          description: 'Payment line ID. Include to update an existing line; omit to create a new one.' },
+                { name: 'AccountId',        type: 'integer', required: false,          description: 'Bank account ID.' },
+                { name: 'Amount',           type: 'number',  required: false,          description: 'Payment amount.' },
+                { name: 'Date',             type: 'string',  required: false,          description: 'Payment date. Format: "YYYY-MM-DD HH:mm:ss".' },
+                { name: 'Method',           type: 'integer', required: false,          description: 'Payment method enum value.' },
+                { name: 'Note',             type: 'string',  required: false,          description: 'Payment note.' },
+                { name: 'BankTransactionId',type: 'integer', required: false,          description: 'Linked bank transaction ID.' },
+                { name: 'BulkId',           type: 'integer', required: false,          description: 'Bulk payment group ID.' },
+                { name: 'BFSTransactionId', type: 'integer', required: false,          description: 'BFS transaction ID.' },
+                { name: 'PaymentProcessor', type: 'integer', required: false,          description: 'Payment processor enum.' },
+              ]
+            },
+          ],
+        },
+        response: {
+          status: 200,
+          description: 'Returns the updated purchase. HTTP 201 is returned instead if the purchase was assigned a new number. Fields below are server-assigned and read-only.',
+          fields: [
+            { name: 'Id',                            type: 'integer', description: 'Internal KashFlow purchase ID.' },
+            { name: 'SupplierName',                  type: 'string',  description: 'Resolved supplier name.' },
+            { name: 'GrossAmount',                   type: 'number',  description: 'Gross total computed by KashFlow.' },
+            { name: 'NetAmount',                     type: 'number',  description: 'Net total computed by KashFlow.' },
+            { name: 'VATAmount',                     type: 'number',  description: 'Header-level VAT total.' },
+            { name: 'TotalPaidAmount',               type: 'number',  description: 'Total payments applied.' },
+            { name: 'DueAmount',                     type: 'number',  description: 'Outstanding balance.' },
+            { name: 'PaidDate',                      type: 'string',  description: 'Date fully paid, or null.' },
+            { name: 'OverdueDays',                   type: 'integer', description: 'Days overdue (0 if not overdue).' },
+            { name: 'Status',                        type: 'string',  description: 'Payment status.' },
+            { name: 'ProjectName',                   type: 'string',  description: 'Resolved header-level project name. Send ProjectNumber instead.' },
+            { name: 'PreviousNumber',                type: 'integer', description: 'Previous purchase number in sequence.' },
+            { name: 'NextNumber',                    type: 'integer', description: 'Next purchase number in sequence.' },
+            { name: 'Permalink',                     type: 'string',  description: 'Absolute URL to view this purchase in KashFlow.' },
+            { name: 'HomeCurrencyGrossAmount',       type: 'number',  description: 'Gross in base currency.' },
+            { name: 'CISRCNetAmount',                type: 'number',  description: 'CIS reverse charge net amount.' },
+            { name: 'CISRCVatAmount',                type: 'number',  description: 'CIS reverse charge VAT amount.' },
+            { name: 'TradeBorderType',               type: 'string',  description: '"Domestic", "EU", or "Rest of World".' },
+            { name: 'FileCount',                     type: 'integer', description: 'Number of attached files.' },
+            { name: 'IsEmailSent',                   type: 'boolean', description: 'Whether an email has been sent.' },
+            { name: 'VATReturnId',                   type: 'integer', description: 'ID of the VAT return this purchase belongs to.' },
+            { name: 'IsWhtDeductionToBeApplied',     type: 'boolean', description: 'Withholding tax deduction flag.' },
+            { name: 'StockManagementApplicable',     type: 'boolean', description: 'Whether stock management applies.' },
+            { name: 'Currency.Name',                 type: 'string',  description: 'Full currency name.' },
+            { name: 'Currency.Symbol',               type: 'string',  description: 'Currency symbol.' },
+            { name: 'Currency.DisplaySymbolOnRight', type: 'boolean', description: 'Symbol display position preference.' },
+            { name: 'LineItems[].NominalId',         type: 'integer', description: 'Internal KashFlow nominal ID.' },
+            { name: 'LineItems[].ProductName',       type: 'string',  description: 'Resolved product name.' },
+            { name: 'LineItems[].ProjectName',       type: 'string',  description: 'Resolved project name for the line.' },
+            { name: 'LineItems[].HomeCurrencyRate',  type: 'number',  description: 'Line rate in base currency.' },
+            { name: 'LineItems[].HomeCurrencyImportDuty', type: 'number', description: 'Import duty in base currency.' },
+            { name: 'LineItems[].DisableDisallowed', type: 'boolean', description: 'Server-controlled disallowed flag.' },
+            { name: 'PaymentLines[].BulkPaymentNumber',         type: 'integer', description: 'Bulk payment number.' },
+            { name: 'PaymentLines[].Permalink',                 type: 'string',  description: 'Absolute URL to this payment line.' },
+            { name: 'PaymentLines[].PaymentProcessorEnumValue', type: 'integer', description: 'Server-resolved payment processor enum value.' },
+            { name: 'PaymentLines[].IsPaymentCreditNote',       type: 'boolean', description: 'Whether this payment line is a credit note.' },
+            { name: 'PaymentLines[].VATReturnId',               type: 'integer', description: 'ID of the VAT return this payment belongs to.' },
+          ],
+        },
+        notes: [
+          'This is a full replacement PUT — send the complete purchase object, not just the changed fields. Omitting LineItems or PaymentLines will clear them.',
+          'If the body Number differs from the path {number}, KashFlow may renumber the purchase and return HTTP 201 instead of 200.',
+          'Purchases included in a submitted VAT return cannot be updated — use POST /purchases/{number}/reverse instead.',
+        ],
+      },
+    ],
+  },
+];
+
+module.exports = apiDocs;

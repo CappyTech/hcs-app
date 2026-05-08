@@ -1,5 +1,7 @@
 'use strict';
 
+const apiDocs = require('../config/apiDocsConfig');
+
 const helpContent = [
   // ─────────────────────────────────────────────────────────────────────────
   //  ROLE GUIDE  — first thing every user sees
@@ -1226,5 +1228,58 @@ exports.getHelp = function (req, res) {
   res.render('tailwindcss/help/index', {
     title: 'Help',
     helpContent: filtered,
+  });
+};
+
+// ── Helper: render a nested field table (used in api.ejs via locals) ───────────
+function renderFieldTableHtml(fields, group, depth) {
+  depth = depth || 0;
+  const indent = depth > 0 ? 'pl-' + (depth * 4) : '';
+  let rows = '';
+  (fields || []).forEach(function(f) {
+    const reqBadge = f.required === true || f.required === 'Yes'
+      ? '<span class="inline-block text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium">Required</span>'
+      : f.required && f.required !== false && f.required !== ''
+        ? '<span class="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium">' + f.required + '</span>'
+        : '<span class="text-xs text-gray-400 dark:text-gray-600">Optional</span>';
+    rows += '<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">';
+    rows += '<td class="px-4 py-2.5 font-mono text-xs text-gray-800 dark:text-gray-200 ' + indent + '">' + (depth > 0 ? '<span class="text-gray-400 mr-1">└</span>' : '') + f.name + '</td>';
+    rows += '<td class="px-4 py-2.5 font-mono text-xs text-indigo-600 dark:text-indigo-400">' + (f.type || '') + '</td>';
+    rows += '<td class="px-4 py-2.5">' + reqBadge + '</td>';
+    rows += '<td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">' + (f.description || '') + '</td>';
+    rows += '</tr>';
+    if (f.children && f.children.length) {
+      rows += renderFieldTableHtml(f.children, group, depth + 1);
+    }
+  });
+  if (depth > 0) return rows;
+  return '<div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700"><table class="w-full text-sm"><thead><tr class="bg-gray-50 dark:bg-gray-800 text-left"><th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-52">Field</th><th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-20">Type</th><th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-28">Required</th><th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300">Description</th></tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-800">' + rows + '</tbody></table></div>';
+}
+
+const methodColors = {
+  GET:    'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+  POST:   'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+  PUT:    'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+  PATCH:  'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
+  DELETE: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+};
+
+function methodBadge(method) {
+  const cls = methodColors[method] || 'bg-gray-100 text-gray-700';
+  return '<span class="inline-block text-xs font-mono font-bold px-2.5 py-1 rounded-lg ' + cls + '">' + method + '</span>';
+}
+
+function methodBadgeSmall(method) {
+  const cls = methodColors[method] || 'bg-gray-100 text-gray-700';
+  return '<span class="flex-shrink-0 inline-block text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ' + cls + '">' + method + '</span>';
+}
+
+exports.getApiDocs = function (req, res) {
+  res.render('tailwindcss/help/api', {
+    title: 'API Reference',
+    apiDocs,
+    renderFieldTable: function(fields, group) { return renderFieldTableHtml(fields, group, 0); },
+    methodBadge,
+    methodBadgeSmall,
   });
 };

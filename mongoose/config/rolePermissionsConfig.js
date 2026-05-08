@@ -201,6 +201,9 @@ const routeAccess = {
   // External connection settings
   '/admin/connections': ['admin'],
 
+  // Internal API reference
+  '/help/api': ['admin'],
+
   // Paperless OCR
   '/paperless/ocr':                    ['admin'],
   '/paperless/ocr/:paperlessId':       ['admin'],

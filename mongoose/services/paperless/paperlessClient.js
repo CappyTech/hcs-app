@@ -143,9 +143,10 @@ function makeClient() {
       const port = await ensureTunnel();
       baseURL = `http://127.0.0.1:${port}/api`;
     } // else: baseURL already validated/normalized above
+    const timeoutMs = parseInt(process.env.PAPERLESS_TIMEOUT_MS, 10) || 60000;
     const api = axios.create({
       baseURL,
-      timeout: 20000,
+      timeout: timeoutMs,
       headers: { Authorization: `Token ${token}`, Accept: accept },
     });
     if (verbose) {

@@ -1,0 +1,179 @@
+<%# ─── /help/api ── Internal KashFlow API reference ────────────────────────── %>
+
+<div x-data="apiDocs()" class="-mx-4 sm:-mx-6 lg:-mx-8 flex min-h-[calc(100vh-4rem)]">
+
+  <%# ─── Left sidebar ─────────────────────────────────────────────────────── %>
+  <aside class="hidden lg:flex flex-col w-64 xl:w-72 flex-shrink-0 sticky top-16 self-start h-[calc(100vh-4rem)] overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-6 space-y-5">
+
+    <div class="relative">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none text-sm"></i>
+      <input
+        type="text"
+        x-model="q"
+        x-on:input="filterOps()"
+        placeholder="Search endpoints…"
+        class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+        autocomplete="off"
+      >
+    </div>
+
+    <nav class="space-y-4 text-sm">
+      <% apiDocs.forEach(function(group) { %>
+        <div>
+          <p class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1 px-1">
+            <i class="bi <%= group.icon %> <%= group.colorClass %>"></i>
+            <%= group.tag %>
+          </p>
+          <ul class="space-y-0.5">
+            <% group.operations.forEach(function(op) { %>
+              <li>
+                <a href="#<%= op.id %>"
+                   class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  <%- methodBadgeSmall(op.method) %>
+                  <span class="truncate text-xs"><%= op.summary %></span>
+                </a>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+      <% }); %>
+    </nav>
+
+  </aside>
+
+  <%# ─── Main content ──────────────────────────────────────────────────────── %>
+  <main class="flex-1 min-w-0 px-6 lg:px-10 py-8">
+
+    <div class="mb-10">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+        <i class="bi bi-code-square text-green-500"></i> API Reference
+      </h1>
+      <p class="mt-2 text-gray-500 dark:text-gray-400">
+        Internal KashFlow v2 REST API documentation. Fields are marked
+        <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium">Required</span>
+        <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium">Conditional</span>
+        or <span class="text-xs text-gray-400">Optional</span>,
+        and <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium">Read-only</span> for fields present in responses but not accepted in requests.
+      </p>
+    </div>
+
+    <%# ── Groups ── %>
+    <% apiDocs.forEach(function(group) { %>
+      <section class="mb-16">
+
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-1 h-8 rounded-full <%= group.bgClass %>"></div>
+          <i class="bi <%= group.icon %> text-xl <%= group.colorClass %>"></i>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white"><%= group.tag %></h2>
+        </div>
+
+        <div class="space-y-8">
+          <% group.operations.forEach(function(op) { %>
+
+            <div id="<%= op.id %>" class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden scroll-mt-20">
+
+              <%# Operation header %>
+              <div class="border-l-4 <%= group.borderClass %> px-6 py-4">
+                <div class="flex flex-wrap items-center gap-3">
+                  <%- methodBadge(op.method) %>
+                  <code class="text-sm font-mono font-semibold text-gray-800 dark:text-gray-200"><%= op.path %></code>
+                  <span class="text-base font-semibold text-gray-900 dark:text-white ml-1"><%= op.summary %></span>
+                </div>
+                <% if (op.description) { %>
+                  <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed"><%= op.description %></p>
+                <% } %>
+              </div>
+
+              <div class="px-6 py-5 space-y-8 border-t border-gray-100 dark:border-gray-800">
+
+                <%# ── Request fields ── %>
+                <% if (op.request && op.request.fields && op.request.fields.length) { %>
+                  <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
+                      <i class="bi bi-upload text-gray-400"></i> Request Body
+                    </h4>
+                    <%- renderFieldTable(op.request.fields, group) %>
+                  </div>
+                <% } %>
+
+                <%# ── Response fields ── %>
+                <% if (op.response && op.response.fields && op.response.fields.length) { %>
+                  <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1 flex items-center gap-2">
+                      <i class="bi bi-download text-gray-400"></i>
+                      Response
+                      <span class="px-2 py-0.5 rounded-full text-xs font-mono bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"><%= op.response.status %></span>
+                    </h4>
+                    <% if (op.response.description) { %>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3"><%= op.response.description %></p>
+                    <% } %>
+                    <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+                      <table class="w-full text-sm">
+                        <thead>
+                          <tr class="bg-gray-50 dark:bg-gray-800 text-left">
+                            <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-52">Field</th>
+                            <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-24">Type</th>
+                            <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                          <% op.response.fields.forEach(function(f) { %>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
+                              <td class="px-4 py-2.5 font-mono text-xs text-gray-800 dark:text-gray-200">
+                                <%= f.name %>
+                                <span class="ml-1 inline-block text-xs px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium">Read-only</span>
+                              </td>
+                              <td class="px-4 py-2.5 font-mono text-xs text-indigo-600 dark:text-indigo-400"><%= f.type || '' %></td>
+                              <td class="px-4 py-2.5 text-gray-600 dark:text-gray-400 text-sm leading-relaxed"><%= f.description %></td>
+                            </tr>
+                          <% }); %>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                <% } %>
+
+                <%# ── Notes ── %>
+                <% if (op.notes && op.notes.length) { %>
+                  <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 px-4 py-3 space-y-2">
+                    <% op.notes.forEach(function(note) { %>
+                      <p class="flex gap-2 text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                        <i class="bi bi-info-circle flex-shrink-0 mt-0.5"></i>
+                        <span><%= note %></span>
+                      </p>
+                    <% }); %>
+                  </div>
+                <% } %>
+
+              </div>
+            </div>
+
+          <% }); %>
+        </div>
+
+      </section>
+    <% }); %>
+
+  </main>
+</div>
+
+<script>
+function apiDocs() {
+  return {
+    q: '',
+    filterOps() {
+      const q = this.q.toLowerCase().trim();
+      document.querySelectorAll('[id]').forEach(el => {
+        if (!el.closest('section')) return;
+        const text = (el.textContent || '').toLowerCase();
+        if (!q || text.includes(q)) {
+          el.style.display = '';
+        } else {
+          el.style.display = 'none';
+        }
+      });
+    }
+  };
+}
+</script>

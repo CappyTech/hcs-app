@@ -27,6 +27,13 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-indigo-700 hover:bg-indigo-800'
     },
+    ApiReference: {
+        title: 'API Reference',
+        description: 'Internal KashFlow REST API documentation — request fields, response-only fields, and integration notes.',
+        link: '/help/api',
+        department: ['admin'],
+        buttonClass: 'bg-violet-700 hover:bg-violet-800'
+    },
     SubmitAttendance: {
         title: 'Submit Attendance',
         description: 'Submit your daily attendance records.',
