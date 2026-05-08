@@ -76,7 +76,7 @@ module.exports = {
       // OLD: subcontractorId: { IsSubcontractor: true },
       subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
       employeeId: { status: 'active' },
-      projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
+      projectId: { Status: { $nin: ['Archived', 'Completed'] } }
     },
     referenceLabelFormat: {
       // Projects: Show number, name, and status label
@@ -488,7 +488,7 @@ module.exports = {
       employeeId: { status: 'active' },
       // OLD: subcontractorId: { IsSubcontractor: true },
       subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
-      projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
+      projectId: { Status: { $nin: ['Archived', 'Completed'] } }
     },
     middleware: {
       read: ['ensureRoles:admin,employee,subcontractor'],
@@ -562,7 +562,7 @@ module.exports = {
       employeeId: { status: 'active' },
       // OLD: subcontractorId: { IsSubcontractor: true },
       subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
-      projectId: { $or: [{ Status: 'Pending' }, { Status: 'In Progress' }] }
+      projectId: { Status: { $nin: ['Archived', 'Completed'] } }
     },
     middleware: {
       read: ['ensureRoles:admin,employee,subcontractor'],

@@ -380,7 +380,7 @@ exports.getPurchaseDraft = async (req, res, next) => {
     if (Project) {
       try {
         activeProjects = await Project.find({
-          $or: [{ Status: "Pending" }, { Status: "In Progress" }],
+          Status: { $nin: ["Archived", "Completed"] },
         })
           .select("Number Name Status")
           .sort({ Number: 1 })
