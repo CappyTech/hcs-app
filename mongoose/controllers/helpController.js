@@ -1276,7 +1276,7 @@ function methodBadgeSmall(method) {
 
 exports.getApiDocs = function (req, res) {
   res.render('tailwindcss/help/api', {
-    title: 'API Reference',
+    title: 'KashFlow API',
     apiDocs,
     renderFieldTable: function(fields, group) { return renderFieldTableHtml(fields, group, 0); },
     methodBadge,

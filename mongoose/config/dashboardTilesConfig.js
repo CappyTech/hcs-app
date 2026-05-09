@@ -28,7 +28,7 @@ module.exports = {
         buttonClass: 'bg-indigo-700 hover:bg-indigo-800'
     },
     ApiReference: {
-        title: 'API Reference',
+        title: 'KashFlow API',
         description: 'Internal KashFlow REST API documentation — request fields, response-only fields, and integration notes.',
         link: '/help/api',
         department: ['admin'],
