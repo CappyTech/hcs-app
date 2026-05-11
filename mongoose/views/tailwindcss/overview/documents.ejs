@@ -57,6 +57,11 @@
       <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
         Never Sent: <strong class="ml-1"><%= neverSent %></strong>
       </span>
+      <% if (sentButUnlinked > 0) { %>
+      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400" title="Sent to KashFlow but KashFlow purchase ID was not saved back to MongoDB">
+        Sent but Unlinked: <strong class="ml-1"><%= sentButUnlinked %></strong>
+      </span>
+      <% } %>
       <% if (ingestStats.total > 0) { %>
       <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-400">
         Ingest Records: <strong class="ml-1"><%= ingestStats.total %></strong>

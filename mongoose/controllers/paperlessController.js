@@ -1133,8 +1133,26 @@ exports.repairDrift = async (req, res) => {
       logger.info(`[repairDrift] Found ${drifted.length} drifted documents to repair`);
       let ok = 0, fail = 0;
       for (const doc of drifted) {
-        // Only write-back for linked docs (MongoDB has ID but Paperless doesn't)
-        if (doc.kashflowPurchaseId == null) continue;
+        // Case 2: Paperless has the KashFlow ID but MongoDB doesn't — sync back into MongoDB
+        if (doc.kashflowPurchaseId == null) {
+          const cfId = Number(doc._cfKfId);
+          if (!Number.isFinite(cfId) || cfId <= 0) {
+            logger.warn(`[repairDrift] Case2 invalid cfKfId="${doc._cfKfId}" for paperlessId=${doc.paperlessId}`);
+            fail++;
+            continue;
+          }
+          try {
+            await OcrDocument.updateOne(
+              { paperlessId: doc.paperlessId },
+              { $set: { kashflowPurchaseId: cfId } },
+            );
+            ok++;
+          } catch (e) {
+            fail++;
+            logger.warn(`[repairDrift] Case2 failed for paperlessId=${doc.paperlessId}: ${e.message}`);
+          }
+          continue;
+        }
         try {
           await updatePaperlessWithKashFlowInfo(
             doc.paperlessId,

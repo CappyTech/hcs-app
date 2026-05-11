@@ -17,6 +17,10 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       direct:   [{ $match: { lastSendMode: 'direct' } }, { $count: 'n' }],
       webhook:  [{ $match: { lastSendMode: 'webhook' } }, { $count: 'n' }],
       neverSent:[{ $match: { lastSentAt: null } }, { $count: 'n' }],
+      sentButUnlinked: [
+        { $match: { kashflowPurchaseId: null, lastSentAt: { $ne: null } } },
+        { $count: 'n' },
+      ],
       // Drift: MongoDB kashflowPurchaseId disagrees with stored Paperless custom field value
       drifted: [
         { $addFields: {
@@ -56,6 +60,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const sentWebhook  = facetResult?.webhook?.[0]?.n  ?? 0;
   const neverSent    = facetResult?.neverSent?.[0]?.n ?? 0;
   const driftedDocs  = facetResult?.drifted?.[0]?.n  ?? 0;
+  const sentButUnlinked = facetResult?.sentButUnlinked?.[0]?.n ?? 0;
 
   // ── By document type ───────────────────────────────────────────────────────
   const byDocType = await OcrDocument.aggregate([
@@ -115,6 +120,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     unlinkedDocs,
     orphanedDocs,
     driftedDocs,
+    sentButUnlinked,
     errorDocs,
     sentDirect,
     sentWebhook,
