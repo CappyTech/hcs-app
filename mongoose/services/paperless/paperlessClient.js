@@ -260,13 +260,16 @@ function makeClient() {
       }
       return data;
     },
-    async getDocument(id, { expand } = {}) {
+    async getDocument(id, { expand, fields } = {}) {
       const api = await createApi();
       if (!id) throw new Error("getDocument requires id");
       const params = {};
       if (expand) {
         // Accept string or array of expand tokens; join with comma
         params.expand = Array.isArray(expand) ? expand.join(",") : expand;
+      }
+      if (fields) {
+        params.fields = Array.isArray(fields) ? fields.join(",") : fields;
       }
       const { data } = await api.get(`/documents/${id}/`, { params });
       return data;
@@ -327,9 +330,11 @@ function makeClient() {
       if (!documentId)
         throw new Error("updateDocumentCustomFields requires documentId");
       const api = await createApi();
-      // Build a map of existing custom fields on the document
+      // Fetch only the custom_fields array — avoids pulling large OCR text bodies.
+      // The ?fields= parameter is supported by Paperless-ngx ≥ 1.14.
       const doc = await this.getDocument(documentId, {
         expand: ["custom_fields", "custom_fields__field"],
+        fields:  "id,custom_fields",
       });
       const existing = new Map(); // fieldId -> value
       const existingByName = new Map(); // lower(name) -> fieldId
