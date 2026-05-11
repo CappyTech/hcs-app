@@ -30,6 +30,7 @@ const {
 const {
   updatePaperlessWithKashFlowInfo,
   updatePaperlessDocumentTags,
+  clearPaperlessKashFlowFields,
 } = require("../services/paperless/paperlessUpdateService");
 
 // Helpers
@@ -1133,7 +1134,8 @@ exports.repairDrift = async (req, res) => {
       logger.info(`[repairDrift] Found ${drifted.length} drifted documents to repair`);
       let ok = 0, fail = 0;
       for (const doc of drifted) {
-        // Case 2: Paperless has the KashFlow ID but MongoDB doesn't — sync back into MongoDB
+        // Case 2: Paperless has the KashFlow ID but MongoDB doesn't
+        // — could be an orphaned doc (purchase deleted) or a failed write-back.
         if (doc.kashflowPurchaseId == null) {
           const cfId = Number(doc._cfKfId);
           if (!Number.isFinite(cfId) || cfId <= 0) {
@@ -1142,10 +1144,31 @@ exports.repairDrift = async (req, res) => {
             continue;
           }
           try {
-            await OcrDocument.updateOne(
-              { paperlessId: doc.paperlessId },
-              { $set: { kashflowPurchaseId: cfId } },
-            );
+            const Purchase = mdb.REST?.purchase;
+            const activePurchase = Purchase
+              ? await Purchase.findOne({ Id: cfId, deletedAt: null, DeletedAt: null }).select('Id Number Permalink').lean()
+              : null;
+
+            if (activePurchase) {
+              // Purchase still exists → restore the MongoDB link
+              await OcrDocument.updateOne(
+                { paperlessId: doc.paperlessId },
+                { $set: {
+                  kashflowPurchaseId:     cfId,
+                  kashflowPurchaseNumber: activePurchase.Number ?? null,
+                  kashflowPermalink:      activePurchase.Permalink ?? null,
+                }},
+              );
+              logger.info(`[repairDrift] Case2 restored link paperlessId=${doc.paperlessId} → KF id=${cfId}`);
+            } else {
+              // Purchase is gone (orphaned) → clear Paperless custom fields then mirror to MongoDB cache
+              await clearPaperlessKashFlowFields(doc.paperlessId, doc.customFields || []);
+              await OcrDocument.updateOne(
+                { paperlessId: doc.paperlessId },
+                { $pull: { customFields: { fieldName: { $regex: /^kashflow /i } } } },
+              );
+              logger.info(`[repairDrift] Case2 cleared orphaned Paperless fields for paperlessId=${doc.paperlessId} (KF id=${cfId} not found)`);
+            }
             ok++;
           } catch (e) {
             fail++;

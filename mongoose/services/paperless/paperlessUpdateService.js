@@ -73,7 +73,37 @@ async function updatePaperlessWithKashFlowInfo(paperlessId, purchase, status, op
   }
 }
 
-module.exports = { updatePaperlessWithKashFlowInfo };
+/**
+ * Clear all KashFlow-related custom fields on a Paperless-ngx document.
+ * Used when a KashFlow purchase is deleted (orphaned doc) and we need to
+ * remove the stale reference from Paperless to eliminate CF drift.
+ *
+ * @param {number} paperlessId - The Paperless document ID
+ * @param {Array} existingCf - OcrDocument.customFields array from MongoDB (fast path, no GET)
+ */
+async function clearPaperlessKashFlowFields(paperlessId, existingCf) {
+  const api = makeClient();
+  const id = Number(paperlessId);
+  if (!Number.isFinite(id)) throw new Error("paperlessId must be a number");
+
+  const clears = {
+    "KashFlow Purchase Id": null,
+    "KashFlow Purchase Number": null,
+    "KashFlow Purchase Permalink": null,
+    "KashFlow Last Send Status": null,
+  };
+
+  try {
+    const res = await api.updateDocumentCustomFieldsDirect(id, clears, existingCf || []);
+    logger.info(`[paperlessUpdate] Cleared KashFlow custom fields for doc ${id} (orphaned purchase)`);
+    return { cleared: true, data: res };
+  } catch (err) {
+    logger.warn(`[paperlessUpdate] Failed to clear KashFlow fields for doc ${id}: ${err.message}`);
+    throw err;
+  }
+}
+
+module.exports = { updatePaperlessWithKashFlowInfo, clearPaperlessKashFlowFields };
 
 /**
  * Set or merge tags on a Paperless-ngx document.
