@@ -260,14 +260,10 @@ function makeClient() {
       }
       return data;
     },
-    async getDocument(id, { expand, fields } = {}) {
+    async getDocument(id, { fields } = {}) {
       const api = await createApi();
       if (!id) throw new Error("getDocument requires id");
       const params = {};
-      if (expand) {
-        // Accept string or array of expand tokens; join with comma
-        params.expand = Array.isArray(expand) ? expand.join(",") : expand;
-      }
       if (fields) {
         params.fields = Array.isArray(fields) ? fields.join(",") : fields;
       }
@@ -330,11 +326,10 @@ function makeClient() {
       if (!documentId)
         throw new Error("updateDocumentCustomFields requires documentId");
       const api = await createApi();
-      // Fetch only the custom_fields array — avoids pulling large OCR text bodies.
-      // The ?fields= parameter is supported by Paperless-ngx ≥ 1.14.
+      // Use ?fields= to limit response to custom_fields only (v2 API).
+      // In v2, field entries return { field: <int id>, value: ... } — no expand needed.
       const doc = await this.getDocument(documentId, {
-        expand: ["custom_fields", "custom_fields__field"],
-        fields:  "id,custom_fields",
+        fields: "id,custom_fields",
       });
       const existing = new Map(); // fieldId -> value
       const existingByName = new Map(); // lower(name) -> fieldId
@@ -423,6 +418,88 @@ function makeClient() {
       );
       const payload = { custom_fields };
       const { data } = await api.patch(`/documents/${documentId}/`, payload);
+      return data;
+    },
+
+    /**
+     * Like updateDocumentCustomFields but uses an already-known customFields array
+     * (e.g. from MongoDB OcrDocument) instead of fetching the document first.
+     * Eliminates the GET /documents/:id/ round-trip that causes timeouts on large docs.
+     *
+     * @param {number} documentId
+     * @param {object} nameValuePairs - { [fieldName]: value|null }
+     * @param {Array<{fieldId?: number, fieldName?: string, value?: any}>} existingCfArray
+     */
+    async updateDocumentCustomFieldsDirect(documentId, nameValuePairs, existingCfArray) {
+      if (!documentId)
+        throw new Error("updateDocumentCustomFieldsDirect requires documentId");
+      const api = await createApi();
+
+      // Build existing map from the MongoDB-cached array — no GET needed
+      const existing = new Map(); // fieldId -> value
+      const existingByName = new Map(); // lower(name) -> fieldId
+      for (const entry of (existingCfArray || [])) {
+        const fid = typeof entry?.fieldId === 'number' ? entry.fieldId : null;
+        const fname = entry?.fieldName ? String(entry.fieldName) : null;
+        if (fid != null) existing.set(fid, entry?.value ?? null);
+        if (fid != null && fname) existingByName.set(fname.trim().toLowerCase(), fid);
+      }
+
+      // Resolve field definitions from cache (no additional GET)
+      let idByName;
+      if (_isCfCacheValid()) {
+        idByName = _cfCacheMap;
+      } else {
+        const defs = [];
+        let cfPage = 1;
+        while (true) {
+          const chunk = await this.listCustomFields({ page: cfPage, pageSize: 100, ordering: 'name' });
+          const results = Array.isArray(chunk?.results) ? chunk.results : [];
+          defs.push(...results);
+          if (!chunk?.next || results.length === 0) break;
+          cfPage++;
+        }
+        idByName = new Map();
+        for (const d of defs) {
+          if (d?.name && typeof d.id === 'number')
+            idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
+        }
+        _cfCacheMap = idByName;
+        _cfCacheAt  = Date.now();
+      }
+
+      const resolveFieldId = async (name) => {
+        const key = String(name).trim().toLowerCase();
+        if (idByName.has(key)) return idByName.get(key);
+        if (existingByName.has(key)) return existingByName.get(key);
+        logger.warn(`[paperlessClient] Custom field "${name}" not found — creating it.`);
+        try {
+          const created = await this.createCustomField({ name, data_type: 'string' });
+          if (created && typeof created.id === 'number') {
+            idByName.set(key, Number(created.id));
+            if (_cfCacheMap) _cfCacheMap.set(key, Number(created.id));
+            return Number(created.id);
+          }
+        } catch (_) { /* skip */ }
+        return null;
+      };
+
+      for (const [name, value] of Object.entries(nameValuePairs || {})) {
+        const key = String(name).trim().toLowerCase();
+        let fid = idByName.get(key) || existingByName.get(key) || null;
+        if (fid == null && value != null) fid = await resolveFieldId(name);
+        if (fid == null) continue;
+        if (value == null) {
+          existing.delete(Number(fid));
+        } else {
+          existing.set(Number(fid), String(value));
+        }
+      }
+
+      const custom_fields = Array.from(existing.entries()).map(
+        ([fid, val]) => ({ field: Number(fid), value: val }),
+      );
+      const { data } = await api.patch(`/documents/${documentId}/`, { custom_fields });
       return data;
     },
     async updateDocumentTags(documentId, tagIds) {

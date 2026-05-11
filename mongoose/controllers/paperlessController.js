@@ -503,7 +503,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
     const draft = await buildPurchaseDraftById(paperlessId);
     // Detect document type for subcontractor mode
     const { OcrDocument: OcrDocumentSend } = mdb.PAPERLESS;
-    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType').lean();
+    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType customFields').lean();
     const isSubcontractor = /subcontract/i.test(sendDoc?.documentType?.name || "");
     // If a supplier is selected, merge its identifiers
     const supplierUuid =
@@ -797,6 +797,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
             paperlessId,
             resp.data,
             resp.status,
+            { existingCf: sendDoc?.customFields || [] },
           );
         } catch (e) {
           logger.warn(
@@ -918,6 +919,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
             paperlessId,
             resp.data,
             resp.status,
+            { existingCf: sendDoc?.customFields || [] },
           );
         } catch (e) {
           logger.warn(
@@ -1123,6 +1125,7 @@ exports.repairDrift = async (req, res) => {
           kashflowPurchaseNumber: 1,
           kashflowPermalink: 1,
           lastSendStatus: 1,
+          customFields: 1,
           _cfKfId: 1,
         }},
       ]);
@@ -1137,6 +1140,7 @@ exports.repairDrift = async (req, res) => {
             doc.paperlessId,
             { Id: doc.kashflowPurchaseId, Number: doc.kashflowPurchaseNumber, Permalink: doc.kashflowPermalink },
             doc.lastSendStatus,
+            { existingCf: doc.customFields || [] },
           );
           // Mirror the written values into MongoDB's customFields so the drift check
           // reflects the fix immediately without waiting for the next grab run
