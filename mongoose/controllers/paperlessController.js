@@ -1088,9 +1088,15 @@ exports.unlinkKashflow = async (req, res, next) => {
 
 /** DELETE /paperless/ocr/:paperlessId — remove an OcrDocument (and its ingest record) */
 /** POST /paperless/repair-drift — bulk write-back KashFlow custom fields to Paperless for drifted docs */
+let _repairDriftRunning = false;
 exports.repairDrift = async (req, res) => {
+  if (_repairDriftRunning) {
+    logger.warn('[repairDrift] Already running — ignoring duplicate request');
+    return res.redirect('/overview/documents');
+  }
   res.redirect('/overview/documents');
   setImmediate(async () => {
+    _repairDriftRunning = true;
     try {
       await mdb.connect();
       const { OcrDocument } = mdb.PAPERLESS;
@@ -1161,13 +1167,17 @@ exports.repairDrift = async (req, res) => {
               );
               logger.info(`[repairDrift] Case2 restored link paperlessId=${doc.paperlessId} → KF id=${cfId}`);
             } else {
-              // Purchase is gone (orphaned) → clear Paperless custom fields then mirror to MongoDB cache
-              await clearPaperlessKashFlowFields(doc.paperlessId, doc.customFields || []);
+              // Purchase is gone (orphaned) → clear MongoDB customFields immediately (resolves drift
+              // count at once), then attempt Paperless cleanup in the background.
               await OcrDocument.updateOne(
                 { paperlessId: doc.paperlessId },
                 { $pull: { customFields: { fieldName: { $regex: /^kashflow /i } } } },
               );
-              logger.info(`[repairDrift] Case2 cleared orphaned Paperless fields for paperlessId=${doc.paperlessId} (KF id=${cfId} not found)`);
+              // Best-effort Paperless cleanup — log failure but don't block ok count
+              clearPaperlessKashFlowFields(doc.paperlessId, doc.customFields || []).catch(e =>
+                logger.warn(`[repairDrift] Case2 Paperless clear failed for paperlessId=${doc.paperlessId}: ${e.message}`),
+              );
+              logger.info(`[repairDrift] Case2 cleared orphaned fields for paperlessId=${doc.paperlessId} (KF id=${cfId} not found)`);
             }
             ok++;
           } catch (e) {
@@ -1214,6 +1224,8 @@ exports.repairDrift = async (req, res) => {
       logger.info(`[repairDrift] Complete. ok=${ok} failed=${fail}`);
     } catch (err) {
       logger.error(`[repairDrift] Fatal error: ${err.message}`);
+    } finally {
+      _repairDriftRunning = false;
     }
   });
 };
