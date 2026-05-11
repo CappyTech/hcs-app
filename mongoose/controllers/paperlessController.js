@@ -32,6 +32,7 @@ const {
   updatePaperlessDocumentTags,
   clearPaperlessKashFlowFields,
 } = require("../services/paperless/paperlessUpdateService");
+const { warmCfCache } = require("../services/paperless/paperlessClient");
 
 // Helpers
 
@@ -1138,6 +1139,16 @@ exports.repairDrift = async (req, res) => {
       ]);
 
       logger.info(`[repairDrift] Found ${drifted.length} drifted documents to repair`);
+
+      // Pre-warm the CF definitions cache once so every document operation uses it
+      // without making individual /custom_fields/ requests (which can transiently 500).
+      try {
+        await warmCfCache();
+      } catch (cacheErr) {
+        logger.warn(`[repairDrift] Could not pre-warm CF cache: ${cacheErr.message} — Paperless may be unavailable`);
+        // Continue anyway; each doc will attempt its own cache refresh and fail individually
+      }
+
       let ok = 0, fail = 0;
       for (const doc of drifted) {
         // Case 2: Paperless has the KashFlow ID but MongoDB doesn't

@@ -516,4 +516,28 @@ function makeClient() {
   };
 }
 
-module.exports = { makeClient, invalidateCfCache: _invalidateCfCache };
+// Pre-populate the module-level CF definitions cache. Call once before a bulk operation
+// (e.g. repairDrift) so every document update hits the cache and never re-fetches /custom_fields/.
+async function warmCfCache() {
+  if (_isCfCacheValid()) return; // already warm
+  const client = makeClient();
+  const defs = [];
+  let page = 1;
+  while (true) {
+    const chunk = await client.listCustomFields({ page, pageSize: 100, ordering: 'name' });
+    const results = Array.isArray(chunk?.results) ? chunk.results : [];
+    defs.push(...results);
+    if (!chunk?.next || results.length === 0) break;
+    page++;
+  }
+  const map = new Map();
+  for (const d of defs) {
+    if (d?.name && typeof d.id === 'number')
+      map.set(String(d.name).trim().toLowerCase(), Number(d.id));
+  }
+  _cfCacheMap = map;
+  _cfCacheAt  = Date.now();
+  logger.info(`[paperlessClient] CF cache warmed: ${map.size} field definitions loaded`);
+}
+
+module.exports = { makeClient, invalidateCfCache: _invalidateCfCache, warmCfCache };
