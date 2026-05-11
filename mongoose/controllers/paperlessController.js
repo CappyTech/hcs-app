@@ -162,10 +162,22 @@ exports.readOcr = async (req, res, next) => {
         .status(404)
         .render("error", { message: "OCR document not found." });
 
+    // Cross-check: compare MongoDB kashflowPurchaseId against the Paperless-cached custom field
+    const cfKfIdEntry = (doc.customFields || []).find(
+      (cf) => String(cf.fieldName || '').toLowerCase() === 'kashflow purchase id',
+    );
+    const cfKashflowPurchaseId = cfKfIdEntry?.value ?? null;
+    const hasDrift = (
+      (doc.kashflowPurchaseId != null && (cfKashflowPurchaseId == null || cfKashflowPurchaseId === '')) ||
+      (doc.kashflowPurchaseId == null && cfKashflowPurchaseId != null && cfKashflowPurchaseId !== '')
+    );
+
     res.render(path.join("tailwindcss", "paperless", "read"), {
       title: doc.title || `Doc #${paperlessId}`,
       doc,
       ingest,
+      hasDrift,
+      cfKashflowPurchaseId,
     });
   } catch (err) {
     next(err);
@@ -779,25 +791,33 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         }
         req.flash("success", "Purchase created in KashFlow.");
 
-        // Run both Paperless updates, then ingest so the DB copy reflects the final state
-        Promise.allSettled([
-          updatePaperlessWithKashFlowInfo(paperlessId, resp.data, resp.status).catch((e) => {
-            logger.warn(
-              `Async updatePaperlessWithKashFlowInfo failed for paperlessId=${paperlessId}: ${e.message}`,
-            );
-          }),
-          updatePaperlessDocumentTags(paperlessId, ["added"]).catch((e) => {
-            logger.warn(
-              `Async updatePaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,
-            );
-          }),
-        ]).then(() => {
-          ingestOnePaperlessDoc(paperlessId).catch((e) => {
-            logger.warn(
-              `Post-send ingest failed for paperlessId=${paperlessId}: ${e.message}`,
-            );
-          });
+        // Await before ingest so Paperless custom fields are written before we re-fetch
+        try {
+          await updatePaperlessWithKashFlowInfo(
+            paperlessId,
+            resp.data,
+            resp.status,
+          );
+        } catch (e) {
+          logger.warn(
+            `updatePaperlessWithKashFlowInfo failed for paperlessId=${paperlessId}: ${e.message}`,
+          );
+        }
+
+        await updatePaperlessDocumentTags(paperlessId, ["added"]).catch((e) => {
+          logger.warn(
+            `Async updatePaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,
+          );
         });
+
+        // Immediately ingest the same file back into our database so UI reflects latest tags/fields
+        try {
+          await ingestOnePaperlessDoc(paperlessId);
+        } catch (e) {
+          logger.warn(
+            `Post-send ingest failed for paperlessId=${paperlessId}: ${e.message}`,
+          );
+        }
       } catch (sendErr) {
         const status = sendErr?.response?.status;
         const data = sendErr?.response?.data;
@@ -892,16 +912,18 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         }
         req.flash("success", "Draft sent to KashFlow creator webhook.");
 
-        // Also try to reflect webhook result into Paperless custom fields
-        updatePaperlessWithKashFlowInfo(
-          paperlessId,
-          resp.data,
-          resp.status,
-        ).catch((e) => {
-          logger.warn(
-            `Async updatePaperlessWithKashFlowInfo (webhook) failed for paperlessId=${paperlessId}: ${e.message}`,
+        // Reflect webhook result into Paperless custom fields before re-ingest
+        try {
+          await updatePaperlessWithKashFlowInfo(
+            paperlessId,
+            resp.data,
+            resp.status,
           );
-        });
+        } catch (e) {
+          logger.warn(
+            `updatePaperlessWithKashFlowInfo (webhook) failed for paperlessId=${paperlessId}: ${e.message}`,
+          );
+        }
 
         // Ingest latest state back into Mongo immediately
         try {
