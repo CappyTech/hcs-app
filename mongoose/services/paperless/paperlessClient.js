@@ -518,26 +518,60 @@ function makeClient() {
 
 // Pre-populate the module-level CF definitions cache. Call once before a bulk operation
 // (e.g. repairDrift) so every document update hits the cache and never re-fetches /custom_fields/.
-async function warmCfCache() {
+// When Paperless is unavailable, falls back to MongoDB's stored customFields to reconstruct
+// the fieldName→fieldId map from previously-ingested documents.
+async function warmCfCache(OcrDocument = null) {
   if (_isCfCacheValid()) return; // already warm
-  const client = makeClient();
-  const defs = [];
-  let page = 1;
-  while (true) {
-    const chunk = await client.listCustomFields({ page, pageSize: 100, ordering: 'name' });
-    const results = Array.isArray(chunk?.results) ? chunk.results : [];
-    defs.push(...results);
-    if (!chunk?.next || results.length === 0) break;
-    page++;
+
+  // Primary: fetch definitions from Paperless
+  try {
+    const client = makeClient();
+    const defs = [];
+    let page = 1;
+    while (true) {
+      const chunk = await client.listCustomFields({ page, pageSize: 100, ordering: 'name' });
+      const results = Array.isArray(chunk?.results) ? chunk.results : [];
+      defs.push(...results);
+      if (!chunk?.next || results.length === 0) break;
+      page++;
+    }
+    const map = new Map();
+    for (const d of defs) {
+      if (d?.name && typeof d.id === 'number')
+        map.set(String(d.name).trim().toLowerCase(), Number(d.id));
+    }
+    _cfCacheMap = map;
+    _cfCacheAt  = Date.now();
+    logger.info(`[paperlessClient] CF cache warmed from Paperless: ${map.size} field definitions`);
+    return;
+  } catch (paperlessErr) {
+    logger.warn(`[paperlessClient] CF Paperless fetch failed (${paperlessErr.message}) — trying MongoDB fallback`);
   }
+
+  // Fallback: reconstruct from MongoDB's stored customFields arrays.
+  // OcrDocument stores { fieldId, fieldName, value } so we can recover the name→id mapping.
+  if (!OcrDocument) {
+    throw new Error('Paperless /custom_fields/ unavailable and no OcrDocument model provided for fallback');
+  }
+  const docs = await OcrDocument
+    .find({ 'customFields.0': { $exists: true } })
+    .select('customFields')
+    .limit(100)
+    .lean();
   const map = new Map();
-  for (const d of defs) {
-    if (d?.name && typeof d.id === 'number')
-      map.set(String(d.name).trim().toLowerCase(), Number(d.id));
+  for (const doc of docs) {
+    for (const cf of (doc.customFields || [])) {
+      if (typeof cf.fieldId === 'number' && cf.fieldName) {
+        map.set(String(cf.fieldName).trim().toLowerCase(), cf.fieldId);
+      }
+    }
+  }
+  if (map.size === 0) {
+    throw new Error('Paperless /custom_fields/ unavailable and no fieldId/fieldName pairs found in MongoDB');
   }
   _cfCacheMap = map;
   _cfCacheAt  = Date.now();
-  logger.info(`[paperlessClient] CF cache warmed: ${map.size} field definitions loaded`);
+  logger.info(`[paperlessClient] CF cache warmed from MongoDB fallback: ${map.size} field definitions`);
 }
 
 module.exports = { makeClient, invalidateCfCache: _invalidateCfCache, warmCfCache };

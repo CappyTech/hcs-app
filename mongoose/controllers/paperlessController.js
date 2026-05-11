@@ -1140,13 +1140,12 @@ exports.repairDrift = async (req, res) => {
 
       logger.info(`[repairDrift] Found ${drifted.length} drifted documents to repair`);
 
-      // Pre-warm the CF definitions cache once so every document operation uses it
-      // without making individual /custom_fields/ requests (which can transiently 500).
+      // Pre-warm the CF definitions cache once — falls back to MongoDB if Paperless /custom_fields/ is unavailable.
       try {
-        await warmCfCache();
+        await warmCfCache(OcrDocument);
       } catch (cacheErr) {
-        logger.warn(`[repairDrift] Could not pre-warm CF cache: ${cacheErr.message} — Paperless may be unavailable`);
-        // Continue anyway; each doc will attempt its own cache refresh and fail individually
+        logger.warn(`[repairDrift] Could not build CF cache from Paperless or MongoDB: ${cacheErr.message}`);
+        // Continue anyway — each doc will try its own resolution and fail if needed
       }
 
       let ok = 0, fail = 0;
