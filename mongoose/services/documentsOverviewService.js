@@ -2,6 +2,31 @@
 
 const mdb = require('./mongooseDatabaseService');
 
+const DETAIL_LIMIT = 100;
+
+// Shared aggregation stages to extract the cached Paperless CF value for 'kashflow purchase id'
+const CF_KF_ID_ADD_FIELD = {
+  $addFields: {
+    _cfKfId: {
+      $let: {
+        vars: {
+          found: { $arrayElemAt: [
+            { $filter: {
+              input: { $ifNull: ['$customFields', []] },
+              cond: { $eq: [
+                { $toLower: { $ifNull: ['$$this.fieldName', ''] } },
+                'kashflow purchase id',
+              ]},
+            }},
+            0,
+          ]},
+        },
+        in: { $ifNull: ['$$found.value', null] },
+      },
+    },
+  },
+};
+
 async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const OcrDocument = mdb.PAPERLESS?.OcrDocument;
   const OcrDocumentIngest = mdb.PAPERLESS?.OcrDocumentIngest;
@@ -79,17 +104,65 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   // ── Error documents ────────────────────────────────────────────────────────
   const errorDocsList = await OcrDocument.find({ error: { $ne: null } })
     .sort({ fetchedAt: -1 })
-    .limit(10)
-    .select('paperlessId title error fetchedAt')
+    .limit(DETAIL_LIMIT)
+    .select('paperlessId title documentType error fetchedAt')
     .lean();
+
+  // ── Drifted docs detail list ───────────────────────────────────────────────
+  const driftedDocsList = await OcrDocument.aggregate([
+    CF_KF_ID_ADD_FIELD,
+    { $match: { $or: [
+      { kashflowPurchaseId: { $ne: null }, $or: [{ _cfKfId: null }, { _cfKfId: '' }] },
+      { kashflowPurchaseId: null, _cfKfId: { $nin: [null, ''] } },
+    ]}},
+    { $project: { paperlessId: 1, title: 1, documentType: 1, kashflowPurchaseId: 1, kashflowPurchaseNumber: 1, kashflowPermalink: 1, _cfKfId: 1 } },
+    { $sort: { paperlessId: -1 } },
+    { $limit: DETAIL_LIMIT },
+  ]);
+
+  // ── Never sent list ────────────────────────────────────────────────────────
+  const neverSentList = await OcrDocument.find({ lastSentAt: null })
+    .sort({ added: -1 })
+    .limit(DETAIL_LIMIT)
+    .select('paperlessId title documentType added')
+    .lean();
+
+  // ── Unlinked list (no KashFlow purchase ID, includes never sent) ───────────
+  const unlinkedDocsList = await OcrDocument.find({ kashflowPurchaseId: null })
+    .sort({ added: -1 })
+    .limit(DETAIL_LIMIT)
+    .select('paperlessId title documentType added lastSentAt lastSendMode lastSendStatus')
+    .lean();
+
+  // ── Ingest stats + error list ──────────────────────────────────────────────
+  let ingestStats = { total: 0, fetched: 0, skipped: 0, error: 0 };
+  let ingestErrorsList = [];
+  if (OcrDocumentIngest) {
+    const ingestAgg = await OcrDocumentIngest.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]);
+    for (const r of ingestAgg) {
+      const s = r._id || 'fetched';
+      ingestStats[s] = r.count;
+      ingestStats.total += r.count;
+    }
+    if (ingestStats.error > 0) {
+      ingestErrorsList = await OcrDocumentIngest.find({ status: 'error' })
+        .sort({ lastFetchedAt: -1 })
+        .limit(DETAIL_LIMIT)
+        .select('paperlessId error lastFetchedAt')
+        .lean();
+    }
+  }
 
   // ── Orphaned links: query only the referenced purchases (not the full collection) ──
   let orphanedDocs = 0;
+  let staleLinkedList = [];
   const Purchase = mdb.REST?.purchase;
   if (Purchase && linkedDocs > 0) {
     const linked = await OcrDocument
       .find({ kashflowPurchaseId: { $ne: null } })
-      .select('kashflowPurchaseId')
+      .select('paperlessId title documentType kashflowPurchaseId kashflowPurchaseNumber kashflowPermalink lastSentAt')
       .lean();
     const linkedIds = [...new Set(linked.map(d => d.kashflowPurchaseId).filter(id => id != null))];
     const activePurchases = await Purchase
@@ -97,21 +170,9 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       .select('Id')
       .lean();
     const activePurchaseIds = new Set(activePurchases.map(p => p.Id));
-    orphanedDocs = linked.filter(d => !activePurchaseIds.has(d.kashflowPurchaseId)).length;
-  }
-
-  // ── Ingest stats ───────────────────────────────────────────────────────────
-  let ingestStats = { total: 0, fetched: 0, skipped: 0, error: 0 };
-  if (OcrDocumentIngest) {
-    const ingestAgg = await OcrDocumentIngest.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]);
-    ingestStats.total = 0;
-    for (const r of ingestAgg) {
-      const s = r._id || 'fetched';
-      ingestStats[s] = r.count;
-      ingestStats.total += r.count;
-    }
+    const stale = linked.filter(d => !activePurchaseIds.has(d.kashflowPurchaseId));
+    orphanedDocs = stale.length;
+    staleLinkedList = stale.slice(0, DETAIL_LIMIT);
   }
 
   return {
@@ -128,7 +189,12 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     byDocType,
     recentDocs,
     errorDocsList,
+    driftedDocsList,
+    neverSentList,
+    unlinkedDocsList,
     ingestStats,
+    ingestErrorsList,
+    staleLinkedList,
     recentLimit,
   };
 }
