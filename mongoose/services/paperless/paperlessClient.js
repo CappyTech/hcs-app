@@ -6,6 +6,21 @@ const logger = require("../../../services/loggerService");
 let sshServer = null;
 let localPort = null;
 
+// Module-level cache for custom field definitions (id-by-name map).
+// Shared across all makeClient() calls to avoid re-paginating on every document
+// during bulk operations like repairDrift. Expires after PAPERLESS_CF_CACHE_MS (default 5 min).
+const CF_CACHE_TTL_MS = parseInt(process.env.PAPERLESS_CF_CACHE_MS, 10) || 5 * 60 * 1000;
+let _cfCacheMap = null;   // Map<string, number> lowercased-name -> fieldId
+let _cfCacheAt  = 0;      // epoch ms when cache was last populated
+
+function _isCfCacheValid() {
+  return _cfCacheMap !== null && (Date.now() - _cfCacheAt) < CF_CACHE_TTL_MS;
+}
+function _invalidateCfCache() {
+  _cfCacheMap = null;
+  _cfCacheAt  = 0;
+}
+
 function makeClient() {
   const useSsh = process.env.PAPERLESS_SSH_TUNNEL_ENABLED === "true";
   // Build a robust baseURL that accepts either a hostname/IP (with optional port)
@@ -335,22 +350,31 @@ function makeClient() {
           existingByName.set(fname.trim().toLowerCase(), Number(fid));
       }
 
-      // Paginate through all custom field definitions (avoids silent truncation beyond 1000)
-      const defs = [];
-      {
-        let cfPage = 1;
-        while (true) {
-          const chunk = await this.listCustomFields({ page: cfPage, pageSize: 100, ordering: "name" });
-          const results = Array.isArray(chunk?.results) ? chunk.results : [];
-          defs.push(...results);
-          if (!chunk?.next || results.length === 0) break;
-          cfPage++;
+      // Paginate through all custom field definitions (avoids silent truncation beyond 1000).
+      // Results are cached at module level for CF_CACHE_TTL_MS to avoid repeated listings
+      // during bulk operations (e.g. repairDrift processes N docs sequentially).
+      let idByName;
+      if (_isCfCacheValid()) {
+        idByName = _cfCacheMap;
+      } else {
+        const defs = [];
+        {
+          let cfPage = 1;
+          while (true) {
+            const chunk = await this.listCustomFields({ page: cfPage, pageSize: 100, ordering: "name" });
+            const results = Array.isArray(chunk?.results) ? chunk.results : [];
+            defs.push(...results);
+            if (!chunk?.next || results.length === 0) break;
+            cfPage++;
+          }
         }
-      }
-      const idByName = new Map();
-      for (const d of defs) {
-        if (d?.name && typeof d.id === "number")
-          idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
+        idByName = new Map();
+        for (const d of defs) {
+          if (d?.name && typeof d.id === "number")
+            idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
+        }
+        _cfCacheMap = idByName;
+        _cfCacheAt  = Date.now();
       }
 
       const resolveFieldId = async (name) => {
@@ -365,6 +389,8 @@ function makeClient() {
           });
           if (created && typeof created.id === "number") {
             idByName.set(key, Number(created.id));
+            // Keep the module-level cache consistent with the newly created field
+            if (_cfCacheMap) _cfCacheMap.set(key, Number(created.id));
             return Number(created.id);
           }
         } catch (_) {
@@ -408,4 +434,4 @@ function makeClient() {
   };
 }
 
-module.exports = { makeClient };
+module.exports = { makeClient, invalidateCfCache: _invalidateCfCache };
