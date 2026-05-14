@@ -1,16 +1,15 @@
 // services/socketService.js
 const { Server } = require("socket.io");
+const logger = require('./loggerService');
 
 let io = null;
 
 function initSocket(server) {
   if (io) {
-    console.warn(
-      "[DUPE CHECK] ⚠️ Socket.IO already initialized, returning existing instance",
-    );
+    logger.warn('[socketService] Socket.IO already initialized, returning existing instance');
     return io; // Prevent double init
   }
-  console.log("[DUPE CHECK] ✅ Initializing Socket.IO...");
+  logger.info('[socketService] Initializing Socket.IO...');
   io = new Server(server, {
     cors: {
       origin: true,
@@ -19,10 +18,10 @@ function initSocket(server) {
   });
 
   io.on("connection", (socket) => {
-    console.log(`Socket connected: ${socket.id}`);
+    logger.debug(`[socketService] Socket connected: ${socket.id}`);
 
     socket.on("disconnect", () => {
-      console.log(`Socket disconnected: ${socket.id}`);
+      logger.debug(`[socketService] Socket disconnected: ${socket.id}`);
     });
   });
 

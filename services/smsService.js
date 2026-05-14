@@ -33,10 +33,10 @@ async function sendSms({ to, body }) {
 
   try {
     const message = await client.messages.create({ from, to, body });
-    logger.info(`SMS sent to ${to} — sid: ${message.sid}`);
+    logger.info(`[smsService] SMS sent to ${to} — sid: ${message.sid}`);
     return message;
   } catch (err) {
-    logger.error(`Failed to send SMS to ${to}: ${err.message}`);
+    logger.error(`[smsService] Failed to send SMS to ${to}: ${err.message}`, { stack: err.stack });
     throw err;
   }
 }

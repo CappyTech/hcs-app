@@ -150,8 +150,8 @@ exports.registerUser = async (req, res, next) => {
     );
     return res.redirect("/user/login");
   } catch (error) {
-    logger.error("Error registering user: " + error.message);
-    req.flash("error", "Error registering user: " + error.message);
+    logger.error(`[userCRUD] Error registering user: ${error.message}`, { stack: error.stack });
+    req.flash("error", "Registration failed. Please try again.");
     return res.redirect("/user/register");
   }
 };

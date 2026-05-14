@@ -262,7 +262,7 @@ async function grabPaperlessOCR(options = {}) {
         processed++;
       } catch (err) {
         failed++;
-        logger.error(`Paperless grab failed for doc ${doc?.id}: ${err.message}`);
+        logger.error(`[grabServicePaperless] Failed for doc ${doc?.id}: ${err.message}`, { stack: err.stack });
         // Persist error on ingest tracker (so we can reprocess later)
         await mdb.PAPERLESS.OcrDocumentIngest.updateOne(
           { paperlessId: doc?.id },
@@ -285,7 +285,7 @@ async function grabPaperlessOCR(options = {}) {
     page += 1;
   }
 
-  logger.info(`Paperless grab complete. processed=${processed} skipped=${skipped} failed=${failed}`);
+  logger.info(`[grabServicePaperless] Complete. processed=${processed} skipped=${skipped} failed=${failed}`);
   return { processed, skipped, failed };
   } finally {
     grabRunning = false;

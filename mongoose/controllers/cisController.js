@@ -691,7 +691,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     logger.error(`Error rendering CIS dashboard Mongo: ${error.message}`, {
       stack: error.stack,
     });
-    req.flash("error", `Error rendering CIS dashboard Mongo: ${error.message}`);
+    req.flash("error", "Failed to load the CIS dashboard. Please try again.");
     next(error);
   }
 };

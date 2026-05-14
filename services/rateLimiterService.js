@@ -1,5 +1,6 @@
 const rateLimit = require("express-rate-limit");
 const { getClientIp } = require("./ipService");
+const logger = require("./loggerService");
 
 const rateLimiterService = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -8,6 +9,11 @@ const rateLimiterService = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => getClientIp(req),
+  handler: (req, res, next, options) => {
+    const ip = getClientIp(req);
+    logger.warn(`[rateLimiter] Rate limit exceeded ip=${ip} path=${req.path}`);
+    res.status(options.statusCode).send(options.message);
+  },
 });
 
 module.exports = rateLimiterService;
