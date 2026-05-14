@@ -21,6 +21,14 @@ router.get('/overview/projects',
   authService.ensureRole('admin'),
   ctrl.getProjectsOverview);
 
+router.post('/overview/projects/check',
+  authService.ensureRole('admin'),
+  ctrl.postProjectsFinancialCheck);
+
+router.post('/overview/projects/:number/complete',
+  authService.ensureRole('admin'),
+  ctrl.postProjectMarkComplete);
+
 router.get('/overview/admin',
   authService.ensureRole('admin'),
   ctrl.getAdminOverview);

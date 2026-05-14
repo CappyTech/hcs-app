@@ -168,4 +168,97 @@
   </div>
   <% } %>
 
+  <!-- KashFlow Project Financial Health -->
+  <div class="mb-8">
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">KashFlow Project Financial Health</h2>
+      <form method="POST" action="/overview/projects/check">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button type="submit"
+          class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
+          &#128269; Run Financial Check &amp; Email Alerts
+        </button>
+      </form>
+    </div>
+
+    <% if (restProjects.length === 0) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">No active KashFlow projects found.</p>
+    <% } else { %>
+    <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">#</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Project</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Status</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Income Target</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Income Actual</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Difference</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Exp. Target</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Exp. Actual</th>
+            <th class="px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-300">Action</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+          <% for (const p of restProjects) {
+            const f = p._financials;
+            const fmt = n => '£' + Number(n).toFixed(2);
+          %>
+          <tr class="<%= f.atRisk ? 'bg-red-50 dark:bg-red-900/10' : '' %>">
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= p.Number %></td>
+            <td class="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">
+              <%= p.Name || '—' %>
+              <% if (p.CustomerName) { %>
+                <span class="ml-1 text-xs text-gray-400">(<%= p.CustomerName %>)</span>
+              <% } %>
+            </td>
+            <td class="px-4 py-2">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                <%= p.Status === 'Active' || p.Status === '1' || p.Status === 1 ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>">
+                <%= p.StatusName || p.Status || '—' %>
+              </span>
+            </td>
+            <td class="px-4 py-2 text-right text-gray-700 dark:text-gray-300"><%= fmt(f.incomeTarget) %></td>
+            <td class="px-4 py-2 text-right text-gray-700 dark:text-gray-300"><%= fmt(f.incomeActual) %></td>
+            <td class="px-4 py-2 text-right font-semibold <%= f.incomeDiff < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' %>">
+              <%= fmt(f.incomeDiff) %>
+            </td>
+            <td class="px-4 py-2 text-right text-gray-500 dark:text-gray-400"><%= fmt(f.expTarget) %></td>
+            <td class="px-4 py-2 text-right text-gray-500 dark:text-gray-400"><%= fmt(f.expActual) %></td>
+            <td class="px-4 py-2 text-center">
+              <% if (!f.atRisk && f.incomeTarget > 0) { %>
+              <form method="POST" action="/overview/projects/<%= p.Number %>/complete"
+                onsubmit="return confirm('Mark project <%= p.Number %> — <%= (p.Name || '').replace(/'/g, '') %> as Completed in KashFlow?')">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit"
+                  class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-green-600 hover:bg-green-700 text-white transition">
+                  &#10003; Mark Complete
+                </button>
+              </form>
+              <% } else if (f.atRisk) { %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-800/20 dark:text-red-400">&#9888; At Risk</span>
+              <% } else { %>
+                <span class="text-gray-300 text-xs">—</span>
+              <% } %>
+            </td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (restProjectsAtRisk.length > 0) { %>
+    <p class="mt-3 text-sm text-red-600 dark:text-red-400">
+      &#9888; <strong><%= restProjectsAtRisk.length %></strong> project(s) are below their income target.
+      Use <em>Run Financial Check</em> to send an alert email.
+    </p>
+    <% } %>
+    <% if (restProjectsReadyToComplete.length > 0) { %>
+    <p class="mt-1 text-sm text-green-600 dark:text-green-400">
+      &#10003; <strong><%= restProjectsReadyToComplete.length %></strong> project(s) have met or exceeded their income target and can be marked complete.
+    </p>
+    <% } %>
+    <% } %>
+  </div>
+
 </div>

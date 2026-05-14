@@ -1,6 +1,7 @@
 'use strict';
 
 const mdb = require('./mongooseDatabaseService');
+const { computeFinancials } = require('./kashflowProjectService');
 
 async function getProjectsOverview() {
   const Contract = mdb.INTERNAL?.contract;
@@ -78,6 +79,9 @@ async function getProjectsOverview() {
   // ── REST projects ──────────────────────────────────────────────────────────
   let restProjects = [];
   let restProjectByStatus = {};
+  let restProjectsAtRisk = [];
+  let restProjectsReadyToComplete = [];
+
   if (RestProject) {
     restProjects = await RestProject.find({ Status: { $ne: 'Completed' } })
       .sort({ StartDate: -1 })
@@ -89,6 +93,14 @@ async function getProjectsOverview() {
     for (const r of allRestProjects) {
       restProjectByStatus[r._id || 'Unknown'] = r.count;
     }
+
+    // Attach financial health to each project
+    for (const p of restProjects) {
+      p._financials = computeFinancials(p);
+    }
+
+    restProjectsAtRisk         = restProjects.filter(p => p._financials.atRisk);
+    restProjectsReadyToComplete = restProjects.filter(p => !p._financials.atRisk && p._financials.incomeTarget > 0);
   }
 
   return {
@@ -103,6 +115,8 @@ async function getProjectsOverview() {
     contractsWithoutAssignments,
     restProjects,
     restProjectByStatus,
+    restProjectsAtRisk,
+    restProjectsReadyToComplete,
   };
 }
 
