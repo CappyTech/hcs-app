@@ -25,9 +25,12 @@ async function detectAndClearOrphans() {
     return stats;
   }
 
-  // 1. All OcrDocuments that currently have a KashFlow purchase link
+  // 1. All OcrDocuments that currently have a KashFlow purchase link,
+  //    but only those sent more than 48 h ago. Documents sent recently may not
+  //    have been picked up by hcs-sync yet, so we must not treat them as orphans.
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
   const linked = await OcrDocument
-    .find({ kashflowPurchaseId: { $ne: null } })
+    .find({ kashflowPurchaseId: { $ne: null }, lastSentAt: { $lt: cutoff } })
     .select('_id kashflowPurchaseId')
     .lean();
 
