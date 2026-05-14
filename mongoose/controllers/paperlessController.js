@@ -30,7 +30,9 @@ const {
 const {
   updatePaperlessWithKashFlowInfo,
   updatePaperlessDocumentTags,
+  clearPaperlessKashFlowFields,
 } = require("../services/paperless/paperlessUpdateService");
+const { warmCfCache } = require("../services/paperless/paperlessClient");
 
 // Helpers
 
@@ -162,10 +164,22 @@ exports.readOcr = async (req, res, next) => {
         .status(404)
         .render("error", { message: "OCR document not found." });
 
+    // Cross-check: compare MongoDB kashflowPurchaseId against the Paperless-cached custom field
+    const cfKfIdEntry = (doc.customFields || []).find(
+      (cf) => String(cf.fieldName || '').toLowerCase() === 'kashflow purchase id',
+    );
+    const cfKashflowPurchaseId = cfKfIdEntry?.value ?? null;
+    const hasDrift = (
+      (doc.kashflowPurchaseId != null && (cfKashflowPurchaseId == null || cfKashflowPurchaseId === '')) ||
+      (doc.kashflowPurchaseId == null && cfKashflowPurchaseId != null && cfKashflowPurchaseId !== '')
+    );
+
     res.render(path.join("tailwindcss", "paperless", "read"), {
       title: doc.title || `Doc #${paperlessId}`,
       doc,
       ingest,
+      hasDrift,
+      cfKashflowPurchaseId,
     });
   } catch (err) {
     next(err);
@@ -491,7 +505,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
     const draft = await buildPurchaseDraftById(paperlessId);
     // Detect document type for subcontractor mode
     const { OcrDocument: OcrDocumentSend } = mdb.PAPERLESS;
-    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType modified').lean();
+    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType modified customFields').lean();
     const isSubcontractor = /subcontract/i.test(sendDoc?.documentType?.name || "");
     // Capture modified before the tag update so we can detect genuine post-send changes later
     const modifiedAtSendTime = sendDoc?.modified ?? null;
@@ -782,25 +796,34 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         }
         req.flash("success", "Purchase created in KashFlow.");
 
-        // Run both Paperless updates, then ingest so the DB copy reflects the final state
-        Promise.allSettled([
-          updatePaperlessWithKashFlowInfo(paperlessId, resp.data, resp.status).catch((e) => {
-            logger.warn(
-              `Async updatePaperlessWithKashFlowInfo failed for paperlessId=${paperlessId}: ${e.message}`,
-            );
-          }),
-          updatePaperlessDocumentTags(paperlessId, ["added"]).catch((e) => {
-            logger.warn(
-              `Async updatePaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,
-            );
-          }),
-        ]).then(() => {
-          ingestOnePaperlessDoc(paperlessId).catch((e) => {
-            logger.warn(
-              `Post-send ingest failed for paperlessId=${paperlessId}: ${e.message}`,
-            );
-          });
+        // Await before ingest so Paperless custom fields are written before we re-fetch
+        try {
+          await updatePaperlessWithKashFlowInfo(
+            paperlessId,
+            resp.data,
+            resp.status,
+            { existingCf: sendDoc?.customFields || [] },
+          );
+        } catch (e) {
+          logger.warn(
+            `updatePaperlessWithKashFlowInfo failed for paperlessId=${paperlessId}: ${e.message}`,
+          );
+        }
+
+        await updatePaperlessDocumentTags(paperlessId, ["added"]).catch((e) => {
+          logger.warn(
+            `Async updatePaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,
+          );
         });
+
+        // Immediately ingest the same file back into our database so UI reflects latest tags/fields
+        try {
+          await ingestOnePaperlessDoc(paperlessId);
+        } catch (e) {
+          logger.warn(
+            `Post-send ingest failed for paperlessId=${paperlessId}: ${e.message}`,
+          );
+        }
       } catch (sendErr) {
         const status = sendErr?.response?.status;
         const data = sendErr?.response?.data;
@@ -897,16 +920,19 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         }
         req.flash("success", "Draft sent to KashFlow creator webhook.");
 
-        // Also try to reflect webhook result into Paperless custom fields
-        updatePaperlessWithKashFlowInfo(
-          paperlessId,
-          resp.data,
-          resp.status,
-        ).catch((e) => {
-          logger.warn(
-            `Async updatePaperlessWithKashFlowInfo (webhook) failed for paperlessId=${paperlessId}: ${e.message}`,
+        // Reflect webhook result into Paperless custom fields before re-ingest
+        try {
+          await updatePaperlessWithKashFlowInfo(
+            paperlessId,
+            resp.data,
+            resp.status,
+            { existingCf: sendDoc?.customFields || [] },
           );
-        });
+        } catch (e) {
+          logger.warn(
+            `updatePaperlessWithKashFlowInfo (webhook) failed for paperlessId=${paperlessId}: ${e.message}`,
+          );
+        }
 
         // Ingest latest state back into Mongo immediately
         try {
@@ -1068,9 +1094,15 @@ exports.unlinkKashflow = async (req, res, next) => {
 
 /** DELETE /paperless/ocr/:paperlessId — remove an OcrDocument (and its ingest record) */
 /** POST /paperless/repair-drift — bulk write-back KashFlow custom fields to Paperless for drifted docs */
+let _repairDriftRunning = false;
 exports.repairDrift = async (req, res) => {
+  if (_repairDriftRunning) {
+    logger.warn('[repairDrift] Already running — ignoring duplicate request');
+    return res.redirect('/overview/documents');
+  }
   res.redirect('/overview/documents');
   setImmediate(async () => {
+    _repairDriftRunning = true;
     try {
       await mdb.connect();
       const { OcrDocument } = mdb.PAPERLESS;
@@ -1106,20 +1138,75 @@ exports.repairDrift = async (req, res) => {
           kashflowPurchaseNumber: 1,
           kashflowPermalink: 1,
           lastSendStatus: 1,
+          customFields: 1,
           _cfKfId: 1,
         }},
       ]);
 
       logger.info(`[repairDrift] Found ${drifted.length} drifted documents to repair`);
+
+      // Pre-warm the CF definitions cache once — falls back to MongoDB if Paperless /custom_fields/ is unavailable.
+      try {
+        await warmCfCache(OcrDocument);
+      } catch (cacheErr) {
+        logger.warn(`[repairDrift] Could not build CF cache from Paperless or MongoDB: ${cacheErr.message}`);
+        // Continue anyway — each doc will try its own resolution and fail if needed
+      }
+
       let ok = 0, fail = 0;
       for (const doc of drifted) {
-        // Only write-back for linked docs (MongoDB has ID but Paperless doesn't)
-        if (doc.kashflowPurchaseId == null) continue;
+        // Case 2: Paperless has the KashFlow ID but MongoDB doesn't
+        // — could be an orphaned doc (purchase deleted) or a failed write-back.
+        if (doc.kashflowPurchaseId == null) {
+          const cfId = Number(doc._cfKfId);
+          if (!Number.isFinite(cfId) || cfId <= 0) {
+            logger.warn(`[repairDrift] Case2 invalid cfKfId="${doc._cfKfId}" for paperlessId=${doc.paperlessId}`);
+            fail++;
+            continue;
+          }
+          try {
+            const Purchase = mdb.REST?.purchase;
+            const activePurchase = Purchase
+              ? await Purchase.findOne({ Id: cfId, deletedAt: null, DeletedAt: null }).select('Id Number Permalink').lean()
+              : null;
+
+            if (activePurchase) {
+              // Purchase still exists → restore the MongoDB link
+              await OcrDocument.updateOne(
+                { paperlessId: doc.paperlessId },
+                { $set: {
+                  kashflowPurchaseId:     cfId,
+                  kashflowPurchaseNumber: activePurchase.Number ?? null,
+                  kashflowPermalink:      activePurchase.Permalink ?? null,
+                }},
+              );
+              logger.info(`[repairDrift] Case2 restored link paperlessId=${doc.paperlessId} → KF id=${cfId}`);
+            } else {
+              // Purchase is gone (orphaned) → clear MongoDB customFields immediately (resolves drift
+              // count at once), then attempt Paperless cleanup in the background.
+              await OcrDocument.updateOne(
+                { paperlessId: doc.paperlessId },
+                { $pull: { customFields: { fieldName: { $regex: /^kashflow /i } } } },
+              );
+              // Best-effort Paperless cleanup — log failure but don't block ok count
+              clearPaperlessKashFlowFields(doc.paperlessId, doc.customFields || []).catch(e =>
+                logger.warn(`[repairDrift] Case2 Paperless clear failed for paperlessId=${doc.paperlessId}: ${e.message}`),
+              );
+              logger.info(`[repairDrift] Case2 cleared orphaned fields for paperlessId=${doc.paperlessId} (KF id=${cfId} not found)`);
+            }
+            ok++;
+          } catch (e) {
+            fail++;
+            logger.warn(`[repairDrift] Case2 failed for paperlessId=${doc.paperlessId}: ${e.message}`);
+          }
+          continue;
+        }
         try {
           await updatePaperlessWithKashFlowInfo(
             doc.paperlessId,
             { Id: doc.kashflowPurchaseId, Number: doc.kashflowPurchaseNumber, Permalink: doc.kashflowPermalink },
             doc.lastSendStatus,
+            { existingCf: doc.customFields || [] },
           );
           // Mirror the written values into MongoDB's customFields so the drift check
           // reflects the fix immediately without waiting for the next grab run
@@ -1152,6 +1239,8 @@ exports.repairDrift = async (req, res) => {
       logger.info(`[repairDrift] Complete. ok=${ok} failed=${fail}`);
     } catch (err) {
       logger.error(`[repairDrift] Fatal error: ${err.message}`);
+    } finally {
+      _repairDriftRunning = false;
     }
   });
 };

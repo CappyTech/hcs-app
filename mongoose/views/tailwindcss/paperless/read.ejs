@@ -48,6 +48,30 @@
             <% } %>
           </div>
         <% } %>
+        <% if (hasDrift) { %>
+          <div class="mt-2 p-2 rounded bg-amber-50 border border-amber-300 text-amber-800 text-sm">
+            <div class="font-semibold mb-1">⚠ Custom field out of sync</div>
+            <div>
+              MongoDB <code>kashflowPurchaseId</code>: <strong><%= doc.kashflowPurchaseId ?? '(none)' %></strong>
+            </div>
+            <div>
+              Paperless cached field: <strong><%= cfKashflowPurchaseId ?? '(none)' %></strong>
+            </div>
+            <% if (doc.kashflowPurchaseId != null) { %>
+              <div class="mt-2 text-xs text-amber-700">The KashFlow Purchase Id was not written back to Paperless. Use the button below to sync it.</div>
+              <form method="POST" action="/paperless/repair-drift" class="mt-2">
+                <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+                <button type="submit" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium">Sync Paperless custom fields</button>
+              </form>
+            <% } else { %>
+              <div class="mt-2 text-xs text-amber-700">Paperless has a KashFlow id but MongoDB does not. Re-ingest or check send logs.</div>
+              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/ingest" class="mt-2">
+                <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+                <button type="submit" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium">Re-ingest document</button>
+              </form>
+            <% } %>
+          </div>
+        <% } %>
       </div>
       <div class="mt-4">
         <a href="/paperless/ocr/<%= doc.paperlessId %>/draft" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm">

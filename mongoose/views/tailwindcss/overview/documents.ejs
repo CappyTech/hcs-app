@@ -1,3 +1,7 @@
+<%
+const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
+%>
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
 
   <!-- Header -->
@@ -49,24 +53,27 @@
     </div>
   </div>
 
-  <!-- Send Mode Summary -->
-  <div class="mb-6">
-    <div class="flex flex-wrap gap-3">
-      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
-        Direct: <strong class="ml-1"><%= sentDirect %></strong>
-      </span>
-      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400">
-        Webhook: <strong class="ml-1"><%= sentWebhook %></strong>
-      </span>
-      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-        Never Sent: <strong class="ml-1"><%= neverSent %></strong>
-      </span>
-      <% if (ingestStats.total > 0) { %>
-      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-400">
-        Ingest Records: <strong class="ml-1"><%= ingestStats.total %></strong>
-      </span>
-      <% } %>
-    </div>
+  <!-- Send Mode pills -->
+  <div class="mb-6 flex flex-wrap gap-3">
+    <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
+      Direct: <strong class="ml-1"><%= sentDirect %></strong>
+    </span>
+    <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400">
+      Webhook: <strong class="ml-1"><%= sentWebhook %></strong>
+    </span>
+    <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+      Never Sent: <strong class="ml-1"><%= neverSent %></strong>
+    </span>
+    <% if (sentButUnlinked > 0) { %>
+    <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400" title="Sent to KashFlow but KashFlow purchase ID was not saved back to MongoDB">
+      Sent but Unlinked: <strong class="ml-1"><%= sentButUnlinked %></strong>
+    </span>
+    <% } %>
+    <% if (ingestStats.total > 0) { %>
+    <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-400">
+      Ingest Records: <strong class="ml-1"><%= ingestStats.total %></strong>
+    </span>
+    <% } %>
   </div>
 
   <!-- By Document Type -->
@@ -83,28 +90,50 @@
   </div>
   <% } %>
 
-  <!-- Custom Field Drift Warning -->
+  <!-- ── CF Drift ──────────────────────────────────────────────────────────── -->
   <% if (driftedDocs > 0) { %>
-  <div class="mb-8 border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4">
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-      <div class="flex-1 min-w-0">
-        <h2 class="text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">&#9888; Custom Field Drift (<%= driftedDocs %>)</h2>
-        <p class="text-sm text-purple-800 dark:text-purple-300">
-          <%= driftedDocs %> document<%= driftedDocs !== 1 ? 's have' : ' has' %> a mismatch between the KashFlow link stored in MongoDB and the <em>KashFlow Purchase Id</em> custom field stored in Paperless-ngx.
-          This can happen if a write-back failed after sending, or if a document was unlinked while offline.
-        </p>
+  <details class="mb-6 group border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-2xl" <%= driftedDocs <= 10 ? 'open' : '' %>>
+    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <span class="text-lg font-bold text-purple-700 dark:text-purple-400">&#9888; CF Drift (<%= driftedDocs %>)</span>
+        <span class="text-sm text-purple-600 dark:text-purple-300 hidden sm:block">MongoDB / Paperless custom field mismatch</span>
       </div>
-      <form method="POST" action="/paperless/repair-drift" class="shrink-0" data-submit-once>
-        <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
-          <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
-          Fix All
-        </button>
-      </form>
+      <div class="flex items-center gap-3 shrink-0">
+        <form method="POST" action="/paperless/repair-drift" data-submit-once>
+          <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
+          <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Fix All</button>
+        </form>
+        <span class="text-purple-400 text-sm group-open:hidden">▼</span>
+        <span class="text-purple-400 text-sm hidden group-open:inline">▲</span>
+      </div>
+    </summary>
+    <div class="overflow-x-auto px-4 pb-4">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-xs text-purple-600 dark:text-purple-400 border-b border-purple-200 dark:border-purple-800">
+          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">MongoDB KF ID</th><th class="pb-1 pr-3 font-medium">Paperless CF</th><th class="pb-1 font-medium">Links</th>
+        </tr></thead>
+        <tbody class="divide-y divide-purple-100 dark:divide-purple-900">
+          <% for (const d of driftedDocsList) { %>
+          <tr>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><%= d.paperlessId %></td>
+            <td class="py-1.5 pr-3 max-w-xs truncate"><a href="/paperless/ocr/<%= d.paperlessId %>" class="text-purple-700 dark:text-purple-300 hover:underline font-medium"><%= d.title || '—' %></a></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500"><%= d.documentType?.name || '—' %></td>
+            <td class="py-1.5 pr-3 font-mono text-xs <%= d.kashflowPurchaseId ? 'text-green-700 dark:text-green-400' : 'text-red-500' %>"><%= d.kashflowPurchaseId ?? '—' %></td>
+            <td class="py-1.5 pr-3 font-mono text-xs <%= d._cfKfId ? 'text-green-700 dark:text-green-400' : 'text-red-500' %>"><%= d._cfKfId ?? '—' %></td>
+            <td class="py-1.5 whitespace-nowrap text-xs">
+              <a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600 mr-2">Paperless ↗</a>
+              <% if (d.kashflowPermalink) { %><a href="<%= d.kashflowPermalink %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-blue-600">KashFlow ↗</a><% } %>
+            </td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+      <% if (driftedDocs > driftedDocsList.length) { %><p class="text-xs text-purple-500 mt-2">Showing <%= driftedDocsList.length %> of <%= driftedDocs %></p><% } %>
     </div>
-  </div>
+  </details>
   <% } %>
 
-  <!-- Added-tag but no KashFlow number warning -->
+  <!-- ── Missing KashFlow Link ────────────────────────────────────────────── -->
   <% if (addedNoKfNumber > 0) { %>
   <div class="mb-8 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4">
     <h2 class="text-xl font-bold text-amber-700 dark:text-amber-400 mb-2">&#9888; Missing KashFlow Link (<%= addedNoKfNumber %>)</h2>
@@ -120,37 +149,169 @@
   </div>
   <% } %>
 
-  <!-- Orphaned Links Warning -->
-  <% if (orphanedDocs > 0) { %>
-  <div class="mb-8 border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-2">&#9888; Stale KashFlow Links (<%= orphanedDocs %>)</h2>
-    <p class="text-sm text-orange-800 dark:text-orange-300">
-      <%= orphanedDocs %> document<%= orphanedDocs !== 1 ? 's have' : ' has' %> a KashFlow purchase link that no longer exists or has been deleted in KashFlow.
-      The nightly cleanup job will remove these links automatically. You can also re-send the affected documents to create a fresh purchase.
-    </p>
-  </div>
-  <% } %>
-
-  <!-- Error Documents -->
+  <!-- ── Document Errors ───────────────────────────────────────────────────── -->
   <% if (errorDocsList.length > 0) { %>
-  <div class="mb-8 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl p-4">
-    <h2 class="text-xl font-bold text-red-700 dark:text-red-400 mb-3">&#9888; Documents With Errors (<%= errorDocsList.length %>)</h2>
-    <ul class="divide-y divide-red-200 dark:divide-red-800">
-      <% for (const d of errorDocsList) { %>
-      <li class="flex items-start justify-between py-1.5 text-sm gap-4">
-        <div class="min-w-0">
-          <span class="font-mono text-xs text-gray-500 mr-2"><%= d.paperlessId %></span>
-          <span class="font-medium text-gray-900 dark:text-gray-100"><%= d.title || '—' %></span>
-          <span class="block text-red-600 text-xs truncate mt-0.5" title="<%= d.error %>"><%= d.error %></span>
-        </div>
-        <span class="text-gray-400 text-xs whitespace-nowrap"><%= slimDateTime(d.fetchedAt) %></span>
-      </li>
-      <% } %>
-    </ul>
-  </div>
+  <details class="mb-6 group border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl" open>
+    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+      <span class="text-lg font-bold text-red-700 dark:text-red-400">&#9888; Document Errors (<%= errorDocs %>)</span>
+      <span class="text-red-400 text-sm group-open:hidden">▼</span><span class="text-red-400 text-sm hidden group-open:inline">▲</span>
+    </summary>
+    <div class="overflow-x-auto px-4 pb-4">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-xs text-red-600 dark:text-red-400 border-b border-red-200 dark:border-red-800">
+          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">Error</th><th class="pb-1 pr-3 font-medium">Fetched</th><th class="pb-1 font-medium">Links</th>
+        </tr></thead>
+        <tbody class="divide-y divide-red-100 dark:divide-red-900">
+          <% for (const d of errorDocsList) { %>
+          <tr>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><%= d.paperlessId %></td>
+            <td class="py-1.5 pr-3 max-w-xs truncate"><a href="/paperless/ocr/<%= d.paperlessId %>" class="text-red-700 dark:text-red-300 hover:underline font-medium"><%= d.title || '—' %></a></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500"><%= d.documentType?.name || '—' %></td>
+            <td class="py-1.5 pr-3 text-xs text-red-600 max-w-xs truncate" title="<%= d.error %>"><%= d.error %></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500 whitespace-nowrap"><%= fmt(d.fetchedAt) %></td>
+            <td class="py-1.5 whitespace-nowrap text-xs"><a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600">Paperless ↗</a></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+      <% if (errorDocs > errorDocsList.length) { %><p class="text-xs text-red-500 mt-2">Showing <%= errorDocsList.length %> of <%= errorDocs %></p><% } %>
+    </div>
+  </details>
   <% } %>
 
-  <!-- Recent Documents -->
+  <!-- ── Never Sent ────────────────────────────────────────────────────────── -->
+  <% if (neverSentList.length > 0) { %>
+  <details class="mb-6 group border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+      <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Never Sent to KashFlow (<%= neverSent %>)</span>
+      <span class="text-gray-400 text-sm group-open:hidden">▼</span><span class="text-gray-400 text-sm hidden group-open:inline">▲</span>
+    </summary>
+    <div class="overflow-x-auto px-4 pb-4">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700">
+          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">Added</th><th class="pb-1 font-medium">Links</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          <% for (const d of neverSentList) { %>
+          <tr>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><%= d.paperlessId %></td>
+            <td class="py-1.5 pr-3 max-w-xs truncate"><a href="/paperless/ocr/<%= d.paperlessId %>" class="text-gray-800 dark:text-gray-200 hover:underline font-medium"><%= d.title || '—' %></a></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500"><%= d.documentType?.name || '—' %></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500 whitespace-nowrap"><%= fmt(d.added) %></td>
+            <td class="py-1.5 whitespace-nowrap text-xs"><a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600">Paperless ↗</a></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+      <% if (neverSent > neverSentList.length) { %><p class="text-xs text-gray-500 mt-2">Showing <%= neverSentList.length %> of <%= neverSent %></p><% } %>
+    </div>
+  </details>
+  <% } %>
+
+  <!-- ── Ingest Errors ─────────────────────────────────────────────────────── -->
+  <% if (ingestErrorsList.length > 0) { %>
+  <details class="mb-6 group border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 rounded-2xl" open>
+    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+      <span class="text-lg font-bold text-red-600 dark:text-red-400">&#9888; Ingest Errors (<%= ingestStats.error %>)</span>
+      <span class="text-red-400 text-sm group-open:hidden">▼</span><span class="text-red-400 text-sm hidden group-open:inline">▲</span>
+    </summary>
+    <div class="overflow-x-auto px-4 pb-4">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-xs text-red-500 border-b border-red-200 dark:border-red-800">
+          <th class="pb-1 pr-3 font-medium">Paperless ID</th><th class="pb-1 pr-3 font-medium">Error</th><th class="pb-1 pr-3 font-medium">Last Attempt</th><th class="pb-1 font-medium">Links</th>
+        </tr></thead>
+        <tbody class="divide-y divide-red-100 dark:divide-red-900">
+          <% for (const d of ingestErrorsList) { %>
+          <tr>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><%= d.paperlessId %></td>
+            <td class="py-1.5 pr-3 text-xs text-red-600 max-w-sm truncate" title="<%= d.error %>"><%= d.error %></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500 whitespace-nowrap"><%= fmt(d.lastFetchedAt) %></td>
+            <td class="py-1.5 whitespace-nowrap text-xs">
+              <a href="/paperless/ocr/<%= d.paperlessId %>" class="text-gray-500 hover:text-purple-600 mr-2">App ↗</a>
+              <a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600">Paperless ↗</a>
+            </td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+      <% if (ingestStats.error > ingestErrorsList.length) { %><p class="text-xs text-red-500 mt-2">Showing <%= ingestErrorsList.length %> of <%= ingestStats.error %></p><% } %>
+    </div>
+  </details>
+  <% } %>
+
+  <!-- ── Stale Links ───────────────────────────────────────────────────────── -->
+  <% if (staleLinkedList.length > 0) { %>
+  <details class="mb-6 group border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl">
+    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+      <div class="min-w-0">
+        <span class="text-lg font-bold text-orange-700 dark:text-orange-400">&#9888; Stale KashFlow Links (<%= orphanedDocs %>)</span>
+        <span class="block text-xs text-orange-600 dark:text-orange-300 mt-0.5">Purchase deleted in KashFlow — nightly job will clear these</span>
+      </div>
+      <span class="text-orange-400 text-sm shrink-0 group-open:hidden">▼</span><span class="text-orange-400 text-sm shrink-0 hidden group-open:inline">▲</span>
+    </summary>
+    <div class="overflow-x-auto px-4 pb-4">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-xs text-orange-600 dark:text-orange-400 border-b border-orange-200 dark:border-orange-800">
+          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">KF Purchase #</th><th class="pb-1 pr-3 font-medium">Last Sent</th><th class="pb-1 font-medium">Links</th>
+        </tr></thead>
+        <tbody class="divide-y divide-orange-100 dark:divide-orange-900">
+          <% for (const d of staleLinkedList) { %>
+          <tr>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><%= d.paperlessId %></td>
+            <td class="py-1.5 pr-3 max-w-xs truncate"><a href="/paperless/ocr/<%= d.paperlessId %>" class="text-orange-700 dark:text-orange-300 hover:underline font-medium"><%= d.title || '—' %></a></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500"><%= d.documentType?.name || '—' %></td>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-600 dark:text-gray-400"><%= d.kashflowPurchaseNumber ?? '—' %></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500 whitespace-nowrap"><%= fmt(d.lastSentAt) %></td>
+            <td class="py-1.5 whitespace-nowrap text-xs">
+              <a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600 mr-2">Paperless ↗</a>
+              <% if (d.kashflowPermalink) { %><a href="<%= d.kashflowPermalink %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-blue-600">KashFlow ↗</a><% } %>
+            </td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+      <% if (orphanedDocs > staleLinkedList.length) { %><p class="text-xs text-orange-500 mt-2">Showing <%= staleLinkedList.length %> of <%= orphanedDocs %></p><% } %>
+    </div>
+  </details>
+  <% } %>
+
+  <!-- ── Unlinked ──────────────────────────────────────────────────────────── -->
+  <% if (unlinkedDocsList.length > 0) { %>
+  <details class="mb-6 group border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl">
+    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+      <span class="text-lg font-bold text-yellow-700 dark:text-yellow-400">Unlinked Documents (<%= unlinkedDocs %>)</span>
+      <span class="text-yellow-400 text-sm group-open:hidden">▼</span><span class="text-yellow-400 text-sm hidden group-open:inline">▲</span>
+    </summary>
+    <div class="overflow-x-auto px-4 pb-4">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-xs text-yellow-600 dark:text-yellow-400 border-b border-yellow-200 dark:border-yellow-800">
+          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">Send Mode</th><th class="pb-1 pr-3 font-medium">Status</th><th class="pb-1 pr-3 font-medium">Added</th><th class="pb-1 font-medium">Links</th>
+        </tr></thead>
+        <tbody class="divide-y divide-yellow-100 dark:divide-yellow-900">
+          <% for (const d of unlinkedDocsList) { %>
+          <tr>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><%= d.paperlessId %></td>
+            <td class="py-1.5 pr-3 max-w-xs truncate"><a href="/paperless/ocr/<%= d.paperlessId %>" class="text-yellow-700 dark:text-yellow-300 hover:underline font-medium"><%= d.title || '—' %></a></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500"><%= d.documentType?.name || '—' %></td>
+            <td class="py-1.5 pr-3 text-xs">
+              <% if (d.lastSendMode === 'direct') { %><span class="text-green-600">direct</span>
+              <% } else if (d.lastSendMode === 'webhook') { %><span class="text-blue-600">webhook</span>
+              <% } else if (d.lastSentAt) { %><span class="text-gray-500">sent</span>
+              <% } else { %><span class="text-gray-400">—</span><% } %>
+            </td>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><%= d.lastSendStatus ?? '—' %></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500 whitespace-nowrap"><%= fmt(d.added) %></td>
+            <td class="py-1.5 whitespace-nowrap text-xs"><a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600">Paperless ↗</a></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+      <% if (unlinkedDocs > unlinkedDocsList.length) { %><p class="text-xs text-yellow-600 mt-2">Showing <%= unlinkedDocsList.length %> of <%= unlinkedDocs %> — <a href="/paperless/ocr" class="underline">view all in Manage Documents</a></p><% } %>
+    </div>
+  </details>
+  <% } %>
+
+  <!-- Recently Added -->
   <div class="mb-8">
     <div class="flex justify-between items-center mb-3">
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Recently Added (<%= recentLimit %>)</h2>
