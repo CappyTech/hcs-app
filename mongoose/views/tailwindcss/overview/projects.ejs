@@ -230,7 +230,8 @@
           <tr class="<%= f.atRisk ? 'bg-red-50 dark:bg-red-900/10' : '' %>">
             <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= p.Number %></td>
             <td class="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">
-              <%= p.Name || '—' %>
+              <a href="https://app.kashflow.com/editProject.asp?id=<%= p.Id %>" target="_blank" rel="noopener noreferrer"
+                class="hover:underline text-blue-600 dark:text-blue-400"><%= p.Name || '—' %></a>
               <% if (p.CustomerName) { %>
                 <span class="ml-1 text-xs text-gray-400">(<%= p.CustomerName %>)</span>
               <% } %>
