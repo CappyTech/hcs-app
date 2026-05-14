@@ -303,7 +303,31 @@ async function ingestOnePaperlessDoc(paperlessId) {
   }
 
   // Fetch full document with expansions so we can resolve custom fields cleanly
-  const doc = await api.getDocument(Number(paperlessId), { expand: ['custom_fields', 'custom_fields__field'] });
+  let doc;
+  try {
+    doc = await api.getDocument(Number(paperlessId), { expand: ['custom_fields', 'custom_fields__field'] });
+  } catch (fetchErr) {
+    const is404 = fetchErr?.response?.status === 404 || /not found/i.test(fetchErr?.message || '');
+    const errMsg = is404
+      ? `Document #${paperlessId} not found in Paperless (404) — it may have been deleted`
+      : `Failed to fetch document #${paperlessId} from Paperless: ${fetchErr.message}`;
+    logger.warn(`[paperless] ${errMsg}`);
+    // Persist error state so the ingest tracker reflects the failure
+    await OcrDocumentIngest.updateOne(
+      { paperlessId: Number(paperlessId) },
+      { $set: { paperlessId: Number(paperlessId), lastFetchedAt: new Date(), status: 'error', error: errMsg } },
+      { upsert: true }
+    );
+    if (is404) {
+      await OcrDocument.updateOne(
+        { paperlessId: Number(paperlessId) },
+        { $set: { error: errMsg, fetchedAt: new Date() } }
+      );
+    }
+    const err = new Error(errMsg);
+    err.status = is404 ? 404 : 502;
+    throw err;
+  }
   if (!doc || typeof doc.id !== 'number') throw new Error('Paperless document not found');
 
   const [correspondent, docType, tagsResolved] = await Promise.all([

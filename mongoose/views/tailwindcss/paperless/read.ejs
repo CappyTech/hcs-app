@@ -98,6 +98,14 @@
             <div class="text-red-600">Error: <%= ingest.error %></div>
           <% } %>
         </div>
+        <% if (hashDuplicate) { %>
+          <div class="mt-3 p-2 rounded bg-blue-50 border border-blue-200 text-blue-800 text-sm">
+            <strong>Possible re-upload detected.</strong>
+            A document with the same content hash already exists as
+            <a href="/paperless/ocr/<%= hashDuplicate.paperlessId %>" class="underline font-medium">Document #<%= hashDuplicate.paperlessId %></a>.
+            If this is a re-upload, you can send that document to KashFlow instead.
+          </div>
+        <% } %>
       <% } else { %>
         <div class="text-sm">No ingest record yet.</div>
       <% } %>

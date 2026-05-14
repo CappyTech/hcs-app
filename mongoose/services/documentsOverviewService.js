@@ -184,6 +184,45 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     staleLinkedList = stale.slice(0, DETAIL_LIMIT);
   }
 
+  // ── Possible re-uploads: error ingest records whose hash matches a live document ──
+  // Step 1: collect hashes of error records that have a hash
+  // Step 2: find non-error records sharing any of those hashes
+  let possibleReuploadCount = 0;
+  let possibleReuploadList = [];
+  if (OcrDocumentIngest && ingestStats.error > 0) {
+    const errorHashes = await OcrDocumentIngest.find({ status: 'error', lastContentHash: { $ne: null } })
+      .select('paperlessId lastContentHash')
+      .lean();
+    const hashSet = [...new Set(errorHashes.map(r => r.lastContentHash))];
+    if (hashSet.length > 0) {
+      const liveMatches = await OcrDocumentIngest.find({
+        lastContentHash: { $in: hashSet },
+        status: { $ne: 'error' },
+      }).select('paperlessId lastContentHash').lean();
+      if (liveMatches.length > 0) {
+        const liveHashMap = new Map(liveMatches.map(r => [r.lastContentHash, r.paperlessId]));
+        const pairs = errorHashes
+          .filter(r => liveHashMap.has(r.lastContentHash))
+          .map(r => ({ deletedId: r.paperlessId, survivingId: liveHashMap.get(r.lastContentHash) }));
+        possibleReuploadCount = pairs.length;
+        // Enrich with titles from OcrDocument
+        const allIds = [...new Set(pairs.flatMap(p => [p.deletedId, p.survivingId]))];
+        const docMap = new Map(
+          (await OcrDocument.find({ paperlessId: { $in: allIds } })
+            .select('paperlessId title documentType')
+            .lean()
+          ).map(d => [d.paperlessId, d])
+        );
+        possibleReuploadList = pairs.slice(0, DETAIL_LIMIT).map(p => ({
+          deletedId: p.deletedId,
+          survivingId: p.survivingId,
+          deletedDoc: docMap.get(p.deletedId) || null,
+          survivingDoc: docMap.get(p.survivingId) || null,
+        }));
+      }
+    }
+  }
+
   return {
     totalDocs,
     linkedDocs,
@@ -205,6 +244,8 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     ingestStats,
     ingestErrorsList,
     staleLinkedList,
+    possibleReuploadCount,
+    possibleReuploadList,
     recentLimit,
   };
 }

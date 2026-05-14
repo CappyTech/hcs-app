@@ -174,12 +174,25 @@ exports.readOcr = async (req, res, next) => {
       (doc.kashflowPurchaseId == null && cfKashflowPurchaseId != null && cfKashflowPurchaseId !== '')
     );
 
+    // If the ingest record is in error state (e.g. 404 / deleted from Paperless), check
+    // whether a document with the same content hash exists under a different Paperless ID.
+    // This catches the common case where a document was deleted and re-uploaded.
+    let hashDuplicate = null;
+    if (ingest?.status === 'error' && ingest?.lastContentHash) {
+      hashDuplicate = await OcrDocumentIngest.findOne({
+        lastContentHash: ingest.lastContentHash,
+        paperlessId: { $ne: paperlessId },
+        status: { $ne: 'error' },
+      }).select('paperlessId').lean();
+    }
+
     res.render(path.join("tailwindcss", "paperless", "read"), {
       title: doc.title || `Doc #${paperlessId}`,
       doc,
       ingest,
       hasDrift,
       cfKashflowPurchaseId,
+      hashDuplicate,
     });
   } catch (err) {
     next(err);
@@ -1048,6 +1061,10 @@ exports.reIngestOne = async (req, res, next) => {
     res.redirect(`/paperless/ocr/${paperlessId}`);
   } catch (err) {
     logger.error(`reIngestOne error for paperlessId=${req.params.paperlessId}: ${err.message}`);
+    if (err.status === 404) {
+      req.flash('error', err.message);
+      return res.redirect(`/paperless/ocr/${req.params.paperlessId}`);
+    }
     next(err);
   }
 };

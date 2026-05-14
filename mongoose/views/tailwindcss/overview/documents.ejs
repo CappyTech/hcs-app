@@ -51,6 +51,10 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Missing KF Link</p>
       <p class="text-3xl font-bold <%- addedNoKfNumber > 0 ? 'text-amber-600' : 'text-gray-400' %>"><%= addedNoKfNumber %></p>
     </div>
+    <div class="bg-white dark:bg-gray-900 border <%- possibleReuploadCount > 0 ? 'border-blue-400 dark:border-blue-600' : 'border-gray-200 dark:border-gray-700' %> rounded-2xl shadow-lg p-4 text-center" title="Deleted Paperless documents with a matching content hash in a live document — likely re-uploads">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Possible Re-uploads</p>
+      <p class="text-3xl font-bold <%- possibleReuploadCount > 0 ? 'text-blue-600' : 'text-gray-400' %>"><%= possibleReuploadCount %></p>
+    </div>
   </div>
 
   <!-- Send Mode pills -->
@@ -147,6 +151,41 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
       <a href="/paperless/ocr?tag=added" class="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">View affected documents &rarr;</a>
     </div>
   </div>
+  <% } %>
+
+  <!-- ── Possible Re-uploads ──────────────────────────────────────────────── -->
+  <% if (possibleReuploadCount > 0) { %>
+  <details class="mb-6 group border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl" open>
+    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <span class="text-lg font-bold text-blue-700 dark:text-blue-400">&#8635; Possible Re-uploads (<%= possibleReuploadCount %>)</span>
+        <span class="text-sm text-blue-600 dark:text-blue-300 hidden sm:block">Deleted documents with a matching content hash in a live document</span>
+      </div>
+      <span class="text-blue-400 text-sm group-open:hidden">&#9660;</span>
+      <span class="text-blue-400 text-sm hidden group-open:inline">&#9650;</span>
+    </summary>
+    <div class="overflow-x-auto px-4 pb-4">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-xs text-blue-600 dark:text-blue-400 border-b border-blue-200 dark:border-blue-800">
+          <th class="pb-1 pr-3 font-medium">Deleted ID</th>
+          <th class="pb-1 pr-3 font-medium">Deleted Title</th>
+          <th class="pb-1 pr-3 font-medium">Surviving ID</th>
+          <th class="pb-1 font-medium">Surviving Title</th>
+        </tr></thead>
+        <tbody class="divide-y divide-blue-100 dark:divide-blue-900">
+          <% for (const r of possibleReuploadList) { %>
+          <tr>
+            <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><a href="/paperless/ocr/<%= r.deletedId %>" class="hover:underline"><%= r.deletedId %></a></td>
+            <td class="py-1.5 pr-3 max-w-xs truncate text-gray-500"><%= r.deletedDoc?.title || '—' %></td>
+            <td class="py-1.5 pr-3 font-mono text-xs"><a href="/paperless/ocr/<%= r.survivingId %>" class="text-blue-700 dark:text-blue-300 hover:underline font-medium"><%= r.survivingId %></a></td>
+            <td class="py-1.5 max-w-xs truncate"><a href="/paperless/ocr/<%= r.survivingId %>" class="text-blue-700 dark:text-blue-300 hover:underline"><%= r.survivingDoc?.title || '—' %></a></td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+      <% if (possibleReuploadCount > possibleReuploadList.length) { %><p class="text-xs text-blue-500 mt-2">Showing <%= possibleReuploadList.length %> of <%= possibleReuploadCount %></p><% } %>
+    </div>
+  </details>
   <% } %>
 
   <!-- ── Document Errors ───────────────────────────────────────────────────── -->
