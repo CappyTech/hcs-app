@@ -83,7 +83,7 @@ async function getProjectsOverview() {
   let restProjectsReadyToComplete = [];
 
   if (RestProject) {
-    restProjects = await RestProject.find({ Status: { $ne: 'Completed' } })
+    restProjects = await RestProject.find({ Status: { $nin: ['Completed', 'Archived'] } })
       .sort({ StartDate: -1 })
       .lean();
     const allRestProjects = await RestProject.aggregate([
