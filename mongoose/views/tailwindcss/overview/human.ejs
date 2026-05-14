@@ -214,12 +214,68 @@
   </div>
 
   <!-- Active Employees Without Assignments -->
+  <% if (unassigned.length > 0) { %>
   <div class="mb-8">
-    <div class="flex justify-between items-center">
+    <div class="flex justify-between items-center mb-3">
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Active &amp; Unassigned (<%= unassigned.length %>)</h2>
       <a href="/employees" class="text-sm text-blue-600 hover:underline">View all employees &rarr;</a>
     </div>
+    <div class="flex flex-wrap gap-2">
+      <% for (const e of unassigned) { %>
+        <a href="/employee/read/<%= e.uuid %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <%= e.name %>
+          <span class="text-xs text-gray-400 capitalize"><%= e.type %></span>
+        </a>
+      <% } %>
+    </div>
   </div>
+  <% } %>
+
+  <!-- Recently Hired -->
+  <% if (recentHires.length > 0) { %>
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">&#127381; Recently Hired (last <%= recentDays %> days) (<%= recentHires.length %>)</h2>
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% for (const e of recentHires) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/employee/read/<%= e.uuid %>" class="font-medium text-blue-600 hover:underline"><%= e.name %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= e.position || '—' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-400 text-xs"><%= slimDateTime(e.hireDate) %></span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= e.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' %>"><%= e.status %></span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
+  </div>
+  <% } %>
+
+  <!-- Vehicles Assigned to Employees -->
+  <% if (employeeVehicles.length > 0) { %>
+  <div class="mb-8">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">&#128663; Vehicles Assigned (<%= employeeVehicles.length %>)</h2>
+      <a href="/overview/fleet" class="text-sm text-blue-600 hover:underline">Fleet overview &rarr;</a>
+    </div>
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% for (const v of employeeVehicles) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/vehicle/read/<%= v.uuid %>" class="font-mono font-bold text-blue-600 hover:underline"><%= v.registrationNumber %></a>
+          <span class="ml-2 text-gray-700 dark:text-gray-300"><%= v.make %> <%= v.model %></span>
+        </div>
+        <% if (v._employeeUuid) { %>
+          <a href="/employee/read/<%= v._employeeUuid %>" class="text-blue-600 hover:underline text-xs"><%= v._employeeName %></a>
+        <% } else { %>
+          <span class="text-gray-400 text-xs"><%= v._employeeName %></span>
+        <% } %>
+      </li>
+      <% } %>
+    </ul>
+  </div>
+  <% } %>
 
 
 

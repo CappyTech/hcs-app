@@ -17,6 +17,14 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       direct:   [{ $match: { lastSendMode: 'direct' } }, { $count: 'n' }],
       webhook:  [{ $match: { lastSendMode: 'webhook' } }, { $count: 'n' }],
       neverSent:[{ $match: { lastSentAt: null } }, { $count: 'n' }],
+      // Tagged 'added' in Paperless but no KashFlow purchase number recorded in MongoDB
+      addedNoKf: [
+        { $match: {
+          kashflowPurchaseNumber: null,
+          'tags.name': { $regex: /^added$/i },
+        }},
+        { $count: 'n' },
+      ],
       // Drift: MongoDB kashflowPurchaseId disagrees with stored Paperless custom field value
       drifted: [
         { $addFields: {
@@ -55,7 +63,8 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const sentDirect   = facetResult?.direct?.[0]?.n   ?? 0;
   const sentWebhook  = facetResult?.webhook?.[0]?.n  ?? 0;
   const neverSent    = facetResult?.neverSent?.[0]?.n ?? 0;
-  const driftedDocs  = facetResult?.drifted?.[0]?.n  ?? 0;
+  const driftedDocs      = facetResult?.drifted?.[0]?.n  ?? 0;
+  const addedNoKfNumber = facetResult?.addedNoKf?.[0]?.n ?? 0;
 
   // ── By document type ───────────────────────────────────────────────────────
   const byDocType = await OcrDocument.aggregate([
@@ -116,6 +125,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     orphanedDocs,
     driftedDocs,
     errorDocs,
+    addedNoKfNumber,
     sentDirect,
     sentWebhook,
     neverSent,

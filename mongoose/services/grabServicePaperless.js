@@ -346,10 +346,48 @@ async function ingestOnePaperlessDoc(paperlessId) {
   };
   const contentHash = sha256(stableStringify(normForHash));
 
+  // Backfill KashFlow linkage from custom fields when the dedicated fields are not yet set.
+  // If the Paperless document has "KashFlow Purchase Number" as a custom field but the DB
+  // record has no kashflowPurchaseNumber, look the purchase up in the REST collection and
+  // populate all linkage fields so the document appears correctly linked without a re-send.
+  const kfBackfill = {};
+  try {
+    const existingLink = await OcrDocument.findOne({ paperlessId: doc.id })
+      .select('kashflowPurchaseNumber kashflowPurchaseId')
+      .lean();
+    if (!existingLink?.kashflowPurchaseNumber) {
+      const cfNumber = customFields.find(
+        (cf) => /kashflow\s*purchase\s*number/i.test(cf.fieldName || '')
+      );
+      const rawNum = cfNumber?.value;
+      const cfPurchaseNum = rawNum != null ? parseInt(String(rawNum), 10) : NaN;
+      if (Number.isFinite(cfPurchaseNum) && cfPurchaseNum > 0 && mdb.REST?.purchase) {
+        const restPurchase = await mdb.REST.purchase
+          .findOne({ Number: cfPurchaseNum })
+          .select('Number Id Permalink')
+          .lean();
+        if (restPurchase) {
+          kfBackfill.kashflowPurchaseNumber = restPurchase.Number ?? cfPurchaseNum;
+          if (typeof restPurchase.Id === 'number') kfBackfill.kashflowPurchaseId = restPurchase.Id;
+          if (restPurchase.Permalink) kfBackfill.kashflowPermalink = restPurchase.Permalink;
+          logger.info(
+            `[paperless] Backfilled KashFlow linkage for paperlessId=${doc.id} from custom field (purchase #${cfPurchaseNum})`
+          );
+        } else {
+          logger.warn(
+            `[paperless] Custom field "KashFlow Purchase Number"=${cfPurchaseNum} not found in REST purchases for paperlessId=${doc.id}`
+          );
+        }
+      }
+    }
+  } catch (backfillErr) {
+    logger.warn(`[paperless] KashFlow backfill failed for paperlessId=${doc.id}: ${backfillErr.message}`);
+  }
+
   // Upsert document and tracker
   await OcrDocument.updateOne(
     { paperlessId: doc.id },
-    { $set: { ...record, fetchedAt: new Date(), error: null } },
+    { $set: { ...record, ...kfBackfill, fetchedAt: new Date(), error: null } },
     { upsert: true }
   );
   await OcrDocumentIngest.updateOne(

@@ -491,8 +491,10 @@ exports.sendDraftToKashflow = async (req, res, next) => {
     const draft = await buildPurchaseDraftById(paperlessId);
     // Detect document type for subcontractor mode
     const { OcrDocument: OcrDocumentSend } = mdb.PAPERLESS;
-    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType').lean();
+    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType modified').lean();
     const isSubcontractor = /subcontract/i.test(sendDoc?.documentType?.name || "");
+    // Capture modified before the tag update so we can detect genuine post-send changes later
+    const modifiedAtSendTime = sendDoc?.modified ?? null;
     // If a supplier is selected, merge its identifiers
     const supplierUuid =
       req.body && req.body.supplierUuid
@@ -768,6 +770,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
                 lastSentAt: new Date(),
                 lastSendMode: "direct",
                 lastSendStatus: resp.status,
+                modifiedAtLastSend: modifiedAtSendTime,
               },
               $inc: { sendCount: 1 },
             },
@@ -868,6 +871,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
                   lastSentAt: new Date(),
                   lastSendMode: "webhook",
                   lastSendStatus: resp.status,
+                  modifiedAtLastSend: modifiedAtSendTime,
                 },
                 $inc: { sendCount: 1 },
               },
@@ -881,6 +885,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
                   lastSentAt: new Date(),
                   lastSendMode: "webhook",
                   lastSendStatus: resp.status,
+                  modifiedAtLastSend: modifiedAtSendTime,
                 },
               },
             );

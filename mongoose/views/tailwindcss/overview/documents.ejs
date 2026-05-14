@@ -43,6 +43,10 @@
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Ingest Errors</p>
       <p class="text-3xl font-bold <%= ingestStats.error > 0 ? 'text-red-600' : 'text-gray-400' %>"><%= ingestStats.error || 0 %></p>
     </div>
+    <div class="bg-white dark:bg-gray-900 border <%- addedNoKfNumber > 0 ? 'border-amber-400 dark:border-amber-600' : 'border-gray-200 dark:border-gray-700' %> rounded-2xl shadow-lg p-4 text-center" title="Tagged 'added' in Paperless but no KashFlow purchase number recorded">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Missing KF Link</p>
+      <p class="text-3xl font-bold <%- addedNoKfNumber > 0 ? 'text-amber-600' : 'text-gray-400' %>"><%= addedNoKfNumber %></p>
+    </div>
   </div>
 
   <!-- Send Mode Summary -->
@@ -100,6 +104,22 @@
   </div>
   <% } %>
 
+  <!-- Added-tag but no KashFlow number warning -->
+  <% if (addedNoKfNumber > 0) { %>
+  <div class="mb-8 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4">
+    <h2 class="text-xl font-bold text-amber-700 dark:text-amber-400 mb-2">&#9888; Missing KashFlow Link (<%= addedNoKfNumber %>)</h2>
+    <p class="text-sm text-amber-800 dark:text-amber-300">
+      <%= addedNoKfNumber %> document<%= addedNoKfNumber !== 1 ? 's are' : ' is' %> tagged <strong>added</strong> in Paperless but have no KashFlow Purchase Number recorded.
+      They may have been sent outside this system. Open each document in
+      <a href="https://docs.heroncs.co.uk" target="_blank" rel="noopener noreferrer" class="underline font-medium">docs.heroncs.co.uk</a>,
+      enter the <strong>KashFlow Purchase Number</strong> custom field, then re-fetch the document to link it automatically.
+    </p>
+    <div class="mt-2">
+      <a href="/paperless/ocr?tag=added" class="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">View affected documents &rarr;</a>
+    </div>
+  </div>
+  <% } %>
+
   <!-- Orphaned Links Warning -->
   <% if (orphanedDocs > 0) { %>
   <div class="mb-8 border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4">
@@ -138,7 +158,7 @@
     </div>
     <div class="flex flex-wrap gap-2">
       <% for (const d of recentDocs) { %>
-        <a href="/ocrDocument/read/<%= d.uuid %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 max-w-xs truncate">
+        <a href="/paperless/ocr/<%= d.paperlessId %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 max-w-xs truncate">
           <%= d.title || '—' %>
           <% if (d.kashflowPurchaseNumber) { %><span class="text-xs text-green-600">#<%= d.kashflowPurchaseNumber %></span><% } %>
         </a>

@@ -13,6 +13,17 @@
         <div><span class="font-medium">Modified:</span> <%= doc.modified ? new Date(doc.modified).toLocaleString() : '-' %></div>
         <div><span class="font-medium">Files:</span> <%= doc.originalFileName || doc.archivedFileName || '-' %></div>
         <div><span class="font-medium">Tags:</span> <%= (doc.tags||[]).map(t=>t.name).join(', ') || '-' %></div>
+        <% const _hasAddedTag = (doc.tags||[]).some(t => (t.name||'').toLowerCase() === 'added'); %>
+        <% if (_hasAddedTag && !doc.kashflowPurchaseNumber && !doc.kashflowPermalink) { %>
+          <div class="mt-2 p-2 rounded bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+            <div class="font-medium flex items-center gap-1"><i class="bi bi-exclamation-triangle-fill"></i> KashFlow linkage missing</div>
+            <div class="mt-1">This document is tagged <strong>added</strong> but has no KashFlow Purchase Number recorded. It may have been sent outside this system.</div>
+            <div class="mt-1">Enter the KashFlow Purchase Number in the <strong>"KashFlow Purchase Number"</strong> custom field at
+              <a href="https://docs.heroncs.co.uk/documents/<%= doc.paperlessId %>" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline font-medium">docs.heroncs.co.uk/documents/<%= doc.paperlessId %></a>,
+              then re-fetch this document to link it automatically.
+            </div>
+          </div>
+        <% } %>
         <% if (doc.kashflowPurchaseNumber || doc.kashflowPermalink) { %>
           <div class="mt-2 p-2 rounded bg-green-50 text-green-800">
             <div class="font-medium">Linked KashFlow Purchase</div>
@@ -26,7 +37,14 @@
               <% } %>
             </div>
             <% if (doc.lastSentAt) { %>
+              <% const _modifiedAfterSent = doc.modified && doc.modifiedAtLastSend && new Date(doc.modified) > new Date(doc.modifiedAtLastSend); %>
               <div class="text-xs text-green-700 mt-1">Last sent: <%= new Date(doc.lastSentAt).toLocaleString() %> via <%= doc.lastSendMode || '-' %> (status <%= doc.lastSendStatus ?? '-' %>)</div>
+              <% if (_modifiedAfterSent) { %>
+                <div class="mt-1 flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                  Document modified after last send — KashFlow purchase may be out of date
+                </div>
+              <% } %>
             <% } %>
           </div>
         <% } %>

@@ -67,12 +67,30 @@
   <% } %>
 
   <!-- Recent Invoices -->
+  <% if (recentInvoices.length > 0) { %>
   <div class="mb-8">
-    <div class="flex justify-between items-center">
+    <div class="flex justify-between items-center mb-3">
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Recent Invoices</h2>
       <a href="/invoices" class="text-sm text-blue-600 hover:underline">View all invoices &rarr;</a>
     </div>
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% for (const inv of recentInvoices) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/invoice/read/<%= inv.uuid %>" class="font-mono font-medium text-blue-600 hover:underline"><%= inv.Number %></a>
+          <span class="ml-2 text-gray-700 dark:text-gray-300"><%= inv.CustomerName || '\u2014' %></span>
+          <span class="ml-2 text-gray-400 text-xs"><%= slimDateTime(inv.IssuedDate) %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="font-semibold text-xs text-gray-800 dark:text-gray-200"><%= formatCurrency(inv.GrossAmount) %></span>
+          <% if (inv.DueAmount > 0) { %><span class="text-xs text-red-600"><%= formatCurrency(inv.DueAmount) %> due</span><% } %>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= inv.Status === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : inv.Status === 'Outstanding' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' %>"><%= inv.Status || '\u2014' %></span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
+  <% } %>
 
   <!-- Purchase Summary Stats -->
   <div class="mb-2">
@@ -125,11 +143,28 @@
   <% } %>
 
   <!-- Recent Purchases -->
+  <% if (recentPurchases.length > 0) { %>
   <div class="mb-8">
-    <div class="flex justify-between items-center">
+    <div class="flex justify-between items-center mb-3">
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Recent Purchases</h2>
       <a href="/purchases" class="text-sm text-blue-600 hover:underline">View all purchases &rarr;</a>
     </div>
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% for (const p of recentPurchases) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/purchase/read/<%= p.uuid %>" class="font-mono font-medium text-blue-600 hover:underline"><%= p.Number %></a>
+          <span class="ml-2 text-gray-700 dark:text-gray-300"><%= p.SupplierName || '\u2014' %></span>
+          <span class="ml-2 text-gray-400 text-xs"><%= slimDateTime(p.IssuedDate) %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="font-semibold text-xs text-gray-800 dark:text-gray-200"><%= formatCurrency(p.GrossAmount) %></span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"><%= p.Status || '\u2014' %></span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
+  <% } %>
 
 </div>
