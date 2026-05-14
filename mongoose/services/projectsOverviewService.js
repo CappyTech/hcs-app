@@ -85,7 +85,6 @@ async function getProjectsOverview() {
   if (RestProject) {
     restProjects = await RestProject.find({ Status: { $ne: 'Completed' } })
       .sort({ StartDate: -1 })
-      .limit(20)
       .lean();
     const allRestProjects = await RestProject.aggregate([
       { $group: { _id: '$Status', count: { $sum: 1 } } },
@@ -99,8 +98,11 @@ async function getProjectsOverview() {
       p._financials = computeFinancials(p);
     }
 
-    restProjectsAtRisk         = restProjects.filter(p => p._financials.atRisk);
-    restProjectsReadyToComplete = restProjects.filter(p => !p._financials.atRisk && p._financials.incomeTarget > 0);
+    restProjectsAtRisk          = restProjects.filter(p => p._financials.atRisk);
+    restProjectsReadyToComplete = restProjects.filter(p => !p._financials.atRisk && p._financials.incomeTarget > 0 && p._financials.incomeActual > 0);
+
+    // Only surface projects that need attention in the financial health table
+    restProjects = restProjects.filter(p => p._financials.atRisk || (!p._financials.atRisk && p._financials.incomeTarget > 0 && p._financials.incomeActual > 0));
   }
 
   return {

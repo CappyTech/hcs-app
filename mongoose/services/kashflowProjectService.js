@@ -32,7 +32,7 @@ function computeFinancials(project) {
     expTarget,
     expActual,
     expDiff,
-    atRisk: incomeDiff < 0,
+    atRisk: incomeActual > 0 && incomeDiff < 0,
   };
 }
 

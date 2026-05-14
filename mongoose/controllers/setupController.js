@@ -150,7 +150,7 @@ exports.getStep2 = (req, res) => {
 };
 
 exports.postStep2 = (req, res) => {
-  const { companyName, supportEmail, incorporationYear, sessionSecret, encryptionKey } = req.body;
+  const { companyName, supportEmail, incorporationYear, notifyEmail, sessionSecret, encryptionKey } = req.body;
 
   if (!sessionSecret || sessionSecret.length < 32) {
     return renderSetup(res, 'step2', {
@@ -174,7 +174,7 @@ exports.postStep2 = (req, res) => {
   }
 
   const w = sessionWizard(req);
-  w.step2 = { companyName, supportEmail, incorporationYear, sessionSecret, encryptionKey };
+  w.step2 = { companyName, supportEmail, incorporationYear, notifyEmail, sessionSecret, encryptionKey };
   writeDraft(w);
   res.redirect('/setup/step3');
 };
@@ -245,6 +245,7 @@ exports.postComplete = (req, res) => {
   if (s2.companyName)       config.COMPANY_NAME       = s2.companyName.trim();
   if (s2.supportEmail)      config.SUPPORTEMAIL       = s2.supportEmail.trim();
   if (s2.incorporationYear) config.INCORPORATION_YEAR = s2.incorporationYear.trim();
+  if (s2.notifyEmail)       config.NOTIFY_EMAIL       = s2.notifyEmail.trim();
 
   config.SESSION_SECRET  = s2.sessionSecret;
   config.ENCRYPTION_KEY  = s2.encryptionKey;
