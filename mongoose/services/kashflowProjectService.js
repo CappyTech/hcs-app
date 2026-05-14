@@ -83,42 +83,51 @@ async function checkProjectFinancials({ notifyEmail } = {}) {
 
     if (to) {
       const fmt = n => `£${Number(n).toFixed(2)}`;
+      const baseUrl = process.env.BASE_URL || '';
+      const kfBase = 'https://app.kashflow.com/editProject.asp';
+
       const rows = atRisk
-        .map(
-          p => `
+        .map(p => {
+          const kfLink = p.Id
+            ? `<a href="${kfBase}?id=${p.Id}" style="color:#4f46e5;text-decoration:none">${p.Number} — ${p.Name || '—'}</a>`
+            : `${p.Number} — ${p.Name || '—'}`;
+          return `
           <tr>
-            <td style="padding:6px 10px;border-bottom:1px solid #eee">${p.Number} — ${p.Name || '—'}</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${fmt(p._financials.incomeTarget)}</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${fmt(p._financials.incomeActual)}</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;color:#dc2626">${fmt(p._financials.incomeDiff)}</td>
-          </tr>`,
-        )
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${kfLink}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280">${p.CustomerName || '—'}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right">${fmt(p._financials.incomeTarget)}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right">${fmt(p._financials.incomeActual)}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#dc2626;font-weight:600">${fmt(p._financials.incomeDiff)}</td>
+          </tr>`;
+        })
         .join('');
 
-      const html = `
-        <h2 style="font-family:sans-serif">KashFlow Projects — Income Alert</h2>
-        <p style="font-family:sans-serif">
-          The following ${atRisk.length} active project(s) have actual income below their target:
-        </p>
-        <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;width:100%">
-          <thead>
-            <tr style="background:#f3f4f6">
-              <th style="padding:6px 10px;text-align:left">Project</th>
-              <th style="padding:6px 10px;text-align:right">Target</th>
-              <th style="padding:6px 10px;text-align:right">Actual</th>
-              <th style="padding:6px 10px;text-align:right">Difference</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <p style="font-family:sans-serif;margin-top:16px">
-          Review at <a href="${process.env.BASE_URL || ''}/overview/projects">/overview/projects</a>
-        </p>`;
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<body style="margin:0;padding:24px;font-family:Arial,sans-serif;font-size:14px;color:#111827">
+  <p style="margin:0 0 16px"><strong>${atRisk.length} KashFlow project${atRisk.length !== 1 ? 's are' : ' is'} below income target.</strong></p>
+  <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px">
+    <thead>
+      <tr style="background:#f1f5f9">
+        <th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb">Project</th>
+        <th style="padding:7px 10px;text-align:left;border:1px solid #e5e7eb">Customer</th>
+        <th style="padding:7px 10px;text-align:right;border:1px solid #e5e7eb">Target</th>
+        <th style="padding:7px 10px;text-align:right;border:1px solid #e5e7eb">Actual</th>
+        <th style="padding:7px 10px;text-align:right;border:1px solid #e5e7eb">Shortfall</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p style="margin:16px 0 0;font-size:13px;color:#6b7280">
+    <a href="${baseUrl}/overview/projects" style="color:#4f46e5">View overview &rarr;</a>
+  </p>
+</body>
+</html>`;
 
       const text = atRisk
         .map(
           p =>
-            `${p.Number} — ${p.Name || '—'}: target £${p._financials.incomeTarget.toFixed(2)}, actual £${p._financials.incomeActual.toFixed(2)}, diff £${p._financials.incomeDiff.toFixed(2)}`,
+            `${p.Number} — ${p.Name || '—'} (${p.CustomerName || '—'}): target ${fmt(p._financials.incomeTarget)}, actual ${fmt(p._financials.incomeActual)}, shortfall ${fmt(p._financials.incomeDiff)}`,
         )
         .join('\n');
 
@@ -130,7 +139,7 @@ async function checkProjectFinancials({ notifyEmail } = {}) {
       });
       emailSent = true;
     } else {
-      logger.warn('[kashflowProjectService] NOTIFY_EMAIL not set — skipping alert email');
+      logger.warn('[kashflowProjectService] No notify email set — skipping alert email');
     }
   }
 
@@ -158,13 +167,7 @@ async function markProjectComplete(projectNumber) {
     );
   });
 
-  // Mirror in local REST namespace so next page load reflects immediately
-  const RestProject = mdb.REST?.project;
-  if (RestProject) {
-    await RestProject.updateOne({ Number: projectNumber }, { $set: { Status: 'Completed' } });
-  }
-
-  logger.info(`[kashflowProjectService] Marked project ${projectNumber} as Completed`);
+  logger.info(`[kashflowProjectService] Marked project ${projectNumber} as Completed in KashFlow`);
 }
 
 module.exports = { checkProjectFinancials, markProjectComplete, computeFinancials };
