@@ -214,13 +214,12 @@ describe('checkProjectFinancials', () => {
     assert.equal(emailSendMailCalls.length, 0);
   });
 
-  it('sends email when a project is at risk and NOTIFY_EMAIL is set', async () => {
-    process.env.NOTIFY_EMAIL = 'alerts@test.com';
+  it('sends email when a project is at risk and notifyEmail is provided', async () => {
     try {
       stubs.findResult = [
         { Number: 42, Name: 'At Risk Project', TargetSalesAmount: 1000, ActualSalesAmount: 200 },
       ];
-      const result = await checkProjectFinancials();
+      const result = await checkProjectFinancials({ notifyEmail: 'alerts@test.com' });
       assert.equal(result.atRisk, 1);
       assert.equal(result.emailSent, true);
       assert.equal(emailSendMailCalls.length, 1);
@@ -232,7 +231,7 @@ describe('checkProjectFinancials', () => {
     } finally { restoreEnv(); }
   });
 
-  it('does not send email when NOTIFY_EMAIL, SMTP_FROM, SMTP_USER are not set', async () => {
+  it('does not send email when no notifyEmail provided and no env fallbacks set', async () => {
     delete process.env.NOTIFY_EMAIL;
     delete process.env.SMTP_FROM;
     delete process.env.SMTP_USER;
@@ -248,14 +247,13 @@ describe('checkProjectFinancials', () => {
   });
 
   it('reports multiple at-risk projects correctly', async () => {
-    process.env.NOTIFY_EMAIL = 'alerts@test.com';
     try {
       stubs.findResult = [
         { Number: 1, Name: 'A', TargetSalesAmount: 1000, ActualSalesAmount: 100 },
         { Number: 2, Name: 'B', TargetSalesAmount: 500,  ActualSalesAmount: 600 },
         { Number: 3, Name: 'C', TargetSalesAmount: 2000, ActualSalesAmount: 500 },
       ];
-      const result = await checkProjectFinancials();
+      const result = await checkProjectFinancials({ notifyEmail: 'alerts@test.com' });
       assert.equal(result.checked, 3);
       assert.equal(result.atRisk, 2);
       assert.equal(result.emailSent, true);

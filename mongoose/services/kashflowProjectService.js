@@ -43,9 +43,11 @@ function computeFinancials(project) {
  * financial health, and sends an alert email for any project where the income
  * difference is negative (actual < target).
  *
+ * @param {object} [opts]
+ * @param {string} [opts.notifyEmail] - Address to send alert to (required to send email)
  * Returns { checked, atRisk, emailSent }
  */
-async function checkProjectFinancials() {
+async function checkProjectFinancials({ notifyEmail } = {}) {
   const RestProject = mdb.REST?.project;
   if (!RestProject) throw new Error('REST project model not available');
 
@@ -74,12 +76,12 @@ async function checkProjectFinancials() {
 
   let emailSent = false;
   if (atRisk.length > 0) {
-    const notifyEmail =
+    const to = notifyEmail ||
       process.env.NOTIFY_EMAIL ||
       process.env.SMTP_FROM ||
       process.env.SMTP_USER;
 
-    if (notifyEmail) {
+    if (to) {
       const fmt = n => `£${Number(n).toFixed(2)}`;
       const rows = atRisk
         .map(
@@ -121,7 +123,7 @@ async function checkProjectFinancials() {
         .join('\n');
 
       await emailService.sendMail({
-        to: notifyEmail,
+        to,
         subject: `⚠ ${atRisk.length} KashFlow project(s) below income target`,
         html,
         text,

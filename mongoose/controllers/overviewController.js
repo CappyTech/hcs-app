@@ -113,9 +113,10 @@ exports.getPayrollOverview = async (req, res, next) => {
 
 exports.postProjectsFinancialCheck = async (req, res, next) => {
   try {
-    const result = await kashflowProjectService.checkProjectFinancials();
+    const notifyEmail = (req.body.notifyEmail || '').trim();
+    const result = await kashflowProjectService.checkProjectFinancials({ notifyEmail });
     req.flash?.('success',
-      `Financial check complete: ${result.checked} project(s) checked, ${result.atRisk} at risk${result.emailSent ? ' — alert email sent' : ''}.`
+      `Financial check complete: ${result.checked} project(s) checked, ${result.atRisk} at risk${result.emailSent ? ` — alert email sent to ${notifyEmail}` : ''}.`
     );
   } catch (err) {
     req.flash?.('error', `Financial check failed: ${err.message}`);
