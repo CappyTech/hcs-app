@@ -16,7 +16,9 @@
 const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
 const logger = require("../../services/loggerService");
-const axios = require("axios");
+const kfSession = require("../../services/kashflowSessionService");
+const kfAxios = kfSession.kfAxios;
+const axios = require("axios"); // non-KashFlow requests (Paperless-ngx etc.)
 const {
   grabPaperlessOCR,
   ingestOnePaperlessDoc,
@@ -754,7 +756,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
             Authorization: `KfToken ${token}`,
             "User-Agent": `sms-app/${process.env.npm_package_version || "0.0.0"}`,
           };
-          return axios.post(url, payload, { headers, timeout: 20000 });
+          return kfAxios.post(url, payload, { headers, timeout: 20000 });
         });
         logger.info(
           `[kashflow] Direct create Purchase OK for paperlessId=${paperlessId}. status=${resp.status}`,

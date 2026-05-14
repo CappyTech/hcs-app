@@ -89,8 +89,15 @@ async function getProjectsOverview() {
     const allRestProjects = await RestProject.aggregate([
       { $group: { _id: '$Status', count: { $sum: 1 } } },
     ]);
+    const statusOrder = ['Active', 'Completed', 'Archived'];
+    const rawByStatus = {};
     for (const r of allRestProjects) {
-      restProjectByStatus[r._id || 'Unknown'] = r.count;
+      rawByStatus[r._id || 'Unknown'] = r.count;
+    }
+    // Build in preferred order, then append any unexpected statuses alphabetically
+    const ordered = [...statusOrder, ...Object.keys(rawByStatus).filter(s => !statusOrder.includes(s)).sort()];
+    for (const s of ordered) {
+      if (rawByStatus[s] !== undefined) restProjectByStatus[s] = rawByStatus[s];
     }
 
     // Attach financial health to each project

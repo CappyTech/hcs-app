@@ -1,9 +1,9 @@
 'use strict';
 
-const axios = require('axios');
 const logger = require('../../services/loggerService');
 const emailService = require('../../services/emailService');
 const kfSession = require('../../services/kashflowSessionService');
+const axios = kfSession.kfAxios;
 const mdb = require('./mongooseDatabaseService');
 
 const KF_BASE = (

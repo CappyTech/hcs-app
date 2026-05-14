@@ -60,14 +60,8 @@ const kfSessionMock = {
     if (stubs.withKfAuthThrow) throw stubs.withKfAuthThrow;
     return fn('fake-token');
   },
+  kfAxios: null, // set after axiosMock is defined below
 };
-require.cache[require.resolve('../services/kashflowSessionService')] = {
-  id: require.resolve('../services/kashflowSessionService'),
-  filename: require.resolve('../services/kashflowSessionService'),
-  loaded: true,
-  exports: kfSessionMock,
-};
-
 // Mock axios
 let axiosPutCalls = [];
 let axiosGetCalls = [];
@@ -88,6 +82,15 @@ require.cache[require.resolve('axios')] = {
   filename: require.resolve('axios'),
   loaded: true,
   exports: axiosMock,
+};
+
+// Wire kfAxios now that axiosMock exists, then register session mock
+kfSessionMock.kfAxios = axiosMock;
+require.cache[require.resolve('../services/kashflowSessionService')] = {
+  id: require.resolve('../services/kashflowSessionService'),
+  filename: require.resolve('../services/kashflowSessionService'),
+  loaded: true,
+  exports: kfSessionMock,
 };
 
 // Mock loggerService

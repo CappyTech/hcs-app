@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const logger = require("../../services/loggerService");
+const mdb = require("../services/mongooseDatabaseService");
 
 const LOG_PATH = path.join(__dirname, "..", "..", "logs", "app.json.log");
 
@@ -114,5 +115,85 @@ exports.downloadLogs = async (req, res) => {
   } catch (err) {
     logger.error("Download logs error: " + err.message);
     res.status(500).json({ error: "Failed to download logs" });
+  }
+};
+
+// ── Shared helper for MongoDB API log pages ──────────────────────────────────
+
+async function getApiLogPage(res, { modelName, title, source }) {
+  try {
+    const model = mdb.INTERNAL?.[modelName];
+    if (!model) {
+      return res.render(path.join("tailwindcss", "admin", "apiLogs"), {
+        title,
+        source,
+        entries: [],
+        stats: { request: 0, response: 0, error: 0 },
+        unavailable: true,
+      });
+    }
+
+    const limit = 500;
+    const entries = await model
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const stats = { request: 0, response: 0, error: 0 };
+    for (const e of entries) {
+      if (e.direction === 'request') stats.request++;
+      else if (e.direction === 'response') stats.response++;
+      else if (e.direction === 'error') stats.error++;
+    }
+
+    res.render(path.join("tailwindcss", "admin", "apiLogs"), {
+      title,
+      source,
+      entries,
+      stats,
+      unavailable: false,
+    });
+  } catch (err) {
+    logger.error(`${title} logs page error: ${err.message}`);
+    res.status(500).render("error", { message: "Failed to load API logs." });
+  }
+}
+
+/* ── GET /logs/kashflow  (KashFlow API log viewer) ── */
+exports.getKashflowApiLogs = (req, res) =>
+  getApiLogPage(res, { modelName: 'kashflowApiLog', title: 'KashFlow API Logs', source: 'kashflow' });
+
+/* ── GET /logs/paperless  (Paperless API log viewer) ── */
+exports.getPaperlessApiLogs = (req, res) =>
+  getApiLogPage(res, { modelName: 'paperlessApiLog', title: 'Paperless API Logs', source: 'paperless' });
+
+/* ── GET /logs/kashflow/data  (JSON — for live refresh) ── */
+exports.getKashflowApiLogsData = async (req, res) => {
+  try {
+    const model = mdb.INTERNAL?.kashflowApiLog;
+    if (!model) return res.json({ entries: [] });
+    const limit = Math.min(parseInt(req.query.limit, 10) || 200, 500);
+    const direction = req.query.direction;
+    const filter = direction ? { direction } : {};
+    const entries = await model.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+    res.json({ entries });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* ── GET /logs/paperless/data  (JSON — for live refresh) ── */
+exports.getPaperlessApiLogsData = async (req, res) => {
+  try {
+    const model = mdb.INTERNAL?.paperlessApiLog;
+    if (!model) return res.json({ entries: [] });
+    const limit = Math.min(parseInt(req.query.limit, 10) || 200, 500);
+    const direction = req.query.direction;
+    const filter = direction ? { direction } : {};
+    const entries = await model.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+    res.json({ entries });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
