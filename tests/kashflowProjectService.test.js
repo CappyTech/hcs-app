@@ -10,6 +10,8 @@ const stubs = {
   updateOneResult: {},
   putResult: {},
   putThrow: null,
+  getResult: { Number: 42, Name: 'Test Project', Status: 'Active', CustomerCode: 'CUST01' },
+  getThrow: null,
   withKfAuthThrow: null,
   sendMailResult: { accepted: ['test@example.com'] },
 };
@@ -68,7 +70,13 @@ require.cache[require.resolve('../services/kashflowSessionService')] = {
 
 // Mock axios
 let axiosPutCalls = [];
+let axiosGetCalls = [];
 const axiosMock = {
+  get: async (url, opts) => {
+    axiosGetCalls.push({ url, opts });
+    if (stubs.getThrow) throw stubs.getThrow;
+    return { data: stubs.getResult };
+  },
   put: async (url, body, opts) => {
     axiosPutCalls.push({ url, body, opts });
     if (stubs.putThrow) throw stubs.putThrow;
@@ -268,23 +276,30 @@ describe('checkProjectFinancials', () => {
 
 describe('markProjectComplete', () => {
   beforeEach(() => {
-    axiosPutCalls = [];
-    kfAuthCalls   = [];
+    axiosPutCalls  = [];
+    axiosGetCalls  = [];
+    kfAuthCalls    = [];
     stubs.putThrow = null;
+    stubs.getThrow = null;
     stubs.withKfAuthThrow = null;
+    stubs.getResult = { Number: 42, Name: 'Test Project', Status: 'Active', CustomerCode: 'CUST01' };
   });
 
   it('throws when projectNumber is not provided', async () => {
     await assert.rejects(() => markProjectComplete(null), /projectNumber is required/);
   });
 
-  it('calls withKfAuth and axios.put with correct args', async () => {
+  it('GETs the project then PUTs with Status Completed', async () => {
     await markProjectComplete(42);
     assert.equal(kfAuthCalls.length, 1);
+    assert.equal(axiosGetCalls.length, 1);
+    assert.ok(axiosGetCalls[0].url.endsWith('/projects/42'));
     assert.equal(axiosPutCalls.length, 1);
     const { url, body } = axiosPutCalls[0];
     assert.ok(url.endsWith('/projects/42'));
-    assert.deepEqual(body, { Status: 'Completed' });
+    assert.equal(body.Status, 'Completed');
+    assert.equal(body.Name, 'Test Project');
+    assert.equal(body.CustomerCode, 'CUST01');
   });
 
   it('sends Authorization header with KfToken', async () => {
@@ -294,7 +309,7 @@ describe('markProjectComplete', () => {
   });
 
   it('propagates KashFlow API errors', async () => {
-    stubs.putThrow = new Error('API error');
+    stubs.getThrow = new Error('API error');
     await assert.rejects(() => markProjectComplete(1), /API error/);
   });
 });

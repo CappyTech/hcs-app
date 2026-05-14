@@ -154,16 +154,40 @@ async function checkProjectFinancials({ notifyEmail } = {}) {
 
 /**
  * Sends PUT /projects/{number} to KashFlow with Status = "Completed".
- * Also updates the local MongoDB REST record so the UI reflects immediately.
+ * Fetches the existing project first so the PUT body contains all required fields.
  */
 async function markProjectComplete(projectNumber) {
   if (!projectNumber) throw new Error('projectNumber is required');
 
   await kfSession.withKfAuth(async (token) => {
+    const headers = { Authorization: `KfToken ${token}` };
+
+    // Fetch the current project so we can send a complete PUT body
+    const { data: existing } = await axios.get(
+      `${KF_BASE}/projects/${projectNumber}`,
+      { headers },
+    );
+
+    // Only send the fields the PUT endpoint accepts
+    const body = {
+      Number:                existing.Number,
+      Name:                  existing.Name,
+      Reference:             existing.Reference,
+      Description:           existing.Description,
+      Note:                  existing.Note,
+      Status:                'Completed',
+      StartDate:             existing.StartDate,
+      EndDate:               existing.EndDate,
+      CustomerCode:          existing.CustomerCode,
+      TargetSalesAmount:     existing.TargetSalesAmount,
+      TargetPurchasesAmount: existing.TargetPurchasesAmount,
+      ExcludeVAT:            existing.ExcludeVAT,
+    };
+
     await axios.put(
       `${KF_BASE}/projects/${projectNumber}`,
-      { Status: 'Completed' },
-      { headers: { Authorization: `KfToken ${token}` } },
+      body,
+      { headers },
     );
   });
 
