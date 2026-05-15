@@ -98,7 +98,7 @@ async function generateContributionsCSV(run, entries) {
     ]);
   }
 
-  logger.info(`peoplesPensionService: generated CSV for run ${run.uuid}, ${entries.length} entries`);
+  logger.info(`[peoplesPensionService] Generated CSV for run ${run.uuid}, ${entries.length} entries`);
   return Buffer.from(csv, 'utf-8');
 }
 

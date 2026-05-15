@@ -295,18 +295,16 @@ exports.approveAttendance = async (req, res, next) => {
       { new: true },
     );
     if (!updated) {
-      logger.warn(
-        `Approve failed: attendance ${req.params.uuid} not found or not pending`,
-      );
+      logger.warn(`[attendanceController] Approve failed: attendance ${req.params.uuid} not found or not pending`);
       return res.status(404).redirect("back");
     }
     // Trigger holiday accrual now that it's approved
     const holidayAccrualService = require("../services/holidayAccrualService");
     await holidayAccrualService.updateAccrualFromAttendance(updated);
-    logger.info(`✅ Attendance ${req.params.uuid} approved`);
+    logger.info(`[attendanceController] Attendance ${req.params.uuid} approved`);
     res.redirect("back");
   } catch (err) {
-    logger.error(`❌ Error approving attendance: ${err.message}`);
+    logger.error(`[attendanceController] Error approving attendance: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
@@ -319,15 +317,13 @@ exports.rejectAttendance = async (req, res, next) => {
       { new: true },
     );
     if (!updated) {
-      logger.warn(
-        `Reject failed: attendance ${req.params.uuid} not found or not pending`,
-      );
+      logger.warn(`[attendanceController] Reject failed: attendance ${req.params.uuid} not found or not pending`);
       return res.status(404).redirect("back");
     }
-    logger.info(`❌ Attendance ${req.params.uuid} rejected`);
+    logger.info(`[attendanceController] Attendance ${req.params.uuid} rejected`);
     res.redirect("back");
   } catch (err) {
-    logger.error(`❌ Error rejecting attendance: ${err.message}`);
+    logger.error(`[attendanceController] Error rejecting attendance: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
@@ -336,7 +332,7 @@ exports.bulkApproveAttendance = async (req, res, next) => {
   try {
     const { weekStart, weekEnd } = req.body;
     if (!weekStart || !weekEnd) {
-      logger.warn("Bulk approve: missing weekStart or weekEnd");
+      logger.warn('[attendanceController] Bulk approve: missing weekStart or weekEnd');
       return res.status(400).redirect("back");
     }
 
@@ -359,19 +355,15 @@ exports.bulkApproveAttendance = async (req, res, next) => {
         try {
           await holidayAccrualService.updateAccrualFromAttendance(record);
         } catch (accrualErr) {
-          logger.warn(
-            `Holiday accrual update failed for ${record.uuid}: ${accrualErr.message}`,
-          );
+          logger.warn(`[attendanceController] Holiday accrual update failed for ${record.uuid}: ${accrualErr.message}`);
         }
       }
     }
 
-    logger.info(
-      `✅ Bulk approved ${result.modifiedCount} attendance records for ${weekStart} to ${weekEnd}`,
-    );
+    logger.info(`[attendanceController] Bulk approved ${result.modifiedCount} attendance records for ${weekStart} to ${weekEnd}`);
     res.redirect("back");
   } catch (err) {
-    logger.error(`❌ Error bulk approving attendance: ${err.message}`);
+    logger.error(`[attendanceController] Error bulk approving attendance: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
@@ -468,9 +460,7 @@ exports.submitAttendance = async (req, res, next) => {
     const record = new mdb.INTERNAL.attendance(data);
     await record.save();
 
-    logger.info(
-      `📝 Self-service attendance submitted by ${req.user.username} (${role}): ${record.uuid}`,
-    );
+    logger.info(`[attendanceController] Self-service attendance submitted by ${req.user.username} (${role}): ${record.uuid}`);
     req.flash("success", "Attendance submitted for approval.");
     res.redirect("/daily/" + moment(data.date).format("YYYY-MM-DD"));
   } catch (err) {
@@ -482,7 +472,7 @@ exports.submitAttendance = async (req, res, next) => {
       );
       return res.redirect("/attendance/submit");
     }
-    logger.error(`❌ Self-service attendance error: ${err.message}`);
+    logger.error(`[attendanceController] Self-service attendance error: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
@@ -524,9 +514,7 @@ async function saveStatementInvoiceNumbers(paperlessId, numbers) {
       "Invoice Number": csvValue,
     });
   } catch (err) {
-    logger.warn(
-      `[statement] Failed to sync Invoice Number to Paperless for doc ${paperlessId}: ${err.message}`,
-    );
+    logger.warn(`[attendanceController] Sync to Paperless failed for doc ${paperlessId}: ${err.message}`);
   }
 }
 
@@ -567,13 +555,11 @@ exports.addStatementPurchase = async (req, res, next) => {
     numbers.push(purchaseNumber);
     await saveStatementInvoiceNumbers(paperlessId, numbers);
 
-    logger.info(
-      `[statement] Added purchase #${purchaseNumber} to statement paperlessId=${paperlessId}`,
-    );
+    logger.info(`[attendanceController] Added purchase #${purchaseNumber} to statement paperlessId=${paperlessId}`);
     req.flash("success", `Purchase #${purchaseNumber} added to statement.`);
     res.redirect("back");
   } catch (err) {
-    logger.error(`[statement] Error adding purchase: ${err.message}`);
+    logger.error(`[attendanceController] Error adding purchase to statement: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
@@ -605,13 +591,11 @@ exports.removeStatementPurchase = async (req, res, next) => {
 
     await saveStatementInvoiceNumbers(paperlessId, filtered);
 
-    logger.info(
-      `[statement] Removed purchase #${purchaseNumber} from statement paperlessId=${paperlessId}`,
-    );
+    logger.info(`[attendanceController] Removed purchase #${purchaseNumber} from statement paperlessId=${paperlessId}`);
     req.flash("success", `Purchase #${purchaseNumber} removed from statement.`);
     res.redirect("back");
   } catch (err) {
-    logger.error(`[statement] Error removing purchase: ${err.message}`);
+    logger.error(`[attendanceController] Error removing purchase from statement: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
@@ -684,7 +668,7 @@ exports.updateAttendance = async (req, res, next) => {
       });
     }
 
-    logger.info(`✏️  Inline updated attendance ${req.params.uuid}`);
+    logger.info(`[attendanceController] Inline updated attendance ${req.params.uuid}`);
     return res.json({
       success: true,
       record: {
@@ -698,7 +682,7 @@ exports.updateAttendance = async (req, res, next) => {
       },
     });
   } catch (err) {
-    logger.error(`❌ Inline update attendance error: ${err.message}`);
+    logger.error(`[attendanceController] Inline update attendance error: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
@@ -779,7 +763,7 @@ exports.inlineCreateAttendance = async (req, res, next) => {
     const record = new mdb.INTERNAL.attendance(data);
     await record.save();
 
-    logger.info(`✏️  Inline created attendance ${record.uuid} for date ${date}`);
+    logger.info(`[attendanceController] Inline created attendance ${record.uuid} for date ${date}`);
     return res.status(201).json({
       success: true,
       record: {
@@ -801,7 +785,7 @@ exports.inlineCreateAttendance = async (req, res, next) => {
           "An attendance record already exists for this person on this date with the same location/project.",
       });
     }
-    logger.error(`❌ Inline create attendance error: ${err.message}`);
+    logger.error(`[attendanceController] Inline create attendance error: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };

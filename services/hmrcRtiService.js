@@ -389,7 +389,7 @@ ${xmlBody}
     rawResponse = String(resp.data || '');
   } catch (err) {
     rawResponse = String(err?.response?.data || err.message || 'Network error');
-    logger.error(`hmrcRtiService.submitToGateway: HTTP error — ${err.message}`);
+    logger.error(`[hmrcRtiService] submitToGateway: HTTP error — ${err.message}`, { stack: err.stack });
     // Return rejected status so callers can log/display it
     return { status: 'rejected', correlationId, errors: [err.message], rawResponse };
   }
@@ -462,9 +462,9 @@ async function submitFPSForRun(runUuid, context = {}) {
   if (result.status === 'accepted') {
     // Mark run as submitted
     await PayrollRun.updateOne({ _id: run._id }, { $set: { status: 'submitted' } });
-    logger.info(`hmrcRtiService: FPS accepted for run ${runUuid}, corr=${result.correlationId}`);
+    logger.info(`[hmrcRtiService] FPS accepted for run ${runUuid}, corr=${result.correlationId}`);
   } else {
-    logger.warn(`hmrcRtiService: FPS ${result.status} for run ${runUuid}: ${result.errors.join('; ')}`);
+    logger.warn(`[hmrcRtiService] FPS ${result.status} for run ${runUuid}: ${result.errors.join('; ')}`);
   }
 
   return result;
@@ -507,9 +507,9 @@ async function submitEPS(taxYear, taxMonth, context = {}) {
   await submission.save();
 
   if (result.status === 'accepted') {
-    logger.info(`hmrcRtiService: EPS accepted for ${taxYear} M${taxMonth}, corr=${result.correlationId}`);
+    logger.info(`[hmrcRtiService] EPS accepted for ${taxYear} M${taxMonth}, corr=${result.correlationId}`);
   } else {
-    logger.warn(`hmrcRtiService: EPS ${result.status} for ${taxYear} M${taxMonth}: ${result.errors.join('; ')}`);
+    logger.warn(`[hmrcRtiService] EPS ${result.status} for ${taxYear} M${taxMonth}: ${result.errors.join('; ')}`);
   }
 
   return result;

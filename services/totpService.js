@@ -21,7 +21,7 @@ const generateTOTPSecret = async (user) => {
   user.totpSecret = encryptionService.encrypt(secret);
   await user.save();
 
-  logger.info(`Generated and encrypted TOTP Secret for user ${user.id}`);
+  logger.info(`[totpService] Generated and encrypted TOTP Secret for user ${user.id}`);
   return secret; // Return the Base32 secret for QR code generation or manual input
 };
 

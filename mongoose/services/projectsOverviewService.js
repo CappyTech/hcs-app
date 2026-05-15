@@ -1,6 +1,7 @@
 'use strict';
 
 const mdb = require('./mongooseDatabaseService');
+const { computeFinancials } = require('./kashflowProjectService');
 
 async function getProjectsOverview() {
   const Contract = mdb.INTERNAL?.contract;
@@ -78,17 +79,37 @@ async function getProjectsOverview() {
   // ── REST projects ──────────────────────────────────────────────────────────
   let restProjects = [];
   let restProjectByStatus = {};
+  let restProjectsAtRisk = [];
+  let restProjectsReadyToComplete = [];
+
   if (RestProject) {
-    restProjects = await RestProject.find({ Status: { $ne: 'Completed' } })
+    restProjects = await RestProject.find({ Status: { $nin: ['Completed', 'Archived'] } })
       .sort({ StartDate: -1 })
-      .limit(20)
       .lean();
     const allRestProjects = await RestProject.aggregate([
       { $group: { _id: '$Status', count: { $sum: 1 } } },
     ]);
+    const statusOrder = ['Active', 'Completed', 'Archived'];
+    const rawByStatus = {};
     for (const r of allRestProjects) {
-      restProjectByStatus[r._id || 'Unknown'] = r.count;
+      rawByStatus[r._id || 'Unknown'] = r.count;
     }
+    // Build in preferred order, then append any unexpected statuses alphabetically
+    const ordered = [...statusOrder, ...Object.keys(rawByStatus).filter(s => !statusOrder.includes(s)).sort()];
+    for (const s of ordered) {
+      if (rawByStatus[s] !== undefined) restProjectByStatus[s] = rawByStatus[s];
+    }
+
+    // Attach financial health to each project
+    for (const p of restProjects) {
+      p._financials = computeFinancials(p);
+    }
+
+    restProjectsAtRisk          = restProjects.filter(p => p._financials.atRisk);
+    restProjectsReadyToComplete = restProjects.filter(p => !p._financials.atRisk && p._financials.incomeTarget > 0 && p._financials.incomeActual > 0);
+
+    // Only surface projects that need attention in the financial health table
+    restProjects = restProjects.filter(p => p._financials.atRisk || (!p._financials.atRisk && p._financials.incomeTarget > 0 && p._financials.incomeActual > 0));
   }
 
   return {
@@ -103,6 +124,8 @@ async function getProjectsOverview() {
     contractsWithoutAssignments,
     restProjects,
     restProjectByStatus,
+    restProjectsAtRisk,
+    restProjectsReadyToComplete,
   };
 }
 

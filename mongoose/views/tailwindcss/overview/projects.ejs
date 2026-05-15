@@ -97,20 +97,57 @@
   <% } %>
 
   <!-- Active Contracts -->
+  <% if (activeContracts.length > 0) { %>
   <div class="mb-8">
-    <div class="flex justify-between items-center">
+    <div class="flex justify-between items-center mb-3">
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Active Contracts (<%= activeContracts.length %>)</h2>
       <a href="/contracts" class="text-sm text-blue-600 hover:underline">View all contracts &rarr;</a>
     </div>
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% for (const c of activeContracts) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/contract/read/<%= c.uuid %>" class="font-medium text-blue-600 hover:underline"><%= c.title %></a>
+          <span class="ml-2 text-gray-500 dark:text-gray-400"><%= c.location || '' %></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <% if (c.endDate) { %><span class="text-gray-500 text-xs">Ends <%= slimDateTime(c.endDate) %></span><% } %>
+          <span class="text-xs text-gray-400"><%= assignmentsByContract[c._id.toString()] || 0 %> assignment<%= (assignmentsByContract[c._id.toString()] || 0) !== 1 ? 's' : '' %></span>
+          <a href="/contract/update/<%= c.uuid %>" class="text-blue-600 hover:underline text-xs">Edit</a>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
+  <% } %>
 
   <!-- Recent Assignments -->
+  <% if (recentAssignments.length > 0) { %>
   <div class="mb-8">
-    <div class="flex justify-between items-center">
+    <div class="flex justify-between items-center mb-3">
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Recent Assignments</h2>
       <a href="/assignments" class="text-sm text-blue-600 hover:underline">View all assignments &rarr;</a>
     </div>
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% for (const a of recentAssignments) { %>
+      <li class="flex items-center justify-between py-1.5 text-sm">
+        <div>
+          <a href="/assignment/read/<%= a.uuid %>" class="font-medium text-blue-600 hover:underline"><%= a.title %></a>
+          <% if (a._contractUuid) { %>
+            <a href="/contract/read/<%= a._contractUuid %>" class="ml-2 text-xs text-gray-500 dark:text-gray-400 hover:underline"><%= a._contractTitle %></a>
+          <% } else { %>
+            <span class="ml-2 text-xs text-gray-400"><%= a._contractTitle %></span>
+          <% } %>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-gray-400 text-xs">w/c <%= slimDateTime(a.weekStart) %></span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= a.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' : a.status === 'Done' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400' %>"><%= a.status %></span>
+        </div>
+      </li>
+      <% } %>
+    </ul>
   </div>
+  <% } %>
 
   <!-- KashFlow Projects -->
   <% if (restProjects.length > 0) { %>
@@ -131,4 +168,176 @@
   </div>
   <% } %>
 
+  <!-- KashFlow Project Financial Health -->
+  <div class="mb-8">
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">KashFlow Project Financial Health</h2>
+        <% if (restProjectsAtRisk.length > 0) { %>
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-800/20 dark:text-red-400">
+            &#9888; <%= restProjectsAtRisk.length %> at risk
+          </span>
+        <% } %>
+        <% if (restProjectsReadyToComplete.length > 0) { %>
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-800/20 dark:text-green-400">
+            &#10003; <%= restProjectsReadyToComplete.length %> ready to complete
+          </span>
+        <% } %>
+      </div>
+      <button type="button" data-modal-open="financialCheckModal"
+        class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
+        &#128269; Run Financial Check &amp; Email Alerts
+      </button>
+    </div>
+
+    <% if (restProjects.length === 0) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">No projects with income activity to review.</p>
+    <% } else { %>
+    <% if (restProjectsAtRisk.length > 0 || restProjectsReadyToComplete.length > 0) { %>
+    <div class="flex flex-wrap gap-3 mb-3">
+      <% if (restProjectsAtRisk.length > 0) { %>
+      <p class="text-sm text-red-600 dark:text-red-400">
+        &#9888; <strong><%= restProjectsAtRisk.length %></strong> project(s) are below their income target.
+      </p>
+      <% } %>
+      <% if (restProjectsReadyToComplete.length > 0) { %>
+      <p class="text-sm text-green-600 dark:text-green-400">
+        &#10003; <strong><%= restProjectsReadyToComplete.length %></strong> project(s) have met or exceeded their income target and can be marked complete.
+      </p>
+      <% } %>
+    </div>
+    <% } %>
+    <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">#</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Project</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Status</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Income Target</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Income Actual</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Difference</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Exp. Target</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Exp. Actual</th>
+            <th class="px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-300">Action</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+          <% for (const p of restProjects) {
+            const f = p._financials;
+            const fmt = n => '£' + Number(n).toFixed(2);
+          %>
+          <tr class="<%= f.atRisk ? 'bg-red-50 dark:bg-red-900/10' : '' %>">
+            <td class="px-4 py-2 text-gray-500 dark:text-gray-400"><%= p.Number %></td>
+            <td class="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">
+              <a href="https://app.kashflow.com/editProject.asp?id=<%= p.Id %>" target="_blank" rel="noopener noreferrer"
+                class="hover:underline text-blue-600 dark:text-blue-400"><%= p.Name || '—' %></a>
+              <% if (p.CustomerName) { %>
+                <span class="ml-1 text-xs text-gray-400">(<%= p.CustomerName %>)</span>
+              <% } %>
+            </td>
+            <td class="px-4 py-2">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                <%= p.Status === 'Active' || p.Status === '1' || p.Status === 1 ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' %>">
+                <%= p.StatusName || p.Status || '—' %>
+              </span>
+            </td>
+            <td class="px-4 py-2 text-right text-gray-700 dark:text-gray-300"><%= fmt(f.incomeTarget) %></td>
+            <td class="px-4 py-2 text-right text-gray-700 dark:text-gray-300"><%= fmt(f.incomeActual) %></td>
+            <td class="px-4 py-2 text-right font-semibold <%= f.incomeDiff < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' %>">
+              <%= fmt(f.incomeDiff) %>
+            </td>
+            <td class="px-4 py-2 text-right text-gray-500 dark:text-gray-400"><%= fmt(f.expTarget) %></td>
+            <td class="px-4 py-2 text-right text-gray-500 dark:text-gray-400"><%= fmt(f.expActual) %></td>
+            <td class="px-4 py-2 text-center">
+              <% if (!f.atRisk && f.incomeTarget > 0) { %>
+              <button type="button"
+                data-modal-open="markCompleteModal"
+                data-modal-param-projectNumber="<%= p.Number %>"
+                data-modal-param-projectName="<%= (p.Name || '').replace(/"/g, '&quot;') %>"
+                class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-green-600 hover:bg-green-700 text-white transition">
+                &#10003; Mark Complete
+              </button>
+              <% } else if (f.atRisk) { %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-800/20 dark:text-red-400">&#9888; At Risk</span>
+              <% } else { %>
+                <span class="text-gray-300 text-xs">—</span>
+              <% } %>
+            </td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+
 </div>
+
+<!-- Financial Check Modal -->
+<div id="financialCheckModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Run Financial Check</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+      All active projects with income recorded will be checked. An alert email will be sent for any project below its target.
+    </p>
+    <form method="POST" action="/overview/projects/check" data-submit-once>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="mb-5">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Send alerts to <span class="text-red-500">*</span>
+        </label>
+        <input type="email" name="notifyEmail" required
+          placeholder="alerts@example.com"
+          value="<%= typeof notifyEmail !== 'undefined' ? notifyEmail : '' %>"
+          class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100">
+      </div>
+      <div class="flex justify-end gap-3">
+        <button type="button" data-modal-close="financialCheckModal"
+          class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition">
+          Cancel
+        </button>
+        <button type="submit" data-submit-once-text="Running…"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition">
+          &#128269; Run Check
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Mark Complete Modal -->
+<div id="markCompleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Mark Project Complete</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+      This will update the project status to <strong>Completed</strong> in KashFlow.
+    </p>
+    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-5" id="markCompleteProjectName"></p>
+    <form id="markCompleteForm" method="POST" action="" data-submit-once>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="flex justify-end gap-3">
+        <button type="button" data-modal-close="markCompleteModal"
+          class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition">
+          Cancel
+        </button>
+        <button type="submit" data-submit-once-text="Saving…"
+          class="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition">
+          &#10003; Confirm Complete
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Populate the Mark Complete modal with the project number/name when opened
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-modal-open="markCompleteModal"]');
+  if (!btn) return;
+  var num  = btn.getAttribute('data-modal-param-projectNumber');
+  var name = btn.getAttribute('data-modal-param-projectName');
+  document.getElementById('markCompleteProjectName').textContent = '#' + num + ' — ' + name;
+  document.getElementById('markCompleteForm').action = '/overview/projects/' + num + '/complete';
+});
+</script>

@@ -5,6 +5,7 @@ const fleetService = require('../services/fleetService');
 const humanOverviewService = require('../services/humanOverviewService');
 const financeOverviewService = require('../services/financeOverviewService');
 const projectsOverviewService = require('../services/projectsOverviewService');
+const kashflowProjectService = require('../services/kashflowProjectService');
 const adminOverviewService = require('../services/adminOverviewService');
 const documentsOverviewService = require('../services/documentsOverviewService');
 const subcontractorsOverviewService = require('../services/subcontractorsOverviewService');
@@ -108,4 +109,28 @@ exports.getPayrollOverview = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+exports.postProjectsFinancialCheck = async (req, res, next) => {
+  try {
+    const notifyEmail = (req.body.notifyEmail || '').trim();
+    const result = await kashflowProjectService.checkProjectFinancials({ notifyEmail });
+    req.flash?.('success',
+      `Financial check complete: ${result.checked} project(s) checked, ${result.atRisk} at risk${result.emailSent ? ` — alert email sent to ${notifyEmail}` : ''}.`
+    );
+  } catch (err) {
+    req.flash?.('error', `Financial check failed: ${err.message}`);
+  }
+  res.redirect('/overview/projects');
+};
+
+exports.postProjectMarkComplete = async (req, res, next) => {
+  const projectNumber = parseInt(req.params.number, 10);
+  try {
+    await kashflowProjectService.markProjectComplete(projectNumber);
+    req.flash?.('success', `Project ${projectNumber} marked as Completed in KashFlow.`);
+  } catch (err) {
+    req.flash?.('error', `Failed to mark project ${projectNumber} complete: ${err.message}`);
+  }
+  res.redirect('/overview/projects');
 };

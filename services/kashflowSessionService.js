@@ -38,6 +38,53 @@
 
 const axios = require("axios");
 const logger = require("./loggerService");
+const kfApiLog = require("./kashflowApiLogService");
+
+// ── Shared axios instance for all KashFlow API calls ─────────────────────────
+// Authorization headers are stripped before logging to avoid storing credentials.
+const kfAxios = axios.create();
+
+kfAxios.interceptors.request.use((config) => {
+  config.metadata = { startTime: Date.now() };
+  const { Authorization, authorization, ...safeHeaders } = config.headers || {};
+  kfApiLog.logRequest({
+    method: config.method,
+    url: config.url,
+    data: config.data || null,
+  });
+  logger.info(`[KashFlow] --> ${(config.method || 'GET').toUpperCase()} ${config.url}`);
+  return config;
+}, (err) => {
+  logger.error(`[KashFlow] Request setup error: ${err.message}`);
+  return Promise.reject(err);
+});
+
+kfAxios.interceptors.response.use((response) => {
+  const durationMs = response.config?.metadata ? Date.now() - response.config.metadata.startTime : undefined;
+  kfApiLog.logResponse({
+    method: response.config?.method,
+    url: response.config?.url,
+    status: response.status,
+    data: response.data,
+    durationMs,
+  });
+  logger.info(`[KashFlow] <-- ${response.status} ${response.config?.method?.toUpperCase() || ''} ${response.config?.url}${durationMs !== undefined ? ` (${durationMs}ms)` : ''}`);
+  return response;
+}, (err) => {
+  const resp = err.response;
+  const cfg  = err.config || {};
+  const durationMs = cfg.metadata ? Date.now() - cfg.metadata.startTime : undefined;
+  const status = resp?.status;
+  kfApiLog.logError({
+    method: cfg.method,
+    url: cfg.url,
+    status,
+    message: err.message,
+    durationMs,
+  });
+  logger.error(`[KashFlow] <-- ${status || 'ERR'} ${(cfg.method || '').toUpperCase()} ${cfg.url || ''}: ${err.message}`);
+  return Promise.reject(err);
+});
 
 // ---------------------------------------------------------------------------
 // In-memory token cache (process-wide singleton – shared across all requests)
@@ -597,4 +644,5 @@ module.exports = {
   ensureSessionToken,
   invalidateSession,
   withKfAuth,
+  kfAxios,
 };

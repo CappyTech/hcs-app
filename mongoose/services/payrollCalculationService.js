@@ -110,7 +110,7 @@ function parseTaxCode(rawCode) {
   }
 
   // Unknown — treat as 0T (safest: no allowance, all taxed)
-  logger.warn(`payrollCalculation: unrecognised tax code '${rawCode}' — treating as 0T`);
+  logger.warn(`[payrollCalculationService] Unrecognised tax code '${rawCode}' — treating as 0T`);
   return { freePayAnnual: 0, isBR: false, isD0: false, isD1: false, isNT: false, isK: false, isOther: true };
 }
 
@@ -662,7 +662,7 @@ async function processPayrollRun(runId) {
       totals.netPay         += toNum(entryData.netPay);
       totals.studentLoan    += toNum(entryData.studentLoanDeduction) + toNum(entryData.postgradLoanDeduction);
     } catch (err) {
-      logger.error(`payrollCalculation: failed for employee ${employee._id}: ${err.message}`);
+      logger.error(`[payrollCalculationService] Failed for employee ${employee._id}: ${err.message}`, { stack: err.stack });
       throw err;
     }
   }
@@ -686,7 +686,7 @@ async function processPayrollRun(runId) {
     { new: true }
   );
 
-  logger.info(`payrollCalculation: run ${run.uuid} processed — ${employees.length} employees, gross £${totals.grossPay.toFixed(2)}`);
+  logger.info(`[payrollCalculationService] Run ${run.uuid} processed — ${employees.length} employees, gross £${totals.grossPay.toFixed(2)}`);
   return updatedRun;
 }
 

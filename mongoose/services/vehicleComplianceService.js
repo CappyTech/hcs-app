@@ -122,7 +122,7 @@ function start() {
     try {
       await checkComplianceAndCreateTasks();
     } catch (err) {
-      logger.error('[vehicleComplianceService] Initial compliance check failed: ' + err.message);
+      logger.error(`[vehicleComplianceService] Initial compliance check failed: ${err.message}`, { stack: err.stack });
     }
   }, 10_000);
 
@@ -130,7 +130,7 @@ function start() {
     try {
       await checkComplianceAndCreateTasks();
     } catch (err) {
-      logger.error('[vehicleComplianceService] Periodic compliance check failed: ' + err.message);
+      logger.error(`[vehicleComplianceService] Periodic compliance check failed: ${err.message}`, { stack: err.stack });
     }
   }, CHECK_INTERVAL_MS);
 }

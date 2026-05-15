@@ -262,7 +262,7 @@ async function grabPaperlessOCR(options = {}) {
         processed++;
       } catch (err) {
         failed++;
-        logger.error(`Paperless grab failed for doc ${doc?.id}: ${err.message}`);
+        logger.error(`[grabServicePaperless] Failed for doc ${doc?.id}: ${err.message}`, { stack: err.stack });
         // Persist error on ingest tracker (so we can reprocess later)
         await mdb.PAPERLESS.OcrDocumentIngest.updateOne(
           { paperlessId: doc?.id },
@@ -285,7 +285,7 @@ async function grabPaperlessOCR(options = {}) {
     page += 1;
   }
 
-  logger.info(`Paperless grab complete. processed=${processed} skipped=${skipped} failed=${failed}`);
+  logger.info(`[grabServicePaperless] Complete. processed=${processed} skipped=${skipped} failed=${failed}`);
   return { processed, skipped, failed };
   } finally {
     grabRunning = false;
@@ -303,7 +303,31 @@ async function ingestOnePaperlessDoc(paperlessId) {
   }
 
   // Fetch full document with expansions so we can resolve custom fields cleanly
-  const doc = await api.getDocument(Number(paperlessId), { expand: ['custom_fields', 'custom_fields__field'] });
+  let doc;
+  try {
+    doc = await api.getDocument(Number(paperlessId), { expand: ['custom_fields', 'custom_fields__field'] });
+  } catch (fetchErr) {
+    const is404 = fetchErr?.response?.status === 404 || /not found/i.test(fetchErr?.message || '');
+    const errMsg = is404
+      ? `Document #${paperlessId} not found in Paperless (404) — it may have been deleted`
+      : `Failed to fetch document #${paperlessId} from Paperless: ${fetchErr.message}`;
+    logger.warn(`[paperless] ${errMsg}`);
+    // Persist error state so the ingest tracker reflects the failure
+    await OcrDocumentIngest.updateOne(
+      { paperlessId: Number(paperlessId) },
+      { $set: { paperlessId: Number(paperlessId), lastFetchedAt: new Date(), status: 'error', error: errMsg } },
+      { upsert: true }
+    );
+    if (is404) {
+      await OcrDocument.updateOne(
+        { paperlessId: Number(paperlessId) },
+        { $set: { error: errMsg, fetchedAt: new Date() } }
+      );
+    }
+    const err = new Error(errMsg);
+    err.status = is404 ? 404 : 502;
+    throw err;
+  }
   if (!doc || typeof doc.id !== 'number') throw new Error('Paperless document not found');
 
   const [correspondent, docType, tagsResolved] = await Promise.all([
@@ -346,10 +370,48 @@ async function ingestOnePaperlessDoc(paperlessId) {
   };
   const contentHash = sha256(stableStringify(normForHash));
 
+  // Backfill KashFlow linkage from custom fields when the dedicated fields are not yet set.
+  // If the Paperless document has "KashFlow Purchase Number" as a custom field but the DB
+  // record has no kashflowPurchaseNumber, look the purchase up in the REST collection and
+  // populate all linkage fields so the document appears correctly linked without a re-send.
+  const kfBackfill = {};
+  try {
+    const existingLink = await OcrDocument.findOne({ paperlessId: doc.id })
+      .select('kashflowPurchaseNumber kashflowPurchaseId')
+      .lean();
+    if (!existingLink?.kashflowPurchaseNumber) {
+      const cfNumber = customFields.find(
+        (cf) => /kashflow\s*purchase\s*number/i.test(cf.fieldName || '')
+      );
+      const rawNum = cfNumber?.value;
+      const cfPurchaseNum = rawNum != null ? parseInt(String(rawNum), 10) : NaN;
+      if (Number.isFinite(cfPurchaseNum) && cfPurchaseNum > 0 && mdb.REST?.purchase) {
+        const restPurchase = await mdb.REST.purchase
+          .findOne({ Number: cfPurchaseNum })
+          .select('Number Id Permalink')
+          .lean();
+        if (restPurchase) {
+          kfBackfill.kashflowPurchaseNumber = restPurchase.Number ?? cfPurchaseNum;
+          if (typeof restPurchase.Id === 'number') kfBackfill.kashflowPurchaseId = restPurchase.Id;
+          if (restPurchase.Permalink) kfBackfill.kashflowPermalink = restPurchase.Permalink;
+          logger.info(
+            `[paperless] Backfilled KashFlow linkage for paperlessId=${doc.id} from custom field (purchase #${cfPurchaseNum})`
+          );
+        } else {
+          logger.warn(
+            `[paperless] Custom field "KashFlow Purchase Number"=${cfPurchaseNum} not found in REST purchases for paperlessId=${doc.id}`
+          );
+        }
+      }
+    }
+  } catch (backfillErr) {
+    logger.warn(`[paperless] KashFlow backfill failed for paperlessId=${doc.id}: ${backfillErr.message}`);
+  }
+
   // Upsert document and tracker
   await OcrDocument.updateOne(
     { paperlessId: doc.id },
-    { $set: { ...record, fetchedAt: new Date(), error: null } },
+    { $set: { ...record, ...kfBackfill, fetchedAt: new Date(), error: null } },
     { upsert: true }
   );
   await OcrDocumentIngest.updateOne(

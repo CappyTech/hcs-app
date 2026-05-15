@@ -60,7 +60,7 @@ const holidayService = {
         type: null
       };
     } catch (error) {
-      logger.error('Error checking holiday: ' + error.message);
+      logger.error(`[holidayService] Error checking holiday: ${error.message}`, { stack: error.stack });
       return {
         isHoliday: false,
         reason: 'Error occurred while fetching holiday details',
@@ -126,7 +126,7 @@ const holidayService = {
       // Return earliest upcoming holiday
       return combined[0];
     } catch (error) {
-      logger.error('Error fetching next holiday: ' + error.message);
+      logger.error(`[holidayService] Error fetching next holiday: ${error.message}`, { stack: error.stack });
       return null;
     }
   },
@@ -173,7 +173,7 @@ const holidayService = {
         logger.info('No holidays to sync.');
       }
     } catch (error) {
-      logger.error('Error syncing bank holidays: ' + error.message);
+      logger.error(`[holidayService] Error syncing bank holidays: ${error.message}`, { stack: error.stack });
     }
   },
 

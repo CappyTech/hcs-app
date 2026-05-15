@@ -16,7 +16,9 @@
 const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
 const logger = require("../../services/loggerService");
-const axios = require("axios");
+const kfSession = require("../../services/kashflowSessionService");
+const kfAxios = kfSession.kfAxios;
+const axios = require("axios"); // non-KashFlow requests (Paperless-ngx etc.)
 const {
   grabPaperlessOCR,
   ingestOnePaperlessDoc,
@@ -174,12 +176,25 @@ exports.readOcr = async (req, res, next) => {
       (doc.kashflowPurchaseId == null && cfKashflowPurchaseId != null && cfKashflowPurchaseId !== '')
     );
 
+    // If the ingest record is in error state (e.g. 404 / deleted from Paperless), check
+    // whether a document with the same content hash exists under a different Paperless ID.
+    // This catches the common case where a document was deleted and re-uploaded.
+    let hashDuplicate = null;
+    if (ingest?.status === 'error' && ingest?.lastContentHash) {
+      hashDuplicate = await OcrDocumentIngest.findOne({
+        lastContentHash: ingest.lastContentHash,
+        paperlessId: { $ne: paperlessId },
+        status: { $ne: 'error' },
+      }).select('paperlessId').lean();
+    }
+
     res.render(path.join("tailwindcss", "paperless", "read"), {
       title: doc.title || `Doc #${paperlessId}`,
       doc,
       ingest,
       hasDrift,
       cfKashflowPurchaseId,
+      hashDuplicate,
     });
   } catch (err) {
     next(err);
@@ -505,8 +520,10 @@ exports.sendDraftToKashflow = async (req, res, next) => {
     const draft = await buildPurchaseDraftById(paperlessId);
     // Detect document type for subcontractor mode
     const { OcrDocument: OcrDocumentSend } = mdb.PAPERLESS;
-    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType customFields').lean();
+    const sendDoc = await OcrDocumentSend.findOne({ paperlessId }).select('documentType modified customFields').lean();
     const isSubcontractor = /subcontract/i.test(sendDoc?.documentType?.name || "");
+    // Capture modified before the tag update so we can detect genuine post-send changes later
+    const modifiedAtSendTime = sendDoc?.modified ?? null;
     // If a supplier is selected, merge its identifiers
     const supplierUuid =
       req.body && req.body.supplierUuid
@@ -739,7 +756,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
             Authorization: `KfToken ${token}`,
             "User-Agent": `sms-app/${process.env.npm_package_version || "0.0.0"}`,
           };
-          return axios.post(url, payload, { headers, timeout: 20000 });
+          return kfAxios.post(url, payload, { headers, timeout: 20000 });
         });
         logger.info(
           `[kashflow] Direct create Purchase OK for paperlessId=${paperlessId}. status=${resp.status}`,
@@ -782,6 +799,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
                 lastSentAt: new Date(),
                 lastSendMode: "direct",
                 lastSendStatus: resp.status,
+                modifiedAtLastSend: modifiedAtSendTime,
               },
               $inc: { sendCount: 1 },
             },
@@ -891,6 +909,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
                   lastSentAt: new Date(),
                   lastSendMode: "webhook",
                   lastSendStatus: resp.status,
+                  modifiedAtLastSend: modifiedAtSendTime,
                 },
                 $inc: { sendCount: 1 },
               },
@@ -904,6 +923,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
                   lastSentAt: new Date(),
                   lastSendMode: "webhook",
                   lastSendStatus: resp.status,
+                  modifiedAtLastSend: modifiedAtSendTime,
                 },
               },
             );
@@ -1043,6 +1063,10 @@ exports.reIngestOne = async (req, res, next) => {
     res.redirect(`/paperless/ocr/${paperlessId}`);
   } catch (err) {
     logger.error(`reIngestOne error for paperlessId=${req.params.paperlessId}: ${err.message}`);
+    if (err.status === 404) {
+      req.flash('error', err.message);
+      return res.redirect(`/paperless/ocr/${req.params.paperlessId}`);
+    }
     next(err);
   }
 };

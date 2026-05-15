@@ -45,10 +45,10 @@ async function sendMail({ to, subject, html, text }) {
 
   try {
     const info = await transporter.sendMail({ from, to, subject, html, text });
-    logger.info(`Email sent to ${to} — messageId: ${info.messageId}`);
+    logger.info(`[emailService] Email sent to ${to} — messageId: ${info.messageId}`);
     return info;
   } catch (err) {
-    logger.error(`Failed to send email to ${to}: ${err.message}`);
+    logger.error(`[emailService] Failed to send email to ${to}: ${err.message}`, { stack: err.stack });
     throw err;
   }
 }

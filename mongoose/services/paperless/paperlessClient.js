@@ -2,6 +2,7 @@
 const axios = require("axios");
 const tunnel = require("tunnel-ssh");
 const logger = require("../../../services/loggerService");
+const paperlessApiLog = require("../../../services/paperlessApiLogService");
 
 let sshServer = null;
 let localPort = null;
@@ -169,76 +170,103 @@ function makeClient() {
         `[paperlessClient] baseURL=${baseURL} accept="${accept}"${useSsh ? " (via SSH tunnel)" : ""}`,
       );
     }
-    // Attach response interceptor to provide better diagnostics for 400-series errors
-    api.interceptors.response.use(
-      (resp) => resp,
-      async (error) => {
-        const status = error?.response?.status;
-        const dataSnippet = (() => {
-          try {
-            const d = error?.response?.data;
-            if (!d) return "";
-            if (typeof d === "string") return ` body="${d.slice(0, 200)}"`;
-            return ` body=${JSON.stringify(d).slice(0, 200)}`;
-          } catch {
-            return "";
-          }
-        })();
-        if (
-          (process.env.PAPERLESS_VERBOSE === "true" || process.env.DEBUG) &&
-          status
-        ) {
+
+    // ── Request logging ──────────────────────────────────────────────────────
+    api.interceptors.request.use((config) => {
+      config.metadata = { startTime: Date.now() };
+      // Authorization header is never stored
+      const { Authorization, authorization, ...safeHeaders } = config.headers || {};
+      paperlessApiLog.logRequest({ method: config.method, url: config.url, data: config.data || null });
+      logger.info(`[Paperless] --> ${(config.method || 'GET').toUpperCase()} ${config.url}`);
+      return config;
+    }, (err) => {
+      logger.error(`[Paperless] Request setup error: ${err.message}`);
+      return Promise.reject(err);
+    });
+
+    // ── Response logging (success) ────────────────────────────────────────────
+    api.interceptors.response.use((resp) => {
+      const durationMs = resp.config?.metadata ? Date.now() - resp.config.metadata.startTime : undefined;
+      paperlessApiLog.logResponse({
+        method: resp.config?.method,
+        url: resp.config?.url,
+        status: resp.status,
+        data: resp.data,
+        durationMs,
+      });
+      logger.info(`[Paperless] <-- ${resp.status} ${(resp.config?.method || '').toUpperCase()} ${resp.config?.url}${durationMs !== undefined ? ` (${durationMs}ms)` : ''}`);
+      return resp;
+    }, async (error) => {
+      const cfg = error?.config || {};
+      const status = error?.response?.status;
+      const durationMs = cfg.metadata ? Date.now() - cfg.metadata.startTime : undefined;
+      paperlessApiLog.logError({ method: cfg.method, url: cfg.url, status, message: error.message, durationMs });
+      logger.error(`[Paperless] <-- ${status || 'ERR'} ${(cfg.method || '').toUpperCase()} ${cfg.url || ''}: ${error.message}`);
+
+      const dataSnippet = (() => {
+        try {
+          const d = error?.response?.data;
+          if (!d) return "";
+          if (typeof d === "string") return ` body="${d.slice(0, 200)}"`;
+          return ` body=${JSON.stringify(d).slice(0, 200)}`;
+        } catch {
+          return "";
+        }
+      })();
+      if (
+        (process.env.PAPERLESS_VERBOSE === "true" || process.env.DEBUG) &&
+        status
+      ) {
+        logger.warn(
+          `[paperlessClient] HTTP ${status} on ${error?.config?.method?.toUpperCase?.() || ""} ${error?.config?.url || ""}${dataSnippet}`,
+        );
+      }
+      if (
+        status === 400 &&
+        error?.config &&
+        !error.config.__acceptFallbackTried
+      ) {
+        // Some Paperless installs reject versioned Accept header; retry once without version
+        const retryCfg = {
+          ...error.config,
+          headers: { ...(error.config.headers || {}) },
+        };
+        delete retryCfg.headers.Accept;
+        retryCfg.__acceptFallbackTried = true;
+        if (process.env.PAPERLESS_VERBOSE === "true" || process.env.DEBUG) {
           logger.warn(
-            `[paperlessClient] HTTP ${status} on ${error?.config?.method?.toUpperCase?.() || ""} ${error?.config?.url || ""}${dataSnippet}`,
+            "[paperlessClient] 400 received; retrying without Accept header for %s",
+            retryCfg.url || retryCfg.baseURL,
           );
         }
-        if (
-          status === 400 &&
-          error?.config &&
-          !error.config.__acceptFallbackTried
-        ) {
-          // Some Paperless installs reject versioned Accept header; retry once without version
-          const cfg = {
-            ...error.config,
-            headers: { ...(error.config.headers || {}) },
-          };
-          delete cfg.headers.Accept;
-          cfg.__acceptFallbackTried = true;
-          if (process.env.PAPERLESS_VERBOSE === "true" || process.env.DEBUG) {
+        try {
+          return await axios(retryCfg);
+        } catch (e) {
+          throw e;
+        }
+      }
+      // Retry on rate-limit (429) and transient server errors (502/503/504) with back-off
+      if (
+        (status === 429 || status === 502 || status === 503 || status === 504) &&
+        error?.config
+      ) {
+        error.config.__retryCount = (error.config.__retryCount || 0) + 1;
+        if (error.config.__retryCount <= 3) {
+          const retryAfterMs =
+            status === 429
+              ? parseInt(error.response?.headers?.['retry-after'] || '5', 10) * 1000
+              : error.config.__retryCount * 2000;
+          const delay = Math.min(retryAfterMs, 30000);
+          if (verbose)
             logger.warn(
-              "[paperlessClient] 400 received; retrying without Accept header for %s",
-              cfg.url || cfg.baseURL,
+              `[paperlessClient] HTTP ${status}; retry ${error.config.__retryCount}/3 after ${delay}ms`,
             );
-          }
-          try {
-            return await axios(cfg);
-          } catch (e) {
-            throw e;
-          }
+          await new Promise((r) => setTimeout(r, delay));
+          return axios(error.config);
         }
-        // Retry on rate-limit (429) and transient server errors (502/503/504) with back-off
-        if (
-          (status === 429 || status === 502 || status === 503 || status === 504) &&
-          error?.config
-        ) {
-          error.config.__retryCount = (error.config.__retryCount || 0) + 1;
-          if (error.config.__retryCount <= 3) {
-            const retryAfterMs =
-              status === 429
-                ? parseInt(error.response?.headers?.['retry-after'] || '5', 10) * 1000
-                : error.config.__retryCount * 2000;
-            const delay = Math.min(retryAfterMs, 30000);
-            if (verbose)
-              logger.warn(
-                `[paperlessClient] HTTP ${status}; retry ${error.config.__retryCount}/3 after ${delay}ms`,
-              );
-            await new Promise((r) => setTimeout(r, delay));
-            return axios(error.config);
-          }
-        }
-        return Promise.reject(error);
-      },
-    );
+      }
+      return Promise.reject(error);
+    });
 
     return api;
   };

@@ -20,7 +20,7 @@ const getAttendanceForDay = async (date) => {
       .populate('contractAssignmentId')
       .sort({ date: 1 });
   } catch (error) {
-    logger.error('Error fetching attendance records: ' + error.message);
+    logger.error(`[attendanceService] Error fetching attendance records: ${error.message}`, { stack: error.stack });
     throw new Error('Failed to fetch attendance records for the day');
   }
 };
@@ -184,7 +184,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
       paidPurchases
     };
   } catch (error) {
-    logger.error('Error fetching attendance week data: ' + error.message);
+    logger.error(`[attendanceService] Error fetching attendance week data: ${error.message}`, { stack: error.stack });
     throw new Error('Failed to fetch weekly attendance');
   }
 };
@@ -484,7 +484,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
       .sort({ title: 1 })
       .lean();
   } catch (e) {
-    logger.warn('Active contracts lookup skipped: ' + e.message);
+    logger.warn(`[attendanceService] Active contracts lookup skipped: ${e.message}`);
     activeContracts = [];
   }
 
@@ -521,7 +521,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
       .sort({ registrationNumber: 1 })
       .lean();
   } catch (e) {
-    logger.warn('Vehicles lookup skipped: ' + e.message);
+    logger.warn(`[attendanceService] Vehicles lookup skipped: ${e.message}`);
   }
 
   // All REST suppliers (unfiltered) for the assignment cell editor — broader than the
@@ -534,7 +534,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
       .sort({ Name: 1 })
       .lean();
   } catch (e) {
-    logger.warn('allSuppliersForAssignment lookup skipped: ' + e.message);
+    logger.warn(`[attendanceService] allSuppliersForAssignment lookup skipped: ${e.message}`);
   }
 
   return {
@@ -690,7 +690,7 @@ const fetchAssignmentsForWeek = async (payrollWeekStart) => {
       .sort({ 'contractId.title': 1, title: 1 })
       .lean();
   } catch (e) {
-    logger.warn('Assignments lookup skipped: ' + e.message);
+    logger.warn(`[attendanceService] Assignments lookup skipped: ${e.message}`);
     return [];
   }
 };
@@ -710,7 +710,7 @@ const fetchVehicleDeploymentsForWeek = async (start, end) => {
       .sort({ date: 1 })
       .lean();
   } catch (e) {
-    logger.warn('Vehicle deployments lookup skipped: ' + e.message);
+    logger.warn(`[attendanceService] Vehicle deployments lookup skipped: ${e.message}`);
     return [];
   }
 };

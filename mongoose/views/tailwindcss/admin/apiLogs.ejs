@@ -1,0 +1,232 @@
+<div class="max-w-7xl mx-auto my-6 px-4">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-3">
+    <div class="flex items-center gap-3">
+      <a href="/logs" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">
+        <i class="bi bi-arrow-left"></i> App Logs
+      </a>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <% if (source === 'kashflow') { %>
+          <i class="bi bi-cloud-arrow-up"></i> KashFlow API Logs
+        <% } else { %>
+          <i class="bi bi-file-earmark-text"></i> Paperless API Logs
+        <% } %>
+      </h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Search -->
+      <div class="relative">
+        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+        <input id="log-search" type="text" placeholder="Filter…"
+          class="pl-9 pr-8 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-52">
+        <button id="btn-clear-search" title="Clear"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hidden">
+          <i class="bi bi-x-lg text-xs"></i>
+        </button>
+      </div>
+      <!-- Refresh -->
+      <button id="btn-refresh" title="Refresh"
+        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <% if (unavailable) { %>
+    <div class="rounded-lg border border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 p-4 text-sm text-yellow-800 dark:text-yellow-300">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Database connection not yet available — logs will appear once the INTERNAL database is connected.
+    </div>
+  <% } else { %>
+
+  <!-- Stats bar -->
+  <div class="flex flex-wrap gap-3 mb-5">
+    <% const statDefs = [
+      { key: 'request', label: 'Requests',  icon: 'bi-arrow-up-circle',   color: 'blue' },
+      { key: 'response', label: 'Responses', icon: 'bi-arrow-down-circle', color: 'green' },
+      { key: 'error',   label: 'Errors',    icon: 'bi-exclamation-circle', color: 'red' },
+    ]; %>
+    <% statDefs.forEach(s => { %>
+      <button class="stat-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition
+        <% if (s.color === 'blue')  { %>border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100<% } %>
+        <% if (s.color === 'green') { %>border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100<% } %>
+        <% if (s.color === 'red')   { %>border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100<% } %>"
+        data-direction="<%= s.key %>">
+        <i class="bi <%= s.icon %>"></i>
+        <span><%= s.label %></span>
+        <span class="font-bold stat-count" id="stat-<%= s.key %>"><%= stats[s.key] %></span>
+      </button>
+    <% }) %>
+    <button id="btn-show-all"
+      class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition">
+      All <span class="font-bold"><%= entries.length %></span>
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+    <table class="min-w-full text-xs" id="log-table">
+      <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase tracking-wide text-xs">
+        <tr>
+          <th class="px-3 py-2 text-left whitespace-nowrap">Time</th>
+          <th class="px-3 py-2 text-left">Direction</th>
+          <th class="px-3 py-2 text-left">Method</th>
+          <th class="px-3 py-2 text-left">URL</th>
+          <th class="px-3 py-2 text-left">Status</th>
+          <th class="px-3 py-2 text-left">Duration</th>
+          <th class="px-3 py-2 text-left">Details</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700" id="log-tbody">
+        <% entries.forEach((e, i) => { %>
+          <%
+            const dirColor = e.direction === 'error'
+              ? 'text-red-600 dark:text-red-400'
+              : e.direction === 'response'
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-blue-600 dark:text-blue-400';
+            const rowBg = e.direction === 'error'
+              ? 'bg-red-50/30 dark:bg-red-900/10'
+              : '';
+            const statusColor = e.status >= 400
+              ? 'text-red-600 dark:text-red-400 font-semibold'
+              : e.status >= 200
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-gray-500';
+            const detailsJson = JSON.stringify(
+              e.direction === 'request'  ? (e.requestBody  || null) :
+              e.direction === 'response' ? (e.responseBody || null) :
+              e.errorMessage || null
+            );
+          %>
+          <tr class="log-row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer <%= rowBg %>"
+              data-direction="<%= e.direction %>"
+              data-text="<%= ((e.method || '') + ' ' + (e.url || '') + ' ' + (e.errorMessage || '')).toLowerCase() %>"
+              data-details='<%- detailsJson ? detailsJson.replace(/'/g, "&#39;") : "null" %>'
+              data-idx="<%= i %>">
+            <td class="px-3 py-2 whitespace-nowrap text-gray-500 dark:text-gray-400 font-mono">
+              <%= e.createdAt ? new Date(e.createdAt).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }) : '—' %>
+            </td>
+            <td class="px-3 py-2 font-semibold <%= dirColor %>"><%= e.direction %></td>
+            <td class="px-3 py-2 font-mono font-bold text-gray-700 dark:text-gray-300"><%= e.method || '—' %></td>
+            <td class="px-3 py-2 font-mono text-gray-600 dark:text-gray-400 max-w-xs truncate" title="<%= e.url || '' %>"><%= e.url || '—' %></td>
+            <td class="px-3 py-2 <%= statusColor %>"><%= e.status || '—' %></td>
+            <td class="px-3 py-2 text-gray-500 dark:text-gray-400"><%= e.durationMs != null ? e.durationMs + 'ms' : '—' %></td>
+            <td class="px-3 py-2 text-gray-500 dark:text-gray-400">
+              <% if (e.direction === 'error' && e.errorMessage) { %>
+                <span class="text-red-500 truncate block max-w-xs" title="<%= e.errorMessage %>"><%= e.errorMessage.slice(0, 80) %></span>
+              <% } else if (detailsJson && detailsJson !== 'null') { %>
+                <button class="text-blue-500 hover:underline btn-details" data-idx="<%= i %>">View</button>
+              <% } else { %>—<% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <div id="no-results" class="hidden text-center text-sm text-gray-400 dark:text-gray-500 py-10">No matching log entries.</div>
+  </div>
+
+  <!-- Details modal -->
+  <div id="details-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100" id="modal-title">Entry Details</h2>
+        <button id="modal-close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">&times;</button>
+      </div>
+      <div class="overflow-auto p-5 flex-1">
+        <pre id="modal-body" class="text-xs font-mono text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-all"></pre>
+      </div>
+    </div>
+  </div>
+
+  <% } %>
+</div>
+
+<script>
+(function () {
+  const source = '<%= source %>';
+  const dataUrl = `/logs/${source}/data`;
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  const searchInput = document.getElementById('log-search');
+  const clearBtn    = document.getElementById('btn-clear-search');
+  let activeDirection = null;
+
+  function applyFilter() {
+    const q = (searchInput?.value || '').toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('#log-tbody .log-row').forEach(row => {
+      const matchDir  = !activeDirection || row.dataset.direction === activeDirection;
+      const matchText = !q || row.dataset.text.includes(q);
+      const show = matchDir && matchText;
+      row.classList.toggle('hidden', !show);
+      if (show) visible++;
+    });
+    document.getElementById('no-results')?.classList.toggle('hidden', visible > 0);
+  }
+
+  searchInput?.addEventListener('input', () => {
+    clearBtn?.classList.toggle('hidden', !searchInput.value);
+    applyFilter();
+  });
+  clearBtn?.addEventListener('click', () => {
+    searchInput.value = '';
+    clearBtn.classList.add('hidden');
+    applyFilter();
+  });
+
+  // ── Direction filter buttons ──────────────────────────────────────────────
+  document.querySelectorAll('.stat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dir = btn.dataset.direction;
+      if (activeDirection === dir) {
+        activeDirection = null;
+        document.querySelectorAll('.stat-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-1'));
+      } else {
+        activeDirection = dir;
+        document.querySelectorAll('.stat-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-1'));
+        btn.classList.add('ring-2', 'ring-offset-1');
+      }
+      applyFilter();
+    });
+  });
+  document.getElementById('btn-show-all')?.addEventListener('click', () => {
+    activeDirection = null;
+    document.querySelectorAll('.stat-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-1'));
+    applyFilter();
+  });
+
+  // ── Details modal ─────────────────────────────────────────────────────────
+  const modal      = document.getElementById('details-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody  = document.getElementById('modal-body');
+  const modalClose = document.getElementById('modal-close');
+
+  function openModal(row) {
+    const raw = row.dataset.details;
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+    modalTitle.textContent = `${row.querySelector('td:nth-child(3)')?.textContent || ''} ${row.querySelector('td:nth-child(4)')?.getAttribute('title') || ''}`.trim();
+    modalBody.textContent = typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2);
+    modal.classList.remove('hidden');
+  }
+
+  document.querySelectorAll('.btn-details').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openModal(btn.closest('.log-row'));
+    });
+  });
+  document.querySelectorAll('.log-row').forEach(row => {
+    row.addEventListener('click', () => {
+      if (row.dataset.details && row.dataset.details !== 'null') openModal(row);
+    });
+  });
+  modalClose?.addEventListener('click', () => modal.classList.add('hidden'));
+  modal?.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+
+  // ── Refresh ───────────────────────────────────────────────────────────────
+  document.getElementById('btn-refresh')?.addEventListener('click', () => location.reload());
+})();
+</script>

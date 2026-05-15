@@ -32,7 +32,7 @@ const errorHandlerService = (error, req, res, next) => {
   const stack = error.stack;
 
   // Log the error details
-  logger.error(`Error Details:
+  logger.error(`[errorHandler] Error Details:
         Status: ${statusCode}
         Title: ${title}
         Message: ${message}
@@ -40,7 +40,7 @@ const errorHandlerService = (error, req, res, next) => {
         URL: ${req.originalUrl}
         Method: ${req.method}`);
 
-  logger.info(`Request Headers: ${JSON.stringify(req.headers, null, 2)}`);
+  logger.info(`[errorHandler] Request Headers: ${JSON.stringify(req.headers, null, 2)}`);
 
   // Render the error page
   res.status(statusCode);

@@ -1,12 +1,5 @@
 const mdb = require('./mongooseDatabaseService');
-
-// Lightweight logger placeholder (replace with central logger if available)
-function logDebug(msg, meta = {}) {
-  if (process.env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line no-console
-    console.debug(`[taskService] ${msg}`, meta);
-  }
-}
+const logger = require('../../services/loggerService');
 
 function validateCreateInput({ title, userId, recurrence, dueDate }) {
   if (!title || typeof title !== 'string') throw new Error('Task title is required.');
@@ -84,7 +77,7 @@ async function processRecurringTasks({ limit = 200 } = {}) {
         dueDate: nextDate,
         recurrence: task.recurrence
       });
-      logDebug('Spawned next recurring task', { title: task.title, nextDate, userId: task.userId });
+      logger.debug(`[taskService] Spawned next recurring task`, { title: task.title, nextDate, userId: task.userId });
     }
   }
 }
