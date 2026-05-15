@@ -127,7 +127,7 @@ vehicleSchema.pre('validate', function (next) {
     const warnFields = ['motExpiryDate', 'insuranceExpiryDate', 'roadTaxExpiryDate'];
     for (const field of warnFields) {
         if (this[field] && this[field] < now && this.isModified(field)) {
-            logger.warn(`⚠️ Vehicle ${this.registrationNumber}: ${field} is set to a past date (${this[field].toISOString()})`);
+            logger.warn(`[vehicle] ${this.registrationNumber}: ${field} is set to a past date (${this[field].toISOString()})`);
         }
     }
 

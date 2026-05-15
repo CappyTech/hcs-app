@@ -822,17 +822,10 @@ exports.inlineCreateAssignment = async (req, res, next) => {
     const record = new mdb.INTERNAL.assignment(data);
     await record.save();
 
-    const populated = await mdb.INTERNAL.assignment
-      .findById(record._id)
-      .populate('contractId', '_id uuid title location status')
-      .populate('assignedEmployees', '_id uuid name department')
-      .populate('assignedSubcontractors', '_id uuid Name')
-      .lean();
-
-    logger.info(`✏️  Inline created assignment ${record.uuid} for contract ${contractId}`);
-    return res.status(201).json({ success: true, record: populated });
+    logger.info(`[attendanceController] Inline created assignment ${record.uuid} for contract ${contractId}`);
+    return res.status(201).json({ success: true });
   } catch (err) {
-    logger.error(`❌ Inline create assignment error: ${err.message}`);
+    logger.error(`[attendanceController] Inline create assignment error: ${err.message}`);
     next(err);
   }
 };
@@ -862,17 +855,14 @@ exports.updateAssignment = async (req, res, next) => {
 
     const updated = await mdb.INTERNAL.assignment
       .findOneAndUpdate({ uuid: req.params.uuid }, update, { new: true, runValidators: true })
-      .populate('contractId', '_id uuid title location status')
-      .populate('assignedEmployees', '_id uuid name department')
-      .populate('assignedSubcontractors', '_id uuid Name')
       .lean();
 
     if (!updated) return res.status(404).json({ success: false, error: 'Assignment not found.' });
 
-    logger.info(`✏️  Inline updated assignment ${req.params.uuid}`);
-    return res.json({ success: true, record: updated });
+    logger.info(`[attendanceController] Inline updated assignment ${req.params.uuid}`);
+    return res.json({ success: true });
   } catch (err) {
-    logger.error(`❌ Inline update assignment error: ${err.message}`);
+    logger.error(`[attendanceController] Inline update assignment error: ${err.message}`);
     next(err);
   }
 };
@@ -925,10 +915,10 @@ exports.inlineCreateVehicleDeployment = async (req, res, next) => {
       .populate('contractId', '_id uuid title location')
       .lean();
 
-    logger.info(`✏️  Inline created vehicle deployment ${record.uuid} for vehicle ${vehicleId} on ${date}`);
+    logger.info(`[attendanceController] Inline created vehicle deployment ${record.uuid} for vehicle ${vehicleId} on ${date}`);
     return res.status(201).json({ success: true, record: populated });
   } catch (err) {
-    logger.error(`❌ Inline create vehicle deployment error: ${err.message}`);
+    logger.error(`[attendanceController] Inline create vehicle deployment error: ${err.message}`);
     next(err);
   }
 };
@@ -972,10 +962,10 @@ exports.updateVehicleDeployment = async (req, res, next) => {
 
     if (!updated) return res.status(404).json({ success: false, error: 'Vehicle deployment not found.' });
 
-    logger.info(`✏️  Inline updated vehicle deployment ${req.params.uuid}`);
+    logger.info(`[attendanceController] Inline updated vehicle deployment ${req.params.uuid}`);
     return res.json({ success: true, record: updated });
   } catch (err) {
-    logger.error(`❌ Inline update vehicle deployment error: ${err.message}`);
+    logger.error(`[attendanceController] Inline update vehicle deployment error: ${err.message}`);
     next(err);
   }
 };

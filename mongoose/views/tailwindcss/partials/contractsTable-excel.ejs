@@ -55,8 +55,19 @@
         <td class="border border-gray-200 dark:border-gray-700 px-3 py-2" colspan="<%= _colspan %>">
           <div class="flex items-center gap-2 flex-wrap">
             <a href="/contract/read/<%= _c.uuid %>" class="font-semibold text-green-900 dark:text-green-400 hover:underline"><%= _c.title %></a>
-            <% if (_c.location) { %><span class="text-xs text-gray-500 dark:text-gray-400">"” <%= _c.location %></span><% } %>
+            <% if (_c.location) { %><span class="text-xs text-gray-500 dark:text-gray-400">&middot; <%= _c.location %></span><% } %>
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= _cBadge[_c.status] || 'bg-gray-100 text-gray-700' %>"><%= _c.status %></span>
+            <% if (_c.startDate || _c.endDate) { %>
+              <span class="text-xs text-gray-400 dark:text-gray-500">
+                <% if (_c.startDate && _c.endDate) { %>
+                  <%= moment(_c.startDate).format('DD/MM/YY') %> &ndash; <%= moment(_c.endDate).format('DD/MM/YY') %>
+                <% } else if (_c.startDate) { %>
+                  From <%= moment(_c.startDate).format('DD/MM/YY') %>
+                <% } else { %>
+                  Until <%= moment(_c.endDate).format('DD/MM/YY') %>
+                <% } %>
+              </span>
+            <% } %>
             <span class="ml-auto text-xs text-gray-400 dark:text-gray-500"><%= _asgns.length %> assignment<%= _asgns.length === 1 ? '' : 's' %> this week</span>
           </div>
         </td>

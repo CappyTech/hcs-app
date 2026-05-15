@@ -99,11 +99,11 @@ mdb.connect = async () => {
       const sshKeyPath = configService.get('SSH_KEY_PATH')?.trim();
       const sshPass = configService.get('SSH_PASS')?.trim();
       if (sshKeyPath) {
-        try { sshConfig.privateKey = fs.readFileSync(sshKeyPath); } catch (err) { logger.error(`❌ Failed to read SSH key at ${sshKeyPath}: ${err.message}`); throw err; }
+        try { sshConfig.privateKey = fs.readFileSync(sshKeyPath); } catch (err) { logger.error(`[mongooseDatabaseService] Failed to read SSH key at ${sshKeyPath}: ${err.message}`); throw err; }
       } else if (sshPass) {
         sshConfig.password = sshPass;
       } else {
-        const msg = '❌ No SSH auth method provided. Set SSH_KEY_PATH or SSH_PASS in .env';
+        const msg = '[mongooseDatabaseService] No SSH auth method provided. Set SSH_KEY_PATH or SSH_PASS in .env';
         logger.error(msg);
         throw new Error(msg);
       }
@@ -111,7 +111,7 @@ mdb.connect = async () => {
       await new Promise((resolve, reject) => {
         tunnel(sshConfig, (err, server) => {
           if (err) {
-            logger.error('❌ SSH tunnel error: ' + err.message);
+            logger.error('[mongooseDatabaseService] SSH tunnel error: ' + err.message);
             return reject(err);
           }
           sshServer = server;
@@ -120,13 +120,13 @@ mdb.connect = async () => {
             const code = e?.code || e?.errno;
             const level = e?.level;
             if (code === 'ECONNRESET' || code === 'EPIPE' || level === 'client-socket') {
-              logger.warn('⚠️ SSH tunnel socket error ignored: ' + (code || level));
+              logger.warn('[mongooseDatabaseService] SSH tunnel socket error ignored: ' + (code || level));
               return;
             }
-            logger.error('❌ SSH tunnel server error: ' + e);
+            logger.error('[mongooseDatabaseService] SSH tunnel server error: ' + e);
           });
-          server.on('close', () => logger.info('🧵 SSH tunnel server closed'));
-          logger.info(`🔐 SSH tunnel established on port ${localPort}`);
+          server.on('close', () => logger.info('[mongooseDatabaseService] SSH tunnel server closed'));
+          logger.info(`[mongooseDatabaseService] SSH tunnel established on port ${localPort}`);
           resolve();
         });
       });
@@ -145,7 +145,7 @@ mdb.connect = async () => {
       restUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${restDb}?authSource=admin`;
       internalUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${internalDb}?authSource=admin`;
       paperlessUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${paperlessDb}?authSource=admin`;
-      if (configService.get('DEBUG')) logger.info('✅ Connected to MongoDB via SSH tunnel');
+      if (configService.get('DEBUG')) logger.info('[mongooseDatabaseService] Connected to MongoDB via SSH tunnel');
     } else {
       // Prefer explicit MONGO_URI; otherwise build from parts
       const rawUri = configService.get('MONGO_URI', '');
@@ -153,7 +153,7 @@ mdb.connect = async () => {
       restUri = getUriWithDb(baseUri, restDb);
       internalUri = getUriWithDb(baseUri, internalDb);
       paperlessUri = getUriWithDb(baseUri, paperlessDb);
-      if (configService.get('DEBUG')) logger.info('✅ Connecting to MongoDB via ' + (rawUri ? 'MONGO_URI' : 'MONGO_HOST/PORT/USER/PASS'));
+      if (configService.get('DEBUG')) logger.info('[mongooseDatabaseService] Connecting to MongoDB via ' + (rawUri ? 'MONGO_URI' : 'MONGO_HOST/PORT/USER/PASS'));
     }
 
     const restConn = mongoose.createConnection(restUri);
@@ -167,9 +167,9 @@ mdb.connect = async () => {
     ]);
 
     if (process.env.DEBUG) {
-      logger.info('✅ REST connection open');
-      logger.info('✅ INTERNAL connection open');
-      logger.info('✅ PAPERLESS connection open');
+      logger.info('[mongooseDatabaseService] REST connection open');
+      logger.info('[mongooseDatabaseService] INTERNAL connection open');
+      logger.info('[mongooseDatabaseService] PAPERLESS connection open');
     }
 
     // Load models into each namespace
@@ -180,13 +180,13 @@ mdb.connect = async () => {
     isConnected = true;
     return mdb;
   } catch (err) {
-    logger.error('❌ Database connection setup failed: ' + err.message);
+    logger.error('[mongooseDatabaseService] Database connection setup failed: ' + err.message);
     throw err;
   }
 };
 
 const cleanup = async () => {
-  logger.info('🧹 Cleaning up database and SSH tunnel...');
+  logger.info('[mongooseDatabaseService] Cleaning up database and SSH tunnel...');
   try {
     try { await mdb.REST?.connection?.close(); } catch {}
     try { await mdb.INTERNAL?.connection?.close(); } catch {}
@@ -194,12 +194,12 @@ const cleanup = async () => {
 
     if (sshServer && sshServer.close) {
       sshServer.close();
-      logger.info('🛑 SSH tunnel closed');
+      logger.info('[mongooseDatabaseService] SSH tunnel closed');
     }
   } catch (err) {
-    logger.error('⚠️ Cleanup error: ' + err.message);
+    logger.error('[mongooseDatabaseService] Cleanup error: ' + err.message);
   } finally {
-    logger.info('✅ Cleanup complete');
+    logger.info('[mongooseDatabaseService] Cleanup complete');
   }
 };
 

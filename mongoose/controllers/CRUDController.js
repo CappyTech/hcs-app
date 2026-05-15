@@ -471,7 +471,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
                   url: `/${modelName}/${encodeURIComponent(item.uuid)}/view/${encodeURIComponent(name)}`,
                 }));
             } catch (err) {
-              logger.warn(`⚠️ No documents found for ${modelName}/${dirName}`);
+              logger.warn(`[CRUDController] No documents found for ${modelName}/${dirName}`);
               item.documents = [];
             }
           }
@@ -511,7 +511,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
             ...extraLocals,
           });
         } catch (err) {
-          logger.error(`❌ Error reading ${modelName}: ${err.message}`);
+          logger.error(`[CRUDController] Error reading ${modelName}: ${err.message}`);
           next(err);
         }
       };
@@ -649,7 +649,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
               },
             );
           }
-          logger.error(`❌ Error creating ${modelName}: ${err.message}`);
+          logger.error(`[CRUDController] Error creating ${modelName}: ${err.message}`);
           req.flash('error', `Failed to create ${baseName.toLowerCase()}.`);
           next(err);
         }
@@ -788,7 +788,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
           req.flash('success', `${baseName} updated successfully.`);
           res.redirect(`/${modelName}s`);
         } catch (err) {
-          logger.error(`❌ Error updating ${modelName}: ${err.message}`);
+          logger.error(`[CRUDController] Error updating ${modelName}: ${err.message}`);
           req.flash('error', `Failed to update ${baseName.toLowerCase()}.`);
           next(err);
         }
@@ -836,7 +836,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
           req.flash('success', `${baseName} deleted successfully.`);
           res.redirect(`/${modelName}s`);
         } catch (err) {
-          logger.error(`❌ Error deleting ${modelName}: ${err.message}`);
+          logger.error(`[CRUDController] Error deleting ${modelName}: ${err.message}`);
           req.flash('error', `Failed to delete ${baseName.toLowerCase()}.`);
           next(err);
         }

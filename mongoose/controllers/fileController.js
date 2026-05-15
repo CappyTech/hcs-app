@@ -49,7 +49,7 @@ exports.viewFile = async (req, res, next) => {
     // Unsupported → fallback to download
     return res.download(filePath, safeFile);
   } catch (err) {
-    logger.error(`❌ Error in viewFile: ${err.message}`);
+    logger.error(`[fileController] Error in viewFile: ${err.message}`);
     next(err);
   }
 };
@@ -107,7 +107,7 @@ exports.uploadFiles = async (req, res, next) => {
     req.flash('success', 'File uploaded successfully.');
     res.redirect(`/${modelName}/read/${uuid}`);
   } catch (err) {
-    logger.error(`❌ Upload error for ${modelName}: ${err.message}`);
+    logger.error(`[fileController] Upload error for ${modelName}: ${err.message}`);
     req.flash('error', 'Failed to upload file.');
     next(err);
   }
@@ -126,11 +126,11 @@ exports.downloadFile = async (req, res, next) => {
     res.download(filePath, sanitizedFile, (err) => {
       if (err) return next(err);
       logger.info(
-        `⬇️ Downloaded: ${sanitizedFile} from ${modelName}/${dirName}`,
+        `[fileController] Downloaded: ${sanitizedFile} from ${modelName}/${dirName}`,
       );
     });
   } catch (err) {
-    logger.warn(`⚠️ File not found or error downloading: ${filePath}`);
+    logger.warn(`[fileController] File not found or error downloading: ${filePath}`);
     next(err);
   }
 };
@@ -145,11 +145,11 @@ exports.deleteFile = async (req, res, next) => {
 
   try {
     await fsp.unlink(filePath);
-    logger.info(`🗑️ Deleted: ${sanitizedFile} from ${modelName}/${dirName}`);
+    logger.info(`[fileController] Deleted: ${sanitizedFile} from ${modelName}/${dirName}`);
     req.flash('success', 'File deleted successfully.');
     res.redirect(`/${modelName}/read/${uuid}`);
   } catch (err) {
-    logger.error(`❌ Delete error for ${modelName}: ${err.message}`);
+    logger.error(`[fileController] Delete error for ${modelName}: ${err.message}`);
     req.flash('error', 'Failed to delete file.');
     next(err);
   }

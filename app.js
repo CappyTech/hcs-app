@@ -123,7 +123,7 @@ const main = async () => {
     const port = Number(process.env.PORT) || 3000;
     const host = process.env.HOST || '0.0.0.0';
     server.listen(port, host, () => {
-      logger.info(`🚀 Setup wizard listening on ${host}:${port} — visit /setup to configure`);
+      logger.info(`[startup] Setup wizard listening on ${host}:${port} — visit /setup to configure`);
     });
     // Do not proceed to Phase 2 — wizard completion restarts the process
     return;
@@ -153,7 +153,7 @@ const main = async () => {
   const host = process.env.HOST || '0.0.0.0';
 
   server.listen(port, host, () => {
-    logger.info(`🚀 Server listening on ${host}:${port} (waiting for MongoDB…)`);
+    logger.info(`[startup] Server listening on ${host}:${port} (waiting for MongoDB…)`);
   });
 
   // ── Phase 2: Connect to MongoDB and mount full app ──────────────────
@@ -377,10 +377,10 @@ const main = async () => {
     try { require('./mongoose/services/vehicleComplianceService').start(); } catch (e) { logger.warn('Vehicle compliance service start failed: ' + e.message); }
     try { require('./mongoose/services/ocrOrphanService').start(); } catch (e) { logger.warn('OCR orphan service start failed: ' + e.message); }
 
-    logger.info(`🚀 Application fully ready in ${process.env.NODE_ENV} on ${host}:${port}`);
+    logger.info(`[startup] Application fully ready in ${process.env.NODE_ENV} on ${host}:${port}`);
 
   } catch (err) {
-    logger.error('❌ Failed to connect to MongoDB: ' + err.message);
+    logger.error('[startup] Failed to connect to MongoDB: ' + err.message);
     logger.error('   Server remains running — showing maintenance page to all requests');
     // Server keeps running; maintenanceService will show 503 for every request
     // because mdb connections remain in non-ready state.

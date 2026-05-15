@@ -480,7 +480,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
   try {
     activeContracts = await mdb.INTERNAL.contract
       .find({ status: { $in: ['Planned', 'In Progress'] } })
-      .select('_id uuid title location status')
+      .select('_id uuid title location status startDate endDate')
       .sort({ title: 1 })
       .lean();
   } catch (e) {
