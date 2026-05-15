@@ -87,6 +87,26 @@
             const _cellClass = _recValues.length > 0 ? (_cellBg[_dominantType] || '') : '';
           %>
           <td class="border border-gray-300 dark:border-gray-700 text-center px-2 py-1.5 align-top <%= _cellClass %>">
+            <%# Always show + Add at top when user can edit %>
+            <% const _entityMongoId = details.employeeMongoId ? String(details.employeeMongoId) : null; %>
+            <% const _subUuid = details.subcontractorId || null; %>
+            <% if (_canEdit && (_entityMongoId || _subUuid)) { %>
+              <button type="button" class="att-open print:hidden w-full text-center"
+                data-uuid=""
+                data-is-new="true"
+                data-is-subcontractor="<%= sectionType === 'subcontractor' %>"
+                data-employee-id="<%= _entityMongoId || '' %>"
+                data-subcontractor-id="<%= _subUuid || '' %>"
+                data-date="<%= day %>"
+                data-type="work"
+                data-hours=""
+                data-day-rate=""
+                data-location-id=""
+                data-contract-id=""
+                title="Add attendance">
+                <span class="text-gray-400 dark:text-gray-500 text-[10px] hover:text-gray-600 dark:hover:text-gray-300">+ Add</span>
+              </button>
+            <% } %>
             <% if (Object.keys(dailyRecords).length > 0) { %>
               <% Object.entries(dailyRecords).forEach(([recordId, record]) => { %>
                 <% const isPurchase = recordId.startsWith('purchase-'); %>
@@ -188,27 +208,6 @@
 
               <% }); %>
 
-            <% } else { %>
-              <%# Empty cell open dialog to create %>
-              <% const _entityMongoId = details.employeeMongoId ? String(details.employeeMongoId) : null; %>
-              <% const _subUuid = details.subcontractorId || null; %>
-              <% if (_canEdit && (_entityMongoId || _subUuid)) { %>
-                <button type="button" class="att-open print:hidden w-full text-center"
-                  data-uuid=""
-                  data-is-new="true"
-                  data-is-subcontractor="<%= sectionType === 'subcontractor' %>"
-                  data-employee-id="<%= _entityMongoId || '' %>"
-                  data-subcontractor-id="<%= _subUuid || '' %>"
-                  data-date="<%= day %>"
-                  data-type="work"
-                  data-hours=""
-                  data-day-rate=""
-                  data-location-id=""
-                  data-contract-id=""
-                  title="Add attendance">
-                  <span class="text-gray-400 dark:text-gray-500 text-[10px] hover:text-gray-600 dark:hover:text-gray-300">+ Add</span>
-                </button>
-              <% } %>
             <% } %>
           </td>
         <% }); %>
