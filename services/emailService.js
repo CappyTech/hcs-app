@@ -19,6 +19,8 @@ function getTransporter() {
     return null;
   }
 
+  logger.info(`[emailService] Creating SMTP transporter — host: ${host}, port: ${port}, secure: ${port === 465}`);
+
   _transporter = nodemailer.createTransport({
     host,
     port,
@@ -48,7 +50,7 @@ async function sendMail({ to, subject, html, text }) {
     logger.info(`[emailService] Email sent to ${to} — messageId: ${info.messageId}`);
     return info;
   } catch (err) {
-    logger.error(`[emailService] Failed to send email to ${to}: ${err.message}`, { stack: err.stack });
+    logger.error(`[emailService] Failed to send email to ${to} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587}: ${err.message}`, { stack: err.stack });
     throw err;
   }
 }
