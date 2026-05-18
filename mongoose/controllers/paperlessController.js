@@ -58,6 +58,9 @@ exports.listOcr = async (req, res, next) => {
       ["1", "true", "on", "yes"].includes(
         String(req.query.done || "").toLowerCase(),
       ) || tagParam === "data-entry-done";
+    const onlyUnlinked = ["1", "true", "on", "yes"].includes(
+      String(req.query.unlinked || "").toLowerCase(),
+    );
 
     // Initial-entry redirect: append autoIngest=1 once to kick off background ingest
     if (typeof req.query.autoIngest === "undefined") {
@@ -70,6 +73,8 @@ exports.listOcr = async (req, res, next) => {
       url.searchParams.set("page", String(page));
       url.searchParams.set("pageSize", String(pageSize));
       if (onlyDone) url.searchParams.set("done", "1");
+      if (tagParam) url.searchParams.set("tag", tagParam);
+      if (onlyUnlinked) url.searchParams.set("unlinked", "1");
       return res.redirect(url.pathname + "?" + url.searchParams.toString());
     }
 
@@ -97,6 +102,24 @@ exports.listOcr = async (req, res, next) => {
       };
       filter.$and = filter.$and || [];
       filter.$and.push(tagCond);
+    } else if (tagParam) {
+      // Generic tag filter: match documents that have the given tag by name
+      const safe = tagParam.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const r = new RegExp("^\\s*" + safe + "\\s*$", "i");
+      const tagCond = {
+        $or: [
+          { "tags.name": r },
+          { "tags.Name": r },
+          { tags: { $elemMatch: { $regex: r } } },
+        ],
+      };
+      filter.$and = filter.$and || [];
+      filter.$and.push(tagCond);
+    }
+
+    // Optional filter: only documents with no KashFlow link
+    if (onlyUnlinked) {
+      filter.kashflowPurchaseId = null;
     }
 
     const total = await OcrDocument.countDocuments(filter);
@@ -142,6 +165,8 @@ exports.listOcr = async (req, res, next) => {
       pageSize,
       total,
       done: onlyDone,
+      tag: tagParam || null,
+      unlinked: onlyUnlinked,
       items,
       pages: Math.max(1, Math.ceil(total / pageSize)),
       startedBgIngest,

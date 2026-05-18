@@ -18,6 +18,19 @@
 
   <div class="text-sm text-gray-600 dark:text-gray-300 mb-2">Total: <%= total %></div>
 
+  <% if (tag) { %>
+  <div class="mb-3 inline-flex items-center gap-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 px-3 py-1.5 text-sm text-amber-800 dark:text-amber-300">
+    <span>Filtered by tag: <strong><%= tag %></strong></span>
+    <a href="?q=<%= encodeURIComponent(q) %>&page=1&pageSize=<%= pageSize %>" class="ml-1 text-amber-600 hover:text-amber-900 dark:hover:text-amber-100 font-bold" title="Clear tag filter">&times;</a>
+  </div>
+  <% } %>
+  <% if (unlinked) { %>
+  <div class="mb-3 inline-flex items-center gap-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 px-3 py-1.5 text-sm text-yellow-800 dark:text-yellow-300">
+    <span>Showing <strong>unlinked</strong> documents only</span>
+    <a href="?q=<%= encodeURIComponent(q) %>&page=1&pageSize=<%= pageSize %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>" class="ml-1 text-yellow-600 hover:text-yellow-900 dark:hover:text-yellow-100 font-bold" title="Clear unlinked filter">&times;</a>
+  </div>
+  <% } %>
+
   <div class="overflow-x-auto border rounded-xl">
     <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700">
       <thead class="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
@@ -72,10 +85,10 @@
     <div>Page <%= page %> of <%= pages %></div>
     <div class="flex gap-2">
       <% if (page > 1) { %>
-        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %>">Prev</a>
+        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %>">Prev</a>
       <% } %>
       <% if (page < pages) { %>
-        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %>">Next</a>
+        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %>">Next</a>
       <% } %>
     </div>
   </div>
