@@ -1107,6 +1107,138 @@ exports.reIngestOne = async (req, res, next) => {
 };
 
 /** POST /paperless/ocr/:paperlessId/unlink — clear stale KashFlow linkage */
+/** GET /paperless/ocr/:paperlessId/match — manual purchase-matching UI */
+exports.getMatchPurchase = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const { OcrDocument } = mdb.PAPERLESS;
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    if (!Number.isFinite(paperlessId)) return res.status(400).render('error', { message: 'Invalid paperlessId' });
+
+    const doc = await OcrDocument.findOne({ paperlessId }).lean();
+    if (!doc) return res.status(404).render('error', { message: 'OCR document not found.' });
+
+    // Resolve existing linked purchase from REST (null if not found / deleted)
+    let currentPurchase = null;
+    const Purchase = mdb.REST?.purchase;
+    if (Purchase && doc.kashflowPurchaseId) {
+      currentPurchase = await Purchase.findOne({ Id: doc.kashflowPurchaseId })
+        .select('Id Number SupplierName SupplierReference IssuedDate GrossAmount NetAmount Status Permalink')
+        .lean();
+    }
+
+    // Search results
+    const q = String(req.query.q || '').trim();
+    const page = Math.max(parseInt(req.query.page || '1', 10), 1);
+    const pageSize = 20;
+    let purchases = [];
+    let purchaseTotal = 0;
+
+    if (Purchase && q) {
+      const numQ = parseInt(q, 10);
+      const filter = Number.isFinite(numQ) && String(numQ) === q
+        ? { Number: numQ }
+        : {
+            $or: [
+              { SupplierName:      { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+              { SupplierReference: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+            ],
+          };
+      [purchaseTotal, purchases] = await Promise.all([
+        Purchase.countDocuments(filter),
+        Purchase.find(filter)
+          .select('Id Number SupplierName SupplierReference IssuedDate GrossAmount NetAmount VATAmount Status Permalink')
+          .sort({ Number: -1 })
+          .skip((page - 1) * pageSize)
+          .limit(pageSize)
+          .lean(),
+      ]);
+    }
+
+    res.render(path.join('tailwindcss', 'paperless', 'match'), {
+      title: `Match Purchase — Doc #${paperlessId}`,
+      doc,
+      currentPurchase,
+      q,
+      page,
+      pageSize,
+      purchases,
+      purchaseTotal,
+      pages: Math.max(1, Math.ceil(purchaseTotal / pageSize)),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** POST /paperless/ocr/:paperlessId/match — confirm a purchase link */
+exports.postMatchPurchase = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const { OcrDocument } = mdb.PAPERLESS;
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    if (!Number.isFinite(paperlessId)) return res.status(400).render('error', { message: 'Invalid paperlessId' });
+
+    const purchaseNumber = parseInt(req.body.purchaseNumber, 10);
+    const purchaseId     = parseInt(req.body.purchaseId, 10);
+    if (!Number.isFinite(purchaseNumber) || !Number.isFinite(purchaseId)) {
+      req.flash('error', 'No purchase selected.');
+      return res.redirect(`/paperless/ocr/${paperlessId}/match`);
+    }
+
+    // Re-confirm the purchase still exists in REST
+    const Purchase = mdb.REST?.purchase;
+    const restPurchase = Purchase
+      ? await Purchase.findOne({ Id: purchaseId, Number: purchaseNumber })
+          .select('Id Number Permalink')
+          .lean()
+      : null;
+
+    if (!restPurchase) {
+      req.flash('error', `Purchase #${purchaseNumber} (Id ${purchaseId}) not found in REST — it may have been deleted.`);
+      return res.redirect(`/paperless/ocr/${paperlessId}/match`);
+    }
+
+    // Update MongoDB
+    await OcrDocument.updateOne(
+      { paperlessId },
+      {
+        $set: {
+          kashflowPurchaseId:     restPurchase.Id,
+          kashflowPurchaseNumber: restPurchase.Number,
+          kashflowPermalink:      restPurchase.Permalink ?? null,
+        },
+      },
+    );
+    logger.info(`[matchPurchase] Manually linked paperlessId=${paperlessId} → purchase #${purchaseNumber} (Id=${purchaseId})`);
+
+    // Write back to Paperless custom fields (best-effort)
+    try {
+      const docForCf = await OcrDocument.findOne({ paperlessId }).select('customFields').lean();
+      await updatePaperlessWithKashFlowInfo(
+        paperlessId,
+        restPurchase,
+        200,
+        { existingCf: docForCf?.customFields || [] },
+      );
+    } catch (cfErr) {
+      logger.warn(`[matchPurchase] CF write-back failed for paperlessId=${paperlessId}: ${cfErr.message}`);
+    }
+
+    // Re-ingest so UI reflects the new CF values
+    try {
+      await ingestOnePaperlessDoc(paperlessId);
+    } catch (ingestErr) {
+      logger.warn(`[matchPurchase] Re-ingest failed for paperlessId=${paperlessId}: ${ingestErr.message}`);
+    }
+
+    req.flash('success', `Linked to KashFlow purchase #${purchaseNumber}.`);
+    res.redirect(`/paperless/ocr/${paperlessId}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.unlinkKashflow = async (req, res, next) => {
   try {
     await mdb.connect();

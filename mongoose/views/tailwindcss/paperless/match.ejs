@@ -1,0 +1,198 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <%# ── Header ──────────────────────────────────────────────────────────────── %>
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/paperless/ocr/<%= doc.paperlessId %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Back to document</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Match Purchase — Doc #<%= doc.paperlessId %></h1>
+  </div>
+
+  <%# ── Flash messages ─────────────────────────────────────────────────────── %>
+  <% if (locals.flash?.error?.length) { %>
+    <div class="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 text-sm text-red-800 dark:text-red-300"><%= flash.error[0] %></div>
+  <% } %>
+  <% if (locals.flash?.success?.length) { %>
+    <div class="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 text-sm text-green-800 dark:text-green-300"><%= flash.success[0] %></div>
+  <% } %>
+
+  <div class="grid lg:grid-cols-5 gap-6">
+
+    <%# ── Left: document details ──────────────────────────────────────────────── %>
+    <div class="lg:col-span-2 space-y-4">
+
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Paperless Document</h2>
+        <div class="space-y-1.5 text-sm">
+          <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-gray-500">ID</span><span>#<%= doc.paperlessId %></span></div>
+          <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-gray-500">Title</span><span class="break-words"><%= doc.title || '—' %></span></div>
+          <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-gray-500">Type</span><span><%= doc.documentType?.name || '—' %></span></div>
+          <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-gray-500">Correspondent</span><span><%= doc.correspondent?.name || '—' %></span></div>
+          <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-gray-500">Created</span><span><%= doc.created ? new Date(doc.created).toLocaleDateString('en-GB') : '—' %></span></div>
+          <% if ((doc.tags||[]).length > 0) { %>
+          <div class="flex gap-2 flex-wrap"><span class="w-28 shrink-0 font-medium text-gray-500">Tags</span>
+            <div class="flex flex-wrap gap-1">
+              <% (doc.tags||[]).forEach(t => { %>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700"><%= t.name %></span>
+              <% }) %>
+            </div>
+          </div>
+          <% } %>
+        </div>
+        <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <a href="https://docs.heroncs.co.uk/documents/<%= doc.paperlessId %>/details" target="_blank" rel="noopener noreferrer"
+             class="text-xs text-green-700 dark:text-green-400 hover:underline">View in Paperless ↗</a>
+        </div>
+      </div>
+
+      <%# Current link status %>
+      <div class="rounded-2xl border shadow-sm p-4
+        <% if (!doc.kashflowPurchaseId) { %>border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900
+        <% } else if (!currentPurchase) { %>border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20
+        <% } else { %>border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20<% } %>">
+
+        <h2 class="font-semibold text-sm uppercase tracking-wide mb-3
+          <% if (!doc.kashflowPurchaseId) { %>text-gray-500 dark:text-gray-400
+          <% } else if (!currentPurchase) { %>text-red-700 dark:text-red-400
+          <% } else { %>text-green-700 dark:text-green-400<% } %>">Current Link</h2>
+
+        <% if (!doc.kashflowPurchaseId) { %>
+          <p class="text-sm text-gray-500 dark:text-gray-400">No KashFlow purchase linked.</p>
+
+        <% } else if (!currentPurchase) { %>
+          <div class="text-sm space-y-1">
+            <div class="font-semibold text-red-700 dark:text-red-400">⚠ Mismatch — purchase not found in REST</div>
+            <div class="text-red-800 dark:text-red-300">MongoDB records Id <strong><%= doc.kashflowPurchaseId %></strong>
+              <% if (doc.kashflowPurchaseNumber) { %>(#<%= doc.kashflowPurchaseNumber %>)<% } %>
+              but no matching purchase exists in the synced data.</div>
+            <div class="text-xs text-red-700 dark:text-red-400 mt-1">The purchase may have been deleted or recreated in KashFlow. Use the search below to re-link.</div>
+          </div>
+
+        <% } else { %>
+          <div class="text-sm space-y-1">
+            <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-green-700 dark:text-green-400">Purchase #</span><span class="font-mono"><%= currentPurchase.Number %></span></div>
+            <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-green-700 dark:text-green-400">Supplier</span><span><%= currentPurchase.SupplierName || '—' %></span></div>
+            <% if (currentPurchase.SupplierReference) { %>
+            <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-green-700 dark:text-green-400">Ref</span><span class="font-mono text-xs"><%= currentPurchase.SupplierReference %></span></div>
+            <% } %>
+            <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-green-700 dark:text-green-400">Date</span><span><%= currentPurchase.IssuedDate ? new Date(currentPurchase.IssuedDate).toLocaleDateString('en-GB') : '—' %></span></div>
+            <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-green-700 dark:text-green-400">Gross</span><span>£<%= (currentPurchase.GrossAmount ?? 0).toFixed(2) %></span></div>
+            <div class="flex gap-2"><span class="w-28 shrink-0 font-medium text-green-700 dark:text-green-400">Status</span><span><%= currentPurchase.Status || '—' %></span></div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-green-200 dark:border-green-800">
+            <a href="https://app.kashflow.com/#purchases/<%= currentPurchase.Number %>" target="_blank" rel="noopener noreferrer"
+               class="text-xs text-green-700 dark:text-green-400 hover:underline">Open in KashFlow ↗</a>
+          </div>
+        <% } %>
+      </div>
+
+    </div>
+
+    <%# ── Right: search + results ────────────────────────────────────────────── %>
+    <div class="lg:col-span-3 space-y-4">
+
+      <%# Search form — GET, no CSRF %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Search Purchases</h2>
+        <form method="GET" action="/paperless/ocr/<%= doc.paperlessId %>/match" class="flex gap-2 flex-wrap">
+          <input name="q" value="<%= q %>" placeholder="Purchase number, supplier name or reference"
+                 class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                        bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          <button type="submit"
+                  class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+            Search
+          </button>
+        </form>
+      </div>
+
+      <%# Results %>
+      <% if (q && purchases.length === 0) { %>
+        <div class="text-sm text-gray-500 dark:text-gray-400 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          No purchases found for <strong><%= q %></strong>.
+        </div>
+
+      <% } else if (purchases.length > 0) { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <%= purchaseTotal %> result<%= purchaseTotal !== 1 ? 's' : '' %> for <strong><%= q %></strong>
+            </span>
+            <% if (pages > 1) { %>
+              <span class="text-xs text-gray-500">Page <%= page %> of <%= pages %></span>
+            <% } %>
+          </div>
+
+          <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% purchases.forEach(p => { %>
+              <%
+                const isCurrentLink = doc.kashflowPurchaseId === p.Id;
+              %>
+              <div class="flex items-start gap-4 px-4 py-3 <%= isCurrentLink ? 'bg-green-50 dark:bg-green-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800' %>">
+
+                <%# Purchase info %>
+                <div class="flex-1 min-w-0 text-sm space-y-0.5">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-mono font-semibold text-gray-900 dark:text-white">#<%= p.Number %></span>
+                    <% if (p.SupplierName) { %><span class="text-gray-700 dark:text-gray-300 truncate"><%= p.SupplierName %></span><% } %>
+                    <% if (isCurrentLink) { %>
+                      <span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">current link</span>
+                    <% } %>
+                  </div>
+                  <div class="flex gap-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+                    <% if (p.IssuedDate) { %><span><%= new Date(p.IssuedDate).toLocaleDateString('en-GB') %></span><% } %>
+                    <% if (p.GrossAmount != null) { %><span>£<%= p.GrossAmount.toFixed(2) %> gross</span><% } %>
+                    <% if (p.NetAmount != null) { %><span>£<%= p.NetAmount.toFixed(2) %> net</span><% } %>
+                    <% if (p.VATAmount != null && p.VATAmount !== 0) { %><span>£<%= p.VATAmount.toFixed(2) %> VAT</span><% } %>
+                    <% if (p.Status) { %><span class="capitalize"><%= p.Status.toLowerCase() %></span><% } %>
+                    <% if (p.SupplierReference) { %><span class="font-mono">Ref: <%= p.SupplierReference %></span><% } %>
+                  </div>
+                </div>
+
+                <%# Link action — each row is its own POST form %>
+                <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/match" class="shrink-0">
+                  <input type="hidden" name="_csrf"           value="<%= csrfToken %>">
+                  <input type="hidden" name="purchaseNumber"  value="<%= p.Number %>">
+                  <input type="hidden" name="purchaseId"      value="<%= p.Id %>">
+                  <% if (isCurrentLink) { %>
+                    <button type="submit"
+                            class="text-xs px-3 py-1.5 rounded-lg border border-green-400 text-green-700 dark:text-green-400 bg-white dark:bg-gray-900 cursor-default opacity-60"
+                            disabled title="Already linked">
+                      Linked
+                    </button>
+                  <% } else { %>
+                    <button type="submit" data-submit-once
+                            class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">
+                      Link
+                    </button>
+                  <% } %>
+                </form>
+
+              </div>
+            <% }) %>
+          </div>
+
+          <%# Pagination %>
+          <% if (pages > 1) { %>
+            <div class="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+              <% if (page > 1) { %>
+                <a href="?q=<%= encodeURIComponent(q) %>&page=<%= page - 1 %>"
+                   class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition">← Prev</a>
+              <% } else { %><span></span><% } %>
+              <% if (page < pages) { %>
+                <a href="?q=<%= encodeURIComponent(q) %>&page=<%= page + 1 %>"
+                   class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition">Next →</a>
+              <% } else { %><span></span><% } %>
+            </div>
+          <% } %>
+        </div>
+
+      <% } else { %>
+        <div class="text-sm text-gray-400 dark:text-gray-500 p-4 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+          Enter a purchase number, supplier name, or reference above to search.
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+
+</div>

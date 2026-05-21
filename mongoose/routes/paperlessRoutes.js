@@ -25,6 +25,8 @@ const paperlessGuard = [
 router.get("/paperless/ocr", ...paperlessGuard, ctrl.listOcr);
 router.get("/paperless/ocr/:paperlessId", ...paperlessGuard, ctrl.readOcr);
 router.get("/paperless/ocr/:paperlessId/draft", ...paperlessGuard, ctrl.getPurchaseDraft);
+router.get("/paperless/ocr/:paperlessId/match", ...paperlessGuard, ctrl.getMatchPurchase);
+router.post("/paperless/ocr/:paperlessId/match", ...paperlessGuard, ctrl.postMatchPurchase);
 router.post("/paperless/ocr/:paperlessId/send", ...paperlessGuard, ctrl.sendDraftToKashflow);
 router.post("/paperless/ocr/:paperlessId/ingest", ...paperlessGuard, ctrl.reIngestOne);
 router.post("/paperless/ocr/:paperlessId/unlink", ...paperlessGuard, ctrl.unlinkKashflow);
