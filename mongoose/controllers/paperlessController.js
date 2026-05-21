@@ -1106,7 +1106,6 @@ exports.reIngestOne = async (req, res, next) => {
   }
 };
 
-/** POST /paperless/ocr/:paperlessId/unlink — clear stale KashFlow linkage */
 /** GET /paperless/ocr/:paperlessId/match — manual purchase-matching UI */
 exports.getMatchPurchase = async (req, res, next) => {
   try {
@@ -1239,6 +1238,7 @@ exports.postMatchPurchase = async (req, res, next) => {
   }
 };
 
+/** POST /paperless/ocr/:paperlessId/unlink — clear stale KashFlow linkage */
 exports.unlinkKashflow = async (req, res, next) => {
   try {
     await mdb.connect();
