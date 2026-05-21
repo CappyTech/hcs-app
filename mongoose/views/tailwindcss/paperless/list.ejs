@@ -9,6 +9,9 @@
   <form method="get" class="mb-4 flex flex-wrap gap-3 items-center" id="list-controls">
     <input name="q" value="<%= q %>" placeholder="Search title/OCR/correspondent/type"
            class="text-sm border rounded px-3 py-1 w-64 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600" />
+    <% if (tag) { %><input type="hidden" name="tag" value="<%= tag %>" /><% } %>
+    <% if (noKfNumber) { %><input type="hidden" name="noKfNumber" value="1" /><% } %>
+    <% if (unlinked) { %><input type="hidden" name="unlinked" value="1" /><% } %>
     <label class="inline-flex items-center gap-2 text-sm">
       <input type="checkbox" name="done" value="1" <%= done ? 'checked' : '' %> class="rounded border-slate-300 dark:border-gray-600 dark:bg-gray-800 accent-green-600" />
       Only data-entry-done
@@ -21,13 +24,19 @@
   <% if (tag) { %>
   <div class="mb-3 inline-flex items-center gap-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 px-3 py-1.5 text-sm text-amber-800 dark:text-amber-300">
     <span>Filtered by tag: <strong><%= tag %></strong></span>
-    <a href="?q=<%= encodeURIComponent(q) %>&page=1&pageSize=<%= pageSize %>" class="ml-1 text-amber-600 hover:text-amber-900 dark:hover:text-amber-100 font-bold" title="Clear tag filter">&times;</a>
+    <a href="?q=<%= encodeURIComponent(q) %>&page=1&pageSize=<%= pageSize %><%= noKfNumber ? '&noKfNumber=1' : '' %>" class="ml-1 text-amber-600 hover:text-amber-900 dark:hover:text-amber-100 font-bold" title="Clear tag filter">&times;</a>
   </div>
   <% } %>
   <% if (unlinked) { %>
   <div class="mb-3 inline-flex items-center gap-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 px-3 py-1.5 text-sm text-yellow-800 dark:text-yellow-300">
     <span>Showing <strong>unlinked</strong> documents only</span>
-    <a href="?q=<%= encodeURIComponent(q) %>&page=1&pageSize=<%= pageSize %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %>" class="ml-1 text-yellow-600 hover:text-yellow-900 dark:hover:text-yellow-100 font-bold" title="Clear unlinked filter">&times;</a>
+    <a href="?q=<%= encodeURIComponent(q) %>&page=1&pageSize=<%= pageSize %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= noKfNumber ? '&noKfNumber=1' : '' %>" class="ml-1 text-yellow-600 hover:text-yellow-900 dark:hover:text-yellow-100 font-bold" title="Clear unlinked filter">&times;</a>
+  </div>
+  <% } %>
+  <% if (noKfNumber) { %>
+  <div class="mb-3 inline-flex items-center gap-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 px-3 py-1.5 text-sm text-amber-800 dark:text-amber-300">
+    <span>Showing documents with <strong>no KashFlow purchase number</strong> only</span>
+    <a href="?q=<%= encodeURIComponent(q) %>&page=1&pageSize=<%= pageSize %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %>" class="ml-1 text-amber-600 hover:text-amber-900 dark:hover:text-amber-100 font-bold" title="Clear no-KF-number filter">&times;</a>
   </div>
   <% } %>
 
@@ -85,10 +94,10 @@
     <div>Page <%= page %> of <%= pages %></div>
     <div class="flex gap-2">
       <% if (page > 1) { %>
-        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %>">Prev</a>
+        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %><%= noKfNumber ? '&noKfNumber=1' : '' %>">Prev</a>
       <% } %>
       <% if (page < pages) { %>
-        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %>">Next</a>
+        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %><%= noKfNumber ? '&noKfNumber=1' : '' %>">Next</a>
       <% } %>
     </div>
   </div>

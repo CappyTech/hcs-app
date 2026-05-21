@@ -61,6 +61,9 @@ exports.listOcr = async (req, res, next) => {
     const onlyUnlinked = ["1", "true", "on", "yes"].includes(
       String(req.query.unlinked || "").toLowerCase(),
     );
+    const noKfNumber = ["1", "true", "on", "yes"].includes(
+      String(req.query.noKfNumber || "").toLowerCase(),
+    );
 
     // Initial-entry redirect: append autoIngest=1 once to kick off background ingest
     if (typeof req.query.autoIngest === "undefined") {
@@ -75,6 +78,7 @@ exports.listOcr = async (req, res, next) => {
       if (onlyDone) url.searchParams.set("done", "1");
       if (tagParam) url.searchParams.set("tag", tagParam);
       if (onlyUnlinked) url.searchParams.set("unlinked", "1");
+      if (noKfNumber) url.searchParams.set("noKfNumber", "1");
       return res.redirect(url.pathname + "?" + url.searchParams.toString());
     }
 
@@ -123,9 +127,6 @@ exports.listOcr = async (req, res, next) => {
     }
 
     // Optional filter: only documents with no KashFlow purchase number recorded
-    const noKfNumber = ["1", "true", "on", "yes"].includes(
-      String(req.query.noKfNumber || "").toLowerCase(),
-    );
     if (noKfNumber) {
       filter.kashflowPurchaseNumber = null;
     }
@@ -175,6 +176,7 @@ exports.listOcr = async (req, res, next) => {
       done: onlyDone,
       tag: tagParam || null,
       unlinked: onlyUnlinked,
+      noKfNumber,
       items,
       pages: Math.max(1, Math.ceil(total / pageSize)),
       startedBgIngest,
