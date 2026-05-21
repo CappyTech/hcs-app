@@ -54,6 +54,11 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
         { $match: { kashflowPurchaseId: null, lastSentAt: { $ne: null } } },
         { $count: 'n' },
       ],
+      // Unlinked but have a KashFlow purchase number — can be auto-resolved via number→ID lookup
+      hasNumberNoId: [
+        { $match: { kashflowPurchaseId: null, kashflowPurchaseNumber: { $ne: null } } },
+        { $count: 'n' },
+      ],
       // Drift: MongoDB kashflowPurchaseId disagrees with stored Paperless custom field value
       drifted: [
         { $addFields: {
@@ -95,6 +100,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const driftedDocs     = facetResult?.drifted?.[0]?.n          ?? 0;
   const addedNoKfNumber = facetResult?.addedNoKf?.[0]?.n        ?? 0;
   const sentButUnlinked = facetResult?.sentButUnlinked?.[0]?.n  ?? 0;
+  const hasNumberNoId   = facetResult?.hasNumberNoId?.[0]?.n    ?? 0;
 
   // ── By document type ───────────────────────────────────────────────────────
   const byDocType = await OcrDocument.aggregate([
@@ -140,7 +146,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const unlinkedDocsList = await OcrDocument.find({ kashflowPurchaseId: null })
     .sort({ added: -1 })
     .limit(DETAIL_LIMIT)
-    .select('paperlessId title documentType added lastSentAt lastSendMode lastSendStatus')
+    .select('paperlessId title documentType added lastSentAt lastSendMode lastSendStatus kashflowPurchaseNumber')
     .lean();
 
   // ── Ingest stats + error list ──────────────────────────────────────────────
@@ -230,6 +236,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     orphanedDocs,
     driftedDocs,
     sentButUnlinked,
+    hasNumberNoId,
     errorDocs,
     addedNoKfNumber,
     sentDirect,

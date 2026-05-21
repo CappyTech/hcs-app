@@ -73,6 +73,11 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
       Sent but Unlinked: <strong class="ml-1"><%= sentButUnlinked %></strong>
     </span>
     <% } %>
+    <% if (hasNumberNoId > 0) { %>
+    <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-100 text-orange-800 dark:bg-orange-800/20 dark:text-orange-400" title="Unlinked but have a KashFlow purchase number — can be auto-resolved">
+      Has KF# (no ID): <strong class="ml-1"><%= hasNumberNoId %></strong>
+    </span>
+    <% } %>
     <% if (ingestStats.total > 0) { %>
     <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-800/20 dark:text-indigo-400">
       Ingest Records: <strong class="ml-1"><%= ingestStats.total %></strong>
@@ -318,13 +323,24 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
   <% if (unlinkedDocsList.length > 0) { %>
   <details class="mb-6 group border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl">
     <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <span class="text-lg font-bold text-yellow-700 dark:text-yellow-400">Unlinked Documents (<%= unlinkedDocs %>)</span>
-      <span class="text-yellow-400 text-sm group-open:hidden">▼</span><span class="text-yellow-400 text-sm hidden group-open:inline">▲</span>
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <span class="text-lg font-bold text-yellow-700 dark:text-yellow-400">Unlinked Documents (<%= unlinkedDocs %>)</span>
+        <% if (hasNumberNoId > 0) { %><span class="text-sm text-orange-600 dark:text-orange-400 hidden sm:block"><%= hasNumberNoId %> have a KF number — resolvable</span><% } %>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <% if (hasNumberNoId > 0) { %>
+        <form method="POST" action="/paperless/resolve-numbers" data-submit-once>
+          <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
+          <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Resolve Numbers</button>
+        </form>
+        <% } %>
+        <span class="text-yellow-400 text-sm group-open:hidden">▼</span><span class="text-yellow-400 text-sm hidden group-open:inline">▲</span>
+      </div>
     </summary>
     <div class="overflow-x-auto px-4 pb-4">
       <table class="min-w-full text-sm">
         <thead><tr class="text-left text-xs text-yellow-600 dark:text-yellow-400 border-b border-yellow-200 dark:border-yellow-800">
-          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">Send Mode</th><th class="pb-1 pr-3 font-medium">Status</th><th class="pb-1 pr-3 font-medium">Added</th><th class="pb-1 font-medium">Links</th>
+          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">KF#</th><th class="pb-1 pr-3 font-medium">Send Mode</th><th class="pb-1 pr-3 font-medium">Status</th><th class="pb-1 pr-3 font-medium">Added</th><th class="pb-1 font-medium">Links</th>
         </tr></thead>
         <tbody class="divide-y divide-yellow-100 dark:divide-yellow-900">
           <% for (const d of unlinkedDocsList) { %>
@@ -332,6 +348,9 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
             <td class="py-1.5 pr-3 font-mono text-xs text-gray-500"><%= d.paperlessId %></td>
             <td class="py-1.5 pr-3 max-w-xs truncate"><a href="/paperless/ocr/<%= d.paperlessId %>" class="text-yellow-700 dark:text-yellow-300 hover:underline font-medium"><%= d.title || '—' %></a></td>
             <td class="py-1.5 pr-3 text-xs text-gray-500"><%= d.documentType?.name || '—' %></td>
+            <td class="py-1.5 pr-3 font-mono text-xs">
+              <% if (d.kashflowPurchaseNumber) { %><span class="text-orange-600 dark:text-orange-400 font-semibold">#<%= d.kashflowPurchaseNumber %></span><% } else { %><span class="text-gray-400">—</span><% } %>
+            </td>
             <td class="py-1.5 pr-3 text-xs">
               <% if (d.lastSendMode === 'direct') { %><span class="text-green-600">direct</span>
               <% } else if (d.lastSendMode === 'webhook') { %><span class="text-blue-600">webhook</span>

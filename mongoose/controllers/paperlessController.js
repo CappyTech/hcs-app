@@ -1137,6 +1137,88 @@ exports.unlinkKashflow = async (req, res, next) => {
 };
 
 /** DELETE /paperless/ocr/:paperlessId — remove an OcrDocument (and its ingest record) */
+
+/** POST /paperless/resolve-numbers — for each unlinked doc with a kashflowPurchaseNumber,
+ *  look up the purchase in REST by that number and populate kashflowPurchaseId. */
+let _resolveNumbersRunning = false;
+exports.resolveNumbers = async (req, res) => {
+  if (_resolveNumbersRunning) {
+    logger.warn('[resolveNumbers] Already running — ignoring duplicate request');
+    return res.redirect('/overview/documents');
+  }
+  res.redirect('/overview/documents');
+  setImmediate(async () => {
+    _resolveNumbersRunning = true;
+    try {
+      await mdb.connect();
+      const { OcrDocument } = mdb.PAPERLESS;
+      const Purchase = mdb.REST?.purchase;
+      if (!Purchase) {
+        logger.error('[resolveNumbers] REST purchase model not available');
+        return;
+      }
+
+      const unlinkedWithNumber = await OcrDocument
+        .find({ kashflowPurchaseId: null, kashflowPurchaseNumber: { $ne: null } })
+        .select('paperlessId kashflowPurchaseNumber customFields lastSendStatus')
+        .lean();
+
+      logger.info(`[resolveNumbers] Found ${unlinkedWithNumber.length} docs with a KashFlow number but no ID`);
+
+      // Pre-warm the CF definitions cache once before the loop for efficient batch CF updates
+      try {
+        await warmCfCache(OcrDocument);
+      } catch (cacheErr) {
+        logger.warn(`[resolveNumbers] Could not pre-warm CF cache: ${cacheErr.message}`);
+      }
+
+      let ok = 0, notFound = 0, fail = 0;
+      for (const doc of unlinkedWithNumber) {
+        try {
+          const purchase = await Purchase
+            .findOne({ Number: doc.kashflowPurchaseNumber, deletedAt: null, DeletedAt: null })
+            .select('Id Number Permalink')
+            .lean();
+
+          if (!purchase) {
+            logger.warn(`[resolveNumbers] Purchase number ${doc.kashflowPurchaseNumber} not found in REST for paperlessId=${doc.paperlessId}`);
+            notFound++;
+            continue;
+          }
+
+          await OcrDocument.updateOne(
+            { paperlessId: doc.paperlessId },
+            { $set: {
+              kashflowPurchaseId:     purchase.Id,
+              kashflowPurchaseNumber: purchase.Number ?? doc.kashflowPurchaseNumber,
+              kashflowPermalink:      purchase.Permalink ?? null,
+            }},
+          );
+
+          // Best-effort: write the ID back to the Paperless custom field to eliminate drift
+          updatePaperlessWithKashFlowInfo(
+            doc.paperlessId,
+            { Id: purchase.Id, Number: purchase.Number, Permalink: purchase.Permalink },
+            doc.lastSendStatus,
+            { existingCf: doc.customFields || [] },
+          ).catch(e => logger.warn(`[resolveNumbers] Paperless CF update failed for paperlessId=${doc.paperlessId}: ${e.message}`));
+
+          logger.info(`[resolveNumbers] Linked paperlessId=${doc.paperlessId} → KF id=${purchase.Id} (number=${purchase.Number})`);
+          ok++;
+        } catch (e) {
+          fail++;
+          logger.warn(`[resolveNumbers] Failed for paperlessId=${doc.paperlessId}: ${e.message}`);
+        }
+      }
+      logger.info(`[resolveNumbers] Complete. linked=${ok} notFound=${notFound} failed=${fail}`);
+    } catch (err) {
+      logger.error(`[resolveNumbers] Fatal error: ${err.message}`);
+    } finally {
+      _resolveNumbersRunning = false;
+    }
+  });
+};
+
 /** POST /paperless/repair-drift — bulk write-back KashFlow custom fields to Paperless for drifted docs */
 let _repairDriftRunning = false;
 exports.repairDrift = async (req, res) => {

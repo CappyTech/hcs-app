@@ -33,5 +33,6 @@ router.get("/paperless/suppliers", ...paperlessGuard, ctrl.searchSuppliers);
 router.get("/paperless/ingest", ...paperlessGuard, ctrl.listIngest);
 router.post("/paperless/ingest/trigger", ...paperlessGuard, grabLimiter, ctrl.triggerGrab);
 router.post("/paperless/repair-drift",    ...paperlessGuard, ctrl.repairDrift);
+router.post("/paperless/resolve-numbers", ...paperlessGuard, ctrl.resolveNumbers);
 
 module.exports = router;
