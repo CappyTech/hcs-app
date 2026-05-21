@@ -10,6 +10,8 @@ Where hcs-app does call an external API directly (e.g. `kashflowSessionService.j
 
 ## Repository Guidelines
 
+> **Before writing any EJS view or UI change, read [`docs/UI-GUIDELINES.md`](docs/UI-GUIDELINES.md).** It defines the card patterns, colour system, button classes, form conventions, CSRF usage, flash message rules, and the strict no-inline-script constraint.
+
 - Use Node.js 24.
 - Install dependencies with `npm install`.
 - Run the unit tests with `npm test` before committing.

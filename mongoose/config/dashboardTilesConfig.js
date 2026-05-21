@@ -34,6 +34,13 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-violet-700 hover:bg-violet-800'
     },
+    UiGuidelines: {
+        title: 'UI Component Board',
+        description: 'Living reference for every UI pattern, component, colour, and layout used in this application.',
+        link: '/admin/ui-guidelines',
+        department: ['admin'],
+        buttonClass: 'bg-slate-700 hover:bg-slate-800'
+    },
     SubmitAttendance: {
         title: 'Submit Attendance',
         description: 'Submit your daily attendance records.',

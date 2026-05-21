@@ -9,4 +9,10 @@ router.get(
   ctrl.getDeletedItems,
 );
 
+router.get(
+  "/admin/ui-guidelines",
+  authService.ensureRole("admin"),
+  ctrl.getUiGuidelines,
+);
+
 module.exports = router;

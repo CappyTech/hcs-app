@@ -163,3 +163,10 @@ exports.getDeletedItems = async (req, res, next) => {
     next(err);
   }
 };
+
+/** GET /admin/ui-guidelines — living component board */
+exports.getUiGuidelines = (req, res) => {
+  res.render(path.join('tailwindcss', 'admin', 'uiGuidelines'), {
+    title: 'UI Component Board',
+  });
+};

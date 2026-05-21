@@ -1,0 +1,469 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-16">
+
+  <%# ── Header ──────────────────────────────────────────────────────────── %>
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <a href="/admin" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Admin</a>
+      <h1 class="text-2xl font-bold mt-1">UI Component Board</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Living reference for every UI pattern used in this application. See also
+        <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">docs/UI-GUIDELINES.md</code>.
+      </p>
+    </div>
+  </div>
+
+  <%# ── Colour Palette ─────────────────────────────────────────────────── %>
+  <section id="colours">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Colour Palette</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <% [
+        { name: 'Brand Green',   bg: 'bg-green-600',  text: 'text-white'      },
+        { name: 'Success',       bg: 'bg-green-50 border border-green-300',    text: 'text-green-800'  },
+        { name: 'Warning',       bg: 'bg-amber-50 border border-amber-300',    text: 'text-amber-800'  },
+        { name: 'Error',         bg: 'bg-red-50 border border-red-300',        text: 'text-red-800'    },
+        { name: 'Info',          bg: 'bg-blue-50 border border-blue-300',      text: 'text-blue-800'   },
+        { name: 'Page BG',       bg: 'bg-gray-50 border border-gray-200',      text: 'text-gray-800'   },
+        { name: 'Card',          bg: 'bg-white border border-gray-200',        text: 'text-gray-800'   },
+        { name: 'Subtle Hover',  bg: 'bg-gray-50 border border-gray-200',      text: 'text-gray-500'   },
+        { name: 'Slate Tag',     bg: 'bg-slate-100 border border-slate-200',   text: 'text-slate-700'  },
+        { name: 'Violet',        bg: 'bg-violet-600',  text: 'text-white'      },
+        { name: 'Indigo',        bg: 'bg-indigo-600',  text: 'text-white'      },
+        { name: 'Danger Red',    bg: 'bg-red-600',     text: 'text-white'      },
+      ].forEach(c => { %>
+        <div class="rounded-xl p-3 <%= c.bg %>">
+          <span class="text-xs font-medium <%= c.text %>"><%= c.name %></span>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <%# ── Typography ─────────────────────────────────────────────────────── %>
+  <section id="typography">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Typography</h2>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-3">
+      <div class="text-2xl font-bold">Page Title — text-2xl font-bold</div>
+      <div class="text-xl font-bold">Sub-page Title — text-xl font-bold</div>
+      <div class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Section Heading — uppercase tracking-wide text-gray-500</div>
+      <div class="text-sm text-gray-700 dark:text-gray-300">Body text — text-sm text-gray-700. Used for most paragraph and label content throughout the application.</div>
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Muted label — text-sm font-medium text-gray-500</div>
+      <div class="font-mono text-xs text-gray-700 dark:text-gray-300">Monospace value — font-mono text-xs (IDs, hashes, codes)</div>
+      <div class="text-sm text-green-700 dark:text-green-400 hover:underline cursor-pointer">Link / back nav — text-green-700 hover:underline</div>
+      <div class="text-sm text-red-700 dark:text-red-400">Danger / error text — text-red-700</div>
+      <div class="text-sm text-amber-700 dark:text-amber-400">Warning text — text-amber-700</div>
+      <div class="text-sm text-green-700 dark:text-green-400">Success text — text-green-700</div>
+    </div>
+  </section>
+
+  <%# ── Buttons ─────────────────────────────────────────────────────────── %>
+  <section id="buttons">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Buttons</h2>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+      <div class="flex flex-wrap gap-3 items-center mb-4">
+        <button type="button" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Primary</button>
+        <button type="button" class="text-sm bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Danger</button>
+        <button type="button" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Indigo</button>
+        <button type="button" class="text-sm bg-violet-600 hover:bg-violet-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Violet</button>
+        <button type="button" class="text-sm bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Amber</button>
+      </div>
+      <div class="flex flex-wrap gap-3 items-center mb-4">
+        <button type="button"
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600
+                 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300
+                 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">
+          <i class="bi bi-arrow-left"></i> Secondary
+        </button>
+        <button type="button"
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-green-400
+                 bg-white dark:bg-gray-900 text-green-700 dark:text-green-400
+                 hover:bg-green-50 dark:hover:bg-green-900/20 text-sm font-medium transition shadow-sm">
+          <i class="bi bi-check2"></i> Outline Green
+        </button>
+        <button type="button" disabled
+          class="text-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                 text-gray-400 bg-white dark:bg-gray-900 cursor-not-allowed opacity-60 font-medium">
+          Disabled
+        </button>
+      </div>
+      <div class="flex flex-wrap gap-3 items-center">
+        <button type="button" class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Small Action</button>
+        <button type="button" class="text-xs px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-sm font-medium transition">Small Danger</button>
+        <button type="button" disabled
+          class="text-xs px-3 py-1.5 rounded-lg border border-green-400 text-green-700 dark:text-green-400
+                 bg-white dark:bg-gray-900 cursor-default opacity-60">
+          Already Done
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <%# ── Cards ──────────────────────────────────────────────────────────── %>
+  <section id="cards">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Cards</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+        <h3 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Standard Card</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400">White background, gray border, rounded-2xl, shadow-sm.</p>
+      </div>
+
+      <div class="border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-2xl shadow-sm p-4">
+        <h3 class="font-semibold text-sm uppercase tracking-wide text-green-700 dark:text-green-400 mb-2">Success Card</h3>
+        <p class="text-sm text-green-800 dark:text-green-300">Used for confirmed links, completed states, positive statuses.</p>
+      </div>
+
+      <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl shadow-sm p-4">
+        <h3 class="font-semibold text-sm uppercase tracking-wide text-amber-700 dark:text-amber-400 mb-2">Warning Card</h3>
+        <p class="text-sm text-amber-800 dark:text-amber-300">Drift detected, missing data, pending actions.</p>
+      </div>
+
+      <div class="border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl shadow-sm p-4">
+        <h3 class="font-semibold text-sm uppercase tracking-wide text-red-700 dark:text-red-400 mb-2">Error / Mismatch Card</h3>
+        <p class="text-sm text-red-800 dark:text-red-300">Broken links, failed syncs, validation errors.</p>
+      </div>
+
+      <div class="border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl shadow-sm p-4">
+        <h3 class="font-semibold text-sm uppercase tracking-wide text-blue-700 dark:text-blue-400 mb-2">Info Card</h3>
+        <p class="text-sm text-blue-800 dark:text-blue-300">Contextual hints, notices, re-upload detection.</p>
+      </div>
+
+      <div class="bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center justify-center">
+        <p class="text-sm text-gray-400 dark:text-gray-500 text-center">Empty state — dashed border</p>
+      </div>
+
+    </div>
+  </section>
+
+  <%# ── Badges & Tags ───────────────────────────────────────────────────── %>
+  <section id="badges">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Badges &amp; Tags</h2>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">success</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">warning</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700">error</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700">info</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-700">violet</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700">indigo</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">neutral</span>
+      </div>
+      <p class="text-xs text-gray-400 mb-3">Tag chips (document tags, labels)</p>
+      <div class="flex flex-wrap gap-2">
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">added</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">data-entry-done</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">subcontractor</span>
+      </div>
+    </div>
+  </section>
+
+  <%# ── Icons ──────────────────────────────────────────────────────────── %>
+  <section id="icons">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Icons (Bootstrap Icons)</h2>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+      <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+        <% [
+          'house','shield-lock','building','cash-coin','people','folder2-open','tools','receipt',
+          'link-45deg','x-lg','check2','arrow-left','box-arrow-up-right','exclamation-triangle-fill',
+          'info-circle','check-circle-fill','plug-fill','calendar','clock','file-earmark-text',
+          'person-fill','gear','trash','pencil','search','plus-circle','dash-circle',
+          'chevron-down','chevron-up','three-dots-vertical','bell','envelope','telephone',
+          'car-front','wrench','database','cpu','wifi','lock-fill','unlock',
+        ].forEach(icon => { %>
+          <div class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+            <i class="bi bi-<%= icon %> text-2xl text-gray-700 dark:text-gray-300"></i>
+            <span class="text-[10px] text-gray-400 text-center leading-tight"><%= icon %></span>
+          </div>
+        <% }) %>
+      </div>
+      <p class="text-xs text-gray-400 mt-4">Usage: <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">&lt;i class="bi bi-{name}"&gt;&lt;/i&gt;</code></p>
+    </div>
+  </section>
+
+  <%# ── Forms ──────────────────────────────────────────────────────────── %>
+  <section id="forms">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Forms</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-4">
+        <h3 class="font-medium text-sm text-gray-700 dark:text-gray-300">Search form (GET — no CSRF)</h3>
+        <form method="GET" action="#" class="flex gap-2 flex-wrap">
+          <input name="q" value="" placeholder="Search..."
+            class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          <button type="submit"
+            class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+            Search
+          </button>
+        </form>
+
+        <h3 class="font-medium text-sm text-gray-700 dark:text-gray-300 pt-2">Inputs</h3>
+        <div class="space-y-3">
+          <input type="text" placeholder="Text input"
+            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          <input type="date"
+            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          <textarea rows="2" placeholder="Textarea"
+            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"></textarea>
+          <select
+            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option>— Choose an option —</option>
+            <option>Option A</option>
+            <option>Option B</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-4">
+        <h3 class="font-medium text-sm text-gray-700 dark:text-gray-300">Mutation form (POST + CSRF)</h3>
+        <form method="POST" action="#" class="space-y-3">
+          <%- include('../partials/csrfHidden') %>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Label</label>
+            <input type="text" name="field" placeholder="Value"
+              class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                     focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Select</label>
+            <select name="choice"
+              class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                     focus:outline-none focus:ring-2 focus:ring-green-500">
+              <option value="">— Choose —</option>
+              <option value="a">Option A</option>
+            </select>
+          </div>
+          <div class="flex gap-3">
+            <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
+            <a href="#" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium">Cancel</a>
+          </div>
+        </form>
+
+        <h3 class="font-medium text-sm text-gray-700 dark:text-gray-300 pt-2">Checkbox &amp; Radio</h3>
+        <div class="space-y-2 text-sm">
+          <label class="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+            <input type="checkbox" checked class="accent-green-600 w-4 h-4" /> Checkbox checked
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+            <input type="checkbox" class="accent-green-600 w-4 h-4" /> Checkbox unchecked
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+            <input type="radio" name="r" checked class="accent-green-600 w-4 h-4" /> Radio selected
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+            <input type="radio" name="r" class="accent-green-600 w-4 h-4" /> Radio unselected
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <%# ── Table ──────────────────────────────────────────────────────────── %>
+  <section id="tables">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Tables</h2>
+    <div class="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">#</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Name</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% [
+            { id: 1001, name: 'Apex Scaffolding Ltd',   status: 'paid',    amount: 1250.00, statusCls: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700' },
+            { id: 1002, name: 'Northern Plant Hire',    status: 'pending',  amount:  875.50, statusCls: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700' },
+            { id: 1003, name: 'Midlands Groundworks',  status: 'overdue',  amount: 4400.00, statusCls: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700' },
+          ].forEach(row => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3 font-mono text-xs text-gray-500">#<%= row.id %></td>
+              <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><%= row.name %></td>
+              <td class="px-4 py-3">
+                <span class="text-[11px] px-2 py-0.5 rounded-full border <%= row.statusCls %>"><%= row.status %></span>
+              </td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">£<%= row.amount.toFixed(2) %></td>
+              <td class="px-4 py-3">
+                <a href="#" class="text-xs text-green-700 dark:text-green-400 hover:underline">View</a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%# ── Divide-list ─────────────────────────────────────────────────────── %>
+  <section id="lists">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Divide List (card rows)</h2>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">3 results</span>
+        <span class="text-xs text-gray-400">Page 1 of 1</span>
+      </div>
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <% [
+          { num: 4421, supplier: 'Apex Scaffolding Ltd', ref: 'SC-2026-041', date: '14/03/2026', gross: 1250.00 },
+          { num: 4398, supplier: 'Northern Plant Hire',  ref: 'PH-MAR-19',   date: '09/03/2026', gross:  875.50 },
+          { num: 4371, supplier: 'Midlands Groundworks', ref: 'MG-0381',     date: '02/03/2026', gross: 4400.00 },
+        ].forEach(p => { %>
+          <div class="flex items-start gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800">
+            <div class="flex-1 min-w-0 text-sm space-y-0.5">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-mono font-semibold text-gray-900 dark:text-white">#<%= p.num %></span>
+                <span class="text-gray-700 dark:text-gray-300 truncate"><%= p.supplier %></span>
+              </div>
+              <div class="flex gap-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+                <span><%= p.date %></span>
+                <span>£<%= p.gross.toFixed(2) %> gross</span>
+                <span class="font-mono">Ref: <%= p.ref %></span>
+              </div>
+            </div>
+            <form method="POST" action="#">
+              <%- include('../partials/csrfHidden') %>
+              <input type="hidden" name="purchaseId" value="<%= p.num %>">
+              <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Link</button>
+            </form>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+
+  <%# ── Pagination ─────────────────────────────────────────────────────── %>
+  <section id="pagination">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Pagination</h2>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+      <div class="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+        <a href="#"
+           class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
+                  bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition">← Prev</a>
+        <span class="text-xs text-gray-500">Page 2 of 7</span>
+        <a href="#"
+           class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
+                  bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 transition">Next →</a>
+      </div>
+    </div>
+  </section>
+
+  <%# ── Alerts & Banners ───────────────────────────────────────────────── %>
+  <section id="alerts">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Alerts &amp; Banners</h2>
+    <div class="space-y-3">
+
+      <div class="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 flex gap-3">
+        <i class="bi bi-check-circle-fill text-green-600 dark:text-green-400 mt-0.5 shrink-0"></i>
+        <div class="text-sm text-green-800 dark:text-green-200"><strong>Success.</strong> KashFlow purchase linked successfully.</div>
+      </div>
+
+      <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 flex gap-3">
+        <i class="bi bi-exclamation-triangle-fill text-amber-500 mt-0.5 shrink-0"></i>
+        <div class="text-sm text-amber-800 dark:text-amber-200"><strong>Warning.</strong> Document modified after last send — KashFlow purchase may be out of date.</div>
+      </div>
+
+      <div class="rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4 flex gap-3">
+        <i class="bi bi-exclamation-triangle-fill text-red-500 mt-0.5 shrink-0"></i>
+        <div class="text-sm text-red-800 dark:text-red-200"><strong>Mismatch.</strong> Linked purchase #4398 not found in REST — it may have been deleted or recreated.</div>
+      </div>
+
+      <div class="rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 flex gap-3">
+        <i class="bi bi-info-circle text-blue-500 mt-0.5 shrink-0"></i>
+        <div class="text-sm text-blue-800 dark:text-blue-200"><strong>Info.</strong> A document with the same content hash exists as <a href="#" class="underline font-medium">Document #1234</a>. Possible re-upload detected.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <%# ── Detail row (key/value) ─────────────────────────────────────────── %>
+  <section id="detail-rows">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Detail Key/Value Rows</h2>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="space-y-1.5 text-sm">
+        <div class="flex gap-2"><span class="w-32 shrink-0 font-medium text-gray-500">Paperless ID</span><span>#1847</span></div>
+        <div class="flex gap-2"><span class="w-32 shrink-0 font-medium text-gray-500">Title</span><span class="break-words">Apex Scaffolding Invoice March 2026</span></div>
+        <div class="flex gap-2"><span class="w-32 shrink-0 font-medium text-gray-500">Correspondent</span><span>Apex Scaffolding Ltd</span></div>
+        <div class="flex gap-2"><span class="w-32 shrink-0 font-medium text-gray-500">Date</span><span>14/03/2026</span></div>
+        <div class="flex gap-2"><span class="w-32 shrink-0 font-medium text-gray-500">Gross</span><span>£1,250.00</span></div>
+        <div class="flex gap-2"><span class="w-32 shrink-0 font-medium text-gray-500">Hash</span><span class="font-mono text-xs text-gray-500 break-all">a3f9c2b1d4e8f07a...</span></div>
+        <div class="flex gap-2 flex-wrap"><span class="w-32 shrink-0 font-medium text-gray-500">Tags</span>
+          <div class="flex flex-wrap gap-1">
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">added</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">data-entry-done</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <%# ── Grid Layouts ───────────────────────────────────────────────────── %>
+  <section id="grids">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Grid Layouts</h2>
+    <div class="space-y-4">
+      <p class="text-xs text-gray-400">2-column (md:grid-cols-2)</p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-xl p-4 text-center text-sm text-gray-500">Col 1</div>
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-xl p-4 text-center text-sm text-gray-500">Col 2</div>
+      </div>
+      <p class="text-xs text-gray-400">Asymmetric 2/5 + 3/5 (lg:grid-cols-5)</p>
+      <div class="grid lg:grid-cols-5 gap-4">
+        <div class="lg:col-span-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-4 text-center text-sm text-gray-500">2/5 — Detail</div>
+        <div class="lg:col-span-3 bg-gray-100 dark:bg-gray-800 rounded-xl p-4 text-center text-sm text-gray-500">3/5 — Content</div>
+      </div>
+      <p class="text-xs text-gray-400">3-column dashboard tiles (lg:grid-cols-3)</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-xl p-4 text-center text-sm text-gray-500">Tile 1</div>
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-xl p-4 text-center text-sm text-gray-500">Tile 2</div>
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-xl p-4 text-center text-sm text-gray-500">Tile 3</div>
+      </div>
+    </div>
+  </section>
+
+  <%# ── Flash Toasts (mock) ────────────────────────────────────────────── %>
+  <section id="toasts">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Flash Toasts</h2>
+    <div class="space-y-3">
+      <p class="text-xs text-gray-400">These render globally from <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">layout.ejs</code> — never inline in views.</p>
+      <div class="relative flex items-start bg-green-600 dark:bg-green-700 text-white rounded-xl shadow-lg px-4 py-3 max-w-xs">
+        <div class="flex-1 pr-6 text-sm">KashFlow purchase linked successfully.</div>
+        <button class="absolute top-2 right-2 text-white hover:text-green-200"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="relative flex items-start bg-red-600 dark:bg-red-700 text-white rounded-xl shadow-lg px-4 py-3 max-w-xs">
+        <div class="flex-1 pr-6 text-sm">Purchase not found in REST.</div>
+        <button class="absolute top-2 right-2 text-white hover:text-red-200"><i class="bi bi-x-lg"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <%# ── Navigation link styles ─────────────────────────────────────────── %>
+  <section id="nav">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Navigation Patterns</h2>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-3 text-sm">
+      <div><a href="#" class="text-green-700 dark:text-green-400 hover:underline">← Back to list</a></div>
+      <div><a href="#" class="text-green-700 dark:text-green-400 hover:underline">← Back to document</a></div>
+      <div class="flex items-center gap-3">
+        <a href="#" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Admin</a>
+        <span class="text-gray-400">/</span>
+        <span class="font-semibold">Current Page</span>
+      </div>
+      <div>
+        <a href="#" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-400 hover:underline">
+          Open in KashFlow <i class="bi bi-box-arrow-up-right text-xs"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</div>
