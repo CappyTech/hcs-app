@@ -225,7 +225,51 @@ async function grabPaperlessOCR(options = {}) {
         const ingest = await OcrDocumentIngest.findOne({ paperlessId: doc.id }).lean();
         const unchanged = ingest && ingest.lastContentHash === contentHash;
 
+        // Pre-resolve KashFlow purchase number from custom fields — used in both branches.
+        // Covers two cases:
+        //   1. Hash changed: user just entered the number in Paperless → write it to MongoDB.
+        //   2. Hash unchanged: number was already there when first ingested but backfill hadn't
+        //      run yet → quietly patch without bumping the hash or status.
+        const _cfKfEntry = customFields.find(
+          (cf) => /kashflow\s*purchase\s*number/i.test(cf.fieldName || '')
+        );
+        const _cfKfNum = _cfKfEntry?.value != null ? parseInt(String(_cfKfEntry.value), 10) : NaN;
+        const _hasCfKfNum = Number.isFinite(_cfKfNum) && _cfKfNum > 0;
+
+        // Helper: resolve linkage fields from REST and return a partial update object (or {})
+        const resolveCfKfBackfill = async () => {
+          if (!_hasCfKfNum || !mdb.REST?.purchase) return {};
+          try {
+            const existing = await OcrDocument.findOne({ paperlessId: doc.id })
+              .select('kashflowPurchaseNumber').lean();
+            if (existing?.kashflowPurchaseNumber) return {}; // already linked — nothing to do
+            const restPurchase = await mdb.REST.purchase
+              .findOne({ Number: _cfKfNum })
+              .select('Number Id Permalink')
+              .lean();
+            if (!restPurchase) {
+              logger.warn(`[paperless] Custom field "KashFlow Purchase Number"=${_cfKfNum} not found in REST for paperlessId=${doc.id}`);
+              return {};
+            }
+            const patch = { kashflowPurchaseNumber: restPurchase.Number ?? _cfKfNum };
+            if (typeof restPurchase.Id === 'number') patch.kashflowPurchaseId = restPurchase.Id;
+            if (restPurchase.Permalink) patch.kashflowPermalink = restPurchase.Permalink;
+            logger.info(`[paperless] Backfilled KashFlow linkage for paperlessId=${doc.id} from custom field (purchase #${_cfKfNum})`);
+            return patch;
+          } catch (backfillErr) {
+            logger.warn(`[paperless] KashFlow backfill failed for paperlessId=${doc.id}: ${backfillErr.message}`);
+            return {};
+          }
+        };
+
         if (unchanged) {
+          // Silently patch linkage if the CF has a number we haven't captured yet
+          if (_hasCfKfNum) {
+            const patch = await resolveCfKfBackfill();
+            if (Object.keys(patch).length > 0) {
+              await OcrDocument.updateOne({ paperlessId: doc.id }, { $set: patch });
+            }
+          }
           await OcrDocumentIngest.updateOne(
             { paperlessId: doc.id },
             { $set: { status: 'skipped', lastFetchedAt: new Date() } }
@@ -235,7 +279,8 @@ async function grabPaperlessOCR(options = {}) {
         }
 
         // Upsert into OcrDocument (unique: paperlessId)
-        const toPersist = { ...record, fetchedAt: new Date(), error: null };
+        const kfBackfill = await resolveCfKfBackfill();
+        const toPersist = { ...record, ...kfBackfill, fetchedAt: new Date(), error: null };
 
         await OcrDocument.updateOne(
           { paperlessId: doc.id },
