@@ -122,6 +122,14 @@ exports.listOcr = async (req, res, next) => {
       filter.kashflowPurchaseId = null;
     }
 
+    // Optional filter: only documents with no KashFlow purchase number recorded
+    const noKfNumber = ["1", "true", "on", "yes"].includes(
+      String(req.query.noKfNumber || "").toLowerCase(),
+    );
+    if (noKfNumber) {
+      filter.kashflowPurchaseNumber = null;
+    }
+
     const total = await OcrDocument.countDocuments(filter);
     const items = await OcrDocument.find(filter)
       .sort({ paperlessId: -1, _id: -1 })
