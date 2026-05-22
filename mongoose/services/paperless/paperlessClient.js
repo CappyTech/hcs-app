@@ -466,11 +466,18 @@ function makeClient() {
       // Build existing map from the MongoDB-cached array — no GET needed
       const existing = new Map(); // fieldId -> value
       const existingByName = new Map(); // lower(name) -> fieldId
+      // Entries without a stored fieldId are deferred until idByName is available
+      const pendingByName = new Map(); // lower(name) -> value
       for (const entry of (existingCfArray || [])) {
         const fid = typeof entry?.fieldId === 'number' ? entry.fieldId : null;
         const fname = entry?.fieldName ? String(entry.fieldName) : null;
-        if (fid != null) existing.set(fid, entry?.value ?? null);
-        if (fid != null && fname) existingByName.set(fname.trim().toLowerCase(), fid);
+        if (fid != null) {
+          existing.set(fid, entry?.value ?? null);
+          if (fname) existingByName.set(fname.trim().toLowerCase(), fid);
+        } else if (fname) {
+          // No fieldId stored — resolve after cache is built to avoid dropping the field
+          pendingByName.set(fname.trim().toLowerCase(), entry?.value ?? null);
+        }
       }
 
       // Resolve field definitions from cache (no additional GET)
@@ -494,6 +501,15 @@ function makeClient() {
         }
         _cfCacheMap = idByName;
         _cfCacheAt  = Date.now();
+      }
+
+      // Resolve deferred entries (stored without fieldId) using the now-populated idByName
+      for (const [key, value] of pendingByName) {
+        const fid = idByName.get(key);
+        if (fid != null && !existing.has(fid)) {
+          existing.set(fid, value);
+          existingByName.set(key, fid);
+        }
       }
 
       const resolveFieldId = async (name) => {

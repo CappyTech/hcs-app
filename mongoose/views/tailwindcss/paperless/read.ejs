@@ -59,7 +59,7 @@
             </div>
             <% if (doc.kashflowPurchaseId != null) { %>
               <div class="mt-2 text-xs text-amber-700">The KashFlow Purchase Id was not written back to Paperless. Use the button below to sync it.</div>
-              <form method="POST" action="/paperless/repair-drift" class="mt-2">
+              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/sync-fields" class="mt-2">
                 <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
                 <button type="submit" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium">Sync Paperless custom fields</button>
               </form>

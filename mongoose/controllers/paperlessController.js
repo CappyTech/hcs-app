@@ -1513,6 +1513,43 @@ exports.repairDrift = async (req, res) => {
   });
 };
 
+/** POST /paperless/ocr/:paperlessId/sync-fields — write KashFlow fields back to Paperless for one document */
+exports.syncPaperlessFields = async (req, res, next) => {
+  const paperlessId = parseInt(req.params.paperlessId, 10);
+  try {
+    if (!Number.isFinite(paperlessId)) {
+      req.flash('error', 'Invalid paperlessId.');
+      return res.redirect('/paperless/ocr');
+    }
+    await mdb.connect();
+    const { OcrDocument } = mdb.PAPERLESS;
+    const doc = await OcrDocument.findOne({ paperlessId })
+      .select('kashflowPurchaseId kashflowPurchaseNumber kashflowPermalink lastSendStatus customFields')
+      .lean();
+    if (!doc) {
+      req.flash('error', 'Document not found.');
+      return res.redirect(`/paperless/ocr/${paperlessId}`);
+    }
+    if (doc.kashflowPurchaseId == null) {
+      req.flash('error', 'No KashFlow Purchase Id in MongoDB — nothing to sync.');
+      return res.redirect(`/paperless/ocr/${paperlessId}`);
+    }
+    await updatePaperlessWithKashFlowInfo(
+      paperlessId,
+      { Id: doc.kashflowPurchaseId, Number: doc.kashflowPurchaseNumber, Permalink: doc.kashflowPermalink },
+      doc.lastSendStatus,
+      { existingCf: doc.customFields || [] },
+    );
+    await ingestOnePaperlessDoc(paperlessId);
+    req.flash('success', `Paperless custom fields synced for document #${paperlessId}.`);
+    res.redirect(`/paperless/ocr/${paperlessId}`);
+  } catch (err) {
+    logger.error(`syncPaperlessFields error for paperlessId=${paperlessId}: ${err.message}`);
+    req.flash('error', `Sync failed: ${err.message}`);
+    res.redirect(`/paperless/ocr/${paperlessId}`);
+  }
+};
+
 exports.deleteOcrDocument = async (req, res, next) => {
   try {
     await mdb.connect();
