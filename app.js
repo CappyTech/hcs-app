@@ -267,6 +267,9 @@ const main = async () => {
     // Attach user info to templates
     const rbac = require('./mongoose/config/rolePermissionsConfig');
     appRouter.use((req, res, next) => {
+      res.locals.currentPath = req.path;
+      res.locals.navActive = (href) =>
+        href === '/' ? req.path === '/' : req.path === href || req.path.startsWith(href + '/');
       res.locals.isAuthenticated = !!req.user;
       res.locals.role = req.user && req.user.role || null;
       res.locals.isAdmin = req.user && req.user.role === 'admin';
