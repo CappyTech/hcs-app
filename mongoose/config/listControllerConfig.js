@@ -3,6 +3,7 @@ const { create } = require("connect-mongo");
 module.exports = {
   assignment: {
     title: 'Assignments',
+    layout: 'rows',
     linkField: 'title',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'description'],
     sortField: 'createdAt',
@@ -92,6 +93,7 @@ module.exports = {
   },
   contract: {
     title: 'Contracts',
+    layout: 'rows',
     linkField: 'title',
     labelOverrides: {
       uuid: 'Contract ID',
@@ -125,6 +127,7 @@ module.exports = {
   },
   customer: {
     title: 'Customers',
+    layout: 'rows',
     linkField: 'Name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Website',
       'Contacts', 'Addresses', 'DeliveryAddresses', 'CustomCheckBoxes', 'CustomTextBoxes', 'PaymentTerms', 'Currency',
@@ -140,6 +143,7 @@ module.exports = {
   },
   employee: {
     title: 'Employees',
+    layout: 'rows',
     linkField: 'name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'contactName', 'contactNumber', 'contract', 'holidayPolicy'],
     fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type', 'ir35', 'definedRate', 'dailyRate', 'weeklyRate', 'monthlyRate', 'yearlyRate', 'hourlyRate', 'hireDate', 'managerId', 'subcontractorSupplierId'],
@@ -229,6 +233,7 @@ module.exports = {
   },
   location: {
     title: 'Locations',
+    layout: 'rows',
     linkField: 'name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
     fieldOrder: ['name', 'address', 'city', 'postalCode', 'country', 'latitude', 'longitude'],
@@ -242,6 +247,7 @@ module.exports = {
   project: {
     fieldOrder: ['Number', 'Id', 'Name', 'Description', 'Reference', 'CustomerCode', 'Status', 'Note'],
     title: 'Projects',
+    layout: 'rows',
     linkField: 'Number',
     sortField: 'Number',
     sortOrder: -1,
@@ -333,6 +339,7 @@ module.exports = {
   },
   subcontractor: {
     aliasOf: 'supplier',
+    layout: 'rows',
     basePath: 'supplier',
     // OLD: baseFilter: { Subcontractor: true },
     baseFilter: { WithholdingTaxRate: { $gte: 0 } },
@@ -362,6 +369,7 @@ module.exports = {
   },
   supplier: {
     title: 'Suppliers',
+    layout: 'rows',
     linkField: 'Name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id',
       'Contacts', 'Address', 'DeliveryAddresses', 'WithholdingTaxReferences', 'BankAccount',
@@ -380,6 +388,7 @@ module.exports = {
   },
   task: {
     title: 'Tasks',
+    layout: 'rows',
     linkField: 'title',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
     fieldOrder: ['title', 'description', 'dueDate', 'recurrence', 'completed', 'userId', 'contractId'],
@@ -488,6 +497,7 @@ module.exports = {
   },
   vehicle: {
     title: 'Vehicles',
+    layout: 'rows',
     description: {
       create: 'Register a new vehicle in the fleet.',
       manage: 'Manage company fleet vehicles, compliance dates and assignments.',

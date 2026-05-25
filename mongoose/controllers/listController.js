@@ -169,6 +169,8 @@ const generateHeaders = (firstDoc, config = {}) => {
         }
       }
 
+      const layout = req.query.layout || config.layout || 'table';
+
       try {
         // ── Data scoping: restrict results based on user role + linked entity ──
         if (req.user) {
@@ -253,7 +255,7 @@ const generateHeaders = (firstDoc, config = {}) => {
             page,
             totalPages,
             query,
-          reqQuery: req.query,
+            reqQuery: req.query,
             actions: config.actions || [],
             headerActions: config.headerActions || [],
             fieldLinks: config.fieldLinks || null,
@@ -261,6 +263,7 @@ const generateHeaders = (firstDoc, config = {}) => {
             tabsValues,
             tabsBy,
             tabs,
+            layout,
           });
         }
 
@@ -426,6 +429,7 @@ const generateHeaders = (firstDoc, config = {}) => {
           tabsValues,
           tabsBy,
           tabs,
+          layout,
         });
       } catch (err) {
         logger.error(`Error listing ${modelName}:`, err);
@@ -532,6 +536,8 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
       }
     }
 
+    const layout = req.query.layout || config.layout || 'table';
+
     try {
       const totalCount = await model.countDocuments(mongoFilter);
       let tabs = [];
@@ -585,6 +591,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
           tabsValues,
           tabsBy,
           tabs,
+          layout,
         });
       }
 
@@ -733,6 +740,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
         tabsValues,
         tabsBy,
         tabs,
+        layout,
       });
     } catch (err) {
       logger.error(`Error listing ${aliasName}:`, err);
