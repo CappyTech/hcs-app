@@ -51,7 +51,7 @@
     if (_isPercentKey(k)) return 'percent';
     if (/^(note|notes|description|comment|comments|remarks|summary|detail|details)$/.test(kl)) return 'body';
     if (/date/i.test(k) || /^(created|updated|modified|issued|hired|hire|start|end|first|last|due|expiry|purchase|service)/i.test(k)) return 'date';
-    if (/^(code|ref|reference|number|customercode|suppliercode|reg|registration)/i.test(kl)) return 'pill';
+    if (/^(code|ref|reference|number|customercode|suppliercode|reg|registration)/i.test(kl) || /code$/i.test(k)) return 'pill';
     const sv = sampleRow?.[k];
     if (typeof sv === 'boolean') return 'bool';
     if (typeof sv === 'number') return 'count';
@@ -359,16 +359,22 @@
                 <% _gMetaLine.forEach(h => {
                   const v = row[h.key];
                   const _rv = (v && v._bsontype === 'Decimal128') ? parseFloat(v.toString()) : v;
-                  if (_rv === null || _rv === undefined || _rv === '') return;
+                  if (_rv === null || _rv === undefined || _rv === '' || _rv === 0) return;
                 %>
-                  <% if (_rv instanceof Date) { %>
+                  <% if (_rv instanceof Date || (typeof _rv === 'string' && /^\d{4}-\d{2}-\d{2}/.test(_rv))) { %>
                     <span class="inline-flex items-center gap-1"><i class="bi bi-calendar3 opacity-70"></i><%= h.label %>: <%= slimDateTime(_rv) %></span>
                   <% } else if (typeof _rv === 'boolean') { %>
-                    <% if (_rv) { %><span class="inline-flex items-center gap-1 text-green-500 dark:text-green-400"><i class="bi bi-check2"></i><%= h.label %></span><% } %>
+                    <% if (_rv) { %>
+                      <% const _boolNeg = /archived|disposed|inactive|blocked|banned|suspended|terminated/i.test(h.key); %>
+                      <span class="inline-flex items-center gap-1 <%= _boolNeg ? 'text-orange-500 dark:text-orange-400' : 'text-green-500 dark:text-green-400' %>"><i class="<%= _boolNeg ? 'bi bi-archive-fill' : 'bi bi-check2' %>"></i><%= h.label %></span>
+                    <% } %>
                   <% } else if (typeof _rv === 'number' && !isNaN(_rv)) { %>
                     <span class="tabular-nums"><%= h.label %>: <%= _isCurrencyKey(h.key) ? formatCurrency(_rv) : _isPercentKey(h.key) ? _rv + '%' : _rv %></span>
                   <% } else if (typeof _rv === 'string' && _rv.trim()) { %>
-                    <% const _ms = String(_rv); %><span><%= h.label %>: <%= _ms.length > 40 ? _ms.substring(0, 37) + '\u2026' : _ms %></span>
+                    <% const _ms = String(_rv); %>
+                    <% if (_ms.trim() !== _pvStr.trim()) { %>
+                      <span><%= h.label %>: <%= _ms.length > 40 ? _ms.substring(0, 37) + '\u2026' : _ms %></span>
+                    <% } %>
                   <% } %>
                 <% }); %>
               </div>
@@ -383,7 +389,7 @@
                 const _rv = (v && v._bsontype === 'Decimal128') ? parseFloat(v.toString()) : v;
                 if (typeof _rv !== 'number' || isNaN(_rv)) return;
               %>
-                <div>
+                <div class="<%= _rv === 0 ? 'opacity-40' : '' %>">
                   <div class="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100"><%= formatCurrency(_rv) %></div>
                   <div class="text-xs text-gray-400 dark:text-gray-500"><%= h.label %></div>
                 </div>
