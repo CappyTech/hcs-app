@@ -197,6 +197,11 @@ function countActiveFilters(req, filterConfigs) {
           if (tabsType === "String") {
             orConds.push({ [tabsBy]: activeTab });
           }
+          // Boolean fields (e.g. IsArchived, completed) — tab values arrive as the
+          // strings 'true' / 'false' from the URL query string
+          if (tabsType === "Boolean") {
+            orConds.push({ [tabsBy]: activeTab === "true" });
+          }
           if (hasNameField) {
             orConds.push({ [nameField]: activeTab });
           }

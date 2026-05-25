@@ -1,22 +1,63 @@
-const { create } = require("connect-mongo");
+/**
+ * listControllerConfig.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Drives the auto-generated list views produced by listController.js.
+ *
+ * Each key maps to a Mongoose model name (case-insensitive, singular or plural).
+ * Alias configs (aliasOf) point to an existing model but apply a baseFilter so
+ * the same collection can be surfaced as a different route (e.g. subcontractor
+ * is the supplier collection filtered to CIS-registered suppliers).
+ *
+ * Key options:
+ *   layout        – 'table' (default) or 'rows' (card-per-record layout)
+ *   hideFields    – fields suppressed from the list view entirely
+ *   fieldOrder    – explicit column/field ordering (extras appended after)
+ *   strictOrder   – if true, only fieldOrder fields are shown (no extras)
+ *   labelOverrides – human-readable column headers
+ *   sortField/sortOrder – default sort (-1 = desc, 1 = asc)
+ *   deny          – array of CRUD operations to block: 'c','r','u','d','l'
+ *   department    – restricts route to users whose department matches
+ *   filters       – per-model filter panel definitions (see applyFilterParams)
+ *   fieldTransforms – resolve ObjectId references to display names + links
+ *   referenceFilters – scopes the options available in reference dropdowns
+ *   tabsby        – field to build tab navigation from
+ *   tabsValues    – explicit tab definitions (or tabsDynamic: true for auto)
+ *   headerActions – extra action buttons rendered in the list header
+ *   baseFilter    – static Mongoose query merged into every list query (aliases)
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
 
 module.exports = {
   assignment: {
     title: 'Assignments',
     layout: 'rows',
     linkField: 'title',
+    // description is a long free-text field — shown on the detail view, too verbose for a list row
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'description'],
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
+    // Quick-filter by workflow stage — Planned/In Progress/Done mirrors the enum
+    tabsby: 'status',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Planned', label: 'Planned' },
+      { value: 'In Progress', label: 'In Progress' },
+      { value: 'Done', label: 'Done' },
+    ],
     labelOverrides: {
       contractId: 'Contract'
     },
     fieldOrder: ['title', 'contractId', 'weekStart', 'status', 'estimatedHours', 'assignedEmployees', 'assignedSubcontractors'],
     referenceFilters: {
+      // Scope the subcontractor dropdown to only suppliers who have a WHT rate set,
+      // which is the defining characteristic of a CIS-registered subcontractor.
+      // Avoids polluting the picker with ordinary trade suppliers.
       assignedSubcontractors: { WithholdingTaxRate: { $gte: 0 } },
     },
     fieldTransforms: {
+      // These resolve MongoDB ObjectId references stored in the assignment document
+      // into display names + hyperlinks. The list view shows names, not raw IDs.
       contractId: {
         fromModel: 'contract',
         matchField: '_id',
@@ -29,6 +70,8 @@ module.exports = {
         returnField: 'name',
         linkTo: (matched) => `/employee/read/${matched.uuid}`
       },
+      // assignedSubcontractors are stored as supplier _ids (subcontractors live in the
+      // supplier collection) — resolved to Name for display.
       assignedSubcontractors: {
         fromModel: 'supplier',
         matchField: '_id',
@@ -40,7 +83,13 @@ module.exports = {
   attendance: {
     title: 'Attendances',
     linkField: 'date',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'contractAssignmentId', 'overtimeRate', 'breakMinutes'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // contractAssignmentId — internal join key linking the attendance record to a
+      // specific assignment; the resolved projectId/locationId are shown instead
+      'contractAssignmentId',
+      // overtimeRate & breakMinutes — payroll-detail fields surfaced in payroll
+      // summary reports; cluttering the attendance list with them adds noise
+      'overtimeRate', 'breakMinutes'],
     fieldOrder: ['date', 'type', 'status', 'employeeId', 'subcontractorId', 'hoursWorked', 'overtimeHours', 'dayRate', 'payRate', 'locationId', 'projectId', 'notes'],
     sortField: 'date',
     sortOrder: -1,
@@ -95,6 +144,14 @@ module.exports = {
     title: 'Contracts',
     layout: 'rows',
     linkField: 'title',
+    // Quick-filter by workflow stage — Planned/In Progress/Completed mirrors the enum
+    tabsby: 'status',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Planned', label: 'Planned' },
+      { value: 'In Progress', label: 'In Progress' },
+      { value: 'Completed', label: 'Completed' },
+    ],
     labelOverrides: {
       uuid: 'Contract ID',
       title: 'Name',
@@ -105,7 +162,10 @@ module.exports = {
       projectId: 'Project',
       locationId: 'Location'
     },
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'quoteId'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // quoteId — the originating KashFlow quote that generated this contract;
+      // accessible via the contract detail view, not needed in the list
+      'quoteId'],
     fieldOrder: ['title', 'status', 'startDate', 'endDate', 'location', 'projectId', 'locationId', 'notes'],
     sortField: 'createdAt',
     sortOrder: -1,
@@ -129,13 +189,23 @@ module.exports = {
     title: 'Customers',
     layout: 'rows',
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Website',
-      'Contacts', 'Addresses', 'DeliveryAddresses', 'CustomCheckBoxes', 'CustomTextBoxes', 'PaymentTerms', 'Currency',
-      'Id', 'WHTReferences', 'AutoIncludeVATNumber', 'AverageDaysToPay', 'UseCustomDeliveryAddress',
-      'AutomaticCreditControlEnabled', 'IsGoCardlessMandateSet', 'Key', 'Source',
-      'ShowDiscount', 'CreateCustomerCodeIfDuplicate', 'CreateCustomerNameIfEmptyOrNull',
-      'InvoiceFileFormat', 'OverrideInvoiceFileFormat', 'EnvelopeUrl', 'PDFThemeId', 'TelephoneNumber', 'UniqueEntityNumber',
-      'DefaultNominalCode', 'EmailTemplateNumber', 'FaxNumber', 'MobileNumber', 'ReceivesWholesalePricing', 'ApplyWHT'],
+    // Customers are synced read-only from KashFlow — deny all writes from the app.
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Nested arrays / objects — too complex to render in a list row
+      'Contacts', 'Addresses', 'DeliveryAddresses', 'CustomCheckBoxes', 'CustomTextBoxes',
+      'PaymentTerms', 'Currency', 'WHTReferences',
+      // Internal KashFlow IDs / system keys not meaningful to users
+      'Id', 'Key', 'Source',
+      // KashFlow UI / print-layout flags — only relevant in KashFlow itself
+      'AutoIncludeVATNumber', 'ShowDiscount', 'InvoiceFileFormat', 'OverrideInvoiceFileFormat',
+      'EnvelopeUrl', 'PDFThemeId', 'CreateCustomerCodeIfDuplicate', 'CreateCustomerNameIfEmptyOrNull',
+      // Account-level settings shown on the customer detail view, not the list
+      'AverageDaysToPay', 'UseCustomDeliveryAddress', 'AutomaticCreditControlEnabled',
+      'IsGoCardlessMandateSet',
+      // Contact channels — TelephoneNumber surfaced on detail; Fax/Mobile rarely populated
+      'TelephoneNumber', 'UniqueEntityNumber', 'FaxNumber', 'MobileNumber', 'Website',
+      // Fields already expressed more clearly elsewhere in fieldOrder
+      'DefaultNominalCode', 'EmailTemplateNumber', 'ReceivesWholesalePricing', 'ApplyWHT'],
     fieldOrder: [
       'Name', 'Code', 'Note',
       'OutstandingBalance', 'InvoicedNetAmount', 'TotalPaidAmount', 'InvoicedVATAmount',
@@ -158,6 +228,13 @@ module.exports = {
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
+    // IsArchived is Boolean — controller casts 'true'/'false' strings to boolean for the query
+    tabsby: 'IsArchived',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'false', label: 'Active' },
+      { value: 'true', label: 'Archived' },
+    ],
     filters: [
       { field: 'IsArchived', label: 'Status', type: 'boolean', falseLabel: 'Active', trueLabel: 'Archived' },
       { field: 'OutstandingBalance', label: 'Outstanding', type: 'numberrange' },
@@ -168,7 +245,13 @@ module.exports = {
     title: 'Employees',
     layout: 'rows',
     linkField: 'name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'contactName', 'contactNumber', 'contract', 'holidayPolicy'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // contactName / contactNumber — legacy emergency-contact fields, superseded
+      // by the linked user account; retained in the schema for existing data
+      'contactName', 'contactNumber',
+      // contract / holidayPolicy — embedded sub-documents with their own detail views;
+      // showing them inline in the list would produce unreadable nested JSON
+      'contract', 'holidayPolicy'],
     fieldOrder: ['name', 'email', 'phoneNumber', 'position', 'status', 'type', 'ir35', 'definedRate', 'dailyRate', 'weeklyRate', 'monthlyRate', 'yearlyRate', 'hourlyRate', 'hireDate', 'managerId', 'subcontractorSupplierId'],
     sortField: 'name',
     sortOrder: 1,
@@ -238,21 +321,32 @@ module.exports = {
   invoice: {
     title: 'Invoices',
     linkField: 'Number',
+    // Invoices are synced read-only from KashFlow — deny all writes from the app.
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
-      // Arrays / objects — not useful in a list view
+      // Arrays / objects — line items and payment detail live on the invoice detail view
       'LineItems', 'PaymentLines', 'Address', 'DeliveryAddress', 'ReminderLetters',
-      // Internal KashFlow IDs / keys
+      // Internal KashFlow IDs — Id is the KashFlow DB primary key; CustomerKey is an
+      // opaque account reference; CustomerCode duplicates CustomerName in this context
       'Id', 'CustomerKey', 'CustomerCode',
-      // Duplicate / redundant amount fields
+      // Redundant amount fields: Paid is a raw 0/1 flag; HomeCurrency* are exchange-rate
+      // conversions not relevant for GBP-only accounts; DueAmount / FormattedDueAmount
+      // duplicate GrossAmount minus payments
       'Paid', 'HomeCurrencyGrossAmount', 'HomeCurrencyVATAmount', 'DueAmount', 'FormattedDueAmount',
-      // Linking / navigation fields
+      // Navigation / print-layout fields — PreviousNumber/NextNumber are invoice chain links
+      // used in KashFlow's UI; Permalink is the KashFlow-hosted PDF URL;
+      // SuppressNumber hides the invoice number on printed output;
+      // PayOnlinePaymentProcessor is a KashFlow payment gateway enum
       'PreviousNumber', 'NextNumber', 'ProjectNumber', 'ProjectName', 'ProjectGrossAmount',
       'Permalink', 'PackingSlipPermalink', 'SuppressNumber', 'PayOnlinePaymentProcessor',
-      // Customer contact detail (too granular)
+      // Customer contact snapshot — KashFlow copies contact details at invoice time;
+      // the live customer record is linked via CustomerId/CustomerName
       'CustomerContactName', 'CustomerContactFirstName', 'CustomerContactLastName',
-      // Misc flags not needed in list
+      // Flags only relevant in CIS-reverse-charge or VAT return workflows;
+      // CISRCNet/Vat amounts surface on the CIS returns pages instead
       'CreatedDate', 'Type', 'FileCount', 'IsArchived', 'IsCISReverseCharge', 'IsWhtDeductionToBeApplied',
       'CISRCNetAmount', 'CISRCVatAmount', 'TradeBorderType',
+      // Address-update flags — KashFlow UI options to sync delivery/billing address back;
+      // not meaningful in a read-only list
       'UpdateCustomerDeliveryAddress', 'UseCustomDeliveryAddress', 'VATNumber', 'VATReturnId'],
     fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerReference', 'Currency',
       'NetAmount', 'GrossAmount', 'VATAmount', 'AmountPaid', 'TotalPaidAmount',
@@ -263,6 +357,16 @@ module.exports = {
     sortOrder: -1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
+    // Tabs give one-click access to the most common status filters
+    tabsby: 'Status',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Outstanding', label: 'Outstanding' },
+      { value: 'Paid', label: 'Paid' },
+      { value: 'Overdue', label: 'Overdue' },
+      { value: 'Credited', label: 'Credited' },
+      { value: 'Cancelled', label: 'Cancelled' },
+    ],
     filters: [
       { field: 'Status', label: 'Status', type: 'select', options: [
         { label: 'Outstanding', value: 'Outstanding' },
@@ -304,6 +408,8 @@ module.exports = {
     department: ['management'],
   },
   meta: {
+    // meta stores internal app configuration (e.g. sync run IDs, feature flags).
+    // It must never be exposed through any list, read, or edit route.
     deny: ['c', 'r', 'u', 'd', 'l'],
   },
   project: {
@@ -319,10 +425,16 @@ module.exports = {
     linkField: 'Number',
     sortField: 'Number',
     sortOrder: -1,
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'deletedAt', 'lastSeenRun',
-      // Internal KashFlow ID (Number is the public job ref)
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // hcs-sync tracking fields — deleted projects are soft-deleted; lastSeenRun
+      // records which sync run last touched the document
+      'deletedAt', 'lastSeenRun',
+      // Id — KashFlow's internal DB primary key; Number is the user-facing job reference
       'Id',
-      // VAT sub-amounts — too granular for list view
+      // ExcludeVAT — KashFlow billing flag, not relevant to project progress tracking
+      // ActualSalesVATAmount / ActualPurchasesVATAmount — VAT breakdowns of the totals
+      // already shown via ActualSalesAmount / ActualPurchasesAmount
+      // ActualJournalsAmount — manual journal adjustments, rarely used; shown on detail
       'ExcludeVAT', 'ActualSalesVATAmount', 'ActualPurchasesVATAmount', 'ActualJournalsAmount'],
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
@@ -371,11 +483,19 @@ module.exports = {
   quote: {
     title: 'Quotes',
     linkField: 'Number',
+    // Quotes are synced read-only from KashFlow — deny all writes from the app.
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
-      // Arrays / objects
+      // Arrays / objects — line item and address detail shown on the quote detail view
       'LineItems', 'Addresses', 'DeliveryAddresses', 'UseCustomDeliveryAddress',
-      // Internal / redundant
+      // Id — KashFlow DB primary key; Number is the user-facing quote reference
+      // HomeCurrencyGrossAmount — exchange-rate conversion, not needed for GBP accounts
+      // FileCount — attachment count, shown on detail view
+      // IsEmailSent — KashFlow emailing flag, not relevant in the app
+      // SuppressAmount — print-layout flag to hide amounts on the printed quote
       'Id', 'HomeCurrencyGrossAmount', 'FileCount', 'IsEmailSent', 'SuppressAmount',
+      // ProjectNumber/Name — duplicated from KashFlow; the project list is the source of truth
+      // Permalink — KashFlow-hosted quote PDF URL
+      // PreviousNumber/NextNumber — quote revision chain links used in KashFlow's UI
       'ProjectNumber', 'ProjectName', 'Permalink', 'PreviousNumber', 'NextNumber'],
     fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerCode', 'CustomerReference',
       'Date', 'GrossAmount', 'NetAmount', 'VATAmount',
@@ -413,17 +533,43 @@ module.exports = {
   purchase: {
     title: 'Purchases',
     linkField: 'Number',
+    // Purchases are synced read-only from KashFlow — deny all writes from the app.
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
-      // Arrays / objects
+      // Arrays / objects — line item breakdown shown on purchase detail view
       'LineItems',
-      // Internal / redundant fields
-      'ReadableString', 'CISRCNetAmount', 'CISRCVatAmount', 'Permalink', 'PreviousNumber',
-      'IsCISReverseCharge', 'Type', 'SupplierCode', 'NextNumber', 'StockManagementApplicable',
-      'ProjectName', 'ProjectNumber', 'AdditionalFieldValue', 'SupplierId', 'FileCount',
-      'HomeCurrencyGrossAmount', 'IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent',
-      'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId', 'deletedAt', 'lastSeenRun',
+      // ReadableString — KashFlow-generated human summary, superseded by our own rendering
+      // CISRCNet/Vat — CIS reverse charge sub-totals, shown on the CIS returns pages
+      'ReadableString', 'CISRCNetAmount', 'CISRCVatAmount',
+      // Navigation / print fields (same pattern as invoice)
+      'Permalink', 'PreviousNumber', 'NextNumber',
+      // IsCISReverseCharge — boolean flag; the CIS module reads this separately
+      // Type — always 'Purchase' for this collection, no value in showing it
+      // SupplierCode — internal KashFlow code; SupplierName is shown in the list
+      'IsCISReverseCharge', 'Type', 'SupplierCode',
+      // StockManagementApplicable — KashFlow inventory flag, not used in this workflow
+      // ProjectName/Number — available via the project list; duplicated here by KashFlow
+      // AdditionalFieldValue — custom field placeholder, always empty in practice
+      'StockManagementApplicable', 'ProjectName', 'ProjectNumber', 'AdditionalFieldValue',
+      // SupplierId — KashFlow integer FK; SupplierName is the display value
+      // FileCount — attachment count, shown on detail view
+      // HomeCurrencyGrossAmount — exchange-rate conversion, not relevant for GBP accounts
+      'SupplierId', 'FileCount', 'HomeCurrencyGrossAmount',
+      // IsWhtDeductionToBeApplied — WHT flag handled by CIS module, not the purchase list
+      // Id — KashFlow DB primary key, Number is the user-facing reference
+      // IsEmailSent — KashFlow emailing flag, irrelevant in the app
+      'IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent',
+      // ProjectGrossAmount — project-level roll-up, shown on project detail not purchase list
+      // TradeBorderType — EC trade classification, not relevant for UK domestic purchases
+      // VATReturnId — links to KashFlow VAT return; the VAT module handles this separately
+      'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId',
+      // hcs-sync tracking fields — internal to the sync process, not user-facing
+      'deletedAt', 'lastSeenRun', 'createdByRunId',
+      // Currency — object type (Mixed), always GBP; OverdueDays — computed nightly by KashFlow
+      // number — lowercase duplicate of Number (data quality issue in older syncs)
+      // SubmissionDate/TaxMonth/TaxYear — CIS submission fields, shown on the CIS returns pages
+      // PurchaseInECMemberState — EC VAT flag, not relevant for CIS/domestic workflow
       'Currency', 'number', 'OverdueDays', 'SubmissionDate', 'TaxMonth', 'TaxYear',
-      'PurchaseInECMemberState', 'createdByRunId'],
+      'PurchaseInECMemberState'],
     fieldOrder: ['Number', 'SupplierName', 'SupplierReference', 'GrossAmount', 'NetAmount', 'VATAmount', 'Status', 'TotalPaidAmount', 'IssuedDate', 'DueAmount', 'DueDate', 'PaidDate'],
     strictOrder: true,
     searchFields: ['Number'],
@@ -431,6 +577,15 @@ module.exports = {
     sortOrder: -1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
+    // Tabs give one-click access to the most common status filters
+    tabsby: 'Status',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Outstanding', label: 'Outstanding' },
+      { value: 'Paid', label: 'Paid' },
+      { value: 'Overdue', label: 'Overdue' },
+      { value: 'Cancelled', label: 'Cancelled' },
+    ],
     filters: [
       { field: 'Status', label: 'Status', type: 'select', options: [
         { label: 'Outstanding', value: 'Outstanding' },
@@ -458,22 +613,41 @@ module.exports = {
     },
   },
   session: {
+    // Raw Express session documents — contain auth tokens, CSRF state and TOTP
+    // session data. Must never be exposed through any route under any circumstance.
     deny: ['c', 'r', 'u', 'd', 'l'],
   },
   subcontractor: {
+    // Alias of the supplier collection — subcontractors are suppliers that have a
+    // WithholdingTaxRate set (i.e. are registered under the Construction Industry Scheme).
+    // Using an alias means we avoid a separate collection while still giving CIS users
+    // a focused view with CIS-relevant fields prominently shown.
     aliasOf: 'supplier',
     layout: 'rows',
     basePath: 'supplier',
-    // OLD: baseFilter: { Subcontractor: true },
+    // baseFilter was previously { Subcontractor: true } but the Subcontractor boolean flag
+    // was unreliable — KashFlow doesn't always set it. WithholdingTaxRate >= 0 is the
+    // definitive indicator: only CIS-registered suppliers have this field populated.
     baseFilter: { WithholdingTaxRate: { $gte: 0 } },
     title: 'Subcontractors',
     linkField: 'Name',
-    // OLD: hideFields included 'Subcontractor', 'IsSubcontractor' and hid 'WithholdingTaxRate', 'WithholdingTaxReferences'
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id', 'IsRegisteredInEC', 'IsArchived', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull',
-      'WithholdingTaxReferences', 'Contacts', 'Address', 'DeliveryAddresses', 'BankAccount',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Nested objects / arrays — too complex for a list row
+      'PaymentTerms', 'Currency', 'Contacts', 'Address', 'DeliveryAddresses',
+      'BankAccount', 'WithholdingTaxReferences',
+      // KashFlow UI / print-layout flags not relevant in the CIS context
+      'Website', 'DefaultPdfTheme', 'PaymentMethod', 'SourceName', 'TradeBorderType',
+      'UsesDefaultPdftTheme', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull',
+      // VAT / billing fields — subcontractors are managed under CIS, not standard VAT billing
       'ApplyWithholdingTax', 'BilledNetAmount', 'BilledVatAmount', 'DefaultVatRate',
-      'DoesSupplierHasTransactionsInVATReturn', 'IsCISReverseCharge', 'IsVatRateEnabled',
-      'SourceName', 'TradeBorderType', 'UsesDefaultPdftTheme', 'VatExempt',
+      'DoesSupplierHasTransactionsInVATReturn', 'IsCISReverseCharge', 'IsVatRateEnabled', 'VatExempt',
+      // Id — KashFlow DB primary key, Code is the user-facing identifier
+      // IsRegisteredInEC — EC VAT flag, not relevant for CIS domestic subcontractors
+      // IsArchived — subcontractor list always shows active; filtered via baseFilter
+      'Id', 'IsRegisteredInEC', 'IsArchived',
+      // Subcontractor / IsSubcontractor — legacy boolean flags replaced by WithholdingTaxRate
+      // CISRate / CISNumber — hcs-app-managed CIS detail, shown on the subcontractor detail
+      // view and the CIS dashboard; not needed in the summary list
       'Subcontractor', 'IsSubcontractor', 'CISRate', 'CISNumber'],
     fieldOrder: ['Name', 'Code', 'WithholdingTaxRate', 'Note', 'OutstandingBalance', 'TotalPaidAmount', 'VatNumber'],
     labelOverrides: {
@@ -487,6 +661,14 @@ module.exports = {
     sortOrder: 1,
     department: ['construction-industry-scheme'],
     deny: ['c', 'u', 'd'],
+    // WithholdingTaxRate is a Number — tab values are cast to numbers by the controller
+    tabsby: 'WithholdingTaxRate',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: '0', label: '0%' },
+      { value: '20', label: '20%' },
+      { value: '30', label: '30%' },
+    ],
     filters: [
       { field: 'WithholdingTaxRate', label: 'WHT Rate', type: 'select', options: [
         { label: '0%', value: 0 },
@@ -506,11 +688,23 @@ module.exports = {
     title: 'Suppliers',
     layout: 'rows',
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'PaymentTerms', 'uuid', 'Website', 'Currency', 'DefaultPdfTheme', 'PaymentMethod', 'Id',
-      'Contacts', 'Address', 'DeliveryAddresses', 'WithholdingTaxReferences', 'BankAccount',
+    // Suppliers are synced read-only from KashFlow — deny all writes from the app.
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Nested objects / arrays — address and contact detail is on the supplier detail view
+      'PaymentTerms', 'Currency', 'Contacts', 'Address', 'DeliveryAddresses',
+      'WithholdingTaxReferences', 'BankAccount',
+      // KashFlow UI / print-layout flags — only meaningful inside KashFlow
+      'Website', 'DefaultPdfTheme', 'PaymentMethod', 'SourceName', 'TradeBorderType',
+      'UsesDefaultPdftTheme', 'CreateSupplierCodeIfDuplicate', 'CreateSupplierNameIfEmptyOrNull',
+      // Billing / VAT sub-fields — BilledNet/Vat are KashFlow-computed totals that duplicate
+      // OutstandingBalance; DefaultVatRate and IsVatRateEnabled are supplier-level VAT overrides
+      // that are only relevant when raising purchases in KashFlow, not when reviewing them here
       'ApplyWithholdingTax', 'BilledNetAmount', 'BilledVatAmount', 'DefaultVatRate',
-      'DoesSupplierHasTransactionsInVATReturn', 'IsCISReverseCharge', 'IsVatRateEnabled',
-      'SourceName', 'TradeBorderType', 'UsesDefaultPdftTheme', 'VatExempt',
+      'DoesSupplierHasTransactionsInVATReturn', 'IsCISReverseCharge', 'IsVatRateEnabled', 'VatExempt',
+      // Id — KashFlow DB primary key; Code is the user-facing supplier reference
+      'Id',
+      // CIS-specific fields shown on the subcontractor alias view instead;
+      // showing them here would confuse non-CIS suppliers
       'Subcontractor', 'IsSubcontractor', 'CISRate', 'CISNumber'],
     fieldOrder: [
       'Name', 'Code', 'Note',
@@ -530,6 +724,13 @@ module.exports = {
     sortOrder: 1,
     department: ['kashflow', 'construction-industry-scheme'],
     deny: ['c', 'u', 'd'],
+    // IsArchived is Boolean — controller casts 'true'/'false' strings to boolean for the query
+    tabsby: 'IsArchived',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'false', label: 'Active' },
+      { value: 'true', label: 'Archived' },
+    ],
     filters: [
       { field: 'IsArchived', label: 'Status', type: 'boolean', falseLabel: 'Active', trueLabel: 'Archived' },
       { field: 'WithholdingTaxRate', label: 'WHT Rate', type: 'select', options: [
@@ -553,6 +754,13 @@ module.exports = {
     sortField: 'title',
     sortOrder: -1,
     department: ['human-resources'],
+    // completed is Boolean — controller casts 'true'/'false' strings to boolean for the query
+    tabsby: 'completed',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'false', label: 'Pending' },
+      { value: 'true', label: 'Done' },
+    ],
     labelOverrides: {
       userId: 'User',
       contractId: 'Contract',
@@ -576,11 +784,30 @@ module.exports = {
   user: {
     title: 'Users',
     linkField: 'username',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'password', 'totpSecret', 'totpEnabled', 'emailVerificationToken', 'emailVerificationExpires', 'customPermissions'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Security-sensitive fields — must never appear in any list or table output
+      'password',          // bcrypt hash
+      'totpSecret',        // AES-256-CBC encrypted TOTP seed
+      'totpEnabled',       // 2FA status — shown on the user detail view only
+      'emailVerificationToken', 'emailVerificationExpires',  // short-lived tokens
+      // customPermissions — complex per-user RBAC overrides; managed via the admin UI
+      'customPermissions'],
     fieldOrder: ['username', 'email', 'emailVerified', 'role', 'employeeId', 'subcontractorId', 'clientId'],
     sortField: 'username',
     sortOrder: 1,
     department: ['human-resources'],
+    // Filter by role — useful for quickly seeing all admins, employees, subcontractors etc.
+    tabsby: 'role',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'admin', label: 'Admin' },
+      { value: 'accountant', label: 'Accountant' },
+      { value: 'employee', label: 'Employee' },
+      { value: 'subcontractor', label: 'Subcontractor' },
+      { value: 'client', label: 'Client' },
+      { value: 'hmrc', label: 'HMRC' },
+      { value: 'none', label: 'None' },
+    ],
     labelOverrides: {
       employeeId: 'Employee',
       subcontractorId: 'Subcontractor',
@@ -661,10 +888,21 @@ module.exports = {
       manage: 'Manage company fleet vehicles, compliance dates and assignments.',
     },
     linkField: 'registrationNumber',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'vin', 'engineNumber',
-      'motCertificateNumber', 'insuranceCost', 'purchasePrice', 'leaseMonthlyCost',
-      'leaseProvider', 'grossWeight', 'payload', 'lastServiceMileage', 'nextServiceDueMileage',
-      'lastMileageUpdate', 'insurancePolicyNumber', 'notes'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Chassis / mechanical identifiers — important for records but too granular for
+      // the fleet overview list; shown on the vehicle detail view
+      'vin', 'engineNumber',
+      // Certificate/policy numbers — reference data kept in the detail view
+      'motCertificateNumber', 'insurancePolicyNumber',
+      // Financial detail — cost fields are on the vehicle detail / finance reports
+      'insuranceCost', 'purchasePrice', 'leaseMonthlyCost', 'leaseProvider',
+      // Load specification — only relevant for HGV compliance, not the fleet summary
+      'grossWeight', 'payload',
+      // Service mileage thresholds — the vehicleComplianceService checks these
+      // automatically; they are shown on the vehicle detail and service history
+      'lastServiceMileage', 'nextServiceDueMileage', 'lastMileageUpdate',
+      // notes — free-text field, shown on the detail view
+      'notes'],
     fieldOrder: [
       'registrationNumber', 'make', 'model', 'year', 'color',
       'fuelType', 'bodyType', 'transmission', 'engineSize',
@@ -804,11 +1042,23 @@ module.exports = {
     },
     linkField: 'Name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
-      // Internal / low-value fields
-      'DefaultProduct', 'PlOption', 'BsOption', 'IRISCoAName', 'IsIRISCoA',
-      'Sa103Code', 'NomType', 'Special', 'AllowDelete', 'AutoFillLineItem',
+      // KashFlow product / stock fields — nominals double as product catalogue entries
+      // in KashFlow's inventory module, which is not used here
+      'DefaultProduct', 'AutoFillLineItem', 'IsProduct',
       'WholeSalePrice', 'StockWarningQuantity', 'ManageStockLevel', 'QuantityInStock',
-      'DigitalService', 'ComplianceCode', 'ControlAccountClassification', 'IsProduct'],
+      // IRIS / accounting software mapping fields — only relevant if exporting to IRIS
+      'IRISCoAName', 'IsIRISCoA',
+      // KashFlow internal classification codes used for P&L / balance sheet layout;
+      // PlOption and BsOption are enum integers that map to KashFlow report sections
+      'PlOption', 'BsOption', 'NomType',
+      // Sa103Code — HMRC Self Assessment (SA103) nominal mapping, not used in this workflow
+      // Special — KashFlow internal flag marking system-reserved nominal accounts
+      // AllowDelete — KashFlow guard flag, not meaningful outside KashFlow
+      'Sa103Code', 'Special', 'AllowDelete',
+      // DigitalService — EC digital services VAT flag, not relevant for construction
+      // ComplianceCode — HMRC Making Tax Digital classification code
+      // ControlAccountClassification — KashFlow debtors/creditors control account type
+      'DigitalService', 'ComplianceCode', 'ControlAccountClassification'],
     fieldOrder: ['Code', 'Name', 'Type', 'Description', 'Classification', 'VATRate', 'VATExempt', 'Price', 'Disallowed', 'Archived'],
     labelOverrides: {
       VATRate: 'VAT Rate',
@@ -827,8 +1077,13 @@ module.exports = {
   },
   note: {
     title: 'Notes',
+    // ObjectNumber is the KashFlow reference of the entity the note is attached to
+    // (e.g. an invoice number, project number). Used as the link target because notes
+    // don't have their own meaningful primary display field — Text is the content itself.
     linkField: 'ObjectNumber',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Permalink'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Permalink — KashFlow-hosted URL to the parent entity; not useful in the app
+      'Permalink'],
     fieldOrder: ['ObjectType', 'ObjectNumber', 'Number', 'Author', 'Date', 'Text', 'LastModifiedBy', 'CreatedDate', 'LastUpdatedDate'],
     labelOverrides: {
       ObjectType: 'Type',
