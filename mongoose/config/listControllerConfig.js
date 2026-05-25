@@ -429,6 +429,7 @@ module.exports = {
       ]},
       { field: 'OutstandingBalance', label: 'Outstanding', type: 'numberrange' },
     ],
+    headerActions: [
       { label: 'Edit CIS Details', href: '/subcontractor/assign', icon: 'bi bi-pencil-square', class: 'bg-green-600 hover:bg-green-700' },
     ],
     description: {
