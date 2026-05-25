@@ -313,11 +313,19 @@ module.exports = {
     },
   },
   task: {
+    description: 'Create a new task and optionally link it to a contract.',
     readOnly: ['uuid', 'createdAt'],
+    hideFields: ['uuid', 'completed'],
+    fieldOrder: ['title', 'description', 'dueDate', 'recurrence', 'userId', 'contractId'],
+    labelOverrides: {
+      userId: 'User',
+      contractId: 'Contract',
+      dueDate: 'Due Date',
+    },
     validators: {
       title: value => typeof value === 'string' && value.length > 0,
-      description: value => typeof value === 'string' && value.length > 0,
-      dueDate: value => !isNaN(Date.parse(value)),
+      description: value => !value || typeof value === 'string',
+      dueDate: value => !value || !isNaN(Date.parse(value)),
     },
     middleware: {
       read: ['ensureRole:admin'],

@@ -88,6 +88,27 @@
       <i class="bi bi-plus-circle"></i> Create
     </button>
   </form>
+
+  <script>
+    (function () {
+      const recurrenceEl = document.getElementById('recurrence');
+      const dueDateEl = document.getElementById('dueDate');
+      if (!recurrenceEl || !dueDateEl) return;
+      const dueDateLabel = dueDateEl.closest('.mb-6')?.querySelector('label');
+      const hint = document.createElement('span');
+      hint.id = '_dueDateRecurrenceHint';
+      hint.className = 'ml-1 text-xs text-amber-600 dark:text-amber-400 hidden';
+      hint.textContent = '(required for recurring tasks)';
+      if (dueDateLabel) dueDateLabel.appendChild(hint);
+      function update() {
+        const recurring = recurrenceEl.value && recurrenceEl.value !== 'none';
+        hint.classList.toggle('hidden', !recurring);
+        dueDateEl.required = recurring;
+      }
+      recurrenceEl.addEventListener('change', update);
+      update();
+    })();
+  </script>
     </div>
   </div>
 </div>
