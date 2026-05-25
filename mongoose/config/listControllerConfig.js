@@ -134,7 +134,8 @@ module.exports = {
       'Id', 'WHTReferences', 'AutoIncludeVATNumber', 'AverageDaysToPay', 'UseCustomDeliveryAddress',
       'AutomaticCreditControlEnabled', 'IsGoCardlessMandateSet', 'Key', 'Source',
       'ShowDiscount', 'CreateCustomerCodeIfDuplicate', 'CreateCustomerNameIfEmptyOrNull',
-      'InvoiceFileFormat', 'OverrideInvoiceFileFormat', 'EnvelopeUrl', 'PDFThemeId', 'TelephoneNumber', 'UniqueEntityNumber'],
+      'InvoiceFileFormat', 'OverrideInvoiceFileFormat', 'EnvelopeUrl', 'PDFThemeId', 'TelephoneNumber', 'UniqueEntityNumber',
+      'DefaultNominalCode', 'EmailTemplateNumber', 'FaxNumber', 'MobileNumber', 'ReceivesWholesalePricing', 'ApplyWHT'],
     fieldOrder: [
       'Name', 'Code', 'Note',
       'OutstandingBalance', 'InvoicedNetAmount', 'TotalPaidAmount', 'InvoicedVATAmount',
