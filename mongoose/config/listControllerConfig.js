@@ -238,13 +238,27 @@ module.exports = {
   invoice: {
     title: 'Invoices',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'DeliveryAddress', 'UseCustomDeliveryAddress', 'Permalink', 'PackingSlipPermalink', 'ReminderLetters',
-      'CustomerKey', 'CustomerContactName', 'CustomerContactFirstName', 'CustomerContactLastName',
-      'CreatedDate', 'HomeCurrencyGrossAmount', 'HomeCurrencyVATAmount', 'DueAmount', 'FormattedDueAmount',
-      'Type', 'FileCount', 'IsArchived', 'IsCISReverseCharge', 'IsWhtDeductionToBeApplied',
-      'CISRCNetAmount', 'CISRCVatAmount', 'PayOnlinePaymentProcessor', 'ProjectGrossAmount', 'TradeBorderType',
-      'UpdateCustomerDeliveryAddress', 'VATNumber', 'VATReturnId'],
-    fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerReference', 'Currency', 'NetAmount', 'GrossAmount', 'VATAmount', 'AmountPaid', 'TotalPaidAmount', 'IssuedDate', 'DueDate', 'PaidDate', 'LastPaymentDate', 'Status', 'OverdueDays', 'AutomaticCreditControlEnabled', 'CustomerDiscount', 'EmailCount', 'InvoiceInECMemberState', 'InvoiceOutsideECMemberState', 'SuppressNumber', 'UpdateCustomerAddress'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Arrays / objects — not useful in a list view
+      'LineItems', 'PaymentLines', 'Address', 'DeliveryAddress', 'ReminderLetters',
+      // Internal KashFlow IDs / keys
+      'Id', 'CustomerKey', 'CustomerCode',
+      // Duplicate / redundant amount fields
+      'Paid', 'HomeCurrencyGrossAmount', 'HomeCurrencyVATAmount', 'DueAmount', 'FormattedDueAmount',
+      // Linking / navigation fields
+      'PreviousNumber', 'NextNumber', 'ProjectNumber', 'ProjectName', 'ProjectGrossAmount',
+      'Permalink', 'PackingSlipPermalink', 'SuppressNumber', 'PayOnlinePaymentProcessor',
+      // Customer contact detail (too granular)
+      'CustomerContactName', 'CustomerContactFirstName', 'CustomerContactLastName',
+      // Misc flags not needed in list
+      'CreatedDate', 'Type', 'FileCount', 'IsArchived', 'IsCISReverseCharge', 'IsWhtDeductionToBeApplied',
+      'CISRCNetAmount', 'CISRCVatAmount', 'TradeBorderType',
+      'UpdateCustomerDeliveryAddress', 'UseCustomDeliveryAddress', 'VATNumber', 'VATReturnId'],
+    fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerReference', 'Currency',
+      'NetAmount', 'GrossAmount', 'VATAmount', 'AmountPaid', 'TotalPaidAmount',
+      'IssuedDate', 'DueDate', 'PaidDate', 'LastPaymentDate',
+      'Status', 'OverdueDays', 'AutomaticCreditControlEnabled', 'CustomerDiscount',
+      'EmailCount', 'InvoiceInECMemberState', 'InvoiceOutsideECMemberState', 'UpdateCustomerAddress'],
     sortField: 'Number',
     sortOrder: -1,
     department: ['kashflow'],
@@ -293,19 +307,38 @@ module.exports = {
     deny: ['c', 'r', 'u', 'd', 'l'],
   },
   project: {
-    fieldOrder: ['Number', 'Id', 'Name', 'Description', 'Reference', 'CustomerCode', 'Status', 'Note'],
+    fieldOrder: [
+      'Number', 'Name', 'Status', 'CustomerCode', 'CustomerName',
+      'Reference', 'Description', 'Note',
+      'StartDate', 'EndDate',
+      'ActualSalesAmount', 'ActualPurchasesAmount', 'WorkInProgressAmount',
+      'TargetSalesAmount', 'TargetPurchasesAmount', 'AssociatedQuotesCount',
+    ],
     title: 'Projects',
     layout: 'rows',
     linkField: 'Number',
     sortField: 'Number',
     sortOrder: -1,
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'deletedAt', 'lastSeenRun'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'deletedAt', 'lastSeenRun',
+      // Internal KashFlow ID (Number is the public job ref)
+      'Id',
+      // VAT sub-amounts — too granular for list view
+      'ExcludeVAT', 'ActualSalesVATAmount', 'ActualPurchasesVATAmount', 'ActualJournalsAmount'],
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
     handlesDocuments: true,
     labelOverrides: {
       CustomerCode: 'Customer',
+      CustomerName: 'Customer Name',
       Number: 'Job Ref',
+      StartDate: 'Start',
+      EndDate: 'End',
+      ActualSalesAmount: 'Actual Sales',
+      ActualPurchasesAmount: 'Actual Purchases',
+      WorkInProgressAmount: 'WIP',
+      TargetSalesAmount: 'Target Sales',
+      TargetPurchasesAmount: 'Target Purchases',
+      AssociatedQuotesCount: 'Quotes',
     },
     fieldTransforms: {
       CustomerCode: {
@@ -315,6 +348,15 @@ module.exports = {
         linkTo: (matched) => `/customer/read/${matched.uuid}`,
       }
     },
+    filters: [
+      { field: 'Status', label: 'Status', type: 'select', options: [
+        { label: 'Active', value: 'Active' },
+        { label: 'Archived', value: 'Archived' },
+        { label: 'Completed', value: 'Completed' },
+      ]},
+      { field: 'StartDate', label: 'Start Date', type: 'daterange' },
+      { field: 'ActualSalesAmount', label: 'Actual Sales', type: 'numberrange' },
+    ],
     tabsby: 'Status',
     tabsValues: [
       { value: 'all', label: 'All' },
@@ -330,14 +372,29 @@ module.exports = {
     title: 'Quotes',
     linkField: 'Number',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Arrays / objects
       'LineItems', 'Addresses', 'DeliveryAddresses', 'UseCustomDeliveryAddress',
+      // Internal / redundant
       'Id', 'HomeCurrencyGrossAmount', 'FileCount', 'IsEmailSent', 'SuppressAmount',
-      'ProjectNumber', 'ProjectName'],
-    fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'Date', 'GrossAmount', 'NetAmount', 'VATAmount', 'CustomerReference', 'Permalink', 'PreviousNumber', 'NextNumber', 'Status', 'Category', 'Currency', 'CustomerCode'],
+      'ProjectNumber', 'ProjectName', 'Permalink', 'PreviousNumber', 'NextNumber'],
+    fieldOrder: ['Number', 'CustomerId', 'CustomerName', 'CustomerCode', 'CustomerReference',
+      'Date', 'GrossAmount', 'NetAmount', 'VATAmount',
+      'Status', 'Category', 'Currency'],
     sortField: 'Number',
     sortOrder: -1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
+    filters: [
+      { field: 'Status', label: 'Status', type: 'select', options: [
+        { label: 'Outstanding', value: 'Outstanding' },
+        { label: 'Accepted', value: 'Accepted' },
+        { label: 'Declined', value: 'Declined' },
+        { label: 'Draft', value: 'Draft' },
+        { label: 'Cancelled', value: 'Cancelled' },
+      ]},
+      { field: 'Date', label: 'Date', type: 'daterange' },
+      { field: 'GrossAmount', label: 'Gross Amount', type: 'numberrange' },
+    ],
     tabsby: 'Category.Name',
     tabsDynamic: true,
     labelOverrides: {
@@ -356,9 +413,18 @@ module.exports = {
   purchase: {
     title: 'Purchases',
     linkField: 'Number',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'ReadableString','CISRCNetAmount', 'CISRCVatAmount','Permalink', 'PreviousNumber','IsCISReverseCharge','Type','SupplierCode', 'NextNumber', 'StockManagementApplicable', 'ProjectName','ProjectNumber', 'AdditionalFieldValue','SupplierId','FileCount', 'HomeCurrencyGrossAmount','IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent', 'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId', 'deletedAt', 'lastSeenRun', 'Currency', 'number',
-      'OverdueDays', 'SubmissionDate', 'TaxMonth', 'TaxYear', 'PurchaseInECMemberState', 'createdByRunId'],
-    fieldOrder: ['Number', 'SupplierName', 'SupplierReference','GrossAmount', 'NetAmount', 'VATAmount', 'Status', 'TotalPaidAmount', 'IssuedDate','DueAmount', 'DueDate'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Arrays / objects
+      'LineItems',
+      // Internal / redundant fields
+      'ReadableString', 'CISRCNetAmount', 'CISRCVatAmount', 'Permalink', 'PreviousNumber',
+      'IsCISReverseCharge', 'Type', 'SupplierCode', 'NextNumber', 'StockManagementApplicable',
+      'ProjectName', 'ProjectNumber', 'AdditionalFieldValue', 'SupplierId', 'FileCount',
+      'HomeCurrencyGrossAmount', 'IsWhtDeductionToBeApplied', 'Id', 'IsEmailSent',
+      'ProjectGrossAmount', 'TradeBorderType', 'VATReturnId', 'deletedAt', 'lastSeenRun',
+      'Currency', 'number', 'OverdueDays', 'SubmissionDate', 'TaxMonth', 'TaxYear',
+      'PurchaseInECMemberState', 'createdByRunId'],
+    fieldOrder: ['Number', 'SupplierName', 'SupplierReference', 'GrossAmount', 'NetAmount', 'VATAmount', 'Status', 'TotalPaidAmount', 'IssuedDate', 'DueAmount', 'DueDate', 'PaidDate'],
     strictOrder: true,
     searchFields: ['Number'],
     sortField: 'Number',
@@ -737,20 +803,56 @@ module.exports = {
       manage: 'Manage nominal accounts (chart of accounts).'
     },
     linkField: 'Name',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Internal / low-value fields
+      'DefaultProduct', 'PlOption', 'BsOption', 'IRISCoAName', 'IsIRISCoA',
+      'Sa103Code', 'NomType', 'Special', 'AllowDelete', 'AutoFillLineItem',
+      'WholeSalePrice', 'StockWarningQuantity', 'ManageStockLevel', 'QuantityInStock',
+      'DigitalService', 'ComplianceCode', 'ControlAccountClassification', 'IsProduct'],
+    fieldOrder: ['Code', 'Name', 'Type', 'Description', 'Classification', 'VATRate', 'VATExempt', 'Price', 'Disallowed', 'Archived'],
+    labelOverrides: {
+      VATRate: 'VAT Rate',
+      VATExempt: 'VAT Exempt',
+    },
     sortField: 'Code',
-    sortOrder: -1,
+    sortOrder: 1,
     department: ['finance'],
     deny: ['c', 'u', 'd'],
+    tabsby: 'Type',
+    tabsDynamic: true,
+    filters: [
+      { field: 'Archived', label: 'Status', type: 'boolean', falseLabel: 'Active', trueLabel: 'Archived' },
+      { field: 'Disallowed', label: 'Disallowed', type: 'boolean', falseLabel: 'Allowed', trueLabel: 'Disallowed' },
+    ],
   },
   note: {
     title: 'Notes',
-    linkField: 'title',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
-    sortField: 'createdAt',
+    linkField: 'ObjectNumber',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'Permalink'],
+    fieldOrder: ['ObjectType', 'ObjectNumber', 'Number', 'Author', 'Date', 'Text', 'LastModifiedBy', 'CreatedDate', 'LastUpdatedDate'],
+    labelOverrides: {
+      ObjectType: 'Type',
+      ObjectNumber: 'Object Ref',
+      LastModifiedBy: 'Modified By',
+      CreatedDate: 'Created',
+      LastUpdatedDate: 'Last Updated',
+    },
+    sortField: 'CreatedDate',
     sortOrder: -1,
     department: ['management'],
     deny: ['c', 'u', 'd'],
+    tabsby: 'ObjectType',
+    tabsDynamic: true,
+    filters: [
+      { field: 'ObjectType', label: 'Type', type: 'select', options: [
+        { label: 'Customer', value: 'Customer' },
+        { label: 'Supplier', value: 'Supplier' },
+        { label: 'Invoice', value: 'Invoice' },
+        { label: 'Purchase', value: 'Purchase' },
+        { label: 'Project', value: 'Project' },
+      ]},
+      { field: 'Date', label: 'Date', type: 'daterange' },
+    ],
   },
   vatrate: {
     title: 'VAT Rates',
