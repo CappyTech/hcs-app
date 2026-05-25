@@ -41,6 +41,22 @@
   // Preserve current layout in generated URLs
   const _rq = typeof reqQuery !== 'undefined' ? reqQuery : {};
   const _lp = (typeof listLayout !== 'undefined' && listLayout === 'rows') ? '&layout=rows' : '';
+  // Build query-string fragment for active filter params
+  const _fqsParts = [];
+  if (typeof filters !== 'undefined' && Array.isArray(filters)) {
+    filters.forEach(fc => {
+      const _fqk = `f_${fc.field}`;
+      if (fc.type === 'daterange' || fc.type === 'numberrange') {
+        const vf = _rq[`${_fqk}_from`]; const vt = _rq[`${_fqk}_to`];
+        if (vf) _fqsParts.push(`${_fqk}_from=${encodeURIComponent(vf)}`);
+        if (vt) _fqsParts.push(`${_fqk}_to=${encodeURIComponent(vt)}`);
+      } else {
+        const v = _rq[_fqk];
+        if (v !== undefined && v !== '') _fqsParts.push(`${_fqk}=${encodeURIComponent(v)}`);
+      }
+    });
+  }
+  const _fqs = _fqsParts.length ? '&' + _fqsParts.join('&') : '';
 
   // Classify a header field for the rows layout
   function _classifyHeader(h, sampleRow) {
@@ -87,15 +103,14 @@
             <% for (let i = 1; i <= totalPages; i++) { %>
               <% if (i === 1 || i === totalPages || Math.abs(i - page) <= range) { %>
                 <li>
-                  <a href="?page=<%= i %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %><%= activeTab ? '&tab=' + encodeURIComponent(activeTab) : '' %><%= _lp %>"
+                  <a href="?page=<%= i %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %><%= activeTab ? '&tab=' + encodeURIComponent(activeTab) : '' %><%= _lp %><%= _fqs %>"
                      class="px-2.5 py-0.5 rounded-lg border text-xs
                      <%= i === page
                        ? 'bg-green-600 text-white border-green-600'
                        : 'bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400'
                      %> transition">
                     <%= i %>
-                  </a>
-                </li>
+                  </a></li>
               <% } else if (i === page - range - 1 || i === page + range + 1) { %>
                 <li><span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">…</span></li>
               <% } %>
@@ -133,7 +148,82 @@
                 class="text-sm bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition shadow-sm">
           Apply
         </button>
+
+        <% if (typeof filters !== 'undefined' && Array.isArray(filters) && filters.length > 0) { %>
+          <button type="button" id="filter-toggle"
+                  class="text-sm px-3 py-1.5 rounded-lg border transition inline-flex items-center gap-1.5
+                         <%= (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) ? 'border-green-500 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:border-green-500 hover:text-green-700 dark:hover:text-green-400' %>">
+            <i class="bi bi-funnel<%= (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) ? '-fill' : '' %>"></i>
+            Filters
+            <% if (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) { %>
+              <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-600 text-white text-xs font-bold"><%= activeFilterCount %></span>
+            <% } %>
+          </button>
+        <% } %>
       </form>
+
+      <% if (typeof filters !== 'undefined' && Array.isArray(filters) && filters.length > 0) { %>
+        <%
+          const _selectCls = 'w-full text-sm border rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500';
+          const _inputCls  = 'w-full text-sm border rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500';
+          const _hasActiveFilters = typeof activeFilterCount !== 'undefined' && activeFilterCount > 0;
+          // Build clear-filters URL: strip all f_* params from current query
+          const _clearParams = new URLSearchParams(Object.entries(_rq).filter(([k]) => !k.startsWith('f_') && k !== 'page'));
+          _clearParams.set('page', '1');
+          const _clearUrl = '?' + _clearParams.toString();
+        %>
+        <form id="filter-panel" method="GET" action="" class="<%= _hasActiveFilters ? '' : 'hidden' %> mt-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+          <input type="hidden" name="page" value="1">
+          <input type="hidden" name="limit" value="<%= limit %>">
+          <% if (typeof query === 'string' && query) { %><input type="hidden" name="search" value="<%= query %>"><% } %>
+          <% if (activeTab) { %><input type="hidden" name="tab" value="<%= activeTab %>"><% } %>
+          <% if (typeof listLayout !== 'undefined' && listLayout === 'rows') { %><input type="hidden" name="layout" value="rows"><% } %>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <% filters.forEach(fc => { %>
+              <% const _fqk = `f_${fc.field}`; %>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400"><%= fc.label %></label>
+                <% if (fc.type === 'boolean') { %>
+                  <select name="<%= _fqk %>" class="<%= _selectCls %>">
+                    <option value="">Any</option>
+                    <option value="false" <%= _rq[_fqk] === 'false' ? 'selected' : '' %>><%= fc.falseLabel || 'No' %></option>
+                    <option value="true"  <%= _rq[_fqk] === 'true'  ? 'selected' : '' %>><%= fc.trueLabel  || 'Yes' %></option>
+                  </select>
+                <% } else if (fc.type === 'select') { %>
+                  <select name="<%= _fqk %>" class="<%= _selectCls %>">
+                    <option value="">Any</option>
+                    <% (fc.options || []).forEach(opt => { %>
+                      <option value="<%= opt.value %>" <%= String(_rq[_fqk]) === String(opt.value) ? 'selected' : '' %>><%= opt.label %></option>
+                    <% }) %>
+                  </select>
+                <% } else if (fc.type === 'daterange') { %>
+                  <div class="flex items-center gap-1">
+                    <input type="date" name="<%= _fqk %>_from" value="<%= _rq[`${_fqk}_from`] || '' %>" class="<%= _inputCls %>">
+                    <span class="text-xs text-gray-400 shrink-0">–</span>
+                    <input type="date" name="<%= _fqk %>_to"   value="<%= _rq[`${_fqk}_to`]   || '' %>" class="<%= _inputCls %>">
+                  </div>
+                <% } else if (fc.type === 'numberrange') { %>
+                  <div class="flex items-center gap-1">
+                    <input type="number" step="any" name="<%= _fqk %>_from" value="<%= _rq[`${_fqk}_from`] || '' %>" placeholder="Min" class="<%= _inputCls %>">
+                    <span class="text-xs text-gray-400 shrink-0">–</span>
+                    <input type="number" step="any" name="<%= _fqk %>_to"   value="<%= _rq[`${_fqk}_to`]   || '' %>" placeholder="Max" class="<%= _inputCls %>">
+                  </div>
+                <% } %>
+              </div>
+            <% }) %>
+          </div>
+
+          <div class="flex gap-2 mt-3">
+            <button type="submit" class="text-sm bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition shadow-sm">Apply filters</button>
+            <% if (_hasActiveFilters) { %>
+              <a href="<%= _clearUrl %>" class="text-sm text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-red-300 transition inline-flex items-center gap-1">
+                <i class="bi bi-x-circle"></i> Clear
+              </a>
+            <% } %>
+          </div>
+        </form>
+      <% } %>
       <!-- Layout toggle -->
       <div class="flex items-center gap-0.5 border border-gray-200 dark:border-gray-700 rounded-lg p-0.5 bg-white dark:bg-gray-800 shrink-0">
         <% const _lqTable = '?' + new URLSearchParams({..._rq, layout: 'table', page: '1'}).toString(); %>
@@ -152,7 +242,7 @@
   <% if (Array.isArray(tabs) && tabs.length > 0) { %>
     <div class="mb-4 flex flex-wrap gap-2">
       <% tabs.forEach(tab => { %>
-        <a href="?tab=<%= encodeURIComponent(tab.value) %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %><%= _lp %>"
+        <a href="?tab=<%= encodeURIComponent(tab.value) %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %><%= _lp %><%= _fqs %>"
            class="px-4 py-1.5 rounded-full text-sm font-medium border transition
                   <%= tab.isActive
                     ? 'bg-transparent text-green-600 border-green-600 shadow-sm dark:text-green-400 dark:border-green-400'
@@ -430,6 +520,15 @@
         const pageInput = form.querySelector('input[name="page"]');
         if (pageInput) pageInput.value = '1';
         form.submit();
+      });
+    }
+
+    // Filter panel toggle
+    const filterToggle = document.getElementById('filter-toggle');
+    const filterPanel  = document.getElementById('filter-panel');
+    if (filterToggle && filterPanel) {
+      filterToggle.addEventListener('click', () => {
+        filterPanel.classList.toggle('hidden');
       });
     }
   });

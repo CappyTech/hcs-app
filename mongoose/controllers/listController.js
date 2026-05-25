@@ -49,6 +49,54 @@ const generateHeaders = (firstDoc, config = {}) => {
   }));
 };
 
+// Apply per-model filter params from req.query (f_FieldName, f_FieldName_from/to)
+function applyFilterParams(req, filterConfigs, mongoFilter) {
+  for (const fc of filterConfigs) {
+    const qkey = `f_${fc.field}`;
+    let fcond = null;
+    if (fc.type === 'boolean') {
+      const val = req.query[qkey];
+      if (val === 'true') fcond = { [fc.field]: true };
+      else if (val === 'false') fcond = { [fc.field]: false };
+    } else if (fc.type === 'select') {
+      const val = req.query[qkey];
+      if (val !== undefined && val !== '') {
+        const opt = Array.isArray(fc.options) ? fc.options.find(o => String(o.value) === val) : null;
+        fcond = { [fc.field]: opt ? opt.value : val };
+      }
+    } else if (fc.type === 'daterange') {
+      const from = req.query[`${qkey}_from`];
+      const to = req.query[`${qkey}_to`];
+      const cond = {};
+      if (from) cond.$gte = new Date(from);
+      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); cond.$lte = d; }
+      if (Object.keys(cond).length) fcond = { [fc.field]: cond };
+    } else if (fc.type === 'numberrange') {
+      const from = req.query[`${qkey}_from`];
+      const to = req.query[`${qkey}_to`];
+      const cond = {};
+      const nf = parseFloat(from); if (from !== undefined && from !== '' && !isNaN(nf)) cond.$gte = nf;
+      const nt = parseFloat(to);   if (to   !== undefined && to   !== '' && !isNaN(nt)) cond.$lte = nt;
+      if (Object.keys(cond).length) fcond = { [fc.field]: cond };
+    }
+    if (fcond) {
+      mongoFilter = Object.keys(mongoFilter).length ? { $and: [mongoFilter, fcond] } : { ...fcond };
+    }
+  }
+  return mongoFilter;
+}
+
+function countActiveFilters(req, filterConfigs) {
+  return filterConfigs.filter(fc => {
+    const qkey = `f_${fc.field}`;
+    if (fc.type === 'daterange' || fc.type === 'numberrange') {
+      const from = req.query[`${qkey}_from`]; const to = req.query[`${qkey}_to`];
+      return (from !== undefined && from !== '') || (to !== undefined && to !== '');
+    }
+    return req.query[qkey] !== undefined && req.query[qkey] !== '';
+  }).length;
+}
+
 // Iterate over REST, INTERNAL and PAPERLESS namespaces to expose list routes for their models.
 ["REST", "INTERNAL", "PAPERLESS"].forEach((ns) => {
   const namespace = mdb[ns];
@@ -169,6 +217,11 @@ const generateHeaders = (firstDoc, config = {}) => {
         }
       }
 
+      // ── Per-model field filters ──
+      const filterConfigs = config.filters || [];
+      mongoFilter = applyFilterParams(req, filterConfigs, mongoFilter);
+      const activeFilterCount = countActiveFilters(req, filterConfigs);
+
       const listLayout = req.query.layout || config.layout || 'table';
 
       try {
@@ -264,6 +317,8 @@ const generateHeaders = (firstDoc, config = {}) => {
             tabsBy,
             tabs,
             listLayout,
+            filters: filterConfigs,
+            activeFilterCount,
           });
         }
 
@@ -430,6 +485,8 @@ const generateHeaders = (firstDoc, config = {}) => {
           tabsBy,
           tabs,
           listLayout,
+          filters: filterConfigs,
+          activeFilterCount,
         });
       } catch (err) {
         logger.error(`Error listing ${modelName}:`, err);
@@ -536,6 +593,11 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
       }
     }
 
+    // ── Per-model field filters ──
+    const filterConfigs = config.filters || [];
+    mongoFilter = applyFilterParams(req, filterConfigs, mongoFilter);
+    const activeFilterCount = countActiveFilters(req, filterConfigs);
+
     const listLayout = req.query.layout || config.layout || 'table';
 
     try {
@@ -590,6 +652,10 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
           activeTab,
           tabsValues,
           tabsBy,
+          tabs,
+          listLayout,
+          filters: filterConfigs,
+          activeFilterCount,
           tabs,
           listLayout,
         });
@@ -741,6 +807,8 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
         tabsBy,
         tabs,
         listLayout,
+        filters: filterConfigs,
+        activeFilterCount,
       });
     } catch (err) {
       logger.error(`Error listing ${aliasName}:`, err);

@@ -158,6 +158,11 @@ module.exports = {
     sortOrder: 1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
+    filters: [
+      { field: 'IsArchived', label: 'Status', type: 'boolean', falseLabel: 'Active', trueLabel: 'Archived' },
+      { field: 'OutstandingBalance', label: 'Outstanding', type: 'numberrange' },
+      { field: 'InvoicedNetAmount', label: 'Net Invoiced', type: 'numberrange' },
+    ],
   },
   employee: {
     title: 'Employees',
@@ -181,6 +186,20 @@ module.exports = {
       ir35: 'IR35',
       subcontractorSupplierId: 'Linked Supplier'
     },
+    filters: [
+      { field: 'status', label: 'Status', type: 'select', options: [
+        { label: 'Active', value: 'active' },
+        { label: 'Inactive', value: 'inactive' },
+      ]},
+      { field: 'type', label: 'Type', type: 'select', options: [
+        { label: 'Employee', value: 'employee' },
+        { label: 'Subcontractor', value: 'subcontractor' },
+      ]},
+      { field: 'ir35', label: 'IR35', type: 'select', options: [
+        { label: 'Inside', value: 'inside' },
+        { label: 'Outside', value: 'outside' },
+      ]},
+    ],
     fieldTransforms: {
       managerId: {
         fromModel: 'employee',
@@ -230,6 +249,17 @@ module.exports = {
     sortOrder: -1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
+    filters: [
+      { field: 'Status', label: 'Status', type: 'select', options: [
+        { label: 'Outstanding', value: 'Outstanding' },
+        { label: 'Paid', value: 'Paid' },
+        { label: 'Overdue', value: 'Overdue' },
+        { label: 'Credited', value: 'Credited' },
+        { label: 'Cancelled', value: 'Cancelled' },
+      ]},
+      { field: 'IssuedDate', label: 'Issued Date', type: 'daterange' },
+      { field: 'GrossAmount', label: 'Gross Amount', type: 'numberrange' },
+    ],
     labelOverrides: {
       Number: 'KashFlow Number',
       CustomerId: 'Customer'
@@ -335,9 +365,18 @@ module.exports = {
     sortOrder: -1,
     department: ['kashflow'],
     deny: ['c', 'u', 'd'],
+    filters: [
+      { field: 'Status', label: 'Status', type: 'select', options: [
+        { label: 'Outstanding', value: 'Outstanding' },
+        { label: 'Paid', value: 'Paid' },
+        { label: 'Overdue', value: 'Overdue' },
+        { label: 'Cancelled', value: 'Cancelled' },
+      ]},
+      { field: 'IssuedDate', label: 'Issued Date', type: 'daterange' },
+      { field: 'GrossAmount', label: 'Gross Amount', type: 'numberrange' },
+    ],
     labelOverrides: {
       Number: 'KashFlow Number',
-      LineItems: 'Line Items',
       PaymentLines: 'Payments',
       SupplierId: 'Supplier',
       syncedAt: 'Last Synced',
@@ -382,7 +421,14 @@ module.exports = {
     sortOrder: 1,
     department: ['construction-industry-scheme'],
     deny: ['c', 'u', 'd'],
-    headerActions: [
+    filters: [
+      { field: 'WithholdingTaxRate', label: 'WHT Rate', type: 'select', options: [
+        { label: '0%', value: 0 },
+        { label: '20%', value: 20 },
+        { label: '30%', value: 30 },
+      ]},
+      { field: 'OutstandingBalance', label: 'Outstanding', type: 'numberrange' },
+    ],
       { label: 'Edit CIS Details', href: '/subcontractor/assign', icon: 'bi bi-pencil-square', class: 'bg-green-600 hover:bg-green-700' },
     ],
     description: {
@@ -417,6 +463,16 @@ module.exports = {
     sortOrder: 1,
     department: ['kashflow', 'construction-industry-scheme'],
     deny: ['c', 'u', 'd'],
+    filters: [
+      { field: 'IsArchived', label: 'Status', type: 'boolean', falseLabel: 'Active', trueLabel: 'Archived' },
+      { field: 'WithholdingTaxRate', label: 'WHT Rate', type: 'select', options: [
+        { label: 'None', value: '' },
+        { label: '0%', value: 0 },
+        { label: '20%', value: 20 },
+        { label: '30%', value: 30 },
+      ]},
+      { field: 'OutstandingBalance', label: 'Outstanding', type: 'numberrange' },
+    ],
     description: {
       manage: 'Manage suppliers and subcontractors.',
     },
