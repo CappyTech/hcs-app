@@ -102,4 +102,19 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.textContent = text;
   });
 
+  // ── searchable ref-list inputs ────────────────────────────────────────────
+  // Usage: <input data-reflist-target="reflist_<key>" …>
+  // Filters label[data-search] items inside the target list by text.
+  document.addEventListener('input', function (e) {
+    var input = e.target.closest('input[data-reflist-target]');
+    if (!input) return;
+    var listId = input.getAttribute('data-reflist-target');
+    var list = document.getElementById(listId);
+    if (!list) return;
+    var term = input.value.toLowerCase();
+    list.querySelectorAll('label[data-search]').forEach(function (label) {
+      label.style.display = label.getAttribute('data-search').includes(term) ? '' : 'none';
+    });
+  });
+
 });

@@ -336,52 +336,102 @@
     <% } else if (field.ref && referenceData?.[key]) { %>
       <!-- Reference -->
       <% const isArray = Array.isArray(selectedValue); %>
-      <div class="flex gap-2 items-start">
-        <select
-          id="<%= key %>"
-          name="<%= fieldName %><%= field.isArray ? '[]' : '' %>"
-          <%= field.isArray ? 'multiple' : '' %>
-          class="flex-1 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-        >
-          <option value="" <%= !field.isArray ? '' : 'disabled' %>>-- Select --</option>
-          <% referenceData[key].forEach(refItem => {
-              const value = isUuid ? refItem.uuid : refItem._id;
-              let label;
-              if (config?.referenceLabelFormat?.[key]) {
-                try {
-                  label = config.referenceLabelFormat[key](refItem);
-                } catch (err) {
-                  label = '[Invalid Format]';
+      <%
+        const _isSubcontractorRef = key.toLowerCase().includes('subcontractor') && field.ref === 'supplier';
+        const _showCreateBtn = _isSubcontractorRef || !field.refDenyCreate;
+        const _createLabel = _isSubcontractorRef
+          ? 'Add a subcontractor'
+          : `Create new ${(field.label || key).replace(/ Id$/i, '')}`;
+        const _createHref = _isSubcontractorRef
+          ? '/subcontractor/assign'
+          : `/${field.ref}/create`;
+      %>
+      <% if (field.isArray) { %>
+        <!-- Searchable checkbox list for multi-ref fields -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex gap-2 items-start">
+            <div class="flex-1 flex flex-col gap-1.5">
+              <div class="relative">
+                <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none text-sm"></i>
+                <input
+                  type="text"
+                  id="search_<%= key %>"
+                  placeholder="Search…"
+                  autocomplete="off"
+                  data-reflist-target="reflist_<%= key %>"
+                  class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+              <div id="reflist_<%= key %>" class="max-h-56 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700/50">
+                <% if (referenceData[key].length === 0) { %>
+                  <p class="px-3 py-3 text-sm text-gray-400 dark:text-gray-500 italic">No options available.</p>
+                <% } %>
+                <% referenceData[key].forEach(function(refItem) {
+                    const _val = isUuid ? refItem.uuid : refItem._id;
+                    let _lbl;
+                    if (config?.referenceLabelFormat?.[key]) {
+                      try { _lbl = config.referenceLabelFormat[key](refItem); } catch(e) { _lbl = '[Invalid Format]'; }
+                    } else {
+                      _lbl = refItem.name || refItem.Name || refItem.Number || refItem.username || refItem.title || String(_val);
+                    }
+                    const _checked = (selectedValue || []).map(String).includes(String(_val));
+                %>
+                  <label data-search="<%= _lbl.toLowerCase() %>" class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white dark:hover:bg-gray-700 transition select-none">
+                    <input
+                      type="checkbox"
+                      name="<%= fieldName %>[]"
+                      value="<%= _val %>"
+                      <%= _checked ? 'checked' : '' %>
+                      class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500 focus:ring-offset-0 shrink-0"
+                    >
+                    <span class="text-sm text-gray-900 dark:text-gray-100 leading-snug"><%= _lbl %></span>
+                  </label>
+                <% }); %>
+              </div>
+            </div>
+            <% if (_showCreateBtn) { %>
+            <a href="<%= _createHref %>" target="_blank" title="<%= _createLabel %>"
+              class="inline-flex items-center justify-center shrink-0 w-10 h-10 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 hover:border-green-400 transition">
+              <i class="bi bi-plus-lg"></i>
+            </a>
+            <% } %>
+          </div>
+          <% if (_isSubcontractorRef) { %>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            Are you missing a subcontractor in this list?
+            <a href="/help#cis-subcontractor-setup" target="_blank" class="text-green-600 dark:text-green-400 hover:underline font-medium">Follow these steps.</a>
+          </p>
+          <% } %>
+        </div>
+      <% } else { %>
+        <!-- Single-ref dropdown -->
+        <div class="flex gap-2 items-start">
+          <select
+            id="<%= key %>"
+            name="<%= fieldName %>"
+            class="flex-1 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="">-- Select --</option>
+            <% referenceData[key].forEach(function(refItem) {
+                const _val = isUuid ? refItem.uuid : refItem._id;
+                let _lbl;
+                if (config?.referenceLabelFormat?.[key]) {
+                  try { _lbl = config.referenceLabelFormat[key](refItem); } catch(e) { _lbl = '[Invalid Format]'; }
+                } else {
+                  _lbl = refItem.name || refItem.Name || refItem.Number || refItem.username || refItem.title || String(_val);
                 }
-              } else {
-                label = refItem.name || refItem.Name || refItem.Number || refItem.username || refItem.title || value;
-              }
-              const selected = field.isArray
-                ? (selectedValue || []).map(String).includes(String(value))
-                : String(selectedValue) === String(value);
-          %>
-            <option value="<%= value %>" <%= selected ? 'selected' : '' %>><%= label %></option>
-          <% }) %>
-        </select>
-        <% 
-          const isSubcontractorRef = key.toLowerCase().includes('subcontractor') && field.ref === 'supplier';
-          const showCreateBtn = isSubcontractorRef || !field.refDenyCreate;
-          if (showCreateBtn) {
-            const createLabel = isSubcontractorRef
-              ? 'Add a subcontractor'
-              : `Create new ${(field.label || key).replace(/ Id$/i, '')}`;
-            const createHref = isSubcontractorRef
-              ? '/subcontractor/assign'
-              : `/${field.ref}/create`;
-        %>
-        <a href="<%= createHref %>" target="_blank" title="<%= createLabel %>"
-          class="inline-flex items-center justify-center shrink-0 w-10 h-10 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 hover:border-green-400 transition">
-          <i class="bi bi-plus-lg"></i>
-        </a>
-        <% } %>
-      </div>
-      <% if ((field.ref || field.enum) && field.isArray && showFieldTips) { %>
-        <p class="text-sm text-gray-500 mt-1">Tip: Press a letter key to jump through matching entries.</p>
+                const _sel = String(selectedValue) === String(_val);
+            %>
+              <option value="<%= _val %>" <%= _sel ? 'selected' : '' %>><%= _lbl %></option>
+            <% }); %>
+          </select>
+          <% if (_showCreateBtn) { %>
+          <a href="<%= _createHref %>" target="_blank" title="<%= _createLabel %>"
+            class="inline-flex items-center justify-center shrink-0 w-10 h-10 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 hover:border-green-400 transition">
+            <i class="bi bi-plus-lg"></i>
+          </a>
+          <% } %>
+        </div>
       <% } %>
 
     <% } else if (field.type === 'Boolean') { %>

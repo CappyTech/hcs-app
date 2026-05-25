@@ -12,6 +12,9 @@ module.exports = {
       contractId: 'Contract'
     },
     fieldOrder: ['title', 'contractId', 'weekStart', 'status', 'estimatedHours', 'assignedEmployees', 'assignedSubcontractors'],
+    referenceFilters: {
+      assignedSubcontractors: { WithholdingTaxRate: { $gte: 0 } },
+    },
     fieldTransforms: {
       contractId: {
         fromModel: 'contract',
