@@ -169,7 +169,7 @@ const generateHeaders = (firstDoc, config = {}) => {
         }
       }
 
-      const layout = req.query.layout || config.layout || 'table';
+      const listLayout = req.query.layout || config.layout || 'table';
 
       try {
         // ── Data scoping: restrict results based on user role + linked entity ──
@@ -263,7 +263,7 @@ const generateHeaders = (firstDoc, config = {}) => {
             tabsValues,
             tabsBy,
             tabs,
-            layout,
+            listLayout,
           });
         }
 
@@ -429,7 +429,7 @@ const generateHeaders = (firstDoc, config = {}) => {
           tabsValues,
           tabsBy,
           tabs,
-          layout,
+          listLayout,
         });
       } catch (err) {
         logger.error(`Error listing ${modelName}:`, err);
@@ -536,7 +536,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
       }
     }
 
-    const layout = req.query.layout || config.layout || 'table';
+    const listLayout = req.query.layout || config.layout || 'table';
 
     try {
       const totalCount = await model.countDocuments(mongoFilter);
@@ -591,7 +591,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
           tabsValues,
           tabsBy,
           tabs,
-          layout,
+          listLayout,
         });
       }
 
@@ -740,7 +740,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
         tabsValues,
         tabsBy,
         tabs,
-        layout,
+        listLayout,
       });
     } catch (err) {
       logger.error(`Error listing ${aliasName}:`, err);

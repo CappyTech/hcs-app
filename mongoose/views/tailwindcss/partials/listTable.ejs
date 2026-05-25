@@ -40,7 +40,7 @@
 <%
   // Preserve current layout in generated URLs
   const _rq = typeof reqQuery !== 'undefined' ? reqQuery : {};
-  const _lp = (typeof layout !== 'undefined' && layout === 'rows') ? '&layout=rows' : '';
+  const _lp = (typeof listLayout !== 'undefined' && listLayout === 'rows') ? '&layout=rows' : '';
 
   // Classify a header field for the rows layout
   function _classifyHeader(h, sampleRow) {
@@ -116,7 +116,7 @@
         </select>
 
         <input type="hidden" name="page" value="1">
-        <% if (typeof layout !== 'undefined' && layout === 'rows') { %>
+        <% if (typeof listLayout !== 'undefined' && listLayout === 'rows') { %>
           <input type="hidden" name="layout" value="rows">
         <% } %>
         <% if (activeTab) { %>
@@ -138,10 +138,10 @@
       <div class="flex items-center gap-0.5 border border-gray-200 dark:border-gray-700 rounded-lg p-0.5 bg-white dark:bg-gray-800 shrink-0">
         <% const _lqTable = '?' + new URLSearchParams({..._rq, layout: 'table', page: '1'}).toString(); %>
         <% const _lqRows  = '?' + new URLSearchParams({..._rq, layout: 'rows',  page: '1'}).toString(); %>
-        <a href="<%= _lqTable %>" title="Table view" class="flex items-center justify-center w-7 h-7 rounded transition <%= (!layout || layout === 'table') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
+        <a href="<%= _lqTable %>" title="Table view" class="flex items-center justify-center w-7 h-7 rounded transition <%= (!listLayout || listLayout === 'table') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
           <i class="bi bi-table text-sm"></i>
         </a>
-        <a href="<%= _lqRows %>" title="List view" class="flex items-center justify-center w-7 h-7 rounded transition <%= (layout === 'rows') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
+        <a href="<%= _lqRows %>" title="List view" class="flex items-center justify-center w-7 h-7 rounded transition <%= (listLayout === 'rows') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
           <i class="bi bi-list-ul text-sm"></i>
         </a>
       </div>
@@ -168,7 +168,7 @@
     <div class="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
       <i class="bi bi-info-circle mr-1"></i> No records found.
     </div>
-  <% } else if (!layout || layout !== 'rows') { %>
+  <% } else if (!listLayout || listLayout !== 'rows') { %>
 
     <!-- Table -->
     <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
