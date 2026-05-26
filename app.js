@@ -359,6 +359,7 @@ const main = async () => {
     appRouter.use('/', require('./mongoose/routes/ssoRoutes'));
     appRouter.use('/', require('./mongoose/routes/helpRoutes'));
     appRouter.use('/', require('./mongoose/routes/payrollRoutes'));
+    appRouter.use('/', require('./mongoose/routes/gdprRoutes'));
 
     // Catch-all 404
     appRouter.use((req, res, next) => {

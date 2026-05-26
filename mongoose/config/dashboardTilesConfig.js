@@ -41,6 +41,20 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-slate-700 hover:bg-slate-800'
     },
+    GdprCompliance: {
+        title: 'GDPR Compliance',
+        description: 'Open RoPA, DPIA template, incident response playbook, and GDPR evidence links.',
+        link: '/admin/gdpr',
+        department: ['admin'],
+        buttonClass: 'bg-emerald-700 hover:bg-emerald-800'
+    },
+    GdprRequests: {
+        title: 'My GDPR Requests',
+        description: 'Submit or track your data subject rights requests (access, erasure, rectification, etc.).',
+        link: '/gdpr/requests',
+        department: ['user'],
+        buttonClass: 'bg-green-600 hover:bg-green-700'
+    },
     SubmitAttendance: {
         title: 'Submit Attendance',
         description: 'Submit your daily attendance records.',

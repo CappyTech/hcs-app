@@ -1,0 +1,101 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+    <div class="p-6 sm:p-8 space-y-6">
+
+      <div>
+        <a href="/admin/gdpr" class="text-sm text-green-700 dark:text-green-400 hover:underline">
+          &larr; Back to GDPR Overview
+        </a>
+        <h1 class="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %></h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          All submitted data subject rights requests. Click a request to review it.
+        </p>
+      </div>
+
+      <!-- Summary counts -->
+      <%
+        const counts = {};
+        requests.forEach(function(r) {
+          counts[r.status] = (counts[r.status] || 0) + 1;
+        });
+        const pending = counts['pending'] || 0;
+        const underReview = counts['under_review'] || 0;
+        const total = requests.length;
+      %>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 text-center">
+          <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= total %></p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total</p>
+        </div>
+        <div class="rounded-xl border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 p-4 text-center">
+          <p class="text-2xl font-bold text-yellow-700 dark:text-yellow-300"><%= pending %></p>
+          <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">Pending</p>
+        </div>
+        <div class="rounded-xl border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-center">
+          <p class="text-2xl font-bold text-blue-700 dark:text-blue-300"><%= underReview %></p>
+          <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">Under Review</p>
+        </div>
+        <div class="rounded-xl border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-center">
+          <p class="text-2xl font-bold text-green-700 dark:text-green-300"><%= counts['completed'] || 0 %></p>
+          <p class="text-xs text-green-600 dark:text-green-400 mt-1">Completed</p>
+        </div>
+      </div>
+
+      <% if (requests.length === 0) { %>
+        <div class="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-10 text-center">
+          <p class="text-gray-500 dark:text-gray-400 text-sm">No GDPR requests have been submitted yet.</p>
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+          <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <tr>
+                <th class="px-4 py-3 text-left">Requester</th>
+                <th class="px-4 py-3 text-left">Type</th>
+                <th class="px-4 py-3 text-left">Status</th>
+                <th class="px-4 py-3 text-left">Submitted</th>
+                <th class="px-4 py-3 text-left">Deadline</th>
+                <th class="px-4 py-3 text-left"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
+              <% requests.forEach(function(r) { %>
+                <%
+                  const dl = r.deadline ? new Date(r.deadline) : null;
+                  const overdue = dl && dl < new Date() && !['completed','rejected','withdrawn'].includes(r.status);
+                %>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition <%= overdue ? 'bg-red-50 dark:bg-red-900/10' : '' %>">
+                  <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                    <%= r.requesterLabel %>
+                  </td>
+                  <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                    <%= TYPE_LABELS[r.type] || r.type %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold <%= STATUS_CLASSES[r.status] || '' %>">
+                      <%= r.status.replace('_', ' ') %>
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
+                    <%= new Date(r.createdAt).toLocaleDateString('en-GB') %>
+                  </td>
+                  <td class="px-4 py-3 <%= overdue ? 'text-red-600 font-semibold' : 'text-gray-500 dark:text-gray-400' %>">
+                    <% if (dl) { %><%= dl.toLocaleDateString('en-GB') %><% } else { %>—<% } %>
+                    <% if (overdue) { %><i class="bi bi-exclamation-triangle-fill ml-1"></i><% } %>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <a href="/gdpr/requests/<%= r.uuid %>"
+                       class="text-green-700 dark:text-green-400 hover:underline text-xs font-medium">
+                      Review
+                    </a>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+</div>

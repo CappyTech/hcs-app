@@ -2,6 +2,7 @@
 
 const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
+const ropa = require("../config/ropaConfig");
 
 const MODEL_LABEL = {
   purchase: (doc) =>
@@ -168,5 +169,33 @@ exports.getDeletedItems = async (req, res, next) => {
 exports.getUiGuidelines = (req, res) => {
   res.render(path.join('tailwindcss', 'admin', 'uiGuidelines'), {
     title: 'UI Component Board',
+  });
+};
+
+exports.getGdprOverview = (_req, res) => {
+  res.render(path.join("tailwindcss", "admin", "gdpr"), {
+    title: "GDPR Compliance",
+    ropaVersion: ropa.version,
+    ropaLastUpdated: ropa.lastUpdated,
+    activityCount: ropa.activities.length,
+    processorCount: ropa.processors.length,
+  });
+};
+
+exports.downloadRopa = (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', 'attachment; filename="ropa.json"');
+  res.json(ropa);
+};
+
+exports.viewIncidentResponse = (_req, res) => {
+  res.render(path.join("tailwindcss", "admin", "gdprIncidentResponse"), {
+    title: "Incident Response Playbook",
+  });
+};
+
+exports.viewDpiaTemplate = (_req, res) => {
+  res.render(path.join("tailwindcss", "admin", "gdprDpiaTemplate"), {
+    title: "DPIA Template",
   });
 };

@@ -1,0 +1,191 @@
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    
+    <div class="p-6 sm:p-8">
+      <a href="/admin/gdpr" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; Back to GDPR Overview</a>
+      <h1 class="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %></h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Complete one DPIA for each new feature or change involving high-risk personal data processing.
+      </p>
+    </div>
+  </div>
+
+  <!-- 1. Metadata -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">1</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Assessment Metadata</h2>
+    </div>
+    <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <% ['DPIA ID', 'Feature / Process Name', 'Owner', 'Reviewers', 'Date Opened', 'Date Reviewed'].forEach(function(label) { %>
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500"><%= label %></p>
+          <p class="mt-1 text-sm text-gray-400 dark:text-gray-600 italic">—</p>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- 2. Processing Description -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">2</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Processing Description</h2>
+    </div>
+    <div class="p-6">
+      <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+        <% [
+          'What is being built or changed?',
+          'Which systems and data stores are involved?',
+          'Which data categories are processed?',
+          'Which data subjects are affected?',
+        ].forEach(function(q) { %>
+          <li class="flex items-start gap-2">
+            <i class="bi bi-question-circle text-gray-400 dark:text-gray-500 mt-0.5 shrink-0"></i>
+            <%= q %>
+          </li>
+        <% }); %>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3. Purpose and Lawful Basis -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">3</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Purpose and Lawful Basis</h2>
+    </div>
+    <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <% ['Business purpose', 'Lawful basis', 'Necessity rationale', 'Proportionality rationale'].forEach(function(label) { %>
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500"><%= label %></p>
+          <p class="mt-1 text-sm text-gray-400 dark:text-gray-600 italic">—</p>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- 4. Risk Assessment -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">4</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Risk Assessment</h2>
+    </div>
+    <div class="p-6">
+      <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <table class="min-w-full text-xs divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            <tr>
+              <% ['Risk ID', 'Risk Description', 'Likelihood', 'Severity', 'Existing Controls', 'Residual Risk'].forEach(function(col) { %>
+                <th class="px-3 py-2 text-left font-medium"><%= col %></th>
+              <% }); %>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+            <tr>
+              <td class="px-3 py-2 font-medium text-gray-500">R1</td>
+              <% ['', '', '', '', ''].forEach(function() { %>
+                <td class="px-3 py-2 text-gray-300 dark:text-gray-600 italic">—</td>
+              <% }); %>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Security and Privacy Controls -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">5</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Security and Privacy Controls</h2>
+    </div>
+    <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <% [
+        'Access control',
+        'Encryption at rest',
+        'Encryption in transit',
+        'Logging and redaction',
+        'Retention and deletion controls',
+        'DSR support (export / rectify / erase)',
+      ].forEach(function(label) { %>
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500"><%= label %></p>
+          <p class="mt-1 text-sm text-gray-400 dark:text-gray-600 italic">—</p>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- 6. Third Parties and Transfers -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">6</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Third Parties and Transfers</h2>
+    </div>
+    <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <% [
+        'Processors involved',
+        'DPA status',
+        'Cross-border transfer mechanism',
+        'Transfer risk assessment summary',
+      ].forEach(function(label) { %>
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500"><%= label %></p>
+          <p class="mt-1 text-sm text-gray-400 dark:text-gray-600 italic">—</p>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- 7. Data Subject Impact -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">7</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Data Subject Impact</h2>
+    </div>
+    <div class="p-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <% ['Potential harms', 'Mitigations', 'Notification implications if incident occurs'].forEach(function(label) { %>
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500"><%= label %></p>
+          <p class="mt-1 text-sm text-gray-400 dark:text-gray-600 italic">—</p>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- 8. Decision -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">8</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Decision</h2>
+    </div>
+    <div class="p-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <% ['Approved / Conditionally Approved / Rejected', 'Conditions', 'Target remediation date'].forEach(function(label) { %>
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500"><%= label %></p>
+          <p class="mt-1 text-sm text-gray-400 dark:text-gray-600 italic">—</p>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- 9. Follow-Up -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">9</span>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Follow-Up</h2>
+    </div>
+    <div class="p-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <% ['Actions and owners', 'Verification date', 'Next review date'].forEach(function(label) { %>
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500"><%= label %></p>
+          <p class="mt-1 text-sm text-gray-400 dark:text-gray-600 italic">—</p>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+</div>

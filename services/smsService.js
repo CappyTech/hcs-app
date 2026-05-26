@@ -3,6 +3,13 @@ const logger = require("./loggerService");
 // ── Twilio client (lazy-initialised) ─────────────────────────────────
 let _client = null;
 
+function maskPhone(value) {
+  const text = String(value || "").trim();
+  if (!text) return "-";
+  const visible = text.slice(-2);
+  return `***${visible}`;
+}
+
 function getClient() {
   if (_client) return _client;
 
@@ -27,7 +34,9 @@ async function sendSms({ to, body }) {
   const client = getClient();
 
   if (!client || !from) {
-    logger.info(`[SMS-FALLBACK] To: ${to} | Body: ${body}`);
+    logger.info(
+      `[SMS-FALLBACK] To: ${maskPhone(to)} | bodyLength=${String(body || "").length}`,
+    );
     return { fallback: true };
   }
 

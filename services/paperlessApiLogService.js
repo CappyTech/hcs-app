@@ -13,6 +13,44 @@ const logger = require('./loggerService');
 
 let _model = null;
 
+function safeSerializedLength(value) {
+  try {
+    return JSON.stringify(value).length;
+  } catch (_) {
+    return null;
+  }
+}
+
+function summarizePayload(payload) {
+  if (payload === null || typeof payload === 'undefined') return null;
+
+  if (Array.isArray(payload)) {
+    return {
+      redacted: true,
+      kind: 'array',
+      itemCount: payload.length,
+      serializedLength: safeSerializedLength(payload),
+    };
+  }
+
+  if (typeof payload === 'object') {
+    const keys = Object.keys(payload);
+    return {
+      redacted: true,
+      kind: 'object',
+      keyCount: keys.length,
+      sampleKeys: keys.slice(0, 20),
+      serializedLength: safeSerializedLength(payload),
+    };
+  }
+
+  return {
+    redacted: true,
+    kind: typeof payload,
+    serializedLength: safeSerializedLength(payload),
+  };
+}
+
 function setModel(model) {
   _model = model;
 }
@@ -41,7 +79,7 @@ function logRequest({ method, url, data }) {
     direction: 'request',
     method: (method || 'GET').toUpperCase(),
     url,
-    requestBody: data || null,
+    requestBody: summarizePayload(data),
   });
 }
 
@@ -51,7 +89,7 @@ function logResponse({ method, url, status, data, durationMs }) {
     method: (method || 'GET').toUpperCase(),
     url,
     status,
-    responseBody: data || null,
+    responseBody: summarizePayload(data),
     durationMs,
   });
 }

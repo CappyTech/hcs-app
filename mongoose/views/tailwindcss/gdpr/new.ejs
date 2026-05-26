@@ -1,0 +1,67 @@
+<div class="max-w-2xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+    <div class="p-6 sm:p-8 space-y-6">
+
+      <div>
+        <a href="/gdpr/requests" class="text-sm text-green-700 dark:text-green-400 hover:underline">
+          &larr; Back to My Requests
+        </a>
+        <h1 class="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %></h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Exercise your rights under UK GDPR. We will respond within 30 calendar days.
+        </p>
+      </div>
+
+      <% if (error) { %>
+        <div class="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+          <%= error %>
+        </div>
+      <% } %>
+
+      <form method="POST" action="/gdpr/requests" class="space-y-5">
+        <%- include('../partials/csrfHidden') %>
+
+        <div>
+          <label for="type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Request Type <span class="text-red-500">*</span>
+          </label>
+          <select id="type" name="type" required
+                  class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="" disabled selected>— Select a request type —</option>
+            <% Object.entries(TYPE_LABELS).forEach(function([value, label]) { %>
+              <option value="<%= value %>"><%= label %></option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div>
+          <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Description
+            <span class="text-gray-400 font-normal">(optional — provide any context that will help us process your request)</span>
+          </label>
+          <textarea id="description" name="description" rows="5" maxlength="2000"
+                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g. I would like a copy of all personal data held about me..."></textarea>
+          <p class="mt-1 text-xs text-gray-400">Max 2000 characters.</p>
+        </div>
+
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+          <p class="font-medium text-gray-600 dark:text-gray-300">What happens next?</p>
+          <p>Your request will be logged and assigned to an administrator. You will receive an update within 30 calendar days as required by UK GDPR Art. 12.</p>
+          <p>You cannot approve or reject your own request. A separate administrator will review it.</p>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          <button type="submit"
+                  class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition shadow-sm">
+            Submit Request
+          </button>
+          <a href="/gdpr/requests" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            Cancel
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>

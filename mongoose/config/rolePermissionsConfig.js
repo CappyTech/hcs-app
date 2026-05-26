@@ -192,6 +192,10 @@ const routeAccess = {
   // Fleet
   '/fleet':               ['admin'],
 
+  // GDPR requests
+  '/gdpr/requests':       '*',
+  '/admin/gdpr/requests': ['admin'],
+
   // Logs
   '/logs':                ['admin'],
 

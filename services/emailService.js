@@ -4,6 +4,21 @@ const logger = require("./loggerService");
 // ── Transporter (lazy-initialised) ───────────────────────────────────
 let _transporter = null;
 
+function maskEmail(email) {
+  const value = String(email || "").trim();
+  const at = value.indexOf("@");
+  if (at <= 0) return value ? "***" : "-";
+  const local = value.slice(0, at);
+  const domain = value.slice(at + 1);
+  const localMasked = `${local.slice(0, 2)}***`;
+  return `${localMasked}@${domain}`;
+}
+
+function getBodyLength(text, html) {
+  const body = text || html || "";
+  return String(body).length;
+}
+
 function getTransporter() {
   if (_transporter) return _transporter;
 
@@ -38,10 +53,10 @@ async function sendMail({ to, subject, html, text }) {
   const transporter = getTransporter();
 
   if (!transporter) {
-    // Fallback: log the email content so verification can still happen
-    // in dev environments without SMTP. Admin can grab the link from logs.
-    logger.info(`[EMAIL-FALLBACK] To: ${to} | Subject: ${subject}`);
-    logger.info(`[EMAIL-FALLBACK] Body:\n${text || html}`);
+    // In fallback mode, avoid logging full email bodies which may contain sensitive tokens.
+    logger.info(
+      `[EMAIL-FALLBACK] To: ${maskEmail(to)} | Subject: ${subject} | bodyLength=${getBodyLength(text, html)}`,
+    );
     return { accepted: [to], fallback: true };
   }
 

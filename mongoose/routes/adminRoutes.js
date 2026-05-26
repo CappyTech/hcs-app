@@ -15,4 +15,28 @@ router.get(
   ctrl.getUiGuidelines,
 );
 
+router.get(
+  "/admin/gdpr",
+  authService.ensureRole("admin"),
+  ctrl.getGdprOverview,
+);
+
+router.get(
+  "/admin/gdpr/ropa",
+  authService.ensureRole("admin"),
+  ctrl.downloadRopa,
+);
+
+router.get(
+  "/admin/gdpr/incident-response",
+  authService.ensureRole("admin"),
+  ctrl.viewIncidentResponse,
+);
+
+router.get(
+  "/admin/gdpr/dpia-template",
+  authService.ensureRole("admin"),
+  ctrl.viewDpiaTemplate,
+);
+
 module.exports = router;

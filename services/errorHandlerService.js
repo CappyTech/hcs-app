@@ -1,6 +1,29 @@
 const logger = require("./loggerService");
 const path = require("path");
 
+function truncate(value, max = 180) {
+  const text = String(value || "");
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}...`;
+}
+
+function getSafeRequestMeta(req) {
+  const headers = req?.headers || {};
+  return {
+    method: req?.method || "-",
+    url: req?.originalUrl || req?.url || "-",
+    ip: req?.ip || req?.socket?.remoteAddress || "-",
+    userAgent: truncate(headers["user-agent"] || "-"),
+    host: headers.host || "-",
+    xForwardedProto: headers["x-forwarded-proto"] || "-",
+    xForwardedHost: headers["x-forwarded-host"] || "-",
+    contentType: headers["content-type"] || "-",
+    contentLength: headers["content-length"] || "-",
+    origin: headers.origin || "-",
+    referer: headers.referer || headers.referrer || "-",
+  };
+}
+
 const errorHandlerService = (error, req, res, next) => {
   // Map transient infra errors (e.g., during Docker recreate) to 503 Service Unavailable
   const isTransientInfraError = (err) => {
@@ -40,7 +63,9 @@ const errorHandlerService = (error, req, res, next) => {
         URL: ${req.originalUrl}
         Method: ${req.method}`);
 
-  logger.info(`[errorHandler] Request Headers: ${JSON.stringify(req.headers, null, 2)}`);
+  logger.info(
+    `[errorHandler] Request Context: ${JSON.stringify(getSafeRequestMeta(req))}`,
+  );
 
   // Render the error page
   res.status(statusCode);
