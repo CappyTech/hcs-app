@@ -1,0 +1,175 @@
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 sm:p-8">
+    <a href="/admin/gdpr" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; Back to GDPR Overview</a>
+    <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %></h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          UK GDPR Art. 30 — Records of Processing Activities
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <a href="/admin/gdpr/requests"
+           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm">
+          <i class="bi bi-inbox"></i> DSR Requests
+        </a>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">
+          <i class="bi bi-calendar3"></i> Version <%= ropa.version %>
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">
+          <i class="bi bi-clock"></i> Updated <%= ropa.lastUpdated %>
+        </span>
+      </div>
+    </div>
+
+    <!-- Controller card -->
+    <dl class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm pt-5 border-t border-gray-100 dark:border-gray-800">
+      <div>
+        <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Controller</dt>
+        <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100"><%= ropa.controller.name %></dd>
+      </div>
+      <div>
+        <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">System</dt>
+        <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100"><%= ropa.controller.system %></dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Processing Activities -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+    <div class="px-6 sm:px-8 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Processing Activities</h2>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+        <%= ropa.activities.length %> registered
+      </span>
+    </div>
+
+    <div class="divide-y divide-gray-100 dark:divide-gray-800">
+      <% ropa.activities.forEach(function(act) { %>
+        <div class="px-6 sm:px-8 py-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-bold shrink-0">
+              <%= act.id %>
+            </span>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100"><%= act.name %></h3>
+          </div>
+
+          <dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+            <div class="lg:col-span-3">
+              <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Purpose</dt>
+              <dd class="mt-0.5 text-gray-700 dark:text-gray-300"><%= act.purpose %></dd>
+            </div>
+
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Lawful Basis</dt>
+              <dd class="mt-1 flex flex-wrap gap-1">
+                <% act.lawfulBasis.forEach(function(b) { %>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-medium"><%= b %></span>
+                <% }); %>
+              </dd>
+            </div>
+
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Data Categories</dt>
+              <dd class="mt-1 flex flex-wrap gap-1">
+                <% act.dataCategories.forEach(function(c) { %>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs"><%= c %></span>
+                <% }); %>
+              </dd>
+            </div>
+
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Subject Categories</dt>
+              <dd class="mt-1 flex flex-wrap gap-1">
+                <% act.subjectCategories.forEach(function(s) { %>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs"><%= s %></span>
+                <% }); %>
+              </dd>
+            </div>
+
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Systems</dt>
+              <dd class="mt-1 flex flex-wrap gap-1">
+                <% act.systems.forEach(function(sys) { %>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 font-mono text-xs"><%= sys %></span>
+                <% }); %>
+              </dd>
+            </div>
+
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Retention</dt>
+              <dd class="mt-0.5 text-gray-700 dark:text-gray-300 text-xs"><%= act.retention %></dd>
+            </div>
+
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Recipients</dt>
+              <dd class="mt-1 flex flex-wrap gap-1">
+                <% act.recipients.forEach(function(r) { %>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs"><%= r %></span>
+                <% }); %>
+              </dd>
+            </div>
+
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Cross-border Transfer</dt>
+              <dd class="mt-0.5 text-xs
+                <% if (act.crossBorderTransfer === 'None') { %>text-green-700 dark:text-green-400 font-medium<% } else { %>text-amber-700 dark:text-amber-400 font-medium<% } %>">
+                <%= act.crossBorderTransfer %>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- Processors -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+    <div class="px-6 sm:px-8 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Data Processors</h2>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+        <%= ropa.processors.length %> listed
+      </span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <tr>
+            <th class="px-6 py-3 text-left">Processor</th>
+            <th class="px-6 py-3 text-left">Service</th>
+            <th class="px-6 py-3 text-left">DPA Status</th>
+            <th class="px-6 py-3 text-left">Transfer Assessment</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
+          <% ropa.processors.forEach(function(p) { %>
+            <%
+              const dpaOk = p.dpaStatus === 'confirmed';
+              const transferOk = p.transferAssessment === 'confirmed';
+            %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100"><%= p.name %></td>
+              <td class="px-6 py-4 text-gray-600 dark:text-gray-400"><%= p.service.replace('_', ' ') %></td>
+              <td class="px-6 py-4">
+                <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold
+                  <%= dpaOk ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' %>">
+                  <%= p.dpaStatus.replace('_', ' ') %>
+                </span>
+              </td>
+              <td class="px-6 py-4">
+                <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold
+                  <%= transferOk ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' %>">
+                  <%= p.transferAssessment.replace('_', ' ') %>
+                </span>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

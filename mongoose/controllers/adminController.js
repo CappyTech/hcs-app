@@ -183,9 +183,10 @@ exports.getGdprOverview = (_req, res) => {
 };
 
 exports.downloadRopa = (_req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Content-Disposition', 'attachment; filename="ropa.json"');
-  res.json(ropa);
+  res.render(path.join('tailwindcss', 'admin', 'gdprRopa'), {
+    title: 'Records of Processing Activities',
+    ropa,
+  });
 };
 
 exports.viewIncidentResponse = (_req, res) => {
