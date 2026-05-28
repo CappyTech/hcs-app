@@ -292,6 +292,12 @@ exports.loginUser = async (req, res) => {
       return res.redirect("/user/2fa");
     }
 
+    // Regenerate session to prevent session fixation and ensure the Set-Cookie
+    // header is sent on the login response (mirrors twoFAController behaviour).
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+
     req.session.user = sessionData;
 
     await new Promise((resolve, reject) => {

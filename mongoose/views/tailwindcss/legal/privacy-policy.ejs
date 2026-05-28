@@ -1,0 +1,223 @@
+<%# ─── Privacy Policy ─────────────────────────────────────────────────────── %>
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-8">
+
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Privacy Policy</h1>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Last updated: May 2026 &mdash; applies to <em><%= companyName || 'Heron Constructive Solutions LTD' %></em> internal management platform</p>
+      </div>
+
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
+        This Privacy Policy explains how <strong><%= companyName || 'Heron Constructive Solutions LTD' %></strong>
+        (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) collects, uses, and protects your
+        personal data when you use this platform, in accordance with the UK General Data Protection
+        Regulation (UK GDPR) and the Data Protection Act 2018.
+      </p>
+
+      <%# Data controller %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        1. Data Controller
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
+        The data controller responsible for your personal data is:
+      </p>
+      <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-xl px-5 py-4 mb-4 space-y-1">
+        <p><strong><%= companyName || 'Heron Constructive Solutions LTD' %></strong></p>
+        <p>Company No: 09276951 &nbsp;|&nbsp; VAT No: 252295994</p>
+        <p>
+          ICO Registration:
+          <% if (icoNumber && !icoNumber.includes('[')) { %>
+            <%= icoNumber %>
+          <% } else { %>
+            <span class="text-amber-600 dark:text-amber-400 font-medium">[ICO number — set the <code class="font-mono text-xs">ICO_NUMBER</code> environment variable]</span>
+          <% } %>
+        </p>
+        <% if (contactEmail) { %>
+          <p>Contact: <a href="mailto:<%= contactEmail %>" class="text-green-600 dark:text-green-400 hover:underline"><%= contactEmail %></a></p>
+        <% } %>
+      </div>
+
+      <%# Data we collect %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        2. Personal Data We Collect
+      </h2>
+
+      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Account data</p>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1 mb-4">
+        <li>Username and email address (required)</li>
+        <li>Phone number (optional — used for SMS-based password reset)</li>
+        <li>Password (stored as a bcrypt hash; never readable in plain text)</li>
+        <li>Role and access level within the platform</li>
+        <li>TOTP secret for two-factor authentication, if enabled (encrypted at rest)</li>
+      </ul>
+
+      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Session &amp; technical data</p>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1 mb-4">
+        <li>IP address at the time of login</li>
+        <li>Browser name, version, and operating system</li>
+        <li>Login timestamp and last activity time</li>
+        <li>Session identifier (signed cookie, encrypted in the database)</li>
+      </ul>
+
+      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Log data</p>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1 mb-4">
+        <li>Request logs including masked session IDs, usernames, and IP addresses</li>
+        <li>Error and audit events (passwords and sensitive tokens are never logged)</li>
+      </ul>
+
+      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Business data (where applicable by role)</p>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1 mb-4">
+        <li>Employee records: contract details, attendance, payroll, holidays</li>
+        <li>Subcontractor records: CIS details, assignments, payments</li>
+        <li>Vehicle records: registration, deployment, service history</li>
+      </ul>
+
+      <%# How we use it %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        3. How We Use Your Data
+      </h2>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1 mb-4">
+        <li>To authenticate you and maintain your session securely</li>
+        <li>To manage employee payroll, CIS submissions, and HMRC RTI obligations</li>
+        <li>To enforce role-based access control across the platform</li>
+        <li>To send transactional emails (password reset, email verification)</li>
+        <li>To detect and prevent unauthorised access and abuse</li>
+        <li>To maintain an audit trail for compliance purposes</li>
+      </ul>
+
+      <%# Legal basis %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        4. Legal Basis for Processing
+      </h2>
+      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-4">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Processing activity</th>
+              <th class="px-4 py-3 font-semibold">Lawful basis (UK GDPR)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+            <tr class="bg-white dark:bg-gray-900"><td class="px-4 py-2.5">Account authentication &amp; session management</td><td class="px-4 py-2.5">Legitimate interests (Art. 6(1)(f))</td></tr>
+            <tr class="bg-gray-50/50 dark:bg-gray-800/30"><td class="px-4 py-2.5">Payroll processing &amp; HMRC RTI submissions</td><td class="px-4 py-2.5">Legal obligation (Art. 6(1)(c))</td></tr>
+            <tr class="bg-white dark:bg-gray-900"><td class="px-4 py-2.5">CIS compliance &amp; subcontractor management</td><td class="px-4 py-2.5">Legal obligation (Art. 6(1)(c))</td></tr>
+            <tr class="bg-gray-50/50 dark:bg-gray-800/30"><td class="px-4 py-2.5">Employee HR records &amp; attendance</td><td class="px-4 py-2.5">Contract performance (Art. 6(1)(b))</td></tr>
+            <tr class="bg-white dark:bg-gray-900"><td class="px-4 py-2.5">Security logging &amp; abuse prevention</td><td class="px-4 py-2.5">Legitimate interests (Art. 6(1)(f))</td></tr>
+            <tr class="bg-gray-50/50 dark:bg-gray-800/30"><td class="px-4 py-2.5">Transactional emails (password reset)</td><td class="px-4 py-2.5">Legitimate interests (Art. 6(1)(f))</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <%# Retention %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        5. Data Retention
+      </h2>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1 mb-4">
+        <li><strong>Sessions:</strong> automatically expired after 12 hours of inactivity and purged by a background cleanup service</li>
+        <li><strong>Application logs:</strong> retained in rolling log files (up to 5 &times; 5 MB); no time-based purge is currently applied — a retention schedule is planned</li>
+        <li><strong>User accounts:</strong> retained while the account is active; deletion is handled by an administrator on request</li>
+        <li><strong>Payroll &amp; CIS records:</strong> retained as required by HMRC record-keeping obligations (typically 6 years)</li>
+      </ul>
+
+      <%# Third parties %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        6. Third-Party Processors
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+        We use the following third-party services that may process personal data on our behalf:
+      </p>
+      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-4">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Processor</th>
+              <th class="px-4 py-3 font-semibold">Purpose</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+            <tr class="bg-white dark:bg-gray-900"><td class="px-4 py-2.5 font-medium">Cloudflare Turnstile</td><td class="px-4 py-2.5">CAPTCHA verification on login / registration to prevent automated attacks</td></tr>
+            <tr class="bg-gray-50/50 dark:bg-gray-800/30"><td class="px-4 py-2.5 font-medium">KashFlow</td><td class="px-4 py-2.5">Accounting data synchronisation (invoices, suppliers, customers, purchases)</td></tr>
+            <tr class="bg-white dark:bg-gray-900"><td class="px-4 py-2.5 font-medium">Paperless-ngx</td><td class="px-4 py-2.5">Document storage and OCR processing</td></tr>
+            <tr class="bg-gray-50/50 dark:bg-gray-800/30"><td class="px-4 py-2.5 font-medium">SMTP provider</td><td class="px-4 py-2.5">Sending transactional emails (password reset, email verification)</td></tr>
+            <tr class="bg-white dark:bg-gray-900"><td class="px-4 py-2.5 font-medium">SMS provider</td><td class="px-4 py-2.5">Sending OTP codes for SMS-based password reset</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        We do not sell or share your personal data with third parties for marketing purposes.
+      </p>
+
+      <%# Security %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        7. Security
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        We implement appropriate technical and organisational measures to protect your data,
+        including: TLS encryption in transit, bcrypt password hashing, AES encryption of sensitive
+        fields at rest, signed and encrypted session cookies, CSRF protection, rate limiting,
+        and role-based access control.
+      </p>
+
+      <%# Your rights %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        8. Your Rights
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+        Under UK GDPR you have the right to:
+      </p>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1 mb-4">
+        <li><strong>Access</strong> — request a copy of the personal data we hold about you</li>
+        <li><strong>Rectification</strong> — ask us to correct inaccurate or incomplete data</li>
+        <li><strong>Erasure</strong> — request deletion of your data where no legal retention obligation applies</li>
+        <li><strong>Restriction</strong> — ask us to limit how we use your data in certain circumstances</li>
+        <li><strong>Portability</strong> — receive your data in a structured, machine-readable format</li>
+        <li><strong>Object</strong> — object to processing based on legitimate interests</li>
+      </ul>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        To exercise any of these rights, please contact us at
+        <% if (contactEmail) { %>
+          <a href="mailto:<%= contactEmail %>" class="text-green-600 dark:text-green-400 hover:underline"><%= contactEmail %></a>.
+        <% } else { %>
+          the contact address provided on your onboarding documentation.
+        <% } %>
+        We will respond within 30 days.
+      </p>
+
+      <%# ICO %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        9. Right to Complain
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        If you believe we have not handled your personal data properly you have the right to
+        lodge a complaint with the Information Commissioner&rsquo;s Office (ICO):
+        <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer"
+          class="text-green-600 dark:text-green-400 hover:underline">ico.org.uk/make-a-complaint</a>.
+        Our ICO registration number is
+        <% if (icoNumber && !icoNumber.includes('[')) { %>
+          <strong><%= icoNumber %></strong>.
+        <% } else { %>
+          <span class="text-amber-600 dark:text-amber-400 font-medium">[not yet set — add <code class="font-mono text-xs">ICO_NUMBER</code> to environment]</span>.
+        <% } %>
+      </p>
+
+      <%# Changes %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        10. Changes to This Policy
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
+        We may update this Privacy Policy periodically. The &ldquo;Last updated&rdquo; date at
+        the top of this page will reflect any changes. Material changes will be communicated
+        via the platform or by email where appropriate.
+      </p>
+
+      <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <a href="/legal/cookie-policy" class="text-sm text-green-600 dark:text-green-400 hover:underline">Cookie Policy</a>
+        <span class="text-gray-300 dark:text-gray-600">&bull;</span>
+        <a href="/legal/terms" class="text-sm text-green-600 dark:text-green-400 hover:underline">Terms of Use</a>
+      </div>
+
+    </div>
+  </div>
+</div>

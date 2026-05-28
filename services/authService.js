@@ -13,7 +13,7 @@ const PUBLIC_PATHS = new Set([
   "/user/verify-totp-reset",
   "/health",
 ]);
-const PUBLIC_PREFIXES = ["/resources/", "/manifest/"];
+const PUBLIC_PREFIXES = ["/resources/", "/manifest/", "/legal/"];
 
 // Paths accessible to authenticated-but-unverified users
 const UNVERIFIED_PATHS = new Set([

@@ -1,0 +1,157 @@
+<%# ─── Cookie Policy ──────────────────────────────────────────────────────── %>
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-8">
+
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Cookie Policy</h1>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Last updated: May 2026</p>
+      </div>
+
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
+        This policy explains how <strong><%= companyName || 'Heron Constructive Solutions LTD' %></strong>
+        uses cookies on this platform. We use only strictly necessary cookies — we do not use
+        advertising, analytics, or tracking cookies.
+      </p>
+
+      <%# What is a cookie %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        What is a cookie?
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        A cookie is a small text file placed on your device by a website. Cookies allow the site to
+        remember information about your visit, such as whether you are logged in.
+      </p>
+
+      <%# Cookies we set %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">
+        Cookies set by this platform
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        All cookies below are <strong>strictly necessary</strong>. They cannot be disabled without
+        breaking the core functionality of the platform.
+      </p>
+
+      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Name</th>
+              <th class="px-4 py-3 font-semibold">Purpose</th>
+              <th class="px-4 py-3 font-semibold">Duration</th>
+              <th class="px-4 py-3 font-semibold">Type</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tr class="bg-white dark:bg-gray-900">
+              <td class="px-4 py-3 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap">hms.sid</td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                Session identifier. Keeps you logged in as you navigate between pages.
+                Signed and the session data is encrypted at rest.
+              </td>
+              <td class="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">8 hours</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                  Strictly necessary
+                </span>
+              </td>
+            </tr>
+            <tr class="bg-gray-50/50 dark:bg-gray-800/30">
+              <td class="px-4 py-3 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap">hms.csrf</td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                Cross-Site Request Forgery (CSRF) protection token. Validates that form
+                submissions originate from this site and not from a third party.
+              </td>
+              <td class="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">Session</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                  Strictly necessary
+                </span>
+              </td>
+            </tr>
+            <tr class="bg-white dark:bg-gray-900">
+              <td class="px-4 py-3 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap">__flash</td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                Carries short-lived notification messages (e.g. "Login successful") across a
+                single page redirect. Automatically deleted after 5 seconds.
+              </td>
+              <td class="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">5 seconds</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                  Strictly necessary
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <%# Third-party cookies %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        Third-party cookies — Cloudflare Turnstile
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+        The login and registration pages load a CAPTCHA widget provided by Cloudflare Turnstile
+        (<code class="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">challenges.cloudflare.com</code>).
+        This widget may set its own cookies or use local storage to determine whether you are
+        a human visitor. These are also strictly necessary to protect the platform against
+        automated attacks.
+      </p>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        For details on Cloudflare's data practices, see the
+        <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer"
+          class="text-green-600 dark:text-green-400 hover:underline">Cloudflare Privacy Policy</a>.
+      </p>
+
+      <%# Managing cookies %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        Managing cookies
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+        Because all cookies on this platform are strictly necessary for it to function, you
+        cannot opt out of them while using the service. You can delete cookies at any time through
+        your browser settings, but doing so will log you out and may disrupt your session.
+      </p>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        Your browser's help section will explain how to manage and delete cookies. Common browsers:
+      </p>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1 mb-6">
+        <li><a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer" class="text-green-600 dark:text-green-400 hover:underline">Google Chrome</a></li>
+        <li><a href="https://support.mozilla.org/en-US/kb/clear-cookies-and-site-data-firefox" target="_blank" rel="noopener noreferrer" class="text-green-600 dark:text-green-400 hover:underline">Mozilla Firefox</a></li>
+        <li><a href="https://support.microsoft.com/en-us/windows/delete-and-manage-cookies-168dab11-0753-043d-7c16-ede5947fc64d" target="_blank" rel="noopener noreferrer" class="text-green-600 dark:text-green-400 hover:underline">Microsoft Edge</a></li>
+        <li><a href="https://support.apple.com/en-gb/guide/safari/sfri11471/mac" target="_blank" rel="noopener noreferrer" class="text-green-600 dark:text-green-400 hover:underline">Apple Safari</a></li>
+      </ul>
+
+      <%# Changes %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        Changes to this policy
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        We may update this Cookie Policy from time to time. The &ldquo;Last updated&rdquo; date
+        at the top of this page will reflect any changes. Continued use of the platform following
+        an update constitutes acceptance of the revised policy.
+      </p>
+
+      <%# Contact %>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        Contact
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
+        If you have any questions about this policy, please contact us at
+        <% if (contactEmail) { %>
+          <a href="mailto:<%= contactEmail %>" class="text-green-600 dark:text-green-400 hover:underline"><%= contactEmail %></a>.
+        <% } else { %>
+          the contact address provided on your onboarding documentation.
+        <% } %>
+      </p>
+
+      <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <a href="/legal/privacy-policy" class="text-sm text-green-600 dark:text-green-400 hover:underline">Privacy Policy</a>
+        <span class="text-gray-300 dark:text-gray-600">&bull;</span>
+        <a href="/legal/terms" class="text-sm text-green-600 dark:text-green-400 hover:underline">Terms of Use</a>
+      </div>
+
+    </div>
+  </div>
+</div>

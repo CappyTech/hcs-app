@@ -302,6 +302,7 @@ const main = async () => {
       }
       res.locals.contactEmail = configService.get('SUPPORTEMAIL');
       res.locals.companyName = configService.get('COMPANY_NAME', '');
+      res.locals.icoNumber = configService.get('ICO_NUMBER', '[ICO_NUMBER not set]');
       res.locals.lastfetched = null;
       res.locals.session = null;
       res.locals.copyrightyearstart = configService.get('INCORPORATION_YEAR');
@@ -360,6 +361,7 @@ const main = async () => {
     appRouter.use('/', require('./mongoose/routes/helpRoutes'));
     appRouter.use('/', require('./mongoose/routes/payrollRoutes'));
     appRouter.use('/', require('./mongoose/routes/gdprRoutes'));
+    appRouter.use('/', require('./mongoose/routes/legalRoutes'));
 
     // Catch-all 404
     appRouter.use((req, res, next) => {
