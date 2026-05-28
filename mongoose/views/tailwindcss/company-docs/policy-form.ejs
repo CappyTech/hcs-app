@@ -1,0 +1,106 @@
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <div class="flex items-center gap-3 mb-2">
+    <a href="/company-docs/policies" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Policies</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold"><%= policy ? 'Edit Policy' : 'New Policy' %></h1>
+  </div>
+
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+    <form method="POST"
+          action="<%= policy ? '/company-docs/policies/' + policy.uuid : '/company-docs/policies' %>"
+          class="space-y-5"
+          id="policy-form">
+      <%- include('../partials/csrfHidden') %>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Title -->
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title <span class="text-red-500">*</span></label>
+          <input type="text" name="title" required
+            value="<%= policy ? policy.title : '' %>"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+
+        <!-- Category -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+          <select name="category"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <% ['HR', 'Health & Safety', 'GDPR', 'Finance', 'Operations', 'General'].forEach(cat => { %>
+              <option value="<%= cat %>" <%= policy && policy.category === cat ? 'selected' : '' %>><%= cat %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- Version -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Version</label>
+          <input type="text" name="version"
+            value="<%= policy ? policy.version : '1.0' %>"
+            placeholder="e.g. 1.0"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+
+        <!-- Published -->
+        <div class="flex items-center gap-3 pt-6">
+          <input type="checkbox" name="isPublished" id="isPublished"
+            class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+            <%= policy && policy.isPublished ? 'checked' : '' %>>
+          <label for="isPublished" class="text-sm font-medium text-gray-700 dark:text-gray-300">Published</label>
+        </div>
+      </div>
+
+      <!-- Rich text editor -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Content</label>
+        <!-- Quill toolbar container -->
+        <div id="quill-toolbar" class="rounded-t-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+          <span class="ql-formats">
+            <select class="ql-header">
+              <option selected></option>
+              <option value="1"></option>
+              <option value="2"></option>
+              <option value="3"></option>
+            </select>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-bold"></button>
+            <button class="ql-italic"></button>
+            <button class="ql-underline"></button>
+            <button class="ql-strike"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-list" value="ordered"></button>
+            <button class="ql-list" value="bullet"></button>
+          </span>
+          <span class="ql-formats">
+            <select class="ql-align"></select>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-blockquote"></button>
+            <button class="ql-link"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-clean"></button>
+          </span>
+        </div>
+        <!-- Quill editor area -->
+        <div id="quill-editor"
+          class="min-h-64 rounded-b-lg border border-t-0 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+          style="min-height:260px"><%- policy ? policy.contentHtml : '' %></div>
+        <!-- Hidden input submitted with the form -->
+        <input type="hidden" name="contentHtml" id="contentHtml-input">
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <a href="/company-docs/policies" class="text-sm text-gray-500 hover:underline">Cancel</a>
+        <button type="submit" id="policy-submit"
+          class="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition">
+          <i class="bi bi-check-lg"></i> <%= policy ? 'Save Changes' : 'Create Policy' %>
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>

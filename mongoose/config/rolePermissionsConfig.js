@@ -21,6 +21,7 @@ const roleDepartments = {
     'kashflow',
     'paperless',
     'finance',
+    'company-docs',
     'user',
   ],
   accountant: [
@@ -218,6 +219,14 @@ const routeAccess = {
   '/paperless/suppliers':              ['admin'],
   '/paperless/ingest':                 ['admin'],
   '/paperless/ingest/trigger':         ['admin'],
+
+  // Company Documents (letterhead + policies)
+  '/company-docs':                                  ['admin'],
+  '/company-docs/letterhead':                       ['admin'],
+  '/company-docs/policies':                         ['admin'],
+  '/company-docs/policies/create':                  ['admin'],
+  '/company-docs/policies/:uuid/edit':              ['admin'],
+  '/company-docs/policies/:uuid/print':             ['admin'],
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────

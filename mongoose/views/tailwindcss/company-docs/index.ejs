@@ -1,0 +1,60 @@
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <i class="bi bi-file-earmark-richtext text-green-600 dark:text-green-400"></i> Company Documents
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Manage your company letterhead and policy documents.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+    <!-- Letterhead -->
+    <a href="/company-docs/letterhead"
+       class="group bg-white dark:bg-gray-900 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 hover:border-green-400 dark:hover:border-green-500 transition">
+      <div class="flex items-center gap-4 mb-4">
+        <div class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+          <i class="bi bi-building text-green-600 dark:text-green-400 text-xl"></i>
+        </div>
+        <div>
+          <div class="font-semibold text-gray-900 dark:text-gray-100">Letterhead Settings</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">Company branding &amp; contact details</div>
+        </div>
+      </div>
+      <% if (letterhead && letterhead.companyName) { %>
+        <p class="text-sm text-gray-600 dark:text-gray-400"><%= letterhead.companyName %></p>
+        <% if (letterhead.addressLine1) { %>
+          <p class="text-xs text-gray-400 dark:text-gray-500"><%= letterhead.addressLine1 %><%= letterhead.town ? ', ' + letterhead.town : '' %></p>
+        <% } %>
+      <% } else { %>
+        <p class="text-sm text-amber-600 dark:text-amber-400"><i class="bi bi-exclamation-triangle"></i> Not configured yet</p>
+      <% } %>
+      <div class="mt-4 text-xs text-green-600 dark:text-green-400 group-hover:underline">Configure →</div>
+    </a>
+
+    <!-- Policies -->
+    <a href="/company-docs/policies"
+       class="group bg-white dark:bg-gray-900 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 hover:border-green-400 dark:hover:border-green-500 transition">
+      <div class="flex items-center gap-4 mb-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+          <i class="bi bi-journal-text text-blue-600 dark:text-blue-400 text-xl"></i>
+        </div>
+        <div>
+          <div class="font-semibold text-gray-900 dark:text-gray-100">Policy Documents</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">Create &amp; print company policies</div>
+        </div>
+      </div>
+      <p class="text-sm text-gray-600 dark:text-gray-400">
+        <span class="font-medium text-gray-900 dark:text-gray-100"><%= policyCount %></span>
+        <%= policyCount === 1 ? 'document' : 'documents' %> saved
+      </p>
+      <div class="mt-4 text-xs text-blue-600 dark:text-blue-400 group-hover:underline">Manage policies →</div>
+    </a>
+
+  </div>
+
+</div>

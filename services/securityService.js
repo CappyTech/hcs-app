@@ -1,6 +1,29 @@
 const helmet = require("helmet");
 const { filterXSS } = require("xss");
 
+// Fields that may contain Quill-generated rich-text HTML.
+// These are sanitised with a permissive-but-safe whitelist that
+// preserves formatting tags and class attributes while blocking
+// event handlers, <script> tags, and javascript: URLs.
+const RICH_TEXT_FIELDS = new Set(["contentHtml"]);
+
+const richTextXssOptions = {
+  whiteList: {
+    p: ["class", "style"], div: ["class", "style"],
+    h1: ["class"], h2: ["class"], h3: ["class"], h4: ["class"], h5: ["class"], h6: ["class"],
+    ul: ["class"], ol: ["class", "type"], li: ["class"],
+    strong: [], b: [], em: [], i: [], u: [], s: [], strike: [],
+    blockquote: ["class"],
+    pre: ["class"], code: ["class", "spellcheck"],
+    br: [], hr: [],
+    span: ["class", "style"],
+    a: ["href", "target", "rel"],
+    img: ["src", "alt", "width", "height"],
+    table: ["class"], thead: [], tbody: [], tr: [],
+    td: ["class", "colspan", "rowspan"], th: ["class", "colspan", "rowspan"],
+  },
+};
+
 /**
  * Express middleware that sanitises req.body, req.query, and req.params
  * by stripping dangerous HTML/script content.  Replaces the abandoned
@@ -11,7 +34,9 @@ function xssSanitize(req, _res, next) {
     if (!obj || typeof obj !== "object") return obj;
     for (const key of Object.keys(obj)) {
       if (typeof obj[key] === "string") {
-        obj[key] = filterXSS(obj[key]);
+        obj[key] = RICH_TEXT_FIELDS.has(key)
+          ? filterXSS(obj[key], richTextXssOptions)
+          : filterXSS(obj[key]);
       } else if (typeof obj[key] === "object") {
         clean(obj[key]);
       }
