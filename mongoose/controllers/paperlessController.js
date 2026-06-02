@@ -810,14 +810,14 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         try {
           await mdb.connect();
           const { OcrDocument } = mdb.PAPERLESS;
-          const purchaseId =
-            resp?.data && typeof resp.data.Id === "number"
-              ? resp.data.Id
-              : null;
-          const purchaseNumber =
-            resp?.data && typeof resp.data.Number === "number"
-              ? resp.data.Number
-              : null;
+          const _rawId = resp?.data?.Id;
+          const purchaseId = typeof _rawId === 'number' && Number.isFinite(_rawId) ? _rawId
+            : typeof _rawId === 'string' && Number.isFinite(parseInt(_rawId, 10)) ? parseInt(_rawId, 10)
+            : null;
+          const _rawNum = resp?.data?.Number;
+          const purchaseNumber = typeof _rawNum === 'number' && Number.isFinite(_rawNum) ? _rawNum
+            : typeof _rawNum === 'string' && Number.isFinite(parseInt(_rawNum, 10)) ? parseInt(_rawNum, 10)
+            : null;
           const permalink =
             (resp?.data &&
               typeof resp.data.Permalink === "string" &&
@@ -926,9 +926,14 @@ exports.sendDraftToKashflow = async (req, res, next) => {
           await mdb.connect();
           const { OcrDocument } = mdb.PAPERLESS;
           const body = resp?.data || {};
-          const purchaseId = typeof body?.Id === "number" ? body.Id : null;
-          const purchaseNumber =
-            typeof body?.Number === "number" ? body.Number : null;
+          const _rawWId = body?.Id;
+          const purchaseId = typeof _rawWId === 'number' && Number.isFinite(_rawWId) ? _rawWId
+            : typeof _rawWId === 'string' && Number.isFinite(parseInt(_rawWId, 10)) ? parseInt(_rawWId, 10)
+            : null;
+          const _rawWNum = body?.Number;
+          const purchaseNumber = typeof _rawWNum === 'number' && Number.isFinite(_rawWNum) ? _rawWNum
+            : typeof _rawWNum === 'string' && Number.isFinite(parseInt(_rawWNum, 10)) ? parseInt(_rawWNum, 10)
+            : null;
           const permalink =
             (typeof body?.Permalink === "string" && body.Permalink) ||
             resp?.headers?.location ||
@@ -1276,6 +1281,28 @@ exports.unlinkKashflow = async (req, res, next) => {
     logger.error(`unlinkKashflow error for paperlessId=${req.params.paperlessId}: ${err.message}`);
     next(err);
   }
+};
+
+/** POST /paperless/clear-orphans — manually trigger an orphan-link sweep (runs in background) */
+let _clearOrphansRunning = false;
+exports.clearOrphans = async (req, res) => {
+  if (_clearOrphansRunning) {
+    logger.warn('[clearOrphans] Already running — ignoring duplicate request');
+    return res.redirect('/overview/documents');
+  }
+  res.redirect('/overview/documents');
+  setImmediate(async () => {
+    _clearOrphansRunning = true;
+    try {
+      const { detectAndClearOrphans } = require('../services/ocrOrphanService');
+      const stats = await detectAndClearOrphans();
+      logger.info(`[clearOrphans] Manual run complete. checked=${stats.checked} cleared=${stats.cleared} errors=${stats.errors}`);
+    } catch (err) {
+      logger.error(`[clearOrphans] Fatal error: ${err.message}`);
+    } finally {
+      _clearOrphansRunning = false;
+    }
+  });
 };
 
 /** DELETE /paperless/ocr/:paperlessId — remove an OcrDocument (and its ingest record) */

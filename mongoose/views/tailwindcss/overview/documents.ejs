@@ -291,7 +291,13 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
         <span class="text-lg font-bold text-orange-700 dark:text-orange-400">&#9888; Stale KashFlow Links (<%= orphanedDocs %>)</span>
         <span class="block text-xs text-orange-600 dark:text-orange-300 mt-0.5">KashFlow purchase no longer exists — links are cleared automatically, but only for documents sent more than 48 hours ago. Recently sent documents are held for up to 48 h to allow hcs-sync time to pick up the new purchase.</span>
       </div>
-      <span class="text-orange-400 text-sm shrink-0 group-open:hidden">▼</span><span class="text-orange-400 text-sm shrink-0 hidden group-open:inline">▲</span>
+      <div class="flex items-center gap-3 shrink-0">
+        <form method="POST" action="/paperless/clear-orphans" data-submit-once>
+          <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
+          <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Clear Now</button>
+        </form>
+        <span class="text-orange-400 text-sm shrink-0 group-open:hidden">▼</span><span class="text-orange-400 text-sm shrink-0 hidden group-open:inline">▲</span>
+      </div>
     </summary>
     <div class="overflow-x-auto px-4 pb-4">
       <table class="min-w-full text-sm">

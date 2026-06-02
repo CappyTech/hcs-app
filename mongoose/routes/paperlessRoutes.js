@@ -37,5 +37,6 @@ router.get("/paperless/ingest", ...paperlessGuard, ctrl.listIngest);
 router.post("/paperless/ingest/trigger", ...paperlessGuard, grabLimiter, ctrl.triggerGrab);
 router.post("/paperless/repair-drift",    ...paperlessGuard, ctrl.repairDrift);
 router.post("/paperless/resolve-numbers", ...paperlessGuard, ctrl.resolveNumbers);
+router.post("/paperless/clear-orphans",   ...paperlessGuard, ctrl.clearOrphans);
 
 module.exports = router;
