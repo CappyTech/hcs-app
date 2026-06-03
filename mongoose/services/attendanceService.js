@@ -2,6 +2,7 @@ const moment = require('moment');
 const logger = require('../../services/loggerService');
 const mdb = require('./mongooseDatabaseService');
 const taxService = require('../../services/taxService');
+const { HMRC_VERIFICATION_REGEX } = require('../../services/cisService');
 
 /**
  * Get attendance for a day
@@ -47,12 +48,11 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
     const activeEmployeesPromise = mdb.INTERNAL.employee.find({ status: 'active' });
 
     // Subcontractors (REST) — match CIS dashboard: require HMRC verification number
-    const VERIFICATION_REGEX = /^V\d{7,10}(\/[A-Z]{1,2})?$/;
     const subcontractorsPromise = mdb.REST.supplier.find({
       WithholdingTaxReferences: {
         $elemMatch: {
           Name: 'Verification Number',
-          Value: { $regex: VERIFICATION_REGEX }
+          Value: { $regex: HMRC_VERIFICATION_REGEX }
         }
       }
     });
@@ -94,7 +94,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
             WithholdingTaxReferences: {
               $elemMatch: {
                 Name: 'Verification Number',
-                Value: { $regex: VERIFICATION_REGEX }
+                Value: { $regex: HMRC_VERIFICATION_REGEX }
               }
             }
           }).select('Id Name uuid WithholdingTaxRate WithholdingTaxReferences').lean()

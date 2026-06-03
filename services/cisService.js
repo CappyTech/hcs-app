@@ -73,8 +73,72 @@ function calculateInvoiceAmounts(
   };
 }
 
+/**
+ * Return a Mongoose query filter that matches any supplier identifiable as a
+ * CIS subcontractor via any of the known indicator fields.
+ */
+function cisSupplierQuery() {
+  return {
+    $or: [
+      { ApplyWithholdingTax: true },
+      { CISRate: { $ne: null } },
+      { WithholdingTaxReferences: { $exists: true, $not: { $size: 0 } } },
+    ],
+  };
+}
+
+/**
+ * In-memory predicate — mirrors cisSupplierQuery() for use on already-fetched docs.
+ * @param {object} s - A lean supplier document.
+ * @returns {boolean}
+ */
+function isCisSupplier(s) {
+  return (
+    s.ApplyWithholdingTax === true ||
+    s.CISRate != null ||
+    (Array.isArray(s.WithholdingTaxReferences) && s.WithholdingTaxReferences.length > 0)
+  );
+}
+
+/**
+ * Regex matching a valid HMRC CIS verification number (e.g. V1234567 or V12345678/AB).
+ */
+const HMRC_VERIFICATION_REGEX = /^V\d{7,10}(\/[A-Z]{1,2})?$/;
+
+/**
+ * Mongoose query filter: supplier has been verified by HMRC
+ * (WithholdingTaxReferences contains a matching Verification Number).
+ */
+function cisVerifiedQuery() {
+  return {
+    WithholdingTaxReferences: {
+      $elemMatch: {
+        Name: 'Verification Number',
+        Value: { $regex: HMRC_VERIFICATION_REGEX },
+      },
+    },
+  };
+}
+
+/**
+ * In-memory predicate — mirrors cisVerifiedQuery().
+ * @param {object} s - A lean supplier document.
+ * @returns {boolean}
+ */
+function isHmrcVerified(s) {
+  return Array.isArray(s.WithholdingTaxReferences) &&
+    s.WithholdingTaxReferences.some(
+      r => r.Name === 'Verification Number' && HMRC_VERIFICATION_REGEX.test(r.Value)
+    );
+}
+
 module.exports = {
   calculateInvoiceAmounts,
   normalizeWhtRate,
   whtRateLabel,
+  cisSupplierQuery,
+  isCisSupplier,
+  HMRC_VERIFICATION_REGEX,
+  cisVerifiedQuery,
+  isHmrcVerified,
 };

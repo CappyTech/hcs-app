@@ -5,7 +5,7 @@ const logger = require("../../services/loggerService");
 const moment = require("moment-timezone");
 const taxService = require("../../services/taxService");
 const cisMappings = require("../config/cisMappings");
-const { normalizeWhtRate } = require("../../services/cisService");
+const { normalizeWhtRate, HMRC_VERIFICATION_REGEX } = require("../../services/cisService");
 
 exports.renderCISDashboardMongo = async (req, res, next) => {
   try {
@@ -197,7 +197,6 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const includeAllSuppliers =
       req.query.includeAll === "1" ||
       req.query.includeNonSubcontractors === "1";
-    const VERIFICATION_REGEX = /^V\d{7,10}(\/[A-Z]{1,2})?$/;
     const supplierQuery = includeAllSuppliers
       ? { Id: { $in: supplierIDs } }
       : {
@@ -205,7 +204,7 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
           WithholdingTaxReferences: {
             $elemMatch: {
               Name: 'Verification Number',
-              Value: { $regex: VERIFICATION_REGEX }
+              Value: { $regex: HMRC_VERIFICATION_REGEX }
             }
           }
         };

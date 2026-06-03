@@ -1,6 +1,7 @@
 'use strict';
 
 const mdb = require('./mongooseDatabaseService');
+const { cisSupplierQuery, isCisSupplier, isHmrcVerified } = require('../../services/cisService');
 
 async function getSubcontractorsOverview() {
   const Supplier = mdb.REST?.supplier;
@@ -19,9 +20,12 @@ async function getSubcontractorsOverview() {
     else cisRateCounts['Not Set']++;
   }
 
-  // ── CIS-applicable (ApplyWithholdingTax = true) ─────────────────────────────
-  const cisApplicable = allSuppliers.filter(s => s.ApplyWithholdingTax === true);
-  const nonCIS = allSuppliers.filter(s => !s.ApplyWithholdingTax);
+  // ── CIS-applicable — any CIS indicator set ──────────────────────────────────
+  const cisApplicable = allSuppliers.filter(isCisSupplier);
+  const nonCIS = allSuppliers.filter(s => !isCisSupplier(s));
+
+  // ── HMRC Verified — have a valid HMRC verification number ─────────────────
+  const cisVerifiedCount = allSuppliers.filter(isHmrcVerified).length;
 
   // ── IR35 — suppliers linked to an employee ─────────────────────────────────
   let ir35Linked = [];
@@ -74,7 +78,7 @@ async function getSubcontractorsOverview() {
   }
 
   // ── Recent by updatedAt ────────────────────────────────────────────────────
-  const recentSuppliers = await Supplier.find({})
+  const recentSuppliers = await Supplier.find(cisSupplierQuery())
     .sort({ updatedAt: -1 })
     .limit(10)
     .select('uuid Name CISRate ApplyWithholdingTax updatedAt')
@@ -84,6 +88,7 @@ async function getSubcontractorsOverview() {
     totalCount,
     cisRateCounts,
     cisApplicable: cisApplicable.length,
+    cisVerifiedCount,
     nonCIS: nonCIS.length,
     ir35Linked,
     subcontractorUsers,
