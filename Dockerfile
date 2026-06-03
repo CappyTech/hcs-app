@@ -1,43 +1,36 @@
 # syntax=docker/dockerfile:1
 
-# Use a slim Node LTS image
+# ── Stage 1: build CSS ────────────────────────────────────────────────────────
+FROM node:24-alpine AS builder
+WORKDIR /app
+
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+
+COPY assets ./assets
+COPY tailwind.config.js postcss.config.js ./
+COPY mongoose/views ./mongoose/views
+COPY mongoose/config ./mongoose/config
+COPY scripts ./scripts
+RUN npm run build:css
+
+# ── Stage 2: production image ─────────────────────────────────────────────────
 FROM node:24-alpine
+WORKDIR /app
 
-# Set working directory
-WORKDIR /mnt/data/hcs/app
-
-# Install OS deps if needed (bash, openssl), keep minimal
 RUN apk add --no-cache dumb-init curl
 
-# Copy package manifests first for better caching
 COPY package*.json ./
-
-# Install dependencies (no dev deps in production build by default)
-ARG NODE_ENV=production
-ENV NODE_ENV=$NODE_ENV
-# Prefer ci when a lockfile is present; fall back to install otherwise
 RUN --mount=type=cache,target=/root/.npm \
-    if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then \
-			npm ci --omit=dev; \
-		else \
-			npm install --omit=dev; \
-		fi
+    npm ci --omit=dev
 
-# Copy app source
 COPY . .
+COPY --from=builder /app/public/css/tailwind.css ./public/css/tailwind.css
 
-# Build step (if any). Currently none.
-
-# Expose app port
+ENV NODE_ENV=production
 ENV PORT=5000
 EXPOSE 5000
 
-# Non-root user for security (optional)
-# RUN addgroup -S app && adduser -S app -G app
-# USER app
-
-# Use dumb-init for proper PID 1 signal handling
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-
-# Start the server
 CMD ["node", "app.js"]
