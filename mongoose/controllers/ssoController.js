@@ -1,6 +1,15 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const logger = require("../../services/loggerService");
+const mdb = require("../services/mongooseDatabaseService");
+
+// Timing-safe string comparison (handles differing lengths by hashing first).
+function safeEqual(a, b) {
+  const ha = crypto.createHmac("sha256", "hcs-sso").update(String(a)).digest();
+  const hb = crypto.createHmac("sha256", "hcs-sso").update(String(b)).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
 
 function isLocalhostHostname(hostname) {
   const h = String(hostname || "")
@@ -188,4 +197,91 @@ exports.hcsSyncHandoff = async (req, res) => {
   });
 
   return res.redirect(returnTo.toString());
+};
+
+/**
+ * POST /api/sso/token
+ * Machine-to-machine endpoint used by hcs-sync's login form.
+ * Validates username+password and issues a short-lived JWT without creating
+ * an hcs-app session, so the user never leaves hcs-sync.
+ *
+ * Requires header:  X-Sync-Api-Key: <HCS_SYNC_API_KEY>
+ * Body (JSON):      { username, password }
+ * Response (JSON):  { token, expiresIn }
+ */
+exports.issueTokenForSync = async (req, res) => {
+  const apiKey = String(process.env.HCS_SYNC_API_KEY || "").trim();
+  if (!apiKey) {
+    logger.error("[sso] HCS_SYNC_API_KEY not configured – /api/sso/token is disabled");
+    return res.status(503).json({ error: "Token endpoint not configured" });
+  }
+
+  const provided = String(req.headers["x-sync-api-key"] || "");
+  if (!provided || !safeEqual(apiKey, provided)) {
+    logger.warn("[sso] /api/sso/token: invalid API key");
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const username = String(req.body?.username || "").trim();
+  const password = String(req.body?.password || "");
+  if (!username || !password) {
+    return res.status(400).json({ error: "username and password are required" });
+  }
+
+  let user;
+  try {
+    user = await mdb.INTERNAL.user.findOne({
+      $or: [{ username }, { email: username }],
+    });
+  } catch (err) {
+    logger.error("[sso] /api/sso/token: DB error: %s", err.message);
+    return res.status(503).json({ error: "Service unavailable" });
+  }
+
+  let authOk = false;
+  if (user) {
+    const stored = user.password;
+    const looksHashed = typeof stored === "string" && stored.startsWith("$2");
+    if (looksHashed) {
+      authOk = await bcrypt.compare(password, stored);
+    } else {
+      authOk = password === stored;
+    }
+  }
+
+  if (!authOk) {
+    logger.info("[sso] /api/sso/token: invalid credentials for \"%s\"", username);
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  const secret = process.env.HCS_SSO_JWT_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    logger.error("[sso] HCS_SSO_JWT_SECRET missing – cannot issue token");
+    return res.status(500).json({ error: "SSO not configured" });
+  }
+
+  const ttlSec = Number(process.env.HCS_SSO_TTL_SECONDS || 60 * 60 * 8);
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  const token = jwt.sign(
+    {
+      sub: user._id.toString(),
+      username: user.username,
+      role: user.role,
+      iss: "hcs-app",
+      aud: "hcs-sync",
+      iat: nowSec,
+    },
+    secret,
+    {
+      algorithm: "HS256",
+      expiresIn: ttlSec,
+      jwtid: crypto.randomUUID
+        ? crypto.randomUUID()
+        : crypto.randomBytes(16).toString("hex"),
+    },
+  );
+
+  logger.info("[sso] /api/sso/token: issued token for user \"%s\"", user.username);
+  return res.json({ token, expiresIn: ttlSec });
 };
