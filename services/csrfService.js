@@ -11,10 +11,15 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const CSRF_COOKIE_NAME = "hms.csrf";
 
 // Optional comma separated path prefixes to exempt (e.g. "/user/login,/user/register")
-const EXEMPT = (process.env.CSRF_EXEMPT_PATHS || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+// Built-in exemptions cover machine-to-machine API endpoints that authenticate via
+// their own headers (e.g. X-Sync-Api-Key) and never carry a browser CSRF token.
+const BUILTIN_EXEMPT = ["/api/sso/token"];
+const EXEMPT = BUILTIN_EXEMPT.concat(
+  (process.env.CSRF_EXEMPT_PATHS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
 
 module.exports = function csrfService(req, res, next) {
   try {

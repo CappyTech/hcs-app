@@ -117,10 +117,10 @@ exports.hcsSyncHandoff = async (req, res) => {
     return res.status(400).send("Invalid return URL");
   }
 
-  const secret = process.env.HCS_SSO_JWT_SECRET || process.env.JWT_SECRET;
+  const secret = process.env.HCS_SSO_JWT_SECRET;
   if (!secret) {
     logger.error(
-      "[sso] HCS_SSO_JWT_SECRET (and JWT_SECRET fallback) missing – cannot sign SSO token",
+      "[sso] HCS_SSO_JWT_SECRET missing – cannot sign SSO token",
     );
     return res.status(500).send("SSO not configured");
   }
@@ -254,7 +254,7 @@ exports.issueTokenForSync = async (req, res) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  const secret = process.env.HCS_SSO_JWT_SECRET || process.env.JWT_SECRET;
+  const secret = process.env.HCS_SSO_JWT_SECRET;
   if (!secret) {
     logger.error("[sso] HCS_SSO_JWT_SECRET missing – cannot issue token");
     return res.status(500).json({ error: "SSO not configured" });
