@@ -27,6 +27,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
 
       - name: Security audit (prod deps)
+        timeout-minutes: 3
         run: npm audit --omit=dev --audit-level=high
 
       - run: npm test
