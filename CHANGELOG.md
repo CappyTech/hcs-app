@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.1.5] - 2026-06-10
+
+### Changed
+- CI: removed `pull_request` trigger to avoid duplicate builds and GHCR write failures on fork PRs.
+- CI: replaced static `ci-latest` / `ci-<full-sha>` tags with `latest` (main branch), `branch-<slug>` (other branches) and `sha-<short>` — consistent with hcs-sync.
+- CI: added `workflow_dispatch` and `release` triggers.
+- CI: added OCI image labels (`source`, `revision`).
+- CI: fixed GHCR login to use `github.repository_owner` instead of `github.actor`.
+
 ## [6.1.4] - 2026-06-10
 
 ### Changed
