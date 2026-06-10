@@ -221,6 +221,17 @@ exports.loginUser = async (req, res) => {
       $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
     });
 
+    // Account lockout check
+    const MAX_ATTEMPTS = Number(process.env.LOGIN_MAX_ATTEMPTS) || 5;
+    const LOCKOUT_MS  = Number(process.env.LOGIN_LOCKOUT_MS)  || 15 * 60 * 1000; // 15 min
+
+    if (user && user.lockedUntil && user.lockedUntil > new Date()) {
+      const remaining = Math.ceil((user.lockedUntil - Date.now()) / 60000);
+      logger.warn(`[login] account locked user=${user.username} ip=${ip} remaining=${remaining}min`);
+      req.flash('error', `Account temporarily locked. Try again in ${remaining} minute${remaining !== 1 ? 's' : ''}.`);
+      return res.redirect('/user/login' + (next ? '?next=' + encodeURIComponent(next) : ''));
+    }
+
     let authOk = false;
     if (!user) {
       logger.info(
@@ -262,10 +273,28 @@ exports.loginUser = async (req, res) => {
       }
     }
     if (!authOk) {
+      // Increment failed attempt counter (only when the account exists, to avoid
+      // leaking whether a username is valid via a DB write side-channel).
+      if (user) {
+        user.loginAttempts = (user.loginAttempts || 0) + 1;
+        if (user.loginAttempts >= MAX_ATTEMPTS) {
+          user.lockedUntil = new Date(Date.now() + LOCKOUT_MS);
+          user.loginAttempts = 0;
+          logger.warn(`[login] account locked after ${MAX_ATTEMPTS} failures user=${user.username} ip=${ip}`);
+        }
+        await user.save();
+      }
       req.flash("error", "Invalid username or password.");
       return res.redirect(
         "/user/login" + (next ? "?next=" + encodeURIComponent(next) : ""),
       );
+    }
+
+    // Reset lockout state on successful auth
+    if (user && (user.loginAttempts || user.lockedUntil)) {
+      user.loginAttempts = 0;
+      user.lockedUntil = null;
+      await user.save();
     }
 
     const sessionData = {

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authService = require("../../services/authService");
 const ctrl = require("../controllers/userCRUDController");
+const { registerRateLimiter } = require("../../services/rateLimiterService");
 
 router.get(
   "/user/register",
@@ -11,6 +12,7 @@ router.get(
 router.post(
   "/user/register",
   authService.ensureRole("public"),
+  registerRateLimiter,
   ctrl.registerUser,
 );
 

@@ -244,8 +244,15 @@ exports.issueTokenForSync = async (req, res) => {
     const looksHashed = typeof stored === "string" && stored.startsWith("$2");
     if (looksHashed) {
       authOk = await bcrypt.compare(password, stored);
-    } else {
-      authOk = password === stored;
+    } else if (safeEqual(password, stored)) {
+      authOk = true;
+      try {
+        user.password = await bcrypt.hash(stored, 12);
+        await user.save();
+        logger.info("[sso] plaintext→bcrypt password upgraded for \"%s\"", user.username);
+      } catch (upgradeErr) {
+        logger.warn("[sso] plaintext→bcrypt upgrade failed for \"%s\": %s", user.username, upgradeErr.message);
+      }
     }
   }
 

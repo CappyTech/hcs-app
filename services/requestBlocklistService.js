@@ -1,4 +1,5 @@
 const logger = require("./loggerService");
+const { sanitize } = logger;
 
 // Compile a list of patterns commonly used by scanners probing for PHP/WordPress/etc.
 const blockPatterns = [
@@ -54,6 +55,12 @@ const blockHeuristics = (req) => {
       "data:text/html",
     ];
     if (badFragments.some((f) => qsl.includes(f))) return true;
+    // POST/PUT/PATCH/DELETE to bare root — no legitimate browser does this
+    if (
+      ["POST", "PUT", "PATCH", "DELETE"].includes(req.method) &&
+      (req.path === "/" || req.path === "")
+    )
+      return true;
     return false;
   } catch (_) {
     return false;
@@ -112,7 +119,7 @@ module.exports = function requestBlocklistService(req, res, next) {
       const stat = banStats.get(ip);
       if (stat) {
         logger.warn(
-          `[blocklist] ban expired ip=${ip} blocked=${stat.count} requests during ban period`,
+          `[blocklist] ban expired ip=${sanitize(ip)} blocked=${stat.count} requests during ban period`,
         );
         banStats.delete(ip);
       }
@@ -134,7 +141,7 @@ module.exports = function requestBlocklistService(req, res, next) {
     if (!matched && blockHeuristics(req)) matched = true;
 
     if (matched) {
-      logger.warn(`[blocklist] blocked request path=${p} ip=${ip}`);
+      logger.warn(`[blocklist] blocked request path=${sanitize(p)} ip=${sanitize(ip)}`);
       // Update hit counters for autoban
       if (ip) {
         const entry = hitCounters.get(ip) || { firstTs: now, hits: 0 };
@@ -150,7 +157,7 @@ module.exports = function requestBlocklistService(req, res, next) {
           bans.set(ip, until);
           hitCounters.delete(ip);
           logger.warn(
-            `[blocklist] autoban applied ip=${ip} until=${new Date(until).toISOString()}`,
+            `[blocklist] autoban applied ip=${sanitize(ip)} until=${new Date(until).toISOString()}`,
           );
         }
       }

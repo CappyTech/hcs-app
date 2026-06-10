@@ -45,4 +45,8 @@ router.get('/overview/payroll',
   authService.ensureRoles('admin', 'accountant'),
   ctrl.getPayrollOverview);
 
+router.get('/overview/policies',
+  authService.ensureRole('admin'),
+  ctrl.getPoliciesOverview);
+
 module.exports = router;

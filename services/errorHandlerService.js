@@ -1,4 +1,5 @@
 const logger = require("./loggerService");
+const { sanitize } = logger;
 const path = require("path");
 
 function truncate(value, max = 180) {
@@ -54,14 +55,15 @@ const errorHandlerService = (error, req, res, next) => {
     : error.message || "Something went wrong.";
   const stack = error.stack;
 
-  // Log the error details
-  logger.error(`[errorHandler] Error Details:
+  // Log the error details — 404s are external noise, not application errors
+  const logFn = statusCode === 404 ? logger.warn.bind(logger) : logger.error.bind(logger);
+  logFn(`[errorHandler] Error Details:
         Status: ${statusCode}
         Title: ${title}
         Message: ${message}
         Stack: ${stack ? stack.split("\n")[0] : "No stack trace"} 
-        URL: ${req.originalUrl}
-        Method: ${req.method}`);
+        URL: ${sanitize(req.originalUrl)}
+        Method: ${sanitize(req.method)}`);
 
   logger.info(
     `[errorHandler] Request Context: ${JSON.stringify(getSafeRequestMeta(req))}`,

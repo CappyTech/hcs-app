@@ -10,6 +10,7 @@ const adminOverviewService = require('../services/adminOverviewService');
 const documentsOverviewService = require('../services/documentsOverviewService');
 const subcontractorsOverviewService = require('../services/subcontractorsOverviewService');
 const payrollOverviewService        = require('../services/payrollOverviewService');
+const policiesOverviewService       = require('../services/policiesOverviewService');
 
 exports.getFleetOverview = async (req, res, next) => {
   try {
@@ -122,6 +123,18 @@ exports.postProjectsFinancialCheck = async (req, res, next) => {
     req.flash?.('error', `Financial check failed: ${err.message}`);
   }
   res.redirect('/overview/projects');
+};
+
+exports.getPoliciesOverview = async (req, res, next) => {
+  try {
+    const overview = await policiesOverviewService.getPoliciesOverview();
+    res.render(path.join('tailwindcss', 'overview', 'policies'), {
+      title: 'Policies Overview',
+      ...overview,
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.postProjectMarkComplete = async (req, res, next) => {

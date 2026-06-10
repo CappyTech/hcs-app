@@ -252,7 +252,7 @@
             </div>
             <% }); %>
           </fieldset>
-          <script>
+          <script nonce="<%= locals.cspNonce %>">
             (function () {
               const master = document.getElementById('select-all-purchases');
               if (!master) return;

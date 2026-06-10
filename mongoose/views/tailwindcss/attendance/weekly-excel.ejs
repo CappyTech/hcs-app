@@ -362,7 +362,7 @@
   <script type="application/json" id="attendance-contracts-json"><%- JSON.stringify((activeContracts || []).map(function(c){ return { _id: c._id, title: c.title, location: c.location }; })) %></script>
 
   <% if (canDept('management') || canDept('admin')) { %>
-  <style>#att-modal::backdrop { background: rgba(0,0,0,0.5); }</style>
+  <style nonce="<%= locals.cspNonce %>">#att-modal::backdrop { background: rgba(0,0,0,0.5); }</style>
   <dialog id="att-modal" class="rounded-xl shadow-2xl bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-0 w-full max-w-md border border-gray-200 dark:border-gray-700">
     <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
       <h3 class="font-semibold text-base" id="att-modal-title">Attendance</h3>
@@ -407,7 +407,7 @@
     </div>
   </dialog>
 
-  <script>
+  <script nonce="<%= locals.cspNonce %>">
   (function () {
     var modal    = document.getElementById('att-modal');
     if (!modal) return;

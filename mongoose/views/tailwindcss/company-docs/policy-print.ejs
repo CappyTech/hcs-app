@@ -1,255 +1,215 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= policy.title %> — <%= letterhead.companyName || 'Company Document' %></title>
-  <style>
-    /* ── Base ─────────────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 11pt;
-      color: #1a1a1a;
-      background: #fff;
-    }
+<style nonce="<%= locals.cspNonce %>">
+  /* ── A4 document (screen preview) ────────────────────────────────────── */
+  .policy-doc {
+    max-width: 210mm;
+    margin: 0 auto 2rem;
+    padding: 25mm 22mm 20mm;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11pt;
+    color: #1a1a1a;
+  }
 
-    /* ── Screen toolbar ───────────────────────────────────────────────── */
-    .print-toolbar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: #1f2937;
-      color: #f9fafb;
-      padding: 0.6rem 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      z-index: 100;
-      font-family: system-ui, sans-serif;
-      font-size: 0.85rem;
-    }
-    .print-toolbar a { color: #9ca3af; text-decoration: none; }
-    .print-toolbar a:hover { color: #f9fafb; text-decoration: underline; }
-    .print-btn {
-      background: #059669;
-      color: #fff;
-      border: none;
-      padding: 0.4rem 1.1rem;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-family: system-ui, sans-serif;
-    }
-    .print-btn:hover { background: #047857; }
+  /* ── Letterhead header ───────────────────────────────────────────────── */
+  .lh-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid #064e3b;
+    margin-bottom: 1.5rem;
+  }
+  .lh-logo {
+    max-height: 70px;
+    max-width: 160px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .lh-company { flex: 1; text-align: right; }
+  .lh-company-name {
+    font-family: system-ui, sans-serif;
+    font-size: 18pt;
+    font-weight: 700;
+    color: #064e3b;
+    line-height: 1.2;
+  }
+  .lh-tagline {
+    font-family: system-ui, sans-serif;
+    font-size: 9pt;
+    color: #6b7280;
+    margin-top: 0.2rem;
+    font-style: italic;
+  }
+  .lh-contact {
+    font-family: system-ui, sans-serif;
+    font-size: 8.5pt;
+    color: #374151;
+    margin-top: 0.5rem;
+    line-height: 1.6;
+  }
 
-    /* ── Page layout ─────────────────────────────────────────────────── */
-    .page {
-      max-width: 210mm;
-      min-height: 277mm;
-      margin: 5rem auto 2rem;
-      padding: 25mm 22mm 20mm;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
-    }
+  /* ── Document meta ───────────────────────────────────────────────────── */
+  .doc-meta {
+    margin-bottom: 1.5rem;
+    font-family: system-ui, sans-serif;
+  }
+  .doc-title {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 0.3rem;
+  }
+  .doc-badges {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .doc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 7.5pt;
+    font-weight: 600;
+    background: #d1fae5;
+    color: #065f46;
+  }
+  .doc-date {
+    font-size: 8pt;
+    color: #6b7280;
+    margin-top: 0.3rem;
+  }
 
-    /* ── Letterhead header ───────────────────────────────────────────── */
-    .lh-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 3px solid #064e3b;
-      margin-bottom: 1.5rem;
-    }
-    .lh-logo {
-      max-height: 70px;
-      max-width: 160px;
-      object-fit: contain;
-      flex-shrink: 0;
-    }
-    .lh-company { flex: 1; text-align: right; }
-    .lh-company-name {
-      font-family: system-ui, sans-serif;
-      font-size: 18pt;
-      font-weight: 700;
-      color: #064e3b;
-      line-height: 1.2;
-    }
-    .lh-tagline {
-      font-family: system-ui, sans-serif;
-      font-size: 9pt;
-      color: #6b7280;
-      margin-top: 0.2rem;
-      font-style: italic;
-    }
-    .lh-contact {
-      font-family: system-ui, sans-serif;
-      font-size: 8.5pt;
-      color: #374151;
-      margin-top: 0.5rem;
-      line-height: 1.6;
-    }
+  /* ── Divider ─────────────────────────────────────────────────────────── */
+  hr.section-rule {
+    border: none;
+    border-top: 1px solid #d1d5db;
+    margin: 1rem 0;
+  }
 
-    /* ── Document meta ───────────────────────────────────────────────── */
-    .doc-meta {
-      margin-bottom: 1.5rem;
-      font-family: system-ui, sans-serif;
-    }
-    .doc-title {
-      font-size: 16pt;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 0.3rem;
-    }
-    .doc-badges {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .doc-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.15rem 0.5rem;
-      border-radius: 999px;
-      font-size: 7.5pt;
-      font-weight: 600;
-      background: #d1fae5;
-      color: #065f46;
-    }
-    .doc-date {
-      font-size: 8pt;
-      color: #6b7280;
-      margin-top: 0.3rem;
-    }
+  /* ── Body content ────────────────────────────────────────────────────── */
+  .doc-body {
+    flex: 1;
+    font-size: 11pt;
+    line-height: 1.7;
+    color: #1a1a1a;
+  }
+  .doc-body p          { margin-bottom: 0.7em; }
+  .doc-body h1         { font-size: 14pt; font-weight: 700; margin: 1.2em 0 0.4em; color: #064e3b; }
+  .doc-body h2         { font-size: 12pt; font-weight: 700; margin: 1em 0 0.3em; color: #065f46; }
+  .doc-body h3         { font-size: 11pt; font-weight: 700; margin: 0.9em 0 0.3em; }
+  .doc-body ul, .doc-body ol { margin: 0.4em 0 0.7em 1.5em; }
+  .doc-body li         { margin-bottom: 0.2em; }
+  .doc-body blockquote { border-left: 3px solid #d1d5db; padding-left: 1em; color: #4b5563; font-style: italic; margin: 0.7em 0; }
+  .doc-body strong     { font-weight: 700; }
+  .doc-body em         { font-style: italic; }
+  .doc-body a          { color: #059669; }
 
-    /* ── Divider ─────────────────────────────────────────────────────── */
-    hr.section-rule {
-      border: none;
-      border-top: 1px solid #d1d5db;
-      margin: 1rem 0;
+  /* ── Footer ──────────────────────────────────────────────────────────── */
+  .lh-footer {
+    margin-top: 2rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #d1d5db;
+    font-family: system-ui, sans-serif;
+    font-size: 7.5pt;
+    color: #6b7280;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* ── Print overrides ─────────────────────────────────────────────────── */
+  @media print {
+    #main-content { padding: 0 !important; }
+    .policy-doc {
+      margin: 0;
+      padding: 15mm 18mm 15mm;
+      max-width: unset;
+      box-shadow: none;
+      font-size: 10.5pt;
     }
+    a { color: inherit; }
 
-    /* ── Body content ────────────────────────────────────────────────── */
-    .doc-body {
-      flex: 1;
-      font-size: 11pt;
-      line-height: 1.7;
-      color: #1a1a1a;
+    @page {
+      size: A4;
+      margin: 0;
     }
-    .doc-body p          { margin-bottom: 0.7em; }
-    .doc-body h1         { font-size: 14pt; font-weight: 700; margin: 1.2em 0 0.4em; color: #064e3b; }
-    .doc-body h2         { font-size: 12pt; font-weight: 700; margin: 1em 0 0.3em; color: #065f46; }
-    .doc-body h3         { font-size: 11pt; font-weight: 700; margin: 0.9em 0 0.3em; }
-    .doc-body ul, .doc-body ol { margin: 0.4em 0 0.7em 1.5em; }
-    .doc-body li         { margin-bottom: 0.2em; }
-    .doc-body blockquote { border-left: 3px solid #d1d5db; padding-left: 1em; color: #4b5563; font-style: italic; margin: 0.7em 0; }
-    .doc-body strong     { font-weight: 700; }
-    .doc-body em         { font-style: italic; }
-    .doc-body a          { color: #059669; }
+  }
+</style>
 
-    /* ── Footer ──────────────────────────────────────────────────────── */
-    .lh-footer {
-      margin-top: 2rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid #d1d5db;
-      font-family: system-ui, sans-serif;
-      font-size: 7.5pt;
-      color: #6b7280;
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-    .lh-footer-reg { }
-    .lh-footer-page { text-align: right; }
-
-    /* ── Print overrides ─────────────────────────────────────────────── */
-    @media print {
-      .print-toolbar { display: none !important; }
-      .page { margin: 0; padding: 15mm 18mm 15mm; min-height: unset; max-width: unset; }
-      body { font-size: 10.5pt; }
-      a { color: inherit; }
-
-      @page {
-        size: A4;
-        margin: 0;
-      }
-    }
-  </style>
-</head>
-<body>
-
-  <!-- Screen-only toolbar -->
-  <div class="print-toolbar">
-    <div>
-      <a href="/company-docs/policies">&larr; Back to Policies</a>
-      &nbsp;&bull;&nbsp;
-      <strong style="color:#f9fafb"><%= policy.title %></strong>
+<!-- Breadcrumb + action bar (screen only) -->
+<div class="max-w-5xl mx-auto py-4 px-4 sm:px-6 lg:px-8 print:hidden">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <a href="/company-docs/policies" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Policies</a>
+      <span class="text-gray-400">/</span>
+      <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><%= policy.title %></span>
     </div>
-    <button class="print-btn" onclick="window.print()">&#128438; Print / Save PDF</button>
+    <button onclick="window.print()"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm">
+      <i class="bi bi-printer"></i> Print / Save PDF
+    </button>
   </div>
+</div>
 
-  <!-- A4 page -->
-  <div class="page">
+<!-- A4 document -->
+<div class="policy-doc">
 
-    <!-- ── Letterhead header ─────────────────────────────────────────── -->
-    <header class="lh-header">
-      <% if (letterhead.logoPath) { %>
-        <img src="<%= letterhead.logoPath %>" alt="<%= letterhead.companyName || 'Company Logo' %>" class="lh-logo">
+  <!-- Letterhead header -->
+  <header class="lh-header">
+    <% if (letterhead.logoPath) { %>
+      <img src="<%= letterhead.logoPath %>" alt="<%= letterhead.companyName || 'Company Logo' %>" class="lh-logo">
+    <% } %>
+    <div class="lh-company">
+      <div class="lh-company-name"><%= letterhead.companyName || 'Company Name' %></div>
+      <% if (letterhead.tagline) { %><div class="lh-tagline"><%= letterhead.tagline %></div><% } %>
+      <div class="lh-contact">
+        <% if (letterhead.addressLine1) { %><%= letterhead.addressLine1 %><% if (letterhead.addressLine2) { %>, <%= letterhead.addressLine2 %><% } %><br><% } %>
+        <% if (letterhead.town || letterhead.postcode) { %><%= [letterhead.town, letterhead.county, letterhead.postcode].filter(Boolean).join(', ') %><br><% } %>
+        <% if (letterhead.phone) { %>T: <%= letterhead.phone %><% if (letterhead.email) { %> &nbsp;|&nbsp; <% } %><% } %>
+        <% if (letterhead.email) { %>E: <%= letterhead.email %><% } %>
+        <% if (letterhead.website) { %><br><%= letterhead.website %><% } %>
+      </div>
+    </div>
+  </header>
+
+  <!-- Document meta -->
+  <div class="doc-meta">
+    <div class="doc-title"><%= policy.title %></div>
+    <div class="doc-badges">
+      <span class="doc-badge"><%= policy.category %></span>
+      <span class="doc-badge">Version <%= policy.version %></span>
+    </div>
+    <div class="doc-date">
+      <% if (policy.updatedAt) { %>
+        Last updated: <%= new Date(policy.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %>
       <% } %>
-      <div class="lh-company">
-        <div class="lh-company-name"><%= letterhead.companyName || 'Company Name' %></div>
-        <% if (letterhead.tagline) { %><div class="lh-tagline"><%= letterhead.tagline %></div><% } %>
-        <div class="lh-contact">
-          <% if (letterhead.addressLine1) { %><%= letterhead.addressLine1 %><% if (letterhead.addressLine2) { %>, <%= letterhead.addressLine2 %><% } %><br><% } %>
-          <% if (letterhead.town || letterhead.postcode) { %><%= [letterhead.town, letterhead.county, letterhead.postcode].filter(Boolean).join(', ') %><br><% } %>
-          <% if (letterhead.phone) { %>T: <%= letterhead.phone %><% if (letterhead.email) { %> &nbsp;|&nbsp; <% } %><% } %>
-          <% if (letterhead.email) { %>E: <%= letterhead.email %><% } %>
-          <% if (letterhead.website) { %><br><%= letterhead.website %><% } %>
-        </div>
-      </div>
-    </header>
-
-    <!-- ── Document meta ─────────────────────────────────────────────── -->
-    <div class="doc-meta">
-      <div class="doc-title"><%= policy.title %></div>
-      <div class="doc-badges">
-        <span class="doc-badge"><%= policy.category %></span>
-        <span class="doc-badge">Version <%= policy.version %></span>
-      </div>
-      <div class="doc-date">
-        <% if (policy.updatedAt) { %>
-          Last updated: <%= new Date(policy.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %>
-        <% } %>
-      </div>
     </div>
-
-    <hr class="section-rule">
-
-    <!-- ── Policy content ────────────────────────────────────────────── -->
-    <div class="doc-body">
-      <%- policy.contentHtml %>
-    </div>
-
-    <!-- ── Footer ────────────────────────────────────────────────────── -->
-    <footer class="lh-footer">
-      <div class="lh-footer-reg">
-        <% if (letterhead.footerText) { %><%= letterhead.footerText %><% } else { %>
-          <% if (letterhead.companyName) { %><%= letterhead.companyName %><% } %>
-          <% if (letterhead.registrationNumber) { %> &bull; Registered in England &amp; Wales No. <%= letterhead.registrationNumber %><% } %>
-          <% if (letterhead.vatNumber) { %> &bull; VAT No. <%= letterhead.vatNumber %><% } %>
-        <% } %>
-      </div>
-      <div class="lh-footer-page">Page 1</div>
-    </footer>
-
   </div>
 
-</body>
-</html>
+  <hr class="section-rule">
+
+  <!-- Policy content -->
+  <div class="doc-body">
+    <%- policy.contentHtml %>
+  </div>
+
+  <!-- Footer -->
+  <footer class="lh-footer">
+    <div>
+      <% if (letterhead.footerText) { %><%= letterhead.footerText %><% } else { %>
+        <% if (letterhead.companyName) { %><%= letterhead.companyName %><% } %>
+        <% if (letterhead.registrationNumber) { %> &bull; Registered in England &amp; Wales No. <%= letterhead.registrationNumber %><% } %>
+        <% if (letterhead.vatNumber) { %> &bull; VAT No. <%= letterhead.vatNumber %><% } %>
+      <% } %>
+    </div>
+    <div>Page 1</div>
+  </footer>
+
+</div>

@@ -64,7 +64,7 @@
   </div>
 </form>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
 // Restore non-sensitive fields only (no passwords stored).
 // localStorage takes precedence over server-restored values.
 const _s3 = JSON.parse(localStorage.getItem('hcs_setup_step3') || '{}');

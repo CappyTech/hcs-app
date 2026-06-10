@@ -1,5 +1,6 @@
 const helmet = require("helmet");
 const { filterXSS } = require("xss");
+const crypto = require("crypto");
 
 // Fields that may contain Quill-generated rich-text HTML.
 // These are sanitised with a permissive-but-safe whitelist that
@@ -58,8 +59,7 @@ const cspDirectives = {
   frameAncestors: ["'self'"],
   styleSrc: [
     "'self'",
-    // Ideally remove after moving inline styles to files
-    "'unsafe-inline'",
+    (_req, res) => `'nonce-${res.locals.cspNonce}'`,
     "https://cdn.jsdelivr.net",
     "https://fonts.googleapis.com",
     "https://unpkg.com",
@@ -67,8 +67,7 @@ const cspDirectives = {
   ],
   scriptSrc: [
     "'self'",
-    // Replace with nonces/hashes ASAP:
-    "'unsafe-inline'",
+    (_req, res) => `'nonce-${res.locals.cspNonce}'`,
     "https://cdn.jsdelivr.net",
     "https://unpkg.com",
     "https://challenges.cloudflare.com",
@@ -117,12 +116,18 @@ const enableHsts =
   (process.env.ENABLE_HSTS || "").toLowerCase() === "true" ||
   (process.env.ENABLE_HSTS === undefined && !isDev);
 
+function generateNonce(_req, res, next) {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+}
+
 const securityService = [
+  generateNonce,
   helmet({
     contentSecurityPolicy: { directives: cspDirectives },
     referrerPolicy: { policy: "no-referrer" },
     crossOriginEmbedderPolicy: false, // adjust if you need COEP
-    hsts: enableHsts ? { maxAge: 15552000 } : false,
+    hsts: enableHsts ? { maxAge: 15552000, includeSubDomains: true } : false,
   }),
   xssSanitize,
 ];

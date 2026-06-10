@@ -12,7 +12,7 @@
   <link rel="manifest" href="/resources/manifest/manifest.json">
 
   <!-- Prevent theme flash: set initial theme class and base background before CSS loads -->
-  <script>
+  <script nonce="<%= locals.cspNonce %>">
     (function () {
       try {
         var stored = localStorage.getItem('theme');
@@ -29,7 +29,7 @@
       }
     })();
   </script>
-  <style>
+  <style nonce="<%= locals.cspNonce %>">
     /* Base background to avoid white flash before Tailwind loads */
     html { background-color: #f9fafb; }
     html.dark { background-color: #111827; }
@@ -224,7 +224,7 @@
 
 
           <!-- JS: Service Worker -->
-          <script defer>
+          <script defer nonce="<%= locals.cspNonce %>">
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/resources/js/service-worker.js').catch(console.error);
@@ -235,7 +235,7 @@
           <% if (typeof quillEditor !== 'undefined' && quillEditor) { %>
           <!-- Quill JS + init (policy editor pages only) -->
           <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.min.js"></script>
-          <script>
+          <script nonce="<%= locals.cspNonce %>">
             (function () {
               var quill = new Quill('#quill-editor', {
                 theme: 'snow',

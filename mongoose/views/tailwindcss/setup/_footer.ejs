@@ -26,7 +26,7 @@
 
   </div>
 
-  <script>
+  <script nonce="<%= locals.cspNonce %>">
   document.getElementById('clearDraftBtn').addEventListener('click', clearWizardDraft);
   function clearWizardDraft() {
     ['hcs_setup_step1','hcs_setup_step2','hcs_setup_step3'].forEach(k => localStorage.removeItem(k));

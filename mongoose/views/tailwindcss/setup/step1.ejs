@@ -91,7 +91,7 @@
   </div>
 </form>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
 // Restore saved values — localStorage takes precedence over server-restored values.
 // Falls back to server-side wizard-draft.json (via session) if localStorage is empty.
 const _s1 = JSON.parse(localStorage.getItem('hcs_setup_step1') || '{}');

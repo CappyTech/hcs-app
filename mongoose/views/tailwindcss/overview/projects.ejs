@@ -330,7 +330,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
 // Populate the Mark Complete modal with the project number/name when opened
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('[data-modal-open="markCompleteModal"]');

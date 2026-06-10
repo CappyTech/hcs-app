@@ -93,7 +93,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
 document.getElementById('epsDownloadBtn').addEventListener('click', function() { submitEPS('download'); });
 document.getElementById('epsSubmitBtn').addEventListener('click', function() { submitEPS('submit'); });
 function submitEPS(action) {

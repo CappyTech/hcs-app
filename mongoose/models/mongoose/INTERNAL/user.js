@@ -94,6 +94,14 @@ const userSchema = new mongoose.Schema({
         departments: { type: [String], default: [] },
         models: { type: Map, of: String, default: () => new Map() },
         routes: { type: [String], default: [] }
+    },
+    loginAttempts: {
+        type: Number,
+        default: 0
+    },
+    lockedUntil: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true,
@@ -101,10 +109,16 @@ const userSchema = new mongoose.Schema({
     toObject: { getters: true }
 });
 
-// Hash password before save
+// Hash password before save.
+// Guard: if the value already looks like a bcrypt hash (set by a controller that
+// pre-hashes before calling save) skip re-hashing to prevent double-hashing.
 userSchema.pre('save', async function (next) {
     if (this.isModified('password')) {
-        this.password = await bcrypt.hash(this.password, 10);
+        const alreadyHashed = typeof this.password === 'string' && this.password.startsWith('$2');
+        if (!alreadyHashed) {
+            const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+            this.password = await bcrypt.hash(this.password, saltRounds);
+        }
     }
 
     // Ensure only one of the foreign keys is set

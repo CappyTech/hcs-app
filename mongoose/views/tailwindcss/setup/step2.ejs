@@ -96,7 +96,7 @@
   </div>
 </form>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
 document.getElementById('regenSessionSecret').addEventListener('click', function() { regenerate('sessionSecret', 64); });
 document.getElementById('regenEncryptionKey').addEventListener('click', function() { regenerate('encryptionKey', 64); });
 function regenerate(fieldId, hexBytes) {

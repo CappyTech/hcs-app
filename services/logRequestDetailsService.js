@@ -1,6 +1,7 @@
 // services/logRequestDetailsService.js
 
 const logger = require("./loggerService");
+const { sanitize } = logger;
 const { getClientIp } = require("./ipService");
 
 const SESSION_COOKIE_NAME = "hms.sid";
@@ -111,10 +112,10 @@ const logRequestDetailsService = (req, res, next) => {
     const hasReqUser = !!req.user;
 
     logger.info(
-      `${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${clientIp}) ` +
+      `${sanitize(logUser)} accessed [${sanitize(req.method)}] ${sanitize(req.originalUrl)} from ${sanitize(browser)} on ${sanitize(platform)} (IP: ${sanitize(clientIp)}) ` +
         `sid=${sidPresent ? "Y" : "N"} sess=${sessionId} reqUser=${hasReqUser ? "Y" : "N"} sessUser=${hasSessionUser ? "Y" : "N"} ` +
-        `secure=${req.secure ? "Y" : "N"} proto=${req.protocol} ` +
-        `xfp=${req.headers["x-forwarded-proto"] || "-"} xff=${(req.headers["x-forwarded-for"] || "").toString().split(",")[0].trim() || "-"}`,
+        `secure=${req.secure ? "Y" : "N"} proto=${sanitize(req.protocol)} ` +
+        `xfp=${sanitize(req.headers["x-forwarded-proto"] || "-")} xff=${sanitize((req.headers["x-forwarded-for"] || "").toString().split(",")[0].trim() || "-")}`,
     );
 
     if (isLogin && req.method === "POST") {
@@ -138,7 +139,7 @@ const logRequestDetailsService = (req, res, next) => {
     }
   } else {
     logger.info(
-      `${logUser} accessed [${req.method}] ${req.originalUrl} from ${browser} on ${platform} (IP: ${clientIp})`,
+      `${sanitize(logUser)} accessed [${sanitize(req.method)}] ${sanitize(req.originalUrl)} from ${sanitize(browser)} on ${sanitize(platform)} (IP: ${sanitize(clientIp)})`,
     );
   }
 

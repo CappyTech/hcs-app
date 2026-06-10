@@ -72,5 +72,15 @@ const logger = createLogger({
   ],
 });
 
+// Sanitize user-controlled strings before interpolating into log messages.
+// Strips newlines and control characters to prevent log injection attacks.
+function sanitize(value, maxLen = 200) {
+  if (value == null) return 'null';
+  return String(value)
+    .replace(/[\r\n\t\x00-\x1f\x7f]/g, ' ')
+    .slice(0, maxLen);
+}
+
 module.exports = logger;
 module.exports.setSocketInstance = setSocketInstance;
+module.exports.sanitize = sanitize;

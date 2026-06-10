@@ -6,7 +6,7 @@
   <title><%= title || 'Getting Dressed...' %></title>
   <meta http-equiv="refresh" content="10">
   <link rel="stylesheet" href="/resources/css/tailwind.css">
-  <script>if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark');</script>
+  <script nonce="<%= locals.cspNonce %>">if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark');</script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
 <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -83,7 +83,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
   (function () {
     var s = 10, el = document.getElementById('countdown');
     if (!el) return;

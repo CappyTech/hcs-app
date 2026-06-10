@@ -219,9 +219,9 @@
   </form>
 </dialog>
 
-<style>#vdep-modal::backdrop { background: rgba(0,0,0,0.5); }</style>
+<style nonce="<%= locals.cspNonce %>">#vdep-modal::backdrop { background: rgba(0,0,0,0.5); }</style>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
 (function () {
   var modal     = document.getElementById('vdep-modal');
   var submitBtn = document.getElementById('vdep-submit');

@@ -89,7 +89,7 @@
     </button>
   </form>
 
-  <script>
+  <script nonce="<%= locals.cspNonce %>">
     (function () {
       const recurrenceEl = document.getElementById('recurrence');
       const dueDateEl = document.getElementById('dueDate');

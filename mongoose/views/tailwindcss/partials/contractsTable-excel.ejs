@@ -241,7 +241,7 @@
   <% } %>
 </table>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
 (function () {
   document.querySelectorAll('.asgn-tog').forEach(function (btn) {
     btn.addEventListener('click', function () {

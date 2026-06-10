@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const logger = require("./loggerService");
+const { sanitize } = logger;
 
 // Lightweight CSRF middleware (transitional mode by default).
 // Generates a per-session token and validates non-idempotent methods.
@@ -63,7 +64,7 @@ module.exports = function csrfService(req, res, next) {
     // Exempt explicit paths (prefix match) to unblock critical flows during debugging
     if (EXEMPT.length && EXEMPT.some((p) => req.path.startsWith(p))) {
       logger.warn(
-        `CSRF exempt path allowed method=${req.method} path=${req.originalUrl}`,
+        `CSRF exempt path allowed method=${sanitize(req.method)} path=${sanitize(req.originalUrl)}`,
       );
       return next();
     }
@@ -111,18 +112,18 @@ function validateToken(req, res, next) {
     )
       return next();
 
-    const strict = process.env.STRICT_MODE === "true";
+    const strict = process.env.STRICT_MODE !== "false";
     const exp = (req.session && req.session.csrfToken) || "none";
     const ob = (v) =>
       v ? `${v.slice(0, 8)}...${v.slice(-6)}(len=${v.length})` : "null";
     if (strict) {
       logger.warn(
-        `CSRF blocked: ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)} hasSession=${!!(req.sessionID)}`,
+        `CSRF blocked: ${sanitize(req.method)} ${sanitize(req.originalUrl)} supplied=${ob(supplied)} expected=${ob(exp)} hasSession=${!!(req.sessionID)}`,
       );
       return res.status(403).send("Forbidden (CSRF)");
     } else {
       logger.warn(
-        `CSRF missing/mismatch (allowed transitional) for ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)}`,
+        `CSRF missing/mismatch (allowed transitional) for ${sanitize(req.method)} ${sanitize(req.originalUrl)} supplied=${ob(supplied)} expected=${ob(exp)}`,
       );
       return next();
     }

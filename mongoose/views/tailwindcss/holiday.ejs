@@ -54,7 +54,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
   document.getElementById('dismissHolidayBtn').addEventListener('click', async () => {
     try {
       const res = await fetch('/holiday/dismiss', { method: 'POST', credentials: 'same-origin' });

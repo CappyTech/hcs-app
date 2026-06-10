@@ -143,7 +143,7 @@
   <% } %>
 </div>
 
-<script>
+<script nonce="<%= locals.cspNonce %>">
 (function () {
   const source = '<%= source %>';
   const dataUrl = `/logs/${source}/data`;

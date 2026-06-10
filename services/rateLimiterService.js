@@ -1,6 +1,7 @@
 const rateLimit = require("express-rate-limit");
 const { getClientIp } = require("./ipService");
 const logger = require("./loggerService");
+const { sanitize } = logger;
 
 const rateLimiterService = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -11,9 +12,28 @@ const rateLimiterService = rateLimit({
   keyGenerator: (req) => getClientIp(req),
   handler: (req, res, next, options) => {
     const ip = getClientIp(req);
-    logger.warn(`[rateLimiter] Rate limit exceeded ip=${ip} path=${req.path}`);
+    logger.warn(`[rateLimiter] Rate limit exceeded ip=${sanitize(ip)} path=${sanitize(req.path)}`);
     res.status(options.statusCode).send(options.message);
   },
 });
 
+// Tighter per-IP limiter for the registration endpoint.
+// 10 attempts per 15 minutes per IP is more than enough for legitimate use
+// and significantly slows enumeration / account-farming attacks.
+const registerRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many registration attempts from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getClientIp(req),
+  handler: (req, res, next, options) => {
+    const ip = getClientIp(req);
+    logger.warn(`[rateLimiter] Registration rate limit exceeded ip=${sanitize(ip)}`);
+    res.status(options.statusCode).send(options.message);
+  },
+  skipSuccessfulRequests: true,
+});
+
 module.exports = rateLimiterService;
+module.exports.registerRateLimiter = registerRateLimiter;

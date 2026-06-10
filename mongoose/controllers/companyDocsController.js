@@ -187,7 +187,6 @@ exports.getPrintPolicy = async (req, res, next) => {
     ]);
     if (!policy) return next(Object.assign(new Error('Policy not found'), { statusCode: 404 }));
     res.render('tailwindcss/company-docs/policy-print', {
-      layout: false,
       title: policy.title,
       policy,
       letterhead: letterhead || {},

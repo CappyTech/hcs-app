@@ -78,6 +78,7 @@ function save(data) {
   const existing = loadFileConfig();
   const merged = { ...existing, ...data };
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2), 'utf8');
+  try { fs.chmodSync(CONFIG_FILE, 0o600); } catch (_) {}
   _fileConfig = null; // invalidate cache
 }
 
@@ -92,6 +93,7 @@ function remove(keys) {
   const dir = path.dirname(CONFIG_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(existing, null, 2), 'utf8');
+  try { fs.chmodSync(CONFIG_FILE, 0o600); } catch (_) {}
   _fileConfig = null;
 }
 
