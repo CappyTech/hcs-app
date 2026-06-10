@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.2.1] - 2026-06-10
+
+### Changed
+- CI: removed `npm ci` from the runner — with tests and CSS build both handled by Docker, `npm audit` only needs `package-lock.json` and doesn't require an installed `node_modules`. Saves ~55s per run.
+- CI: removed `cache: npm` from `setup-node` (no longer needed without `npm ci`).
+
 ## [6.2.0] - 2026-06-10
 
 ### Changed

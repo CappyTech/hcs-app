@@ -25,9 +25,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-
-      - run: npm ci --no-audit --no-fund
 
       - name: Security audit (prod deps)
         timeout-minutes: 3
