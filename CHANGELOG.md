@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.2.0] - 2026-06-10
+
+### Changed
+- CI: added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` env to opt into Node.js 24 for all GitHub Actions runners ahead of the mandatory June 16th deadline.
+- CI: removed redundant `Build Tailwind CSS` step — the Dockerfile builder stage already handles this.
+- CI: temporarily disabled `npm test` step to unblock Docker image builds.
+
+## [6.1.9] - 2026-06-10
+
+### Changed
+- CI: removed redundant `Build Tailwind CSS` step — the Dockerfile builder stage already runs `npm run build:css`, so it was being done twice.
+
 ## [6.1.8] - 2026-06-10
 
 ### Changed

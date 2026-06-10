@@ -11,6 +11,9 @@ permissions:
   contents: read
   packages: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     name: Build & Publish
@@ -31,9 +34,6 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
       # - run: npm test
-
-      - name: Build Tailwind CSS
-        run: npm run build:css
 
       - name: Derive tags
         run: |
