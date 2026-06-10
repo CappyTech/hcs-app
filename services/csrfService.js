@@ -5,6 +5,11 @@ const logger = require("./loggerService");
 // Generates a per-session token and validates non-idempotent methods.
 // Accepts token in body._csrf / body.csrfToken / X-CSRF-Token header / ?_csrf query.
 // STRICT_MODE=true enforces rejection; otherwise logs and allows (grace period to update forms).
+//
+// For multipart/form-data routes (file uploads using multer), the request body is not
+// parsed at the point this global middleware runs. Those routes must use csrfService.validate
+// as a per-route middleware AFTER their multer middleware so the token can be read from
+// the parsed body.
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -63,13 +68,42 @@ module.exports = function csrfService(req, res, next) {
       return next();
     }
 
+    // Multipart requests: the body hasn't been parsed yet at this point (multer runs later
+    // in the route handler). Validation is deferred to csrfService.validate which must be
+    // placed after the multer middleware in those routes.
+    const contentType = req.headers["content-type"] || "";
+    if (contentType.includes("multipart/form-data")) {
+      return next();
+    }
+
+    return validateToken(req, res, next);
+  } catch (err) {
+    logger.error("CSRF middleware error: " + err.message);
+    next();
+  }
+};
+
+// Per-route CSRF validation for use after multer (or any middleware that parses multipart
+// body). Add this as a middleware in route arrays after your upload middleware:
+//   router.post('/upload', upload.single('file'), csrfService.validate, handler)
+module.exports.validate = function validateCsrf(req, res, next) {
+  if (SAFE_METHODS.has(req.method)) return next();
+  try {
+    return validateToken(req, res, next);
+  } catch (err) {
+    logger.error("CSRF validate middleware error: " + err.message);
+    next();
+  }
+};
+
+function validateToken(req, res, next) {
     const supplied =
       (req.body && (req.body._csrf || req.body.csrfToken)) ||
       req.headers["x-csrf-token"] ||
       req.headers["x-xsrf-token"] ||
       req.query._csrf;
 
-    const expectedSession = req.session.csrfToken;
+    const expectedSession = req.session && req.session.csrfToken;
     const expectedCookie = req.cookies && req.cookies[CSRF_COOKIE_NAME];
     if (
       supplied &&
@@ -78,25 +112,18 @@ module.exports = function csrfService(req, res, next) {
       return next();
 
     const strict = process.env.STRICT_MODE === "true";
+    const exp = (req.session && req.session.csrfToken) || "none";
+    const ob = (v) =>
+      v ? `${v.slice(0, 8)}...${v.slice(-6)}(len=${v.length})` : "null";
     if (strict) {
-      const exp = req.session.csrfToken || "none";
-      const ob = (v) =>
-        v ? `${v.slice(0, 8)}...${v.slice(-6)}(len=${v.length})` : "null";
       logger.warn(
-        `CSRF blocked: ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)} hasSession=${!!req.sessionID}`,
+        `CSRF blocked: ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)} hasSession=${!!(req.sessionID)}`,
       );
       return res.status(403).send("Forbidden (CSRF)");
     } else {
-      const exp = req.session.csrfToken || "none";
-      const ob = (v) =>
-        v ? `${v.slice(0, 8)}...${v.slice(-6)}(len=${v.length})` : "null";
       logger.warn(
         `CSRF missing/mismatch (allowed transitional) for ${req.method} ${req.originalUrl} supplied=${ob(supplied)} expected=${ob(exp)}`,
       );
       return next();
     }
-  } catch (err) {
-    logger.error("CSRF middleware error: " + err.message);
-    next();
-  }
-};
+}

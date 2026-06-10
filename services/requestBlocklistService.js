@@ -76,7 +76,8 @@ const BAN_TTL_MS = Number(process.env.BLOCK_BAN_TTL_MS || 60 * 60 * 1000); // 1 
 
 // In-memory counters and bans
 const hitCounters = new Map(); // ip -> { firstTs, hits }
-const bans = new Map(); // ip -> untilTs
+const bans = new Map();      // ip -> untilTs
+const banStats = new Map();  // ip -> { count, firstPath } — requests blocked during active ban
 
 module.exports = function requestBlocklistService(req, res, next) {
   try {
@@ -100,10 +101,21 @@ module.exports = function requestBlocklistService(req, res, next) {
     const now = Date.now();
     const banUntil = bans.get(ip);
     if (banUntil && banUntil > now) {
-      logger.warn(`[blocklist] banned ip=${ip} path=${p}`);
+      // Suppress per-request noise — count silently instead
+      const stat = banStats.get(ip) || { count: 0, firstPath: p };
+      stat.count += 1;
+      banStats.set(ip, stat);
       return deny(res);
     } else if (banUntil && banUntil <= now) {
       bans.delete(ip);
+      // Emit a single summary now that the ban has expired
+      const stat = banStats.get(ip);
+      if (stat) {
+        logger.warn(
+          `[blocklist] ban expired ip=${ip} blocked=${stat.count} requests during ban period`,
+        );
+        banStats.delete(ip);
+      }
     }
 
     // IP-based blocklist (static)

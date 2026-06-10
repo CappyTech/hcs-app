@@ -5,6 +5,7 @@ const path = require("path");
 const authService = require("../../services/authService");
 const ensureHandlesDocuments = require("../../services/ensureHandlesDocuments");
 const fileController = require("../controllers/fileController");
+const csrfService = require("../../services/csrfService");
 
 const upload = multer({
   dest: "uploads/",
@@ -41,6 +42,7 @@ router.post(
   authService.ensureRole("admin"),
   ensureHandlesDocuments,
   upload.array("files", 10),
+  csrfService.validate,
   fileController.uploadFiles,
 );
 

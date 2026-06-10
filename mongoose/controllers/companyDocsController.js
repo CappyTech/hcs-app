@@ -4,6 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const mdb = require('../services/mongooseDatabaseService');
 const logger = require('../../services/loggerService');
+const csrfService = require('../../services/csrfService');
 
 // contentHtml is pre-sanitised by the global xssSanitize middleware
 // (securityService.js) with the richTextXssOptions whitelist.
@@ -64,6 +65,7 @@ exports.getLetterhead = async (req, res, next) => {
 
 exports.postLetterhead = [
   logoUpload.single('logo'),
+  csrfService.validate,
   async (req, res, next) => {
     try {
       const fields = [
