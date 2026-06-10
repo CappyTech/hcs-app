@@ -21,9 +21,10 @@ if (files.length === 0) {
   process.exit(1);
 }
 
-const result = spawnSync(process.execPath, ['--test', ...files], {
+const result = spawnSync(process.execPath, ['--test', '--test-force-exit', ...files], {
   cwd: path.join(__dirname, '..'),
   stdio: 'inherit',
+  env: { ...process.env, NODE_ENV: 'test' },
 });
 
 process.exit(result.status === null ? 1 : result.status);

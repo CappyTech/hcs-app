@@ -50,6 +50,8 @@ const consoleFormat = printf(({ level, message, timestamp }) => {
   return `${timestamp} ${level}: ${message}`;
 });
 
+const isTest = process.env.NODE_ENV === 'test';
+
 const logger = createLogger({
   level: "debug",
   format: combine(timestamp({ format: "DD-MM-YYYY HH:mm:ss" }), json()),
@@ -61,13 +63,13 @@ const logger = createLogger({
         consoleFormat,
       ),
     }),
-    new transports.File({
+    ...(!isTest ? [new transports.File({
       filename: logFile,
       maxsize: 5 * 1024 * 1024,
       maxFiles: 5,
       tailable: true,
       format: combine(timestamp(), json()),
-    }),
+    })] : []),
     new WebSocketTransport(),
   ],
 });
