@@ -1,8 +1,24 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const speakeasy = require("speakeasy");
 const logger = require("../../services/loggerService");
 const mdb = require("../services/mongooseDatabaseService");
+const encryptionService = require("../../services/encryptionService");
+
+// Roles allowed to receive an hcs-sync SSO token. The sync dashboard exposes
+// financial data and destructive operations (dedup, manual sync), so it is
+// limited to back-office roles by default.
+function getAllowedSsoRoles() {
+  return String(process.env.HCS_SYNC_SSO_ROLES || "admin,accountant")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isRoleAllowedForSync(role) {
+  return getAllowedSsoRoles().includes(String(role || "").toLowerCase());
+}
 
 // Timing-safe string comparison (handles differing lengths by hashing first).
 function safeEqual(a, b) {
@@ -115,6 +131,16 @@ exports.hcsSyncHandoff = async (req, res) => {
   // Validate return_to to prevent open redirects.
   if (!returnTo || !isAllowedReturnTo(returnTo)) {
     return res.status(400).send("Invalid return URL");
+  }
+
+  // Role gate: only back-office roles may access the sync dashboard.
+  if (!isRoleAllowedForSync(req.user.role)) {
+    logger.warn(
+      `[sso] handoff denied: role "${req.user.role}" not permitted for hcs-sync (user=${req.user.username})`,
+    );
+    return res
+      .status(403)
+      .send("Your account does not have access to the sync dashboard.");
   }
 
   const secret = process.env.HCS_SSO_JWT_SECRET;
@@ -238,6 +264,38 @@ exports.issueTokenForSync = async (req, res) => {
     return res.status(503).json({ error: "Service unavailable" });
   }
 
+  // Enforce the same account lockout as the browser login flow.
+  const MAX_ATTEMPTS = Number(process.env.LOGIN_MAX_ATTEMPTS) || 5;
+  const LOCKOUT_MS = Number(process.env.LOGIN_LOCKOUT_MS) || 15 * 60 * 1000;
+
+  if (user && user.lockedUntil && user.lockedUntil > new Date()) {
+    const remaining = Math.ceil((user.lockedUntil - Date.now()) / 60000);
+    logger.warn(
+      `[sso] /api/sso/token: account locked user=${user.username} remaining=${remaining}min`,
+    );
+    return res.status(401).json({
+      error: `Account temporarily locked. Try again in ${remaining} minute${remaining !== 1 ? "s" : ""}.`,
+      code: "locked",
+    });
+  }
+
+  const recordFailedAttempt = async () => {
+    if (!user) return;
+    try {
+      user.loginAttempts = (user.loginAttempts || 0) + 1;
+      if (user.loginAttempts >= MAX_ATTEMPTS) {
+        user.lockedUntil = new Date(Date.now() + LOCKOUT_MS);
+        user.loginAttempts = 0;
+        logger.warn(
+          `[sso] /api/sso/token: account locked after ${MAX_ATTEMPTS} failures user=${user.username}`,
+        );
+      }
+      await user.save();
+    } catch (saveErr) {
+      logger.error("[sso] failed to record login attempt: %s", saveErr.message);
+    }
+  };
+
   let authOk = false;
   if (user) {
     const stored = user.password;
@@ -258,7 +316,62 @@ exports.issueTokenForSync = async (req, res) => {
 
   if (!authOk) {
     logger.info("[sso] /api/sso/token: invalid credentials for \"%s\"", username);
+    await recordFailedAttempt();
     return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  // Role gate: only back-office roles may access the sync dashboard.
+  if (!isRoleAllowedForSync(user.role)) {
+    logger.warn(
+      `[sso] /api/sso/token: role "${user.role}" not permitted for hcs-sync (user=${user.username})`,
+    );
+    return res.status(403).json({
+      error: "Your account does not have access to the sync dashboard.",
+      code: "role_denied",
+    });
+  }
+
+  // 2FA: users with TOTP enabled must supply a valid code — the sync login
+  // must not be a way to sidestep two-factor authentication.
+  if (user.totpEnabled && user.totpSecret) {
+    const totpCode = String(req.body?.totp || "").trim();
+    if (!totpCode) {
+      return res.status(401).json({
+        error: "Two-factor authentication code required.",
+        code: "totp_required",
+      });
+    }
+    let totpOk = false;
+    try {
+      const decryptedSecret = encryptionService.decrypt(user.totpSecret);
+      totpOk = speakeasy.totp.verify({
+        secret: decryptedSecret,
+        encoding: "base32",
+        token: totpCode,
+        window: 1,
+      });
+    } catch (totpErr) {
+      logger.error("[sso] TOTP verification error for \"%s\": %s", user.username, totpErr.message);
+    }
+    if (!totpOk) {
+      logger.info("[sso] /api/sso/token: invalid TOTP for \"%s\"", user.username);
+      await recordFailedAttempt();
+      return res.status(401).json({
+        error: "Invalid two-factor authentication code.",
+        code: "totp_invalid",
+      });
+    }
+  }
+
+  // Reset lockout state on successful auth.
+  if (user.loginAttempts || user.lockedUntil) {
+    try {
+      user.loginAttempts = 0;
+      user.lockedUntil = null;
+      await user.save();
+    } catch (resetErr) {
+      logger.warn("[sso] failed to reset lockout state: %s", resetErr.message);
+    }
   }
 
   const secret = process.env.HCS_SSO_JWT_SECRET;

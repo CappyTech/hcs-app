@@ -2,10 +2,13 @@ const crypto = require("crypto");
 const logger = require("./loggerService");
 const { sanitize } = logger;
 
-// Lightweight CSRF middleware (transitional mode by default).
+// Lightweight CSRF middleware (strict mode by default).
 // Generates a per-session token and validates non-idempotent methods.
-// Accepts token in body._csrf / body.csrfToken / X-CSRF-Token header / ?_csrf query.
-// STRICT_MODE=true enforces rejection; otherwise logs and allows (grace period to update forms).
+// Accepts token in body._csrf / body.csrfToken / X-CSRF-Token / X-XSRF-Token header.
+// Validation compares against the SESSION token only (timing-safe); the cookie is
+// a read-only convenience copy for JS clients that echo it back in a header.
+// STRICT_MODE=false downgrades rejection to a logged warning (transitional mode
+// for updating legacy forms).
 //
 // For multipart/form-data routes (file uploads using multer), the request body is not
 // parsed at the point this global middleware runs. Those routes must use csrfService.validate
@@ -27,6 +30,22 @@ const EXEMPT = BUILTIN_EXEMPT.concat(
     .filter(Boolean),
 );
 
+// Exempt entries match the exact path or a path-segment prefix
+// ("/api/sso/token" matches "/api/sso/token" and "/api/sso/token/x",
+// but NOT "/api/sso/tokenx").
+function isExemptPath(reqPath) {
+  return EXEMPT.some((p) => reqPath === p || reqPath.startsWith(p + "/"));
+}
+
+function tokensMatch(supplied, expected) {
+  if (typeof supplied !== "string" || typeof expected !== "string") return false;
+  if (!supplied || !expected) return false;
+  // Hash both sides so timingSafeEqual gets equal-length buffers.
+  const ha = crypto.createHash("sha256").update(supplied).digest();
+  const hb = crypto.createHash("sha256").update(expected).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+
 module.exports = function csrfService(req, res, next) {
   try {
     if (!req.session) return next();
@@ -35,16 +54,14 @@ module.exports = function csrfService(req, res, next) {
       req.session.csrfToken = crypto.randomBytes(24).toString("hex");
       createdToken = true;
     }
-    // Prefer an existing CSRF cookie (supports cases where the session cookie isn't
-    // sent back due to proxy/secure-cookie mismatches), otherwise fall back to session.
-    const cookieToken = req.cookies && req.cookies[CSRF_COOKIE_NAME];
-    res.locals.csrfToken = cookieToken || req.session.csrfToken;
+    // The session token is the single source of truth.
+    res.locals.csrfToken = req.session.csrfToken;
 
-    // Always set a CSRF cookie to support double-submit style validation.
-    // - SameSite=Lax prevents cross-site POSTs from including this cookie.
-    // - We tie "secure" to req.secure so it still works behind imperfect proxy headers.
+    // Set a readable cookie mirroring the session token so JS clients can echo
+    // it back in X-CSRF-Token. The cookie is never accepted as the expected
+    // value during validation — only the session token is.
     try {
-      res.cookie(CSRF_COOKIE_NAME, res.locals.csrfToken, {
+      res.cookie(CSRF_COOKIE_NAME, req.session.csrfToken, {
         httpOnly: false,
         sameSite: "lax",
         secure: !!req.secure,
@@ -61,8 +78,8 @@ module.exports = function csrfService(req, res, next) {
 
     if (SAFE_METHODS.has(req.method)) return next();
 
-    // Exempt explicit paths (prefix match) to unblock critical flows during debugging
-    if (EXEMPT.length && EXEMPT.some((p) => req.path.startsWith(p))) {
+    // Exempt explicit paths to unblock machine-to-machine flows
+    if (isExemptPath(req.path)) {
       logger.warn(
         `CSRF exempt path allowed method=${sanitize(req.method)} path=${sanitize(req.originalUrl)}`,
       );
@@ -98,32 +115,27 @@ module.exports.validate = function validateCsrf(req, res, next) {
 };
 
 function validateToken(req, res, next) {
+    // Token may arrive in the body or a header. The query string is NOT
+    // accepted: tokens in URLs leak via logs and Referer headers.
     const supplied =
       (req.body && (req.body._csrf || req.body.csrfToken)) ||
       req.headers["x-csrf-token"] ||
-      req.headers["x-xsrf-token"] ||
-      req.query._csrf;
+      req.headers["x-xsrf-token"];
 
-    const expectedSession = req.session && req.session.csrfToken;
-    const expectedCookie = req.cookies && req.cookies[CSRF_COOKIE_NAME];
-    if (
-      supplied &&
-      (supplied === expectedSession || supplied === expectedCookie)
-    )
-      return next();
+    const expected = req.session && req.session.csrfToken;
+    if (tokensMatch(supplied, expected)) return next();
 
     const strict = process.env.STRICT_MODE !== "false";
-    const exp = (req.session && req.session.csrfToken) || "none";
     const ob = (v) =>
       v ? `${v.slice(0, 8)}...${v.slice(-6)}(len=${v.length})` : "null";
     if (strict) {
       logger.warn(
-        `CSRF blocked: ${sanitize(req.method)} ${sanitize(req.originalUrl)} supplied=${ob(supplied)} expected=${ob(exp)} hasSession=${!!(req.sessionID)}`,
+        `CSRF blocked: ${sanitize(req.method)} ${sanitize(req.originalUrl)} supplied=${ob(supplied)} expected=${ob(expected || "none")} hasSession=${!!(req.sessionID)}`,
       );
       return res.status(403).send("Forbidden (CSRF)");
     } else {
       logger.warn(
-        `CSRF missing/mismatch (allowed transitional) for ${sanitize(req.method)} ${sanitize(req.originalUrl)} supplied=${ob(supplied)} expected=${ob(exp)}`,
+        `CSRF missing/mismatch (allowed transitional) for ${sanitize(req.method)} ${sanitize(req.originalUrl)} supplied=${ob(supplied)} expected=${ob(expected || "none")}`,
       );
       return next();
     }

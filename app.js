@@ -44,7 +44,13 @@ const main = async () => {
   const app = express();
   const http = require('http');
 
-  app.set('trust proxy', ['loopback', '127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
+  // Behind reverse proxies (Caddy/FRP): trust loopback and the Docker bridge
+  // range only. Trusting the full private-IP space would let any LAN host spoof
+  // X-Forwarded-For (defeating IP-keyed rate limiting). Override with
+  // TRUST_PROXY (comma-separated list) if your proxy sits on another range.
+  const trustProxy = (process.env.TRUST_PROXY || 'loopback,172.16.0.0/12')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+  app.set('trust proxy', trustProxy);
   app.set('view engine', 'ejs');
   app.set('views', [path.join(__dirname, 'mongoose/views')]);
   app.set('layout', path.join('tailwindcss', 'layout'));

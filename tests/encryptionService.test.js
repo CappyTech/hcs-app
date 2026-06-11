@@ -39,20 +39,68 @@ describe('encryptionService', () => {
     });
   });
 
-  describe('encrypt output format', () => {
-    it('returns base64 IV : base64 ciphertext', () => {
+  describe('encrypt output format (v2 / AES-256-GCM)', () => {
+    it('returns v2:iv:authTag:ciphertext (all base64)', () => {
       const result = encrypt('test');
-      assert.ok(result.includes(':'), 'should contain : separator');
-      const [iv, cipher] = result.split(':');
-      assert.ok(iv.length > 0, 'IV should be non-empty');
-      assert.ok(cipher.length > 0, 'ciphertext should be non-empty');
+      const parts = result.split(':');
+      assert.equal(parts.length, 4);
+      assert.equal(parts[0], 'v2');
+      assert.ok(parts[1].length > 0, 'IV should be non-empty');
+      assert.ok(parts[2].length > 0, 'auth tag should be non-empty');
+      assert.ok(parts[3].length > 0, 'ciphertext should be non-empty');
     });
 
-    it('IV decodes to 16 bytes', () => {
+    it('IV decodes to 12 bytes (GCM)', () => {
       const result = encrypt('test');
-      const ivBase64 = result.split(':')[0];
-      const ivBuf = Buffer.from(ivBase64, 'base64');
-      assert.equal(ivBuf.length, 16);
+      const ivBuf = Buffer.from(result.split(':')[1], 'base64');
+      assert.equal(ivBuf.length, 12);
+    });
+
+    it('auth tag decodes to 16 bytes', () => {
+      const result = encrypt('test');
+      const tagBuf = Buffer.from(result.split(':')[2], 'base64');
+      assert.equal(tagBuf.length, 16);
+    });
+  });
+
+  describe('legacy AES-256-CBC compatibility', () => {
+    // Re-create the legacy format so we can prove old ciphertexts still decrypt.
+    function legacyEncrypt(text) {
+      const crypto = require('node:crypto');
+      const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+      let encrypted = cipher.update(text, 'utf8', 'base64');
+      encrypted += cipher.final('base64');
+      return iv.toString('base64') + ':' + encrypted;
+    }
+
+    it('decrypts a legacy CBC ciphertext', () => {
+      const secret = 'JBSWY3DPEHPK3PXP';
+      assert.equal(decrypt(legacyEncrypt(secret)), secret);
+    });
+
+    it('decrypts legacy unicode content', () => {
+      const text = '日本語テスト 🔑';
+      assert.equal(decrypt(legacyEncrypt(text)), text);
+    });
+  });
+
+  describe('tamper detection (GCM)', () => {
+    it('throws when ciphertext is modified', () => {
+      const parts = encrypt('secret').split(':');
+      const ctBuf = Buffer.from(parts[3], 'base64');
+      ctBuf[0] ^= 0xff;
+      parts[3] = ctBuf.toString('base64');
+      assert.throws(() => decrypt(parts.join(':')), /failed/i);
+    });
+
+    it('throws when auth tag is modified', () => {
+      const parts = encrypt('secret').split(':');
+      const tagBuf = Buffer.from(parts[2], 'base64');
+      tagBuf[0] ^= 0xff;
+      parts[2] = tagBuf.toString('base64');
+      assert.throws(() => decrypt(parts.join(':')), /failed/i);
     });
   });
 

@@ -64,14 +64,14 @@ describe('csrfService', () => {
       });
     });
 
-    it('prefers cookie token over session for res.locals', (_, done) => {
+    it('uses the session token for res.locals even when a cookie is present', (_, done) => {
       const req = makeReq({
         session: { csrfToken: 'sessionTok', save: mock.fn() },
         cookies: { 'hms.csrf': 'cookieTok' },
       });
       const res = makeRes();
       csrfService(req, res, () => {
-        assert.equal(res.locals.csrfToken, 'cookieTok');
+        assert.equal(res.locals.csrfToken, 'sessionTok');
         done();
       });
     });
@@ -133,17 +133,25 @@ describe('csrfService', () => {
       );
     });
 
-    it('allows POST when query._csrf matches', (_, done) => {
+    it('rejects POST when token is only in the query string (strict)', () => {
+      process.env.STRICT_MODE = 'true';
       const token = 'tok';
+      const res = makeRes();
+      let nextCalled = false;
       csrfService(
         makeReq({ method: 'POST', session: { csrfToken: token, save: mock.fn() }, query: { _csrf: token } }),
-        makeRes(),
-        () => done()
+        res,
+        () => { nextCalled = true; }
       );
+      assert.equal(nextCalled, false);
+      assert.equal(res._status, 403);
     });
 
-    it('allows POST when token matches cookie', (_, done) => {
+    it('rejects POST when token only matches the cookie, not the session (strict)', () => {
+      process.env.STRICT_MODE = 'true';
       const token = 'cookieTok';
+      const res = makeRes();
+      let nextCalled = false;
       csrfService(
         makeReq({
           method: 'POST',
@@ -151,14 +159,31 @@ describe('csrfService', () => {
           cookies: { 'hms.csrf': token },
           body: { _csrf: token },
         }),
-        makeRes(),
-        () => done()
+        res,
+        () => { nextCalled = true; }
       );
+      assert.equal(nextCalled, false);
+      assert.equal(res._status, 403);
     });
   });
 
-  describe('transitional mode (default)', () => {
+  describe('strict mode is the default', () => {
+    it('blocks POST with missing token when STRICT_MODE is unset', () => {
+      const res = makeRes();
+      let nextCalled = false;
+      csrfService(
+        makeReq({ method: 'POST', session: { csrfToken: 'real', save: mock.fn() } }),
+        res,
+        () => { nextCalled = true; }
+      );
+      assert.equal(nextCalled, false);
+      assert.equal(res._status, 403);
+    });
+  });
+
+  describe('transitional mode (STRICT_MODE=false)', () => {
     it('allows POST with missing token and logs warning', (_, done) => {
+      process.env.STRICT_MODE = 'false';
       csrfService(
         makeReq({ method: 'POST', session: { csrfToken: 'real', save: mock.fn() } }),
         makeRes(),
@@ -187,6 +212,30 @@ describe('csrfService', () => {
       let nextCalled = false;
       csrfService(
         makeReq({ method: 'POST', session: { csrfToken: 'real', save: mock.fn() }, body: { _csrf: 'wrong' } }),
+        res,
+        () => { nextCalled = true; }
+      );
+      assert.equal(nextCalled, false);
+      assert.equal(res._status, 403);
+    });
+  });
+
+  describe('exempt paths', () => {
+    it('allows the built-in exempt path without a token', (_, done) => {
+      process.env.STRICT_MODE = 'true';
+      csrfService(
+        makeReq({ method: 'POST', path: '/api/sso/token', originalUrl: '/api/sso/token', session: { csrfToken: 'real', save: mock.fn() } }),
+        makeRes(),
+        () => done()
+      );
+    });
+
+    it('does not exempt sibling paths sharing the prefix', () => {
+      process.env.STRICT_MODE = 'true';
+      const res = makeRes();
+      let nextCalled = false;
+      csrfService(
+        makeReq({ method: 'POST', path: '/api/sso/tokenx', originalUrl: '/api/sso/tokenx', session: { csrfToken: 'real', save: mock.fn() } }),
         res,
         () => { nextCalled = true; }
       );
