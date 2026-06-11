@@ -88,19 +88,16 @@ const main = async () => {
     }
   });
 
-  // "I am stuck" — always shows the maintenance page (the upside-down heron)
-  app.get('/i-am-stuck', (req, res) => {
-    res.status(503);
-    try {
-      res.render(path.join('tailwindcss', 'maintenance'), {
-        layout: false,
-        title: 'I Am Stuck!',
-        message: 'You asked to see me stuck. Here I am, upside down!',
-      });
-    } catch (e) {
-      res.type('text/plain').send('503 - I am stuck!');
-    }
+  // Service status page — renders the current availability state in place
+  // (503 + Retry-After while degraded, redirect home when healthy).
+  // /i-am-stuck is kept as a legacy alias for old bookmarks and monitors.
+  const maintenance = require('./services/maintenanceService');
+  app.get('/service-unavailable', (req, res) => {
+    const reason = maintenance.currentReason();
+    if (!reason) return res.redirect(302, '/');
+    return maintenance.renderUnavailable(req, res, reason);
   });
+  app.get('/i-am-stuck', (req, res) => res.redirect(301, '/service-unavailable'));
 
   // Early request blocklist for common scanner/probe paths
   app.use(require('./services/requestBlocklistService'));
@@ -150,7 +147,7 @@ const main = async () => {
   // Minimal error handler for the pre-DB phase
   app.use((err, req, res, _next) => {
     logger.error('[startup] Error before DB ready: ' + (err.message || err));
-    return res.redirect(302, '/i-am-stuck');
+    return maintenance.renderUnavailable(req, res, 'starting');
   });
 
   // Start listening immediately

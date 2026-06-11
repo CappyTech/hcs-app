@@ -4,7 +4,7 @@ const logger = require('../../services/loggerService');
 const listConfig = require('../config/listControllerConfig');
 
 // Pages to skip when tracking visit history
-const SKIP_PREFIXES = ['/resources/', '/favicon.', '/healthz', '/i-am-stuck', '/__debug'];
+const SKIP_PREFIXES = ['/resources/', '/favicon.', '/healthz', '/i-am-stuck', '/service-unavailable', '/__debug'];
 const MAX_FREQUENT_PAGES = 10;
 
 // Map a path to a human-readable label

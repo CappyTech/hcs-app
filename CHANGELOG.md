@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.4.0] - 2026-06-11
+
+### Changed
+- Availability/maintenance mechanism professionalised. 503 responses are now rendered **in place** (no more 302 redirect to `/i-am-stuck`) so the requested URL is preserved, the page auto-refreshes the user back into the app on recovery, and monitors see a true `503` with a `Retry-After` header. API/XHR clients receive a JSON body (`{ error: 'service_unavailable', reason, retryAfter }`) instead of an HTML redirect.
+- Maintenance page rewritten with professional copy and three states: planned maintenance (`MAINTENANCE=true`), application starting, and temporarily unavailable. The upside-down-heron easter egg is retired.
+- `/service-unavailable` is the new status page (redirects home when the app is healthy); `/i-am-stuck` remains as a `301` legacy alias.
+- Planned maintenance mode (`MAINTENANCE=true`, now documented in `compose.env.example`) lets admin users bypass the maintenance page, matching the in-app help (which previously documented a non-existent `MAINTENANCE_MODE` variable and a bypass that didn't exist).
+- "DB unavailable" warnings from the maintenance guard are throttled to one per 30s to avoid log floods during container restarts.
+
 ## [6.3.0] - 2026-06-11
 
 ### Security

@@ -81,8 +81,9 @@ const errorHandlerService = (error, req, res, next) => {
     res.locals.flash ??= {};
     res.locals.session ??= req.session || {};
     if (statusCode === 503) {
-      // Redirect to the friendly maintenance page
-      return res.redirect(302, "/i-am-stuck");
+      // Render the maintenance page in place — preserves the requested URL
+      // (auto-refresh recovers the user) and returns a true 503 with Retry-After
+      return require("./maintenanceService").renderUnavailable(req, res, "unavailable");
     }
     res.render(path.join("tailwindcss", "error"), {
       title,

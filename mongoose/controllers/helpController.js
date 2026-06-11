@@ -1025,7 +1025,7 @@ const helpContent = [
           'To run the setup wizard for initial app-wide configuration, navigate to /setup.',
         ],
         notes: [
-          'Maintenance mode (MAINTENANCE_MODE env var) returns a 503 page to all non-admin users. Admin users can still access the app.',
+          'Maintenance mode (MAINTENANCE env var) returns a 503 maintenance page to all non-admin users. Admin users can still access the app.',
         ],
       },
       {
