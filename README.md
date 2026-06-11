@@ -64,3 +64,4 @@ scripts/                # Utilities (tailwind safelist, migrations)
 See `package.json`.
 
 - See `docs/Project-Timeline.md` for a phase-based summary of work on the `Working` branch, including links to key files and recent highlights.
+- See `docs/IMPROVEMENTS-BACKLOG.md` for the outstanding feature improvements from the June 2026 review (post-v6.5.0).
