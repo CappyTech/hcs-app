@@ -578,6 +578,46 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         }
       }
     }
+    // Duplicate detection: block (unless overridden) when a purchase with the
+    // same supplier + supplier reference already exists in the synced data —
+    // catches the same invoice arriving twice via different documents.
+    const forceDuplicate = ["true", "on", "1", "yes"].includes(
+      String(req.body?.forceDuplicate || "").toLowerCase(),
+    );
+    if (!dryRun && !forceDuplicate && draft.SupplierReference) {
+      const Purchase = mdb.REST && mdb.REST.purchase;
+      if (Purchase) {
+        const ref = String(draft.SupplierReference).trim();
+        const refRegex = new RegExp(`^${ref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+        const supplierConds = [];
+        if (draft.SupplierCode) {
+          supplierConds.push({ SupplierCode: draft.SupplierCode }, { "data.SupplierCode": draft.SupplierCode });
+        }
+        if (typeof draft.SupplierId === "number") {
+          supplierConds.push({ SupplierId: draft.SupplierId }, { "data.SupplierId": draft.SupplierId });
+        }
+        const dupQuery = {
+          $and: [
+            { $or: [{ SupplierReference: refRegex }, { "data.SupplierReference": refRegex }] },
+            ...(supplierConds.length ? [{ $or: supplierConds }] : []),
+          ],
+        };
+        const dup = await Purchase.findOne(dupQuery).select("Number data.Number").lean();
+        if (dup) {
+          const dupNumber = dup.Number ?? dup.data?.Number ?? "?";
+          logger.warn(
+            `[paperless] Duplicate blocked: supplier ref "${ref}" already on purchase #${dupNumber} (paperlessId=${paperlessId})`,
+          );
+          req.flash(
+            "error",
+            `A purchase with supplier reference "${ref}" already exists (purchase #${dupNumber}). ` +
+              'If this is genuinely a different invoice, tick "override duplicate check" and send again.',
+          );
+          return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+        }
+      }
+    }
+
     // Load allowed nominal codes (Classification: 'Purchases') to validate selections
     let allowedNominalCodes = null;
     try {

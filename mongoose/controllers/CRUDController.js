@@ -628,6 +628,14 @@ for (const namespace of ["REST", "INTERNAL"]) {
           }
           // Hook: sync parent vehicle when creating sub-model records
           await syncVehicleFromSubModel(modelName, doc);
+          // Generic per-model post-create hook (non-fatal: the record is saved)
+          if (typeof config.afterCreate === "function") {
+            try {
+              await config.afterCreate(doc, req);
+            } catch (hookErr) {
+              logger.error(`[CRUDController] afterCreate hook failed for ${modelName}: ${hookErr.message}`);
+            }
+          }
           req.flash('success', `${baseName} created successfully.`);
           res.redirect(`/${modelName}s`);
         } catch (err) {
@@ -765,6 +773,12 @@ for (const namespace of ["REST", "INTERNAL"]) {
           }
 
           // 3) actually update, dropping any undefined keys
+          // Capture the pre-update state when an afterUpdate hook wants to
+          // detect transitions (e.g. holiday request status changes)
+          let previous = null;
+          if (typeof config.afterUpdate === "function") {
+            previous = await Model.findOne({ uuid: req.params.uuid }).lean();
+          }
           let updated;
           if (config.useSave) {
             // Use findOne + save so document middleware (pre-validate hooks) fires
@@ -785,6 +799,14 @@ for (const namespace of ["REST", "INTERNAL"]) {
           }
           // Hook: sync parent vehicle when updating sub-model records
           if (updated) await syncVehicleFromSubModel(modelName, updated);
+          // Generic per-model post-update hook (non-fatal: the record is saved)
+          if (updated && typeof config.afterUpdate === "function") {
+            try {
+              await config.afterUpdate(updated, req, { previous });
+            } catch (hookErr) {
+              logger.error(`[CRUDController] afterUpdate hook failed for ${modelName}: ${hookErr.message}`);
+            }
+          }
           req.flash('success', `${baseName} updated successfully.`);
           res.redirect(`/${modelName}s`);
         } catch (err) {

@@ -880,6 +880,53 @@ module.exports = {
       manage: 'Manage employee holiday entitlement and accrual records.',
     },
   },
+  holidayRequest: {
+    title: 'Holiday Requests',
+    linkField: 'startDate',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    fieldOrder: [
+      'employeeId', 'startDate', 'endDate', 'daysRequested',
+      'leaveType', 'status', 'reason', 'reviewedBy', 'reviewedAt', 'reviewNotes',
+    ],
+    sortField: 'startDate',
+    sortOrder: -1,
+    department: ['human-resources', 'management'],
+    labelOverrides: {
+      employeeId: 'Employee',
+      startDate: 'From',
+      endDate: 'To',
+      daysRequested: 'Days',
+      leaveType: 'Type',
+      reviewedBy: 'Reviewed By',
+      reviewedAt: 'Reviewed At',
+      reviewNotes: 'Review Notes',
+    },
+    fieldTransforms: {
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      reviewedBy: {
+        fromModel: 'user',
+        matchField: '_id',
+        returnField: 'username',
+      },
+    },
+    tabsby: 'status',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'pending', label: 'Pending' },
+      { value: 'approved', label: 'Approved' },
+      { value: 'rejected', label: 'Rejected' },
+      { value: 'cancelled', label: 'Cancelled' },
+    ],
+    description: {
+      create: 'Submit a holiday request for approval.',
+      manage: 'Review, approve and reject employee holiday requests.',
+    },
+  },
   vehicle: {
     title: 'Vehicles',
     layout: 'rows',

@@ -457,6 +457,18 @@ exports.submitAttendance = async (req, res, next) => {
       data.dayRate = Number(req.body.dayRate);
     }
 
+    // Payroll lock: reject submissions for dates already in a locked/submitted run
+    const lockedRun = await attendanceService.getLockedRunForDate(data.date);
+    if (lockedRun) {
+      req.flash(
+        "error",
+        `Attendance for this date can no longer be submitted — the payroll period ` +
+          `${moment(lockedRun.periodStart).format("D MMM")} – ${moment(lockedRun.periodEnd).format("D MMM YYYY")} ` +
+          `has been ${lockedRun.status}. Contact an administrator if a correction is needed.`,
+      );
+      return res.redirect("/attendance/submit");
+    }
+
     const record = new mdb.INTERNAL.attendance(data);
     await record.save();
 
@@ -759,6 +771,17 @@ exports.inlineCreateAttendance = async (req, res, next) => {
     if (dayRate != null) data.dayRate = Number(dayRate);
     if (locationId) data.locationId = locationId;
     if (contractId) data.contractId = contractId;
+
+    // Payroll lock: admins may correct locked periods, others may not
+    if (req.user?.role !== "admin") {
+      const lockedRun = await attendanceService.getLockedRunForDate(data.date);
+      if (lockedRun) {
+        return res.status(409).json({
+          success: false,
+          error: `This date falls in a ${lockedRun.status} payroll period and can no longer be edited.`,
+        });
+      }
+    }
 
     const record = new mdb.INTERNAL.attendance(data);
     await record.save();

@@ -90,6 +90,11 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // One-time recovery codes (bcrypt hashes); each is removed when used
+    totpBackupCodes: {
+        type: [String],
+        default: []
+    },
     customPermissions: {
         departments: { type: [String], default: [] },
         models: { type: Map, of: String, default: () => new Map() },

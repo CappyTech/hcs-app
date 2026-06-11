@@ -49,6 +49,30 @@ const generateHeaders = (firstDoc, config = {}) => {
   }));
 };
 
+// CSV export for list views (?format=csv) — same columns/labels as the table
+function csvEscape(value) {
+  if (value === null || value === undefined) return "";
+  let str;
+  if (value instanceof Date) str = value.toISOString();
+  else if (typeof value === "object") str = JSON.stringify(value);
+  else str = String(value);
+  if (/[",\n\r]/.test(str)) str = '"' + str.replace(/"/g, '""') + '"';
+  return str;
+}
+
+function sendCsv(res, modelName, headers, rows) {
+  const cols = headers.filter((h) => !h.key.startsWith("__"));
+  const lines = [cols.map((h) => csvEscape(h.label)).join(",")];
+  for (const row of rows) {
+    lines.push(cols.map((h) => csvEscape(row[h.key])).join(","));
+  }
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.set("Content-Type", "text/csv; charset=utf-8");
+  res.set("Content-Disposition", `attachment; filename="${modelName}-${stamp}.csv"`);
+  // BOM so Excel opens UTF-8 correctly
+  return res.send("﻿" + lines.join("\r\n"));
+}
+
 // Apply per-model filter params from req.query (f_FieldName, f_FieldName_from/to)
 function applyFilterParams(req, filterConfigs, mongoFilter) {
   for (const fc of filterConfigs) {
@@ -123,8 +147,12 @@ function countActiveFilters(req, filterConfigs) {
       const sortField = (rawSort && /^[a-zA-Z0-9_.]+$/.test(rawSort)) ? rawSort : (config.sortField || "createdAt");
       const sortOrder = req.query.order === 'asc' ? 1 : req.query.order === 'desc' ? -1 : (config.sortOrder ?? -1);
       // Pagination & search
-      const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 500);
-      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      // CSV export: same filters/tabs/scoping, but unpaged (capped at 10k rows)
+      const exportCsv = String(req.query.format || "").toLowerCase() === "csv";
+      const limit = exportCsv
+        ? 10000
+        : Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 500);
+      const page = exportCsv ? 1 : Math.max(parseInt(req.query.page) || 1, 1);
       const rawSearch = (req.query.search || "").trim();
       const query = rawSearch;
 
@@ -302,6 +330,7 @@ function countActiveFilters(req, filterConfigs) {
         }
 
         if (!items.length) {
+          if (exportCsv) return sendCsv(res, modelName, [], []);
           return res.render(path.join("tailwindcss", "partials", "listTable"), {
             title: config.title || capitalize(modelName) + "s",
             headers: [],
@@ -468,6 +497,10 @@ function countActiveFilters(req, filterConfigs) {
           const dynamic = row && row.__links ? row.__links : null;
           return { ...(fromConfig || {}), ...(dynamic || {}) };
         };
+
+        if (exportCsv) {
+          return sendCsv(res, modelName, headers, items);
+        }
 
         res.render(path.join("tailwindcss", "partials", "listTable"), {
           title: config.title || capitalize(modelName) + "s",

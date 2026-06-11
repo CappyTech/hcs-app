@@ -3,6 +3,7 @@
 const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
 const ropa = require("../config/ropaConfig");
+const jobScheduler = require("../services/jobSchedulerService");
 
 const MODEL_LABEL = {
   purchase: (doc) =>
@@ -199,4 +200,116 @@ exports.viewDpiaTemplate = (_req, res) => {
   res.render(path.join("tailwindcss", "admin", "gdprDpiaTemplate"), {
     title: "DPIA Template",
   });
+};
+
+/** GET /admin/jobs — background job status dashboard */
+exports.getJobs = async (req, res, next) => {
+  try {
+    // Recent notification outbox summary alongside the jobs that feed it
+    const Notification = mdb.INTERNAL.notification;
+    const outbox = {
+      pending: await Notification.countDocuments({ status: "pending" }),
+      sent24h: await Notification.countDocuments({ status: "sent", sentAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }),
+      failed: await Notification.countDocuments({ status: "failed" }),
+    };
+    res.render(path.join("tailwindcss", "admin", "jobs"), {
+      title: "Background Jobs",
+      jobs: jobScheduler.getStatus(),
+      outbox,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** GET /admin/security-events — paginated security audit trail */
+exports.getSecurityEvents = async (req, res, next) => {
+  try {
+    const SecurityEvent = mdb.INTERNAL.securityEvent;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const type = req.query.type || null;
+    const pageSize = 50;
+
+    const query = type ? { type } : {};
+    const [events, total, types] = await Promise.all([
+      SecurityEvent.find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .lean(),
+      SecurityEvent.countDocuments(query),
+      SecurityEvent.distinct("type"),
+    ]);
+
+    res.render(path.join("tailwindcss", "admin", "securityEvents"), {
+      title: "Security Events",
+      events,
+      total,
+      types: types.sort(),
+      filterType: type,
+      page,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** GET /admin/maintenance — runtime maintenance mode controls */
+exports.getMaintenance = (req, res) => {
+  const configService = require("../../services/configService");
+  const maintenanceService = require("../../services/maintenanceService");
+  res.render(path.join("tailwindcss", "admin", "maintenance"), {
+    title: "Maintenance Mode",
+    active: maintenanceService.isMaintenanceOn(),
+    notice: configService.get("MAINTENANCE_NOTICE", ""),
+    envLocked: configService.isFromStartupEnv("MAINTENANCE"),
+  });
+};
+
+/** POST /admin/maintenance — toggle maintenance mode / set the notice banner */
+exports.postMaintenance = (req, res) => {
+  const configService = require("../../services/configService");
+  if (configService.isFromStartupEnv("MAINTENANCE")) {
+    req.flash("error", "MAINTENANCE is set by the deployment environment and cannot be changed here.");
+    return res.redirect("/admin/maintenance");
+  }
+  const maintenanceService = require("../../services/maintenanceService");
+  let active;
+  if (req.body.action === "enable") active = true;
+  else if (req.body.action === "disable") active = false;
+  else active = maintenanceService.isMaintenanceOn(); // 'save' keeps current state
+  const notice = String(req.body.notice || "").trim().slice(0, 300);
+  // Persist for restarts and sync the running process (bootstrap() copies
+  // file values into process.env at startup, so both must agree)
+  configService.save({ MAINTENANCE: active ? "true" : "false", MAINTENANCE_NOTICE: notice });
+  process.env.MAINTENANCE = active ? "true" : "false";
+  process.env.MAINTENANCE_NOTICE = notice;
+  req.flash(
+    "success",
+    active
+      ? "Maintenance mode is ON — non-admin users now see the maintenance page."
+      : notice
+        ? "Maintenance mode is off. The notice banner is shown to all users."
+        : "Maintenance mode is off and no banner is shown.",
+  );
+  res.redirect("/admin/maintenance");
+};
+
+/** POST /admin/jobs/:name/run — manually trigger a job */
+exports.runJob = async (req, res) => {
+  const name = req.params.name;
+  try {
+    const outcome = await jobScheduler.runNow(name);
+    if (outcome.skipped) {
+      req.flash("error", `Job "${name}" is already running — manual run skipped.`);
+    } else if (outcome.ok) {
+      req.flash("success", `Job "${name}" completed.`);
+    } else {
+      req.flash("error", `Job "${name}" failed: ${outcome.error}`);
+    }
+  } catch (err) {
+    req.flash("error", err.message);
+  }
+  res.redirect("/admin/jobs");
 };

@@ -9,6 +9,7 @@ const encryptionService = require("../../services/encryptionService");
 const { getClientIp } = require("../../services/ipService");
 const emailService = require("../../services/emailService");
 const smsService = require("../../services/smsService");
+const auditLog = require("../../services/auditLogService");
 
 function hasCookie(req, cookieName) {
   try {
@@ -281,9 +282,18 @@ exports.loginUser = async (req, res) => {
           user.lockedUntil = new Date(Date.now() + LOCKOUT_MS);
           user.loginAttempts = 0;
           logger.warn(`[login] account locked after ${MAX_ATTEMPTS} failures user=${user.username} ip=${ip}`);
+          auditLog.record("account_locked", req, {
+            userId: user._id, username: user.username,
+            meta: { maxAttempts: MAX_ATTEMPTS, lockedUntil: user.lockedUntil },
+          });
         }
         await user.save();
       }
+      auditLog.record("login_failed", req, {
+        userId: user?._id ?? null,
+        username: user?.username ?? String(usernameOrEmail).slice(0, 100),
+        meta: { knownUser: !!user },
+      });
       req.flash("error", "Invalid username or password.");
       return res.redirect(
         "/user/login" + (next ? "?next=" + encodeURIComponent(next) : ""),
@@ -296,6 +306,10 @@ exports.loginUser = async (req, res) => {
       user.lockedUntil = null;
       await user.save();
     }
+    auditLog.record("login_success", req, {
+      userId: user._id, username: user.username,
+      meta: { twoFactor: !!user.totpEnabled },
+    });
 
     const sessionData = {
       id: user._id.toString(),
@@ -375,6 +389,10 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.logoutUser = (req, res) => {
+  auditLog.record("logout", req, {
+    userId: req.user?._id ?? null,
+    username: req.user?.username ?? req.session?.user?.username ?? null,
+  });
   req.session.destroy((err) => {
     if (err) {
       logger.error("Error logging out: " + err.message);
@@ -553,6 +571,9 @@ exports.sendPasswordReset = async (req, res) => {
         );
       }
       logger.info(`Password reset email issued for ${user.email}`);
+      auditLog.record("password_reset_requested", req, {
+        userId: user._id, username: user.username, meta: { channel: "email" },
+      });
     } else {
       logger.info(
         `Password reset requested for unknown identifier: ${maskIdentifier(identifier)}`,
@@ -723,6 +744,9 @@ exports.resetPassword = async (req, res) => {
     await user.save();
 
     logger.info(`Password reset successfully for ${user.email}`);
+    auditLog.record("password_reset_completed", req, {
+      userId: user._id, username: user.username,
+    });
     req.flash(
       "success",
       "Your password has been reset. You can now log in with your new password.",

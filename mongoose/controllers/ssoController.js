@@ -325,6 +325,9 @@ exports.issueTokenForSync = async (req, res) => {
     logger.warn(
       `[sso] /api/sso/token: role "${user.role}" not permitted for hcs-sync (user=${user.username})`,
     );
+    require("../../services/auditLogService").record("sso_token_denied", req, {
+      userId: user._id, username: user.username, meta: { role: user.role, reason: "role_denied" },
+    });
     return res.status(403).json({
       error: "Your account does not have access to the sync dashboard.",
       code: "role_denied",
@@ -403,5 +406,8 @@ exports.issueTokenForSync = async (req, res) => {
   );
 
   logger.info("[sso] /api/sso/token: issued token for user \"%s\"", user.username);
+  require("../../services/auditLogService").record("sso_token_issued", req, {
+    userId: user._id, username: user.username, meta: { ttlSec },
+  });
   return res.json({ token, expiresIn: ttlSec });
 };

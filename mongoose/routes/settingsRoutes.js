@@ -14,6 +14,7 @@ router.get('/admin/connections/paperless', authService.ensureRoles('admin'), con
 router.post('/admin/connections/paperless', authService.ensureRoles('admin'), connSettings.postPaperlessSettings);
 router.get('/admin/connections/sms', authService.ensureRoles('admin'), connSettings.getSmsSettings);
 router.post('/admin/connections/sms', authService.ensureRoles('admin'), connSettings.postSmsSettings);
+router.post('/admin/connections/test/:service', authService.ensureRoles('admin'), connSettings.testConnection);
 
 // All authenticated users can access their own profile/account
 router.get(
@@ -46,6 +47,11 @@ router.post(
   "/user/account/disable-totp",
   authService.ensureAnyRole(),
   settings.disableTotp,
+);
+router.post(
+  "/user/account/regenerate-backup-codes",
+  authService.ensureAnyRole(),
+  settings.regenerateBackupCodes,
 );
 router.post(
   "/user/account/change-password",

@@ -1,5 +1,6 @@
 const logger = require("./loggerService");
 const mdb = require("../mongoose/services/mongooseDatabaseService");
+const configService = require("./configService");
 const path = require("path");
 
 /**
@@ -99,9 +100,14 @@ function renderUnavailable(req, res, reasonKey = "unavailable") {
   );
 }
 
+/** Planned-maintenance flag — runtime-toggleable via /admin/maintenance. */
+function isMaintenanceOn() {
+  return String(configService.get("MAINTENANCE", "false")) === "true";
+}
+
 /** Current availability reason, or null when the app is fully available. */
 function currentReason() {
-  if (process.env.MAINTENANCE === "true") return "maintenance";
+  if (isMaintenanceOn()) return "maintenance";
   const state = dbState();
   return state === "ready" ? null : state;
 }
@@ -113,8 +119,8 @@ module.exports = function maintenanceService(req, res, next) {
       return next();
     }
 
-    // Planned maintenance via env flag — admins may continue working
-    if (process.env.MAINTENANCE === "true") {
+    // Planned maintenance (env var or runtime toggle) — admins may continue working
+    if (isMaintenanceOn()) {
       if (req.user && req.user.role === "admin") return next();
       return renderUnavailable(req, res, "maintenance");
     }
@@ -146,3 +152,4 @@ module.exports = function maintenanceService(req, res, next) {
 
 module.exports.renderUnavailable = renderUnavailable;
 module.exports.currentReason = currentReason;
+module.exports.isMaintenanceOn = isMaintenanceOn;

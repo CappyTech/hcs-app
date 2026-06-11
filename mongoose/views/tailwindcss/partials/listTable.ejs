@@ -93,6 +93,21 @@
               <% if (a.icon) { %><i class="<%= a.icon %>"></i><% } %> <%= a.label %>
             </a>
           <% }) %>
+          <%
+            // Export the current view (search/tab/filters preserved) as CSV
+            const _csvParams = new URLSearchParams();
+            if (typeof reqQuery !== 'undefined' && reqQuery) {
+              for (const [k, v] of Object.entries(reqQuery)) {
+                if (k === 'page' || k === 'limit' || k === 'format' || v === undefined || v === '') continue;
+                _csvParams.set(k, v);
+              }
+            }
+            _csvParams.set('format', 'csv');
+          %>
+          <a href="?<%= _csvParams.toString() %>" title="Download the current view as CSV"
+             class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg shadow-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <i class="bi bi-download"></i> CSV
+          </a>
         </div>
         <div class="flex flex-wrap items-center gap-4">
       <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>

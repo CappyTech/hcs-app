@@ -39,4 +39,34 @@ router.get(
   ctrl.viewDpiaTemplate,
 );
 
+router.get(
+  "/admin/jobs",
+  authService.ensureRole("admin"),
+  ctrl.getJobs,
+);
+
+router.get(
+  "/admin/security-events",
+  authService.ensureRole("admin"),
+  ctrl.getSecurityEvents,
+);
+
+router.get(
+  "/admin/maintenance",
+  authService.ensureRole("admin"),
+  ctrl.getMaintenance,
+);
+
+router.post(
+  "/admin/maintenance",
+  authService.ensureRole("admin"),
+  ctrl.postMaintenance,
+);
+
+router.post(
+  "/admin/jobs/:name/run",
+  authService.ensureRole("admin"),
+  ctrl.runJob,
+);
+
 module.exports = router;

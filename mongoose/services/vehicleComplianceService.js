@@ -32,6 +32,7 @@ const COMPLIANCE_FIELDS = [
  */
 async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } = {}) {
   const stats = { created: 0, skipped: 0, errors: 0 };
+  const newAlerts = []; // newly flagged items for the email summary
 
   const Vehicle = mdb.INTERNAL?.vehicle;
   const User = mdb.INTERNAL?.user;
@@ -73,6 +74,7 @@ async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } 
       const title = `[${prefix}] ${label} – ${vehicle.registrationNumber} (${vehicle.make} ${vehicle.model})`;
       const description = `Vehicle ${vehicle.registrationNumber} ${label} ${suffix} on ${expiryDate.toISOString().slice(0, 10)}. Please renew or update the record.`;
 
+      let createdForVehicle = false;
       for (const admin of adminUsers) {
         try {
           // Idempotency: check if an uncompleted task with same title already exists
@@ -94,11 +96,41 @@ async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } 
             dueDate: expiryDate
           });
           stats.created++;
+          createdForVehicle = true;
         } catch (err) {
           logger.error(`[vehicleComplianceService] Failed to create task for ${vehicle.registrationNumber} / ${label}: ${err.message}`);
           stats.errors++;
         }
       }
+
+      if (createdForVehicle) {
+        newAlerts.push(`${vehicle.registrationNumber} (${vehicle.make} ${vehicle.model}) — ${label} ${suffix}`);
+      }
+    }
+  }
+
+  // Email a daily summary of newly flagged items (deduped: max one per day)
+  if (newAlerts.length > 0) {
+    try {
+      const notificationService = require('../../services/notificationService');
+      const today = new Date().toISOString().slice(0, 10);
+      await notificationService.enqueueForRoles(['admin'], {
+        subject: `Fleet compliance: ${newAlerts.length} item(s) need attention`,
+        html: notificationService.wrapTemplate({
+          heading: 'Fleet Compliance Alerts',
+          bodyLines: [
+            'The following vehicle compliance items are expired or expiring soon:',
+            ...newAlerts,
+          ],
+          ctaText: 'Open Fleet Management',
+          ctaUrl: `${notificationService.baseUrl()}/fleet`,
+        }),
+        text: ['Vehicle compliance items needing attention:', ...newAlerts].join('\n'),
+        category: 'fleet',
+        dedupeKey: `fleet-compliance-${today}`,
+      });
+    } catch (err) {
+      logger.error(`[vehicleComplianceService] Failed to queue alert email: ${err.message}`);
     }
   }
 

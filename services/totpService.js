@@ -44,7 +44,50 @@ const generateQRCode = async (secret, user) => {
   return await qrcode.toDataURL(otpAuthUrl); // Generate a QR code as a Base64 data URL
 };
 
+/**
+ * Generate one-time 2FA recovery codes.
+ * Returns the plaintext codes (shown to the user exactly once) and bcrypt
+ * hashes for storage on user.totpBackupCodes.
+ *
+ * @param {number} [count=10]
+ * @returns {Promise<{ plain: string[], hashed: string[] }>}
+ */
+const generateBackupCodes = async (count = 10) => {
+  const crypto = require("crypto");
+  const bcrypt = require("bcrypt");
+  const plain = Array.from({ length: count }, () => {
+    // 10 hex chars grouped as XXXXX-XXXXX for readability
+    const hex = crypto.randomBytes(5).toString("hex").toUpperCase();
+    return `${hex.slice(0, 5)}-${hex.slice(5)}`;
+  });
+  const hashed = await Promise.all(plain.map((c) => bcrypt.hash(normalizeBackupCode(c), 10)));
+  return { plain, hashed };
+};
+
+/** Canonical form for comparing backup codes (case/dash/space-insensitive). */
+const normalizeBackupCode = (input) =>
+  String(input || "").replace(/[\s-]/g, "").toUpperCase();
+
+/**
+ * Check `input` against the stored hashes; on a match, consume it.
+ * @returns {Promise<{ ok: boolean, remaining: string[] }>} remaining hashes after use
+ */
+const verifyAndConsumeBackupCode = async (input, hashedCodes = []) => {
+  const bcrypt = require("bcrypt");
+  const normalized = normalizeBackupCode(input);
+  if (normalized.length < 8) return { ok: false, remaining: hashedCodes };
+  for (let i = 0; i < hashedCodes.length; i++) {
+    if (await bcrypt.compare(normalized, hashedCodes[i])) {
+      return { ok: true, remaining: hashedCodes.filter((_, idx) => idx !== i) };
+    }
+  }
+  return { ok: false, remaining: hashedCodes };
+};
+
 module.exports = {
   generateQRCode,
   generateTOTPSecret,
+  generateBackupCodes,
+  normalizeBackupCode,
+  verifyAndConsumeBackupCode,
 };

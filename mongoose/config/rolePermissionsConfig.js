@@ -80,6 +80,7 @@ const roleModelAccess = {
     attendance:       'r:own,l:own,c:own',
     employee:         'r:own',
     employeeHoliday:  'r:own,l:own',
+    holidayRequest:   'c:own,r:own,l:own',
     vehicle:          'r:own,l:own',
     vehicleFuelLog:   'r:own,l:own',
     vehicleMileageLog:'r:own,l:own',
@@ -116,6 +117,7 @@ const ownershipFields = {
       attendance:        'employeeId',
       employee:          '_id',
       employeeHoliday:   'employeeId',
+      holidayRequest:    'employeeId',
       vehicle:           'employeeId',
       vehicleFuelLog:    'employeeId',
       vehicleMileageLog: 'employeeId',
@@ -199,6 +201,15 @@ const routeAccess = {
 
   // Logs
   '/logs':                ['admin'],
+
+  // Background jobs dashboard
+  '/admin/jobs':          ['admin'],
+
+  // Maintenance mode controls
+  '/admin/maintenance':   ['admin'],
+
+  // Security audit trail
+  '/admin/security-events': ['admin'],
 
   // Files
   '/files':               ['admin'],

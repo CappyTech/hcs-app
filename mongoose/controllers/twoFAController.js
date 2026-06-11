@@ -55,12 +55,32 @@ exports.verify2FA = async (req, res) => {
 
     const decryptedSecret = encryptionService.decrypt(user.totpSecret);
 
-    const isValid = speakeasy.totp.verify({
+    let isValid = speakeasy.totp.verify({
       secret: decryptedSecret,
       encoding: "base32",
       token: code,
       window: 1,
     });
+
+    // Fallback: accept a one-time backup code (consumed on use)
+    if (!isValid && Array.isArray(user.totpBackupCodes) && user.totpBackupCodes.length) {
+      const totpService = require("../../services/totpService");
+      const result = await totpService.verifyAndConsumeBackupCode(code, user.totpBackupCodes);
+      if (result.ok) {
+        user.totpBackupCodes = result.remaining;
+        await user.save();
+        isValid = true;
+        logger.warn(`[2fa] Backup code used by ${user.username} — ${result.remaining.length} remaining`);
+        require("../../services/auditLogService").record("login_success", req, {
+          userId: user._id, username: user.username,
+          meta: { twoFactor: true, backupCodeUsed: true, backupCodesRemaining: result.remaining.length },
+        });
+        req.flash(
+          "success",
+          `Backup code accepted — ${result.remaining.length} code${result.remaining.length === 1 ? "" : "s"} remaining. Consider regenerating codes from Account Settings.`,
+        );
+      }
+    }
 
     if (!isValid) {
       req.flash("error", "Invalid 2FA code. Please try again.");

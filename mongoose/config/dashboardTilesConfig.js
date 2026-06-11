@@ -13,6 +13,27 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    BackgroundJobs: {
+        title: 'Background Jobs',
+        description: 'Monitor scheduled tasks, notification outbox, and trigger jobs manually.',
+        link: '/admin/jobs',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    SecurityEvents: {
+        title: 'Security Events',
+        description: 'Audit trail of logins, lockouts, password and 2FA changes.',
+        link: '/admin/security-events',
+        department: ['admin'],
+        buttonClass: 'bg-red-700 hover:bg-red-800'
+    },
+    MaintenanceMode: {
+        title: 'Maintenance Mode',
+        description: 'Take the app offline for non-admins or announce a maintenance window.',
+        link: '/admin/maintenance',
+        department: ['admin'],
+        buttonClass: 'bg-amber-700 hover:bg-amber-800'
+    },
     AdminSettings: {
         title: 'Settings',
         description: 'Manage your account settings, password, and preferences.',
@@ -214,6 +235,13 @@ module.exports = {
         title: 'Holiday Management',
         description: 'Manage holiday accrual, requests and approvals.',
         link: '/holiday',
+        department: ['human-resources', 'management'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    HolidayRequests: {
+        title: 'Holiday Requests',
+        description: 'Review, approve and reject employee holiday requests.',
+        link: '/holidayRequests',
         department: ['human-resources', 'management'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },

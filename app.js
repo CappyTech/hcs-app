@@ -305,6 +305,10 @@ const main = async () => {
       }
       res.locals.contactEmail = configService.get('SUPPORTEMAIL');
       res.locals.companyName = configService.get('COMPANY_NAME', '');
+      // Maintenance banner: pre-announcement notice + active flag (admins
+      // bypass the maintenance page, so remind them it's on)
+      res.locals.maintenanceActive = maintenance.isMaintenanceOn();
+      res.locals.maintenanceNotice = String(configService.get('MAINTENANCE_NOTICE', '') || '').trim();
       res.locals.icoNumber = configService.get('ICO_NUMBER', '[ICO_NUMBER not set]');
       res.locals.lastfetched = null;
       res.locals.session = null;
@@ -383,9 +387,9 @@ const main = async () => {
     setupWebSocket(io, sessionService);
 
     // Start periodic background services
-    try { require('./mongoose/services/sessionCleanupService').start(); } catch (e) { logger.warn('Session cleanup start failed: ' + e.message); }
-    try { require('./mongoose/services/vehicleComplianceService').start(); } catch (e) { logger.warn('Vehicle compliance service start failed: ' + e.message); }
-    try { require('./mongoose/services/ocrOrphanService').start(); } catch (e) { logger.warn('OCR orphan service start failed: ' + e.message); }
+    // All periodic background work runs through the central job scheduler
+    // (status + manual trigger at /admin/jobs)
+    try { require('./mongoose/services/jobRegistry').start(); } catch (e) { logger.warn('Job scheduler start failed: ' + e.message); }
 
     logger.info(`[startup] Application fully ready in ${process.env.NODE_ENV} on ${host}:${port}`);
 

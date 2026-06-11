@@ -1,0 +1,75 @@
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <i class="bi bi-shield-exclamation text-red-500"></i> Security Events
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Audit trail of authentication and account-security events. Retained for ~13 months. <%= total %> event(s)<%= filterType ? ` of type ${filterType}` : '' %>.
+      </p>
+    </div>
+    <a href="/admin" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Admin</a>
+  </div>
+
+  <!-- Type filter -->
+  <div class="flex flex-wrap gap-2">
+    <a href="/admin/security-events"
+       class="px-3 py-1 rounded-full text-xs font-medium transition <%= !filterType ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' %>">All</a>
+    <% types.forEach((t) => { %>
+      <a href="/admin/security-events?type=<%= encodeURIComponent(t) %>"
+         class="px-3 py-1 rounded-full text-xs font-medium font-mono transition <%= filterType === t ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' %>"><%= t %></a>
+    <% }) %>
+  </div>
+
+  <!-- Events table -->
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow border border-gray-200 dark:border-gray-700 overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-200 dark:border-gray-700 text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <th class="px-4 py-3">When</th>
+          <th class="px-4 py-3">Event</th>
+          <th class="px-4 py-3">User</th>
+          <th class="px-4 py-3">Actor</th>
+          <th class="px-4 py-3">IP</th>
+          <th class="px-4 py-3">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!events.length) { %>
+          <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400 dark:text-gray-500">No events recorded yet.</td></tr>
+        <% } %>
+        <% events.forEach((e) => {
+             const danger = ['login_failed', 'account_locked', 'sso_token_denied'].includes(e.type);
+             const warn = ['password_reset_requested', 'totp_disabled', 'role_changed'].includes(e.type); %>
+          <tr class="border-b border-gray-100 dark:border-gray-800">
+            <td class="px-4 py-2 whitespace-nowrap text-gray-600 dark:text-gray-400"><%= new Date(e.createdAt).toLocaleString('en-GB') %></td>
+            <td class="px-4 py-2">
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium font-mono <%= danger ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : warn ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' %>">
+                <%= e.type %>
+              </span>
+            </td>
+            <td class="px-4 py-2 text-gray-900 dark:text-gray-100"><%= e.username || '—' %></td>
+            <td class="px-4 py-2 text-gray-600 dark:text-gray-400"><%= e.actorName && e.actorName !== e.username ? e.actorName : '—' %></td>
+            <td class="px-4 py-2 font-mono text-xs text-gray-500 dark:text-gray-400"><%= e.ip || '—' %></td>
+            <td class="px-4 py-2 font-mono text-xs text-gray-500 dark:text-gray-400 break-all"><%= e.meta && Object.keys(e.meta).length ? JSON.stringify(e.meta) : '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <% if (totalPages > 1) { %>
+    <div class="flex items-center justify-center gap-2 text-sm">
+      <% const qs = filterType ? `&type=${encodeURIComponent(filterType)}` : ''; %>
+      <% if (page > 1) { %>
+        <a href="/admin/security-events?page=<%= page - 1 %><%= qs %>" class="px-3 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition">← Prev</a>
+      <% } %>
+      <span class="text-gray-500 dark:text-gray-400">Page <%= page %> of <%= totalPages %></span>
+      <% if (page < totalPages) { %>
+        <a href="/admin/security-events?page=<%= page + 1 %><%= qs %>" class="px-3 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition">Next →</a>
+      <% } %>
+    </div>
+  <% } %>
+</div>

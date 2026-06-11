@@ -25,6 +25,15 @@ module.exports = {
     title: 'Attendance',
     readOnly: ['uuid', 'createdAt'],
     hideFields: ['_id', '__v'],
+    // Payroll lock: non-admins cannot create records inside a locked/submitted run
+    beforeCreate: async (cleanedData, req) => {
+      if (req.user?.role === 'admin') return;
+      const { getLockedRunForDate } = require('../services/attendanceService');
+      const lockedRun = await getLockedRunForDate(cleanedData.date);
+      if (lockedRun) {
+        throw new Error(`This date falls in a ${lockedRun.status} payroll period and can no longer be edited.`);
+      }
+    },
     fieldOrder: [
       'date', 'type', 'status',
       'employeeId', 'subcontractorId',
@@ -337,7 +346,23 @@ module.exports = {
   user: {
     title: 'User',
     readOnly: ['uuid', 'createdAt'],
-    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models', 'customPermissions.routes'],
+    // Security audit: record role/email changes made through the admin CRUD
+    afterUpdate: async (updated, req, { previous }) => {
+      const auditLog = require('../../services/auditLogService');
+      if (previous && previous.role !== updated.role) {
+        auditLog.record('role_changed', req, {
+          userId: updated._id, username: updated.username,
+          meta: { from: previous.role, to: updated.role },
+        });
+      }
+      if (previous && previous.email !== updated.email) {
+        auditLog.record('email_changed', req, {
+          userId: updated._id, username: updated.username,
+          meta: { from: previous.email, to: updated.email },
+        });
+      }
+    },
+    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models', 'customPermissions.routes'],
     fieldOrder: [
       'username', 'email', 'phoneNumber', 'emailVerified', 'role',
       'employeeId', 'subcontractorId', 'clientId',
@@ -468,6 +493,39 @@ module.exports = {
     referenceFilters: {
       employeeId: { status: 'active' }
     }
+  },
+  holidayRequest: {
+    readOnly: ['uuid', 'createdAt', 'reviewedBy', 'reviewedAt'],
+    useSave: true, // run document middleware (date-order validation)
+    validators: {
+      employeeId: v => typeof v === 'string' && v.length > 0,
+      startDate: v => !isNaN(Date.parse(v)),
+      endDate: v => !isNaN(Date.parse(v)),
+      daysRequested: v => !isNaN(parseFloat(v)) && parseFloat(v) >= 0.5,
+    },
+    middleware: {
+      read: ['ensureRoles:admin,employee'],
+      create: ['ensureRoles:admin,employee'],
+      update: ['ensureRole:admin'],
+      delete: ['ensureRole:admin'],
+    },
+    ownershipFields: {
+      employee: 'employeeId',
+    },
+    referenceFilters: {
+      employeeId: { status: 'active' }
+    },
+    // Employees may only submit for themselves, always starting as pending
+    beforeCreate: async (cleanedData, req) => {
+      if (req.user?.role === 'employee') {
+        cleanedData.employeeId = req.user.employeeId;
+        cleanedData.status = 'pending';
+      }
+    },
+    afterCreate: (doc) =>
+      require('../services/holidayRequestService').notifyNewRequest(doc),
+    afterUpdate: (updated, req, { previous }) =>
+      require('../services/holidayRequestService').handleStatusChange(updated, previous, req),
   },
   vehicle: {
     readOnly: ['uuid', 'createdAt'],

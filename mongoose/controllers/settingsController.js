@@ -10,6 +10,7 @@ const totpService = require("../../services/totpService");
 const rbac = require("../config/rolePermissionsConfig");
 const crypto = require("crypto");
 const emailService = require("../../services/emailService");
+const auditLog = require("../../services/auditLogService");
 const { validationResult, body } = require("express-validator");
 
 exports.getProfilePage = async (req, res, next) => {
@@ -398,6 +399,9 @@ exports.changePassword = async (req, res) => {
     logger.info(
       `Password changed successfully for user ${req.session.user.id}`,
     );
+    auditLog.record("password_changed", req, {
+      userId: user._id, username: user.username,
+    });
     req.flash("success", "Password changed successfully.");
     res.redirect("/user/account");
   } catch (error) {
@@ -436,14 +440,24 @@ exports.verifyAndEnableTotp = async (req, res) => {
     }
 
     user.totpEnabled = true;
+
+    // Issue one-time recovery codes (shown exactly once on the next page)
+    const { plain, hashed } = await totpService.generateBackupCodes();
+    user.totpBackupCodes = hashed;
     await user.save();
 
     logger.info(`TOTP enabled for user ${req.session.user.id}`);
+    auditLog.record("totp_enabled", req, {
+      userId: user._id, username: user.username,
+    });
     req.flash(
       "success",
       "Two-Factor Authentication has been enabled successfully.",
     );
-    res.redirect("/user/account");
+    res.render(path.join("tailwindcss", "user", "backupCodes"), {
+      title: "Your 2FA Backup Codes",
+      codes: plain,
+    });
   } catch (error) {
     logger.error(`Error enabling TOTP: ${error.message}`);
     req.flash("error", "Failed to enable Two-Factor Authentication.");
@@ -479,14 +493,57 @@ exports.disableTotp = async (req, res) => {
 
     user.totpEnabled = false;
     user.totpSecret = undefined;
+    user.totpBackupCodes = [];
     await user.save();
 
     logger.info(`TOTP disabled for user ${req.session.user.id}`);
+    auditLog.record("totp_disabled", req, {
+      userId: user._id, username: user.username,
+    });
     req.flash("success", "Two-Factor Authentication has been disabled.");
     res.redirect("/user/account");
   } catch (error) {
     logger.error(`Error disabling TOTP: ${error.message}`);
     req.flash("error", "Failed to disable Two-Factor Authentication.");
+    res.redirect("/user/account");
+  }
+};
+
+exports.regenerateBackupCodes = async (req, res) => {
+  try {
+    const { confirmPassword } = req.body;
+    if (!confirmPassword) {
+      req.flash("error", "Please enter your password to regenerate backup codes.");
+      return res.redirect("/user/account");
+    }
+
+    const user = await mdb.INTERNAL.user.findById(req.session.user.id);
+    if (!user || !user.totpEnabled) {
+      req.flash("error", "Two-Factor Authentication is not enabled.");
+      return res.redirect("/user/account");
+    }
+
+    const isMatch = await bcrypt.compare(confirmPassword, user.password);
+    if (!isMatch) {
+      req.flash("error", "Incorrect password. Backup codes were not regenerated.");
+      return res.redirect("/user/account");
+    }
+
+    const { plain, hashed } = await totpService.generateBackupCodes();
+    user.totpBackupCodes = hashed;
+    await user.save();
+
+    auditLog.record("backup_codes_regenerated", req, {
+      userId: user._id, username: user.username,
+    });
+    req.flash("success", "New backup codes generated — previous codes no longer work.");
+    res.render(path.join("tailwindcss", "user", "backupCodes"), {
+      title: "Your 2FA Backup Codes",
+      codes: plain,
+    });
+  } catch (error) {
+    logger.error(`Error regenerating backup codes: ${error.message}`);
+    req.flash("error", "Failed to regenerate backup codes.");
     res.redirect("/user/account");
   }
 };

@@ -715,6 +715,23 @@ const fetchVehicleDeploymentsForWeek = async (start, end) => {
   }
 };
 
+/**
+ * Payroll period locking: once a payroll run covering a date is locked or
+ * submitted, non-admin attendance writes for that date are rejected so paid
+ * periods can't be silently retro-edited. Returns the blocking run or null.
+ */
+const getLockedRunForDate = async (date) => {
+  const PayrollRun = mdb.INTERNAL?.payrollRun;
+  if (!PayrollRun || !date) return null;
+  const d = new Date(date);
+  if (isNaN(d)) return null;
+  return PayrollRun.findOne({
+    status: { $in: ['locked', 'submitted'] },
+    periodStart: { $lte: d },
+    periodEnd: { $gte: d },
+  }).select('taxYear taxMonth taxWeek frequency status periodStart periodEnd').lean();
+};
+
 module.exports = {
   getAttendanceForDay,
   fetchAttendanceForWeek,
@@ -722,5 +739,6 @@ module.exports = {
   groupAttendanceByPerson,
   fetchStatementsForWeek,
   fetchAssignmentsForWeek,
-  fetchVehicleDeploymentsForWeek
+  fetchVehicleDeploymentsForWeek,
+  getLockedRunForDate
 };

@@ -2,6 +2,30 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.5.0] - 2026-06-11
+
+### Added
+- **Central job scheduler** (`jobSchedulerService` + `jobRegistry`): all periodic work (session cleanup, vehicle compliance, OCR orphans, plus the new jobs below) now runs through one scheduler with per-job status, concurrency guards, and failure tracking. New admin page **/admin/jobs** shows status and lets admins trigger any job manually.
+- **Notification service** (`notificationService` + INTERNAL `notification` outbox model): features enqueue emails into a persistent outbox; a worker job delivers them with exponential-backoff retry (5 attempts), so SMTP outages can't lose messages. Dedupe keys make recurring reminders idempotent. Outbox health (pending/sent/failed) is shown on /admin/jobs.
+- **Holiday request workflow**: new `holidayRequest` model (request → approve/reject with reviewer trail), wired into the generic CRUD UI at /holidayRequests with status tabs. Admins are emailed on new requests; employees are emailed on decisions. Approving annual leave updates `employeeHoliday.takenDays` for the covering period (and reverses if un-approved). Employees can submit/view their own requests (`c:own,r:own,l:own`).
+- **CIS return reminders**: emails admin/accountant users 7 and 2 days before each CIS monthly-return deadline (19th), with the tax period spelled out.
+- **GDPR deadline tracking**: daily job alerts admins when an open data-subject request enters the 7-day warning window or passes its 30-day statutory deadline (one email per request per stage).
+- **Fleet compliance emails**: the vehicle compliance check now also emails admins a daily summary of newly flagged MOT/insurance/road-tax items (in-app tasks unchanged).
+- **Security audit log**: new INTERNAL `securityEvent` model (13-month TTL) + `auditLogService`. Records login success/failure, account lockouts, logouts, password changes/resets, 2FA enable/disable, backup-code regeneration, role and email changes, and SSO token issue/denial. New admin page **/admin/security-events** with type filtering and pagination.
+- **Runtime maintenance toggle**: new admin page **/admin/maintenance** turns maintenance mode on/off without a restart (persists via app-config.json; blocked when MAINTENANCE is compose-managed) and sets a pre-announcement banner shown to all users. Admins see a persistent "maintenance is ON" reminder banner.
+- **2FA backup codes**: enabling TOTP now issues 10 single-use recovery codes (shown once, stored bcrypt-hashed). The 2FA login accepts a backup code as fallback and consumes it; codes can be regenerated from Account Settings (password-confirmed, audited).
+- **Connection test buttons**: /admin/connections sub-pages (KashFlow, SMTP, Paperless, Twilio) gained "Test connection" buttons that exercise the saved credentials live (SMTP verify, Paperless API call, KashFlow session, Twilio account fetch).
+- **CSV export on list views**: every list page has a CSV button exporting the current view (search/tab/filters/scoping preserved, unpaged up to 10k rows, Excel-friendly BOM).
+- **Duplicate purchase detection**: sending a Paperless draft to KashFlow is blocked when a purchase with the same supplier + supplier reference already exists in synced data, with an explicit per-send override checkbox.
+- **Attendance payroll locking**: once a payroll run covering a date is locked/submitted, non-admin attendance submissions and edits for that date are rejected (self-service, inline editor, and CRUD paths).
+- **Deleted-items auto-purge** (off by default): optional `DELETED_ITEMS_RETENTION_DAYS` (min 30) enables a daily job that permanently removes soft-deleted records past retention.
+- **Generic CRUD hooks**: `CRUDControllerConfig` entries can now declare `afterCreate(doc, req)` and `afterUpdate(doc, req, { previous })` (non-fatal), used by the holiday workflow and user role/email auditing.
+- 28 new unit tests (jobScheduler, notificationService, CIS deadline maths, backup codes); suite now at 527.
+
+### Changed
+- `app.js` starts one job scheduler instead of three ad-hoc `setInterval` services.
+- "DB unavailable" warnings throttled (already in 6.4.0) now complemented by scheduler-level failure tracking.
+
 ## [6.4.0] - 2026-06-11
 
 ### Changed

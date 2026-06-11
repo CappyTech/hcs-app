@@ -1,0 +1,75 @@
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <i class="bi bi-cone-striped text-amber-500"></i> Maintenance Mode
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Take the application offline for non-admin users, or announce an upcoming maintenance window with a banner.
+      </p>
+    </div>
+    <a href="/admin" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Admin</a>
+  </div>
+
+  <!-- Current state -->
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow border <%= active ? 'border-amber-400 dark:border-amber-600' : 'border-gray-200 dark:border-gray-700' %> p-6">
+    <div class="flex items-center gap-3">
+      <% if (active) { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+          <i class="bi bi-exclamation-triangle-fill"></i> Maintenance mode is ON
+        </span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">Non-admin users see the maintenance page (503). Admins retain full access.</span>
+      <% } else { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">
+          <i class="bi bi-check-circle-fill"></i> Application available
+        </span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">All users have normal access.</span>
+      <% } %>
+    </div>
+    <% if (envLocked) { %>
+      <p class="mt-4 text-sm text-amber-700 dark:text-amber-300">
+        <i class="bi bi-lock-fill"></i> <strong>MAINTENANCE</strong> is set by the deployment environment (docker-compose) and cannot be toggled here. Remove the env var to enable runtime control.
+      </p>
+    <% } %>
+  </div>
+
+  <% if (!envLocked) { %>
+  <form method="POST" action="/admin/maintenance" class="bg-white dark:bg-gray-900 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+    <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+
+    <div>
+      <label for="notice" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notice banner (optional)</label>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+        Shown to all signed-in users while maintenance mode is <em>off</em> — use it to pre-announce a window, e.g.
+        “Planned maintenance tonight 18:00–19:00”. Cleared by saving an empty field.
+      </p>
+      <input type="text" id="notice" name="notice" maxlength="300" value="<%= notice %>"
+             placeholder="Planned maintenance tonight 18:00–19:00"
+             class="mt-2 w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500">
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3">
+      <% if (active) { %>
+        <button type="submit" name="action" value="disable"
+                class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 shadow-sm transition">
+          <i class="bi bi-play-circle"></i> End maintenance — bring the app back online
+        </button>
+        <button type="submit" name="action" value="save"
+                class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition">
+          Save banner only
+        </button>
+      <% } else { %>
+        <button type="submit" name="action" value="enable"
+                class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition">
+          <i class="bi bi-cone-striped"></i> Start maintenance mode now
+        </button>
+        <button type="submit" name="action" value="save"
+                class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition">
+          Save banner only
+        </button>
+      <% } %>
+    </div>
+  </form>
+  <% } %>
+</div>
