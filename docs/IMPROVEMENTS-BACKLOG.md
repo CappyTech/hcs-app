@@ -147,9 +147,9 @@ Most email-based items are now small: enqueue via
 
 - [ ] **Controller/route tests** — supertest + in-memory Mongo for the
       largest controllers (paperless, attendance, userCRUD, CRUD). The unit
-      suite (527 tests) covers services only.
+      suite (571 tests) covers services only.
 
 ---
 
-*Created 2026-06-11 after the v6.5.0 batch. Remove items as they ship and
-record completions in CHANGELOG.md.*
+*Created 2026-06-11 after the v6.5.0 batch; last updated 2026-06-12 after
+v6.6.0. Remove items as they ship and record completions in CHANGELOG.md.*
