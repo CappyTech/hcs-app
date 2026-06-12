@@ -101,6 +101,8 @@ const cspDirectives = {
     "https://challenges.cloudflare.com",
   ],
   frameSrc: ["'self'", "https://challenges.cloudflare.com"],
+  // Violation reports POSTed by browsers to the unauthenticated endpoint in app.js
+  reportUri: ["/csp-report"],
 };
 
 // WebSocket allowances

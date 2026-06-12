@@ -10,6 +10,7 @@ const { getClientIp } = require("../../services/ipService");
 const emailService = require("../../services/emailService");
 const smsService = require("../../services/smsService");
 const auditLog = require("../../services/auditLogService");
+const hibpService = require("../../services/hibpService");
 
 function hasCookie(req, cookieName) {
   try {
@@ -115,6 +116,13 @@ exports.registerUser = async (req, res, next) => {
       req.flash("error", "User model unavailable. Please try again later.");
       return res.redirect("/user/register");
     }
+    // Reject passwords found in known data breaches (fails open on API outage)
+    const breach = await hibpService.isPasswordPwned(password);
+    if (breach.pwned) {
+      req.flash("error", hibpService.PWNED_MESSAGE);
+      return res.redirect("/user/register");
+    }
+
     // Hash password before storing (was previously stored in plaintext)
     const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -737,6 +745,14 @@ exports.resetPassword = async (req, res) => {
       return res.redirect("/user/forgot-password");
     }
 
+    const breach = await hibpService.isPasswordPwned(password);
+    if (breach.pwned) {
+      req.flash("error", hibpService.PWNED_MESSAGE);
+      return res.redirect(
+        `/user/reset-password?token=${encodeURIComponent(token)}`,
+      );
+    }
+
     const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 12;
     user.password = await bcrypt.hash(password, saltRounds);
     user.passwordResetToken = null;
@@ -805,6 +821,12 @@ exports.verifySmsOtp = async (req, res) => {
 
     if (!user) {
       req.flash("error", "Invalid or expired verification code.");
+      return res.redirect("/user/verify-sms-otp");
+    }
+
+    const breach = await hibpService.isPasswordPwned(password);
+    if (breach.pwned) {
+      req.flash("error", hibpService.PWNED_MESSAGE);
       return res.redirect("/user/verify-sms-otp");
     }
 
@@ -885,6 +907,12 @@ exports.verifyTotpReset = async (req, res) => {
 
     if (!isValid) {
       req.flash("error", "Invalid authenticator code. Please try again.");
+      return res.redirect("/user/verify-totp-reset");
+    }
+
+    const breach = await hibpService.isPasswordPwned(password);
+    if (breach.pwned) {
+      req.flash("error", hibpService.PWNED_MESSAGE);
       return res.redirect("/user/verify-totp-reset");
     }
 

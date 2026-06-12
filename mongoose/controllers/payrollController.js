@@ -10,6 +10,7 @@ const payrollJournal = require('../services/payrollJournalService');
 const hmrcRti = require('../../services/hmrcRtiService');
 const { getClientIp } = require('../../services/ipService');
 const peoplesPension = require('../../services/peoplesPensionService');
+const ukTaxId = require('../../services/ukTaxIdService');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -610,7 +611,11 @@ exports.saveEmployeePayroll = async (req, res, next) => {
 
     // Encrypt NI number only if a new value was supplied (not the masked placeholder)
     if (niNumber && niNumber !== '' && !niNumber.startsWith('••')) {
-      payroll.niNumber = safeEncrypt(niNumber.toUpperCase().replace(/\s/g, ''));
+      if (!ukTaxId.isValidNino(niNumber)) {
+        req.flash?.('error', 'NI number format is invalid — expected e.g. AB123456C.');
+        return res.redirect(`/payroll/employee/${req.params.uuid}`);
+      }
+      payroll.niNumber = safeEncrypt(ukTaxId.normalise(niNumber));
     } else {
       payroll.niNumber = employee.payroll?.niNumber ?? null;
     }

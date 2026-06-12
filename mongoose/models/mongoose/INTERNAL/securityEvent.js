@@ -21,6 +21,7 @@ const EVENT_TYPES = [
   'totp_enabled',
   'totp_disabled',
   'backup_codes_regenerated',
+  'sessions_revoked',
   'role_changed',
   'email_changed',
   'sso_token_issued',

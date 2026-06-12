@@ -1,14 +1,19 @@
 const rateLimit = require("express-rate-limit");
 const { getClientIp } = require("./ipService");
 const logger = require("./loggerService");
+const RateLimitMongoStore = require("./rateLimitMongoStore");
 const { sanitize } = logger;
 
+// Mongo-backed buckets: counters survive container restarts and are shared
+// across replicas (the default MemoryStore is per-process). Fails open while
+// MongoDB is unavailable.
 const rateLimiterService = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1500, // limit each IP to 1500 requests per windowMs
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RateLimitMongoStore({ prefix: "rl:" }),
   keyGenerator: (req) => getClientIp(req),
   handler: (req, res, next, options) => {
     const ip = getClientIp(req);
@@ -26,6 +31,7 @@ const registerRateLimiter = rateLimit({
   message: "Too many registration attempts from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RateLimitMongoStore({ prefix: "rl-reg:" }),
   keyGenerator: (req) => getClientIp(req),
   handler: (req, res, next, options) => {
     const ip = getClientIp(req);

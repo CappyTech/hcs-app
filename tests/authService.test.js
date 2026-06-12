@@ -90,13 +90,54 @@ describe('authService', () => {
     });
 
     it('sets req.user when user found in DB', async () => {
-      userFindByIdResult = { _id: 'user1', role: 'admin', emailVerified: true };
+      userFindByIdResult = { _id: 'user1', role: 'admin', emailVerified: true, totpEnabled: true };
       patchMdb();
       const req = makeReq();
       let nextCalled = false;
       await ensureAuthenticated(req, makeRes(), () => { nextCalled = true; });
       assert.ok(nextCalled);
       assert.equal(req.user.role, 'admin');
+    });
+
+    it('redirects privileged role without TOTP to account page', async () => {
+      userFindByIdResult = { _id: 'user1', role: 'admin', emailVerified: true, totpEnabled: false };
+      patchMdb();
+      const res = makeRes();
+      await ensureAuthenticated(makeReq({ originalUrl: '/dashboard' }), res, () => {});
+      assert.equal(res._redirectUrl, '/user/account');
+    });
+
+    it('allows privileged role without TOTP to reach the account page', async () => {
+      userFindByIdResult = { _id: 'user1', role: 'admin', emailVerified: true, totpEnabled: false };
+      patchMdb();
+      let nextCalled = false;
+      await ensureAuthenticated(
+        makeReq({ originalUrl: '/user/account' }),
+        makeRes(),
+        () => { nextCalled = true; }
+      );
+      assert.ok(nextCalled);
+    });
+
+    it('does not require TOTP for non-privileged roles', async () => {
+      userFindByIdResult = { _id: 'user1', role: 'employee', emailVerified: true, totpEnabled: false };
+      patchMdb();
+      let nextCalled = false;
+      await ensureAuthenticated(makeReq(), makeRes(), () => { nextCalled = true; });
+      assert.ok(nextCalled);
+    });
+
+    it('REQUIRE_2FA_ROLES="" disables 2FA enforcement', async () => {
+      process.env.REQUIRE_2FA_ROLES = '';
+      try {
+        userFindByIdResult = { _id: 'user1', role: 'admin', emailVerified: true, totpEnabled: false };
+        patchMdb();
+        let nextCalled = false;
+        await ensureAuthenticated(makeReq(), makeRes(), () => { nextCalled = true; });
+        assert.ok(nextCalled);
+      } finally {
+        delete process.env.REQUIRE_2FA_ROLES;
+      }
     });
 
     it('redirects to login when user not found in DB', async () => {

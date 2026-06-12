@@ -123,6 +123,7 @@ exports.postCreatePolicy = async (req, res, next) => {
       version:     req.body.version || '1.0',
       contentHtml: safeHtml,
       isPublished: req.body.isPublished === 'on',
+      reviewDate:  req.body.reviewDate ? new Date(req.body.reviewDate) : null,
       createdBy:   req.session.user.id,
       updatedBy:   req.session.user.id,
     });
@@ -158,6 +159,7 @@ exports.postEditPolicy = async (req, res, next) => {
     policy.version     = req.body.version || policy.version;
     policy.contentHtml = safeHtml;
     policy.isPublished = req.body.isPublished === 'on';
+    policy.reviewDate  = req.body.reviewDate ? new Date(req.body.reviewDate) : null;
     policy.updatedBy   = req.session.user.id;
     await policy.save();
     req.session.successMessage = 'Policy updated.';

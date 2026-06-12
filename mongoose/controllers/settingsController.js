@@ -11,6 +11,7 @@ const rbac = require("../config/rolePermissionsConfig");
 const crypto = require("crypto");
 const emailService = require("../../services/emailService");
 const auditLog = require("../../services/auditLogService");
+const hibpService = require("../../services/hibpService");
 const { validationResult, body } = require("express-validator");
 
 exports.getProfilePage = async (req, res, next) => {
@@ -192,6 +193,7 @@ exports.getAccountPage = async (req, res, next) => {
       });
     }
 
+    const { rolesRequiring2FA } = require("../../services/authService");
     res.render(path.join("tailwindcss", "user", "account"), {
       title: "Account Settings",
       qrCodeUrl,
@@ -199,6 +201,7 @@ exports.getAccountPage = async (req, res, next) => {
       user,
       sessions: activeSessions,
       currentSessionId: currentSid,
+      twoFARequired: rolesRequiring2FA().includes(user.role),
     });
   } catch (error) {
     logger.error(
@@ -356,6 +359,55 @@ exports.logoutSession = async (req, res, next) => {
   }
 };
 
+// Revoke every session belonging to the user except the current one.
+// Covers denormalized sessions (userId field) and legacy sessions where the
+// user id only exists inside the JSON payload.
+exports.logoutAllOtherSessions = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const result = await mdb.INTERNAL.session.deleteMany({
+      userId,
+      _id: { $ne: req.sessionID },
+    });
+    let deleted = result.deletedCount || 0;
+
+    const legacyCandidates = await mdb.INTERNAL.session
+      .find({ userId: { $exists: false }, _id: { $ne: req.sessionID } })
+      .lean();
+    for (const doc of legacyCandidates) {
+      let payload = doc.session;
+      if (typeof payload === "string") {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          payload = {};
+        }
+      }
+      if (payload?.user?.id === userId) {
+        await mdb.INTERNAL.session.deleteOne({ _id: doc._id });
+        deleted++;
+      }
+    }
+
+    auditLog.record("sessions_revoked", req, {
+      userId,
+      username: req.session.user.username,
+      meta: { deleted },
+    });
+    req.flash(
+      "success",
+      deleted > 0
+        ? `Logged out ${deleted} other session${deleted === 1 ? "" : "s"}.`
+        : "No other active sessions found.",
+    );
+    res.redirect("/user/account");
+  } catch (error) {
+    logger.error(`Error logging out all sessions: ${error.message}`);
+    req.flash("error", "Failed to log out other sessions.");
+    res.redirect("/user/account");
+  }
+};
+
 exports.changePassword = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -389,6 +441,13 @@ exports.changePassword = async (req, res) => {
     // Check new passwords match
     if (req.body.newPassword !== req.body.confirmNewPassword) {
       req.flash("error", "New passwords do not match.");
+      return res.redirect("/user/account");
+    }
+
+    // Reject passwords found in known data breaches (fails open on API outage)
+    const breach = await hibpService.isPasswordPwned(req.body.newPassword);
+    if (breach.pwned) {
+      req.flash("error", hibpService.PWNED_MESSAGE);
       return res.redirect("/user/account");
     }
 

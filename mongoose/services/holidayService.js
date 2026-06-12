@@ -131,50 +131,50 @@ const holidayService = {
     }
   },
 
+  // Errors propagate to the caller — the 'bank-holiday-sync' job surfaces
+  // them on /admin/jobs instead of silently logging.
   syncBankHolidays: async () => {
-    try {
-      const response = await axios.get(HOLIDAY_API_URL);
-      const data = response.data;
+    const response = await axios.get(HOLIDAY_API_URL, { timeout: 15000 });
+    const data = response.data;
 
-      const bulkOps = [];
+    const bulkOps = [];
 
-      for (const division in data) {
-        for (const event of data[division].events) {
-          bulkOps.push({
-            updateOne: {
-              filter: {
-                title: event.title,
-                date: event.date,
-                division,
-                notes: event.notes || '',
-                bunting: event.bunting
-              },
-              update: {
-                $setOnInsert: {
-                  uuid: crypto.randomUUID()
-                }
-              },
-              upsert: true
-            }
-          });
-        }
+    for (const division in data) {
+      for (const event of data[division].events) {
+        bulkOps.push({
+          updateOne: {
+            filter: {
+              title: event.title,
+              date: event.date,
+              division,
+              notes: event.notes || '',
+              bunting: event.bunting
+            },
+            update: {
+              $setOnInsert: {
+                uuid: crypto.randomUUID()
+              }
+            },
+            upsert: true
+          }
+        });
       }
-
-      const totalEvents = bulkOps.length;
-
-      if (totalEvents > 0) {
-        const result = await mdb.INTERNAL.holiday.bulkWrite(bulkOps);
-        const upserts = result.upsertedCount || 0;
-        const modified = result.modifiedCount || 0;
-        const unchanged = totalEvents - upserts - modified;
-
-        logger.info(`Bank holidays synced. Events: ${totalEvents}, Unchanged: ${unchanged}, Upserts: ${upserts}, Modified: ${modified}`);
-      } else {
-        logger.info('No holidays to sync.');
-      }
-    } catch (error) {
-      logger.error(`[holidayService] Error syncing bank holidays: ${error.message}`, { stack: error.stack });
     }
+
+    const totalEvents = bulkOps.length;
+
+    if (totalEvents === 0) {
+      logger.info('No holidays to sync.');
+      return { events: 0, upserts: 0, modified: 0, unchanged: 0 };
+    }
+
+    const result = await mdb.INTERNAL.holiday.bulkWrite(bulkOps);
+    const upserts = result.upsertedCount || 0;
+    const modified = result.modifiedCount || 0;
+    const unchanged = totalEvents - upserts - modified;
+
+    logger.info(`Bank holidays synced. Events: ${totalEvents}, Unchanged: ${unchanged}, Upserts: ${upserts}, Modified: ${modified}`);
+    return { events: totalEvents, upserts, modified, unchanged };
   },
 
   fetchBankHolidays: async () => {

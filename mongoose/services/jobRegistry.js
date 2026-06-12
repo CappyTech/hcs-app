@@ -56,6 +56,30 @@ function registerAll() {
     intervalMs: DAY,
     run: () => require('./deletedItemsPurgeService').purgeOnce(),
   });
+
+  scheduler.register('bank-holiday-sync', {
+    description: 'Sync UK bank holidays from the GOV.UK feed into the Government Holidays list.',
+    intervalMs: 7 * DAY,
+    run: () => require('./holidayService').syncBankHolidays(),
+  });
+
+  scheduler.register('hr-compliance', {
+    description: 'Create tasks and email alerts for employee contracts and right-to-work checks expiring within 30 days.',
+    intervalMs: DAY,
+    run: () => require('./hrComplianceService').checkExpiriesAndCreateTasks(),
+  });
+
+  scheduler.register('policy-review-reminder', {
+    description: 'Email admins when company policies reach their review date (30-day warning).',
+    intervalMs: DAY,
+    run: () => require('./policyReviewReminderService').checkAndQueueReminders(),
+  });
+
+  scheduler.register('holiday-carry-over', {
+    description: "Roll unused holiday entitlement into the new holiday year, capped by each employee's carry-over policy.",
+    intervalMs: DAY,
+    run: () => require('./holidayCarryOverService').applyCarryOverOnce(),
+  });
 }
 
 function start() {

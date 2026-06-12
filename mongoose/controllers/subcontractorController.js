@@ -1,5 +1,22 @@
 const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
+const ukTaxId = require("../../services/ukTaxIdService");
+
+// Format checks per HMRC reference name used on the CIS edit form
+const REF_VALIDATORS = {
+  "UTR Number": {
+    isValid: ukTaxId.isValidUtr,
+    message: "UTR Number must be 10 digits (e.g. 1234567890).",
+  },
+  "NI Number": {
+    isValid: ukTaxId.isValidNino,
+    message: "NI Number must look like AB123456C.",
+  },
+  "Verification Number": {
+    isValid: ukTaxId.isValidVerificationNumber,
+    message: "Verification Number must look like V1234567890, optionally followed by up to two letters.",
+  },
+};
 
 /**
  * GET /subcontractor/assign
@@ -80,12 +97,28 @@ exports.changeSupplier = async (req, res, next) => {
 
     // Parse references: array of { Name, Value } objects from individual form fields
     const parsedRefs = [];
+    const validationErrors = [];
     for (let i = 0; i < 10; i++) {
       const name = req.body[`whtRefName_${i}`];
       const value = req.body[`whtRefValue_${i}`];
       if (name && value && value.trim()) {
-        parsedRefs.push({ Name: name, Value: value.trim() });
+        const validator = REF_VALIDATORS[name];
+        if (validator) {
+          if (!validator.isValid(value)) {
+            validationErrors.push(validator.message);
+            continue;
+          }
+          // Store HMRC references normalised (uppercase, no spaces)
+          parsedRefs.push({ Name: name, Value: ukTaxId.normalise(value) });
+        } else {
+          parsedRefs.push({ Name: name, Value: value.trim() });
+        }
       }
+    }
+
+    if (validationErrors.length > 0) {
+      req.flash("error", validationErrors.join(" "));
+      return res.redirect(`/supplier/change/${req.params.uuid}`);
     }
 
     await mdb.REST.supplier.updateOne(

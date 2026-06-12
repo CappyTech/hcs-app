@@ -63,6 +63,16 @@ employeeSchema.add({
   definedRate: { type: String, enum: ['hourly','daily', 'weekly', 'monthly', 'yearly'], default: 'weekly' }
 });
 
+// Right-to-work check (hrComplianceService reminds admins before expiryDate)
+employeeSchema.add({
+  rightToWork: {
+    documentType: { type: String, enum: ['passport', 'birth-certificate', 'visa', 'biometric-residence-permit', 'share-code', 'other', null], default: null },
+    reference: { type: String, default: null },
+    checkedDate: { type: Date, default: null },
+    expiryDate: { type: Date, default: null }
+  }
+});
+
 // IR35 off-payroll: employee is also a CIS subcontractor
 employeeSchema.add({
   ir35: { type: Boolean, default: false },

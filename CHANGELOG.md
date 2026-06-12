@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.0] - 2026-06-12
+
+### Added
+- **Bank-holiday auto-sync**: the existing GOV.UK feed import (`holidayService.syncBankHolidays`, previously never invoked) now runs as the weekly `bank-holiday-sync` job, keeping the Government Holidays list populated automatically.
+- **HR expiry reminders** (`hrComplianceService` + daily `hr-compliance` job): tasks for admins and a daily summary email when an employee's contract end date or right-to-work check is expired/expiring within 30 days. New `employee.rightToWork` fields (documentType, reference, checkedDate, expiryDate) editable via the employee form. Certification tracking remains on the backlog.
+- **Policy review reminders**: `policyDocument.reviewDate` (new field on the policy form, with an overdue badge on the list) + daily `policy-review-reminder` job emailing admins a summary of policies due/overdue for review.
+- **Holiday carry-over at year end** (`holidayCarryOverService` + daily `holiday-carry-over` job): rolls unused entitlement from the previous holiday year into the current year's `carryOverDays`/`carryOverHours`, capped by each employee's `holidayPolicy.carryOverMax*` (default 0 = no carry-over). Applied once per year per employee (`carryOverAppliedAt`); manual carry-over values are never overwritten.
+- **UK tax-ID format validation** (`ukTaxIdService`): UTR (10 digits), NINO (HMRC prefix/suffix rules), and CIS verification number (V + 10 digits + up to 2 letters) checked at entry — the supplier CIS details form (HMRC references, stored normalised) and the employee payroll NI number.
+- 44 new unit tests; suite now at 571.
+
+### Security
+- **Per-role 2FA enforcement**: users with roles in `REQUIRE_2FA_ROLES` (default `admin,accountant`; empty string disables) must enable TOTP — until then they are confined to the account page, which shows a setup notice.
+- **Breached-password check** (`hibpService`): new passwords are checked against Have I Been Pwned via the k-anonymity range API (only the first 5 SHA-1 chars leave the server) on registration, password change, and all three reset flows. Fails open on API outage; `HIBP_DISABLED=true` opts out.
+- **Log out all other sessions**: one-click revoke of every other session from Account Settings (covers legacy session docs), audited as `sessions_revoked`.
+- **Mongo-backed rate limiter** (`rateLimitMongoStore`): rate-limit counters now persist in the INTERNAL database (TTL-indexed `rateLimits` collection), surviving container restarts and shared across replicas. Fails open while MongoDB is down.
+- **CSP violation reporting**: `report-uri /csp-report` directive + unauthenticated report endpoint that logs browser CSP violation reports.
+
 ## [6.5.0] - 2026-06-11
 
 ### Added

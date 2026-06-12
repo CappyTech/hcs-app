@@ -66,6 +66,26 @@ const main = async () => {
     res.sendFile(path.join(__dirname, 'public', 'robots.txt'));
   });
 
+  // CSP violation reports (report-uri directive in securityService). Browsers
+  // POST these automatically with no session/CSRF, so the endpoint must sit
+  // outside the authenticated appRouter. Reports are logged for review.
+  app.post(
+    '/csp-report',
+    express.json({
+      type: ['application/csp-report', 'application/reports+json', 'application/json'],
+      limit: '32kb',
+    }),
+    (req, res) => {
+      try {
+        const report = req.body?.['csp-report'] || req.body;
+        if (report && Object.keys(report).length > 0) {
+          logger.warn('[csp] Violation report: ' + JSON.stringify(report).slice(0, 2000));
+        }
+      } catch (_) { /* never fail a beacon */ }
+      res.status(204).end();
+    },
+  );
+
   // Health check (no DB required — reports actual readiness)
   app.get('/healthz', async (req, res) => {
     const ra = (req.socket && req.socket.remoteAddress) || '';

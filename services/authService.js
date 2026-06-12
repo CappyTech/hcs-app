@@ -28,6 +28,27 @@ const UNVERIFIED_PATHS = new Set([
   "/user/account",
 ]);
 
+// ── Per-role 2FA enforcement ──────────────────────────────────────────
+// Roles listed here must have TOTP enabled; until then they are restricted
+// to the account page (where 2FA is set up) and the paths below.
+// Override with REQUIRE_2FA_ROLES (comma-separated; empty string disables).
+function rolesRequiring2FA() {
+  const raw = process.env.REQUIRE_2FA_ROLES;
+  const value = raw === undefined ? "admin,accountant" : raw;
+  return value.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+const TWOFA_SETUP_PATHS = new Set([
+  "/user/logout",
+  "/user/profile",
+  "/user/verify-pending",
+  "/user/resend-verification",
+]);
+
+function isTwoFASetupPath(path) {
+  return TWOFA_SETUP_PATHS.has(path) || path.startsWith("/user/account");
+}
+
 function isPublicPath(url) {
   const path = url.split("?")[0];
   if (path === "/") return true;
@@ -85,6 +106,22 @@ async function ensureAuthenticated(req, res, next) {
     !UNVERIFIED_PATHS.has(reqPath)
   ) {
     return res.redirect("/user/verify-pending");
+  }
+
+  // Per-role 2FA enforcement: privileged roles must enable TOTP before
+  // accessing anything beyond their account page.
+  if (
+    !req.user.totpEnabled &&
+    rolesRequiring2FA().includes(req.user.role) &&
+    !isTwoFASetupPath(reqPath)
+  ) {
+    if (typeof req.flash === "function") {
+      req.flash(
+        "error",
+        `Your role (${req.user.role}) requires two-factor authentication. Please enable it to continue.`,
+      );
+    }
+    return res.redirect("/user/account");
   }
 
   next();
@@ -263,6 +300,7 @@ function ensureDepartment(department) {
 module.exports = {
   ensureAuthenticated,
   ensureRouteAccess,
+  rolesRequiring2FA,
   ensureRoles,
   ensureRole,
   ensureAnyRole,

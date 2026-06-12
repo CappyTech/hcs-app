@@ -39,6 +39,11 @@ router.post(
   settings.logoutSession,
 );
 router.post(
+  "/user/account/logout-all-sessions",
+  authService.ensureAnyRole(),
+  settings.logoutAllOtherSessions,
+);
+router.post(
   "/user/account/verify-totp",
   authService.ensureAnyRole(),
   settings.verifyAndEnableTotp,

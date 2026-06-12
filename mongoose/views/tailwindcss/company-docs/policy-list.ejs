@@ -29,6 +29,7 @@
             <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Title</th>
             <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 hidden sm:table-cell">Category</th>
             <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 hidden md:table-cell">Version</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 hidden md:table-cell">Review</th>
             <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 hidden md:table-cell">Status</th>
             <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Actions</th>
           </tr>
@@ -39,6 +40,17 @@
               <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100"><%= policy.title %></td>
               <td class="px-4 py-3 text-gray-500 dark:text-gray-400 hidden sm:table-cell"><%= policy.category %></td>
               <td class="px-4 py-3 text-gray-500 dark:text-gray-400 hidden md:table-cell">v<%= policy.version %></td>
+              <td class="px-4 py-3 hidden md:table-cell">
+                <% if (policy.reviewDate) { %>
+                  <% const reviewOverdue = new Date(policy.reviewDate) < new Date(); %>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium <%= reviewOverdue ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' %>">
+                    <% if (reviewOverdue) { %><i class="bi bi-exclamation-triangle-fill"></i><% } %>
+                    <%= new Date(policy.reviewDate).toISOString().split('T')[0] %>
+                  </span>
+                <% } else { %>
+                  <span class="text-xs text-gray-400 dark:text-gray-500">—</span>
+                <% } %>
+              </td>
               <td class="px-4 py-3 hidden md:table-cell">
                 <% if (policy.isPublished) { %>
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">

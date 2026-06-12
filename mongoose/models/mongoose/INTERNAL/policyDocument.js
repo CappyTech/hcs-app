@@ -15,6 +15,8 @@ const policyDocumentSchema = new mongoose.Schema({
   version:     { type: String, trim: true, default: '1.0' },
   contentHtml: { type: String, default: '' },
   isPublished: { type: Boolean, default: false, index: true },
+  // Next scheduled review — policyReviewReminderService emails admins as this approaches
+  reviewDate:  { type: Date, default: null },
   createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
   updatedBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
 }, {

@@ -21,6 +21,8 @@ const employeeHolidaySchema = new mongoose.Schema({
   // Carry over from previous year (approved)
   carryOverDays: { type: Number, default: 0 },
   carryOverHours: { type: Number, default: 0 },
+  // Set once by the year-end carry-over job so it never reapplies (null = not yet processed)
+  carryOverAppliedAt: { type: Date, default: null },
 
   // Accrual policy
   accrualMethod: { type: String, enum: ['fixed', 'per-hour', 'per-day'], default: 'fixed' },

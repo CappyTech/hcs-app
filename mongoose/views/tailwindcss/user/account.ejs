@@ -14,6 +14,14 @@
     <div>
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-4">Two-Factor Authentication (TOTP)</h2>
 
+      <% if (!user.totpEnabled && typeof twoFARequired !== 'undefined' && twoFARequired) { %>
+        <div class="mb-4 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <i class="bi bi-exclamation-triangle-fill mr-1"></i>
+          Your role (<strong class="capitalize"><%= user.role %></strong>) requires two-factor authentication.
+          You must enable it below before you can use the rest of the platform.
+        </div>
+      <% } %>
+
       <% if (!user.totpEnabled) { %>
         <p class="text-center text-gray-600 dark:text-gray-300 mb-4">Two-Factor Authentication is not enabled for your account.</p>
         <p class="mb-2">Scan the QR code below with your authentication app<br> <small>(e.g., Google Authenticator, Authy).</small></p>
@@ -155,7 +163,18 @@
 <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden mt-6">
   <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
   <div class="p-6 sm:p-8">
-  <h1 class="text-xl font-bold text-center text-gray-900 dark:text-gray-100 mb-6">Active Sessions</h1>
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Active Sessions</h1>
+    <% if (sessions.filter(s => !s.isCurrent).length > 0) { %>
+      <form action="/user/account/logout-all-sessions" method="POST">
+        <%- include('../partials/csrfHidden.ejs') %>
+        <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition shadow-sm"
+          data-confirm="Log out all other sessions? Other devices will need to sign in again.">
+          <i class="bi bi-box-arrow-right"></i> Log out all other sessions
+        </button>
+      </form>
+    <% } %>
+  </div>
 
   <% if (sessions.length === 0) { %>
     <div class="text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-6 rounded-xl">
