@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.4] - 2026-06-22
+
+### Fixed
+- **Layout**: removed stray `<br>` tag between `<main>` and the footer/nav block, which was adding an extra line of height to the page flow and could cause a spurious scrollbar at certain viewport sizes.
+
 ## [6.6.3] - 2026-06-22
 
 ### Changed
