@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.3] - 2026-06-22
+
+### Changed
+- **Login page**: added TOTP field (accounts with 2FA enrolled can optionally submit their code upfront); added `autofocus`, `autocomplete="username"`, `autocomplete="current-password"` attributes; submit button gains `focus:ring` classes for keyboard accessibility parity with hcs-sync.
+- **Login page**: `SKIP_TURNSTILE` bypass check moved from template (`process.env.*`) to controller — `skipTurnstile` is now passed as a template variable. Turnstile script always loads unconditionally.
+
 ## [6.6.2] - 2026-06-22
 
 ### Security

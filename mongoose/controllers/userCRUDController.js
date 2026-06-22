@@ -171,6 +171,7 @@ exports.renderLoginForm = (req, res) => {
   res.render(path.join("tailwindcss", "user", "login"), {
     title: "Log In",
     siteKey: process.env.TURNSTILE_SITE_KEY,
+    skipTurnstile: process.env.SKIP_TURNSTILE === "true",
     next,
   });
 };
