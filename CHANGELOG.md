@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.7] - 2026-06-22
+
+### Changed
+- **compose.env.example**: documented all previously undocumented environment variables found in application code. Added a Tailscale section (`TS_AUTHKEY`, `TS_HOSTNAME`), SSO token lifetime (`HCS_SSO_TTL_SECONDS`), security rate-limiting variables (`BCRYPT_ROUNDS`, `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCKOUT_MS`, `BLOCK_HIT_THRESHOLD`, `BLOCK_HIT_WINDOW_MS`, `BLOCK_BAN_TTL_MS`, `BLOCKED_IPS`), and miscellaneous variables (`HIBP_DISABLED`, `REQUIRE_2FA_ROLES`, `NOTIFY_EMAIL`).
+
 ## [6.6.6] - 2026-06-22
 
 ### Added
