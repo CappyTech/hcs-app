@@ -1,11 +1,27 @@
 services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: hcs-app-tailscale
+    hostname: hcs-app-local
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=true
+      - TS_EXTRA_ARGS=--accept-routes
+    volumes:
+      - tailscale_state:/var/lib/tailscale
+    ports:
+      - "3000:5000"   # app is accessible at http://localhost:3000 (container listens on 5000)
+    restart: unless-stopped
+
   hcs-app:
     # Pull the latest CI image; override APP_IMAGE / APP_IMAGE_TAG env vars to use a specific build
     image: ${APP_IMAGE:-ghcr.io/cappytech/hcs-app}:${APP_IMAGE_TAG:-ci-latest}
-    pull_policy: always  # always pull the latest image on up/start
-    restart: unless-stopped  # auto-restarts after wizard exit(0) so new config is picked up
-    ports:
-      - "3000:5000"   # app is accessible at http://localhost:3000 (container listens on 5000)
+    pull_policy: always
+    restart: unless-stopped
+    # Shares Tailscale's network namespace — app traffic routes through Tailscale.
+    # Access the app at http://localhost:3000 (port is exposed on the tailscale service above).
+    network_mode: service:tailscale
     environment:
       # Required for plain HTTP — both default to true in production, which breaks local HTTP
       - ENABLE_HSTS=false      # prevents browser forcing HTTPS via HSTS header
@@ -14,24 +30,25 @@ services:
       # the setup wizard at http://localhost:3000/setup — fill them in there.
       # Once the wizard writes config/app-config.json, restart the container to start the full app.
     volumes:
-      - ./uploads:/uploads  # user-uploaded files persisted on host
-      - ./logs:/logs        # app logs persisted on host
-      - ./config:/app/config  # persists app-config.json written by the setup wizard (/setup)
+      - ./uploads:/uploads
+      - ./logs:/logs
+      - ./config:/app/config
     depends_on:
-      mongodb:
-        condition: service_healthy  # wait for MongoDB to be ready before starting the app
+      - tailscale
+      - mongodb
 
   mongodb:
     image: mongo:8
     restart: unless-stopped
     volumes:
-      - mongo_data:/data/db  # database files persisted in a named volume
+      - mongo_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s  # give mongod time to initialise before first check
+      start_period: 15s
 
 volumes:
-  mongo_data:  # managed by Docker; survives container restarts and re-creates
+  mongo_data:
+  tailscale_state:

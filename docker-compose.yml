@@ -1,10 +1,28 @@
 services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: hcs-app-tailscale
+    hostname: hcs-app
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=true
+      - TS_EXTRA_ARGS=--accept-routes
+    volumes:
+      - tailscale_state:/var/lib/tailscale
+    restart: unless-stopped
+    networks:
+      - hcs-net
+
   hcs-app:
     # Published image from CI (override via compose.env):
     image: ${APP_IMAGE:-ghcr.io/cappytech/hcs-app}:${APP_IMAGE_TAG:-ci-latest}
     pull_policy: always
     container_name: hcs-app
     restart: unless-stopped
+    # Shares Tailscale's network namespace — app traffic routes through Tailscale.
+    # Caddy must proxy to 'tailscale:${PORT}' (not 'hcs-app:${PORT}').
+    network_mode: service:tailscale
     # Load environment variables from compose.env (create it from compose.env.example)
     env_file:
       - compose.env
@@ -17,8 +35,9 @@ services:
       timeout: 3s
       retries: 5
       start_period: 20s
-    networks:
-      - hcs-net
+    depends_on:
+      - tailscale
+
   caddy:
     image: caddy:2
     container_name: caddy
@@ -28,15 +47,18 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data          # certificates & CA
+      - caddy_data:/data
       - caddy_config:/config
     networks:
       - hcs-net
     depends_on:
-      - hcs-app
+      - tailscale
+
 networks:
   hcs-net:
     external: true
+
 volumes:
   caddy_data:
   caddy_config:
+  tailscale_state:
