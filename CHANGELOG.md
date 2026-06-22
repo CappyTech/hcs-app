@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.1] - 2026-06-22
+
+### Fixed
+- **2FA login broken**: `req.session.userPending2FA` was written to the session but `session.save()` was never awaited before redirecting to `/user/2fa`. The session store did not flush in time, causing every 2FA-enabled login to land on "2FA session expired. Please log in again." (`userCRUDController`).
+
 ## [6.6.0] - 2026-06-12
 
 ### Added

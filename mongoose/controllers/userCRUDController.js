@@ -339,6 +339,9 @@ exports.loginUser = async (req, res) => {
     // If TOTP is enabled, stage login for /user/2fa
     if (user.totpEnabled) {
       req.session.userPending2FA = sessionData;
+      await new Promise((resolve, reject) => {
+        req.session.save((err) => (err ? reject(err) : resolve()));
+      });
       logger.info(`Login staged for 2FA: ${user.username}`);
       return res.redirect("/user/2fa");
     }
