@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.2] - 2026-06-22
+
+### Security
+- **nodemailer upgraded to 9.0.1**: fixes [GHSA-p6gq-j5cr-w38f](https://github.com/advisories/GHSA-p6gq-j5cr-w38f) (high) — the `raw` message option could bypass `disableFileAccess`/`disableUrlAccess`, enabling arbitrary file read and SSRF. No application code changes required; `createTransport`/`sendMail` API is unchanged.
+
 ## [6.6.1] - 2026-06-22
 
 ### Fixed
