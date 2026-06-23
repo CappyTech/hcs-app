@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.8] - 2026-06-23
+
+### Fixed
+- **2FA login flow**: removed `ensureAnyRole()` guard from `GET /user/2fa` and `POST /user/2fa` routes. Users at the 2FA step only have `req.session.userPending2FA` (not a full session), so the middleware was rejecting them with a 401 before the controller could run. The controller already validates the pending session itself.
+
 ## [6.6.7] - 2026-06-22
 
 ### Changed
