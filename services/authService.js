@@ -11,6 +11,7 @@ const PUBLIC_PATHS = new Set([
   "/user/reset-password",
   "/user/verify-sms-otp",
   "/user/verify-totp-reset",
+  "/user/2fa",
   "/health",
   // Machine-to-machine SSO token issuance for hcs-sync. Has no browser session;
   // it authenticates itself via the X-Sync-Api-Key header + credential check,

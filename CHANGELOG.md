@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.9] - 2026-06-23
+
+### Fixed
+- **2FA login flow**: added `/user/2fa` to `PUBLIC_PATHS` in `authService`. The global `ensureAuthenticated` middleware runs before route handlers, so it was intercepting the 2FA page and redirecting unauthenticated mid-login users back to `/user/login`. The controller already validates `req.session.userPending2FA` so the route is safe without a session guard.
+
 ## [6.6.8] - 2026-06-23
 
 ### Fixed
