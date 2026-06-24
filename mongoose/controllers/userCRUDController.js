@@ -337,14 +337,52 @@ exports.loginUser = async (req, res) => {
       },
     };
 
-    // If TOTP is enabled, stage login for /user/2fa
+    // If TOTP is enabled, try the inline code first; fall back to /user/2fa
     if (user.totpEnabled) {
-      req.session.userPending2FA = sessionData;
-      await new Promise((resolve, reject) => {
-        req.session.save((err) => (err ? reject(err) : resolve()));
-      });
-      logger.info(`Login staged for 2FA: ${user.username}`);
-      return res.redirect("/user/2fa");
+      const inlineTotp = String(req.body.totp || "").trim();
+      if (inlineTotp) {
+        const decryptedSecret = encryptionService.decrypt(user.totpSecret);
+        let totpValid = speakeasy.totp.verify({
+          secret: decryptedSecret,
+          encoding: "base32",
+          token: inlineTotp,
+          window: 1,
+        });
+
+        if (!totpValid && Array.isArray(user.totpBackupCodes) && user.totpBackupCodes.length) {
+          const totpService = require("../../services/totpService");
+          const result = await totpService.verifyAndConsumeBackupCode(inlineTotp, user.totpBackupCodes);
+          if (result.ok) {
+            user.totpBackupCodes = result.remaining;
+            await user.save();
+            totpValid = true;
+            logger.warn(`[login] Backup code used by ${user.username} — ${result.remaining.length} remaining`);
+            auditLog.record("login_success", req, {
+              userId: user._id, username: user.username,
+              meta: { twoFactor: true, backupCodeUsed: true, backupCodesRemaining: result.remaining.length },
+            });
+            req.flash(
+              "success",
+              `Backup code accepted — ${result.remaining.length} code${result.remaining.length === 1 ? "" : "s"} remaining. Consider regenerating codes from Account Settings.`,
+            );
+          }
+        }
+
+        if (!totpValid) {
+          req.flash("error", "Invalid 2FA code. Please try again.");
+          return res.redirect("/user/login" + (next ? "?next=" + encodeURIComponent(next) : ""));
+        }
+
+        // Inline TOTP verified — fall through to full session creation below
+      } else {
+        // No inline code provided — redirect to dedicated 2FA page
+        req.session.userPending2FA = sessionData;
+        await new Promise((resolve, reject) => {
+          req.session.save((err) => (err ? reject(err) : resolve()));
+        });
+        logger.info(`Login staged for 2FA: ${user.username}`);
+        return res.redirect("/user/2fa");
+      }
     }
 
     // Regenerate session to prevent session fixation and ensure the Set-Cookie

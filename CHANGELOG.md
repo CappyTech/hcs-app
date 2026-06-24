@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.13] - 2026-06-24
+
+### Fixed
+- **Inline 2FA on login page**: the `totp` field submitted on `/user/login` was previously ignored — the controller always redirected TOTP-enabled accounts to `/user/2fa`. Now, if a code is provided upfront it is verified immediately (including backup code fallback), and on success the session is created directly. If no inline code is provided the existing staged-login redirect to `/user/2fa` still applies.
+
 ## [6.6.12] - 2026-06-24
 
 ### Fixed
