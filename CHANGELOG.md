@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.10] - 2026-06-24
+
+### Added
+- **Build commit in footer**: the footer now shows the short Git commit SHA next to the version, linking to the commit on GitHub. The SHA is baked into the Docker image via the new `GIT_COMMIT` build arg (`docker build --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) …`), with a local-dev fallback that reads git directly; the repo URL is overridable via `GIT_REPO_URL`.
+
+### Fixed
+- **Dashboard "Two-Factor Auth" tile** linked to `/user/2fa` — the pre-login challenge, which only works mid-login and otherwise bounces a logged-in user to the login page. It now points to `/user/account`, where 2FA setup and management actually live.
+
 ## [6.6.9] - 2026-06-23
 
 ### Fixed
@@ -165,6 +173,27 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - Added GHA Docker layer cache (`type=gha`) to CI workflow — cuts Docker build time from 15+ min to ~1-2 min on cache hits.
 - Added `timeout-minutes: 20` to CI job to fail fast instead of running indefinitely.
 
+## [6.1.3] - 2026-06-10
+
+### Changed
+- Upgraded dev dependency `concurrently` to `^10.0.3` and regenerated `package-lock.json`. (Backfilled — this release was previously missing from the changelog.)
+
 ## [6.1.2] - 2026-06-10
 
 Initial changelog entry. Version reflects the state of the codebase at this point.
+
+## Pre-changelog history (≤ 6.1.1) — 2023-06-01 → 2026-06-10
+
+The changelog above begins at 6.1.2. The roughly **2,400 commits** before it — from the initial commit on 2023-06-01 through 6.1.1 (and the entire 5.x and early-6.x line) — were never logged here. This section is a high-level reconstruction from commit history, not a per-version record; treat git as the source of truth for anything in this range.
+
+By the time the changelog begins (6.1.2), the application already provided:
+
+- **CIS core (the original 2023 tool):** subcontractor management, invoices, and CIS monthly/yearly returns — the app started life as an internal CIS/subcontractor system ("SMS"/"hms", later renamed `hcs-app`).
+- **Authentication & accounts:** session-based login (bcrypt), TOTP two-factor, account settings, password reset, and role-based access control across the user roles.
+- **KashFlow integration:** consumption of the synced REST namespace (with legacy SOAP support), normaliser/API layer, and KashFlow ID linkage/backfill.
+- **Paperless-ngx ingestion:** document capture and the KashFlow custom-field linkage/backfill plus orphan sweeps.
+- **Business modules:** HR/payroll, attendance, holidays, fleet/vehicle compliance, projects, notes, and dashboards.
+- **Generic CRUD + dynamic list views:** the config-driven `listController`/`CRUDController` system with per-model filters, tabs, labels, and scoping.
+- **Compliance & legal:** GDPR DSR collection and governance views, RoPA in the admin UI, legal pages (privacy/cookies/terms), and company-docs (letterhead & policies).
+- **Integration & security:** the `/api/sso/token` endpoint for hcs-sync, CSRF protection, CSP nonces, rate limiting, Helmet, and encryption of TOTP secrets at rest.
+- **Build & delivery:** multi-stage Docker build, GitHub Actions → GHCR pipeline, and the Tailwind CSS build pipeline.

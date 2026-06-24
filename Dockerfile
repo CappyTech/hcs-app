@@ -30,6 +30,12 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=5000
+
+# Short commit SHA, surfaced in the app footer. Pass at build time:
+#   docker build --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) ...
+ARG GIT_COMMIT=
+ENV GIT_COMMIT=$GIT_COMMIT
+
 EXPOSE 5000
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/docker-entrypoint.sh"]

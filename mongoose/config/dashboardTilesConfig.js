@@ -262,7 +262,9 @@ module.exports = {
     TwoFactorAuth: {
         title: 'Two-Factor Auth',
         description: 'Set up or manage your TOTP two-factor authentication.',
-        link: '/user/2fa',
+        // 2FA setup/management lives on the account page. /user/2fa is the
+        // pre-login challenge and only works mid-login (requires userPending2FA).
+        link: '/user/account',
         department: ['user'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },

@@ -4,6 +4,13 @@
       <small class="cursor-default" title="<%= (typeof lastfetched !== 'undefined' && lastfetched) ? slimDateTime(lastfetched.lastFetchedAt, ['includeTime']) : 'Never' %>">
         v<%= package %>
       </small>
+      <% if (typeof commit !== 'undefined' && commit) { %>
+        <span class="mx-1 text-gray-300 dark:text-gray-600">&bull;</span>
+        <a href="<%= commitUrl %>" target="_blank" rel="noopener noreferrer"
+           class="text-green-600 hover:underline font-mono" title="View commit <%= commit %> on GitHub">
+          <%= commit %>
+        </a>
+      <% } %>
     </div>
     <div class="flex items-center space-x-2">
       <small>&copy; <%= copyrightyearstart %>–<%= copyrightyear %></small>

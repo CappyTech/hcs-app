@@ -12,6 +12,18 @@ const cookieParser = require('cookie-parser');
 const logger = require('./services/loggerService');
 const packageJson = require('./package.json');
 const crypto = require('crypto');
+
+// Build/commit identity. In Docker the short SHA is baked in via the GIT_COMMIT
+// build arg (see Dockerfile); in local dev we fall back to reading git directly.
+// Computed once at startup — never per request.
+const gitCommit = (process.env.GIT_COMMIT || (() => {
+  try {
+    return require('child_process')
+      .execSync('git rev-parse --short HEAD', { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim();
+  } catch (_) { return ''; }
+})()).trim() || null;
+const gitRepoUrl = (process.env.GIT_REPO_URL || 'https://github.com/CappyTech/hcs-app').replace(/\/+$/, '');
 const authService = require('./services/authService')
 
 const mdb = require('./mongoose/services/mongooseDatabaseService');
@@ -317,6 +329,8 @@ const main = async () => {
         ? req.user.username.split('.')[0].replace(/^\w/, c => c.toUpperCase())
         : null;
       res.locals.package = packageJson.version;
+      res.locals.commit = gitCommit;
+      res.locals.commitUrl = gitCommit ? `${gitRepoUrl}/commit/${gitCommit}` : null;
       res.locals.slimDateTime = require('./services/dateService').slimDateTime;
       res.locals.formatCurrency = require('./services/currencyService').formatCurrency;
       res.locals.rounding = require('./services/currencyService').rounding;
