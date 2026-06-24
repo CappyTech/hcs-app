@@ -67,6 +67,8 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64
+          build-args: |
+            GIT_COMMIT=${{ env.SHORT_SHA }}
           tags: |
             ${{ env.IMAGE }}:${{ env.EXTRA_TAG }}
             ${{ env.IMAGE }}:sha-${{ env.SHORT_SHA }}

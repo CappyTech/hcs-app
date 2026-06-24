@@ -2,10 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.11] - 2026-06-24
+
+### Fixed
+- **Footer commit SHA was blank in deployed images**: the 6.6.10 footer feature had no value to show because CI built the image without the `GIT_COMMIT` build arg, and the container has no `.git` to fall back on. CI now passes `SHORT_SHA` as the build arg (`.github/workflows/ci.yml`); `app.js` displays a 7-char SHA regardless of input length. (Manual builds still need `--build-arg GIT_COMMIT=$(git rev-parse --short HEAD)`.)
+
 ## [6.6.10] - 2026-06-24
 
 ### Added
-- **Build commit in footer**: the footer now shows the short Git commit SHA next to the version, linking to the commit on GitHub. The SHA is baked into the Docker image via the new `GIT_COMMIT` build arg (`docker build --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) …`), with a local-dev fallback that reads git directly; the repo URL is overridable via `GIT_REPO_URL`.
+- **Build commit in footer**: the footer now shows the short Git commit SHA next to the version, linking to the commit on GitHub. The SHA is baked into the image via a `GIT_COMMIT` build arg, with a local-dev fallback that reads git directly; the repo URL is overridable via `GIT_REPO_URL`.
 
 ### Fixed
 - **Dashboard "Two-Factor Auth" tile** linked to `/user/2fa` — the pre-login challenge, which only works mid-login and otherwise bounces a logged-in user to the login page. It now points to `/user/account`, where 2FA setup and management actually live.

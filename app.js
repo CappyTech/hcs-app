@@ -329,7 +329,7 @@ const main = async () => {
         ? req.user.username.split('.')[0].replace(/^\w/, c => c.toUpperCase())
         : null;
       res.locals.package = packageJson.version;
-      res.locals.commit = gitCommit;
+      res.locals.commit = gitCommit ? gitCommit.slice(0, 7) : null;
       res.locals.commitUrl = gitCommit ? `${gitRepoUrl}/commit/${gitCommit}` : null;
       res.locals.slimDateTime = require('./services/dateService').slimDateTime;
       res.locals.formatCurrency = require('./services/currencyService').formatCurrency;
