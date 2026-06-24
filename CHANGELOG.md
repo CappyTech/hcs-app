@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.15] - 2026-06-24
+
+### Changed
+- **`twoFAController`**: replaced silent `try/catch` around the session denorm write with a fire-and-forget `.catch()` that logs a warning. The intent was always best-effort; the swallowed catch was just noise hiding failures silently.
+
 ## [6.6.14] - 2026-06-24
 
 ### Fixed

@@ -123,32 +123,29 @@ exports.verify2FA = async (req, res) => {
 
     req.flash("success", "Successfully logged in.");
 
-    // Denormalize user fields for querying sessions list
-    try {
-      if (mdb.INTERNAL.session) {
-        const upd = await mdb.INTERNAL.session.updateOne(
-          { _id: req.sessionID },
-          {
-            $set: {
-              userId: user._id.toString(),
-              username: user.username,
-              email: user.email,
-              role: user.role,
-              ip,
-              uaBrowser: req.session.user.userAgent.browser,
-              uaVersion: req.session.user.userAgent.version,
-              uaOS: req.session.user.userAgent.os,
-              loginTime: new Date(req.session.user.loginTime),
-            },
+    // Denormalize user fields for querying sessions list (best-effort)
+    if (mdb.INTERNAL.session) {
+      mdb.INTERNAL.session.updateOne(
+        { _id: req.sessionID },
+        {
+          $set: {
+            userId: user._id.toString(),
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            ip,
+            uaBrowser: req.session.user.userAgent.browser,
+            uaVersion: req.session.user.userAgent.version,
+            uaOS: req.session.user.userAgent.os,
+            loginTime: new Date(req.session.user.loginTime),
           },
-          { upsert: true },
-        );
+        },
+        { upsert: true },
+      ).then((upd) =>
         logger.info(
           `[SESSION DENORM 2FA] matched=${upd.matchedCount} modified=${upd.modifiedCount} upserted=${upd.upsertedCount || 0} sid=${req.sessionID}`,
-        );
-      }
-    } catch (_) {
-      /* ignore */
+        ),
+      ).catch((err) => logger.warn(`[SESSION DENORM 2FA] failed: ${err.message}`));
     }
     return res.redirect(next || "/");
   } catch (error) {
