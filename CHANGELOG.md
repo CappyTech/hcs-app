@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.14] - 2026-06-24
+
+### Fixed
+- **`/user/2fa` redirect loop for logged-in users**: visiting `/user/2fa` with an active session now redirects to `/` instead of showing "2FA session expired".
+
 ## [6.6.13] - 2026-06-24
 
 ### Fixed

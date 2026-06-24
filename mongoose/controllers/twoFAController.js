@@ -22,6 +22,10 @@ function getSafeNext(raw) {
 }
 
 exports.render2FAPage = (req, res) => {
+  if (req.session.user) {
+    return res.redirect("/");
+  }
+
   if (!req.session.userPending2FA) {
     req.flash("error", "2FA session expired. Please log in again.");
     return res.redirect("/user/login");
