@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.6.12] - 2026-06-24
+
+### Fixed
+- **2FA login returned a bare "Not Found" on code submission** — the real root cause behind the long-running 2FA failure (6.6.1/6.6.8/6.6.9 addressed adjacent issues but not this one). `CRUDRoutes` auto-generates `POST /:model/:uuid` for each model's update action, including `POST /user/:uuid`. `POST /user/2fa` matched it with `uuid="2fa"`, and the `router.param("uuid")` guard returned `404 "Not Found"` instead of falling through — shadowing the real `POST /user/2fa` handler in `twoFARoutes` (mounted afterwards). The guard now calls `next("route")` so non-UUID params skip the CRUD route and reach the correct handler. This also un-shadows any other specific route sharing a `/:model/<segment>` shape. (`GET /user/2fa` was never affected — CRUD only generates `GET /:model/read|update/:uuid`.)
+
 ## [6.6.11] - 2026-06-24
 
 ### Fixed

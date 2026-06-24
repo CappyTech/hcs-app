@@ -10,8 +10,12 @@ const uuidv4Regex =
 
 router.param("uuid", (req, res, next, uuid) => {
   if (!uuidv4Regex.test(uuid)) {
-    // Not a valid UUID, skip CRUD route and call next route (likely your /login route)
-    return res.status(404).send("Not Found");
+    // Not a valid UUID — skip this CRUD route and let Express try the next
+    // matching route. Sending a 404 here instead would *shadow* specific
+    // routes that share the `/:model/<segment>` shape — e.g. POST /user/2fa
+    // was being captured by the generated POST /user/:uuid (update) route and
+    // 404'd before twoFARoutes could handle it.
+    return next("route");
   }
   next();
 });
