@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.2] - 2026-06-25
+
+### Changed
+- **Rewrote `README.md`** into a full project overview: added Tech Stack, App Structure, `app.js` lifecycle, an 18-feature walkthrough (Dev / User / Business Owner perspectives), and split Development vs Production deployment instructions. Added an explicit proprietary License section ("All rights reserved." — Heron Constructive Solutions LTD).
+
 ## [6.7.1] - 2026-06-25
 
 ### Fixed
