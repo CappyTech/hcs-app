@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.1] - 2026-06-25
+
+### Fixed
+- **Projects financial check no longer fails when the alert email can't be sent**: an SMTP failure (e.g. `ECONNREFUSED ...:465`) previously surfaced as "Financial check failed", discarding the result. The check now completes and reports the at-risk count, with the email-delivery problem shown as a separate warning. `checkProjectFinancials` returns `emailError` instead of throwing on send failure.
+
+### Changed
+- **SMTP transport hardening** (`services/emailService.js`): added an explicit `SMTP_SECURE` override (TLS mode independent of port) and connection/greeting/socket timeouts so an unreachable or misconfigured SMTP host fails fast with a clear error instead of hanging. New optional env: `SMTP_SECURE`, `SMTP_CONNECTION_TIMEOUT_MS`, `SMTP_GREETING_TIMEOUT_MS`, `SMTP_SOCKET_TIMEOUT_MS`. Note: `ECONNREFUSED ...:465` is a config issue — switch `SMTP_PORT` to `587` (STARTTLS) for hosts that don't listen on 465.
+
 ## [6.7.0] - 2026-06-25
 
 ### Fixed

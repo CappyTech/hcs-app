@@ -34,13 +34,26 @@ function getTransporter() {
     return null;
   }
 
-  logger.info(`[emailService] Creating SMTP transporter — host: ${host}, port: ${port}, secure: ${port === 465}`);
+  // `secure: true` means implicit TLS (port 465). For 587/25 use STARTTLS
+  // (`secure: false`). Allow an explicit override for hosts that don't follow
+  // the port convention.
+  const secure =
+    process.env.SMTP_SECURE !== undefined
+      ? String(process.env.SMTP_SECURE).toLowerCase() === "true"
+      : port === 465;
+
+  logger.info(`[emailService] Creating SMTP transporter — host: ${host}, port: ${port}, secure: ${secure}`);
 
   _transporter = nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
+    secure,
     auth: { user, pass },
+    // Fail fast with a clear error instead of hanging when the SMTP host is
+    // unreachable or the port is wrong.
+    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS) || 15000,
+    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS) || 10000,
+    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS) || 20000,
   });
 
   return _transporter;

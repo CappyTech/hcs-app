@@ -15,6 +15,7 @@ const stubs = {
   getThrow: null,
   withKfAuthThrow: null,
   sendMailResult: { accepted: ['test@example.com'] },
+  sendMailThrow: null,
 };
 
 // Mock mongooseDatabaseService
@@ -43,6 +44,7 @@ let emailSendMailCalls = [];
 const emailMock = {
   sendMail: async (opts) => {
     emailSendMailCalls.push(opts);
+    if (stubs.sendMailThrow) throw stubs.sendMailThrow;
     return stubs.sendMailResult;
   },
 };
@@ -199,6 +201,7 @@ describe('checkProjectFinancials', () => {
     emailSendMailCalls = [];
     stubs.findResult = [];
     stubs.putThrow = null;
+    stubs.sendMailThrow = null;
     stubs.withKfAuthThrow = null;
     savedNotifyEmail = process.env.NOTIFY_EMAIL;
     savedSmtpFrom    = process.env.SMTP_FROM;
@@ -261,6 +264,21 @@ describe('checkProjectFinancials', () => {
       assert.equal(result.atRisk, 1);
       assert.equal(result.emailSent, false);
       assert.equal(emailSendMailCalls.length, 0);
+    } finally { restoreEnv(); }
+  });
+
+  it('does not throw and reports emailError when sending the alert fails', async () => {
+    try {
+      stubs.sendMailThrow = new Error('connect ECONNREFUSED 77.72.2.107:465');
+      stubs.findResult = [
+        { Number: 42, Name: 'At Risk Project', TargetSalesAmount: 1000, ActualSalesAmount: 200 },
+      ];
+      const result = await checkProjectFinancials({ notifyEmail: 'alerts@test.com' });
+      assert.equal(result.checked, 1);
+      assert.equal(result.atRisk, 1);
+      assert.equal(result.emailSent, false);
+      assert.match(result.emailError, /ECONNREFUSED/);
+      assert.equal(emailSendMailCalls.length, 1); // delivery was attempted
     } finally { restoreEnv(); }
   });
 

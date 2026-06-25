@@ -119,6 +119,11 @@ exports.postProjectsFinancialCheck = async (req, res, next) => {
     req.flash?.('success',
       `Financial check complete: ${result.checked} project(s) checked, ${result.atRisk} at risk${result.emailSent ? ` — alert email sent to ${notifyEmail}` : ''}.`
     );
+    // The check succeeded even if the alert email did not send — surface the
+    // delivery problem separately rather than failing the whole operation.
+    if (result.atRisk > 0 && !result.emailSent && result.emailError) {
+      req.flash?.('error', `Alert email could not be sent: ${result.emailError}`);
+    }
   } catch (err) {
     req.flash?.('error', `Financial check failed: ${err.message}`);
   }

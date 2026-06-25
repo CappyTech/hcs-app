@@ -76,6 +76,7 @@ async function checkProjectFinancials({ notifyEmail } = {}) {
   const atRisk = withFinancials.filter(p => p._financials.atRisk);
 
   let emailSent = false;
+  let emailError = null;
   if (atRisk.length > 0) {
     const to = notifyEmail ||
       process.env.NOTIFY_EMAIL ||
@@ -132,13 +133,23 @@ async function checkProjectFinancials({ notifyEmail } = {}) {
         )
         .join('\n');
 
-      await emailService.sendMail({
-        to,
-        subject: `⚠ ${atRisk.length} KashFlow project(s) below income target`,
-        html,
-        text,
-      });
-      emailSent = true;
+      // The check itself has already succeeded by this point. A delivery
+      // failure (SMTP down, wrong port, etc.) must not discard the results —
+      // capture it and report it as a partial success to the caller.
+      try {
+        await emailService.sendMail({
+          to,
+          subject: `⚠ ${atRisk.length} KashFlow project(s) below income target`,
+          html,
+          text,
+        });
+        emailSent = true;
+      } catch (mailErr) {
+        emailError = mailErr.message;
+        logger.error(
+          `[kashflowProjectService] Financial check ran but the alert email could not be sent: ${mailErr.message}`,
+        );
+      }
     } else {
       logger.warn('[kashflowProjectService] No notify email set — skipping alert email');
     }
@@ -148,7 +159,7 @@ async function checkProjectFinancials({ notifyEmail } = {}) {
     `[kashflowProjectService] Financial check complete: ${activeProjects.length} checked, ${atRisk.length} at risk, email sent: ${emailSent}`,
   );
 
-  return { checked: activeProjects.length, atRisk: atRisk.length, emailSent, projects: withFinancials };
+  return { checked: activeProjects.length, atRisk: atRisk.length, emailSent, emailError, projects: withFinancials };
 }
 
 // ── Mark project complete via KashFlow API ───────────────────────────────────
