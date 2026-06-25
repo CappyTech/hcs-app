@@ -10,6 +10,7 @@ const stubs = {
   updateOneResult: {},
   putResult: {},
   putThrow: null,
+  postThrow: null,
   getResult: { Number: 42, Name: 'Test Project', Status: 'Active', CustomerCode: 'CUST01' },
   getThrow: null,
   withKfAuthThrow: null,
@@ -65,6 +66,7 @@ const kfSessionMock = {
 // Mock axios
 let axiosPutCalls = [];
 let axiosGetCalls = [];
+let axiosPostCalls = [];
 const axiosMock = {
   get: async (url, opts) => {
     axiosGetCalls.push({ url, opts });
@@ -75,6 +77,11 @@ const axiosMock = {
     axiosPutCalls.push({ url, body, opts });
     if (stubs.putThrow) throw stubs.putThrow;
     return { data: stubs.putResult };
+  },
+  post: async (url, body, opts) => {
+    axiosPostCalls.push({ url, body, opts });
+    if (stubs.postThrow) throw stubs.postThrow;
+    return { data: { ok: true, action: 'updated', entityType: body?.entityType, entityId: body?.entityId } };
   },
 };
 require.cache[require.resolve('axios')] = {
@@ -278,15 +285,27 @@ describe('checkProjectFinancials', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('markProjectComplete', () => {
+  let savedSyncApiKey;
   beforeEach(() => {
     axiosPutCalls  = [];
     axiosGetCalls  = [];
+    axiosPostCalls = [];
     kfAuthCalls    = [];
     stubs.putThrow = null;
     stubs.getThrow = null;
+    stubs.postThrow = null;
     stubs.withKfAuthThrow = null;
     stubs.getResult = { Number: 42, Name: 'Test Project', Status: 'Active', CustomerCode: 'CUST01' };
+    // hcsSyncService needs the shared key to attempt the re-pull; without it,
+    // it short-circuits to the local fallback path.
+    savedSyncApiKey = process.env.HCS_SYNC_API_KEY;
+    process.env.HCS_SYNC_API_KEY = 'test-sync-api-key';
   });
+
+  const restoreSyncEnv = () => {
+    if (savedSyncApiKey === undefined) delete process.env.HCS_SYNC_API_KEY;
+    else process.env.HCS_SYNC_API_KEY = savedSyncApiKey;
+  };
 
   it('throws when projectNumber is not provided', async () => {
     await assert.rejects(() => markProjectComplete(null), /projectNumber is required/);
@@ -314,5 +333,31 @@ describe('markProjectComplete', () => {
   it('propagates KashFlow API errors', async () => {
     stubs.getThrow = new Error('API error');
     await assert.rejects(() => markProjectComplete(1), /API error/);
+  });
+
+  it('re-syncs the project from KashFlow via hcs-sync after completing', async () => {
+    try {
+      await markProjectComplete(42);
+      assert.equal(axiosPostCalls.length, 1);
+      const { url, body, opts } = axiosPostCalls[0];
+      assert.ok(url.endsWith('/api/pull'));
+      assert.equal(body.entityType, 'project');
+      assert.equal(body.entityId, 42);
+      assert.equal(opts.headers['X-Sync-Api-Key'], 'test-sync-api-key');
+    } finally { restoreSyncEnv(); }
+  });
+
+  it('falls back to a local Status patch when hcs-sync is unreachable', async () => {
+    try {
+      stubs.postThrow = new Error('ECONNREFUSED');
+      let updateArgs = null;
+      const origUpdate = mockProject.updateOne;
+      mockProject.updateOne = async (filter, update) => { updateArgs = { filter, update }; return {}; };
+      await markProjectComplete(42); // should not throw — KashFlow write already succeeded
+      mockProject.updateOne = origUpdate;
+      assert.ok(updateArgs, 'expected a fallback updateOne call');
+      assert.deepEqual(updateArgs.filter, { Number: 42 });
+      assert.equal(updateArgs.update.$set.Status, 'Completed');
+    } finally { restoreSyncEnv(); }
   });
 });

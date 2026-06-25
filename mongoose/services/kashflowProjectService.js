@@ -5,6 +5,7 @@ const emailService = require('../../services/emailService');
 const kfSession = require('../../services/kashflowSessionService');
 const axios = kfSession.kfAxios;
 const mdb = require('./mongooseDatabaseService');
+const hcsSyncService = require('./hcsSyncService');
 
 const KF_BASE = (
   process.env.KASHFLOW_API_BASE_URL || 'https://api.kashflow.com/v2'
@@ -192,6 +193,45 @@ async function markProjectComplete(projectNumber) {
   });
 
   logger.info(`[kashflowProjectService] Marked project ${projectNumber} as Completed in KashFlow`);
+
+  // The KashFlow write succeeded, but the local REST-namespace copy (maintained
+  // by hcs-sync) is now stale — it still shows the project as active. Re-pull it
+  // from KashFlow via hcs-sync so the projects overview reflects the change.
+  await refreshLocalProject(projectNumber);
+}
+
+/**
+ * Refresh a single project's local REST-namespace copy after a write to
+ * KashFlow. Primary path: ask hcs-sync to re-pull it (authoritative, full
+ * document). Fallback: if hcs-sync is unreachable, patch the local Status
+ * directly so the overview stays consistent.
+ */
+async function refreshLocalProject(projectNumber) {
+  try {
+    await hcsSyncService.pullEntity('project', projectNumber);
+    logger.info(`[kashflowProjectService] Re-synced project ${projectNumber} via hcs-sync`);
+    return;
+  } catch (err) {
+    logger.warn(
+      `[kashflowProjectService] hcs-sync re-pull failed for project ${projectNumber}: ${err.message} — falling back to local Status patch`,
+    );
+  }
+
+  // Fallback: keep the local copy consistent even if hcs-sync is down.
+  try {
+    const RestProject = mdb.REST?.project;
+    if (RestProject) {
+      await RestProject.updateOne(
+        { Number: projectNumber },
+        { $set: { Status: 'Completed' } },
+      );
+      logger.info(`[kashflowProjectService] Patched local project ${projectNumber} Status=Completed (fallback)`);
+    }
+  } catch (patchErr) {
+    logger.error(
+      `[kashflowProjectService] Fallback local patch failed for project ${projectNumber}: ${patchErr.message}`,
+    );
+  }
 }
 
 module.exports = { checkProjectFinancials, markProjectComplete, computeFinancials };

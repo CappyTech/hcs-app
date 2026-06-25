@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.0] - 2026-06-25
+
+### Fixed
+- **Projects Overview "Mark Complete" left stale data**: marking a KashFlow project Complete from `/overview/projects` wrote `Status=Completed` to KashFlow but never refreshed the local REST-namespace copy, so the project kept appearing as active after the redirect. `markProjectComplete` now re-syncs that single project as a by-product of the write.
+
+### Added
+- **`hcsSyncService`**: calls hcs-sync's new `POST /api/pull` (authenticated with the shared `HCS_SYNC_API_KEY` via the `X-Sync-Api-Key` header) to re-pull a single entity from KashFlow on demand. If hcs-sync is unreachable, `markProjectComplete` falls back to patching the local project `Status` directly so the overview stays consistent. New env: `HCS_SYNC_BASE_URL` (default `https://sync.heroncs.co.uk`), optional `HCS_SYNC_TIMEOUT_MS`.
+
 ## [6.6.15] - 2026-06-24
 
 ### Changed
