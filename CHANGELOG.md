@@ -2,6 +2,30 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.0] - 2026-06-26
+
+### Changed
+- **Overhauled the generic read/detail view** (`mongoose/views/tailwindcss/partials/form-read.ejs`, `partials/_formField.ejs`):
+  - **Field layout** replaced individual grey pill-per-field boxes with a horizontal key/value row pattern (label flush-left at fixed width, value to the right, `border-b` dividers) matching the UI guidelines "Detail Key/Value Rows" standard.
+  - **Main details panel** switched from `bg-gray-50 p-6` to a clean `bg-white border border-gray-200 rounded-2xl overflow-hidden` card so rows sit flush inside it.
+  - **Grouped fieldsets** now render a `bg-gray-50` legend strip spanning the full card width rather than a floating inner border box.
+  - **Sub-section cards** (Documents, CIS calendars, Purchases, vehicle logs) switched from the gradient-top-bar pattern to the `border border-gray-200 rounded-2xl shadow-sm` standard card with a `border-b` header row.
+  - **Section headings** standardised to `font-semibold text-sm uppercase tracking-wide text-gray-500`.
+  - **All tables** updated: `th` to `font-semibold uppercase tracking-wide`; `py-2` → `py-3`; `tbody tr` gets `hover:bg-gray-50 transition`; `divide-y divide-gray-100` on tbody; empty cells now render `—`.
+  - **Update button** icon changed from `bi-arrow-clockwise` to `bi-pencil`.
+  - **Vehicle quick-action buttons** replaced raw HTML emoji with Bootstrap Icons (`bi-fuel-pump`, `bi-car-front`, `bi-wrench-adjustable`); "Log Service" colour changed from `bg-purple-600` to `bg-violet-600`.
+  - **Action button colour logic** refactored from repeated inline ternary chains to a `_btnColor()` lookup helper.
+  - Back link, page title, and link colours corrected to match UI guidelines (`green-700`, `font-bold`).
+
+### Added
+- **Cross-model related-record panels** on all generic detail pages (`form-read.ejs`, `listControllerConfig.js`):
+  - **Customer detail** now shows three linked tables below the main fields — *Invoices* (number→`/invoice/read/`, status badge, gross, paid), *Quotes* (number→`/quote/read/`, status badge, gross), and *Projects* (ref→`/project/read/`, status badge, start/end). Injected via new `readLocals` querying `invoice.CustomerId`, `quote.CustomerId`, `project.CustomerCode`.
+  - **Invoice detail** now shows a linked *Customer* card (name→`/customer/read/`). Injected via `readLocals` resolving `CustomerId` → customer record.
+  - **Quote detail** now shows a linked *Customer* card (name→`/customer/read/`). Same pattern as invoice.
+  - **Purchase detail** now shows a linked *Supplier* card (name→`/supplier/read/`, code, CIS badge if `WithholdingTaxRate` is set). Injected via `readLocals` resolving `SupplierId` → supplier record. Previously `SupplierId` was in `hideFields` and completely absent from the detail view.
+  - **Project detail** now shows a linked *Customer* card (name→`/customer/read/`) and a *Contracts* table (title→`/contract/read/`, status badge, start/end). Injected via `readLocals` resolving `CustomerCode` → customer and querying `contract.projectId`.
+  - **Employee detail** now shows *Vehicles* (reg→`/vehicle/read/`, make/model, status badge), *Holiday Entitlements* (period→`/employeeHoliday/read/`, entitlement/accrued/taken/carry-over days), and *Holiday Requests* (dates→`/holidayRequest/read/`, type, status badge). Injected via `readLocals` querying by `employeeId`.
+
 ## [6.7.9] - 2026-06-26
 
 ### Fixed

@@ -315,6 +315,15 @@ module.exports = {
       { field: 'OutstandingBalance', label: 'Outstanding', type: 'numberrange' },
       { field: 'InvoicedNetAmount', label: 'Net Invoiced', type: 'numberrange' },
     ],
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const [relatedInvoices, relatedQuotes, relatedProjects] = await Promise.all([
+        mdb.REST?.invoice?.find({ CustomerId: item.Id }).select('uuid Number Status IssuedDate GrossAmount AmountPaid').sort({ Number: -1 }).limit(50).lean() ?? [],
+        mdb.REST?.quote?.find({ CustomerId: item.Id }).select('uuid Number Status Date GrossAmount').sort({ Number: -1 }).limit(50).lean() ?? [],
+        mdb.REST?.project?.find({ CustomerCode: item.Code }).select('uuid Number Name Status StartDate EndDate').sort({ Number: -1 }).limit(50).lean() ?? [],
+      ]);
+      return { relatedInvoices, relatedQuotes, relatedProjects };
+    },
   },
   employee: {
     title: 'Employees',
@@ -371,6 +380,15 @@ module.exports = {
         returnField: 'Name',
         linkTo: (matched) => `/supplier/read/${matched.uuid}`
       }
+    },
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const [relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements] = await Promise.all([
+        mdb.INTERNAL?.vehicle?.find({ employeeId: item._id }).select('uuid registrationNumber make model year availabilityStatus').sort({ registrationNumber: 1 }).lean() ?? [],
+        mdb.INTERNAL?.holidayRequest?.find({ employeeId: item._id }).select('uuid startDate endDate daysRequested leaveType status').sort({ startDate: -1 }).limit(20).lean() ?? [],
+        mdb.INTERNAL?.employeeHoliday?.find({ employeeId: item._id }).select('uuid periodStart periodEnd entitlementDays takenDays accruedDays carryOverDays').sort({ periodStart: -1 }).lean() ?? [],
+      ]);
+      return { relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements };
     },
   },
   holiday: {
@@ -471,6 +489,13 @@ module.exports = {
         linkTo: (matched) => `/invoice/read/${matched.uuid}`
       },
     },
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const customer = item.CustomerId && mdb.REST?.customer
+        ? await mdb.REST.customer.findOne({ Id: item.CustomerId }).select('uuid Name Code').lean()
+        : null;
+      return { relatedCustomer: customer };
+    },
   },
   location: {
     title: 'Locations',
@@ -554,6 +579,16 @@ module.exports = {
     description: {
       manage: 'Manage projects and their documents.',
     },
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const [relatedCustomer, relatedContracts] = await Promise.all([
+        item.CustomerCode && mdb.REST?.customer
+          ? mdb.REST.customer.findOne({ Code: item.CustomerCode }).select('uuid Name Code').lean()
+          : null,
+        mdb.INTERNAL?.contract?.find({ projectId: item._id }).select('uuid title status startDate endDate').sort({ startDate: -1 }).lean() ?? [],
+      ]);
+      return { relatedCustomer, relatedContracts };
+    },
   },
   quote: {
     title: 'Quotes',
@@ -603,6 +638,13 @@ module.exports = {
         returnField: 'Name',
         linkTo: (matched) => `/customer/read/${matched.uuid}`
       }
+    },
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const customer = item.CustomerId && mdb.REST?.customer
+        ? await mdb.REST.customer.findOne({ Id: item.CustomerId }).select('uuid Name Code').lean()
+        : null;
+      return { relatedCustomer: customer };
     },
   },
   purchase: {
@@ -685,6 +727,13 @@ module.exports = {
         returnField: 'Name',
         linkTo: (matched) => `/supplier/read/${matched.uuid}`
       }
+    },
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const supplier = item.SupplierId && mdb.REST?.supplier
+        ? await mdb.REST.supplier.findOne({ Id: item.SupplierId }).select('uuid Name Code WithholdingTaxRate').lean()
+        : null;
+      return { relatedSupplier: supplier };
     },
   },
   session: {
