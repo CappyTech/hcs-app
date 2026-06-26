@@ -1,0 +1,23 @@
+<%
+  // Shared Update/Delete action buttons for detail views, with permission gating.
+  // Locals: basePath (string), item ({ uuid }). Falls back to isAdmin when canUpdate/
+  // canDelete are not supplied. Renders nothing when the user can't update.
+  const _ba = typeof basePath !== 'undefined' ? basePath : '';
+  const _uuid = (typeof item !== 'undefined' && item) ? item.uuid : (typeof uuid !== 'undefined' ? uuid : '');
+  const _isAdmin = typeof isAdmin !== 'undefined' ? isAdmin : false;
+  const _cu = typeof canUpdate !== 'undefined' ? canUpdate : _isAdmin;
+  const _cd = typeof canDelete !== 'undefined' ? canDelete : _isAdmin;
+  const _auth = typeof isAuthenticated !== 'undefined' ? isAuthenticated : false;
+%>
+<% if (_auth && _cu) { %>
+  <div class="flex gap-2 shrink-0">
+    <a href="/<%= _ba %>/update/<%= _uuid %>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition shadow-sm">
+      <i class="bi bi-arrow-clockwise"></i><span class="hidden sm:inline">Update</span>
+    </a>
+    <% if (_cd) { %>
+    <a href="/<%= _ba %>/delete/<%= _uuid %>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition shadow-sm">
+      <i class="bi bi-trash-fill"></i><span class="hidden sm:inline">Delete</span>
+    </a>
+    <% } %>
+  </div>
+<% } %>

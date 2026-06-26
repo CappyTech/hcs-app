@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.9] - 2026-06-26
+
+### Fixed
+- **Raw `customPermissions.models` Map editor leaked onto the admin User update form** (`mongoose/config/CRUDControllerConfig.js`): the `user` config's `hideFields` listed `customPermissions.models`, but Mongoose registers a `Map` under the wildcard schema path `customPermissions.models.$*`, so the exact-match hide check in `extractSchema` (`CRUDController.js`) never matched and rendered an unusable `Models.$*` field. The sibling `[String]` paths (`customPermissions.departments`/`.routes`) matched exactly and were correctly hidden. Hide entry corrected to `customPermissions.models.$*`.
+
+## [6.7.8] - 2026-06-26
+
+### Changed
+- **Extracted shared detail-view partials** to remove duplication across the new per-model read views. `partials/_status-badge.ejs` centralises status→colour mapping (used by the assignment & contract headers and the contract's assignments table), and `partials/_detail-actions.ejs` centralises the permission-gated Update/Delete buttons. `assignment/read.ejs` and `contract/read.ejs` now include both instead of hand-rolling the markup, so future detail views reuse them and styling/permission logic stays in one place.
+
 ## [6.7.7] - 2026-06-26
 
 ### Changed

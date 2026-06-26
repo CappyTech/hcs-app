@@ -362,7 +362,7 @@ module.exports = {
         });
       }
     },
-    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models', 'customPermissions.routes'],
+    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models.$*', 'customPermissions.routes'],
     fieldOrder: [
       'username', 'email', 'phoneNumber', 'emailVerified', 'role',
       'employeeId', 'subcontractorId', 'clientId',

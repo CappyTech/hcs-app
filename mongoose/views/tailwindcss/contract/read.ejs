@@ -2,22 +2,11 @@
   // Streamlined contract detail view. Resolved refs (project, location, quote) and
   // the related assignments list are provided by the contract config's readLocals.
   const _status = item.status || 'Planned';
-  const _statusBadge = _status === 'Completed'
-    ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400'
-    : _status === 'In Progress'
-      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400'
-      : 'bg-gray-100 text-gray-800 dark:bg-gray-800/20 dark:text-gray-400';
-  const _asgBadge = (s) => s === 'Done'
-    ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400'
-    : s === 'In Progress'
-      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400'
-      : 'bg-gray-100 text-gray-800 dark:bg-gray-800/20 dark:text-gray-400';
   const _project = (typeof project !== 'undefined') ? project : null;
   const _location = (typeof location !== 'undefined') ? location : null;
   const _quote = (typeof quote !== 'undefined') ? quote : null;
   const _asgs = (typeof assignments !== 'undefined' && Array.isArray(assignments)) ? assignments : [];
   const _canUpdate = typeof canUpdate !== 'undefined' ? canUpdate : isAdmin;
-  const _canDelete = typeof canDelete !== 'undefined' ? canDelete : isAdmin;
 
   // Duration in days (inclusive) when both dates are present.
   let _durationDays = null;
@@ -39,24 +28,13 @@
         <div class="min-w-0">
           <div class="flex items-center gap-3 flex-wrap">
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 break-words"><%= item.title %></h1>
-            <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold <%= _statusBadge %>"><%= _status %></span>
+            <%- include('../partials/_status-badge', { status: _status }) %>
           </div>
           <% if (item.location) { %>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><i class="bi bi-geo-alt mr-1"></i><%= item.location %></p>
           <% } %>
         </div>
-        <% if (isAuthenticated && _canUpdate) { %>
-          <div class="flex gap-2 shrink-0">
-            <a href="/contract/update/<%= item.uuid %>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition shadow-sm">
-              <i class="bi bi-arrow-clockwise"></i><span class="hidden sm:inline">Update</span>
-            </a>
-            <% if (_canDelete) { %>
-            <a href="/contract/delete/<%= item.uuid %>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition shadow-sm">
-              <i class="bi bi-trash-fill"></i><span class="hidden sm:inline">Delete</span>
-            </a>
-            <% } %>
-          </div>
-        <% } %>
+        <%- include('../partials/_detail-actions', { basePath: 'contract', item }) %>
       </div>
 
       <!-- Meta grid -->
@@ -133,7 +111,7 @@
                 <tr>
                   <td class="px-4 py-2"><a href="/assignment/read/<%= a.uuid %>" class="text-green-600 dark:text-green-400 hover:underline font-medium"><%= a.title %></a></td>
                   <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><%= a.weekStart ? slimDateTime(a.weekStart, ['displayFormat']) : '—' %></td>
-                  <td class="px-4 py-2"><span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold <%= _asgBadge(a.status) %>"><%= a.status || 'Planned' %></span></td>
+                  <td class="px-4 py-2"><%- include('../partials/_status-badge', { status: a.status || 'Planned' }) %></td>
                   <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= a.empCount %></td>
                   <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-200"><%= a.subCount %></td>
                 </tr>
