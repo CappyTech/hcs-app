@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.5] - 2026-06-26
+
+### Fixed
+- **"Print / Save PDF" button on the policy view did nothing** (`mongoose/views/tailwindcss/company-docs/policy-print.ejs`). The button used an inline `onclick="window.print()"`, which the nonce-based Content-Security-Policy blocks (inline event-handler attributes aren't covered by script nonces). Replaced with a nonced `<script>` that attaches the click handler, matching the existing `cis/partials/_printButton.ejs` pattern.
+
 ## [6.8.4] - 2026-06-26
 
 ### Added

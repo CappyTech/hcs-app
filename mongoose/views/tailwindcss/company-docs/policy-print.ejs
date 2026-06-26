@@ -156,12 +156,19 @@
       <span class="text-gray-400">/</span>
       <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><%= policy.title %></span>
     </div>
-    <button onclick="window.print()"
+    <button id="policy-print-btn" type="button"
       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm">
       <i class="bi bi-printer"></i> Print / Save PDF
     </button>
   </div>
 </div>
+
+<%# Inline onclick is blocked by the nonce-based CSP — attach via a nonced script. %>
+<script nonce="<%= locals.cspNonce %>">
+  document.getElementById('policy-print-btn')?.addEventListener('click', function () {
+    window.print();
+  });
+</script>
 
 <!-- A4 document -->
 <div class="policy-doc">
