@@ -165,7 +165,21 @@
     </div>
 
   <% /* 2b) Generic array-of-objects pretty table (e.g., Contacts) */ %>
-  <% } else if (Array.isArray(selectedValue) && selectedValue.length > 0 && typeof selectedValue[0] === 'object' && !Array.isArray(selectedValue[0])) { %>
+  <%
+    // Guard: ref arrays (assignedEmployees, assignedSubcontractors, …) hold ObjectIds,
+    // which are typeof 'object'. They must be resolved to names/links by branch 3 via
+    // referenceData — not dumped here as a raw table (that prints the ObjectId's internal
+    // {"type":"Buffer","data":[…]}). Also skip BSON ObjectIds, Buffers and Dates.
+    const _firstRow = Array.isArray(selectedValue) ? selectedValue[0] : null;
+    const _isPlainObjectRow = _firstRow != null
+      && typeof _firstRow === 'object'
+      && !Array.isArray(_firstRow)
+      && !_firstRow._bsontype
+      && !(_firstRow instanceof Date)
+      && !(typeof Buffer !== 'undefined' && Buffer.isBuffer(_firstRow))
+      && !(typeof Buffer !== 'undefined' && Buffer.isBuffer(_firstRow.buffer));
+  %>
+  <% } else if (!field.ref && Array.isArray(selectedValue) && selectedValue.length > 0 && _isPlainObjectRow) { %>
     <% 
       const rows = selectedValue.map(r => r || {});
       const allCols = Array.from(new Set(rows.flatMap(r => Object.keys(r))));

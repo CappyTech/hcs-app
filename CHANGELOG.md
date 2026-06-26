@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.3] - 2026-06-26
+
+### Fixed
+- **Reference-array fields rendered as raw ObjectId buffers on read/delete views** (`mongoose/views/tailwindcss/partials/_formField.ejs`): fields like an assignment's `assignedEmployees`/`assignedSubcontractors` displayed `{"type":"Buffer","data":[…]}` instead of names. The generic "array-of-objects table" branch matched first (an `ObjectId` is `typeof 'object'`) and dumped each id's internal `buffer`. That branch now skips `ref` fields and BSON `ObjectId`/`Buffer`/`Date` arrays, so they fall through to reference resolution and render as linked names. Affects read, update and delete views for any ObjectId-array ref field.
+
 ## [6.7.2] - 2026-06-25
 
 ### Changed
