@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.6] - 2026-06-26
+
+### Changed
+- **Generic read view goes full-width when there's no Items/Payments sidebar** (`mongoose/views/tailwindcss/partials/form-read.ejs`): models without `LineItems`/`PaymentLines` (employees, contracts, notes, …) previously left a blank right-hand third and squeezed details into 2/3 width. The details column now spans the full width and the empty sidebar column is no longer rendered. Invoice-style records (purchases, suppliers) keep the existing 2/3 + sidebar layout. Pure widen — no field restructuring.
+
 ## [6.7.5] - 2026-06-26
 
 ### Changed

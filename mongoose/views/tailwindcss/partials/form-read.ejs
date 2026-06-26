@@ -53,10 +53,13 @@
     <p class="text-gray-500 dark:text-gray-400 text-sm mb-4"><%= descText %></p>
   <% } %>
 
-  <!-- Horizontal layout: details left, sidebar with Items/Payments right -->
-  <div class="grid md:grid-cols-3 gap-4">
+  <!-- Horizontal layout: details left, sidebar with Items/Payments right.
+       When the model has no Items/Payments the sidebar is empty, so the details
+       span the full width instead of leaving a blank right-hand third. -->
+  <% const _hasSidebar = !!(schema['LineItems'] || schema['PaymentLines']); %>
+  <div class="grid gap-4 <%= _hasSidebar ? 'md:grid-cols-3' : 'grid-cols-1' %>">
     <!-- Main details -->
-    <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 p-6 rounded-xl">
+    <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl <%= _hasSidebar ? 'md:col-span-2' : '' %>">
       <%
         const _readRendered = new Set();
         const _readKeys = Object.keys(schema).filter(k => k !== 'LineItems' && k !== 'PaymentLines');
@@ -111,7 +114,8 @@
       }) %>
     </div>
 
-    <!-- Sidebar: Items and Payments stacked -->
+    <!-- Sidebar: Items and Payments stacked (only when the model has them) -->
+    <% if (_hasSidebar) { %>
     <div class="space-y-4">
       <% if (schema['LineItems']) { %>
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
@@ -151,6 +155,7 @@
         </div>
       <% } %>
     </div>
+    <% } %>
   </div>
 
   </div></div><!-- close main card -->
