@@ -78,7 +78,39 @@ module.exports = {
         returnField: 'Name',
         linkTo: (matched) => `/supplier/read/${matched.uuid}`
       }
-    }
+    },
+    // Streamlined detail view (replaces the generic invoice-style form-read, whose
+    // empty Items/Payments sidebar wastes space for assignments).
+    readView: require('path').join('tailwindcss', 'assignment', 'read'),
+    // Resolve ObjectId refs to display name + uuid so the custom view stays simple.
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const pick = (ref) =>
+        mdb.REST?.[ref] || mdb.INTERNAL?.[ref] || mdb.PAPERLESS?.[ref] || mdb[ref];
+      const Contract = pick('contract');
+      const Employee = pick('employee');
+      const Supplier = pick('supplier');
+
+      const contractDoc = item.contractId && Contract
+        ? await Contract.findById(item.contractId).select('title uuid').lean()
+        : null;
+
+      const empIds = Array.isArray(item.assignedEmployees) ? item.assignedEmployees : [];
+      const empDocs = empIds.length && Employee
+        ? await Employee.find({ _id: { $in: empIds } }).select('name uuid').lean()
+        : [];
+
+      const subIds = Array.isArray(item.assignedSubcontractors) ? item.assignedSubcontractors : [];
+      const subDocs = subIds.length && Supplier
+        ? await Supplier.find({ _id: { $in: subIds } }).select('Name uuid').lean()
+        : [];
+
+      return {
+        contract: contractDoc ? { name: contractDoc.title, uuid: contractDoc.uuid } : null,
+        employees: empDocs.map((e) => ({ name: e.name, uuid: e.uuid })),
+        subcontractors: subDocs.map((s) => ({ name: s.Name, uuid: s.uuid })),
+      };
+    },
   },
   attendance: {
     title: 'Attendances',

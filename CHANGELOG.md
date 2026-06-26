@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.5] - 2026-06-26
+
+### Changed
+- **Streamlined the assignment detail page** (`mongoose/views/tailwindcss/assignment/read.ejs`, wired via `readView`/`readLocals` in `listControllerConfig.js`). Replaced the generic invoice-style `form-read` layout — whose empty Items/Payments sidebar left a large blank column and stacked every field into a tall sparse list — with a compact, purpose-built card: title + colour-coded status badge, contract as a linked subtitle, a responsive meta grid (Week Start / Estimated Hours / Created), and assigned employees & subcontractors rendered as linked chips. `readLocals` resolves the ObjectId refs to name + uuid so the template stays simple.
+
 ## [6.7.4] - 2026-06-26
 
 ### Fixed
