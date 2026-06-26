@@ -27,10 +27,24 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
           <select name="category"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-            <% ['HR', 'Health & Safety', 'GDPR', 'Finance', 'Operations', 'General'].forEach(cat => { %>
+            <% categories.forEach(cat => { %>
               <option value="<%= cat %>" <%= policy && policy.category === cat ? 'selected' : '' %>><%= cat %></option>
             <% }) %>
           </select>
+        </div>
+
+        <!-- Assign to employee -->
+        <div class="sm:col-span-3">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign to employee <span class="text-gray-400">(optional)</span></label>
+          <select name="employee"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Company-wide (no specific employee)</option>
+            <% employees.forEach(emp => { %>
+              <% const empId = emp._id.toString(); %>
+              <option value="<%= empId %>" <%= policy && policy.employee && policy.employee.toString() === empId ? 'selected' : '' %>><%= emp.name %></option>
+            <% }) %>
+          </select>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">For individual documents like a contract or onboarding pack. Leave as company-wide for general policies.</p>
         </div>
 
         <!-- Version -->
@@ -42,13 +56,31 @@
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
 
-        <!-- Review date -->
+        <!-- Review cycle -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Review date</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Review every (months)</label>
+          <input type="number" name="reviewIntervalMonths" min="0" step="1"
+            value="<%= policy && (policy.reviewIntervalMonths || policy.reviewIntervalMonths === 0) ? policy.reviewIntervalMonths : 12 %>"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Flagged out of date this many months after each save. <strong>0</strong> = never expires.</p>
+        </div>
+
+        <!-- Due-soon warning window -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Flag "due soon" (days before)</label>
+          <input type="number" name="reviewWarningDays" min="0" step="1"
+            value="<%= policy && (policy.reviewWarningDays || policy.reviewWarningDays === 0) ? policy.reviewWarningDays : 30 %>"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">How many days before the review date the policy shows as "due soon".</p>
+        </div>
+
+        <!-- Review date (override) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Next review date <span class="text-gray-400">(optional)</span></label>
           <input type="date" name="reviewDate"
             value="<%= policy && policy.reviewDate ? new Date(policy.reviewDate).toISOString().split('T')[0] : '' %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Admins are emailed 30 days before this date.</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Overrides the cycle above. Admins are emailed 30 days before. Leave blank to use the review cycle.</p>
         </div>
 
         <!-- Published -->

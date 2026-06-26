@@ -9,9 +9,10 @@ const DEFAULT_DAYS_AHEAD = 30;
  * Policy review-date reminders.
  *
  * Emails admins one daily summary (via the notification outbox) listing
- * company policies whose `reviewDate` has passed or falls within the next
- * `daysAhead` days. Deduped per day, so the reminder repeats daily until the
- * review date is updated.
+ * company policies whose `reviewDate` has passed or falls within that policy's
+ * own warning window (`reviewWarningDays`, falling back to `daysAhead`).
+ * Deduped per day, so the reminder repeats daily until the review date is
+ * updated.
  */
 async function checkAndQueueReminders({ daysAhead = DEFAULT_DAYS_AHEAD } = {}) {
   const stats = { due: 0, queued: 0 };
@@ -23,12 +24,18 @@ async function checkAndQueueReminders({ daysAhead = DEFAULT_DAYS_AHEAD } = {}) {
   }
 
   const now = new Date();
-  const horizon = new Date(now);
-  horizon.setDate(horizon.getDate() + daysAhead);
 
-  const duePolicies = await PolicyDocument.find({
-    reviewDate: { $ne: null, $lte: horizon },
-  }).sort({ reviewDate: 1 }).lean();
+  // Each policy can set its own lead time (reviewWarningDays), so fetch all with
+  // a review date and filter per policy rather than against one global horizon.
+  const candidates = await PolicyDocument.find({ reviewDate: { $ne: null } })
+    .sort({ reviewDate: 1 }).lean();
+
+  const duePolicies = candidates.filter((p) => {
+    const warnDays = Number.isFinite(p.reviewWarningDays) ? p.reviewWarningDays : daysAhead;
+    const horizon = new Date(now);
+    horizon.setDate(horizon.getDate() + warnDays);
+    return new Date(p.reviewDate) <= horizon;
+  });
 
   stats.due = duePolicies.length;
   if (!duePolicies.length) return stats;

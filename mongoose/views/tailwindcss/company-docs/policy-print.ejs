@@ -20,7 +20,7 @@
     justify-content: space-between;
     gap: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 3px solid #064e3b;
+    border-bottom: 3px solid #047857;
     margin-bottom: 1.5rem;
   }
   .lh-logo {
@@ -34,7 +34,7 @@
     font-family: system-ui, sans-serif;
     font-size: 18pt;
     font-weight: 700;
-    color: #064e3b;
+    color: #047857;
     line-height: 1.2;
   }
   .lh-tagline {
@@ -101,7 +101,7 @@
     color: #1a1a1a;
   }
   .doc-body p          { margin-bottom: 0.7em; }
-  .doc-body h1         { font-size: 14pt; font-weight: 700; margin: 1.2em 0 0.4em; color: #064e3b; }
+  .doc-body h1         { font-size: 14pt; font-weight: 700; margin: 1.2em 0 0.4em; color: #047857; }
   .doc-body h2         { font-size: 12pt; font-weight: 700; margin: 1em 0 0.3em; color: #065f46; }
   .doc-body h3         { font-size: 11pt; font-weight: 700; margin: 0.9em 0 0.3em; }
   .doc-body ul, .doc-body ol { margin: 0.4em 0 0.7em 1.5em; }
@@ -122,6 +122,11 @@
     display: flex;
     justify-content: space-between;
     gap: 1rem;
+  }
+  .lh-footer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
   }
 
   /* ── Print overrides ─────────────────────────────────────────────────── */
@@ -186,6 +191,9 @@
       <span class="doc-badge"><%= policy.category %></span>
       <span class="doc-badge">Version <%= policy.version %></span>
     </div>
+    <% if (policy.employee && policy.employee.name) { %>
+      <div class="doc-date">Prepared for: <%= policy.employee.name %><% if (policy.employee.position) { %> — <%= policy.employee.position %><% } %></div>
+    <% } %>
     <div class="doc-date">
       <% if (policy.updatedAt) { %>
         Last updated: <%= new Date(policy.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %>
@@ -202,11 +210,13 @@
 
   <!-- Footer -->
   <footer class="lh-footer">
-    <div>
-      <% if (letterhead.footerText) { %><%= letterhead.footerText %><% } else { %>
-        <% if (letterhead.companyName) { %><%= letterhead.companyName %><% } %>
-        <% if (letterhead.registrationNumber) { %> &bull; Registered in England &amp; Wales No. <%= letterhead.registrationNumber %><% } %>
-        <% if (letterhead.vatNumber) { %> &bull; VAT No. <%= letterhead.vatNumber %><% } %>
+    <div class="lh-footer-meta">
+      <% if (letterhead.footerText) { %>
+        <span><%= letterhead.footerText %></span>
+      <% } else { %>
+        <% if (letterhead.companyName) { %><span><%= letterhead.companyName %></span><% } %>
+        <% if (letterhead.registrationNumber) { %><span>Company No. <%= letterhead.registrationNumber %></span><% } %>
+        <% if (letterhead.vatNumber) { %><span>VAT No. <%= letterhead.vatNumber %></span><% } %>
       <% } %>
     </div>
     <div>Page 1</div>

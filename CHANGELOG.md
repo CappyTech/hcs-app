@@ -2,6 +2,26 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.3] - 2026-06-26
+
+### Added
+- **Per-policy review cadence rules** (`mongoose/models/mongoose/INTERNAL/policyDocument.js`, `policy-form.ejs`, `companyDocsController`). Two new per-policy fields let each policy define when it is considered out of date: `reviewIntervalMonths` (default 12; `0` = never expires) and `reviewWarningDays` (default 30 — how far ahead it is flagged "due soon"). On create/edit, if no explicit **Next review date** is given, `reviewDate` is derived as *now + interval* (`deriveReviewDate`/`parseNonNegInt` helpers), so the existing `policyReviewReminderService` (which emails admins ahead of `reviewDate`) keeps working unchanged. The form gained "Review every (months)" and "Flag due soon (days before)" inputs, and the date field is now an optional override.
+- **Group-by control on the policy list** (`policy-list.ejs`, `getPolicyList`). A `?groupBy=` toggle switches between **Category** (default), **Employee**, **Published** (Published / Draft), and **Review status** (Out of date / Due soon / Up to date / No review date). Review state is resolved per policy from its own cadence rules (`resolveReview`): *out of date* when the effective review date has passed, *due soon* within that policy's warning window, with coloured group headers and review badges.
+- **Employee-specific documents** (`policyDocument.js`, `policy-form.ejs`, `policy-list.ejs`, `policy-print.ejs`, `companyDocsController`). Policies can now be assigned to an individual employee via a new optional `employee` ref (e.g. contracts, onboarding packs); unassigned policies remain company-wide. The create/edit form gained an "Assign to employee" dropdown, the list shows an employee chip and can **group by employee** (Company-wide first, then each employee A–Z), and the printed document shows a "Prepared for: …" line. The reminder list/email populate the employee for display.
+- **New policy categories** (`policyDocument.js`). Added **Employee Handbook**, **Employee Contract**, and **Onboarding** to the category enum. The category list is now a single exported `POLICY_CATEGORIES` constant consumed by the model enum, the form select, and the list's group ordering (no more duplicated hard-coded lists).
+
+### Fixed
+- **Policy review reminder email now honours each policy's warning window** (`mongoose/services/policyReviewReminderService.js`). Previously every policy was flagged using one global 30-day horizon; the service now fetches all policies with a review date and includes each one based on its own `reviewWarningDays` (falling back to the 30-day default), matching the list's "due soon" logic.
+
+### Changed
+- **Policy print/letterhead styling** (`mongoose/views/tailwindcss/company-docs/policy-print.ejs`):
+  - **Header colour corrected to the brand green.** The company name, header underline, and `h1` body headings were hard-coded to off-palette `#064e3b` (emerald-900); changed to the defined brand colour `#047857` (`brand.DEFAULT` in `tailwind.config.js`).
+  - **Footer simplified.** Dropped the "Registered in England & Wales" wording and the `•` bullet separators. The fallback footer now renders the company name, "Company No. …", and "VAT No. …" as spaced segments (new `.lh-footer-meta` flex container).
+- **Policy list redesigned and grouped by category** (`mongoose/views/tailwindcss/company-docs/policy-list.ejs`, `companyDocsController.getPolicyList`):
+  - Policies are now **grouped into per-category cards** (ordered HR → Health & Safety → GDPR → Finance → Operations → General, then any others alphabetically), each with a category header and policy count, so the list scales as policies grow. The redundant per-row Category column was removed. `getPolicyList` builds the `groups` array; `policies` is still passed for the empty-state check.
+  - The **policy title is now a link** to the view (`/company-docs/policies/:uuid/print`).
+  - The row's **"Print" action is now "View"** (`bi-eye`, opening the same view page) — the redundant print-from-list action is gone; printing is done from the View page's existing "Print / Save PDF" button.
+
 ## [6.8.2] - 2026-06-26
 
 ### Fixed
