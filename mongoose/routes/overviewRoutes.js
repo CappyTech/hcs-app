@@ -13,6 +13,10 @@ router.get('/overview/human',
   authService.ensureRole('admin'),
   ctrl.getHumanOverview);
 
+router.get('/overview/holiday',
+  authService.ensureRole('admin'),
+  ctrl.getHolidayOverview);
+
 router.get('/overview/finance',
   authService.ensureRoles('admin', 'accountant'),
   ctrl.getFinanceOverview);

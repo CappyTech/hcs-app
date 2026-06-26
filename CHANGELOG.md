@@ -2,13 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [6.8.1] - 2026-06-26
+## [6.8.2] - 2026-06-26
 
 ### Fixed
-- **Holiday Management dashboard tile (`/holiday`) returned "Page Not Found".** The `HolidayManagement` tile linked to `/holiday`, but no `GET /holiday` route existed — only `POST /holiday/dismiss` and the generated `holiday` (government holidays) CRUD sub-routes (`/holiday/read/:uuid`, etc.). Added a Holiday Management landing page:
-  - New `GET /holiday` route (`mongoose/routes/holidayRoutes.js`), admin-only, matching the other management hubs (`/overview/human`, `/overview/fleet`). Added `/holiday → ['admin']` to `rolePermissionsConfig` route access.
-  - New `holidayManagementService` (`mongoose/services/holidayManagementService.js`) aggregating current-period entitlement balances (with low-balance flags), pending requests awaiting approval, recent decisions, and upcoming government + company holidays.
-  - New `getHolidayManagement` controller handler (`mongoose/controllers/holidayController.js`) and view (`mongoose/views/tailwindcss/holiday-management.ejs`) following the existing overview-hub design, linking through to `/employeeHolidays`, `/holidayRequests`, `/holidays` and `/holidayCustoms`.
+- **Letterhead logo did not persist across redeploys** (`/company-docs/letterhead`). The uploaded logo was written to the container filesystem (`public/images/letterhead-logo.*`) and served from `/resources/images/...`, but `public/` is baked into the image at build time and is not a mounted volume, so every `docker compose pull && up -d` reset the filesystem and deleted the file — leaving `letterhead.logoPath` pointing at a missing image. The logo bytes are now stored in MongoDB on the singleton letterhead document (`logoData` Buffer + `logoMime`) and served via a new admin-only route `GET /company-docs/letterhead/logo` (with a cache-busting query string set on each upload), so the logo persists with the database. Upload switched from `multer.diskStorage` to `multer.memoryStorage`; render queries exclude the `logoData` buffer via `.select('-logoData')`. Files: `mongoose/models/mongoose/INTERNAL/letterhead.js`, `mongoose/controllers/companyDocsController.js`, `mongoose/routes/companyDocsRoutes.js`.
+
+## [6.8.1] - 2026-06-26
+
+### Added
+- **Holiday Overview page (`/overview/holiday`).** New admin overview hub joining the existing `/overview/*` family, surfacing current-period entitlement balances (with low-balance flags), pending requests awaiting approval, recent decisions, and upcoming government + company holidays, linking through to `/employeeHolidays`, `/holidayRequests`, `/holidays` and `/holidayCustoms`. New `holidayOverviewService` (`mongoose/services/holidayOverviewService.js`), `overviewController.getHolidayOverview`, route in `overviewRoutes.js`, and view `mongoose/views/tailwindcss/overview/holiday.ejs`. Also added to the home-page Overviews grid (`index.ejs`).
+
+### Fixed
+- **Holiday and Fleet dashboard tiles returned "Page Not Found".** The `HolidayManagement` tile linked to `/holiday` and the `FleetManagement` tile to `/fleet`, neither of which had a route. Both tiles now point at their overview pages (`/overview/holiday`, `/overview/fleet`) and were retitled to "Holiday Overview" / "Fleet Overview" to match the `PayrollOverview` convention. Removed the dead `/holiday` and `/fleet` entries from `rolePermissionsConfig` route access (the `/overview/*` routes are guarded by `ensureRole('admin')` in the route handler, like their siblings).
 
 ## [6.8.0] - 2026-06-26
 

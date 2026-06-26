@@ -17,7 +17,12 @@ const letterheadSchema = new mongoose.Schema({
   website:           { type: String, trim: true, default: '' },
   registrationNumber:{ type: String, trim: true, default: '' },
   vatNumber:         { type: String, trim: true, default: '' },
+  // logoPath is the URL the views point at (the serve route below, with a
+  // cache-busting query string). The image bytes live in logoData so they
+  // persist with the database — container-local files are wiped on redeploy.
   logoPath:          { type: String, trim: true, default: '' },
+  logoData:          { type: Buffer },
+  logoMime:          { type: String, trim: true, default: '' },
   footerText:        { type: String, trim: true, default: '' },
 }, {
   timestamps: true,

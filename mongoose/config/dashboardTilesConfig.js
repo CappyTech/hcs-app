@@ -225,16 +225,16 @@ module.exports = {
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
     FleetManagement: {
-        title: 'Fleet Management',
+        title: 'Fleet Overview',
         description: 'Manage company vehicles, compliance and assignments.',
-        link: '/fleet',
+        link: '/overview/fleet',
         department: ['maintenance'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     HolidayManagement: {
-        title: 'Holiday Management',
+        title: 'Holiday Overview',
         description: 'Manage holiday accrual, requests and approvals.',
-        link: '/holiday',
+        link: '/overview/holiday',
         department: ['human-resources', 'management'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },

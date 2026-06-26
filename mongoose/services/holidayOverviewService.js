@@ -3,7 +3,7 @@
 const mdb = require('./mongooseDatabaseService');
 
 /**
- * Holiday Management landing page data: a hub that pulls together the three
+ * Holiday Overview landing page data: a hub that pulls together the three
  * sides of holiday administration — accrual/entitlement (employeeHoliday),
  * the request → approval workflow (holidayRequest), and the holiday calendar
  * (government holidays + company holidays). The detailed CRUD lists live at
@@ -15,7 +15,7 @@ const mdb = require('./mongooseDatabaseService');
  * @param {number} [opts.lowBalanceThreshold=3] - Remaining days/hours at or below which a balance is flagged low
  * @returns {Promise<Object>}
  */
-async function getHolidayManagement({ upcomingDays = 60, lowBalanceThreshold = 3 } = {}) {
+async function getHolidayOverview({ upcomingDays = 60, lowBalanceThreshold = 3 } = {}) {
   const now = new Date();
   const horizon = new Date(now);
   horizon.setDate(horizon.getDate() + upcomingDays);
@@ -175,4 +175,4 @@ async function getHolidayManagement({ upcomingDays = 60, lowBalanceThreshold = 3
   };
 }
 
-module.exports = { getHolidayManagement };
+module.exports = { getHolidayOverview };

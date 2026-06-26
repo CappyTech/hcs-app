@@ -2,7 +2,6 @@ const path = require("path");
 const moment = require("moment-timezone");
 const logger = require("../../services/loggerService");
 const holidayService = require("../services/holidayService");
-const holidayManagementService = require("../services/holidayManagementService");
 const mdb = require("../services/mongooseDatabaseService");
 
 async function checkHoliday(req, res, next) {
@@ -43,20 +42,6 @@ async function checkHoliday(req, res, next) {
   }
 }
 
-// GET /holiday — Holiday Management landing page (accrual, requests, calendar)
-async function getHolidayManagement(req, res, next) {
-  try {
-    const overview = await holidayManagementService.getHolidayManagement();
-    return res.render(path.join("tailwindcss", "holiday-management"), {
-      title: "Holiday Management",
-      ...overview,
-    });
-  } catch (err) {
-    logger.error("Holiday management page error: " + err.message);
-    return next(err);
-  }
-}
-
 // POST handler for dismissing holiday for current user
 async function dismissHoliday(req, res, next) {
   try {
@@ -89,6 +74,5 @@ async function dismissHoliday(req, res, next) {
 
 module.exports = {
   checkHoliday,
-  getHolidayManagement,
   dismissHoliday,
 };

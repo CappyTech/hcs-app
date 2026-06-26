@@ -192,12 +192,6 @@ const routeAccess = {
   // Holiday dismiss (all authenticated users)
   '/holiday/dismiss':     '*',
 
-  // Holiday Management hub (aggregates all employees' data)
-  '/holiday':             ['admin'],
-
-  // Fleet
-  '/fleet':               ['admin'],
-
   // GDPR requests
   '/gdpr/requests':       '*',
   '/admin/gdpr/requests': ['admin'],

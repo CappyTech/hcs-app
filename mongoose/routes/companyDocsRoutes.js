@@ -10,6 +10,7 @@ const adminOnly = authService.ensureRole('admin');
 
 router.get('/company-docs',                        adminOnly, ctrl.getIndex);
 router.get('/company-docs/letterhead',             adminOnly, ctrl.getLetterhead);
+router.get('/company-docs/letterhead/logo',        adminOnly, ctrl.getLetterheadLogo);
 router.post('/company-docs/letterhead',            adminOnly, ...ctrl.postLetterhead);
 router.get('/company-docs/policies',               adminOnly, ctrl.getPolicyList);
 router.get('/company-docs/policies/create',        adminOnly, ctrl.getCreatePolicy);

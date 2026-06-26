@@ -3,6 +3,7 @@
 const path = require('path');
 const fleetService = require('../services/fleetService');
 const humanOverviewService = require('../services/humanOverviewService');
+const holidayOverviewService = require('../services/holidayOverviewService');
 const financeOverviewService = require('../services/financeOverviewService');
 const projectsOverviewService = require('../services/projectsOverviewService');
 const kashflowProjectService = require('../services/kashflowProjectService');
@@ -31,6 +32,18 @@ exports.getHumanOverview = async (req, res, next) => {
     const overview = await humanOverviewService.getHumanOverview({ contractEndDays });
     res.render(path.join('tailwindcss', 'overview', 'human'), {
       title: 'Human Resources',
+      ...overview,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getHolidayOverview = async (req, res, next) => {
+  try {
+    const overview = await holidayOverviewService.getHolidayOverview();
+    res.render(path.join('tailwindcss', 'overview', 'holiday'), {
+      title: 'Holiday Overview',
       ...overview,
     });
   } catch (err) {

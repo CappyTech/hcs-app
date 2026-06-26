@@ -33,6 +33,7 @@
       const overviews = [];
       if (canDept('maintenance'))                    overviews.push({ href: '/overview/fleet',           icon: 'bi-truck',             label: 'Fleet',           desc: 'Vehicles, compliance & assignments' });
       if (canDept('human-resources'))                overviews.push({ href: '/overview/human',           icon: 'bi-people',            label: 'Human Resources', desc: 'Employees, attendance & holidays' });
+      if (canDept('human-resources') || canDept('management')) overviews.push({ href: '/overview/holiday',   icon: 'bi-calendar-check',    label: 'Holiday',         desc: 'Accrual, requests & approvals' });
       if (canDept('finance'))                        overviews.push({ href: '/overview/finance',         icon: 'bi-wallet2',           label: 'Finance',         desc: 'Invoices, purchases & overdue' });
       if (canDept('management'))                     overviews.push({ href: '/overview/projects',        icon: 'bi-clipboard-check',   label: 'Projects',        desc: 'Contracts & assignments' });
       if (canDept('paperless'))                      overviews.push({ href: '/overview/documents',       icon: 'bi-file-earmark-text', label: 'Documents',       desc: 'OCR & paperless sync' });

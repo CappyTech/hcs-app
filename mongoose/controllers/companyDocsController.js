@@ -11,19 +11,10 @@ const csrfService = require('../../services/csrfService');
 // No additional filterXSS call is needed here.
 
 // ── Logo upload storage ──────────────────────────────────────────────────────
-const logoStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const dir = path.join(__dirname, '../../public/images');
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `letterhead-logo${ext}`);
-  },
-});
-
+// Keep the upload in memory so the bytes can be persisted to MongoDB. Writing
+// to the container filesystem (public/images) does not survive redeploys.
 const logoUpload = multer({
-  storage: logoStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     const allowed = /\.(jpeg|jpg|png|gif|svg|webp)$/i;
     const allowedMime = /image\//;
@@ -37,7 +28,7 @@ const logoUpload = multer({
 exports.getIndex = async (req, res, next) => {
   try {
     const [letterhead, policyCount] = await Promise.all([
-      mdb.INTERNAL.letterhead.findOne().lean(),
+      mdb.INTERNAL.letterhead.findOne().select('-logoData').lean(),
       mdb.INTERNAL.policyDocument.countDocuments(),
     ]);
     res.render('tailwindcss/company-docs/index', {
@@ -53,11 +44,27 @@ exports.getIndex = async (req, res, next) => {
 // ── Letterhead settings ──────────────────────────────────────────────────────
 exports.getLetterhead = async (req, res, next) => {
   try {
-    const letterhead = await mdb.INTERNAL.letterhead.findOne().lean();
+    const letterhead = await mdb.INTERNAL.letterhead.findOne().select('-logoData').lean();
     res.render('tailwindcss/company-docs/letterhead', {
       title: 'Letterhead Settings',
       letterhead: letterhead || {},
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Streams the stored logo bytes. The letterhead.logoPath the views render
+// points here (with a cache-busting query string set on each upload).
+exports.getLetterheadLogo = async (req, res, next) => {
+  try {
+    const letterhead = await mdb.INTERNAL.letterhead.findOne().select('logoData logoMime');
+    if (!letterhead || !letterhead.logoData || !letterhead.logoData.length) {
+      return res.status(404).end();
+    }
+    res.set('Content-Type', letterhead.logoMime || 'application/octet-stream');
+    res.set('Cache-Control', 'private, max-age=31536000, immutable');
+    res.send(letterhead.logoData);
   } catch (err) {
     next(err);
   }
@@ -78,7 +85,10 @@ exports.postLetterhead = [
         if (req.body[f] !== undefined) update[f] = req.body[f];
       }
       if (req.file) {
-        update.logoPath = `/resources/images/${req.file.filename}`;
+        update.logoData = req.file.buffer;
+        update.logoMime = req.file.mimetype;
+        // Cache-busting query string so a replaced logo refreshes immediately.
+        update.logoPath = `/company-docs/letterhead/logo?v=${Date.now()}`;
       }
       await mdb.INTERNAL.letterhead.findOneAndUpdate({}, update, { upsert: true, new: true });
       req.session.successMessage = 'Letterhead settings saved.';
@@ -185,7 +195,7 @@ exports.getPrintPolicy = async (req, res, next) => {
   try {
     const [policy, letterhead] = await Promise.all([
       mdb.INTERNAL.policyDocument.findOne({ uuid: req.params.uuid }).lean(),
-      mdb.INTERNAL.letterhead.findOne().lean(),
+      mdb.INTERNAL.letterhead.findOne().select('-logoData').lean(),
     ]);
     if (!policy) return next(Object.assign(new Error('Policy not found'), { statusCode: 404 }));
     res.render('tailwindcss/company-docs/policy-print', {
