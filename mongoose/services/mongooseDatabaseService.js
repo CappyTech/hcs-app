@@ -7,6 +7,12 @@ const tunnel = require('tunnel-ssh');
 const mongoose = require('mongoose');
 const logger = require('../../services/loggerService');
 const configService = require('../../services/configService');
+const auditPlugin = require('./auditPlugin');
+
+// INTERNAL models excluded from the audit trail: the audit log itself, plus
+// high-frequency infrastructure writes (session activity) that would flood it.
+const AUDIT_EXCLUDE_MODELS = (process.env.AUDIT_EXCLUDE_MODELS || 'auditLog,session')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 
 const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {} };
 let isConnected = false;
@@ -69,6 +75,11 @@ async function createNamespace(ns, connection) {
     if (!modelName || !schema) {
       logger.warn(`Skipping model in ${ns}: ${file} (missing modelName/schema)`);
       continue;
+    }
+    // Attach the audit trail to INTERNAL models, skipping the audit log itself
+    // and high-frequency infrastructure collections (e.g. session writes).
+    if (ns === 'INTERNAL' && !AUDIT_EXCLUDE_MODELS.includes(modelName)) {
+      schema.plugin(auditPlugin, { modelName });
     }
     connection.model(modelName, schema);
     mdb[ns][modelName] = connection.model(modelName);

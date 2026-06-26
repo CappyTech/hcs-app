@@ -207,6 +207,7 @@ const routeAccess = {
 
   // Security audit trail
   '/admin/security-events': ['admin'],
+  '/audit':                 ['admin'],
 
   // Files
   '/files':               ['admin'],

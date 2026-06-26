@@ -1,6 +1,7 @@
 'use strict';
 
 const logger = require('../../services/loggerService');
+const auditContext = require('./auditContextService');
 
 /**
  * Central background-job scheduler.
@@ -60,7 +61,11 @@ async function execute(job, trigger = 'interval') {
   job.lastRunAt = new Date();
   const startedAt = Date.now();
   try {
-    const result = await job.run();
+    // Attribute any DB writes this job makes to a named System actor in the audit log.
+    const result = await auditContext.runAs(
+      { actorId: null, actorName: `System (${job.name})`, actorEmail: '', ip: '', method: 'JOB', route: job.name },
+      () => job.run(),
+    );
     job.lastDurationMs = Date.now() - startedAt;
     job.lastOutcome = 'ok';
     job.lastError = null;

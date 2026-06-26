@@ -1,0 +1,110 @@
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <h1 class="text-xl font-bold">Audit Log</h1>
+    <span class="text-xs text-gray-400 dark:text-gray-500"><%= total.toLocaleString() %> entries</span>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" action="/audit" class="flex flex-wrap items-end gap-3 text-sm">
+    <div>
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Collection</label>
+      <select name="collection" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm">
+        <option value="">All</option>
+        <% collections.forEach(c => { %>
+          <option value="<%= c %>" <%= filters.collection === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Operation</label>
+      <select name="op" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm">
+        <% ['', 'create', 'update', 'delete', 'read'].forEach(o => { %>
+          <option value="<%= o %>" <%= filters.op === o ? 'selected' : '' %>><%= o ? o.charAt(0).toUpperCase() + o.slice(1) : 'All' %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="flex-1 min-w-48">
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search (actor / record id)</label>
+      <input type="text" name="q" value="<%= filters.q %>" placeholder="name, email or uuid"
+        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm">
+    </div>
+    <button type="submit" class="px-4 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition">Filter</button>
+    <% if (filters.collection || filters.op || filters.q) { %>
+      <a href="/audit" class="px-3 py-1.5 text-sm text-gray-500 hover:underline">Clear</a>
+    <% } %>
+  </form>
+
+  <% if (entries.length === 0) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-12 text-center">
+      <i class="bi bi-shield-check text-4xl text-gray-300 dark:text-gray-600 mb-3 block"></i>
+      <p class="text-gray-500 dark:text-gray-400 text-sm">No audit entries match these filters.</p>
+    </div>
+  <% } else { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">When</th>
+            <th class="px-4 py-3 text-left font-semibold uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Actor</th>
+            <th class="px-4 py-3 text-left font-semibold uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Op</th>
+            <th class="px-4 py-3 text-left font-semibold uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Collection</th>
+            <th class="px-4 py-3 text-left font-semibold uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Record</th>
+            <th class="px-4 py-3 text-left font-semibold uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Changes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          <% entries.forEach(e => {
+               const opTone = e.op === 'create' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                            : e.op === 'update' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                            : e.op === 'delete' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
+               const changedKeys = e.changes ? Object.keys(e.changes) : [];
+          %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition align-top">
+              <td class="px-4 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400"><%= typeof slimDateTime === 'function' ? slimDateTime(e.at) : new Date(e.at).toISOString() %></td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <% if (e.actorName || e.actorEmail) { %>
+                  <span class="font-medium text-gray-900 dark:text-gray-100"><%= e.actorName || e.actorEmail %></span>
+                <% } else { %>
+                  <span class="text-gray-400 dark:text-gray-500 italic">System</span>
+                <% } %>
+              </td>
+              <td class="px-4 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= opTone %>"><%= e.op %></span></td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= e.collectionName %></td>
+              <td class="px-4 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs"><%= e.docUuid || (e.docId ? e.docId.toString() : '—') %></td>
+              <td class="px-4 py-3">
+                <% if (changedKeys.length) { %>
+                  <details>
+                    <summary class="cursor-pointer text-green-700 dark:text-green-400"><%= changedKeys.length %> field<%= changedKeys.length === 1 ? '' : 's' %>: <%= changedKeys.slice(0, 5).join(', ') %><%= changedKeys.length > 5 ? '…' : '' %></summary>
+                    <pre class="mt-2 max-w-xl whitespace-pre-wrap break-all text-xs bg-gray-50 dark:bg-gray-800 rounded-lg p-2"><%= JSON.stringify(e.changes, null, 2) %></pre>
+                  </details>
+                <% } else if (e.op === 'create' || e.op === 'delete') { %>
+                  <details>
+                    <summary class="cursor-pointer text-green-700 dark:text-green-400">view record</summary>
+                    <pre class="mt-2 max-w-xl whitespace-pre-wrap break-all text-xs bg-gray-50 dark:bg-gray-800 rounded-lg p-2"><%= JSON.stringify(e.op === 'create' ? e.after : e.before, null, 2) %></pre>
+                  </details>
+                <% } else { %>
+                  <span class="text-gray-400 dark:text-gray-500">—</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <% if (totalPages > 1) { %>
+      <% const qs = (p) => { const u = new URLSearchParams({ ...(filters.collection && { collection: filters.collection }), ...(filters.op && { op: filters.op }), ...(filters.q && { q: filters.q }), page: p }); return '/audit?' + u.toString(); }; %>
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-gray-500 dark:text-gray-400">Page <%= page %> of <%= totalPages %></span>
+        <div class="flex items-center gap-2">
+          <% if (page > 1) { %><a href="<%= qs(page - 1) %>" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">← Prev</a><% } %>
+          <% if (page < totalPages) { %><a href="<%= qs(page + 1) %>" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">Next →</a><% } %>
+        </div>
+      </div>
+    <% } %>
+  <% } %>
+
+</div>

@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.4] - 2026-06-26
+
+### Added
+- **Database audit trail (`INTERNAL.auditLog`).** All write operations on INTERNAL collections — and single-record reads of sensitive models — are now recorded to an append-only audit log with actor attribution.
+  - **New collection/model** `mongoose/models/mongoose/INTERNAL/auditLog.js`: `{ collectionName, op (create/update/delete/read), docId, docUuid, actor + actorName/actorEmail snapshot, ip/method/route, before, after, changes, at }`, with indexes for per-document history and recent-first scans. Optional retention via `AUDIT_TTL_DAYS` (a TTL index; unset/0 keeps the trail indefinitely).
+  - **Actor context** `mongoose/services/auditContextService.js`: `AsyncLocalStorage` middleware (mounted after auth in `app.js`) binds the acting user + request metadata to the async context so writes are attributed without threading `req` through every call. Operations outside a request (cron/jobs) are recorded as "System".
+  - **Audit plugin** `mongoose/services/auditPlugin.js`: applied to every INTERNAL schema at the single registration chokepoint in `mongooseDatabaseService.createNamespace`. Hooks `save`/`insertMany` (create/update) and query `findOneAndUpdate`/`updateOne`/`updateMany`/`findOneAndDelete`/`deleteOne`/`deleteMany` (with before/after snapshots and a field-level diff). Snapshots are sanitised — binary blobs dropped, long strings truncated — so e.g. the letterhead logo buffer is never copied into the log. Audit writes never throw, so a logging failure can't break the underlying operation.
+  - **Sensitive reads**: single-record reads (`findOne`/`findById`) of nominated models are logged for GDPR subject-access accountability. Default `employee,payrollEntry`, configurable via `AUDIT_SENSITIVE_MODELS`. List reads are intentionally not logged.
+  - **Viewer** at `/audit` (admin-only): `auditController` + `mongoose/views/tailwindcss/audit/index.ejs` — filter by collection / operation / actor or record id, expandable change detail, pagination. Registered in `rolePermissionsConfig`, with an "Audit Log" tile on the Admin dashboard (`dashboardTilesConfig.js`).
+  - **Background-job attribution**: the central job scheduler (`jobSchedulerService.execute`) now runs each job inside an audit context, so writes from cron tasks (review reminders, sync, cleanup) are attributed to `System (<job name>)` rather than a blank actor. Any other context-less write also records as "System" (`auditPlugin.record`).
+  - **Exclusions**: the audit log itself and high-frequency infrastructure writes (`session`) are excluded by default (`AUDIT_EXCLUDE_MODELS`) to prevent recursion and log flooding.
+  - **Note:** MongoDB's built-in auditing is Enterprise/Atlas only (this deployment runs Community `mongo:8`) and cannot attribute actions to app users, so the trail is implemented at the application layer.
+
 ## [6.8.3] - 2026-06-26
 
 ### Added

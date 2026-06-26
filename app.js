@@ -269,6 +269,9 @@ const main = async () => {
     appRouter.use(require('./services/flashService'));
     appRouter.use(authService.ensureAuthenticated);
     appRouter.use(authService.ensureRouteAccess);
+    // Bind the authenticated actor to async-local storage so the DB audit plugin
+    // can attribute writes (must run after auth populates req.session.user).
+    appRouter.use(require('./mongoose/services/auditContextService').middleware);
     appRouter.use(require('./services/logRequestDetailsService'));
     appRouter.use(require('./services/rateLimiterService'));
     // Maintenance/availability guard (friendly 503 when backing services restart mid-operation)
@@ -404,6 +407,7 @@ const main = async () => {
     appRouter.use('/', require('./mongoose/routes/gdprRoutes'));
     appRouter.use('/', require('./mongoose/routes/legalRoutes'));
     appRouter.use('/', require('./mongoose/routes/companyDocsRoutes'));
+    appRouter.use('/', require('./mongoose/routes/auditRoutes'));
 
     // Catch-all 404
     appRouter.use((req, res, next) => {

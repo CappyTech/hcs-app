@@ -27,6 +27,13 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-red-700 hover:bg-red-800'
     },
+    AuditLog: {
+        title: 'Audit Log',
+        description: 'Database audit trail of all record changes and sensitive reads, with actor attribution.',
+        link: '/audit',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     MaintenanceMode: {
         title: 'Maintenance Mode',
         description: 'Take the app offline for non-admins or announce a maintenance window.',
