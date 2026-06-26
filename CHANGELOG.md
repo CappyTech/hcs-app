@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.7] - 2026-06-26
+
+### Changed
+- **Redesigned the contract detail page** (`mongoose/views/tailwindcss/contract/read.ejs`, wired via `readView`/`readLocals` in `listControllerConfig.js`). Replaced the generic stacked `form-read` layout with a compact, purpose-built view: title + colour-coded status badge, site location as a subtitle, a responsive meta grid (Start / End / computed Duration / Project / Location / Quote with resolved links), and notes. Added a second card listing the **assignments that belong to the contract** (title, week start, status badge, employee/subcontractor counts) — mirroring the supplier→purchases pattern. `readLocals` resolves the project/location/quote ObjectId refs and queries child assignments.
+
 ## [6.7.6] - 2026-06-26
 
 ### Changed

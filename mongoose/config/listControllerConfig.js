@@ -215,7 +215,50 @@ module.exports = {
         returnField: 'name',
         linkTo: (matched) => `/location/read/${matched.uuid}`
       }
-    }
+    },
+    // Streamlined detail view (replaces the generic stacked form-read) with a compact
+    // header/meta grid plus a table of the assignments that belong to this contract.
+    readView: require('path').join('tailwindcss', 'contract', 'read'),
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const pick = (ref) =>
+        mdb.REST?.[ref] || mdb.INTERNAL?.[ref] || mdb.PAPERLESS?.[ref] || mdb[ref];
+      const Project = pick('project');
+      const Location = pick('location');
+      const Quote = pick('quote');
+      const Assignment = pick('assignment');
+
+      const projectDoc = item.projectId && Project
+        ? await Project.findById(item.projectId).select('Name name uuid').lean()
+        : null;
+      const locationDoc = item.locationId && Location
+        ? await Location.findById(item.locationId).select('name uuid').lean()
+        : null;
+      const quoteDoc = item.quoteId && Quote
+        ? await Quote.findById(item.quoteId).select('Number Reference uuid').lean()
+        : null;
+
+      const assignmentDocs = item._id && Assignment
+        ? await Assignment.find({ contractId: item._id })
+            .select('uuid title weekStart status assignedEmployees assignedSubcontractors')
+            .sort({ weekStart: -1 })
+            .lean()
+        : [];
+
+      return {
+        project: projectDoc ? { name: projectDoc.Name || projectDoc.name, uuid: projectDoc.uuid } : null,
+        location: locationDoc ? { name: locationDoc.name, uuid: locationDoc.uuid } : null,
+        quote: quoteDoc ? { label: quoteDoc.Number || quoteDoc.Reference || 'Quote', uuid: quoteDoc.uuid } : null,
+        assignments: assignmentDocs.map((a) => ({
+          uuid: a.uuid,
+          title: a.title,
+          weekStart: a.weekStart,
+          status: a.status,
+          empCount: Array.isArray(a.assignedEmployees) ? a.assignedEmployees.length : 0,
+          subCount: Array.isArray(a.assignedSubcontractors) ? a.assignedSubcontractors.length : 0,
+        })),
+      };
+    },
   },
   customer: {
     title: 'Customers',
