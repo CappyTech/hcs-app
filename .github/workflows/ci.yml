@@ -50,7 +50,7 @@ jobs:
           echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
           echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
           REF_SLUG=$(echo "$GITHUB_REF_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g')
-          if [ "$GITHUB_REF_NAME" = "main" ] || [ "$GITHUB_REF_NAME" = "Working" ]; then echo "EXTRA_TAG=latest"; else echo "EXTRA_TAG=branch-${REF_SLUG}"; fi >> $GITHUB_ENV
+          if [ "$GITHUB_REF_NAME" = "main" ] || [ "$GITHUB_REF_NAME" = "master" ] || [ "$GITHUB_REF_NAME" = "Working" ]; then echo "EXTRA_TAG=latest"; else echo "EXTRA_TAG=branch-${REF_SLUG}"; fi >> $GITHUB_ENV
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

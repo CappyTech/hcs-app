@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.7.4] - 2026-06-26
+
+### Fixed
+- **CI no longer publishes `:latest` from `master`** (`.github/workflows/ci.yml`): when the default branch moved from `Working` to `master`, master pushes were tagged `branch-master` instead of the rolling `latest` tag the server pulls, so deployments stayed frozen on the previous `Working` build (e.g. v6.7.2 kept rendering the `assignedEmployees` ObjectId-buffer bug even after the fix merged). The tag-derivation step now treats `master` (alongside `main`/`Working`) as a `latest`-producing branch.
+
 ## [6.7.3] - 2026-06-26
 
 ### Fixed
