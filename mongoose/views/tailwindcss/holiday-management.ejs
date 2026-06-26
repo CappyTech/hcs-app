@@ -1,0 +1,191 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6 print:hidden">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Holiday Management</h1>
+    <div class="flex gap-2">
+      <a href="/holidayRequests" class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">
+        Review Requests
+      </a>
+      <a href="/employeeHoliday/create" class="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm">
+        + Holiday Record
+      </a>
+    </div>
+  </div>
+
+  <!-- Sub-model navigation -->
+  <div class="flex flex-wrap gap-2 mb-6 print:hidden">
+    <a href="/employeeHolidays" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">
+      &#127961; Holiday Records
+    </a>
+    <a href="/holidayRequests" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">
+      &#128203; Requests &amp; Approvals
+    </a>
+    <a href="/holidays" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">
+      &#127470;&#127463; Government Holidays
+    </a>
+    <a href="/holidayCustoms" class="inline-flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium">
+      &#127968; Company Holidays
+    </a>
+  </div>
+
+  <!-- Summary Stats Row -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Employees Tracked</p>
+      <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><%= employeesTracked %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Pending Requests</p>
+      <p class="text-3xl font-bold <%= pendingCount > 0 ? 'text-amber-600' : 'text-green-600' %>"><%= pendingCount %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Low Balance (&le;<%= lowBalanceThreshold %>)</p>
+      <p class="text-3xl font-bold <%= lowBalanceCount > 0 ? 'text-red-600' : 'text-gray-400' %>"><%= lowBalanceCount %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Remaining Days</p>
+      <p class="text-3xl font-bold text-blue-600"><%= totalRemainingDays %></p>
+    </div>
+  </div>
+
+  <!-- Pending Holiday Requests -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Pending Requests</h2>
+      <a href="/holidayRequests" class="text-blue-600 hover:underline text-sm print:hidden">View all &rarr;</a>
+    </div>
+    <% if (pendingRequests.length === 0) { %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center text-gray-500 dark:text-gray-400">
+        No requests are awaiting approval.
+      </div>
+    <% } else { %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Employee</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Dates</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Days</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Type</th>
+              <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300 print:hidden"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <% for (const r of pendingRequests) { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <td class="px-4 py-3">
+                <% if (r.employeeUuid) { %>
+                  <a href="/employee/read/<%= r.employeeUuid %>" class="font-medium text-blue-600 hover:underline"><%= r.employeeName %></a>
+                <% } else { %>
+                  <span class="font-medium text-gray-700 dark:text-gray-200"><%= r.employeeName %></span>
+                <% } %>
+                <% if (r.reason) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><%= r.reason %></p><% } %>
+              </td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= slimDateTime(r.startDate) %> &ndash; <%= slimDateTime(r.endDate) %></td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= r.daysRequested %></td>
+              <td class="px-4 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"><%= r.leaveType %></span></td>
+              <td class="px-4 py-3 text-right print:hidden">
+                <a href="/holidayRequest/update/<%= r.uuid %>" class="text-blue-600 hover:underline text-xs font-medium">Review</a>
+              </td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <!-- Holiday Balances -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Current Balances</h2>
+        <a href="/employeeHolidays" class="text-blue-600 hover:underline text-sm print:hidden">All records &rarr;</a>
+      </div>
+      <% if (balances.length === 0) { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center text-gray-500 dark:text-gray-400">
+          No holiday records for the current period.
+          <a href="/employeeHoliday/create" class="text-blue-600 hover:underline">Create one</a>.
+        </div>
+      <% } else { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Employee</th>
+                <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Entitlement</th>
+                <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Taken</th>
+                <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Remaining</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              <% for (const b of balances) { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 <%= b.low ? 'bg-red-50/50 dark:bg-red-900/10' : '' %>">
+                <td class="px-4 py-3">
+                  <a href="/employeeHoliday/read/<%= b.uuid %>" class="font-medium text-blue-600 hover:underline"><%= b.employeeName %></a>
+                  <span class="block text-xs text-gray-400 dark:text-gray-500"><%= b.type === 'hours' ? 'hours' : 'days' %></span>
+                </td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= b.entitlement + b.carryOver %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= b.taken %></td>
+                <td class="px-4 py-3 text-right font-semibold <%= b.low ? 'text-red-600' : 'text-green-600' %>"><%= Math.round(b.remaining * 10) / 10 %></td>
+              </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Upcoming Holidays -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Upcoming Holidays</h2>
+        <span class="text-xs text-gray-400 dark:text-gray-500">next <%= upcomingDays %> days</span>
+      </div>
+      <% if (upcomingHolidays.length === 0) { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center text-gray-500 dark:text-gray-400">
+          No holidays in the next <%= upcomingDays %> days.
+        </div>
+      <% } else { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg overflow-hidden">
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            <% for (const h of upcomingHolidays) { %>
+            <li class="flex items-center justify-between px-4 py-3 text-sm">
+              <div>
+                <span class="font-medium text-gray-900 dark:text-gray-100"><%= h.title %></span>
+                <% if (h.division) { %><span class="ml-2 text-xs text-gray-400 dark:text-gray-500"><%= h.division %></span><% } %>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= h.source === 'Company' ? 'bg-purple-100 text-purple-800 dark:bg-purple-800/20 dark:text-purple-400' : 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400' %>"><%= h.source %></span>
+                <span class="text-gray-500 dark:text-gray-400 text-xs"><%= slimDateTime(h.date) %></span>
+              </div>
+            </li>
+            <% } %>
+          </ul>
+        </div>
+      <% } %>
+
+      <!-- Recent Decisions -->
+      <% if (recentDecisions.length > 0) { %>
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mt-8 mb-4">Recent Decisions</h2>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg overflow-hidden">
+        <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+          <% for (const d of recentDecisions) { %>
+          <li class="flex items-center justify-between px-4 py-2.5 text-sm">
+            <div>
+              <span class="font-medium text-gray-900 dark:text-gray-100"><%= d.employeeName %></span>
+              <span class="ml-2 text-xs text-gray-500 dark:text-gray-400"><%= slimDateTime(d.startDate) %> &ndash; <%= slimDateTime(d.endDate) %> (<%= d.daysRequested %>d)</span>
+            </div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize <%= d.status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' %>"><%= d.status %></span>
+          </li>
+          <% } %>
+        </ul>
+      </div>
+      <% } %>
+    </div>
+
+  </div>
+
+</div>

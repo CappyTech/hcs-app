@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.1] - 2026-06-26
+
+### Fixed
+- **Holiday Management dashboard tile (`/holiday`) returned "Page Not Found".** The `HolidayManagement` tile linked to `/holiday`, but no `GET /holiday` route existed — only `POST /holiday/dismiss` and the generated `holiday` (government holidays) CRUD sub-routes (`/holiday/read/:uuid`, etc.). Added a Holiday Management landing page:
+  - New `GET /holiday` route (`mongoose/routes/holidayRoutes.js`), admin-only, matching the other management hubs (`/overview/human`, `/overview/fleet`). Added `/holiday → ['admin']` to `rolePermissionsConfig` route access.
+  - New `holidayManagementService` (`mongoose/services/holidayManagementService.js`) aggregating current-period entitlement balances (with low-balance flags), pending requests awaiting approval, recent decisions, and upcoming government + company holidays.
+  - New `getHolidayManagement` controller handler (`mongoose/controllers/holidayController.js`) and view (`mongoose/views/tailwindcss/holiday-management.ejs`) following the existing overview-hub design, linking through to `/employeeHolidays`, `/holidayRequests`, `/holidays` and `/holidayCustoms`.
+
 ## [6.8.0] - 2026-06-26
 
 ### Changed
