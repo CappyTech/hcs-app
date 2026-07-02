@@ -347,6 +347,7 @@ const main = async () => {
       res.locals.commit = gitCommit ? gitCommit.slice(0, 7) : null;
       res.locals.commitUrl = gitCommit ? `${gitRepoUrl}/commit/${gitCommit}` : null;
       res.locals.slimDateTime = require('./services/dateService').slimDateTime;
+      res.locals.fmtDate = require('./services/dateService').fmtDate;
       res.locals.formatCurrency = require('./services/currencyService').formatCurrency;
       res.locals.rounding = require('./services/currencyService').rounding;
       if (!res.locals.csrfToken && req.session?.csrfToken) {

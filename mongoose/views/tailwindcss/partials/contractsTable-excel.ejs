@@ -60,11 +60,11 @@
             <% if (_c.startDate || _c.endDate) { %>
               <span class="text-xs text-gray-400 dark:text-gray-500">
                 <% if (_c.startDate && _c.endDate) { %>
-                  <%= moment(_c.startDate).format('DD/MM/YY') %> &ndash; <%= moment(_c.endDate).format('DD/MM/YY') %>
+                  <%= fmtDate(_c.startDate, 'dd/MM/yy') %> &ndash; <%= fmtDate(_c.endDate, 'dd/MM/yy') %>
                 <% } else if (_c.startDate) { %>
-                  From <%= moment(_c.startDate).format('DD/MM/YY') %>
+                  From <%= fmtDate(_c.startDate, 'dd/MM/yy') %>
                 <% } else { %>
-                  Until <%= moment(_c.endDate).format('DD/MM/YY') %>
+                  Until <%= fmtDate(_c.endDate, 'dd/MM/yy') %>
                 <% } %>
               </span>
             <% } %>

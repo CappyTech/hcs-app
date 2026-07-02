@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
 const logger = require("../../services/loggerService");
-const moment = require("moment-timezone");
+const { formatDistanceToNow } = require("date-fns");
 const bcrypt = require("bcrypt");
 const encryptionService = require("../../services/encryptionService");
 const totpService = require("../../services/totpService");
@@ -166,9 +166,9 @@ exports.getAccountPage = async (req, res, next) => {
     const activeSessions = [];
     const currentSid = req.sessionID;
     for (const doc of rawSessions) {
-      const expiresMoment = moment(doc.expires);
-      // Purge if expired
-      if (expiresMoment.isBefore(moment())) {
+      const expiresDate = doc.expires ? new Date(doc.expires) : null;
+      // Purge if expired (or unparseable)
+      if (!expiresDate || isNaN(expiresDate.getTime()) || expiresDate.getTime() < Date.now()) {
         await mdb.INTERNAL.session.deleteOne({ _id: doc._id });
         continue;
       }
@@ -184,9 +184,9 @@ exports.getAccountPage = async (req, res, next) => {
         platform: doc.uaOS || "Unknown OS",
         loginTime: doc.loginTime || null,
         lastActivity: doc.lastActivity || doc.loginTime || null,
-        idleFor: doc.lastActivity ? moment(doc.lastActivity).fromNow() : "—",
-        expires: expiresMoment,
-        timeUntilExpiry: expiresMoment.fromNow(),
+        idleFor: doc.lastActivity ? formatDistanceToNow(new Date(doc.lastActivity), { addSuffix: true }) : "—",
+        expires: expiresDate,
+        timeUntilExpiry: formatDistanceToNow(expiresDate, { addSuffix: true }),
         secure: true,
         isCurrent,
       });

@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.13] - 2026-07-02
+
+### Changed
+- **moment → date-fns migration complete (phase 2).** The remaining six files are ported and `moment`/`moment-timezone` are no longer runtime dependencies (moved to devDependencies — two test files still use moment as an *independent* implementation to verify date maths against):
+  - `attendanceService` — the Saturday-based payroll-week engine now works in explicit London wall-time arithmetic (new `londonMidnight`/`londonEndOfDay`/`addLondonDays` helpers, DST-safe day addition). **API change:** `payrollWeekStart`/`endDate` returned by `getAttendanceForWeek` are now plain `Date` instants (London midnight) instead of moment objects; the exported week functions accept Date/moment/string inputs via a tolerant converter, so existing callers and test fixtures keep working.
+  - `attendanceController` — new strict `parseYMDLocal` helper preserves moment's strict `YYYY-MM-DD` validation (rejects rollover dates like `2025-02-30`) and local-midnight parsing for inline attendance/assignment/deployment creation.
+  - `cisController` — non-ISO KashFlow date strings ("YYYY-MM-DD HH:mm:ss") parse via a single `parseLondonString` helper; the CIS submission-window dates now come from `taxService.getCurrentMonthlyReturn` instead of being re-derived locally; BST/GMT display tags via `getTimezoneOffset`.
+  - `holidayService` — also **fixes two latent crashes**: matched bank/custom holidays called `.format()` on plain Dates/strings, which threw and made `isDateHoliday` return its error shape instead of holiday details.
+  - `returnsController` (tax-month names now a plain April-first lookup; one shared London date formatter) and `settingsController` (session expiry/idle humanised with `formatDistanceToNow`; sessions with unparseable expiry are now purged).
+- **New global template helper `fmtDate(date, pattern)`** (`dateService`, injected via res.locals) replaces passing `moment` into views — all 28 `moment(...).format(...)` call sites across 8 EJS templates converted, and the `moment` pass-through locals removed from the weekly attendance views.
+- **Fixes a 6.8.12 regression**: `holidayController` and `indexController` passed bare `moment` into render locals, which the 6.8.12 dead-require cleanup missed — the holiday-notice page and home dashboard would have thrown at render. Both locals removed; templates use `fmtDate`.
+
 ## [6.8.12] - 2026-07-02
 
 ### Changed

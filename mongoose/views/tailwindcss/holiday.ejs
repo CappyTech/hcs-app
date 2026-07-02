@@ -36,7 +36,7 @@
     </p>
     <p class="text-gray-600 text-lg">
       <% if (startDate === endDate) { %>
-        We’ll be back on <span class="text-green-600 font-bold"><%= moment(endDate).add(1, 'day').format('DD/MM/YYYY') %></span>. Thank you for your patience!
+        We’ll be back on <span class="text-green-600 font-bold"><%= fmtDate(new Date(new Date(endDate).getTime() + 86400000), 'dd/MM/yyyy') %></span>. Thank you for your patience!
       <% } else { %>
         We’ll be back after <span class="text-green-600 font-bold"><%= slimDateTime(endDate) %></span>. Thank you for your patience!
       <% } %>

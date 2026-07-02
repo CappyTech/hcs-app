@@ -1,6 +1,6 @@
 {
   "name": "hcs-app",
-  "version": "6.8.12",
+  "version": "6.8.13",
   "description": "Internal business platform for Heron Constructive Solutions LTD: CIS/HMRC compliance, HR, attendance, fleet, holidays, document management and finance dashboards.",
   "main": "app.js",
   "engines": {
@@ -46,8 +46,6 @@
     "get-port": "^7.1.0",
     "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
-    "moment": "^2.30.1",
-    "moment-timezone": "^0.5.48",
     "mongoose": "^8.18.0",
     "multer": "^2.0.2",
     "nodemailer": "^9.0.1",
@@ -67,6 +65,8 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^10.0.3",
     "fast-glob": "^3.3.2",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.6.2",
     "nodemon": "^3.1.4",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13"

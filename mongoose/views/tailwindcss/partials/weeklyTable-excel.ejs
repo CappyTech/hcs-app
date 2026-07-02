@@ -39,9 +39,9 @@
       <% daysOfWeek.forEach(day => { %>
         <th class="text-center text-xs font-normal border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-700 dark:text-gray-300">
           <a href="/daily/<%= day %>" class="hover:underline hover:text-green-700 dark:hover:text-green-300">
-            <%= moment(day).format('DD/MM/YYYY') %>
+            <%= fmtDate(day, 'dd/MM/yyyy') %>
           </a><br>
-          <span class="text-gray-600 dark:text-gray-400 font-bold"><%= moment(day).format('dddd') %></span>
+          <span class="text-gray-600 dark:text-gray-400 font-bold"><%= fmtDate(day, 'EEEE') %></span>
         </th>
       <% }); %>
       <% if (!isManagementView) { %>
@@ -230,7 +230,7 @@
                 <%= _hbEntry.remaining %> days
               </span>
               <span class="block text-[10px] text-gray-500 dark:text-gray-400">
-                exp. <%= moment(_hbEntry.periodEnd).format('DD/MM/YY') %>
+                exp. <%= fmtDate(_hbEntry.periodEnd, 'dd/MM/yy') %>
               </span>
             <% } else { %>
               <span class="text-gray-400 dark:text-gray-500 text-xs"></span>

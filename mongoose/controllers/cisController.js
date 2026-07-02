@@ -2,8 +2,23 @@ const mongoose = require("mongoose");
 const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
 const logger = require("../../services/loggerService");
-const moment = require("moment-timezone");
+const { formatInTimeZone, fromZonedTime, getTimezoneOffset } = require("date-fns-tz");
 const taxService = require("../../services/taxService");
+
+const LONDON_TZ = "Europe/London";
+
+/**
+ * Parse a bare date/datetime string (e.g. "2025-09-05 14:30:00") as
+ * Europe/London wall time. Returns null when unparseable.
+ */
+const parseLondonString = (s) => {
+  try {
+    const d = fromZonedTime(String(s).trim().replace(" ", "T"), LONDON_TZ);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+};
 const cisMappings = require("../config/cisMappings");
 const { normalizeWhtRate, HMRC_VERIFICATION_REGEX } = require("../../services/cisService");
 
@@ -102,19 +117,8 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         if (s.startsWith("0000-00-00")) return null;
         let dt = new Date(s);
         if (!isNaN(dt.getTime())) return dt;
-        const hasSpaceDateTime = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?/.test(
-          s,
-        );
-        if (hasSpaceDateTime) {
-          const m = moment.tz(
-            s,
-            ["YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD HH:mm"],
-            "Europe/London",
-          );
-          if (m.isValid()) return m.toDate();
-        }
-        const m2 = moment.tz(s, "Europe/London");
-        return m2.isValid() ? m2.toDate() : null;
+        // Non-ISO strings (e.g. "YYYY-MM-DD HH:mm:ss") — London wall time
+        return parseLondonString(s);
       }
       return null;
     };
@@ -147,22 +151,8 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
         // Fast path: native parse (works for ISO)
         let dt = new Date(d);
         if (!isNaN(dt.getTime())) return dt;
-        // Handle common non-ISO format "YYYY-MM-DD HH:mm:ss" (no T)
-        const trimmed = d.trim();
-        const hasSpaceDateTime = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?/.test(
-          trimmed,
-        );
-        if (hasSpaceDateTime) {
-          const m = moment.tz(
-            trimmed,
-            ["YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD HH:mm"],
-            "Europe/London",
-          );
-          if (m.isValid()) return m.toDate();
-        }
-        // Try a more lenient moment parse in London tz as a last resort
-        const m2 = moment.tz(trimmed, "Europe/London");
-        return m2.isValid() ? m2.toDate() : null;
+        // Non-ISO strings (e.g. "YYYY-MM-DD HH:mm:ss" without T) — London wall time
+        return parseLondonString(d);
       }
       return null;
     };
@@ -423,10 +413,9 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const nextMonth = specifiedMonth === 12 ? 1 : specifiedMonth + 1;
     const nextYear = specifiedMonth === 12 ? specifiedYear + 1 : specifiedYear;
 
-    // Use the actual Date for periodEnd to avoid double-formatting and preserve type for slimDateTime
-    const periodEnd = moment(currentMonthlyReturn.periodEnd);
-    const submissionStartDate = periodEnd.clone().date(7).toDate();
-    const submissionEndDate = periodEnd.clone().date(11).toDate();
+    // taxService already computes the 7th/11th submission window dates
+    const submissionStartDate = currentMonthlyReturn.submissionOpenDate;
+    const submissionEndDate = currentMonthlyReturn.submissionDeadline;
 
     // Decorate purchases for view list
     const purchasesForView = filteredPurchases.map((p) => {
@@ -446,17 +435,14 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       const displayDateRaw = isPaid
         ? displayPaidDate
         : toDate(p.IssuedDate) || null;
-      const m = displayDateRaw
-        ? moment.tz(displayDateRaw, "Europe/London")
-        : null;
-      const due = p.DueDate ? moment.tz(p.DueDate, "Europe/London") : null;
+      const due = p.DueDate ? toDate(p.DueDate) : null;
       return {
         ...p,
         isPaid,
         displayDateLabel: isPaid ? "Paid" : "Issued",
-        displayDate: m ? m.format("Do MMM YYYY") : "",
-        timeZoneTag: m ? (m.isDST() ? "BST" : "GMT") : "",
-        dueDateStr: due ? due.format("Do MMM YYYY") : "",
+        displayDate: displayDateRaw ? formatInTimeZone(displayDateRaw, LONDON_TZ, "do MMM yyyy") : "",
+        timeZoneTag: displayDateRaw ? (getTimezoneOffset(LONDON_TZ, displayDateRaw) !== 0 ? "BST" : "GMT") : "",
+        dueDateStr: due ? formatInTimeZone(due, LONDON_TZ, "do MMM yyyy") : "",
       };
     });
 
@@ -696,6 +682,6 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
 };
 
 exports.redirectCIS = (req, res, next) => {
-  const { taxYear, taxMonth } = taxService.calculateTaxYearAndMonth(moment());
+  const { taxYear, taxMonth } = taxService.calculateTaxYearAndMonth(new Date());
   return res.redirect(`/CIS/Dashboard/${taxYear}/${taxMonth}`);
 };

@@ -29,7 +29,6 @@ async function checkHoliday(req, res, next) {
           reason: holidayDetails.reason,
           startDate: holidayDetails.startDate,
           endDate: holidayDetails.endDate,
-          moment: moment,
         });
       }
       return next();

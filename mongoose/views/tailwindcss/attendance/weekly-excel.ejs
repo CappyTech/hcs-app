@@ -19,7 +19,7 @@
   </div>
 
   <p class="text-center mb-6 text-gray-700 dark:text-gray-300">
-    From <%= moment(startDate).format('Do MMMM YYYY') %> to <%= moment(endDate).format('Do MMMM YYYY') %>
+    From <%= fmtDate(startDate, 'do MMMM yyyy') %> to <%= fmtDate(endDate, 'do MMMM yyyy') %>
   </p>
 
   <!-- Stats Grid -->
@@ -123,9 +123,7 @@
             entries: _deptGroups[dept],
             daysOfWeek,
             startDate,
-            endDate,
-            moment,
-            isManagementView,
+            endDate,            isManagementView,
             dailyHeadcount: dailyHeadcount || {},
             showHeadcount: dept === 'Landscaping',
             sectionType: 'employee',
@@ -143,9 +141,7 @@
         entries: employeeEntries,
         daysOfWeek,
         startDate,
-        endDate,
-        moment,
-        isManagementView,
+        endDate,        isManagementView,
         dailyHeadcount: dailyHeadcount || {},
         showHeadcount: true,
         sectionType: 'employee',
@@ -163,9 +159,7 @@
       entries: subcontractorEntries,
       daysOfWeek,
       startDate,
-      endDate,
-      moment,
-      isManagementView,
+      endDate,      isManagementView,
       dailyHeadcount: dailyHeadcount || {},
       showHeadcount: false,
       sectionType: 'subcontractor',
@@ -182,9 +176,7 @@
       vehicles: typeof vehicles !== 'undefined' ? vehicles : [],
       vehicleDeploymentsByVehicleDate: typeof vehicleDeploymentsByVehicleDate !== 'undefined' ? vehicleDeploymentsByVehicleDate : {},
       daysOfWeek,
-      isManagementView,
-      moment,
-      allEmployees: typeof allEmployees !== 'undefined' ? allEmployees : [],
+      isManagementView,      allEmployees: typeof allEmployees !== 'undefined' ? allEmployees : [],
       allSubcontractors: typeof allSubcontractors !== 'undefined' ? allSubcontractors : [],
       locations: typeof locations !== 'undefined' ? locations : [],
       activeContracts: typeof activeContracts !== 'undefined' ? activeContracts : []
@@ -268,7 +260,7 @@
                 <%= entry.statement.title || entry.statement.originalFileName || 'Statement' %>
               </a>
               <span class="block text-xs text-gray-500 dark:text-gray-400">
-                Modified: <%= moment(entry.statement.modified).format('DD/MM/YYYY') %>
+                Modified: <%= fmtDate(entry.statement.modified, 'dd/MM/yyyy') %>
               </span>
             </td>
             <td class="border border-gray-300 dark:border-gray-700 px-3 py-2">

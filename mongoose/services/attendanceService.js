@@ -1,17 +1,39 @@
-const moment = require('moment');
+const { format } = require('date-fns');
+const { formatInTimeZone, fromZonedTime } = require('date-fns-tz');
 const logger = require('../../services/loggerService');
 const mdb = require('./mongooseDatabaseService');
 const taxService = require('../../services/taxService');
 const { HMRC_VERIFICATION_REGEX } = require('../../services/cisService');
+
+const TZ = 'Europe/London';
+
+// Accept Date, moment-like (has valueOf), number or string inputs
+const toDateAny = (x) =>
+  x instanceof Date ? x : new Date(typeof x?.valueOf === 'function' ? x.valueOf() : x);
+
+/** London wall-clock date string (yyyy-MM-dd) of an instant. */
+const londonYMD = (instant) => formatInTimeZone(toDateAny(instant), TZ, 'yyyy-MM-dd');
+/** Instant of London midnight on the same London calendar day. */
+const londonMidnight = (instant) => fromZonedTime(londonYMD(instant), TZ);
+/** Instant of London 23:59:59.999 on the same London calendar day. */
+const londonEndOfDay = (instant) => fromZonedTime(`${londonYMD(instant)}T23:59:59.999`, TZ);
+/** Add whole London calendar days (DST-safe wall-time arithmetic). */
+const addLondonDays = (instant, days) => {
+  const d = new Date(`${londonYMD(instant)}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return fromZonedTime(d.toISOString().slice(0, 10), TZ);
+};
 
 /**
  * Get attendance for a day
  */
 const getAttendanceForDay = async (date) => {
   try {
-    // Normalize date to day boundaries
-    const start = moment(date).startOf('day').toDate();
-    const end = moment(date).endOf('day').toDate();
+    // Normalize date to (server-local) day boundaries
+    const start = toDateAny(date);
+    start.setHours(0, 0, 0, 0);
+    const end = toDateAny(date);
+    end.setHours(23, 59, 59, 999);
     return await mdb.INTERNAL.attendance
       .find({ date: { $gte: start, $lte: end } })
       .populate('employeeId')
@@ -31,8 +53,8 @@ const getAttendanceForDay = async (date) => {
  */
 const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
   try {
-    const start = payrollWeekStart.clone().startOf('day').toDate();
-    const end = endDate.clone().endOf('day').toDate();
+    const start = londonMidnight(payrollWeekStart);
+    const end = londonEndOfDay(endDate);
 
     // Fetch internal attendance records for the week
     const attendancePromise = mdb.INTERNAL.attendance
@@ -241,7 +263,7 @@ const groupAttendanceByPerson = (
     if (!supplier) return;
 
     const name = supplier.Name;
-    const dateKey = moment(purchase.InvoiceDate).format('YYYY-MM-DD');
+    const dateKey = format(toDateAny(purchase.InvoiceDate), 'yyyy-MM-dd');
     const amount = parseFloat(purchase.AmountPaid || 0);
 
     if (!groupedAttendance[name]) {
@@ -283,7 +305,7 @@ const groupAttendanceByPerson = (
     if (!supplier) return;
 
     const name = supplier.Name;
-    const dateKey = moment(record.date).format('YYYY-MM-DD');
+    const dateKey = format(toDateAny(record.date), 'yyyy-MM-dd');
     const dayRate = parseFloat(record.dayRate || 0);
 
     if (!groupedAttendance[name]) {
@@ -326,7 +348,7 @@ const groupAttendanceByPerson = (
     if (!employee) return;
 
     const name = employee.name;
-    const dateKey = moment(record.date).format('YYYY-MM-DD');
+    const dateKey = format(toDateAny(record.date), 'yyyy-MM-dd');
     const hoursWorked = parseFloat(record.hoursWorked || 0);
     const hourlyRate = parseFloat(employee.hourlyRate || 0);
     const calculatedPay = hoursWorked * hourlyRate;
@@ -367,9 +389,9 @@ const groupAttendanceByPerson = (
     totalEmployeeHours += hoursWorked;
   });
 
-  // Build day list
+  // Build day list (London calendar days)
   const daysOfWeek = Array.from({ length: 7 }, (_, i) =>
-    payrollWeekStart.clone().add(i, 'days').format('YYYY-MM-DD')
+    londonYMD(addLondonDays(payrollWeekStart, i))
   );
 
   const totalEmployeePay = Object.values(groupedAttendance)
@@ -429,23 +451,26 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
   const year = !isNaN(yearParam) ? yearParam : taxService.getCurrentTaxYear();
   const { start: startOfTaxYear, end: endOfTaxYear } = taxService.getTaxYearStartEnd(year);
 
-  const taxYearStart = moment.tz(startOfTaxYear, 'Do MMMM YYYY', 'Europe/London');
-  const taxYearEnd = moment.tz(endOfTaxYear, 'Do MMMM YYYY', 'Europe/London');
+  // First payroll week starts on the Saturday of the week containing 6 April
+  const isoDow = Number(formatInTimeZone(startOfTaxYear, TZ, 'i')); // 1=Mon .. 7=Sun
+  const deltaToSaturday = isoDow === 7 ? 6 : 6 - isoDow;
+  let firstPayrollWeekStart = addLondonDays(startOfTaxYear, deltaToSaturday);
+  if (firstPayrollWeekStart.getTime() < startOfTaxYear.getTime()) {
+    firstPayrollWeekStart = addLondonDays(firstPayrollWeekStart, 7);
+  }
 
-  let firstPayrollWeekStart = taxYearStart.clone().day(6);
-  if (firstPayrollWeekStart.isBefore(taxYearStart)) firstPayrollWeekStart.add(7, 'days');
+  const WEEK_MS = 7 * 86400000;
+  const totalWeeksInYear =
+    Math.trunc((endOfTaxYear.getTime() - firstPayrollWeekStart.getTime()) / WEEK_MS) + 1;
 
-  const totalWeeksInYear = taxYearEnd.diff(firstPayrollWeekStart, 'weeks') + 1;
-
-  const today = moment.tz('Europe/London');
   let requestedWeekNumber = !isNaN(weekParam)
     ? weekParam
-    : today.diff(firstPayrollWeekStart, 'weeks') + 1;
+    : Math.trunc((Date.now() - firstPayrollWeekStart.getTime()) / WEEK_MS) + 1;
 
   requestedWeekNumber = Math.max(1, Math.min(requestedWeekNumber, totalWeeksInYear));
 
-  const payrollWeekStart = firstPayrollWeekStart.clone().add((requestedWeekNumber - 1) * 7, 'days');
-  const endDate = payrollWeekStart.clone().add(6, 'days');
+  const payrollWeekStart = addLondonDays(firstPayrollWeekStart, (requestedWeekNumber - 1) * 7);
+  const endDate = addLondonDays(payrollWeekStart, 6);
 
   const previousWeek = requestedWeekNumber === 1 ? totalWeeksInYear : requestedWeekNumber - 1;
   const previousYear = requestedWeekNumber === 1 ? year - 1 : year;
@@ -499,13 +524,13 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
 
   // Vehicle deployments — per-day per-vehicle
   const weekDeployments = await fetchVehicleDeploymentsForWeek(
-    payrollWeekStart.clone().startOf('day').toDate(),
-    endDate.clone().endOf('day').toDate()
+    londonMidnight(payrollWeekStart),
+    londonEndOfDay(endDate)
   );
   const vehicleDeploymentsByVehicleDate = {};
   for (const d of weekDeployments) {
     const vKey = String(d.vehicleId._id || d.vehicleId);
-    const dateKey = moment(d.date).format('YYYY-MM-DD');
+    const dateKey = format(toDateAny(d.date), 'yyyy-MM-dd');
     if (!vehicleDeploymentsByVehicleDate[vKey]) vehicleDeploymentsByVehicleDate[vKey] = {};
     vehicleDeploymentsByVehicleDate[vKey][dateKey] = d;
   }
@@ -584,8 +609,8 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
 const fetchStatementsForWeek = async (payrollWeekStart, endDate) => {
   if (!mdb.PAPERLESS || !mdb.PAPERLESS.OcrDocument) return [];
 
-  const start = payrollWeekStart.clone().startOf('day').toDate();
-  const end = endDate.clone().endOf('day').toDate();
+  const start = londonMidnight(payrollWeekStart);
+  const end = londonEndOfDay(endDate);
 
   // Find statements whose DueDate (from custom field "Invoice Due Date") falls
   // within or overlaps the week, or that were created/modified this week.
@@ -680,8 +705,8 @@ const fetchStatementsForWeek = async (payrollWeekStart, endDate) => {
  */
 const fetchAssignmentsForWeek = async (payrollWeekStart) => {
   try {
-    const dayStart = payrollWeekStart.clone().startOf('day').toDate();
-    const dayEnd = payrollWeekStart.clone().endOf('day').toDate();
+    const dayStart = londonMidnight(payrollWeekStart);
+    const dayEnd = londonEndOfDay(payrollWeekStart);
     return await mdb.INTERNAL.assignment
       .find({ weekStart: { $gte: dayStart, $lte: dayEnd } })
       .populate('contractId', '_id uuid title location status')

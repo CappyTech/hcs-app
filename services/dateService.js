@@ -1,3 +1,4 @@
+const { format } = require("date-fns");
 const { fromZonedTime, formatInTimeZone } = require("date-fns-tz");
 
 /**
@@ -53,4 +54,17 @@ function slimDateTime(dateString, options = [], timezone = "Europe/London") {
   return baseDate;
 }
 
-module.exports = { slimDateTime };
+/**
+ * General-purpose template date formatter (replaces passing `moment` into
+ * views). Accepts a Date / string / number and a date-fns format pattern
+ * (e.g. 'dd/MM/yyyy', 'do MMMM yyyy', 'EEE'). Returns '' for falsy or
+ * unparseable input.
+ */
+function fmtDate(input, pattern = "dd/MM/yyyy") {
+  if (!input) return "";
+  const d = input instanceof Date ? input : new Date(input);
+  if (isNaN(d.getTime())) return "";
+  return format(d, pattern);
+}
+
+module.exports = { slimDateTime, fmtDate };

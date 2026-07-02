@@ -1,5 +1,5 @@
 const axios = require('axios');
-const moment = require('moment-timezone');
+const { format } = require('date-fns');
 const mdb = require('./mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 const crypto = require('crypto');
@@ -10,8 +10,14 @@ const customHolidays = [
   { startDate: '2024-12-21 08:00:00', endDate: '2025-01-05 18:00:00', title: 'Company Holiday' }
 ];
 
+// Display format for holiday dates, tolerant of Date objects and strings
+const displayDate = (d) => {
+  const dt = d instanceof Date ? d : new Date(d);
+  return isNaN(dt.getTime()) ? String(d) : format(dt, 'do MMMM yyyy');
+};
+
 const holidayService = {
-  isDateHoliday: async (date = moment().format('YYYY-MM-DD')) => {
+  isDateHoliday: async (date = format(new Date(), 'yyyy-MM-dd')) => {
     try {
       // Check Bank Holidays (Mongo)
       const holiday = await mdb.INTERNAL.holiday.findOne({ date });
@@ -20,8 +26,8 @@ const holidayService = {
           return {
             isHoliday: true,
             reason: holiday.title,
-            startDate: holiday.date.format('Do MMMM YYYY'),
-            endDate: holiday.date.format('Do MMMM YYYY'),
+            startDate: displayDate(holiday.date),
+            endDate: displayDate(holiday.date),
             type: 'Government Holiday',
             division: holiday.division
           };
@@ -37,17 +43,19 @@ const holidayService = {
         }
       }
 
-      // Check custom holidays
+      // Check custom holidays (inclusive range; NaN comparisons are false,
+      // matching moment's invalid-date behaviour)
+      const dateMs = new Date(date).getTime();
       const customHoliday = customHolidays.find(h =>
-        moment(date).isBetween(h.startDate, h.endDate, null, '[]')
+        dateMs >= new Date(h.startDate).getTime() && dateMs <= new Date(h.endDate).getTime()
       );
 
       if (customHoliday) {
         return {
           isHoliday: true,
           reason: customHoliday.title,
-          startDate: customHoliday.startDate.format('Do MMMM YYYY'),
-          endDate: customHoliday.endDate.format('Do MMMM YYYY'),
+          startDate: displayDate(customHoliday.startDate),
+          endDate: displayDate(customHoliday.endDate),
           type: 'Company Holiday'
         };
       }
@@ -73,7 +81,7 @@ const holidayService = {
 
 
   isTodayHoliday: async () => {
-    const today = moment().format('Do MMMM YYYY');
+    const today = format(new Date(), 'do MMMM yyyy');
     return await holidayService.isDateHoliday(today);
   },
 
@@ -93,14 +101,16 @@ const holidayService = {
   },
 
   getNextHoliday: async (division) => {
-    const today = moment().startOf('day');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayMs = today.getTime();
     if (!division) division = 'england-and-wales';
     try {
       // Fetch all bank holidays from DB, filter future dates
       const allHolidays = await mdb.INTERNAL.holiday.find();
 
       // Filter bank holidays on or after today
-      const futureBankHolidays = allHolidays.filter(h => moment(h.date).isSameOrAfter(today) && h.division === division);
+      const futureBankHolidays = allHolidays.filter(h => new Date(h.date).getTime() >= todayMs && h.division === division);
 
       // Map to unified format with startDate and endDate same for bank holidays
       const bankHolidayObjs = futureBankHolidays.map(h => ({
@@ -113,7 +123,7 @@ const holidayService = {
       }));
 
       // Filter custom holidays on or after today (by startDate)
-      const futureCustomHolidays = customHolidays.filter(h => moment(h.startDate).isSameOrAfter(today));
+      const futureCustomHolidays = customHolidays.filter(h => new Date(h.startDate).getTime() >= todayMs);
 
       // Merge all holidays
       const combined = [...bankHolidayObjs, ...futureCustomHolidays];
@@ -121,7 +131,7 @@ const holidayService = {
       if (combined.length === 0) return null;
 
       // Sort by startDate ascending
-      combined.sort((a, b) => moment(a.startDate).diff(moment(b.startDate)));
+      combined.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
       // Return earliest upcoming holiday
       return combined[0];

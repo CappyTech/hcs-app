@@ -120,7 +120,6 @@ exports.renderIndex = async (req, res, next) => {
       frequentPages,
       isAuthenticated: !!req.user,
       nextHoliday,
-      moment,
     });
   } catch (err) {
     next(err);

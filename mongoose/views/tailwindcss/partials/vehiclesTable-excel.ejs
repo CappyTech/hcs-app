@@ -10,7 +10,7 @@
    *   allSubcontractors               "” [{_id, uuid, Name}]
    *   locations                       "” [{_id, uuid, name}]
    *   activeContracts                 "” [{_id, uuid, title}]
-   *   moment                          "” moment.js
+   *   (dates are formatted with the global fmtDate helper)
    */
   const _vByD   = typeof vehicleDeploymentsByVehicleDate !== 'undefined' ? vehicleDeploymentsByVehicleDate : {};
   const _today  = new Date();
@@ -49,8 +49,8 @@
       <th class="text-left font-normal border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">Type</th>
       <% _dows.forEach(function(day) { %>
         <th class="text-center text-xs font-normal border border-gray-300 dark:border-gray-700 px-2 py-2 text-gray-700 dark:text-gray-300 min-w-[90px]">
-          <a href="/daily/<%= day %>" class="hover:underline hover:text-green-700 dark:hover:text-green-300"><%= moment(day).format('DD/MM') %></a><br>
-          <span class="font-bold text-gray-600 dark:text-gray-400"><%= moment(day).format('ddd') %></span>
+          <a href="/daily/<%= day %>" class="hover:underline hover:text-green-700 dark:hover:text-green-300"><%= fmtDate(day, 'dd/MM') %></a><br>
+          <span class="font-bold text-gray-600 dark:text-gray-400"><%= fmtDate(day, 'EEE') %></span>
         </th>
       <% }); %>
       <th class="text-center font-normal border border-gray-200 dark:border-gray-700 px-2 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">TAX</th>
@@ -122,17 +122,17 @@
 
         <!-- Compliance columns -->
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.roadTaxExpiryDate) %>">
-          <%= v.roadTaxExpiryDate ? moment(v.roadTaxExpiryDate).format('DD/MM/YY') : '' %>
+          <%= v.roadTaxExpiryDate ? fmtDate(v.roadTaxExpiryDate, 'dd/MM/yy') : '' %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap <%= _complianceCls(v.motExpiryDate) %>">
-          <%= v.motExpiryDate ? moment(v.motExpiryDate).format('DD/MM/YY') : '' %>
+          <%= v.motExpiryDate ? fmtDate(v.motExpiryDate, 'dd/MM/yy') : '' %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
-          <span class="<%= _complianceCls(v.insuranceExpiryDate) %>"><%= v.insuranceExpiryDate ? moment(v.insuranceExpiryDate).format('DD/MM/YY') : '' %></span>
+          <span class="<%= _complianceCls(v.insuranceExpiryDate) %>"><%= v.insuranceExpiryDate ? fmtDate(v.insuranceExpiryDate, 'dd/MM/yy') : '' %></span>
           <% if (v.insuranceProvider) { %><span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.insuranceProvider %></span><% } %>
         </td>
         <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-xs whitespace-nowrap">
-          <span class="<%= _complianceCls(v.breakdownExpiryDate) %>"><%= v.breakdownExpiryDate ? moment(v.breakdownExpiryDate).format('DD/MM/YY') : '' %></span>
+          <span class="<%= _complianceCls(v.breakdownExpiryDate) %>"><%= v.breakdownExpiryDate ? fmtDate(v.breakdownExpiryDate, 'dd/MM/yy') : '' %></span>
           <% if (v.breakdownProvider) { %><span class="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5"><%= v.breakdownProvider %></span><% } %>
         </td>
       </tr>

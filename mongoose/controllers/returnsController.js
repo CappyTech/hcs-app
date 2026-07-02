@@ -3,7 +3,13 @@ const mdb = require("../services/mongooseDatabaseService");
 const taxService = require("../../services/taxService");
 const cisMappings = require("../config/cisMappings");
 const { whtRateLabel } = require("../../services/cisService");
-const moment = require("moment-timezone");
+const { formatInTimeZone } = require("date-fns-tz");
+
+// Tax months run April(1) → March(12)
+const TAX_MONTH_NAMES = ["April", "May", "June", "July", "August", "September",
+  "October", "November", "December", "January", "February", "March"];
+const taxMonthName = (m) => TAX_MONTH_NAMES[((+m - 1) % 12 + 12) % 12];
+const fmtLondonDate = (d) => (d ? formatInTimeZone(d, "Europe/London", "dd/MM/yyyy") : "");
 
 // Tax month display names (April=1 .. March=12)
 const monthNames = [
@@ -208,13 +214,9 @@ exports.renderMonthlyReturns = async (req, res, next) => {
       },
     );
 
-    const monthName = moment
-      .tz({ year: +year, month: 3, day: 6 }, "Europe/London")
-      .add(+month - 1, "months")
-      .format("MMMM");
+    const monthName = taxMonthName(month);
 
-    const slimDateTimeM = (d) =>
-      d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+    const slimDateTimeM = fmtLondonDate;
     const formatCurrencyM = (n) => `£${Number(n || 0).toFixed(2)}`;
 
     const nextYearShortM = (Number(year) + 1).toString().slice(-2);
@@ -342,8 +344,7 @@ exports.renderYearlyReturns = async (req, res, next) => {
     }
 
     // Provide helpers for formatting if not globally defined
-    const slimDateTime = (d) =>
-      d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+    const slimDateTime = fmtLondonDate;
     const formatCurrency = (n) => `£${Number(n || 0).toFixed(2)}`;
 
     const nextYearShort = (Number(year) + 1).toString().slice(-2);
@@ -405,7 +406,7 @@ function classifyLines(p) {
 
 // Shared helper: build a subcontractor entry for the "ForAll" views
 function buildSubEntry(supplier, purchases) {
-  const slimDT = (d) => d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+  const slimDT = fmtLondonDate;
   // OLD: const cisRate = supplier.CISRate != null ? Number(supplier.CISRate) : null;
   // NEW: use WithholdingTaxRate; -1 means N/A
   const whtRate = supplier.WithholdingTaxRate != null ? Number(supplier.WithholdingTaxRate) : null;
@@ -453,7 +454,7 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
     const { year } = req.params;
     if (!year) return res.status(400).send("Year required");
 
-    const slimDateTime = (d) => d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+    const slimDateTime = fmtLondonDate;
     const formatCurrency = (n) => `£${Number(n || 0).toFixed(2)}`;
 
     const taxYearRange = taxService.getTaxYearStartEnd(+year);
@@ -506,7 +507,7 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
     const { year, month } = req.params;
     if (!year || !month) return res.status(400).send("Year and Month required");
 
-    const slimDateTime = (d) => d ? moment.tz(d, "Europe/London").format("DD/MM/YYYY") : "";
+    const slimDateTime = fmtLondonDate;
     const formatCurrency = (n) => `£${Number(n || 0).toFixed(2)}`;
 
     const taxMonthRange = taxService.getCurrentMonthlyReturn(+year, +month);
@@ -541,10 +542,7 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
       subcontractors.push(buildSubEntry(supplier, paid));
     }
 
-    const monthName = moment
-      .tz({ year: +year, month: 3, day: 6 }, "Europe/London")
-      .add(+month - 1, "months")
-      .format("MMMM");
+    const monthName = taxMonthName(month);
     const nextYearShort = (Number(year) + 1).toString().slice(-2);
     return res.render(path.join("tailwindcss", "cis", "monthlyReturnsForAll"), {
       title: `CIS Monthly Returns ${year}-${nextYearShort} — ${monthName} | All Subcontractors`,

@@ -1,6 +1,19 @@
 const path = require("path");
-const moment = require("moment-timezone");
+const { format } = require("date-fns");
+const { formatInTimeZone } = require("date-fns-tz");
 const attendanceService = require("../services/attendanceService");
+
+/**
+ * Strict "YYYY-MM-DD" parser returning a server-local-midnight Date, or null.
+ * Rejects impossible dates (e.g. 2025-02-30), matching the old
+ * moment(date, "YYYY-MM-DD", true).isValid() behaviour.
+ */
+function parseYMDLocal(s) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s || ""))) return null;
+  const [y, m, d] = String(s).split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d ? dt : null;
+}
 const mdb = require("../services/mongooseDatabaseService");
 const logger = require("../../services/loggerService");
 const { scopeQuery } = require("../../services/dataScopingService");
@@ -22,13 +35,12 @@ async function filterAttendanceForUser(req, records) {
 }
 
 exports.getDailyAttendance = async (req, res, next) => {
-  const date = req.params.date || moment().format("YYYY-MM-DD");
+  const date = req.params.date || format(new Date(), "yyyy-MM-dd");
   try {
     let attendance = await attendanceService.getAttendanceForDay(date);
     attendance = await filterAttendanceForUser(req, attendance);
     res.render(path.join("tailwindcss", "attendance", "daily"), {
-      title: `Attendance for ${moment(date).format("DD MMMM YYYY")}`,
-      moment,
+      title: `Attendance for ${format(new Date(date), "dd MMMM yyyy")}`,
       attendance,
       date,
     });
@@ -162,9 +174,11 @@ exports.getWeeklyAttendance = async (req, res, next) => {
     const filteredSubDays = subcontractorEntries.reduce((sum, [_, v]) => sum + Object.keys(v.dailyRecords).length, 0);
 
     // ── Fetch Paperless statements with linked purchases ──
+    // payrollWeekStart/endDate are London-midnight Date instants; the service
+    // normalises to London day boundaries internally.
     const statements = await attendanceService.fetchStatementsForWeek(
-      moment(payrollWeekStart.format("YYYY-MM-DD")),
-      moment(endDate.format("YYYY-MM-DD"))
+      payrollWeekStart,
+      endDate
     );
 
     // Map purchaseUuid → statement paperlessId so weeklyTable can link due events
@@ -181,7 +195,7 @@ exports.getWeeklyAttendance = async (req, res, next) => {
     let holidayBalanceMap = {};
     let fleetCompliance = [];
     if (isManagementView) {
-      const today = moment().toDate();
+      const today = new Date();
 
       // Collect employee Mongo ObjectIds from the filtered entries
       const empMongoIds = employeeEntries
@@ -231,11 +245,10 @@ exports.getWeeklyAttendance = async (req, res, next) => {
     const viewFile = isManagementView ? "weeklyManagement" : "weeklyAdmin";
     // REVERT: change 'weekly-excel' back to 'weekly' to disable inline cell editing
     res.render(path.join("tailwindcss", "attendance", "weekly-excel"), {
-      title: `Tax Week ${taxWeekNumber} — ${payrollWeekStart.format("YYYY")}`,
-      moment,
+      title: `Tax Week ${taxWeekNumber} — ${formatInTimeZone(payrollWeekStart, "Europe/London", "yyyy")}`,
       groupedAttendance: scopedGrouped,
-      startDate: payrollWeekStart.format("YYYY-MM-DD"),
-      endDate: endDate.format("YYYY-MM-DD"),
+      startDate: formatInTimeZone(payrollWeekStart, "Europe/London", "yyyy-MM-dd"),
+      endDate: formatInTimeZone(endDate, "Europe/London", "yyyy-MM-dd"),
       previousYear,
       previousWeek,
       nextYear,
@@ -336,8 +349,10 @@ exports.bulkApproveAttendance = async (req, res, next) => {
       return res.status(400).redirect("back");
     }
 
-    const start = moment(weekStart).startOf("day").toDate();
-    const end = moment(weekEnd).endOf("day").toDate();
+    const start = new Date(weekStart);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(weekEnd);
+    end.setHours(23, 59, 59, 999);
 
     const result = await mdb.INTERNAL.attendance.updateMany(
       { date: { $gte: start, $lte: end }, status: "pending" },
@@ -402,12 +417,11 @@ exports.renderSubmitAttendance = async (req, res, next) => {
 
     res.render(path.join("tailwindcss", "attendance", "submit"), {
       title: "Submit Attendance",
-      moment,
       projects,
       locations,
       entityName,
       isEmployee,
-      today: moment().format("YYYY-MM-DD"),
+      today: format(new Date(), "yyyy-MM-dd"),
     });
   } catch (err) {
     next(err);
@@ -463,7 +477,7 @@ exports.submitAttendance = async (req, res, next) => {
       req.flash(
         "error",
         `Attendance for this date can no longer be submitted — the payroll period ` +
-          `${moment(lockedRun.periodStart).format("D MMM")} – ${moment(lockedRun.periodEnd).format("D MMM YYYY")} ` +
+          `${format(new Date(lockedRun.periodStart), "d MMM")} – ${format(new Date(lockedRun.periodEnd), "d MMM yyyy")} ` +
           `has been ${lockedRun.status}. Contact an administrator if a correction is needed.`,
       );
       return res.redirect("/attendance/submit");
@@ -474,7 +488,7 @@ exports.submitAttendance = async (req, res, next) => {
 
     logger.info(`[attendanceController] Self-service attendance submitted by ${req.user.username} (${role}): ${record.uuid}`);
     req.flash("success", "Attendance submitted for approval.");
-    res.redirect("/daily/" + moment(data.date).format("YYYY-MM-DD"));
+    res.redirect("/daily/" + format(new Date(data.date), "yyyy-MM-dd"));
   } catch (err) {
     if (err.code === 11000) {
       // Duplicate key — attendance already exists for this date/location/project
@@ -726,7 +740,8 @@ exports.inlineCreateAttendance = async (req, res, next) => {
     }
 
     // Validate date
-    if (!date || !moment(date, "YYYY-MM-DD", true).isValid()) {
+    const parsedDate = parseYMDLocal(date);
+    if (!parsedDate) {
       return res.status(400).json({ success: false, error: "Invalid date." });
     }
 
@@ -742,7 +757,7 @@ exports.inlineCreateAttendance = async (req, res, next) => {
     }
 
     const data = {
-      date: moment(date, "YYYY-MM-DD").toDate(),
+      date: parsedDate,
       type: type || "work",
       status: "pending",
     };
@@ -824,7 +839,8 @@ exports.inlineCreateAssignment = async (req, res, next) => {
     const { contractId, weekStart, title, description, assignedEmployees, assignedSubcontractors, estimatedHours, status } = req.body;
 
     if (!contractId) return res.status(400).json({ success: false, error: 'contractId is required.' });
-    if (!weekStart || !moment(weekStart, 'YYYY-MM-DD', true).isValid()) {
+    const parsedWeekStart = parseYMDLocal(weekStart);
+    if (!parsedWeekStart) {
       return res.status(400).json({ success: false, error: 'Invalid weekStart date.' });
     }
     if (!title || !String(title).trim()) {
@@ -833,7 +849,7 @@ exports.inlineCreateAssignment = async (req, res, next) => {
 
     const data = {
       contractId,
-      weekStart: moment(weekStart, 'YYYY-MM-DD').toDate(),
+      weekStart: parsedWeekStart,
       title: String(title).trim(),
     };
     if (description) data.description = String(description).trim();
@@ -903,7 +919,8 @@ exports.inlineCreateVehicleDeployment = async (req, res, next) => {
     const { vehicleId, date, driverEmployeeId, driverSubcontractorId, locationId, contractId, startMileage, endMileage, usageType, notes } = req.body;
 
     if (!vehicleId) return res.status(400).json({ success: false, error: 'vehicleId is required.' });
-    if (!date || !moment(date, 'YYYY-MM-DD', true).isValid()) {
+    const parsedDeployDate = parseYMDLocal(date);
+    if (!parsedDeployDate) {
       return res.status(400).json({ success: false, error: 'Invalid date.' });
     }
     if (driverEmployeeId && driverSubcontractorId) {
@@ -915,7 +932,7 @@ exports.inlineCreateVehicleDeployment = async (req, res, next) => {
 
     const data = {
       vehicleId,
-      date: moment(date, 'YYYY-MM-DD').toDate(),
+      date: parsedDeployDate,
       usageType: usageType || 'site',
     };
     if (driverEmployeeId) data.driverEmployeeId = driverEmployeeId;
