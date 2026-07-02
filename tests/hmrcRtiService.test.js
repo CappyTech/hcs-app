@@ -229,3 +229,157 @@ describe('EPS XML structure', () => {
     assert.ok(xml.startsWith('<EmployerPaymentSummary'), 'Root element should be EmployerPaymentSummary');
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Real-service tests — exercise the actual hmrcRtiService with mocked models
+// ══════════════════════════════════════════════════════════════════════════════
+
+// encryptionService requires ENCRYPTION_KEY at load time
+if (!process.env.ENCRYPTION_KEY) {
+  process.env.ENCRYPTION_KEY = 'test-key-for-unit-tests-only';
+}
+const { encrypt } = require('../services/encryptionService');
+const mdb = require('../mongoose/services/mongooseDatabaseService');
+const { buildFPSForRun, buildEPS, buildFraudHeaders } = require('../services/hmrcRtiService');
+
+// Minimal chainable model mocks matching the query shapes the service uses.
+function findOneModel(doc) {
+  return { findOne: () => ({ lean: async () => doc }) };
+}
+function findModel(docs) {
+  const chain = { populate: () => chain, lean: async () => docs };
+  return { find: () => chain, findOne: () => ({ lean: async () => docs[0] || null }) };
+}
+
+const mockConfig = {
+  payeSchemeReference: encrypt('123/A12345'),
+  accountsOfficeRef:   encrypt('123PA00012345'),
+  gatewayUserId:       encrypt('testuser'),
+  gatewayPassword:     encrypt('testpass'),
+  employerName: 'Heron CS Test'
+};
+
+function setupMocks({ run, entries, runs }) {
+  mdb.INTERNAL.payrollRun    = runs ? findModel(runs) : findOneModel(run);
+  mdb.INTERNAL.payrollEntry  = findModel(entries || []);
+  mdb.INTERNAL.payrollConfig = findOneModel(mockConfig);
+}
+
+const baseRun = {
+  _id: 'run-1', uuid: 'uuid-run-1', taxYear: '2025/26', taxWeek: 5,
+  frequency: 'weekly', status: 'locked',
+  paymentDate: new Date('2025-05-02T00:00:00.000Z')
+};
+
+const baseEntry = {
+  employeeId: {
+    name: 'John O\'Brien & Sons',
+    uuid: 'abcdef12-3456',
+    payroll: { niNumber: encrypt('QQ123456C'), payrollId: 'EMP001' }
+  },
+  taxCode: '1257L', taxBasis: 'cumulative',
+  taxableGross: 600, taxDeducted: 71.65,
+  employeeNI: 28.66, employerNI: 75.58,
+  employeePension: 24.31, employerPension: 14.59,
+  grossPay: 600, ytdGrossPayAfter: 3000, ytdTaxPaidAfter: 358.25,
+  ytdEmployeeNIAfter: 143.30, ytdEmployerNIAfter: 377.90,
+  studentLoanDeduction: 17, postgradLoanDeduction: 0,
+  niCategory: 'A'
+};
+
+describe('buildFPSForRun (mocked models)', () => {
+  it('generates a complete FPS with decrypted NINO, money fields and week number', async () => {
+    setupMocks({ run: baseRun, entries: [baseEntry] });
+    const xml = (await buildFPSForRun('uuid-run-1')).toString('utf-8');
+
+    assert.ok(xml.includes('<NINO>QQ123456C</NINO>'), 'decrypted NINO missing');
+    assert.ok(xml.includes('<TaxablePay>600.00</TaxablePay>'));
+    assert.ok(xml.includes('<TotalTax>71.65</TotalTax>'));
+    assert.ok(xml.includes('<EEsNIInPayPd>28.66</EEsNIInPayPd>'));
+    assert.ok(xml.includes('<ERsNIInPayPd>75.58</ERsNIInPayPd>'));
+    assert.ok(xml.includes('<WeekNo>5</WeekNo>'));
+    assert.ok(!xml.includes('<MonthNo>'), 'weekly run must not emit MonthNo');
+    assert.ok(xml.includes('<PayFreq>W1</PayFreq>'));
+    assert.ok(xml.includes('<RelatedTaxYear>25-26</RelatedTaxYear>'));
+    assert.ok(xml.includes('<OfficeNo>123</OfficeNo>'));
+    assert.ok(xml.includes('<PayeRef>A12345</PayeRef>'));
+    assert.ok(xml.includes('<AORef>123PA00012345</AORef>'));
+    assert.ok(xml.includes('<PmtDate>2025-05-02</PmtDate>'));
+    assert.ok(xml.includes('<TaxablePay_YTD>3000.00</TaxablePay_YTD>'));
+    assert.ok(xml.includes('<TotalTax_YTD>358.25</TotalTax_YTD>'));
+  });
+
+  it('XML-escapes employee names', async () => {
+    setupMocks({ run: baseRun, entries: [baseEntry] });
+    const xml = (await buildFPSForRun('uuid-run-1')).toString('utf-8');
+    // "John O'Brien & Sons" → Fore contains the escaped ampersand
+    assert.ok(xml.includes('&amp;'), 'ampersand in name must be escaped');
+    assert.ok(!/<Fore>[^<]*& /.test(xml), 'raw ampersand leaked into XML');
+  });
+
+  it('includes student loan deduction only when non-zero', async () => {
+    setupMocks({ run: baseRun, entries: [baseEntry] });
+    const withSL = (await buildFPSForRun('uuid-run-1')).toString('utf-8');
+    assert.ok(withSL.includes('<SLDeductionInPayPd>17.00</SLDeductionInPayPd>'));
+    assert.ok(!withSL.includes('<PGLDeductionInPayPd>'), 'zero PGL must be omitted');
+
+    setupMocks({ run: baseRun, entries: [{ ...baseEntry, studentLoanDeduction: 0 }] });
+    const withoutSL = (await buildFPSForRun('uuid-run-1')).toString('utf-8');
+    assert.ok(!withoutSL.includes('<SLDeductionInPayPd>'));
+  });
+
+  it('sets Wk1Mth1Ind for week1/month1 tax basis', async () => {
+    setupMocks({ run: baseRun, entries: [{ ...baseEntry, taxBasis: 'week1' }] });
+    const xml = (await buildFPSForRun('uuid-run-1')).toString('utf-8');
+    assert.ok(xml.includes('<Wk1Mth1Ind>true</Wk1Mth1Ind>'));
+  });
+
+  it('monthly run emits MonthNo and M1 frequency', async () => {
+    const monthlyRun = { ...baseRun, taxWeek: undefined, taxMonth: 2, frequency: 'monthly' };
+    setupMocks({ run: monthlyRun, entries: [baseEntry] });
+    const xml = (await buildFPSForRun('uuid-run-1')).toString('utf-8');
+    assert.ok(xml.includes('<MonthNo>2</MonthNo>'));
+    assert.ok(!xml.includes('<WeekNo>'));
+    assert.ok(xml.includes('<PayFreq>M1</PayFreq>'));
+  });
+
+  it('refuses to build an FPS for a draft run', async () => {
+    setupMocks({ run: { ...baseRun, status: 'draft' }, entries: [baseEntry] });
+    await assert.rejects(() => buildFPSForRun('uuid-run-1'), /locked/);
+  });
+});
+
+describe('buildEPS (mocked models)', () => {
+  it('aggregates totals across all locked/submitted runs for the month', async () => {
+    const runs = [
+      { totals: { grossPay: 10000, taxDeducted: 1500, employeeNI: 700, employerNI: 1200 } },
+      { totals: { grossPay: 5000,  taxDeducted: 750,  employeeNI: 350, employerNI: 600 } }
+    ];
+    setupMocks({ runs });
+    const xml = (await buildEPS('2025/26', 2)).toString('utf-8');
+
+    assert.ok(xml.includes('<EEsContribsYTD>1050.00</EEsContribsYTD>'));
+    assert.ok(xml.includes('<ERsContribsYTD>1800.00</ERsContribsYTD>'));
+    assert.ok(xml.includes('<TaxMonth>2</TaxMonth>'));
+    assert.ok(xml.includes('<RelatedTaxYear>25-26</RelatedTaxYear>'));
+    assert.ok(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>'));
+  });
+});
+
+describe('buildFraudHeaders', () => {
+  it('produces all mandatory Gov-Client / Gov-Vendor headers', () => {
+    const h = buildFraudHeaders({ clientIp: '203.0.113.7', userId: 'jack', serverIp: '198.51.100.1' });
+    assert.equal(h['Gov-Client-Connection-Method'], 'WEB_APP_VIA_SERVER');
+    assert.equal(h['Gov-Client-Public-IP'], '203.0.113.7');
+    assert.equal(h['Gov-Vendor-Public-IP'], '198.51.100.1');
+    assert.ok(h['Gov-Client-User-IDs'].includes('"jack"'));
+    assert.match(h['Gov-Client-Timezone'], /^UTC[+-]\d{2}:\d{2}$/);
+    assert.ok(h['Gov-Client-Device-ID'].length >= 8);
+    assert.ok(h['Gov-Vendor-Version'].includes('hcs-app'));
+  });
+
+  it('user IDs header is valid JSON even with special characters in username', () => {
+    const h = buildFraudHeaders({ userId: 'user "quoted" \\slash' });
+    assert.doesNotThrow(() => JSON.parse(h['Gov-Client-User-IDs']));
+  });
+});

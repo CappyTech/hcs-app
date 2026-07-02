@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.6] - 2026-07-02
+
+### Fixed
+- **Statutory payroll corrections** (verified against HMRC "Rates and thresholds for employers" 2025/26 and 2026/27) — the roadmap's "correctness floor" pass over the PAYE/NI/CIS/RTI engines:
+  - **Employer NI rate corrected from 13.8% to 15%** in `scripts/seed-payroll-tax-rates.js` for both 2025/26 and 2026/27. The rate rose to 15% at Autumn Budget 2024 (effective 6 April 2025); the seed only reflected the Secondary Threshold drop to £5,000. Employer NI was being **under-calculated by 1.2 percentage points**. ⚠️ Re-run the seed script on the server and recalculate any unsubmitted payroll runs; runs already submitted via FPS under-reported employer NI and may need a corrective submission.
+  - **Student loan thresholds corrected**: 2025/26 Plan 1 was seeded with the 2024/25 value (£24,990 → **£26,065**) and Plan 4 likewise (£31,395 → **£32,745**) — both were over-deducting. 2026/27 estimates replaced with published values (Plan 1 £26,900, Plan 2 £29,385, Plan 4 £33,795). 2025/26 LEL corrected £6,396 → £6,500.
+  - **Student/postgrad loan deductions now round down to the whole pound** (HMRC SL3 rule) instead of truncating to pence (`payrollCalculationService.calculateStudentLoan`, with float-noise guard so e.g. an exact £75.00 result can't floor to £74).
+  - **NI category B (married women's reduced rate) corrected from 5.85% to 1.85%** — the rate dropped in March 2024 alongside the main-rate cut. Now DB-driven via new `payrollTaxRates.niEmployeeReducedRate` field (default 0.0185), editable in Settings → Payroll → Tax Rates.
+  - **PAYE 50% regulatory "overriding limit" implemented** (`calculatePAYETax`, both cumulative and week1/month1 bases): tax deducted in a period is capped at 50% of the pay it is deducted from (applies to all codes since April 2015; K codes could previously deduct without limit).
+  - **Employer NI relief categories implemented** (`calculateEmployerNI`): categories H (apprentice under 25), M/Z (under 21) and V (veteran) now pay 0% employer NI up to the UST/AUST/VUST (aligned with the UEL) and the standard rate only above it; category X pays none. The category letter is now passed through from the employee record.
+  - **NI rounding now follows the CWG2 exact-percentage method** — nearest penny with an exact half penny rounded down — replacing plain truncation for employee and employer NI.
+
+### Added
+- **HMRC reference-case unit tests** for the statutory engines (`tests/payrollCalculationService.test.js`, `tests/cisService.test.js`, `tests/hmrcRtiService.test.js`): exact-value PAYE cases (cumulative and week1/month1, K-code overriding limit), NI cases for categories A/B/C/H/J/M/V/X/Z including the half-penny rounding rule, whole-pound student-loan cases, CIS verification-number regex and supplier-predicate cases, and real `buildFPSForRun`/`buildEPS`/`buildFraudHeaders` tests running against mocked models with encrypted fixtures (decrypted NINO, money formatting, week/month numbers, Wk1Mth1 indicator, conditional student-loan elements, XML escaping, draft-run guard, EPS aggregation). Suite: 615 tests passing.
+
 ## [6.8.5] - 2026-06-26
 
 ### Fixed

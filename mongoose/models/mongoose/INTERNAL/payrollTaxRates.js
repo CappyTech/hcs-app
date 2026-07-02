@@ -41,10 +41,11 @@ const payrollTaxRatesSchema = new mongoose.Schema({
   niUEL:  { type: Number, required: true },  // Upper Earnings Limit (e.g. 50270)
   niEmployeeMain:  { type: Number, required: true },  // rate between PT and UEL (e.g. 0.08)
   niEmployeeUpper: { type: Number, required: true },  // rate above UEL (e.g. 0.02)
+  niEmployeeReducedRate: { type: Number, default: 0.0185 },  // category B married women's reduced rate (1.85% since Mar 2024)
 
   // ── National Insurance (Class 1 Employer) ────────────────────────────────
   niST:           { type: Number, required: true },  // Secondary Threshold — employer NI starts (e.g. 5000 for 2025/26)
-  niEmployerRate: { type: Number, required: true },  // e.g. 0.138 (13.8%)
+  niEmployerRate: { type: Number, required: true },  // e.g. 0.15 (15% from April 2025)
 
   // ── Auto-enrolment Pension ────────────────────────────────────────────────
   aeQualifyingLower: { type: Number, required: true },  // Lower Qualifying Earnings (e.g. 6240)

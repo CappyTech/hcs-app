@@ -38,14 +38,28 @@ function toNum(v) {
 
 /**
  * Round a decimal amount to the nearest penny (2 dp), using
- * HMRC-standard "round half up" for tax, and "truncate" for NI.
+ * HMRC-standard "round half up" for tax.
  */
 function roundHalfUp(n) {
   return Math.round(n * 100) / 100;
 }
 
-function truncatePence(n) {
-  return Math.trunc(n * 100) / 100;
+/**
+ * HMRC exact-percentage-method NI rounding (CWG2): round to the nearest
+ * penny, with an exact half penny rounded DOWN.
+ */
+function roundNiPence(n) {
+  // Kill float noise before applying the half-penny rule
+  const pence = Math.round(n * 100 * 1e6) / 1e6;
+  return Math.ceil(pence - 0.5) / 100;
+}
+
+/**
+ * Round DOWN to the nearest whole pound (HMRC student loan rule), guarding
+ * against binary float noise (e.g. 1250 × 0.06 = 74.99999999999999).
+ */
+function floorPound(n) {
+  return Math.floor(Math.round(n * 1e6) / 1e6);
 }
 
 /**
@@ -179,6 +193,11 @@ function calculatePAYETax({ grossPay, ytdGrossBefore, ytdTaxBefore, taxCode, tax
     return roundHalfUp(tax);
   }
 
+  // Regulatory "overriding limit" (PAYE regs): tax deducted in a period may
+  // not exceed 50% of the pay it is deducted from. Applies to all codes
+  // since 6 April 2015 (previously K codes only).
+  const overridingLimit = roundHalfUp(Math.max(0, grossPay) * 0.5);
+
   if (taxBasis === 'week1/month1') {
     // Non-cumulative: calculate tax for this period in isolation
     const periodFreePay = annualToPeriod(freePayAnnual, frequency);
@@ -190,7 +209,7 @@ function calculatePAYETax({ grossPay, ytdGrossBefore, ytdTaxBefore, taxCode, tax
     const annualisedTaxable = taxableThisPeriod * periodsInYear(frequency);
     const annualisedTax = taxOnCumulative(annualisedTaxable);
     const periodTax = annualisedTax / periodsInYear(frequency);
-    return Math.max(0, roundHalfUp(periodTax));
+    return Math.min(Math.max(0, roundHalfUp(periodTax)), overridingLimit);
   }
 
   // ── Cumulative method ─────────────────────────────────────────────────────
@@ -214,7 +233,7 @@ function calculatePAYETax({ grossPay, ytdGrossBefore, ytdTaxBefore, taxCode, tax
   const taxToDate = taxOnCumulative(taxableToDate);
   const taxThisPeriod = taxToDate - ytdTaxBefore;
 
-  return Math.max(0, roundHalfUp(taxThisPeriod));
+  return Math.min(Math.max(0, roundHalfUp(taxThisPeriod)), overridingLimit);
 }
 
 // ---------------------------------------------------------------------------
@@ -234,15 +253,17 @@ function calculatePAYETax({ grossPay, ytdGrossBefore, ytdTaxBefore, taxCode, tax
  *
  * Category notes:
  *   A — standard (most employees)
- *   B — married women / widows with reduced rate election (5.85% main, 2% upper)
+ *   B — married women / widows with reduced rate election (1.85% main since Mar 2024, 2% upper)
  *   C — over State Pension Age: no employee NI
- *   H — apprentices under 25: no employee NI between ST and UEL
+ *   H — apprentices under 25: employee pays standard rates (the relief is employer-side)
  *   J — deferred (employees with another job already paying NI): 2% flat above PT
- *   M — under 21: same as A currently
- *   Z — under 21, deferred: 0% between ST and UEL, 2% above
+ *   M — under 21: employee pays standard rates (the relief is employer-side)
+ *   V — veterans (first year): employee pays standard rates (relief is employer-side)
+ *   X — no NI (e.g. under 16)
+ *   Z — under 21, deferred: 2% flat above PT
  */
 function calculateEmployeeNI({ grossPay, niCategory, frequency, rates }) {
-  const { niLEL, niPT, niUEL, niEmployeeMain, niEmployeeUpper } = rates;
+  const { niLEL, niPT, niUEL, niEmployeeMain, niEmployeeUpper, niEmployeeReducedRate } = rates;
 
   const pt  = annualToPeriod(niPT,  frequency);
   const uel = annualToPeriod(niUEL, frequency);
@@ -250,17 +271,16 @@ function calculateEmployeeNI({ grossPay, niCategory, frequency, rates }) {
   const cat = (niCategory || 'A').toUpperCase();
 
   // Categories with no employee NI at all
-  if (cat === 'C') return 0;
+  if (cat === 'C' || cat === 'X') return 0;
 
-  // Category J (deferred): flat 2% above PT
+  // Category J/Z (deferred): flat 2% above PT
   if (cat === 'J' || cat === 'Z') {
     if (grossPay <= pt) return 0;
-    return Math.max(0, truncatePence((grossPay - pt) * niEmployeeUpper));
+    return Math.max(0, roundNiPence((grossPay - pt) * niEmployeeUpper));
   }
 
-  // Category B (reduced rate): ~5.85% main, 2% upper
-  // HMRC 2025/26: 5.85% between PT and UEL, 2% above UEL
-  const mainRate  = cat === 'B' ? 0.0585 : niEmployeeMain;
+  // Category B (married women's reduced rate): 1.85% between PT and UEL, 2% above
+  const mainRate  = cat === 'B' ? (niEmployeeReducedRate ?? 0.0185) : niEmployeeMain;
   const upperRate = niEmployeeUpper;
 
   if (grossPay <= pt)  return 0;
@@ -275,30 +295,47 @@ function calculateEmployeeNI({ grossPay, niCategory, frequency, rates }) {
     ni += (grossPay - uel) * upperRate;
   }
 
-  return Math.max(0, truncatePence(ni));
+  return Math.max(0, roundNiPence(ni));
 }
 
 /**
  * Calculate employer Class 1 NI for a pay period.
  *
  * @param {object} p
- *   grossPay  {number} — gross pay this period (£)
- *   frequency {string}
- *   rates     {object}
+ *   grossPay   {number} — gross pay this period (£)
+ *   niCategory {string} — A, B, C, H, J, M, V, X, Z
+ *   frequency  {string}
+ *   rates      {object}
  *
  * @returns {number} employer NI this period (£, ≥0)
  *
- * Note: Employer NI applies above the Secondary Threshold (ST) at 13.8%.
+ * Employer NI applies above the Secondary Threshold (ST) at niEmployerRate
+ * (15% from April 2025). Relief categories H (apprentice under 25),
+ * M/Z (under 21) and V (veteran, first year) pay 0% up to the
+ * UST/AUST/VUST — all currently aligned with the UEL (£50,270) — and the
+ * standard rate only on earnings above it.
+ *
  * The Employment Allowance (up to £10,500 for 2025/26) is applied at the
  * company level, not per-employee — so it is NOT deducted here.
  * The journal posting service should handle EA offset separately.
  */
-function calculateEmployerNI({ grossPay, frequency, rates }) {
-  const { niST, niEmployerRate } = rates;
+function calculateEmployerNI({ grossPay, niCategory, frequency, rates }) {
+  const { niST, niUEL, niEmployerRate } = rates;
   const st = annualToPeriod(niST, frequency);
 
+  const cat = (niCategory || 'A').toUpperCase();
+  if (cat === 'X') return 0;
+
+  // Employer relief categories: 0% from ST up to the upper secondary
+  // thresholds (UST/AUST/VUST), which HMRC keeps aligned with the UEL.
+  if (['H', 'M', 'V', 'Z'].includes(cat)) {
+    const ust = annualToPeriod(niUEL, frequency);
+    if (grossPay <= ust) return 0;
+    return Math.max(0, roundNiPence((grossPay - ust) * niEmployerRate));
+  }
+
   if (grossPay <= st) return 0;
-  return Math.max(0, truncatePence((grossPay - st) * niEmployerRate));
+  return Math.max(0, roundNiPence((grossPay - st) * niEmployerRate));
 }
 
 // ---------------------------------------------------------------------------
@@ -373,17 +410,19 @@ function calculateStudentLoan({ grossPay, plan, postgradLoan, frequency, rates }
     Plan4: studentLoanPlan4Threshold
   };
 
+  // HMRC SL3: multiply the excess over the threshold by the rate, then
+  // round DOWN to the nearest whole pound.
   if (plan && plan !== 'none' && thresholdMap[plan] != null) {
     const threshold = annualToPeriod(thresholdMap[plan], frequency);
     if (grossPay > threshold) {
-      studentLoanDeduction = truncatePence((grossPay - threshold) * (studentLoanRate || 0.09));
+      studentLoanDeduction = floorPound((grossPay - threshold) * (studentLoanRate || 0.09));
     }
   }
 
   if (postgradLoan && studentLoanPostgradThreshold != null) {
     const pgThreshold = annualToPeriod(studentLoanPostgradThreshold, frequency);
     if (grossPay > pgThreshold) {
-      postgradLoanDeduction = truncatePence((grossPay - pgThreshold) * (postgradLoanRate || 0.06));
+      postgradLoanDeduction = floorPound((grossPay - pgThreshold) * (postgradLoanRate || 0.06));
     }
   }
 
@@ -508,7 +547,7 @@ async function computeEntryForEmployee({ employee, grossPayManual = 0, taxPeriod
   const employeeNI = calculateEmployeeNI({ grossPay, niCategory, frequency, rates: taxRates });
 
   // ── Employer NI ───────────────────────────────────────────────────────────
-  const employerNI = calculateEmployerNI({ grossPay, frequency, rates: taxRates });
+  const employerNI = calculateEmployerNI({ grossPay, niCategory, frequency, rates: taxRates });
 
   // ── Student loans ─────────────────────────────────────────────────────────
   const { studentLoanDeduction, postgradLoanDeduction } = calculateStudentLoan({

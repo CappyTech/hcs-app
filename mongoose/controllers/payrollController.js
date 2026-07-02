@@ -526,7 +526,7 @@ exports.saveEditTaxRate = async (req, res, next) => {
     const fields = [
       'taxYear', 'personalAllowance', 'basicRateLimit', 'higherRateThreshold', 'additionalRateThreshold',
       'basicRate', 'higherRate', 'additionalRate',
-      'niLEL', 'niPT', 'niUEL', 'niEmployeeMain', 'niEmployeeUpper',
+      'niLEL', 'niPT', 'niUEL', 'niEmployeeMain', 'niEmployeeUpper', 'niEmployeeReducedRate',
       'niST', 'niEmployerRate', 'aeQualifyingLower', 'aeQualifyingUpper',
       'studentLoanPlan1Threshold', 'studentLoanPlan2Threshold', 'studentLoanPlan4Threshold',
       'studentLoanPostgradThreshold', 'studentLoanRate', 'postgradLoanRate'

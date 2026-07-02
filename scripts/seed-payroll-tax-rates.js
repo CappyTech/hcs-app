@@ -38,21 +38,22 @@ const rates = [
     higherRate:   0.40,
     additionalRate: 0.45,
     // Employee NI thresholds (annual)
-    niLEL:  6396,   // Lower Earnings Limit
+    niLEL:  6500,   // Lower Earnings Limit (£125/week for 2025/26)
     niPT:   12570,  // Primary Threshold (aligned with personal allowance since 2022)
     niUEL:  50270,  // Upper Earnings Limit
     niEmployeeMain:  0.08,   // 8% between PT and UEL (reduced from 10% Oct 2024)
     niEmployeeUpper: 0.02,   // 2% above UEL
+    niEmployeeReducedRate: 0.0185, // category B married women's reduced rate
     // Employer NI
     niST:           5000,    // Secondary Threshold — reduced from £9,100 to £5,000 for 2025/26
-    niEmployerRate: 0.138,   // 13.8% (increased from 13.8% — rate unchanged but threshold dropped)
+    niEmployerRate: 0.15,    // 15% — increased from 13.8% at Autumn Budget 2024, effective 6 April 2025
     // Auto-enrolment pension qualifying earnings
     aeQualifyingLower: 6240,
     aeQualifyingUpper: 50270,
     // Student loan thresholds (annual, pre-tax income)
-    studentLoanPlan1Threshold:    24990,
+    studentLoanPlan1Threshold:    26065,
     studentLoanPlan2Threshold:    28470,
-    studentLoanPlan4Threshold:    31395,
+    studentLoanPlan4Threshold:    32745,
     studentLoanPostgradThreshold: 21000,
     studentLoanRate:   0.09,
     postgradLoanRate:  0.06
@@ -68,21 +69,22 @@ const rates = [
     higherRate:   0.40,
     additionalRate: 0.45,
     // Employee NI
-    niLEL:  6644,   // uprated by CPI (estimated — update when HMRC publishes)
+    niLEL:  6708,   // per HMRC rates and thresholds for employers 2026/27
     niPT:   12570,
     niUEL:  50270,
     niEmployeeMain:  0.08,
     niEmployeeUpper: 0.02,
+    niEmployeeReducedRate: 0.0185,
     // Employer NI
     niST:           5000,
-    niEmployerRate: 0.138,
+    niEmployerRate: 0.15,
     // Auto-enrolment
     aeQualifyingLower: 6240,
     aeQualifyingUpper: 50270,
-    // Student loan (estimated — update when HMRC publishes)
-    studentLoanPlan1Threshold:    26065,
-    studentLoanPlan2Threshold:    29270,
-    studentLoanPlan4Threshold:    32745,
+    // Student loan — per HMRC 2026/27 published thresholds
+    studentLoanPlan1Threshold:    26900,
+    studentLoanPlan2Threshold:    29385,
+    studentLoanPlan4Threshold:    33795,
     studentLoanPostgradThreshold: 21000,
     studentLoanRate:   0.09,
     postgradLoanRate:  0.06
