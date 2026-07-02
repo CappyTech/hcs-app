@@ -236,6 +236,18 @@ const main = async () => {
       logger.error('[bootstrap] Failed to create admin user: ' + bootstrapErr.message);
     }
 
+    // Seed payroll tax rates for known tax years (insert-only — admin edits
+    // in Settings → Payroll → Tax Rates are preserved; known-bad values from
+    // pre-6.8.6 seeds are corrected by exact-value match)
+    try {
+      const { ensureSeeded } = require('./mongoose/services/payrollTaxRatesSeedService');
+      const { created, corrected } = await ensureSeeded(mdb.INTERNAL.payrollTaxRates);
+      if (created.length > 0) logger.info(`[migration] Seeded payroll tax rates for: ${created.join(', ')}`);
+      if (corrected > 0)      logger.info(`[migration] Applied ${corrected} payroll tax rate correction(s)`);
+    } catch (seedErr) {
+      logger.error('[migration] Payroll tax rate seeding failed', { error: seedErr.message });
+    }
+
     // Load CIS nominal code mappings from the database
     try {
       const cisMappings = require('./mongoose/config/cisMappings');

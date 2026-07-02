@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.7] - 2026-07-02
+
+### Changed
+- **Payroll tax rates now seed automatically at startup** (`mongoose/services/payrollTaxRatesSeedService.js`, wired into the Phase 2 migrations in `app.js`), replacing the manual `scripts/seed-payroll-tax-rates.js` deployment step that had let the wrong 13.8% employer NI rate sit in the live database. Semantics:
+  - **Insert-only for whole years** (`$setOnInsert` upsert): rates an admin has edited in Settings → Payroll → Tax Rates are never overwritten by a restart or deploy.
+  - **Exact-value corrections**: values written by pre-6.8.6 seeds (13.8% employer NI, 2024/25 student-loan thresholds, stale LEL, 2026/27 estimates) are fixed only when the stored value still equals the known-bad one, so admin-corrected documents are left alone. Also backfills the new `niEmployeeReducedRate` field on pre-existing documents.
+  - This removes the "re-run the seed script on the server" follow-up from 6.8.6 — deploying this version corrects the live rate table on boot. Recalculating unsubmitted runs (and reviewing already-submitted FPS) is still required.
+- `scripts/seed-payroll-tax-rates.js` is now a thin **force-reset** utility over the same shared `DEFAULT_RATES` data (single source of truth), kept only for recovering a corrupted rate table; it warns that it overwrites admin edits.
+
+### Added
+- `tests/payrollTaxRatesSeedService.test.js` — guards the shipped statutory data (15% employer NI, published student-loan thresholds, 1.85% category B) and the seeding semantics (insert-only writes, exact-value correction filters, reduced-rate backfill).
+
 ## [6.8.6] - 2026-07-02
 
 ### Fixed

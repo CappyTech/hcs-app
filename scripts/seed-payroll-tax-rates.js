@@ -4,94 +4,24 @@
 /**
  * scripts/seed-payroll-tax-rates.js
  *
- * Seeds UK PAYE/NI/pension tax rates for 2025/26 and 2026/27 into the
- * INTERNAL database payrollTaxRates collection.
+ * FORCE-resets UK PAYE/NI/pension tax rates to the shipped defaults
+ * (see mongoose/services/payrollTaxRatesSeedService.js — single source of
+ * truth for the rate data).
  *
- * Run once after deployment:
+ * ⚠️  You normally do NOT need this script: the application seeds missing
+ * tax years and corrects known-bad values automatically at startup, and
+ * admins can edit rates in Settings → Payroll → Tax Rates.
+ *
+ * Running this OVERWRITES any admin-edited values with the shipped defaults.
+ * Use it only to recover from a corrupted rate table:
  *   node scripts/seed-payroll-tax-rates.js
- *
- * Safe to re-run — uses upsert so existing records are updated, not duplicated.
- *
- * Sources:
- *   HMRC — https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026
- *   HMRC — https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
  */
 
 require('dotenv').config();
 
 const mongoose = require('mongoose');
 const configService = require('../services/configService');
-
-// ── Tax rate data ────────────────────────────────────────────────────────────
-// All monetary thresholds are ANNUAL amounts in GBP (£).
-// All rates are fractions (0.20 = 20%).
-
-const rates = [
-  {
-    taxYear: '2025/26',
-    // Income Tax — England, Wales, Northern Ireland
-    personalAllowance:       12570,
-    basicRateLimit:          37700,
-    higherRateThreshold:     50270,  // personalAllowance + basicRateLimit
-    additionalRateThreshold: 125140,
-    basicRate:    0.20,
-    higherRate:   0.40,
-    additionalRate: 0.45,
-    // Employee NI thresholds (annual)
-    niLEL:  6500,   // Lower Earnings Limit (£125/week for 2025/26)
-    niPT:   12570,  // Primary Threshold (aligned with personal allowance since 2022)
-    niUEL:  50270,  // Upper Earnings Limit
-    niEmployeeMain:  0.08,   // 8% between PT and UEL (reduced from 10% Oct 2024)
-    niEmployeeUpper: 0.02,   // 2% above UEL
-    niEmployeeReducedRate: 0.0185, // category B married women's reduced rate
-    // Employer NI
-    niST:           5000,    // Secondary Threshold — reduced from £9,100 to £5,000 for 2025/26
-    niEmployerRate: 0.15,    // 15% — increased from 13.8% at Autumn Budget 2024, effective 6 April 2025
-    // Auto-enrolment pension qualifying earnings
-    aeQualifyingLower: 6240,
-    aeQualifyingUpper: 50270,
-    // Student loan thresholds (annual, pre-tax income)
-    studentLoanPlan1Threshold:    26065,
-    studentLoanPlan2Threshold:    28470,
-    studentLoanPlan4Threshold:    32745,
-    studentLoanPostgradThreshold: 21000,
-    studentLoanRate:   0.09,
-    postgradLoanRate:  0.06
-  },
-  {
-    taxYear: '2026/27',
-    // Income Tax
-    personalAllowance:       12570,   // frozen until 2028 per OBR
-    basicRateLimit:          37700,
-    higherRateThreshold:     50270,
-    additionalRateThreshold: 125140,
-    basicRate:    0.20,
-    higherRate:   0.40,
-    additionalRate: 0.45,
-    // Employee NI
-    niLEL:  6708,   // per HMRC rates and thresholds for employers 2026/27
-    niPT:   12570,
-    niUEL:  50270,
-    niEmployeeMain:  0.08,
-    niEmployeeUpper: 0.02,
-    niEmployeeReducedRate: 0.0185,
-    // Employer NI
-    niST:           5000,
-    niEmployerRate: 0.15,
-    // Auto-enrolment
-    aeQualifyingLower: 6240,
-    aeQualifyingUpper: 50270,
-    // Student loan — per HMRC 2026/27 published thresholds
-    studentLoanPlan1Threshold:    26900,
-    studentLoanPlan2Threshold:    29385,
-    studentLoanPlan4Threshold:    33795,
-    studentLoanPostgradThreshold: 21000,
-    studentLoanRate:   0.09,
-    postgradLoanRate:  0.06
-  }
-];
-
-// ── Connection ───────────────────────────────────────────────────────────────
+const { DEFAULT_RATES } = require('../mongoose/services/payrollTaxRatesSeedService');
 
 const { payrollTaxRatesSchema } = (() => {
   const m = require('../mongoose/models/mongoose/INTERNAL/payrollTaxRates');
@@ -125,11 +55,11 @@ async function run() {
   let created = 0;
   let updated = 0;
 
-  for (const rate of rates) {
+  for (const rate of DEFAULT_RATES) {
     const existing = await PayrollTaxRates.findOne({ taxYear: rate.taxYear });
     if (existing) {
       await PayrollTaxRates.updateOne({ taxYear: rate.taxYear }, { $set: rate });
-      console.log(`  ✔  Updated  ${rate.taxYear}`);
+      console.log(`  ✔  Reset    ${rate.taxYear}`);
       updated++;
     } else {
       await PayrollTaxRates.create(rate);
@@ -139,7 +69,7 @@ async function run() {
   }
 
   await conn.close();
-  console.log(`\nDone: ${created} created, ${updated} updated.`);
+  console.log(`\nDone: ${created} created, ${updated} reset to defaults.`);
 }
 
 run().catch((err) => {
