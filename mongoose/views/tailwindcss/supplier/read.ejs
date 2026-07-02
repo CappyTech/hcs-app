@@ -1,0 +1,199 @@
+<%
+  // Compact supplier / subcontractor detail view. item.purchases is injected
+  // by CRUDController's supplier read handler; suppliers are synced read-only
+  // from KashFlow. The subcontractor list is an alias of this model, so this
+  // view serves both.
+  const _purchases = Array.isArray(item.purchases) ? item.purchases : [];
+  const _isCis = item.WithholdingTaxRate != null && Number(item.WithholdingTaxRate) >= 0;
+  const _money = (v) => { const n = Number(v); return Number.isFinite(n) ? formatCurrency(n) : null; };
+  const _date  = (v) => v ? slimDateTime(v) : null;
+
+  // ── CIS tax-year calendars (paid + issued) ────────────────────────────────
+  // Tax months run April(1) → March(12); a purchase is counted in the month of
+  // each payment (paid calendar) or its TaxYear/TaxMonth / issue date (issued).
+  const monthsShort = ['A','M','J','J','A','S','O','N','D','J','F','M'];
+  const toTaxYearMonth = (dateObj) => {
+    if (!dateObj || isNaN(dateObj.getTime())) return null;
+    const cm = dateObj.getMonth();
+    const taxMonth = ((cm + 9) % 12) + 1;
+    const calYear = dateObj.getFullYear();
+    const taxYear = (cm >= 3) ? calYear : (calYear - 1);
+    return { taxYear, taxMonth };
+  };
+
+  const cisPaidMap = {};
+  const cisIssuedMap = {};
+  if (_isCis) {
+    _purchases.forEach(p => {
+      // Paid calendar — from payment line dates
+      if (Array.isArray(p.PaymentLines)) {
+        p.PaymentLines.forEach(pl => {
+          const raw = pl?.PayDate || pl?.Date;
+          if (!raw) return;
+          let d = new Date(raw);
+          if (isNaN(d.getTime()) && typeof raw === 'string') d = new Date(raw.trim().replace(' ', 'T'));
+          const t = toTaxYearMonth(d);
+          if (!t) return;
+          if (!cisPaidMap[t.taxYear]) cisPaidMap[t.taxYear] = {};
+          cisPaidMap[t.taxYear][t.taxMonth] = (cisPaidMap[t.taxYear][t.taxMonth] || 0) + 1;
+        });
+      }
+      // Issued calendar — prefer explicit CIS TaxYear/TaxMonth, else issue date
+      let y = p.TaxYear, m = p.TaxMonth;
+      if ((!y || !m) && p.IssuedDate) {
+        const t = toTaxYearMonth(new Date(p.IssuedDate));
+        if (t) { y = t.taxYear; m = t.taxMonth; }
+      }
+      if (y && m) {
+        if (!cisIssuedMap[y]) cisIssuedMap[y] = {};
+        const mm = Number(m);
+        cisIssuedMap[y][mm] = (cisIssuedMap[y][mm] || 0) + 1;
+      }
+    });
+  }
+  const cisCalendars = [
+    { title: 'CIS Calendar — Paid',   icon: 'text-green-500', pill: 'bg-green-600 hover:bg-green-700', map: cisPaidMap,   empty: 'No CIS payment months found for this supplier.' },
+    { title: 'CIS Calendar — Issued', icon: 'text-blue-500',  pill: 'bg-blue-600 hover:bg-blue-700',   map: cisIssuedMap, empty: 'No issued months found for this supplier.' },
+  ];
+%>
+<div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-5">
+  <a href="/suppliers" class="inline-flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 hover:underline font-medium"><i class="bi bi-arrow-left"></i> Go Back</a>
+
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-6 sm:p-8 space-y-6">
+
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 break-words"><%= item.Name %></h1>
+            <%- include('../partials/_status-badge', { status: item.IsArchived ? 'Archived' : 'Active' }) %>
+            <% if (_isCis) { %>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">CIS <%= item.WithholdingTaxRate %>%</span>
+            <% } %>
+          </div>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <% if (item.Code) { %><span class="font-mono text-xs mr-3"><%= item.Code %></span><% } %>
+            <% if (item.VatNumber) { %><span class="mr-3">VAT <%= item.VatNumber %></span><% } %>
+            <% if (item.DefaultNominalCode != null) { %><span>Nominal <%= item.DefaultNominalCode %></span><% } %>
+          </p>
+        </div>
+        <% if (_isCis) { %>
+          <a href="/subcontractor/assign" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition shadow-sm shrink-0">
+            <i class="bi bi-pencil-square"></i><span class="hidden sm:inline">Edit CIS Details</span>
+          </a>
+        <% } %>
+      </div>
+
+      <!-- Balances + history -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <%- include('../partials/_meta-tile', { label: 'Outstanding',    value: _money(item.OutstandingBalance) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Total Paid',     value: _money(item.TotalPaidAmount) }) %>
+        <%- include('../partials/_meta-tile', { label: 'First Purchase', value: _date(item.FirstPurchaseDate) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Last Purchase',  value: _date(item.LastPurchaseDate) }) %>
+      </div>
+
+      <!-- Note -->
+      <% if (item.Note && String(item.Note).trim()) { %>
+        <div>
+          <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1"><i class="bi bi-card-text mr-1"></i>Note</h2>
+          <p class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed"><%= item.Note %></p>
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+
+  <!-- CIS calendars -->
+  <% if (_isCis) { %>
+    <% cisCalendars.forEach(cal => { const years = Object.keys(cal.map).sort((a,b) => Number(b) - Number(a)); %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-calendar3 mr-1.5 <%= cal.icon %>"></i><%= cal.title %></h2>
+        </div>
+        <div class="p-6">
+          <% if (years.length > 0) { %>
+            <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+              <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Tax Year</th>
+                    <% monthsShort.forEach(ms => { %>
+                      <th class="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= ms %></th>
+                    <% }) %>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                  <% years.forEach(y => { %>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                      <td class="px-4 py-3 font-medium text-gray-800 dark:text-gray-200"><%= y %></td>
+                      <% for (let i = 1; i <= 12; i++) { %>
+                        <% const count = cal.map[y][i] || 0; %>
+                        <td class="px-2 py-3 text-center">
+                          <% if (count > 0) { %>
+                            <a href="/CIS/Dashboard/<%= y %>/<%= i %>"
+                               class="inline-flex items-center justify-center w-6 h-6 rounded-full <%= cal.pill %> text-white text-[10px] font-medium transition"
+                               title="<%= count %> purchase<%= count === 1 ? '' : 's' %>"><%= count %></a>
+                          <% } else { %>
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 text-[10px]" title="0 purchases">0</span>
+                          <% } %>
+                        </td>
+                      <% } %>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } else { %>
+            <p class="text-sm text-gray-500 dark:text-gray-400 italic"><%= cal.empty %></p>
+          <% } %>
+        </div>
+      </div>
+    <% }) %>
+  <% } %>
+
+  <!-- Purchases -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-receipt mr-1.5 text-green-500"></i>Purchases</h2>
+      <a href="/purchases" class="text-xs text-green-700 dark:text-green-400 hover:underline">View all</a>
+    </div>
+    <% if (_purchases.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Number</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Reference</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Issued</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Net</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">VAT</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Gross</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _purchases.forEach(p => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3 text-gray-800 dark:text-gray-200">
+                  <a class="inline-flex items-center gap-1 text-green-700 dark:text-green-400 hover:underline" href="https://app.kashflow.com/#purchases/<%= p.Number %>" target="_blank" rel="noopener noreferrer">
+                    <%= p.Number %> <i class="bi bi-box-arrow-up-right text-xs"></i>
+                  </a>
+                </td>
+                <td class="px-4 py-3"><a class="text-green-700 dark:text-green-400 hover:underline" href="/purchase/read/<%= p.uuid %>"><%= p.SupplierReference || '—' %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= _date(p.IssuedDate) || '—' %></td>
+                <td class="px-4 py-3"><%- include('../partials/_status-badge', { status: p.Status }) %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= _money(p.NetAmount) || '' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= _money(p.VATAmount) || '' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= _money(p.GrossAmount) || '' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No purchases found for this supplier.</p>
+    <% } %>
+  </div>
+</div>

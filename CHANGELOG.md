@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.10] - 2026-07-02
+
+### Changed
+- **Supplier and vehicle per-model read views — read-view migration complete.** `mongoose/views/tailwindcss/supplier/read.ejs` (balances/history tiles, CIS badge + "Edit CIS Details" action, the CIS Paid/Issued tax-year calendars refactored to one parameterised loop, purchases table with KashFlow deep links; also serves the subcontractor alias since its reads route through `/supplier/read/`) and `vehicle/read.ejs` (spec/status header, quick Log Fuel/Trip/Service actions, compliance-date and ownership/cost tiles, identifier fields, service/fuel/mileage tables). New vehicle `readLocals` resolve the assigned employee, subcontractor and project into links — previously raw ObjectIds on the detail page (list-only `fieldTransforms` never applied there), handling both ObjectId and KashFlow numeric project ids.
+- **`form-read.ejs` is now purely generic** (175 lines, down from 896 pre-6.8.9): the last `basePath === 'supplier'` / `'vehicle'` blocks were removed. Audit of all 30 model configs: 11 models have curated views (user via `CRUDControllerConfig`, the other 10 via `listControllerConfig` — `getMergedConfig` merges both, CRUD config winning), `meta`/`session` deny reads, and the remaining simple flat models (attendance, holidays, task, note, nominal, vatrate, vehicle logs, OCR documents) intentionally use the generic view.
+
+### Added
+- Supplier and vehicle render smoke-tests in `tests/readViews.test.js` (CIS calendars present for subcontractors and absent for plain suppliers, purchases links, resolved vehicle assignment links, quick-action URLs, empty-state fallbacks). Suite: 662 tests passing.
+
 ## [6.8.9] - 2026-07-02
 
 ### Changed

@@ -202,4 +202,83 @@ describe('per-model read views render', () => {
     });
     assert.ok(html.includes('New Starter'));
   });
+
+  it('supplier: CIS subcontractor with purchases and calendars', async () => {
+    const html = await render('supplier', {
+      title: 'Supplier Details', basePath: 'supplier', config: {},
+      item: {
+        uuid: 'u7', Name: 'Subbie Ltd', Code: 'SUB01', IsArchived: false,
+        WithholdingTaxRate: 20, VatNumber: 'GB999', OutstandingBalance: 500,
+        TotalPaidAmount: 12000, FirstPurchaseDate: '2024-05-01', LastPurchaseDate: '2026-06-01',
+        Note: 'Groundworks crew',
+        purchases: [
+          {
+            uuid: 'pp1', Number: 900, SupplierReference: 'INV-1', IssuedDate: '2025-06-15',
+            Status: 'Paid', NetAmount: 1000, VATAmount: 200, GrossAmount: 1200,
+            TaxYear: 2025, TaxMonth: 3,
+            PaymentLines: [{ Date: '2025-06-20', Method: 'BACS', Amount: 1200 }]
+          }
+        ]
+      }
+    });
+    assert.ok(html.includes('Subbie Ltd'));
+    assert.ok(html.includes('CIS 20%'));
+    assert.ok(html.includes('CIS Calendar — Paid'));
+    assert.ok(html.includes('CIS Calendar — Issued'));
+    assert.ok(html.includes('/purchase/read/pp1'));
+    assert.ok(html.includes('/CIS/Dashboard/'));
+    assert.ok(html.includes('Groundworks crew'));
+  });
+
+  it('supplier: plain supplier (no CIS) hides the calendars', async () => {
+    const html = await render('supplier', {
+      title: 'Supplier Details', basePath: 'supplier', config: {},
+      item: { uuid: 'u7', Name: 'Plain Merchant', WithholdingTaxRate: null, purchases: [] }
+    });
+    assert.ok(html.includes('Plain Merchant'));
+    assert.ok(!html.includes('CIS Calendar'));
+    assert.ok(html.includes('No purchases found'));
+  });
+
+  it('vehicle: full data with logs and resolved links', async () => {
+    const html = await render('vehicle', {
+      title: 'Vehicle Details', basePath: 'vehicle', config: {},
+      item: {
+        uuid: 'u8', _id: 'v1', registrationNumber: 'AB12 CDE', make: 'Ford', model: 'Transit',
+        year: 2021, color: 'White', fuelType: 'Diesel', bodyType: 'Van', transmission: 'Manual',
+        engineSize: '2.0L', currentMileage: 48200, availabilityStatus: 'In Use',
+        vehicleUsage: 'Site', assignedDepartment: 'Maintenance', ownershipStatus: 'Owned',
+        purchaseDate: '2021-03-01', purchasePrice: 25000, insuranceProvider: 'Aviva',
+        insuranceCost: 900, insuranceExpiryDate: '2026-11-01', motExpiryDate: '2026-10-15',
+        roadTaxExpiryDate: '2026-08-01', roadTaxAmount: 320,
+        lastServiceDate: '2026-01-10', nextServiceDueDate: '2026-07-10',
+        vin: 'WF0XXX', engineNumber: 'ENG-1', motCertificateNumber: 'MOT-1',
+        insurancePolicyNumber: 'POL-1', notes: 'Roof rack fitted',
+        serviceHistory: [{ uuid: 'sv1', date: '2026-01-10', serviceType: 'MOT', provider: 'Kwik Fit', status: 'Completed', mileageAtService: 45000, totalCost: 54.85, passed: true }],
+        fuelLogs: [{ uuid: 'fl1', date: '2026-06-01', fuelType: 'Diesel', litres: 62.4, totalCost: 92.1, mileageAtFillUp: 48000, station: 'Shell', paymentMethod: 'Fuel Card' }],
+        mileageLogs: [{ uuid: 'ml1', date: '2026-06-02', tripPurpose: 'Site visit', startMileage: 48000, endMileage: 48060, distance: 60, startLocation: 'Yard', endLocation: 'Site A', claimable: true, claimAmount: 27 }]
+      },
+      relatedEmployee: { uuid: 'e1', name: 'Jane Doe' },
+      relatedProject: { uuid: 'p1', Name: 'New Build', Number: 101 }
+    });
+    assert.ok(html.includes('AB12 CDE'));
+    assert.ok(html.includes('/employee/read/e1'));
+    assert.ok(html.includes('/project/read/p1'));
+    assert.ok(html.includes('PASS'));
+    assert.ok(html.includes('Shell'));
+    assert.ok(html.includes('Yard → Site A'));
+    assert.ok(html.includes('/vehicleFuelLog/create?vehicleId=v1'));
+    assert.ok(html.includes('Roof rack fitted'));
+  });
+
+  it('vehicle: minimal data', async () => {
+    const html = await render('vehicle', {
+      title: 'Vehicle Details', basePath: 'vehicle', config: {},
+      item: { uuid: 'u8', _id: 'v2', registrationNumber: 'XX99 YYY', availabilityStatus: 'Available' }
+    });
+    assert.ok(html.includes('XX99 YYY'));
+    assert.ok(html.includes('No service records yet'));
+    assert.ok(html.includes('No fuel logs yet'));
+    assert.ok(html.includes('No mileage logs yet'));
+  });
 });

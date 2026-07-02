@@ -880,6 +880,8 @@ module.exports = {
     description: {
       manage: 'Manage suppliers and subcontractors.',
     },
+    // Also serves the subcontractor alias (basePath 'supplier').
+    readView: require('path').join('tailwindcss', 'supplier', 'read'),
   },
   task: {
     title: 'Tasks',
@@ -1145,6 +1147,25 @@ module.exports = {
         returnField: 'Name',
         linkTo: (matched) => `/project/read/${matched.uuid}`
       }
+    },
+    readView: require('path').join('tailwindcss', 'vehicle', 'read'),
+    readLocals: async (item) => {
+      const mdb = require('../services/mongooseDatabaseService');
+      const [relatedEmployee, relatedSubcontractor, relatedProject] = await Promise.all([
+        item.employeeId && mdb.INTERNAL?.employee
+          ? mdb.INTERNAL.employee.findOne({ _id: item.employeeId }).select('uuid name').lean()
+          : null,
+        item.subcontractorId && mdb.REST?.supplier
+          ? mdb.REST.supplier.findOne({ _id: item.subcontractorId }).select('uuid Name').lean()
+          : null,
+        // projectId may hold a Mongo ObjectId or a KashFlow numeric Id
+        item.projectId && mdb.REST?.project
+          ? (/^[0-9a-fA-F]{24}$/.test(String(item.projectId))
+              ? mdb.REST.project.findOne({ _id: item.projectId }).select('uuid Name Number').lean()
+              : mdb.REST.project.findOne({ Id: Number(item.projectId) }).select('uuid Name Number').lean())
+          : null,
+      ]);
+      return { relatedEmployee, relatedSubcontractor, relatedProject };
     },
   },
   holidayDismissal: {

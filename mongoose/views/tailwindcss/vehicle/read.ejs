@@ -1,0 +1,258 @@
+<%
+  // Compact vehicle detail view. fuelLogs / mileageLogs / serviceHistory are
+  // injected by CRUDController's vehicle read handler; relatedEmployee /
+  // relatedSubcontractor / relatedProject come from the vehicle config's
+  // readLocals.
+  const _services = Array.isArray(item.serviceHistory) ? item.serviceHistory : [];
+  const _fuel     = Array.isArray(item.fuelLogs)       ? item.fuelLogs       : [];
+  const _mileage  = Array.isArray(item.mileageLogs)    ? item.mileageLogs    : [];
+  const _employee      = (typeof relatedEmployee      !== 'undefined') ? relatedEmployee      : null;
+  const _subcontractor = (typeof relatedSubcontractor !== 'undefined') ? relatedSubcontractor : null;
+  const _project       = (typeof relatedProject       !== 'undefined') ? relatedProject       : null;
+  const _num = (v) => {
+    if (v == null) return null;
+    const raw = (typeof v === 'object') ? (v.$numberDecimal ?? (typeof v.toString === 'function' ? v.toString() : v)) : v;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+  const _money = (v) => { const n = _num(v); return n != null && n > 0 ? formatCurrency(n) : null; };
+  const _date  = (v) => v ? slimDateTime(v) : null;
+%>
+<div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-5">
+  <a href="/vehicles" class="inline-flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 hover:underline font-medium"><i class="bi bi-arrow-left"></i> Go Back</a>
+
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-6 sm:p-8 space-y-6">
+
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 font-mono"><%= item.registrationNumber %></h1>
+            <%- include('../partials/_status-badge', { status: item.availabilityStatus }) %>
+            <% if (item.vehicleUsage) { %>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700"><%= item.vehicleUsage %></span>
+            <% } %>
+          </div>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <%= [item.make, item.model, item.year].filter(Boolean).join(' ') || '—' %>
+            <% if (item.color) { %><span class="ml-2"><%= item.color %></span><% } %>
+            <% const _spec = [item.fuelType, item.bodyType, item.transmission, item.engineSize].filter(Boolean).join(' · '); %>
+            <% if (_spec) { %><span class="ml-2 text-xs text-gray-400"><%= _spec %></span><% } %>
+          </p>
+        </div>
+        <%- include('../partials/_detail-actions', { basePath: 'vehicle', item }) %>
+      </div>
+
+      <!-- Assignment + mileage -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <%- include('../partials/_meta-tile', { label: 'Mileage', value: item.currentMileage != null ? Number(item.currentMileage).toLocaleString() + ' mi' : null }) %>
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+          <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Assigned To</div>
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
+            <% if (_employee) { %><a href="/employee/read/<%= _employee.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= _employee.name %></a>
+            <% } else if (_subcontractor) { %><a href="/supplier/read/<%= _subcontractor.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= _subcontractor.Name %></a>
+            <% } else { %>—<% } %>
+          </div>
+        </div>
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+          <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Project</div>
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
+            <% if (_project) { %><a href="/project/read/<%= _project.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= _project.Name || ('#' + _project.Number) %></a><% } else { %>—<% } %>
+          </div>
+        </div>
+        <%- include('../partials/_meta-tile', { label: 'Department', value: item.assignedDepartment }) %>
+      </div>
+
+      <!-- Compliance dates -->
+      <div>
+        <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2"><i class="bi bi-shield-check mr-1"></i>Compliance</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <%- include('../partials/_meta-tile', { label: 'MOT Expiry',       value: _date(item.motExpiryDate) }) %>
+          <%- include('../partials/_meta-tile', { label: 'Insurance Expiry', value: _date(item.insuranceExpiryDate) }) %>
+          <%- include('../partials/_meta-tile', { label: 'Tax Expiry',       value: _date(item.roadTaxExpiryDate) }) %>
+          <%- include('../partials/_meta-tile', { label: 'Last Service',     value: _date(item.lastServiceDate) }) %>
+          <%- include('../partials/_meta-tile', { label: 'Next Service',     value: _date(item.nextServiceDueDate) }) %>
+        </div>
+      </div>
+
+      <!-- Ownership & costs -->
+      <div>
+        <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2"><i class="bi bi-wallet2 mr-1"></i>Ownership &amp; Costs</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <%- include('../partials/_meta-tile', { label: 'Ownership',      value: item.ownershipStatus }) %>
+          <%- include('../partials/_meta-tile', { label: 'Purchased',      value: _date(item.purchaseDate) }) %>
+          <%- include('../partials/_meta-tile', { label: 'Purchase Price', value: _money(item.purchasePrice) }) %>
+          <%- include('../partials/_meta-tile', { label: 'Insurance',      value: [item.insuranceProvider, _money(item.insuranceCost)].filter(Boolean).join(' · ') || null }) %>
+          <%- include('../partials/_meta-tile', { label: 'Road Tax',       value: _money(item.roadTaxAmount) }) %>
+        </div>
+        <% if (item.leaseProvider || item.leaseExpiryDate || _money(item.leaseMonthlyCost)) { %>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
+            <%- include('../partials/_meta-tile', { label: 'Lease Provider', value: item.leaseProvider }) %>
+            <%- include('../partials/_meta-tile', { label: 'Lease Monthly',  value: _money(item.leaseMonthlyCost) }) %>
+            <%- include('../partials/_meta-tile', { label: 'Lease Expiry',   value: _date(item.leaseExpiryDate) }) %>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Identifiers -->
+      <% if (item.vin || item.engineNumber || item.motCertificateNumber || item.insurancePolicyNumber) { %>
+        <div>
+          <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2"><i class="bi bi-upc-scan mr-1"></i>Identifiers</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <%- include('../partials/_meta-tile', { label: 'VIN',              value: item.vin }) %>
+            <%- include('../partials/_meta-tile', { label: 'Engine No.',       value: item.engineNumber }) %>
+            <%- include('../partials/_meta-tile', { label: 'MOT Certificate',  value: item.motCertificateNumber }) %>
+            <%- include('../partials/_meta-tile', { label: 'Insurance Policy', value: item.insurancePolicyNumber }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Notes -->
+      <% if (item.notes && String(item.notes).trim()) { %>
+        <div>
+          <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1"><i class="bi bi-card-text mr-1"></i>Notes</h2>
+          <p class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed"><%= item.notes %></p>
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="flex flex-wrap gap-2 print:hidden">
+    <a href="/vehicleFuelLog/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
+      <i class="bi bi-fuel-pump"></i> Log Fuel
+    </a>
+    <a href="/vehicleMileageLog/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
+      <i class="bi bi-car-front"></i> Log Trip
+    </a>
+    <a href="/vehicleService/create?vehicleId=<%= item._id %>" class="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm">
+      <i class="bi bi-wrench-adjustable"></i> Log Service
+    </a>
+  </div>
+
+  <!-- Service History -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-wrench-adjustable mr-1.5 text-violet-500"></i>Service History</h2>
+    </div>
+    <% if (_services.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Provider</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Mileage</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Cost</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Result</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _services.forEach(s => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a class="text-green-700 dark:text-green-400 hover:underline" href="/vehicleService/read/<%= s.uuid %>"><%= _date(s.date) %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= s.serviceType %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= s.provider || '—' %></td>
+                <td class="px-4 py-3"><%- include('../partials/_status-badge', { status: s.status }) %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= s.mileageAtService != null ? Number(s.mileageAtService).toLocaleString() : '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= _money(s.totalCost) || '—' %></td>
+                <td class="px-4 py-3">
+                  <% if (s.serviceType === 'MOT' && s.passed != null) { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full border font-semibold <%= s.passed ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700' : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700' %>">
+                      <%= s.passed ? 'PASS' : 'FAIL' %>
+                    </span>
+                  <% } else { %>—<% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No service records yet.</p>
+    <% } %>
+  </div>
+
+  <!-- Fuel Logs -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-fuel-pump mr-1.5 text-green-500"></i>Fuel Logs</h2>
+    </div>
+    <% if (_fuel.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Fuel</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Litres</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Cost</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Mileage</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Station</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Payment</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _fuel.forEach(f => { const litres = _num(f.litres); %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a class="text-green-700 dark:text-green-400 hover:underline" href="/vehicleFuelLog/read/<%= f.uuid %>"><%= _date(f.date) %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= f.fuelType %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= litres != null ? litres.toFixed(2) : '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= _money(f.totalCost) || '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= f.mileageAtFillUp != null ? Number(f.mileageAtFillUp).toLocaleString() : '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= f.station || '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= f.paymentMethod || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No fuel logs yet.</p>
+    <% } %>
+  </div>
+
+  <!-- Mileage / Trip Logs -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-speedometer2 mr-1.5 text-blue-500"></i>Mileage / Trip Logs</h2>
+    </div>
+    <% if (_mileage.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Purpose</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Start</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">End</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Distance</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Route</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Claim</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _mileage.forEach(m => { const claim = _num(m.claimAmount); %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a class="text-green-700 dark:text-green-400 hover:underline" href="/vehicleMileageLog/read/<%= m.uuid %>"><%= _date(m.date) %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= m.tripPurpose || '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= m.startMileage != null ? Number(m.startMileage).toLocaleString() : '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= m.endMileage != null ? Number(m.endMileage).toLocaleString() : '—' %></td>
+                <td class="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-200"><%= m.distance != null ? Number(m.distance).toLocaleString() + ' mi' : '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300 text-xs"><%= [m.startLocation, m.endLocation].filter(Boolean).join(' → ') || '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= m.claimable && claim != null && claim > 0 ? formatCurrency(claim) : '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No mileage logs yet.</p>
+    <% } %>
+  </div>
+</div>
