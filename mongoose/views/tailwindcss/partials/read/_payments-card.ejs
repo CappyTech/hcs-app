@@ -1,0 +1,35 @@
+<%
+  // KashFlow REST payment-lines table for invoice / purchase detail views.
+  // Locals: payments (array), slimDateTime + formatCurrency (globals).
+  const _rows = Array.isArray(payments) ? payments : [];
+  const _num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+%>
+<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-cash-stack mr-1.5 text-emerald-500"></i>Payments</h2>
+  </div>
+  <% if (_rows.length) { %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Method</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% _rows.forEach(p => { const amt = _num(p.Amount); %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= p.Date ? slimDateTime(p.Date) : '—' %></td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= p.Method || '—' %></td>
+              <td class="px-4 py-3 text-right font-medium text-gray-800 dark:text-gray-200"><%= amt != null ? formatCurrency(amt) : '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No payments recorded.</p>
+  <% } %>
+</div>

@@ -315,6 +315,7 @@ module.exports = {
       { field: 'OutstandingBalance', label: 'Outstanding', type: 'numberrange' },
       { field: 'InvoicedNetAmount', label: 'Net Invoiced', type: 'numberrange' },
     ],
+    readView: require('path').join('tailwindcss', 'customer', 'read'),
     readLocals: async (item) => {
       const mdb = require('../services/mongooseDatabaseService');
       const [relatedInvoices, relatedQuotes, relatedProjects] = await Promise.all([
@@ -381,14 +382,21 @@ module.exports = {
         linkTo: (matched) => `/supplier/read/${matched.uuid}`
       }
     },
+    readView: require('path').join('tailwindcss', 'employee', 'read'),
     readLocals: async (item) => {
       const mdb = require('../services/mongooseDatabaseService');
-      const [relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements] = await Promise.all([
+      const [relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements, relatedManager, relatedLinkedSupplier] = await Promise.all([
         mdb.INTERNAL?.vehicle?.find({ employeeId: item._id }).select('uuid registrationNumber make model year availabilityStatus').sort({ registrationNumber: 1 }).lean() ?? [],
         mdb.INTERNAL?.holidayRequest?.find({ employeeId: item._id }).select('uuid startDate endDate daysRequested leaveType status').sort({ startDate: -1 }).limit(20).lean() ?? [],
         mdb.INTERNAL?.employeeHoliday?.find({ employeeId: item._id }).select('uuid periodStart periodEnd entitlementDays takenDays accruedDays carryOverDays').sort({ periodStart: -1 }).lean() ?? [],
+        item.managerId && mdb.INTERNAL?.employee
+          ? mdb.INTERNAL.employee.findOne({ _id: item.managerId }).select('uuid name').lean()
+          : null,
+        item.subcontractorSupplierId && mdb.REST?.supplier
+          ? mdb.REST.supplier.findOne({ _id: item.subcontractorSupplierId }).select('uuid Name').lean()
+          : null,
       ]);
-      return { relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements };
+      return { relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements, relatedManager, relatedLinkedSupplier };
     },
   },
   holiday: {
@@ -489,6 +497,7 @@ module.exports = {
         linkTo: (matched) => `/invoice/read/${matched.uuid}`
       },
     },
+    readView: require('path').join('tailwindcss', 'invoice', 'read'),
     readLocals: async (item) => {
       const mdb = require('../services/mongooseDatabaseService');
       const customer = item.CustomerId && mdb.REST?.customer
@@ -579,6 +588,7 @@ module.exports = {
     description: {
       manage: 'Manage projects and their documents.',
     },
+    readView: require('path').join('tailwindcss', 'project', 'read'),
     readLocals: async (item) => {
       const mdb = require('../services/mongooseDatabaseService');
       const [relatedCustomer, relatedContracts] = await Promise.all([
@@ -639,6 +649,7 @@ module.exports = {
         linkTo: (matched) => `/customer/read/${matched.uuid}`
       }
     },
+    readView: require('path').join('tailwindcss', 'quote', 'read'),
     readLocals: async (item) => {
       const mdb = require('../services/mongooseDatabaseService');
       const customer = item.CustomerId && mdb.REST?.customer
@@ -728,6 +739,7 @@ module.exports = {
         linkTo: (matched) => `/supplier/read/${matched.uuid}`
       }
     },
+    readView: require('path').join('tailwindcss', 'purchase', 'read'),
     readLocals: async (item) => {
       const mdb = require('../services/mongooseDatabaseService');
       const supplier = item.SupplierId && mdb.REST?.supplier

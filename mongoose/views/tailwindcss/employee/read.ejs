@@ -1,0 +1,200 @@
+<%
+  // Compact employee detail view. relatedVehicles / relatedHolidayRequests /
+  // relatedHolidayEntitlements / relatedManager / relatedLinkedSupplier are
+  // provided by the employee config's readLocals. Payroll settings are
+  // deliberately not shown here — they are managed under Payroll.
+  const _vehicles     = (typeof relatedVehicles            !== 'undefined' && Array.isArray(relatedVehicles))            ? relatedVehicles            : [];
+  const _requests     = (typeof relatedHolidayRequests     !== 'undefined' && Array.isArray(relatedHolidayRequests))     ? relatedHolidayRequests     : [];
+  const _entitlements = (typeof relatedHolidayEntitlements !== 'undefined' && Array.isArray(relatedHolidayEntitlements)) ? relatedHolidayEntitlements : [];
+  const _manager      = (typeof relatedManager        !== 'undefined') ? relatedManager        : null;
+  const _linkedSupp   = (typeof relatedLinkedSupplier !== 'undefined') ? relatedLinkedSupplier : null;
+  const _num = (v) => {
+    if (v == null) return null;
+    const raw = (typeof v === 'object') ? (v.$numberDecimal ?? (typeof v.toString === 'function' ? v.toString() : v)) : v;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+  const _money = (v) => { const n = _num(v); return n != null ? formatCurrency(n) : null; };
+  const _date  = (v) => v ? slimDateTime(v) : null;
+  const _rates = [
+    ['Hourly',  _money(item.hourlyRate)],
+    ['Daily',   _money(item.dailyRate)],
+    ['Weekly',  _money(item.weeklyRate)],
+    ['Monthly', _money(item.monthlyRate)],
+    ['Yearly',  _money(item.yearlyRate)],
+    ['Defined', _money(item.definedRate)],
+  ].filter(([, v]) => v != null);
+%>
+<div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-5">
+  <a href="/employees" class="inline-flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 hover:underline font-medium"><i class="bi bi-arrow-left"></i> Go Back</a>
+
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-6 sm:p-8 space-y-6">
+
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 break-words"><%= item.name %></h1>
+            <%- include('../partials/_status-badge', { status: item.status }) %>
+            <% if (item.type) { %>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700 capitalize"><%= item.type %></span>
+            <% } %>
+            <% if (item.ir35) { %>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-700">IR35: <%= item.ir35 %></span>
+            <% } %>
+          </div>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <% if (item.position) { %><span class="mr-3"><i class="bi bi-briefcase mr-1"></i><%= item.position %></span><% } %>
+            <% if (item.email) { %><a href="mailto:<%= item.email %>" class="text-green-600 dark:text-green-400 hover:underline mr-3"><i class="bi bi-envelope mr-1"></i><%= item.email %></a><% } %>
+            <% if (item.phoneNumber) { %><span><i class="bi bi-telephone mr-1"></i><%= item.phoneNumber %></span><% } %>
+          </p>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <% if (isAuthenticated && config?.handlesDocuments && (typeof canUpdate !== 'undefined' ? canUpdate : isAdmin)) { %>
+            <a href="/employee/upload/<%= item.uuid %>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition shadow-sm">
+              <i class="bi bi-upload"></i><span class="hidden sm:inline">Upload</span>
+            </a>
+          <% } %>
+          <%- include('../partials/_detail-actions', { basePath: 'employee', item }) %>
+        </div>
+      </div>
+
+      <!-- Meta -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <%- include('../partials/_meta-tile', { label: 'Hired', value: _date(item.hireDate) }) %>
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+          <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Manager</div>
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
+            <% if (_manager) { %><a href="/employee/read/<%= _manager.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= _manager.name %></a><% } else { %>—<% } %>
+          </div>
+        </div>
+        <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+          <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Linked Supplier</div>
+          <div class="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
+            <% if (_linkedSupp) { %><a href="/supplier/read/<%= _linkedSupp.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= _linkedSupp.Name %></a><% } else { %>—<% } %>
+          </div>
+        </div>
+        <%- include('../partials/_meta-tile', { label: 'Added', value: _date(item.createdAt) }) %>
+      </div>
+
+      <!-- Rates -->
+      <% if (_rates.length) { %>
+        <div>
+          <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2"><i class="bi bi-cash mr-1"></i>Rates</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
+            <% _rates.forEach(([label, value]) => { %>
+              <%- include('../partials/_meta-tile', { label, value }) %>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+
+  <!-- Vehicles -->
+  <% if (_vehicles.length > 0) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-car-front mr-1.5 text-blue-500"></i>Vehicles</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Reg</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Make / Model</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Year</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _vehicles.forEach(v => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a href="/vehicle/read/<%= v.uuid %>" class="text-green-700 dark:text-green-400 hover:underline font-mono font-medium"><%= v.registrationNumber %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= [v.make, v.model].filter(Boolean).join(' ') || '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= v.year || '—' %></td>
+                <td class="px-4 py-3"><%- include('../partials/_status-badge', { status: v.availabilityStatus }) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Holiday Entitlements -->
+  <% if (_entitlements.length > 0) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-calendar-check mr-1.5 text-green-500"></i>Holiday Entitlements</h2>
+        <a href="/employeeHolidays?employeeId=<%= item._id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">View all</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Period</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Entitlement</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Accrued</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Taken</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Carry Over</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _entitlements.forEach(h => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a href="/employeeHoliday/read/<%= h.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= _date(h.periodStart) %> – <%= _date(h.periodEnd) %></a></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= h.entitlementDays != null ? h.entitlementDays + ' days' : '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= h.accruedDays != null ? h.accruedDays + ' days' : '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= h.takenDays != null ? h.takenDays + ' days' : '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= h.carryOverDays != null ? h.carryOverDays + ' days' : '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Holiday Requests -->
+  <% if (_requests.length > 0) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-clock-history mr-1.5 text-amber-500"></i>Holiday Requests</h2>
+        <a href="/holidayRequests?employeeId=<%= item._id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">View all</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">From</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">To</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Days</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _requests.forEach(hr => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a href="/holidayRequest/read/<%= hr.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= _date(hr.startDate) %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= _date(hr.endDate) %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= hr.daysRequested != null ? hr.daysRequested : '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= hr.leaveType || '—' %></td>
+                <td class="px-4 py-3"><%- include('../partials/_status-badge', { status: hr.status }) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Documents -->
+  <% if (config?.handlesDocuments) { %>
+    <%- include('../partials/_documents-card', { item, basePath }) %>
+  <% } %>
+</div>

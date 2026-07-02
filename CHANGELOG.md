@@ -2,6 +2,20 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.9] - 2026-07-02
+
+### Changed
+- **Per-model read views for customer, invoice, quote, purchase, project and employee** — continuing the v6.8.0 migration off the generic `partials/form-read.ejs` (previously done for user, assignment, contract). Each model now has a compact, curated detail view at `mongoose/views/tailwindcss/<model>/read.ejs`, wired via `config.readView` in `listControllerConfig.js`:
+  - **invoice / quote / purchase**: number + status header with linked customer/supplier (CIS % badge on purchases), "Open in KashFlow" deep link, amount and date tile grids, dedicated Items table (Description/Qty/Rate/VAT/Net with project & nominal context) and Payments table — replacing the raw schema dump.
+  - **customer**: balance and account-history tiles, contact details, related Invoices / Quotes / Projects tables (moved from form-read).
+  - **project**: dates + financial tiles (actual/target/WIP), customer link, contracts table, documents card.
+  - **employee**: status/type/IR35 chips, contact line, rate tiles, resolved **Manager** and **Linked Supplier** links (new lookups in the employee `readLocals` — the list-only `fieldTransforms` never applied to detail views), vehicles/holiday tables, documents card. Payroll settings are deliberately not rendered on this view.
+  - **New shared partials**: `partials/_meta-tile.ejs` (stat tile), `partials/_documents-card.ejs` (extracted from form-read, reused by form-read itself), `partials/read/_party-card.ejs`, `partials/read/_lineitems-card.ejs`, `partials/read/_payments-card.ejs`. Status pills reuse `partials/_status-badge.ejs`.
+  - **form-read.ejs slimmed by ~340 lines**: the migrated models' `<% if (basePath === '…') %>` related-record blocks were removed (supplier CIS calendars/purchases and vehicle logs remain — those models still use the generic view); the documents block now includes the shared partial.
+
+### Added
+- `tests/readViews.test.js` — EJS render smoke-tests for all six new views, each rendered with full and minimal locals to catch template errors and unguarded references (also asserts payroll data never leaks into the employee view). Suite: 658 tests passing.
+
 ## [6.8.8] - 2026-07-02
 
 ### Fixed

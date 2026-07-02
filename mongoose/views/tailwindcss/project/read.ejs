@@ -1,0 +1,114 @@
+<%
+  // Compact project detail view. relatedCustomer / relatedContracts are
+  // provided by the project config's readLocals; projects are synced
+  // read-only from KashFlow but the app stores their documents.
+  const _customer  = (typeof relatedCustomer  !== 'undefined') ? relatedCustomer : null;
+  const _contracts = (typeof relatedContracts !== 'undefined' && Array.isArray(relatedContracts)) ? relatedContracts : [];
+  const _money = (v) => { const n = Number(v); return Number.isFinite(n) ? formatCurrency(n) : null; };
+  const _date  = (v) => v ? slimDateTime(v) : null;
+%>
+<div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-5">
+  <a href="/projects" class="inline-flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 hover:underline font-medium"><i class="bi bi-arrow-left"></i> Go Back</a>
+
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-6 sm:p-8 space-y-6">
+
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 break-words">
+              <span class="font-mono text-gray-400 mr-1">#<%= item.Number %></span><%= item.Name || 'Project' %>
+            </h1>
+            <%- include('../partials/_status-badge', { status: item.Status }) %>
+          </div>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <% if (_customer) { %>
+              <i class="bi bi-building mr-1"></i>
+              <a href="/customer/read/<%= _customer.uuid %>" class="text-green-600 dark:text-green-400 hover:underline"><%= _customer.Name %></a>
+            <% } else if (item.CustomerName) { %>
+              <i class="bi bi-building mr-1"></i><%= item.CustomerName %>
+            <% } %>
+            <% if (item.Reference) { %><span class="ml-2 text-xs font-mono text-gray-400">Ref <%= item.Reference %></span><% } %>
+          </p>
+        </div>
+        <% if (isAuthenticated && config?.handlesDocuments && (typeof canUpdate !== 'undefined' ? canUpdate : isAdmin)) { %>
+          <a href="/project/upload/<%= item.uuid %>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition shadow-sm shrink-0">
+            <i class="bi bi-upload"></i><span class="hidden sm:inline">Upload</span>
+          </a>
+        <% } %>
+      </div>
+
+      <!-- Dates -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <%- include('../partials/_meta-tile', { label: 'Start', value: _date(item.StartDate) }) %>
+        <%- include('../partials/_meta-tile', { label: 'End',   value: _date(item.EndDate) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Quotes', value: item.AssociatedQuotesCount != null ? String(item.AssociatedQuotesCount) : null }) %>
+      </div>
+
+      <!-- Financials -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <%- include('../partials/_meta-tile', { label: 'Actual Sales',     value: _money(item.ActualSalesAmount) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Actual Purchases', value: _money(item.ActualPurchasesAmount) }) %>
+        <%- include('../partials/_meta-tile', { label: 'WIP',              value: _money(item.WorkInProgressAmount) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Target Sales',     value: _money(item.TargetSalesAmount) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Target Purchases', value: _money(item.TargetPurchasesAmount) }) %>
+      </div>
+
+      <!-- Description / Note -->
+      <% if (item.Description && String(item.Description).trim()) { %>
+        <div>
+          <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1"><i class="bi bi-card-text mr-1"></i>Description</h2>
+          <p class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed"><%= item.Description %></p>
+        </div>
+      <% } %>
+      <% if (item.Note && String(item.Note).trim()) { %>
+        <div>
+          <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1"><i class="bi bi-sticky mr-1"></i>Note</h2>
+          <p class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed"><%= item.Note %></p>
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+
+  <!-- Contracts -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-file-earmark-text mr-1.5 text-blue-500"></i>Contracts</h2>
+      <a href="/contracts" class="text-xs text-green-700 dark:text-green-400 hover:underline">View all</a>
+    </div>
+    <% if (_contracts.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Title</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Start</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">End</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _contracts.forEach(c => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a href="/contract/read/<%= c.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= c.title || '—' %></a></td>
+                <td class="px-4 py-3"><%- include('../partials/_status-badge', { status: c.status }) %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= _date(c.startDate) || '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= _date(c.endDate) || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No contracts linked to this project.</p>
+    <% } %>
+  </div>
+
+  <!-- Documents -->
+  <% if (config?.handlesDocuments) { %>
+    <%- include('../partials/_documents-card', { item, basePath }) %>
+  <% } %>
+</div>

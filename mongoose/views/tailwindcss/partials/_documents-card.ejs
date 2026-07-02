@@ -1,0 +1,29 @@
+<%
+  // Shared documents list card for detail views (models with handlesDocuments).
+  // Locals: item ({ uuid, documents[] }), basePath (string).
+  const _docs = Array.isArray(item.documents) ? item.documents : [];
+%>
+<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-folder2-open mr-1.5 text-blue-500"></i>Documents</h2>
+  </div>
+  <div class="p-6">
+    <% if (_docs.length) { %>
+      <ul class="space-y-2">
+        <% _docs.forEach(doc => { %>
+          <li class="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-800 dark:text-gray-200">
+            <i class="bi bi-file-earmark text-gray-400 shrink-0"></i>
+            <span class="flex-1 truncate"><%= doc.name %></span>
+            <% if (doc.name.match(/\.(pdf|jpg|jpeg|png|webp|gif)$/i)) { %>
+              <a href="<%= doc.url %>" class="text-green-700 dark:text-green-400 hover:underline text-xs font-medium">View</a>
+            <% } else { %>
+              <a href="/<%= basePath %>/download/<%= item.uuid %>/<%= encodeURIComponent(doc.name) %>" class="text-green-700 dark:text-green-400 hover:underline text-xs font-medium">Download</a>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400 italic">No documents uploaded yet.</p>
+    <% } %>
+  </div>
+</div>

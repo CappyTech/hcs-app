@@ -1,0 +1,53 @@
+<%
+  // KashFlow REST line-items table for invoice / purchase / quote detail views.
+  // Locals: lineItems (array), formatCurrency (global).
+  const _rows = Array.isArray(lineItems) ? lineItems : [];
+  const _num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+%>
+<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-list-ul mr-1.5 text-green-500"></i>Items</h2>
+  </div>
+  <% if (_rows.length) { %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Qty</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Rate</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">VAT</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Net</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% _rows.forEach(li => {
+            const qty  = _num(li.Quantity);
+            const rate = _num(li.Rate);
+            const vat  = _num(li.VATAmount);
+            const net  = (qty != null && rate != null) ? qty * rate : null;
+          %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3 text-gray-800 dark:text-gray-200">
+                <%= li.Description || '—' %>
+                <% if (li.ProjectNumber || li.NominalCode) { %>
+                  <span class="block text-[11px] text-gray-400 mt-0.5">
+                    <% if (li.ProjectNumber) { %>Project #<%= li.ProjectNumber %><% } %>
+                    <% if (li.ProjectNumber && li.NominalCode) { %> · <% } %>
+                    <% if (li.NominalCode) { %>Nominal <%= li.NominalCode %><% } %>
+                  </span>
+                <% } %>
+              </td>
+              <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= qty != null ? qty : '—' %></td>
+              <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= rate != null ? formatCurrency(rate) : '—' %></td>
+              <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= vat != null ? formatCurrency(vat) : '—' %></td>
+              <td class="px-4 py-3 text-right font-medium text-gray-800 dark:text-gray-200"><%= net != null ? formatCurrency(net) : '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No line items.</p>
+  <% } %>
+</div>

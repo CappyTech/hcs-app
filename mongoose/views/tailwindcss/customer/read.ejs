@@ -1,0 +1,170 @@
+<%
+  // Compact customer detail view. relatedInvoices / relatedQuotes /
+  // relatedProjects are provided by the customer config's readLocals;
+  // customers are synced read-only from KashFlow.
+  const _invoices = (typeof relatedInvoices !== 'undefined' && Array.isArray(relatedInvoices)) ? relatedInvoices : [];
+  const _quotes   = (typeof relatedQuotes   !== 'undefined' && Array.isArray(relatedQuotes))   ? relatedQuotes   : [];
+  const _projects = (typeof relatedProjects !== 'undefined' && Array.isArray(relatedProjects)) ? relatedProjects : [];
+  const _money = (v) => { const n = Number(v); return Number.isFinite(n) ? formatCurrency(n) : null; };
+  const _date  = (v) => v ? slimDateTime(v) : null;
+%>
+<div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-5">
+  <a href="/customers" class="inline-flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 hover:underline font-medium"><i class="bi bi-arrow-left"></i> Go Back</a>
+
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-6 sm:p-8 space-y-6">
+
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 break-words"><%= item.Name %></h1>
+            <%- include('../partials/_status-badge', { status: item.IsArchived ? 'Archived' : 'Active' }) %>
+          </div>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <% if (item.Code) { %><span class="font-mono text-xs mr-3"><%= item.Code %></span><% } %>
+            <% if (item.Email) { %><a href="mailto:<%= item.Email %>" class="text-green-600 dark:text-green-400 hover:underline mr-3"><i class="bi bi-envelope mr-1"></i><%= item.Email %></a><% } %>
+            <% if (item.TelephoneNumber) { %><span><i class="bi bi-telephone mr-1"></i><%= item.TelephoneNumber %></span><% } %>
+          </p>
+        </div>
+      </div>
+
+      <!-- Balances -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <%- include('../partials/_meta-tile', { label: 'Outstanding',  value: _money(item.OutstandingBalance) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Net Invoiced', value: _money(item.InvoicedNetAmount) }) %>
+        <%- include('../partials/_meta-tile', { label: 'VAT',          value: _money(item.InvoicedVATAmount) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Total Paid',   value: _money(item.TotalPaidAmount) }) %>
+      </div>
+
+      <!-- Account details -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <%- include('../partials/_meta-tile', { label: 'Invoices',        value: item.InvoiceCount != null ? String(item.InvoiceCount) : null }) %>
+        <%- include('../partials/_meta-tile', { label: 'First Invoice',   value: _date(item.FirstInvoiceDate) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Last Invoice',    value: _date(item.LastInvoiceDate) }) %>
+        <%- include('../partials/_meta-tile', { label: 'Customer Since',  value: _date(item.CreatedDate) }) %>
+      </div>
+      <% if (item.VATNumber || (item.DiscountRate != null && Number(item.DiscountRate) > 0) || (item.WHTRate != null && Number(item.WHTRate) >= 0)) { %>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <% if (item.VATNumber) { %><%- include('../partials/_meta-tile', { label: 'VAT Number', value: item.VATNumber }) %><% } %>
+        <% if (item.DiscountRate != null && Number(item.DiscountRate) > 0) { %><%- include('../partials/_meta-tile', { label: 'Discount', value: item.DiscountRate + '%' }) %><% } %>
+        <% if (item.WHTRate != null && Number(item.WHTRate) >= 0) { %><%- include('../partials/_meta-tile', { label: 'WHT Rate', value: item.WHTRate + '%' }) %><% } %>
+      </div>
+      <% } %>
+
+      <!-- Note -->
+      <% if (item.Note && String(item.Note).trim()) { %>
+        <div>
+          <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1"><i class="bi bi-card-text mr-1"></i>Note</h2>
+          <p class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed"><%= item.Note %></p>
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+
+  <!-- Invoices -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-receipt mr-1.5 text-green-500"></i>Invoices</h2>
+      <a href="/invoices?CustomerId=<%= item.Id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">View all</a>
+    </div>
+    <% if (_invoices.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Number</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Issued</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Gross</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Paid</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _invoices.forEach(inv => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a href="/invoice/read/<%= inv.uuid %>" class="text-green-700 dark:text-green-400 hover:underline font-mono">#<%= inv.Number %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= _date(inv.IssuedDate) || '—' %></td>
+                <td class="px-4 py-3"><%- include('../partials/_status-badge', { status: inv.Status }) %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= _money(inv.GrossAmount) || '—' %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= _money(inv.AmountPaid) || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No invoices found for this customer.</p>
+    <% } %>
+  </div>
+
+  <!-- Quotes -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-file-earmark-text mr-1.5 text-blue-500"></i>Quotes</h2>
+    </div>
+    <% if (_quotes.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Number</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Gross</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _quotes.forEach(q => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a href="/quote/read/<%= q.uuid %>" class="text-green-700 dark:text-green-400 hover:underline font-mono">#<%= q.Number %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= _date(q.Date) || '—' %></td>
+                <td class="px-4 py-3"><%- include('../partials/_status-badge', { status: q.Status }) %></td>
+                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= _money(q.GrossAmount) || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No quotes found for this customer.</p>
+    <% } %>
+  </div>
+
+  <!-- Projects -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><i class="bi bi-folder2-open mr-1.5 text-violet-500"></i>Projects</h2>
+    </div>
+    <% if (_projects.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ref</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Name</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Start</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">End</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% _projects.forEach(proj => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3"><a href="/project/read/<%= proj.uuid %>" class="text-green-700 dark:text-green-400 hover:underline font-mono">#<%= proj.Number %></a></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= proj.Name || '—' %></td>
+                <td class="px-4 py-3"><%- include('../partials/_status-badge', { status: proj.Status }) %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= _date(proj.StartDate) || '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= _date(proj.EndDate) || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 italic">No projects found for this customer.</p>
+    <% } %>
+  </div>
+</div>

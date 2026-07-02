@@ -1,0 +1,8 @@
+<%
+  // Small grey stat tile used on detail-view meta grids.
+  // Locals: label (string), value (pre-formatted string | null).
+%>
+<div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+  <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1"><%= label %></div>
+  <div class="text-sm font-medium text-gray-900 dark:text-gray-100 break-words"><%= (value == null || value === '') ? '—' : value %></div>
+</div>
