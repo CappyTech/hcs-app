@@ -63,6 +63,8 @@ const payrollRunSchema = new mongoose.Schema({
   // ── KashFlow journal ──────────────────────────────────────────────────────
   kashflowJournalRef: { type: String, default: null },  // Journal ID returned by KashFlow API
   journalPostedAt:    { type: Date, default: null },
+  journalPostingAt:   { type: Date, default: null },    // in-flight claim — blocks concurrent posting (stale after 5 min)
+  journalLastError:   { type: String, default: null },  // last posting failure, surfaced for retry decisions
 
   notes: { type: String, trim: true, maxlength: 2000 }
 }, {

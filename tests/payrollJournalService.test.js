@@ -143,3 +143,171 @@ describe('buildJournalLines', () => {
     assert.doesNotThrow(() => buildJournalLines(totals, validNominals, 'Zeros'));
   });
 });
+
+// ── postPayrollJournal — double-submit guard (mocked models + axios) ──────────
+
+// Force kashflowSessionService onto the preset-token path (no HTTP login)
+delete process.env.KASHFLOW_EXTERNAL_TOKEN;
+delete process.env.KASHFLOW_API_USERNAME;
+delete process.env.KFUSERNAME;
+process.env.KASHFLOW_SESSION_TOKEN = 'test-token';
+
+const mdb = require('../mongoose/services/mongooseDatabaseService');
+const axios = require('axios');
+const { postPayrollJournal } = journalSvc;
+
+const RUN_UUID = 'aaaabbbb-cccc-dddd-eeee-ffff00001111';
+const EXPECTED_REFERENCE = 'PAY-AAAABBBB';
+
+function makeRun() {
+  return {
+    _id: 'run-1',
+    uuid: RUN_UUID,
+    status: 'locked',
+    paymentDate: new Date('2025-05-30T00:00:00.000Z'),
+    taxYear: '2025/26',
+    frequency: 'monthly',
+    taxMonth: 2,
+    totals: makeTotals(),
+    kashflowJournalRef: null,
+    journalPostingAt: null
+  };
+}
+
+/**
+ * Install mocked payrollRun/payrollConfig models on the mdb singleton.
+ * claimResult — what findOneAndUpdate returns (null = claim lost)
+ * existingDoc — what the diagnostic findOne returns
+ */
+function setupJournalMocks({ claimResult, existingDoc = null, nominals = validNominals } = {}) {
+  const calls = { claims: [], updates: [] };
+  mdb.INTERNAL.payrollRun = {
+    findOneAndUpdate: (filter, update, opts) => {
+      calls.claims.push({ filter, update, opts });
+      return { lean: async () => claimResult };
+    },
+    findOne: () => ({ select: () => ({ lean: async () => existingDoc }) }),
+    updateOne: async (filter, update) => {
+      calls.updates.push({ filter, update });
+      return { modifiedCount: 1 };
+    }
+  };
+  mdb.INTERNAL.payrollConfig = {
+    findOne: () => ({ lean: async () => ({ kashflowNominals: nominals }) })
+  };
+  return calls;
+}
+
+function patchAxiosPost(impl) {
+  const original = axios.post;
+  axios.post = impl;
+  return () => { axios.post = original; };
+}
+
+describe('postPayrollJournal', () => {
+  it('posts the journal and persists the ref while clearing the claim', async () => {
+    const calls = setupJournalMocks({ claimResult: makeRun() });
+    const restore = patchAxiosPost(async (url, payload) => {
+      assert.ok(url.endsWith('/journals'));
+      assert.equal(payload.Reference, EXPECTED_REFERENCE);
+      assert.equal(payload.Lines.length, 6);
+      return { status: 201, data: { Id: 555 } };
+    });
+    try {
+      const ref = await postPayrollJournal(RUN_UUID);
+      assert.equal(ref, '555');
+      assert.equal(calls.updates.length, 1);
+      const { update } = calls.updates[0];
+      assert.equal(update.$set.kashflowJournalRef, '555');
+      assert.equal(update.$set.journalPostingAt, null);
+      assert.ok(update.$set.journalPostedAt instanceof Date);
+    } finally { restore(); }
+  });
+
+  it('claims atomically: filter requires locked status, no ref, and no live claim', async () => {
+    const calls = setupJournalMocks({ claimResult: makeRun() });
+    const restore = patchAxiosPost(async () => ({ status: 201, data: { Id: 1 } }));
+    try {
+      await postPayrollJournal(RUN_UUID);
+      const { filter, update } = calls.claims[0];
+      assert.equal(filter.uuid, RUN_UUID);
+      assert.equal(filter.status, 'locked');
+      assert.equal(filter.kashflowJournalRef, null);
+      assert.ok(filter.$or.some(c => c.journalPostingAt === null));
+      assert.ok(filter.$or.some(c => c.journalPostingAt && c.journalPostingAt.$lt instanceof Date),
+        'stale takeover condition missing');
+      assert.ok(update.$set.journalPostingAt instanceof Date);
+    } finally { restore(); }
+  });
+
+  it('rejects when the journal is already posted', async () => {
+    setupJournalMocks({
+      claimResult: null,
+      existingDoc: { status: 'locked', kashflowJournalRef: 'J-1' }
+    });
+    await assert.rejects(() => postPayrollJournal(RUN_UUID), /already posted.*J-1/);
+  });
+
+  it('rejects when another posting is in flight', async () => {
+    setupJournalMocks({
+      claimResult: null,
+      existingDoc: { status: 'locked', kashflowJournalRef: null, journalPostingAt: new Date() }
+    });
+    await assert.rejects(() => postPayrollJournal(RUN_UUID), /already in progress/);
+  });
+
+  it('rejects an unlocked run', async () => {
+    setupJournalMocks({
+      claimResult: null,
+      existingDoc: { status: 'draft', kashflowJournalRef: null }
+    });
+    await assert.rejects(() => postPayrollJournal(RUN_UUID), /Only locked runs/);
+  });
+
+  it('rejects an unknown run', async () => {
+    setupJournalMocks({ claimResult: null, existingDoc: null });
+    await assert.rejects(() => postPayrollJournal(RUN_UUID), /not found/);
+  });
+
+  it('ambiguous failure (timeout): releases the claim and points at the KashFlow reference', async () => {
+    const calls = setupJournalMocks({ claimResult: makeRun() });
+    const restore = patchAxiosPost(async () => {
+      const err = new Error('timeout of 30000ms exceeded');
+      err.code = 'ECONNABORTED';
+      throw err;
+    });
+    try {
+      await assert.rejects(
+        () => postPayrollJournal(RUN_UUID),
+        new RegExp(`may still have been created.*${EXPECTED_REFERENCE}`)
+      );
+      // Claim released + error recorded
+      assert.equal(calls.updates.length, 1);
+      const { update } = calls.updates[0];
+      assert.equal(update.$set.journalPostingAt, null);
+      assert.match(update.$set.journalLastError, new RegExp(EXPECTED_REFERENCE));
+    } finally { restore(); }
+  });
+
+  it('definite failure (400): releases the claim without the ambiguity warning', async () => {
+    const calls = setupJournalMocks({ claimResult: makeRun() });
+    const restore = patchAxiosPost(async () => {
+      const err = new Error('Request failed with status code 400');
+      err.response = { status: 400, data: { error: 'bad nominal' } };
+      throw err;
+    });
+    try {
+      await assert.rejects(() => postPayrollJournal(RUN_UUID), /400/);
+      const { update } = calls.updates[0];
+      assert.equal(update.$set.journalPostingAt, null);
+      assert.ok(!/may still have been created/.test(update.$set.journalLastError));
+    } finally { restore(); }
+  });
+
+  it('missing nominal config: releases the claim and reports the config error', async () => {
+    const calls = setupJournalMocks({ claimResult: makeRun(), nominals: null });
+    mdb.INTERNAL.payrollConfig = { findOne: () => ({ lean: async () => ({}) }) };
+    await assert.rejects(() => postPayrollJournal(RUN_UUID), /nominal codes not configured/i);
+    assert.equal(calls.updates[0].update.$set.journalPostingAt, null);
+  });
+});

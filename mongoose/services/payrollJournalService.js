@@ -123,8 +123,21 @@ function buildJournalLines(runTotals, nominals, periodLabel) {
 }
 
 /**
+ * How long an in-flight posting claim blocks other posters before it is
+ * considered abandoned (crashed process, lost connection) and can be taken
+ * over. Must comfortably exceed the 30s KashFlow request timeout.
+ */
+const JOURNAL_CLAIM_STALE_MS = 5 * 60 * 1000;
+
+/**
  * Posts the payroll journal to KashFlow and saves the journal reference on
  * the run document.
+ *
+ * Double-submit safe: the run is claimed atomically before the HTTP call, so
+ * concurrent submits (double-click, two tabs, retried request) cannot both
+ * post. The KashFlow Reference is deterministic (PAY-<uuid8>), so if an
+ * ambiguous failure ever leaves the outcome unknown, the journal can be found
+ * in KashFlow by reference before retrying.
  *
  * @param {string} runUuid  – the uuid of the payrollRun
  * @returns {string}         the KashFlow journal reference/ID
@@ -137,62 +150,105 @@ async function postPayrollJournal(runUuid) {
     throw new Error('Database not ready — payrollRun or payrollConfig model unavailable');
   }
 
-  const run = await PayrollRun.findOne({ uuid: runUuid });
-  if (!run) throw new Error(`Payroll run not found: ${runUuid}`);
-  if (run.status !== 'locked') throw new Error('Only locked runs can be posted to KashFlow');
-  if (run.kashflowJournalRef) throw new Error(`Journal already posted for this run (ref: ${run.kashflowJournalRef})`);
+  // Atomically claim the run: only matches a locked, unposted run with no
+  // live claim. Check-then-act would race across the 30s KashFlow call.
+  const staleCutoff = new Date(Date.now() - JOURNAL_CLAIM_STALE_MS);
+  const run = await PayrollRun.findOneAndUpdate(
+    {
+      uuid: runUuid,
+      status: 'locked',
+      kashflowJournalRef: null,
+      $or: [{ journalPostingAt: null }, { journalPostingAt: { $lt: staleCutoff } }]
+    },
+    { $set: { journalPostingAt: new Date(), journalLastError: null } },
+    { new: true }
+  ).lean();
 
-  const config = await PayrollConfig.findOne().lean();
-  if (!config?.kashflowNominals) {
-    throw new Error('Payroll nominal codes not configured. Go to Settings → Payroll to set them up.');
+  if (!run) {
+    // Claim failed — diagnose why for a useful error message
+    const existing = await PayrollRun.findOne({ uuid: runUuid })
+      .select('status kashflowJournalRef journalPostingAt').lean();
+    if (!existing) throw new Error(`Payroll run not found: ${runUuid}`);
+    if (existing.kashflowJournalRef) throw new Error(`Journal already posted for this run (ref: ${existing.kashflowJournalRef})`);
+    if (existing.status !== 'locked') throw new Error('Only locked runs can be posted to KashFlow');
+    throw new Error('A journal posting for this run is already in progress — wait for it to finish before retrying.');
   }
 
-  const nominals = config.kashflowNominals;
-  const paymentDate = run.paymentDate.toISOString().split('T')[0];
-  const periodLabel = `${run.taxYear} ${run.frequency} W${run.taxWeek || '-'}M${run.taxMonth || '-'}`;
+  const reference = `PAY-${runUuid.slice(0, 8).toUpperCase()}`;
 
-  const lines = buildJournalLines(run.totals, nominals, periodLabel);
+  try {
+    const config = await PayrollConfig.findOne().lean();
+    if (!config?.kashflowNominals) {
+      throw new Error('Payroll nominal codes not configured. Go to Settings → Payroll to set them up.');
+    }
 
-  // Verify debits = credits (within 1p rounding tolerance)
-  const debitTotal  = round2(lines.filter(l => l.Debit).reduce((s, l) => s + l.Amount, 0));
-  const creditTotal = round2(lines.filter(l => !l.Debit).reduce((s, l) => s + l.Amount, 0));
-  if (Math.abs(debitTotal - creditTotal) > 0.02) {
-    logger.warn(`payrollJournal: imbalanced journal (Dr £${debitTotal} vs Cr £${creditTotal}) for run ${runUuid}`);
-  }
+    const nominals = config.kashflowNominals;
+    const paymentDate = new Date(run.paymentDate).toISOString().split('T')[0];
+    const periodLabel = `${run.taxYear} ${run.frequency} W${run.taxWeek || '-'}M${run.taxMonth || '-'}`;
 
-  const journalPayload = {
-    Date: paymentDate,
-    Description: `Payroll — ${periodLabel}`,
-    Reference: `PAY-${runUuid.slice(0, 8).toUpperCase()}`,
-    Lines: lines
-  };
+    const lines = buildJournalLines(run.totals, nominals, periodLabel);
 
-  logger.info(`payrollJournalService: posting journal to KashFlow for run ${runUuid}`);
+    // Verify debits = credits (within 1p rounding tolerance)
+    const debitTotal  = round2(lines.filter(l => l.Debit).reduce((s, l) => s + l.Amount, 0));
+    const creditTotal = round2(lines.filter(l => !l.Debit).reduce((s, l) => s + l.Amount, 0));
+    if (Math.abs(debitTotal - creditTotal) > 0.02) {
+      logger.warn(`payrollJournal: imbalanced journal (Dr £${debitTotal} vs Cr £${creditTotal}) for run ${runUuid}`);
+    }
 
-  const journalRef = await kfSession.withKfAuth(async (token) => {
-    const resp = await axios.post(
-      `${KF_BASE_URL()}/journals`,
-      journalPayload,
-      {
-        headers: {
-          Authorization: `KfToken ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        timeout: 30000
-      }
+    const journalPayload = {
+      Date: paymentDate,
+      Description: `Payroll — ${periodLabel}`,
+      Reference: reference,
+      Lines: lines
+    };
+
+    logger.info(`payrollJournalService: posting journal to KashFlow for run ${runUuid}`);
+
+    const journalRef = await kfSession.withKfAuth(async (token) => {
+      const resp = await axios.post(
+        `${KF_BASE_URL()}/journals`,
+        journalPayload,
+        {
+          headers: {
+            Authorization: `KfToken ${token}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+      // KashFlow returns the created journal ID/reference
+      const data = resp.data || {};
+      return data.Id || data.JournalId || data.Reference || journalPayload.Reference;
+    });
+
+    await PayrollRun.updateOne(
+      { _id: run._id },
+      { $set: { kashflowJournalRef: String(journalRef), journalPostedAt: new Date(), journalPostingAt: null } }
     );
-    // KashFlow returns the created journal ID/reference
-    const data = resp.data || {};
-    return data.Id || data.JournalId || data.Reference || journalPayload.Reference;
-  });
 
-  run.kashflowJournalRef = String(journalRef);
-  run.journalPostedAt = new Date();
-  await run.save();
+    logger.info(`payrollJournalService: journal posted, ref=${journalRef}, run=${runUuid}`);
+    return String(journalRef);
+  } catch (err) {
+    // Ambiguous outcomes — request reached KashFlow but the response was lost
+    // (timeout, connection drop, 5xx) — mean the journal MAY exist there.
+    const status = err?.response?.status;
+    const ambiguous = err.code === 'ECONNABORTED' || (!err.response && !!err.request) || (status != null && status >= 500);
+    const note = ambiguous
+      ? ` The journal may still have been created in KashFlow — search for reference ${reference} there before retrying.`
+      : '';
 
-  logger.info(`payrollJournalService: journal posted, ref=${journalRef}, run=${runUuid}`);
-  return String(journalRef);
+    // Release the claim and record the failure on the run
+    await PayrollRun.updateOne(
+      { _id: run._id },
+      { $set: { journalPostingAt: null, journalLastError: `${err.message}${note}`.slice(0, 500) } }
+    ).catch(releaseErr => {
+      logger.error(`payrollJournalService: failed to release posting claim for ${runUuid}: ${releaseErr.message}`);
+    });
+
+    err.message = `${err.message}${note}`;
+    throw err;
+  }
 }
 
-module.exports = { buildJournalLines, postPayrollJournal };
+module.exports = { buildJournalLines, postPayrollJournal, JOURNAL_CLAIM_STALE_MS };

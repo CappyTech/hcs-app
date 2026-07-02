@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.8] - 2026-07-02
+
+### Fixed
+- **KashFlow posting is now double-submit safe** (the roadmap's "Idempotent KashFlow posting" item). Both posting paths used check-then-act: read a "already posted?" flag, then spend 20–30s on the KashFlow HTTP call before persisting the result — so a double-click, second tab, or retried request could pass the check twice and create **duplicate purchases/journals** in the ledger.
+  - **Payroll journal** (`payrollJournalService.postPayrollJournal`): the run is now claimed atomically via `findOneAndUpdate` (filter: locked + no `kashflowJournalRef` + no live claim) before anything is sent; concurrent posters get a clear "already in progress" / "already posted (ref …)" error. New `payrollRun.journalPostingAt` (claim timestamp, stale after 5 min so a crashed process never wedges the run) and `journalLastError` fields. On ambiguous failures (timeout, connection drop, 5xx) the error now points at the run's deterministic KashFlow reference (`PAY-<uuid8>`) so the journal can be searched for in KashFlow before retrying.
+  - **AP capture send** (`paperlessController.sendDraftToKashflow`): the per-document idempotency pre-check is replaced by an atomic claim in the new `mongoose/services/paperless/kashflowSendClaimService.js` (`OcrDocument.kfSendLockedAt`, same 5-minute stale-takeover). The claim is released on every exit path (duplicate-block redirect, success render, error render); a successful send remains blocked afterwards by the existing already-linked condition, and a failed send does not permanently block a retry.
+
+### Added
+- `tests/kashflowSendClaimService.test.js` and `postPayrollJournal` tests in `tests/payrollJournalService.test.js` — claim-filter shapes (already-linked exclusion, stale takeover), win/lose/diagnose paths, success persistence clearing the claim, ambiguous-vs-definite failure handling, and release-never-throws. `postPayrollJournal` is exercised end-to-end against mocked models with a patched axios and the preset-token KashFlow auth path. Suite: 646 tests passing.
+
 ## [6.8.7] - 2026-07-02
 
 ### Changed

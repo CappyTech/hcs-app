@@ -35,6 +35,7 @@ const {
   clearPaperlessKashFlowFields,
 } = require("../services/paperless/paperlessUpdateService");
 const { warmCfCache } = require("../services/paperless/paperlessClient");
+const kfSendClaim = require("../services/paperless/kashflowSendClaimService");
 
 // Helpers
 
@@ -532,6 +533,15 @@ exports.getPurchaseDraft = async (req, res, next) => {
 
 /** Handle POST to send the draft to KashFlow (placeholder – external integration lives elsewhere) */
 exports.sendDraftToKashflow = async (req, res, next) => {
+  // Send-claim state: released on every exit path; the 5-minute stale-claim
+  // timeout in kashflowSendClaimService is the fallback if a release is missed.
+  let sendClaimed = false;
+  let claimedPaperlessId = null;
+  const releaseSendClaim = async () => {
+    if (!sendClaimed) return;
+    sendClaimed = false;
+    await kfSendClaim.releaseSend(mdb.PAPERLESS.OcrDocument, claimedPaperlessId);
+  };
   try {
     const paperlessId = parseInt(req.params.paperlessId, 10);
     // Checkbox semantics: when unchecked, field is absent -> treat as false
@@ -539,15 +549,19 @@ exports.sendDraftToKashflow = async (req, res, next) => {
       String(req.body?.dryRun || "").toLowerCase(),
     );
 
-    // Server-side idempotency check — reject if already linked to KashFlow
+    // Server-side double-submit guard — atomically claim the document.
+    // The old check-then-act read raced across the 20s KashFlow call: two
+    // concurrent submits both passed and created two purchases.
     if (!dryRun) {
       await mdb.connect();
       const { OcrDocument } = mdb.PAPERLESS;
-      const existingDoc = await OcrDocument.findOne({ paperlessId }).select('kashflowPurchaseId lastSendStatus').lean();
-      if (existingDoc?.kashflowPurchaseId && existingDoc?.lastSendStatus === 201) {
-        req.flash('error', `This document is already linked to KashFlow purchase #${existingDoc.kashflowPurchaseId}. Unlink it first before re-sending.`);
+      const claim = await kfSendClaim.claimSend(OcrDocument, paperlessId);
+      if (!claim.ok) {
+        req.flash('error', claim.message);
         return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
       }
+      sendClaimed = true;
+      claimedPaperlessId = paperlessId;
     }
 
     // Rebuild draft server-side to avoid trusting client payload
@@ -613,6 +627,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
             `A purchase with supplier reference "${ref}" already exists (purchase #${dupNumber}). ` +
               'If this is genuinely a different invoice, tick "override duplicate check" and send again.',
           );
+          await releaseSendClaim();
           return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
         }
       }
@@ -1070,6 +1085,8 @@ exports.sendDraftToKashflow = async (req, res, next) => {
       };
       req.flash("success", msg);
     }
+    await releaseSendClaim();
+
     // Render a dedicated result view with details
     res.render(path.join("tailwindcss", "paperless", "sendResult"), {
       title: "KashFlow Send Result",
@@ -1081,6 +1098,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
     });
   } catch (err) {
     logger.error("sendDraftToKashflow error:", err);
+    await releaseSendClaim().catch(() => {});
     req.flash("error", `Send failed: ${err.message}`);
     res.render(path.join("tailwindcss", "paperless", "sendResult"), {
       title: "KashFlow Send Result",

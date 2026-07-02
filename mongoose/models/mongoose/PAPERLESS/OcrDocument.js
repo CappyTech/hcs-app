@@ -35,6 +35,7 @@ const OcrDocumentSchema = new mongoose.Schema({
   lastSendMode:           { type: String, enum: ['direct', 'webhook', null], default: null, index: true },
   lastSendStatus:         { type: Number, default: null },
   modifiedAtLastSend:     { type: Date,   default: null },
+  kfSendLockedAt:         { type: Date,   default: null }, // in-flight send claim — blocks concurrent sends (stale after 5 min)
   sendCount:              { type: Number },
   fetchedAt:              { type: Date, default: () => new Date() },
   error: { type: String, default: null },
