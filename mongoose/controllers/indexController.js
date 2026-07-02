@@ -6,7 +6,6 @@ const holidayService = require("../services/holidayService");
 const { getFrequentPages } = require("../services/sessionActivityService");
 const rbac = require("../config/rolePermissionsConfig");
 const { endOfToday, endOfWeek, endOfMonth } = require("date-fns");
-const moment = require("moment-timezone");
 
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);

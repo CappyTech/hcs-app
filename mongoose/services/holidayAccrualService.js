@@ -1,6 +1,5 @@
 const mdb = require('./mongooseDatabaseService');
 const taxService = require('../../services/taxService');
-const moment = require('moment-timezone');
 
 function toNumber(x) {
   if (x == null) return 0;

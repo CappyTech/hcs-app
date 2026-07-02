@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.12] - 2026-07-02
+
+### Changed
+- **moment → date-fns migration, phase 1 (the shared date services).** `services/taxService.js` (CIS tax-year/tax-month/return-period engine) and `services/dateService.js` (`slimDateTime`, injected into every template) are ported from `moment-timezone` to `date-fns` + `date-fns-tz`, preserving semantics exactly: bare date strings are still interpreted as Europe/London wall time, instants with Z/offset pass through, and the KashFlow BST/GMT boundary behaviour (period end at London 23:59:59.999 so `T23:00:00Z`/`T00:00:00Z` boundary-day records aren't dropped) is unchanged. Removed four **dead** `moment-timezone` requires (`holidayAccrualService`, `holidayController`, `indexController` — which already used date-fns — and `twoFAController`).
+- Remaining on moment (phase 2, ~50 call sites): `holidayService`, `attendanceService`, `cisController`, `attendanceController`, `settingsController`, `returnsController`. `moment`/`moment-timezone` stay in package.json until those are ported.
+
+### Added
+- **BST/GMT characterization tests** in `tests/taxService.test.js`, written against the moment implementation *before* the port and passing unchanged after it: exact UTC instants for period start/end in BST, GMT, and across both clock-change months; KashFlow boundary-day containment (`2025-09-04T23:00:00Z` ∈ month 5, `2026-01-05T00:00:00Z` ∈ month 9); tax-month attribution for UTC-instant inputs; tax-year start/end instants. Suite: 680 tests passing.
+
 ## [6.8.11] - 2026-07-02
 
 ### Changed

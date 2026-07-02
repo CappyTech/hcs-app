@@ -190,3 +190,83 @@ describe('getCurrentMonthlyReturn', () => {
     assert.equal(start.date(), 6);
   });
 });
+
+// ── BST/GMT boundary characterization ────────────────────────────────────────
+// KashFlow stores dates as the UTC equivalent of London midnight. These pin
+// the exact UTC instants the period boundaries must produce so boundary-day
+// records are never dropped (see the comment in getCurrentMonthlyReturn).
+
+describe('getCurrentMonthlyReturn — exact UTC instants across DST', () => {
+  it('BST period start: month 5 of 2025 starts at 2025-08-05T23:00:00Z (6 Aug midnight BST)', () => {
+    const r = getCurrentMonthlyReturn(2025, 5); // Aug 6 – Sep 5
+    assert.equal(r.periodStart.toISOString(), '2025-08-05T23:00:00.000Z');
+  });
+
+  it('BST period end: month 5 of 2025 ends at 2025-09-05T22:59:59.999Z — catching KashFlow "5 Sep" = 2025-09-04T23:00:00Z', () => {
+    const r = getCurrentMonthlyReturn(2025, 5);
+    assert.equal(r.periodEnd.toISOString(), '2025-09-05T22:59:59.999Z');
+    const kashflowBoundary = new Date('2025-09-04T23:00:00.000Z'); // 5 Sep midnight BST
+    assert.ok(kashflowBoundary <= r.periodEnd, 'BST boundary-day record must fall inside the period');
+    assert.ok(kashflowBoundary >= r.periodStart);
+  });
+
+  it('GMT period end: month 9 of 2025 ends at 2026-01-05T23:59:59.999Z — catching KashFlow "5 Jan" = 2026-01-05T00:00:00Z', () => {
+    const r = getCurrentMonthlyReturn(2025, 9); // Dec 6 – Jan 5
+    assert.equal(r.periodEnd.toISOString(), '2026-01-05T23:59:59.999Z');
+    const kashflowBoundary = new Date('2026-01-05T00:00:00.000Z'); // 5 Jan midnight GMT
+    assert.ok(kashflowBoundary <= r.periodEnd, 'GMT boundary-day record must fall inside the period');
+  });
+
+  it('GMT period start: month 9 of 2025 starts at 2025-12-06T00:00:00Z (6 Dec midnight GMT)', () => {
+    const r = getCurrentMonthlyReturn(2025, 9);
+    assert.equal(r.periodStart.toISOString(), '2025-12-06T00:00:00.000Z');
+  });
+
+  it('period spanning the October clock change (month 7: Oct 6 – Nov 5) has BST start and GMT end', () => {
+    const r = getCurrentMonthlyReturn(2025, 7);
+    assert.equal(r.periodStart.toISOString(), '2025-10-05T23:00:00.000Z'); // 6 Oct midnight BST
+    assert.equal(r.periodEnd.toISOString(),   '2025-11-05T23:59:59.999Z'); // 5 Nov end-of-day GMT
+    assert.equal(r.isDST, true);
+    assert.equal(r.isEndDST, false);
+  });
+
+  it('period spanning the March clock change (month 12: Mar 6 – Apr 5) has GMT start and BST end', () => {
+    const r = getCurrentMonthlyReturn(2025, 12);
+    assert.equal(r.periodStart.toISOString(), '2026-03-06T00:00:00.000Z'); // 6 Mar midnight GMT
+    assert.equal(r.periodEnd.toISOString(),   '2026-04-05T22:59:59.999Z'); // 5 Apr end-of-day BST
+    assert.equal(r.isDST, false);
+    assert.equal(r.isEndDST, true);
+  });
+
+  it('tax year start instant respects BST: 2025 tax year starts 2025-04-05T23:00:00Z', () => {
+    const { start, end } = getTaxYearStartEnd(2025);
+    assert.equal(start.toISOString(), '2025-04-05T23:00:00.000Z'); // 6 Apr midnight BST
+    assert.equal(end.toISOString(),   '2026-04-04T23:00:00.000Z'); // 5 Apr midnight BST
+  });
+});
+
+describe('calculateTaxYearAndMonth — UTC-instant inputs at boundaries', () => {
+  it('KashFlow "5 Sep 2025" (2025-09-04T23:00:00Z) is tax month 5', () => {
+    const r = calculateTaxYearAndMonth('2025-09-04T23:00:00.000Z');
+    assert.equal(r.taxYear, 2025);
+    assert.equal(r.taxMonth, 5);
+  });
+
+  it('KashFlow "6 Sep 2025" (2025-09-05T23:00:00Z) is tax month 6', () => {
+    const r = calculateTaxYearAndMonth('2025-09-05T23:00:00.000Z');
+    assert.equal(r.taxYear, 2025);
+    assert.equal(r.taxMonth, 6);
+  });
+
+  it('KashFlow "5 Jan 2026" (2026-01-05T00:00:00Z) is tax month 9', () => {
+    const r = calculateTaxYearAndMonth('2026-01-05T00:00:00.000Z');
+    assert.equal(r.taxYear, 2025);
+    assert.equal(r.taxMonth, 9);
+  });
+
+  it('Date object input works the same as ISO string', () => {
+    const r = calculateTaxYearAndMonth(new Date('2025-09-04T23:00:00.000Z'));
+    assert.equal(r.taxYear, 2025);
+    assert.equal(r.taxMonth, 5);
+  });
+});
