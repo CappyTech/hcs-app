@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.11] - 2026-07-02
+
+### Changed
+- **TOTP library swapped from `speakeasy` (unmaintained since 2017) to `otplib` v12** — the deferred half of the June 2026 hardening pass. Verification is now centralised in a single `totpService.verifyTOTP(secret, token)` chokepoint (window ±1, matching the previous behaviour; trims input; returns false rather than throwing on malformed secrets), replacing five duplicated `speakeasy.totp.verify` call sites across `userCRUDController` (login inline 2FA + password-reset TOTP), `twoFAController`, `ssoController` and `settingsController`. Secret generation (`authenticator.generateSecret(20)`, Base32) and the otpauth QR URL (`authenticator.keyuri`) are drop-in compatible — **existing enrolled authenticators keep working unchanged**.
+
+### Added
+- `verifyTOTP` unit tests in `tests/totpService.test.js`: current-token accept, whitespace tolerance, wrong-token/wrong-secret reject, ±1-step clock-drift accept, and non-throwing behaviour on missing/malformed input. Suite: 669 tests passing.
+
 ## [6.8.10] - 2026-07-02
 
 ### Changed

@@ -32,7 +32,7 @@ Provider-agnostic on the accounting side: it reads synced accounting data from M
 | Database | MongoDB via Mongoose 8 — three logical databases: `INTERNAL`, `REST`, `PAPERLESS` |
 | Sessions | `express-session` + `connect-mongo` (Mongo-backed store) |
 | Real-time | Socket.IO |
-| Auth & security | bcrypt, JWT (`jsonwebtoken`), TOTP (`speakeasy` + `qrcode`), Helmet, CSRF, `express-rate-limit`, `xss`, `sanitize-filename`, Have-I-Been-Pwned breach checks |
+| Auth & security | bcrypt, JWT (`jsonwebtoken`), TOTP (`otplib` + `qrcode`), Helmet, CSRF, `express-rate-limit`, `xss`, `sanitize-filename`, Have-I-Been-Pwned breach checks |
 | Integrations | KashFlow (accounting), Paperless-ngx (OCR document ingestion), HMRC RTI (FPS/EPS), People's Pension, Twilio (SMS), Nodemailer (email), Cloudflare Turnstile |
 | Tunnelling | `tunnel-ssh` (optional SSH tunnels to MongoDB / Paperless) |
 | Logging | Winston |

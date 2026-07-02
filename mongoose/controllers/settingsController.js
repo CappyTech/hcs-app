@@ -5,7 +5,6 @@ const logger = require("../../services/loggerService");
 const moment = require("moment-timezone");
 const bcrypt = require("bcrypt");
 const encryptionService = require("../../services/encryptionService");
-const speakeasy = require("speakeasy");
 const totpService = require("../../services/totpService");
 const rbac = require("../config/rolePermissionsConfig");
 const crypto = require("crypto");
@@ -486,12 +485,7 @@ exports.verifyAndEnableTotp = async (req, res) => {
 
     const decryptedSecret = encryptionService.decrypt(user.totpSecret);
 
-    const isValid = speakeasy.totp.verify({
-      secret: decryptedSecret,
-      encoding: "base32",
-      token: totpToken,
-      window: 1,
-    });
+    const isValid = totpService.verifyTOTP(decryptedSecret, totpToken);
 
     if (!isValid) {
       req.flash("error", "Invalid authentication code. Please try again.");

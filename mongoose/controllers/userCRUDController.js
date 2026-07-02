@@ -4,7 +4,6 @@ const logger = require("../../services/loggerService");
 const axios = require("axios");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const speakeasy = require("speakeasy");
 const encryptionService = require("../../services/encryptionService");
 const { getClientIp } = require("../../services/ipService");
 const emailService = require("../../services/emailService");
@@ -342,15 +341,10 @@ exports.loginUser = async (req, res) => {
       const inlineTotp = String(req.body.totp || "").trim();
       if (inlineTotp) {
         const decryptedSecret = encryptionService.decrypt(user.totpSecret);
-        let totpValid = speakeasy.totp.verify({
-          secret: decryptedSecret,
-          encoding: "base32",
-          token: inlineTotp,
-          window: 1,
-        });
+        const totpService = require("../../services/totpService");
+        let totpValid = totpService.verifyTOTP(decryptedSecret, inlineTotp);
 
         if (!totpValid && Array.isArray(user.totpBackupCodes) && user.totpBackupCodes.length) {
-          const totpService = require("../../services/totpService");
           const result = await totpService.verifyAndConsumeBackupCode(inlineTotp, user.totpBackupCodes);
           if (result.ok) {
             user.totpBackupCodes = result.remaining;
@@ -937,15 +931,11 @@ exports.verifyTotpReset = async (req, res) => {
       return res.redirect("/user/forgot-password");
     }
 
-    // totpSecret getter auto-decrypts, but we need the raw decrypted value for speakeasy
+    // totpSecret getter auto-decrypts, but we need the raw decrypted value for verification
     const decryptedSecret = encryptionService.decrypt(user.totpSecret);
 
-    const isValid = speakeasy.totp.verify({
-      secret: decryptedSecret,
-      encoding: "base32",
-      token: totpToken.trim(),
-      window: 1,
-    });
+    const totpService = require("../../services/totpService");
+    const isValid = totpService.verifyTOTP(decryptedSecret, totpToken);
 
     if (!isValid) {
       req.flash("error", "Invalid authenticator code. Please try again.");

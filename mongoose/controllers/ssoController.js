@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const speakeasy = require("speakeasy");
+const totpService = require("../../services/totpService");
 const logger = require("../../services/loggerService");
 const mdb = require("../services/mongooseDatabaseService");
 const encryptionService = require("../../services/encryptionService");
@@ -347,12 +347,7 @@ exports.issueTokenForSync = async (req, res) => {
     let totpOk = false;
     try {
       const decryptedSecret = encryptionService.decrypt(user.totpSecret);
-      totpOk = speakeasy.totp.verify({
-        secret: decryptedSecret,
-        encoding: "base32",
-        token: totpCode,
-        window: 1,
-      });
+      totpOk = totpService.verifyTOTP(decryptedSecret, totpCode);
     } catch (totpErr) {
       logger.error("[sso] TOTP verification error for \"%s\": %s", user.username, totpErr.message);
     }

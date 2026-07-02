@@ -3,7 +3,6 @@ const path = require("path");
 const mdb = require("../services/mongooseDatabaseService");
 const logger = require("../../services/loggerService");
 const moment = require("moment-timezone");
-const speakeasy = require("speakeasy");
 const encryptionService = require("../../services/encryptionService");
 
 function getSafeNext(raw) {
@@ -59,16 +58,11 @@ exports.verify2FA = async (req, res) => {
 
     const decryptedSecret = encryptionService.decrypt(user.totpSecret);
 
-    let isValid = speakeasy.totp.verify({
-      secret: decryptedSecret,
-      encoding: "base32",
-      token: code,
-      window: 1,
-    });
+    const totpService = require("../../services/totpService");
+    let isValid = totpService.verifyTOTP(decryptedSecret, code);
 
     // Fallback: accept a one-time backup code (consumed on use)
     if (!isValid && Array.isArray(user.totpBackupCodes) && user.totpBackupCodes.length) {
-      const totpService = require("../../services/totpService");
       const result = await totpService.verifyAndConsumeBackupCode(code, user.totpBackupCodes);
       if (result.ok) {
         user.totpBackupCodes = result.remaining;

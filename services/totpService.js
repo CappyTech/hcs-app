@@ -1,4 +1,4 @@
-const speakeasy = require("speakeasy");
+const { authenticator } = require("otplib");
 const qrcode = require("qrcode");
 const encryptionService = require("./encryptionService");
 const logger = require("./loggerService");
@@ -14,8 +14,7 @@ const logger = require("./loggerService");
  * @returns {string} - The newly generated TOTP secret in Base32 encoding.
  */
 const generateTOTPSecret = async (user) => {
-  const totpSecret = speakeasy.generateSecret({ length: 20 }); // Generate a 20-character secret
-  const secret = totpSecret.base32; // Retrieve the Base32-encoded secret
+  const secret = authenticator.generateSecret(20); // Base32-encoded, 20 bytes of entropy
 
   // Encrypt and store the secret
   user.totpSecret = encryptionService.encrypt(secret);
@@ -35,13 +34,34 @@ const generateTOTPSecret = async (user) => {
  * @returns {Promise<string>} - A Promise that resolves to the QR code data URL (Base64-encoded PNG).
  */
 const generateQRCode = async (secret, user) => {
-  const otpAuthUrl = speakeasy.otpauthURL({
-    secret: secret, // Base32 TOTP secret
-    label: `${user.username} - HeronCS LTD`, // Label for the QR code (e.g., username and issuer)
-    issuer: "HeronCS LTD", // Issuer name (displayed in the authenticator app)
-    encoding: "base32",
-  });
+  const otpAuthUrl = authenticator.keyuri(
+    `${user.username} - HeronCS LTD`, // account label (shown in the authenticator app)
+    "HeronCS LTD",                    // issuer
+    secret                            // Base32 TOTP secret
+  );
   return await qrcode.toDataURL(otpAuthUrl); // Generate a QR code as a Base64 data URL
+};
+
+/**
+ * Verify a 6-digit TOTP token against a Base32 secret.
+ *
+ * Single verification chokepoint for the whole app (login 2FA, SSO, settings,
+ * sensitive-action confirmation). Accepts the previous/next time step
+ * (window ±1, matching the old speakeasy behaviour) to tolerate clock drift.
+ *
+ * @param {string} secret - Base32 TOTP secret (already decrypted).
+ * @param {string} token  - The 6-digit code entered by the user.
+ * @returns {boolean}
+ */
+const verifyTOTP = (secret, token) => {
+  if (!secret || !token) return false;
+  try {
+    const verifier = authenticator.clone({ window: 1 });
+    return verifier.verify({ secret, token: String(token).trim() });
+  } catch (err) {
+    logger.warn(`[totpService] TOTP verification error: ${err.message}`);
+    return false;
+  }
 };
 
 /**
@@ -87,6 +107,7 @@ const verifyAndConsumeBackupCode = async (input, hashedCodes = []) => {
 module.exports = {
   generateQRCode,
   generateTOTPSecret,
+  verifyTOTP,
   generateBackupCodes,
   normalizeBackupCode,
   verifyAndConsumeBackupCode,

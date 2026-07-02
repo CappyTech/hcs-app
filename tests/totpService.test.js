@@ -2,8 +2,8 @@ const { describe, it, mock } = require('node:test');
 const assert = require('node:assert/strict');
 
 /*
- * totpService requires speakeasy, qrcode, encryptionService, logger.
- * speakeasy and encryptionService run with real deps.
+ * totpService requires otplib, qrcode, encryptionService, logger.
+ * otplib and encryptionService run with real deps.
  * qrcode is stubbed: its toDataURL() uses native/canvas internals that
  * produce non-cloneable objects, causing the Node test-runner IPC channel
  * to fail with ERR_TEST_FAILURE / "Unable to deserialize cloned data".
@@ -19,7 +19,8 @@ const qrcode = require('qrcode');
 const FAKE_QR_URL = 'data:image/png;base64,' + 'A'.repeat(128);
 mock.method(qrcode, 'toDataURL', async () => FAKE_QR_URL);
 
-const { generateTOTPSecret, generateQRCode } = require('../services/totpService');
+const { generateTOTPSecret, generateQRCode, verifyTOTP } = require('../services/totpService');
+const { authenticator } = require('otplib');
 
 /* ── tests ─────────────────────────────────────────────────────────── */
 describe('totpService', () => {
@@ -57,6 +58,50 @@ describe('totpService', () => {
     it('returns the value from qrcode.toDataURL', async () => {
       const url = await generateQRCode('ABCDEFGH', { username: 'alice' });
       assert.equal(url, FAKE_QR_URL);
+    });
+  });
+
+  describe('verifyTOTP', () => {
+    const secret = 'JBSWY3DPEHPK3PXP';
+
+    it('accepts the current token for the secret', () => {
+      const token = authenticator.generate(secret);
+      assert.equal(verifyTOTP(secret, token), true);
+    });
+
+    it('accepts a token with surrounding whitespace', () => {
+      const token = authenticator.generate(secret);
+      assert.equal(verifyTOTP(secret, `  ${token}  `), true);
+    });
+
+    it('rejects a wrong token', () => {
+      const token = authenticator.generate(secret);
+      const wrong = token === '000000' ? '000001' : '000000';
+      assert.equal(verifyTOTP(secret, wrong), false);
+    });
+
+    it('rejects a token generated for a different secret', () => {
+      const otherToken = authenticator.generate('MFRGGZDFMZTWQ2LK');
+      const ours = authenticator.generate(secret);
+      // In the astronomically unlikely event both secrets yield the same
+      // token this period, skip rather than flake.
+      if (otherToken === ours) return;
+      assert.equal(verifyTOTP(secret, otherToken), false);
+    });
+
+    it('accepts the previous time-step token (window ±1 clock drift)', () => {
+      const drifted = authenticator.clone({ epoch: Date.now() - 30000 }).generate(secret);
+      assert.equal(verifyTOTP(secret, drifted), true);
+    });
+
+    it('returns false for missing inputs instead of throwing', () => {
+      assert.equal(verifyTOTP(null, '123456'), false);
+      assert.equal(verifyTOTP(secret, ''), false);
+      assert.equal(verifyTOTP('', ''), false);
+    });
+
+    it('returns false (not throw) for a malformed secret', () => {
+      assert.equal(verifyTOTP('not-base32-???', '123456'), false);
     });
   });
 });
