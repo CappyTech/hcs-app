@@ -700,7 +700,7 @@ module.exports = {
       'PurchaseInECMemberState'],
     fieldOrder: ['Number', 'SupplierName', 'SupplierReference', 'GrossAmount', 'NetAmount', 'VATAmount', 'Status', 'TotalPaidAmount', 'IssuedDate', 'DueAmount', 'DueDate', 'PaidDate'],
     strictOrder: true,
-    searchFields: ['Number'],
+    searchFields: ['Number', 'SupplierReference'],
     sortField: 'Number',
     sortOrder: -1,
     department: ['kashflow'],

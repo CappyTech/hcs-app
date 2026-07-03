@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.16] - 2026-07-03
+
+### Added
+- **Purchases list search now matches supplier reference.** The `/purchases` search box previously only matched the KashFlow number; `SupplierReference` is now included as a case-insensitive partial match alongside it.
+
 ## [6.8.15] - 2026-07-03
 
 ### Fixed
