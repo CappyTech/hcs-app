@@ -740,12 +740,41 @@ module.exports = {
       }
     },
     readView: require('path').join('tailwindcss', 'purchase', 'read'),
-    readLocals: async (item) => {
+    readLocals: async (item, req) => {
       const mdb = require('../services/mongooseDatabaseService');
       const supplier = item.SupplierId && mdb.REST?.supplier
         ? await mdb.REST.supplier.findOne({ Id: item.SupplierId }).select('uuid Name Code WithholdingTaxRate').lean()
         : null;
-      return { relatedSupplier: supplier };
+      // Paperless document that was sent to KashFlow as this purchase (PICP linkage).
+      // The /paperless/ocr detail view is admin-only, so only surface the link to admins.
+      let paperlessDoc = null;
+      if (req?.user?.role === 'admin' && mdb.PAPERLESS?.OcrDocument) {
+        const or = [];
+        if (item.Id != null) or.push({ kashflowPurchaseId: item.Id });
+        if (item.Number != null) or.push({ kashflowPurchaseNumber: item.Number });
+        if (or.length) {
+          paperlessDoc = await mdb.PAPERLESS.OcrDocument.findOne({ $or: or, deletedInPaperlessAt: null })
+            .select('paperlessId title').lean();
+        }
+      }
+      // Resolve line-item ProjectNumber / NominalCode references to their names so
+      // the items table can show "Project name" / "Nominal name" instead of bare codes.
+      const projectNumbers = [...new Set((item.LineItems || []).map(li => li.ProjectNumber).filter(n => n != null && n !== 0))];
+      const nominalCodes   = [...new Set((item.LineItems || []).map(li => li.NominalCode).filter(n => n != null))];
+      const lineItemProjects = {};
+      const lineItemNominals = {};
+      if (projectNumbers.length && mdb.REST?.project) {
+        // Subcontractors can read their own purchases but have no project access —
+        // give them the name without a link that would 403.
+        const canReadProjects = ['admin', 'accountant'].includes(req?.user?.role);
+        const projects = await mdb.REST.project.find({ Number: { $in: projectNumbers } }).select('uuid Number Name').lean();
+        for (const p of projects) lineItemProjects[p.Number] = { uuid: canReadProjects ? p.uuid : null, name: p.Name };
+      }
+      if (nominalCodes.length && mdb.REST?.nominal) {
+        const nominals = await mdb.REST.nominal.find({ Code: { $in: nominalCodes.map(Number).filter(Number.isFinite) } }).select('Code Name').lean();
+        for (const n of nominals) lineItemNominals[n.Code] = n.Name;
+      }
+      return { relatedSupplier: supplier, paperlessDoc, lineItemProjects, lineItemNominals };
     },
   },
   session: {

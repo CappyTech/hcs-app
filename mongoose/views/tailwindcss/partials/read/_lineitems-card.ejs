@@ -1,8 +1,12 @@
 <%
   // KashFlow REST line-items table for invoice / purchase / quote detail views.
   // Locals: lineItems (array), formatCurrency (global).
+  // Optional locals: lineItemProjects ({ [Number]: { uuid, name } }) and
+  // lineItemNominals ({ [Code]: name }) resolve reference codes to names/links.
   const _rows = Array.isArray(lineItems) ? lineItems : [];
   const _num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+  const _projects = (typeof lineItemProjects !== 'undefined' && lineItemProjects) ? lineItemProjects : {};
+  const _nominals = (typeof lineItemNominals !== 'undefined' && lineItemNominals) ? lineItemNominals : {};
 %>
 <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
   <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
@@ -30,11 +34,18 @@
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
               <td class="px-4 py-3 text-gray-800 dark:text-gray-200">
                 <%= li.Description || '—' %>
+                <% const _proj = li.ProjectNumber ? _projects[li.ProjectNumber] : null; %>
+                <% const _nomName = li.NominalCode != null ? _nominals[li.NominalCode] : null; %>
                 <% if (li.ProjectNumber || li.NominalCode) { %>
                   <span class="block text-[11px] text-gray-400 mt-0.5">
-                    <% if (li.ProjectNumber) { %>Project #<%= li.ProjectNumber %><% } %>
+                    <% if (li.ProjectNumber) { %>
+                      <% if (_proj && _proj.uuid) { %>
+                        <a href="/project/read/<%= _proj.uuid %>" class="text-green-600 dark:text-green-400 hover:underline">#<%= li.ProjectNumber %> <%= _proj.name || '' %></a>
+                      <% } else if (_proj) { %>#<%= li.ProjectNumber %> <%= _proj.name || '' %>
+                      <% } else { %>Project #<%= li.ProjectNumber %><% } %>
+                    <% } %>
                     <% if (li.ProjectNumber && li.NominalCode) { %> · <% } %>
-                    <% if (li.NominalCode) { %>Nominal <%= li.NominalCode %><% } %>
+                    <% if (li.NominalCode) { %><%= _nomName ? _nomName : 'Nominal' %> (<%= li.NominalCode %>)<% } %>
                   </span>
                 <% } %>
               </td>

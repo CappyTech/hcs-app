@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.21] - 2026-07-03
+
+### Added
+- **Purchase detail links back to its Paperless document.** When an OCR document is linked to the purchase (by KashFlow Id or Number, PICP linkage), the purchase read view header shows a "View Document" button opening the internal `/paperless/ocr/:id` detail page. Admin-only, matching that route's access; documents flagged deleted in Paperless are excluded.
+
+### Changed
+- **Purchase line items show project and nominal names instead of bare codes.** `Project #40810 · Nominal 5300` becomes `#40810 <Project Name> · <Nominal Name> (5300)` — projects and nominals are resolved in batched lookups from the synced KashFlow collections, with graceful fallback to the code when unmatched. The project name links to the project detail page for admins/accountants; subcontractors see plain text (they have no project access). Invoice/quote views sharing the line-items partial are unchanged.
+
 ## [6.8.20] - 2026-07-03
 
 ### Added
