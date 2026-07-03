@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.20] - 2026-07-03
+
+### Added
+- **Reconciliation pass: documents deleted in Paperless are now detected.** Previously a document deleted in Paperless left a permanent ghost in MongoDB — still counted in totals and stuck forever in the Unlinked/Never Sent panels with nothing to link. The grab now records every document ID seen during a full unfiltered listing sweep and flags MongoDB docs that no longer appear (`deletedInPaperlessAt`); the flag clears automatically if a document reappears, and a per-document re-ingest 404 also sets it. Flagged docs are excluded from all actionable buckets (Unlinked, Never Sent, Missing KF Link, drift counts and Fix All, stale-link sweep, Resolve Numbers, Match References) and surface in a new "Deleted in Paperless" overview panel showing any KashFlow link they carried, with a per-document Remove button (`POST /paperless/ocr/:id/remove`) that deletes the MongoDB copy + ingest record — removal is refused for docs still present in Paperless. Filtered grabs (since/query) skip reconciliation, as does an empty listing (more likely an API problem than an emptied Paperless).
+
 ## [6.8.19] - 2026-07-03
 
 ### Changed

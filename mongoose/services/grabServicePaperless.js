@@ -128,11 +128,16 @@ async function grabPaperlessOCR(options = {}) {
   let page = 1;
   const limit = promiseLimit(concurrency);
   let processed = 0, skipped = 0, failed = 0;
+  // Every paperlessId seen in the listing sweep — used by the reconciliation pass below
+  const seenIds = new Set();
 
   while (true) {
     const pageData = await api.listDocuments({ page, pageSize, query, modified__gte: since });
 
     const results = pageData.results || [];
+    for (const d of results) {
+      if (d && typeof d.id === 'number') seenIds.add(d.id);
+    }
     if (VERBOSE) {
       const nextFlag = pageData && typeof pageData.next !== 'undefined' ? Boolean(pageData.next) : false;
       const total = typeof pageData.count === 'number' ? pageData.count : 'unknown';
@@ -370,8 +375,34 @@ async function grabPaperlessOCR(options = {}) {
     page += 1;
   }
 
-  logger.info(`[grabServicePaperless] Complete. processed=${processed} skipped=${skipped} failed=${failed}`);
-  return { processed, skipped, failed };
+  // ── Reconciliation pass: flag MongoDB docs deleted in Paperless ────────────
+  // Only valid after a FULL unfiltered sweep (a since/query-filtered listing legitimately
+  // omits docs), and only if the listing returned something (an empty listing is more
+  // likely an API/permission problem than a truly emptied Paperless).
+  // Reaching this point means every listing page fetched without throwing.
+  let flaggedDeleted = 0, unflagged = 0;
+  if (!since && !query && seenIds.size > 0) {
+    const seen = [...seenIds];
+    const [flagRes, unflagRes] = await Promise.all([
+      // Not seen in Paperless any more → flag (keep the first-noticed timestamp on reruns)
+      OcrDocument.updateMany(
+        { paperlessId: { $nin: seen }, deletedInPaperlessAt: null },
+        { $set: { deletedInPaperlessAt: new Date() } },
+      ),
+      // Seen again (restored/undeleted) → clear the flag
+      OcrDocument.updateMany(
+        { paperlessId: { $in: seen }, deletedInPaperlessAt: { $ne: null } },
+        { $set: { deletedInPaperlessAt: null } },
+      ),
+    ]);
+    flaggedDeleted = flagRes.modifiedCount || 0;
+    unflagged = unflagRes.modifiedCount || 0;
+    if (flaggedDeleted > 0) logger.warn(`[grabServicePaperless] Reconciliation: ${flaggedDeleted} MongoDB doc(s) no longer exist in Paperless — flagged deletedInPaperlessAt`);
+    if (unflagged > 0) logger.info(`[grabServicePaperless] Reconciliation: ${unflagged} doc(s) reappeared in Paperless — flag cleared`);
+  }
+
+  logger.info(`[grabServicePaperless] Complete. processed=${processed} skipped=${skipped} failed=${failed} flaggedDeleted=${flaggedDeleted} unflagged=${unflagged}`);
+  return { processed, skipped, failed, flaggedDeleted, unflagged };
   } finally {
     grabRunning = false;
   }
@@ -407,6 +438,11 @@ async function ingestOnePaperlessDoc(paperlessId) {
       await OcrDocument.updateOne(
         { paperlessId: Number(paperlessId) },
         { $set: { error: errMsg, fetchedAt: new Date() } }
+      );
+      // 404 = deleted in Paperless — flag it (keep the first-noticed timestamp)
+      await OcrDocument.updateOne(
+        { paperlessId: Number(paperlessId), deletedInPaperlessAt: null },
+        { $set: { deletedInPaperlessAt: new Date() } }
       );
     }
     const err = new Error(errMsg);
@@ -514,10 +550,10 @@ async function ingestOnePaperlessDoc(paperlessId) {
     ));
   }
 
-  // Upsert document and tracker
+  // Upsert document and tracker (doc fetched successfully, so it exists in Paperless)
   await OcrDocument.updateOne(
     { paperlessId: doc.id },
-    { $set: { ...record, customFields: customFieldsToSave, ...kfBackfill, fetchedAt: new Date(), error: null } },
+    { $set: { ...record, customFields: customFieldsToSave, ...kfBackfill, fetchedAt: new Date(), error: null, deletedInPaperlessAt: null } },
     { upsert: true }
   );
   await OcrDocumentIngest.updateOne(

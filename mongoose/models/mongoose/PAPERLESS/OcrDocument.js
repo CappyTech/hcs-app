@@ -38,6 +38,9 @@ const OcrDocumentSchema = new mongoose.Schema({
   kfSendLockedAt:         { type: Date,   default: null }, // in-flight send claim — blocks concurrent sends (stale after 5 min)
   sendCount:              { type: Number },
   fetchedAt:              { type: Date, default: () => new Date() },
+  // Set by the grab's reconciliation pass when a full unfiltered sweep no longer sees
+  // this document in Paperless (deleted there). Cleared automatically if it reappears.
+  deletedInPaperlessAt:   { type: Date, default: null, index: true },
   error: { type: String, default: null },
 }, { timestamps: true });
 

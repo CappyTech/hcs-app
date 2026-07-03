@@ -29,6 +29,8 @@ async function detectAndClearOrphans() {
   const linked = await OcrDocument
     .find({
       kashflowPurchaseId: { $ne: null },
+      // Docs deleted in Paperless can't have their custom fields cleared (PATCH would 404)
+      deletedInPaperlessAt: null,
       $or: [{ lastSentAt: null }, { lastSentAt: { $lt: cutoff } }],
     })
     .select('_id kashflowPurchaseId')

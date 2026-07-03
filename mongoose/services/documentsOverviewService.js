@@ -19,6 +19,8 @@ const KF_ELIGIBLE_MATCH = {
   'documentType.name': { $regex: /^purchase$/i },
   title: { $not: /credit/i },
   tags: { $not: { $elemMatch: { name: { $in: NOT_FOR_KASHFLOW_TAGS } } } },
+  // Ghosts deleted in Paperless can't be actioned — they get their own panel
+  deletedInPaperlessAt: null,
 };
 
 // "manually added to kashflow" docs are already in KashFlow (entered by hand) so the app
@@ -87,12 +89,17 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
         { $count: 'n' },
       ],
       sentButUnlinked: [
-        { $match: { kashflowPurchaseId: null, lastSentAt: { $ne: null } } },
+        { $match: { kashflowPurchaseId: null, lastSentAt: { $ne: null }, deletedInPaperlessAt: null } },
         { $count: 'n' },
       ],
       // Unlinked but have a KashFlow purchase number — can be auto-resolved via number→ID lookup
       hasNumberNoId: [
-        { $match: { kashflowPurchaseId: null, kashflowPurchaseNumber: { $ne: null } } },
+        { $match: { kashflowPurchaseId: null, kashflowPurchaseNumber: { $ne: null }, deletedInPaperlessAt: null } },
+        { $count: 'n' },
+      ],
+      // Deleted in Paperless but still in MongoDB (flagged by the grab reconciliation pass)
+      deletedInPaperless: [
+        { $match: { deletedInPaperlessAt: { $ne: null } } },
         { $count: 'n' },
       ],
       // Drift: MongoDB kashflowPurchaseId disagrees with stored Paperless custom field value
@@ -116,7 +123,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
             },
           },
         }},
-        { $match: { $or: [
+        { $match: { deletedInPaperlessAt: null, $or: [
           // MongoDB says linked but Paperless field is absent/empty
           { kashflowPurchaseId: { $ne: null }, $or: [{ _cfKfId: null }, { _cfKfId: '' }] },
           // MongoDB says unlinked but Paperless field is set
@@ -141,6 +148,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const addedNoKfNumber = facetResult?.addedNoKf?.[0]?.n        ?? 0;
   const sentButUnlinked = facetResult?.sentButUnlinked?.[0]?.n  ?? 0;
   const hasNumberNoId   = facetResult?.hasNumberNoId?.[0]?.n    ?? 0;
+  const deletedInPaperless = facetResult?.deletedInPaperless?.[0]?.n ?? 0;
 
   // ── By document type ───────────────────────────────────────────────────────
   const byDocType = await OcrDocument.aggregate([
@@ -166,7 +174,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   // ── Drifted docs detail list ───────────────────────────────────────────────
   const driftedDocsList = await OcrDocument.aggregate([
     CF_KF_ID_ADD_FIELD,
-    { $match: { $or: [
+    { $match: { deletedInPaperlessAt: null, $or: [
       { kashflowPurchaseId: { $ne: null }, $or: [{ _cfKfId: null }, { _cfKfId: '' }] },
       { kashflowPurchaseId: null, _cfKfId: { $nin: [null, ''] } },
     ]}},
@@ -187,6 +195,13 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     .sort({ added: -1 })
     .limit(DETAIL_LIMIT)
     .select('paperlessId title documentType added lastSentAt lastSendMode lastSendStatus kashflowPurchaseNumber')
+    .lean();
+
+  // ── Deleted in Paperless (ghost docs flagged by the grab reconciliation) ──
+  const deletedInPaperlessList = await OcrDocument.find({ deletedInPaperlessAt: { $ne: null } })
+    .sort({ deletedInPaperlessAt: -1 })
+    .limit(DETAIL_LIMIT)
+    .select('paperlessId title documentType kashflowPurchaseId kashflowPurchaseNumber lastSentAt deletedInPaperlessAt')
     .lean();
 
   // ── Ingest stats + error list ──────────────────────────────────────────────
@@ -216,7 +231,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const Purchase = mdb.REST?.purchase;
   if (Purchase && linkedDocs > 0) {
     const linked = await OcrDocument
-      .find({ kashflowPurchaseId: { $ne: null } })
+      .find({ kashflowPurchaseId: { $ne: null }, deletedInPaperlessAt: null })
       .select('paperlessId title documentType kashflowPurchaseId kashflowPurchaseNumber kashflowPermalink lastSentAt')
       .lean();
     const linkedIds = [...new Set(linked.map(d => d.kashflowPurchaseId).filter(id => id != null))];
@@ -280,6 +295,8 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     driftedDocs,
     sentButUnlinked,
     hasNumberNoId,
+    deletedInPaperless,
+    deletedInPaperlessList,
     errorDocs,
     addedNoKfNumber,
     sentDirect,

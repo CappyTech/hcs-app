@@ -1387,7 +1387,7 @@ exports.resolveNumbers = async (req, res) => {
       }
 
       const unlinkedWithNumber = await OcrDocument
-        .find({ kashflowPurchaseId: null, kashflowPurchaseNumber: { $ne: null } })
+        .find({ kashflowPurchaseId: null, kashflowPurchaseNumber: { $ne: null }, deletedInPaperlessAt: null })
         .select('paperlessId kashflowPurchaseNumber customFields lastSendStatus')
         .lean();
 
@@ -1498,6 +1498,7 @@ exports.matchReferences = async (req, res) => {
           'documentType.name': { $regex: /^purchase$/i },
           title: { $not: /credit/i },
           tags: { $not: { $elemMatch: { name: { $in: [/original\/multiple invoice one pdf/i, /credit\/refund/i] } } } },
+          deletedInPaperlessAt: null,
         })
         .select('paperlessId title correspondent customFields created lastSendStatus')
         .lean();
@@ -1638,7 +1639,7 @@ exports.repairDrift = async (req, res) => {
             },
           },
         }},
-        { $match: { $or: [
+        { $match: { deletedInPaperlessAt: null, $or: [
           { kashflowPurchaseId: { $ne: null }, $or: [{ _cfKfId: null }, { _cfKfId: '' }] },
           { kashflowPurchaseId: null, _cfKfId: { $nin: [null, ''] } },
         ]}},
@@ -1792,6 +1793,39 @@ exports.syncPaperlessFields = async (req, res, next) => {
     logger.error(`syncPaperlessFields error for paperlessId=${paperlessId}: ${err.message}`);
     req.flash('error', `Sync failed: ${err.message}`);
     res.redirect(`/paperless/ocr/${paperlessId}`);
+  }
+};
+
+/** POST /paperless/ocr/:paperlessId/remove — remove a MongoDB copy of a document that was
+ *  deleted in Paperless (flagged by the grab reconciliation). Only allows removal of docs
+ *  actually flagged deletedInPaperlessAt, and returns to the Documents overview. */
+exports.removeDeletedOcrDocument = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const { OcrDocument, OcrDocumentIngest } = mdb.PAPERLESS;
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    if (!Number.isFinite(paperlessId)) {
+      return res.status(400).json({ error: 'Invalid paperlessId' });
+    }
+    const doc = await OcrDocument.findOne({ paperlessId }).select('deletedInPaperlessAt').lean();
+    if (!doc) {
+      req.flash('error', `Document #${paperlessId} not found in MongoDB.`);
+      return res.redirect('/overview/documents');
+    }
+    if (!doc.deletedInPaperlessAt) {
+      req.flash('error', `Document #${paperlessId} still exists in Paperless — not removing. Use the document page to delete it.`);
+      return res.redirect('/overview/documents');
+    }
+    await Promise.all([
+      OcrDocument.deleteOne({ paperlessId }),
+      OcrDocumentIngest.deleteOne({ paperlessId }),
+    ]);
+    logger.info(`[paperless] Removed MongoDB copy of Paperless-deleted document paperlessId=${paperlessId}`);
+    req.flash('success', `Document #${paperlessId} removed (was deleted in Paperless).`);
+    res.redirect('/overview/documents');
+  } catch (err) {
+    logger.error(`removeDeletedOcrDocument error for paperlessId=${req.params.paperlessId}: ${err.message}`);
+    next(err);
   }
 };
 
