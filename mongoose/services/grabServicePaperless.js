@@ -253,8 +253,11 @@ async function grabPaperlessOCR(options = {}) {
               .select('Number Id Permalink')
               .lean();
             if (!restPurchase) {
-              logger.warn(`[paperless] CF "KashFlow Purchase Number"=${_cfKfNum} not found in REST for paperlessId=${doc.id}`);
-              return {};
+              // Store the number anyway — it IS recorded in Paperless. The doc then shows
+              // as "has KF# (no ID) — resolvable" instead of falsely "missing", and
+              // resolve-numbers can link it once the purchase appears in REST.
+              logger.warn(`[paperless] CF "KashFlow Purchase Number"=${_cfKfNum} not found in REST for paperlessId=${doc.id} — storing number without ID`);
+              return { kashflowPurchaseNumber: _cfKfNum };
             }
             const patch = { kashflowPurchaseNumber: restPurchase.Number ?? _cfKfNum };
             if (typeof restPurchase.Id === 'number') patch.kashflowPurchaseId = restPurchase.Id;
@@ -470,8 +473,11 @@ async function ingestOnePaperlessDoc(paperlessId) {
             `[paperless] Backfilled KashFlow linkage for paperlessId=${doc.id} from custom field (purchase #${cfPurchaseNum})`
           );
         } else {
+          // Store the number anyway — it IS recorded in Paperless. The doc then shows
+          // as "has KF# (no ID) — resolvable" instead of falsely "missing".
+          kfBackfill.kashflowPurchaseNumber = cfPurchaseNum;
           logger.warn(
-            `[paperless] Custom field "KashFlow Purchase Number"=${cfPurchaseNum} not found in REST purchases for paperlessId=${doc.id}`
+            `[paperless] Custom field "KashFlow Purchase Number"=${cfPurchaseNum} not found in REST purchases for paperlessId=${doc.id} — storing number without ID`
           );
         }
       }

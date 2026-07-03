@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.15] - 2026-07-03
+
+### Fixed
+- **Documents-overview "KashFlow ↗" links resolved to the wrong domain.** `kashflowPermalink` values are API-relative paths (`/v2/documents/purchase/…`), and the CF Drift and Stale Links tables rendered them raw, so the browser resolved them against app.heroncs.co.uk. The overview now links to the KashFlow UI purchase page by number (matching every other view), falling back to the permalink prefixed with `https://api.kashflow.com`.
+- **Documents with a KashFlow Purchase Number custom field could be falsely flagged "linkage missing".** The re-fetch backfill only stored the number in MongoDB when a REST purchase lookup by that number succeeded; on lookup failure it stored nothing, so the document detail banner, the overview Missing KF Link count, and the `noKfNumber` filter (which all check MongoDB's dedicated `kashflowPurchaseNumber` field) claimed no number was recorded even though it was visible in Paperless. The backfill now always stores the CF number (without the ID when the lookup fails), so such documents surface in the "Has KF# (no ID) — resolvable" bucket instead and can be linked by Resolve Numbers once the purchase syncs.
+
 ## [6.8.14] - 2026-07-03
 
 ### Changed

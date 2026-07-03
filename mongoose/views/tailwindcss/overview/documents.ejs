@@ -1,6 +1,11 @@
 <%
 const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—';
 const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
+// Permalinks from KashFlow are API-relative paths (/v2/documents/...) — never render them raw.
+// Prefer the KashFlow UI purchase page; fall back to the API-hosted PDF link.
+const kfUrl = (d) => d.kashflowPurchaseNumber
+  ? `https://app.kashflow.com/#purchases/${d.kashflowPurchaseNumber}`
+  : (d.kashflowPermalink ? (d.kashflowPermalink.startsWith('/') ? `https://api.kashflow.com${d.kashflowPermalink}` : d.kashflowPermalink) : null);
 %>
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
 
@@ -133,7 +138,7 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
             <td class="py-1.5 pr-3 font-mono text-xs <%= d._cfKfId ? 'text-green-700 dark:text-green-400' : 'text-red-500' %>"><%= d._cfKfId ?? '—' %></td>
             <td class="py-1.5 whitespace-nowrap text-xs">
               <a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600 mr-2">Paperless ↗</a>
-              <% if (d.kashflowPermalink) { %><a href="<%= d.kashflowPermalink %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-blue-600">KashFlow ↗</a><% } %>
+              <% if (kfUrl(d)) { %><a href="<%= kfUrl(d) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-blue-600">KashFlow ↗</a><% } %>
             </td>
           </tr>
           <% } %>
@@ -324,7 +329,7 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
             </td>
             <td class="py-1.5 whitespace-nowrap text-xs">
               <a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600 mr-2">Paperless ↗</a>
-              <% if (d.kashflowPermalink) { %><a href="<%= d.kashflowPermalink %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-blue-600">KashFlow ↗</a><% } %>
+              <% if (kfUrl(d)) { %><a href="<%= kfUrl(d) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-blue-600">KashFlow ↗</a><% } %>
             </td>
           </tr>
           <% } %>
