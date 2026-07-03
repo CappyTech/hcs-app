@@ -25,6 +25,7 @@ const {
   isGrabRunning,
 } = require("../services/grabServicePaperless");
 const {
+  buildPurchaseDraftFromOcr,
   buildPurchaseDraftById,
   buildKashFlowPayloadFromDraft,
   defaultMap,
@@ -1408,7 +1409,21 @@ exports.resolveNumbers = async (req, res) => {
             .lean();
 
           if (!purchase) {
-            logger.warn(`[resolveNumbers] Purchase number ${doc.kashflowPurchaseNumber} not found in REST for paperlessId=${doc.paperlessId}`);
+            // Diagnose the miss: soft-deleted purchase, or the stored value is a KashFlow
+            // Id rather than a Number (older CF backfills wrote the Id in some paths).
+            const [softDeleted, byId] = await Promise.all([
+              Purchase.findOne({ Number: doc.kashflowPurchaseNumber, $or: [{ deletedAt: { $ne: null } }, { DeletedAt: { $ne: null } }] })
+                .select('Id Number deletedAt DeletedAt').lean(),
+              Purchase.findOne({ Id: doc.kashflowPurchaseNumber, deletedAt: null, DeletedAt: null })
+                .select('Id Number SupplierName SupplierReference').lean(),
+            ]);
+            if (softDeleted) {
+              logger.warn(`[resolveNumbers] Purchase number ${doc.kashflowPurchaseNumber} exists in REST but is soft-deleted (Id=${softDeleted.Id}) for paperlessId=${doc.paperlessId}`);
+            } else if (byId) {
+              logger.warn(`[resolveNumbers] No purchase with Number ${doc.kashflowPurchaseNumber}, but it matches KashFlow Id ${byId.Id} (Number=${byId.Number}, supplier="${byId.SupplierName}", ref="${byId.SupplierReference}") for paperlessId=${doc.paperlessId} — the stored value is likely an Id, not a Number; verify and relink manually or via Match References`);
+            } else {
+              logger.warn(`[resolveNumbers] Purchase number ${doc.kashflowPurchaseNumber} not found in REST (not yet synced?) for paperlessId=${doc.paperlessId}`);
+            }
             notFound++;
             continue;
           }
@@ -1442,6 +1457,135 @@ exports.resolveNumbers = async (req, res) => {
       logger.error(`[resolveNumbers] Fatal error: ${err.message}`);
     } finally {
       _resolveNumbersRunning = false;
+    }
+  });
+};
+
+/** POST /paperless/match-references — for each unlinked KF-eligible doc (with or without a
+ *  KashFlow number), cross-check REST purchases by SupplierReference: the send pipeline writes
+ *  the doc's invoice-number custom field into the purchase's SupplierReference, so a synced
+ *  purchase whose SupplierReference equals that value is almost certainly the created purchase.
+ *  A doc is linked only when exactly one candidate purchase survives the safety checks. */
+let _matchReferencesRunning = false;
+exports.matchReferences = async (req, res) => {
+  if (_matchReferencesRunning) {
+    logger.warn('[matchReferences] Already running — ignoring duplicate request');
+    return res.redirect('/overview/documents');
+  }
+  res.redirect('/overview/documents');
+  setImmediate(async () => {
+    _matchReferencesRunning = true;
+    try {
+      await mdb.connect();
+      const { OcrDocument } = mdb.PAPERLESS;
+      const Purchase = mdb.REST?.purchase;
+      if (!Purchase) {
+        logger.error('[matchReferences] REST purchase model not available');
+        return;
+      }
+
+      // Same eligibility rule as the Documents overview: purchases only, no credit notes
+      const unlinked = await OcrDocument
+        .find({
+          kashflowPurchaseId: null,
+          'documentType.name': { $regex: /^purchase$/i },
+          title: { $not: /credit/i },
+        })
+        .select('paperlessId title correspondent customFields created lastSendStatus')
+        .lean();
+
+      // Purchases already claimed by another doc must not be linked twice
+      const claimed = new Set(
+        (await OcrDocument.find({ kashflowPurchaseId: { $ne: null } })
+          .select('kashflowPurchaseId').lean()
+        ).map(d => d.kashflowPurchaseId),
+      );
+
+      logger.info(`[matchReferences] Cross-checking ${unlinked.length} unlinked docs against REST purchases by SupplierReference`);
+
+      try {
+        await warmCfCache(OcrDocument);
+      } catch (cacheErr) {
+        logger.warn(`[matchReferences] Could not pre-warm CF cache: ${cacheErr.message}`);
+      }
+
+      const normName = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+      let ok = 0, noRef = 0, none = 0, ambiguous = 0, mismatch = 0, fail = 0;
+      for (const doc of unlinked) {
+        try {
+          const draft = buildPurchaseDraftFromOcr(doc);
+          const ref = draft.SupplierReference != null ? String(draft.SupplierReference).trim() : '';
+          if (!ref) { noRef++; continue; }
+
+          const escaped = ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          let candidates = await Purchase
+            .find({
+              SupplierReference: { $regex: new RegExp(`^\\s*${escaped}\\s*$`, 'i') },
+              deletedAt: null, DeletedAt: null,
+            })
+            .select('Id Number Permalink SupplierName SupplierReference GrossAmount IssuedDate')
+            .lean();
+          candidates = candidates.filter(p => !claimed.has(p.Id));
+
+          if (candidates.length === 0) { none++; continue; }
+
+          // Disambiguate / validate: require gross amount within 1p, or failing that a
+          // supplier-name match, before trusting a reference collision.
+          const gross = typeof draft.GrossAmount === 'number' ? draft.GrossAmount : null;
+          const docSupplier = normName(draft.SupplierName);
+          const confident = candidates.filter(p => {
+            const grossOk = gross != null && typeof p.GrossAmount === 'number'
+              && Math.abs(p.GrossAmount - gross) < 0.01;
+            const supplierOk = docSupplier && normName(p.SupplierName) === docSupplier;
+            return grossOk || supplierOk;
+          });
+          // A single ref candidate with no comparable amount/supplier data is still accepted —
+          // SupplierReference comes from our own send pipeline, so a unique hit is trustworthy.
+          const pool = confident.length > 0
+            ? confident
+            : (candidates.length === 1 && gross == null && !docSupplier ? candidates : []);
+
+          if (pool.length === 0) { mismatch++;
+            logger.warn(`[matchReferences] Ref "${ref}" matched ${candidates.length} purchase(s) but amount/supplier disagree for paperlessId=${doc.paperlessId}`);
+            continue;
+          }
+          if (pool.length > 1) { ambiguous++;
+            logger.warn(`[matchReferences] Ref "${ref}" is ambiguous (${pool.length} candidates) for paperlessId=${doc.paperlessId}`);
+            continue;
+          }
+
+          const purchase = pool[0];
+          await OcrDocument.updateOne(
+            { paperlessId: doc.paperlessId },
+            { $set: {
+              kashflowPurchaseId:     purchase.Id,
+              kashflowPurchaseNumber: purchase.Number ?? null,
+              kashflowPermalink:      purchase.Permalink ?? null,
+            }},
+          );
+          claimed.add(purchase.Id);
+
+          // Best-effort: write the ID back to the Paperless custom field to eliminate drift
+          updatePaperlessWithKashFlowInfo(
+            doc.paperlessId,
+            { Id: purchase.Id, Number: purchase.Number, Permalink: purchase.Permalink },
+            doc.lastSendStatus,
+            { existingCf: doc.customFields || [] },
+          ).catch(e => logger.warn(`[matchReferences] Paperless CF update failed for paperlessId=${doc.paperlessId}: ${e.message}`));
+
+          logger.info(`[matchReferences] Linked paperlessId=${doc.paperlessId} → KF id=${purchase.Id} (number=${purchase.Number}, ref="${ref}")`);
+          ok++;
+        } catch (e) {
+          fail++;
+          logger.warn(`[matchReferences] Failed for paperlessId=${doc.paperlessId}: ${e.message}`);
+        }
+      }
+      logger.info(`[matchReferences] Complete. linked=${ok} noRef=${noRef} noMatch=${none} mismatch=${mismatch} ambiguous=${ambiguous} failed=${fail}`);
+    } catch (err) {
+      logger.error(`[matchReferences] Fatal error: ${err.message}`);
+    } finally {
+      _matchReferencesRunning = false;
     }
   });
 };

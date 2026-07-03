@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.17] - 2026-07-03
+
+### Added
+- **"Match References" — cross-check unlinked Paperless documents against synced KashFlow purchases by supplier reference.** Resolve Numbers could only fix unlinked documents that already had a KashFlow purchase number recorded; documents sent to KashFlow but never enriched (webhook sends, lost responses) stayed unlinked with no number to resolve. Since the send pipeline writes the document's invoice-number custom field into the created purchase's `SupplierReference` — now available locally via hcs-sync — a new admin action (`POST /paperless/match-references`, button on the Documents overview Unlinked panel) matches each unlinked KF-eligible document's extracted supplier reference against REST purchases (exact trimmed case-insensitive match, deleted and already-claimed purchases excluded). A link is written only when exactly one candidate survives validation by gross amount (±1p) or normalized supplier name; ambiguous or disagreeing matches are logged and skipped. Successful links update MongoDB and write the KashFlow ID back to the Paperless custom field, same as Resolve Numbers.
+- **Resolve Numbers now diagnoses its misses.** "Purchase number N not found in REST" is replaced by three distinct warnings: the purchase exists but is soft-deleted, the stored value matches a KashFlow *Id* rather than a Number (older custom-field backfills wrote the Id in some paths — the log includes that purchase's Number, supplier and reference for manual verification), or it genuinely isn't in REST yet (not synced).
+
 ## [6.8.16] - 2026-07-03
 
 ### Added

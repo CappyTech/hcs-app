@@ -358,6 +358,10 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
           <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Resolve Numbers</button>
         </form>
         <% } %>
+        <form method="POST" action="/paperless/match-references" data-submit-once title="Cross-check unlinked documents against synced KashFlow purchases by supplier reference (invoice number), validated by amount or supplier name">
+          <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
+          <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Match References</button>
+        </form>
         <span class="text-yellow-400 text-sm group-open:hidden">▼</span><span class="text-yellow-400 text-sm hidden group-open:inline">▲</span>
       </div>
     </summary>
