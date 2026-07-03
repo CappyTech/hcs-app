@@ -4,12 +4,29 @@ const mdb = require('./mongooseDatabaseService');
 
 const DETAIL_LIMIT = 100;
 
-// Documents that are never sent to KashFlow — statements, subcontractor docs
-// and credit notes — are excluded from the unlinked / never-sent / missing-link
-// panels so those lists only show purchases that actually need action.
+// Documents that are never sent to KashFlow — statements, subcontractor docs,
+// credit notes and docs tagged "original/multiple invoice one pdf" (originals kept
+// for reference whose invoices were entered separately) — are excluded from the
+// unlinked / never-sent / missing-link panels so those lists only show purchases
+// that actually need action.
+// Note: uses `tags: { $not: { $elemMatch } }` rather than a 'tags.name' key so it
+// can coexist with facets that also match on 'tags.name' (e.g. addedNoKf).
+const NOT_FOR_KASHFLOW_TAGS = [
+  /original\/multiple invoice one pdf/i, // reference originals; invoices entered separately
+  /credit\/refund/i,                     // credit notes (automatic tag; title regex kept as fallback)
+];
 const KF_ELIGIBLE_MATCH = {
   'documentType.name': { $regex: /^purchase$/i },
   title: { $not: /credit/i },
+  tags: { $not: { $elemMatch: { name: { $in: NOT_FOR_KASHFLOW_TAGS } } } },
+};
+
+// "manually added to kashflow" docs are already in KashFlow (entered by hand) so the app
+// will never send them — exclude from Never Sent only; they stay in Unlinked so
+// Match References / Resolve Numbers can still attach them to their purchase.
+const NEVER_SENT_ELIGIBLE_MATCH = {
+  ...KF_ELIGIBLE_MATCH,
+  tags: { $not: { $elemMatch: { name: { $in: [...NOT_FOR_KASHFLOW_TAGS, /manually added to kashflow/i] } } } },
 };
 
 // Shared aggregation stages to extract the cached Paperless CF value for 'kashflow purchase id'
@@ -52,7 +69,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       neverSent:[{ $match: { lastSentAt: null } }, { $count: 'n' }],
       // Same, restricted to KF-eligible docs (drives the tile + panel)
       neverSentEligible: [
-        { $match: { lastSentAt: null, ...KF_ELIGIBLE_MATCH } },
+        { $match: { lastSentAt: null, ...NEVER_SENT_ELIGIBLE_MATCH } },
         { $count: 'n' },
       ],
       // Unlinked, restricted to KF-eligible docs (drives the tile + panel)
@@ -159,7 +176,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   ]);
 
   // ── Never sent list (KF-eligible docs only) ───────────────────────────────
-  const neverSentList = await OcrDocument.find({ lastSentAt: null, ...KF_ELIGIBLE_MATCH })
+  const neverSentList = await OcrDocument.find({ lastSentAt: null, ...NEVER_SENT_ELIGIBLE_MATCH })
     .sort({ added: -1 })
     .limit(DETAIL_LIMIT)
     .select('paperlessId title documentType added')

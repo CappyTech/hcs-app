@@ -1490,12 +1490,14 @@ exports.matchReferences = async (req, res) => {
         return;
       }
 
-      // Same eligibility rule as the Documents overview: purchases only, no credit notes
+      // Same eligibility rule as the Documents overview: purchases only, no credit notes,
+      // no docs tagged as originals that are never entered into KashFlow themselves
       const unlinked = await OcrDocument
         .find({
           kashflowPurchaseId: null,
           'documentType.name': { $regex: /^purchase$/i },
           title: { $not: /credit/i },
+          tags: { $not: { $elemMatch: { name: { $in: [/original\/multiple invoice one pdf/i, /credit\/refund/i] } } } },
         })
         .select('paperlessId title correspondent customFields created lastSendStatus')
         .lean();

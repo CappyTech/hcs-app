@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.19] - 2026-07-03
+
+### Changed
+- **Paperless tags now drive KashFlow-eligibility on the Documents overview.** Documents tagged "original/multiple invoice one pdf" (reference originals whose invoices are entered separately) or "credit/refund" (automatic tag — more reliable than the title-based credit heuristic, which is kept as fallback) are excluded from the Unlinked, Never Sent and Missing KF Link tiles/panels and skipped by Match References. Documents tagged "manually added to kashflow" are excluded from Never Sent only — the app will never send them, but they stay in Unlinked so Match References / Resolve Numbers can still attach them to their purchase.
+
 ## [6.8.18] - 2026-07-03
 
 ### Changed
