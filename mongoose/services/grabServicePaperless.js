@@ -13,6 +13,17 @@ const VERBOSE = process.env.PAPERLESS_VERBOSE === 'true' || process.env.DEBUG;
 let grabRunning = false;
 function isGrabRunning() { return grabRunning; }
 
+// Serialize background CF write-backs to Paperless: docs on a page are processed in
+// parallel, and firing one PATCH /documents/:id/ per doc simultaneously makes
+// Paperless-ngx 500 every request under write contention. Chain them instead.
+let _cfWriteBackChain = Promise.resolve();
+function queueCfWriteBack(paperlessId, fn) {
+  _cfWriteBackChain = _cfWriteBackChain
+    .then(fn)
+    .catch(e => logger.warn(`[paperless] CF write-back failed for paperlessId=${paperlessId}: ${e.message}`));
+  return _cfWriteBackChain;
+}
+
 // Stable stringify: sorts object keys and normalizes dates/arrays for consistent hashing
 function stableStringify(value) {
   const seen = new WeakSet();
@@ -298,12 +309,12 @@ async function grabPaperlessOCR(options = {}) {
             .lean();
           finalKfId = _ex?.kashflowPurchaseId ?? null;
           if (finalKfId != null) {
-            setImmediate(() => updatePaperlessWithKashFlowInfo(
+            queueCfWriteBack(doc.id, () => updatePaperlessWithKashFlowInfo(
               doc.id,
               { Id: _ex.kashflowPurchaseId, Number: _ex.kashflowPurchaseNumber, Permalink: _ex.kashflowPermalink },
               _ex.lastSendStatus,
               { existingCf: _ex.customFields || [] },
-            ).catch(e => logger.warn(`[grabServicePaperless] CF write-back failed for paperlessId=${doc.id}: ${e.message}`)));
+            ));
           }
         }
         const customFieldsToSave = (finalKfId != null && !_cfKfIdIncoming)
@@ -495,12 +506,12 @@ async function ingestOnePaperlessDoc(paperlessId) {
     : customFields;
   if (finalKfId != null && !_cfKfIdIncoming) {
     if (!kfBackfill.kashflowPurchaseId) kfBackfill.kashflowPurchaseId = finalKfId;
-    setImmediate(() => updatePaperlessWithKashFlowInfo(
+    queueCfWriteBack(doc.id, () => updatePaperlessWithKashFlowInfo(
       doc.id,
       { Id: finalKfId, Number: kfBackfill.kashflowPurchaseNumber ?? _ingestExistingLink?.kashflowPurchaseNumber ?? null, Permalink: kfBackfill.kashflowPermalink ?? _ingestExistingLink?.kashflowPermalink ?? null },
       _ingestExistingLink?.lastSendStatus ?? null,
       { existingCf: customFields },
-    ).catch(e => logger.warn(`[paperless] CF write-back failed for paperlessId=${doc.id}: ${e.message}`)));
+    ));
   }
 
   // Upsert document and tracker

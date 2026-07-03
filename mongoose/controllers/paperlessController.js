@@ -1437,13 +1437,19 @@ exports.resolveNumbers = async (req, res) => {
             }},
           );
 
-          // Best-effort: write the ID back to the Paperless custom field to eliminate drift
-          updatePaperlessWithKashFlowInfo(
-            doc.paperlessId,
-            { Id: purchase.Id, Number: purchase.Number, Permalink: purchase.Permalink },
-            doc.lastSendStatus,
-            { existingCf: doc.customFields || [] },
-          ).catch(e => logger.warn(`[resolveNumbers] Paperless CF update failed for paperlessId=${doc.paperlessId}: ${e.message}`));
+          // Best-effort: write the ID back to the Paperless custom field to eliminate drift.
+          // Awaited so PATCHes run sequentially — firing them in parallel across the loop
+          // overwhelms Paperless-ngx and every PATCH 500s under write contention.
+          try {
+            await updatePaperlessWithKashFlowInfo(
+              doc.paperlessId,
+              { Id: purchase.Id, Number: purchase.Number, Permalink: purchase.Permalink },
+              doc.lastSendStatus,
+              { existingCf: doc.customFields || [] },
+            );
+          } catch (e) {
+            logger.warn(`[resolveNumbers] Paperless CF update failed for paperlessId=${doc.paperlessId}: ${e.message}`);
+          }
 
           logger.info(`[resolveNumbers] Linked paperlessId=${doc.paperlessId} → KF id=${purchase.Id} (number=${purchase.Number})`);
           ok++;
@@ -1566,13 +1572,18 @@ exports.matchReferences = async (req, res) => {
           );
           claimed.add(purchase.Id);
 
-          // Best-effort: write the ID back to the Paperless custom field to eliminate drift
-          updatePaperlessWithKashFlowInfo(
-            doc.paperlessId,
-            { Id: purchase.Id, Number: purchase.Number, Permalink: purchase.Permalink },
-            doc.lastSendStatus,
-            { existingCf: doc.customFields || [] },
-          ).catch(e => logger.warn(`[matchReferences] Paperless CF update failed for paperlessId=${doc.paperlessId}: ${e.message}`));
+          // Best-effort: write the ID back to the Paperless custom field to eliminate drift.
+          // Awaited so PATCHes run sequentially — parallel PATCHes 500 under write contention.
+          try {
+            await updatePaperlessWithKashFlowInfo(
+              doc.paperlessId,
+              { Id: purchase.Id, Number: purchase.Number, Permalink: purchase.Permalink },
+              doc.lastSendStatus,
+              { existingCf: doc.customFields || [] },
+            );
+          } catch (e) {
+            logger.warn(`[matchReferences] Paperless CF update failed for paperlessId=${doc.paperlessId}: ${e.message}`);
+          }
 
           logger.info(`[matchReferences] Linked paperlessId=${doc.paperlessId} → KF id=${purchase.Id} (number=${purchase.Number}, ref="${ref}")`);
           ok++;
@@ -1686,9 +1697,12 @@ exports.repairDrift = async (req, res) => {
                 { $pull: { customFields: { fieldName: { $regex: /^kashflow /i } } } },
               );
               // Best-effort Paperless cleanup — log failure but don't block ok count
-              clearPaperlessKashFlowFields(doc.paperlessId, doc.customFields || []).catch(e =>
-                logger.warn(`[repairDrift] Case2 Paperless clear failed for paperlessId=${doc.paperlessId}: ${e.message}`),
-              );
+              // Awaited so PATCHes run sequentially — parallel PATCHes 500 under write contention.
+              try {
+                await clearPaperlessKashFlowFields(doc.paperlessId, doc.customFields || []);
+              } catch (e) {
+                logger.warn(`[repairDrift] Case2 Paperless clear failed for paperlessId=${doc.paperlessId}: ${e.message}`);
+              }
               logger.info(`[repairDrift] Case2 cleared orphaned fields for paperlessId=${doc.paperlessId} (KF id=${cfId} not found)`);
             }
             ok++;

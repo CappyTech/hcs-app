@@ -3,6 +3,15 @@
 const { makeClient } = require("./paperlessClient");
 const logger = require("../../../services/loggerService");
 
+// Axios errors hide the response body ("Request failed with status code 500") —
+// append what Paperless actually returned so failures are diagnosable from logs.
+function describeAxiosError(err) {
+  const body = err?.response?.data;
+  if (body == null) return err.message;
+  const text = typeof body === "string" ? body : JSON.stringify(body);
+  return `${err.message} — response: ${text.slice(0, 500)}`;
+}
+
 /**
  * Update the Paperless-ngx document's custom fields with KashFlow info.
  * Fields written (as strings):
@@ -67,7 +76,7 @@ async function updatePaperlessWithKashFlowInfo(paperlessId, purchase, status, op
     return { updated: true, data: res };
   } catch (err) {
     logger.warn(
-      `[paperlessUpdate] Failed to update custom fields for doc ${id}: ${err.message}`,
+      `[paperlessUpdate] Failed to update custom fields for doc ${id}: ${describeAxiosError(err)}`,
     );
     throw err;
   }
@@ -98,7 +107,7 @@ async function clearPaperlessKashFlowFields(paperlessId, existingCf) {
     logger.info(`[paperlessUpdate] Cleared KashFlow custom fields for doc ${id} (orphaned purchase)`);
     return { cleared: true, data: res };
   } catch (err) {
-    logger.warn(`[paperlessUpdate] Failed to clear KashFlow fields for doc ${id}: ${err.message}`);
+    logger.warn(`[paperlessUpdate] Failed to clear KashFlow fields for doc ${id}: ${describeAxiosError(err)}`);
     throw err;
   }
 }

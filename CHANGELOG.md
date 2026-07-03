@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.18] - 2026-07-03
+
+### Changed
+- **Documents overview says "Custom Field" instead of "CF".** The drift tile, panel header and drift-table column header are spelled out for clarity.
+
+### Fixed
+- **Bulk Paperless custom-field write-backs fired in parallel and all 500'd.** Resolve Numbers, Match References and Repair Drift's orphan-clear launched their `PATCH /documents/:id/` write-backs fire-and-forget inside their loops, and the Paperless ingest drift-guard used `setImmediate` per document — dozens of concurrent PATCHes hit Paperless-ngx at once and every one failed with 500 under write contention (MongoDB links were unaffected; the failures only left custom-field drift). The controller loops now await each write-back sequentially, and the ingest write-backs are serialized through a shared promise chain. Paperless PATCH failures now also log the response body instead of just "Request failed with status code 500".
+
 ## [6.8.17] - 2026-07-03
 
 ### Added

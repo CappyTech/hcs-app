@@ -38,7 +38,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
       <% if (unlinkedExcluded > 0) { %><p class="text-[10px] text-gray-400">+<%= unlinkedExcluded %> excluded</p><% } %>
     </div>
     <div class="bg-white dark:bg-gray-900 border <%- driftedDocs > 0 ? 'border-purple-400 dark:border-purple-600' : 'border-gray-200 dark:border-gray-700' %> rounded-2xl shadow-lg p-4 text-center" title="Documents where MongoDB and Paperless-ngx disagree on the KashFlow link">
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">CF Drift</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Custom Field Drift</p>
       <p class="text-3xl font-bold <%- driftedDocs > 0 ? 'text-purple-600' : 'text-gray-400' %>"><%= driftedDocs %></p>
     </div>
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
@@ -111,7 +111,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <details class="mb-6 group border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-2xl" <%= driftedDocs <= 10 ? 'open' : '' %>>
     <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="flex items-center gap-3 min-w-0 flex-1">
-        <span class="text-lg font-bold text-purple-700 dark:text-purple-400">&#9888; CF Drift (<%= driftedDocs %>)</span>
+        <span class="text-lg font-bold text-purple-700 dark:text-purple-400">&#9888; Custom Field Drift (<%= driftedDocs %>)</span>
         <span class="text-sm text-purple-600 dark:text-purple-300 hidden sm:block">MongoDB / Paperless custom field mismatch</span>
       </div>
       <div class="flex items-center gap-3 shrink-0">
@@ -126,7 +126,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
     <div class="overflow-x-auto px-4 pb-4">
       <table class="min-w-full text-sm">
         <thead><tr class="text-left text-xs text-purple-600 dark:text-purple-400 border-b border-purple-200 dark:border-purple-800">
-          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">MongoDB KF ID</th><th class="pb-1 pr-3 font-medium">Paperless CF</th><th class="pb-1 font-medium">Links</th>
+          <th class="pb-1 pr-3 font-medium">ID</th><th class="pb-1 pr-3 font-medium">Title</th><th class="pb-1 pr-3 font-medium">Type</th><th class="pb-1 pr-3 font-medium">MongoDB KF ID</th><th class="pb-1 pr-3 font-medium">Paperless Custom Field</th><th class="pb-1 font-medium">Links</th>
         </tr></thead>
         <tbody class="divide-y divide-purple-100 dark:divide-purple-900">
           <% for (const d of driftedDocsList) { %>
