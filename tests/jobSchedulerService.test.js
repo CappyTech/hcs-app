@@ -21,9 +21,21 @@ describe('jobSchedulerService', () => {
     assert.throws(() => scheduler.register('a', { intervalMs: 1000, run: async () => {} }), /already registered/);
   });
 
-  it('rejects jobs without run or intervalMs', () => {
+  it('rejects jobs without run', () => {
     assert.throws(() => scheduler.register('x', { intervalMs: 1000 }), /requires run/);
-    assert.throws(() => scheduler.register('y', { run: async () => {} }), /requires run/);
+  });
+
+  it('allows manual-only jobs (no intervalMs) and never schedules them', async () => {
+    let calls = 0;
+    scheduler.register('manual', { run: async () => { calls++; return 'done'; } });
+    scheduler.start();
+    const [status] = scheduler.getStatus();
+    assert.equal(status.intervalMs, null);
+    assert.equal(status.nextRunAt, null);
+    const outcome = await scheduler.runNow('manual');
+    assert.equal(outcome.ok, true);
+    assert.equal(calls, 1);
+    scheduler.stop();
   });
 
   it('runNow executes the job and records success status', async () => {

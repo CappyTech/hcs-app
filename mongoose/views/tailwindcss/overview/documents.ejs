@@ -27,9 +27,10 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Stale Links</p>
       <p class="text-3xl font-bold <%- orphanedDocs > 0 ? 'text-orange-600' : 'text-gray-400' %>"><%= orphanedDocs %></p>
     </div>
-    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center" title="Purchases with no KashFlow link<%= unlinkedExcluded > 0 ? ` — excludes ${unlinkedExcluded} statements/subcontractor docs/credits` : '' %>">
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Unlinked</p>
       <p class="text-3xl font-bold text-yellow-600"><%= unlinkedDocs %></p>
+      <% if (unlinkedExcluded > 0) { %><p class="text-[10px] text-gray-400">+<%= unlinkedExcluded %> excluded</p><% } %>
     </div>
     <div class="bg-white dark:bg-gray-900 border <%- driftedDocs > 0 ? 'border-purple-400 dark:border-purple-600' : 'border-gray-200 dark:border-gray-700' %> rounded-2xl shadow-lg p-4 text-center" title="Documents where MongoDB and Paperless-ngx disagree on the KashFlow link">
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">CF Drift</p>
@@ -39,9 +40,10 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Errors</p>
       <p class="text-3xl font-bold <%= errorDocs > 0 ? 'text-red-600' : 'text-gray-400' %>"><%= errorDocs %></p>
     </div>
-    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center" title="Purchases never sent to KashFlow<%= neverSentExcluded > 0 ? ` — excludes ${neverSentExcluded} statements/subcontractor docs/credits` : '' %>">
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Never Sent</p>
-      <p class="text-3xl font-bold text-gray-600 dark:text-gray-300"><%= neverSent %></p>
+      <p class="text-3xl font-bold text-gray-600 dark:text-gray-300"><%= neverSentEligible %></p>
+      <% if (neverSentExcluded > 0) { %><p class="text-[10px] text-gray-400">+<%= neverSentExcluded %> excluded</p><% } %>
     </div>
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Ingest Errors</p>
@@ -227,7 +229,10 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
   <% if (neverSentList.length > 0) { %>
   <details class="mb-6 group border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
     <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Never Sent to KashFlow (<%= neverSent %>)</span>
+      <div class="min-w-0">
+        <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Never Sent to KashFlow (<%= neverSentEligible %>)</span>
+        <% if (neverSentExcluded > 0) { %><span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5"><%= neverSentExcluded %> statements, subcontractor docs and credit notes are excluded — they are never sent to KashFlow.</span><% } %>
+      </div>
       <span class="text-gray-400 text-sm group-open:hidden">▼</span><span class="text-gray-400 text-sm hidden group-open:inline">▲</span>
     </summary>
     <div class="overflow-x-auto px-4 pb-4">
@@ -289,7 +294,7 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
     <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="min-w-0">
         <span class="text-lg font-bold text-orange-700 dark:text-orange-400">&#9888; Stale KashFlow Links (<%= orphanedDocs %>)</span>
-        <span class="block text-xs text-orange-600 dark:text-orange-300 mt-0.5">KashFlow purchase no longer exists — links are cleared automatically, but only for documents sent more than 48 hours ago. Recently sent documents are held for up to 48 h to allow hcs-sync time to pick up the new purchase.</span>
+        <span class="block text-xs text-orange-600 dark:text-orange-300 mt-0.5">KashFlow purchase no longer exists. Use Clear Now to remove the stale links. Documents sent within the last 48 hours are held (marked below) to allow hcs-sync time to pick up the new purchase.</span>
       </div>
       <div class="flex items-center gap-3 shrink-0">
         <form method="POST" action="/paperless/clear-orphans" data-submit-once>
@@ -311,7 +316,12 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
             <td class="py-1.5 pr-3 max-w-xs truncate"><a href="/paperless/ocr/<%= d.paperlessId %>" class="text-orange-700 dark:text-orange-300 hover:underline font-medium"><%= d.title || '—' %></a></td>
             <td class="py-1.5 pr-3 text-xs text-gray-500"><%= d.documentType?.name || '—' %></td>
             <td class="py-1.5 pr-3 font-mono text-xs text-gray-600 dark:text-gray-400"><%= d.kashflowPurchaseNumber ?? '—' %></td>
-            <td class="py-1.5 pr-3 text-xs text-gray-500 whitespace-nowrap"><%= fmt(d.lastSentAt) %></td>
+            <td class="py-1.5 pr-3 text-xs text-gray-500 whitespace-nowrap">
+              <%= fmt(d.lastSentAt) %>
+              <% if (d.lastSentAt && (Date.now() - new Date(d.lastSentAt).getTime()) < 48 * 60 * 60 * 1000) { %>
+                <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-200 text-orange-800 dark:bg-orange-800/40 dark:text-orange-300" title="Sent within the last 48 h — held until hcs-sync has had time to pick up the new purchase">held</span>
+              <% } %>
+            </td>
             <td class="py-1.5 whitespace-nowrap text-xs">
               <a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-green-600 mr-2">Paperless ↗</a>
               <% if (d.kashflowPermalink) { %><a href="<%= d.kashflowPermalink %>" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-blue-600">KashFlow ↗</a><% } %>
@@ -330,8 +340,11 @@ const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
   <details class="mb-6 group border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl">
     <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="flex items-center gap-3 min-w-0 flex-1">
-        <span class="text-lg font-bold text-yellow-700 dark:text-yellow-400">Unlinked Documents (<%= unlinkedDocs %>)</span>
-        <% if (hasNumberNoId > 0) { %><span class="text-sm text-orange-600 dark:text-orange-400 hidden sm:block"><%= hasNumberNoId %> have a KF number — resolvable</span><% } %>
+        <div class="min-w-0">
+          <span class="text-lg font-bold text-yellow-700 dark:text-yellow-400">Unlinked Documents (<%= unlinkedDocs %>)</span>
+          <% if (hasNumberNoId > 0) { %><span class="text-sm text-orange-600 dark:text-orange-400 hidden sm:inline ml-2"><%= hasNumberNoId %> have a KF number — resolvable</span><% } %>
+          <% if (unlinkedExcluded > 0) { %><span class="block text-xs text-yellow-600 dark:text-yellow-500 mt-0.5"><%= unlinkedExcluded %> statements, subcontractor docs and credit notes are excluded — they are never sent to KashFlow.</span><% } %>
+        </div>
       </div>
       <div class="flex items-center gap-3 shrink-0">
         <% if (hasNumberNoId > 0) { %>

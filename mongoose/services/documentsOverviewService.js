@@ -4,6 +4,14 @@ const mdb = require('./mongooseDatabaseService');
 
 const DETAIL_LIMIT = 100;
 
+// Documents that are never sent to KashFlow — statements, subcontractor docs
+// and credit notes — are excluded from the unlinked / never-sent / missing-link
+// panels so those lists only show purchases that actually need action.
+const KF_ELIGIBLE_MATCH = {
+  'documentType.name': { $regex: /^purchase$/i },
+  title: { $not: /credit/i },
+};
+
 // Shared aggregation stages to extract the cached Paperless CF value for 'kashflow purchase id'
 const CF_KF_ID_ADD_FIELD = {
   $addFields: {
@@ -42,11 +50,22 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       direct:   [{ $match: { lastSendMode: 'direct' } }, { $count: 'n' }],
       webhook:  [{ $match: { lastSendMode: 'webhook' } }, { $count: 'n' }],
       neverSent:[{ $match: { lastSentAt: null } }, { $count: 'n' }],
+      // Same, restricted to KF-eligible docs (drives the tile + panel)
+      neverSentEligible: [
+        { $match: { lastSentAt: null, ...KF_ELIGIBLE_MATCH } },
+        { $count: 'n' },
+      ],
+      // Unlinked, restricted to KF-eligible docs (drives the tile + panel)
+      unlinkedEligible: [
+        { $match: { kashflowPurchaseId: null, ...KF_ELIGIBLE_MATCH } },
+        { $count: 'n' },
+      ],
       // Tagged 'added' in Paperless but no KashFlow purchase number recorded in MongoDB
       addedNoKf: [
         { $match: {
           kashflowPurchaseNumber: null,
           'tags.name': { $regex: /^added$/i },
+          ...KF_ELIGIBLE_MATCH,
         }},
         { $count: 'n' },
       ],
@@ -92,11 +111,15 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   ]);
   const totalDocs    = facetResult?.total?.[0]?.n    ?? 0;
   const linkedDocs   = facetResult?.linked?.[0]?.n   ?? 0;
-  const unlinkedDocs = totalDocs - linkedDocs;
+  const unlinkedAll  = totalDocs - linkedDocs;
+  const unlinkedDocs = facetResult?.unlinkedEligible?.[0]?.n ?? 0;
+  const unlinkedExcluded = unlinkedAll - unlinkedDocs;
   const errorDocs    = facetResult?.error?.[0]?.n    ?? 0;
   const sentDirect   = facetResult?.direct?.[0]?.n   ?? 0;
   const sentWebhook  = facetResult?.webhook?.[0]?.n  ?? 0;
   const neverSent       = facetResult?.neverSent?.[0]?.n        ?? 0;
+  const neverSentEligible = facetResult?.neverSentEligible?.[0]?.n ?? 0;
+  const neverSentExcluded = neverSent - neverSentEligible;
   const driftedDocs     = facetResult?.drifted?.[0]?.n          ?? 0;
   const addedNoKfNumber = facetResult?.addedNoKf?.[0]?.n        ?? 0;
   const sentButUnlinked = facetResult?.sentButUnlinked?.[0]?.n  ?? 0;
@@ -135,15 +158,15 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     { $limit: DETAIL_LIMIT },
   ]);
 
-  // ── Never sent list ────────────────────────────────────────────────────────
-  const neverSentList = await OcrDocument.find({ lastSentAt: null })
+  // ── Never sent list (KF-eligible docs only) ───────────────────────────────
+  const neverSentList = await OcrDocument.find({ lastSentAt: null, ...KF_ELIGIBLE_MATCH })
     .sort({ added: -1 })
     .limit(DETAIL_LIMIT)
     .select('paperlessId title documentType added')
     .lean();
 
-  // ── Unlinked list (no KashFlow purchase ID, includes never sent) ───────────
-  const unlinkedDocsList = await OcrDocument.find({ kashflowPurchaseId: null })
+  // ── Unlinked list (no KashFlow purchase ID, includes never sent; KF-eligible only) ──
+  const unlinkedDocsList = await OcrDocument.find({ kashflowPurchaseId: null, ...KF_ELIGIBLE_MATCH })
     .sort({ added: -1 })
     .limit(DETAIL_LIMIT)
     .select('paperlessId title documentType added lastSentAt lastSendMode lastSendStatus kashflowPurchaseNumber')
@@ -233,6 +256,9 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     totalDocs,
     linkedDocs,
     unlinkedDocs,
+    unlinkedExcluded,
+    neverSentEligible,
+    neverSentExcluded,
     orphanedDocs,
     driftedDocs,
     sentButUnlinked,

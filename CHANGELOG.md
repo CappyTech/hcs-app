@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.14] - 2026-07-03
+
+### Changed
+- **Stale KashFlow link clearing is now admin-triggered only.** The `ocr-orphans` job no longer runs automatically every 24 h — the job scheduler now supports manual-only jobs (`intervalMs: null`), which appear on `/admin/jobs` with a Run button but are never scheduled. Admins clear stale links via the "Clear Now" button on the Documents overview or from the jobs page. The sweep logic itself is unchanged, including the 48-hour hold on recently sent documents so hcs-sync can pick up new purchases. Also removed `ocrOrphanService`'s dead self-scheduling `start()`/`stop()` code (never wired into app.js) and updated the Documents-overview banner text, which claimed links "are cleared automatically".
+
+- **Documents overview filters out non-KashFlow document types.** The Unlinked, Never Sent and Missing KF Link tiles/panels now only count purchases (excluding credit notes by title), since statements, subcontractor docs and credits are never sent to KashFlow and were permanent noise in those lists. Excluded counts are shown next to the tiles and panel headers so the totals remain transparent; the raw send-mode pills (Direct/Webhook/Never Sent) are unchanged.
+
+### Fixed
+- **Stale links on never-sent documents were unclearable.** The orphan sweep matched only `lastSentAt < 48 h ago`, which never matches `lastSentAt: null` — so linked-but-never-sent documents (e.g. linked via number resolution) appeared in the Documents-overview "Stale KashFlow Links" panel forever and Clear Now silently skipped them. Never-sent docs are now cleared immediately (they have nothing pending in hcs-sync); the 48-hour hold still applies to recently sent documents, and held rows now show a "held" badge in the stale-links table.
+
 ## [6.8.13] - 2026-07-02
 
 ### Changed

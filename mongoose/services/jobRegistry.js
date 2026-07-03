@@ -34,8 +34,8 @@ function registerAll() {
   });
 
   scheduler.register('ocr-orphans', {
-    description: 'Detect OCR documents whose Paperless source has been deleted.',
-    intervalMs: DAY,
+    description: 'Clear KashFlow links on OCR documents whose purchase has been deleted (docs sent in the last 48 h are held). Manual only — run from this page or the Documents overview.',
+    intervalMs: null, // manual-only: admin decides when stale links are cleared
     run: () => require('./ocrOrphanService').detectAndClearOrphans(),
   });
 

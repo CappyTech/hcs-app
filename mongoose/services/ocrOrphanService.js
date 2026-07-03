@@ -3,11 +3,6 @@
 const mdb    = require('./mongooseDatabaseService');
 const logger = require('../../services/loggerService');
 
-const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
-const INITIAL_DELAY_MS  = 15_000;               // 15 s after boot
-
-let intervalHandle = null;
-
 /**
  * Finds OcrDocuments whose kashflowPurchaseId no longer matches an active
  * (non-soft-deleted) REST purchase and nulls out the stale link fields.
@@ -25,12 +20,17 @@ async function detectAndClearOrphans() {
     return stats;
   }
 
-  // 1. All OcrDocuments that currently have a KashFlow purchase link,
-  //    but only those sent more than 48 h ago. Documents sent recently may not
-  //    have been picked up by hcs-sync yet, so we must not treat them as orphans.
+  // 1. All OcrDocuments that currently have a KashFlow purchase link.
+  //    Documents sent within the last 48 h are held — hcs-sync may not have
+  //    picked up the new purchase yet. Never-sent docs (lastSentAt null, e.g.
+  //    linked via number resolution) have nothing pending in hcs-sync, so they
+  //    are clearable immediately.
   const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
   const linked = await OcrDocument
-    .find({ kashflowPurchaseId: { $ne: null }, lastSentAt: { $lt: cutoff } })
+    .find({
+      kashflowPurchaseId: { $ne: null },
+      $or: [{ lastSentAt: null }, { lastSentAt: { $lt: cutoff } }],
+    })
     .select('_id kashflowPurchaseId')
     .lean();
 
@@ -83,21 +83,4 @@ async function detectAndClearOrphans() {
   return stats;
 }
 
-function start() {
-  if (intervalHandle) return;
-  logger.info('[ocrOrphanService] Starting (initial delay 15 s, then every 24 h).');
-  setTimeout(async () => {
-    try { await detectAndClearOrphans(); }
-    catch (err) { logger.error('[ocrOrphanService] Initial run failed: ' + err.message); }
-  }, INITIAL_DELAY_MS);
-  intervalHandle = setInterval(async () => {
-    try { await detectAndClearOrphans(); }
-    catch (err) { logger.error('[ocrOrphanService] Periodic run failed: ' + err.message); }
-  }, CHECK_INTERVAL_MS);
-}
-
-function stop() {
-  if (intervalHandle) { clearInterval(intervalHandle); intervalHandle = null; }
-}
-
-module.exports = { detectAndClearOrphans, start, stop };
+module.exports = { detectAndClearOrphans };

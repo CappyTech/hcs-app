@@ -21,16 +21,17 @@ let started = false;
  * @param {string} name      – unique slug, e.g. 'session-cleanup'
  * @param {object} def
  * @param {string} def.description – human-readable summary for the admin UI
- * @param {number} def.intervalMs  – how often to run
+ * @param {number|null} def.intervalMs – how often to run, or null for a
+ *                                       manual-only job (run via /admin/jobs)
  * @param {number} [def.initialDelayMs=10000] – delay before the first run
  * @param {Function} def.run       – async () => result (result is kept for status)
  */
-function register(name, { description, intervalMs, initialDelayMs = 10_000, run }) {
+function register(name, { description, intervalMs = null, initialDelayMs = 10_000, run }) {
   if (jobs.has(name)) {
     throw new Error(`[jobScheduler] Job already registered: ${name}`);
   }
-  if (typeof run !== 'function' || !intervalMs) {
-    throw new Error(`[jobScheduler] Job ${name} requires run() and intervalMs`);
+  if (typeof run !== 'function') {
+    throw new Error(`[jobScheduler] Job ${name} requires run()`);
   }
   jobs.set(name, {
     name,
@@ -103,6 +104,7 @@ function start() {
   if (started) return;
   started = true;
   for (const job of jobs.values()) {
+    if (!job.intervalMs) continue; // manual-only job — never scheduled
     job.initialHandle = setTimeout(() => {
       execute(job, 'initial');
       job.handle = setInterval(() => execute(job), job.intervalMs);
