@@ -180,7 +180,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
             <td class="py-1.5 whitespace-nowrap text-xs">
               <form method="POST" action="/paperless/ocr/<%= d.paperlessId %>/remove" data-submit-once class="inline">
                 <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
-                <button type="submit" data-submit-once-text="Removing…" class="inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white rounded px-2 py-1 text-xs font-medium transition shadow-sm" onclick="return confirm('Remove the MongoDB copy of document #<%= d.paperlessId %>? This cannot be undone.')">Remove</button>
+                <button type="submit" data-submit-once-text="Removing…" data-confirm="Remove the MongoDB copy of document #<%= d.paperlessId %>? This cannot be undone." class="inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white rounded px-2 py-1 text-xs font-medium transition shadow-sm">Remove</button>
               </form>
             </td>
           </tr>

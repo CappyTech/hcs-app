@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.22] - 2026-07-07
+
+### Security
+- **Fixed CSP `script-src-attr` violation on `/overview/documents`.** The Remove button in the "Deleted in Paperless" panel used an inline `onclick="return confirm(...)"` handler, which is blocked by the `script-src-attr 'none'` policy. Replaced with a `data-confirm` attribute, handled by the existing `ui-helpers.js` listener.
+
 ## [6.8.21] - 2026-07-03
 
 ### Added
