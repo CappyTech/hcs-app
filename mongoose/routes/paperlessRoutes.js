@@ -28,6 +28,7 @@ router.get("/paperless/ocr/:paperlessId/draft", ...paperlessGuard, ctrl.getPurch
 router.get("/paperless/ocr/:paperlessId/match", ...paperlessGuard, ctrl.getMatchPurchase);
 router.post("/paperless/ocr/:paperlessId/match", ...paperlessGuard, ctrl.postMatchPurchase);
 router.post("/paperless/ocr/:paperlessId/send", ...paperlessGuard, ctrl.sendDraftToKashflow);
+router.post("/paperless/ocr/:paperlessId/draft/extra-lines", ...paperlessGuard, ctrl.saveDraftExtraLines);
 router.post("/paperless/ocr/:paperlessId/ingest", ...paperlessGuard, ctrl.reIngestOne);
 router.post("/paperless/ocr/:paperlessId/sync-fields", ...paperlessGuard, ctrl.syncPaperlessFields);
 router.post("/paperless/ocr/:paperlessId/unlink", ...paperlessGuard, ctrl.unlinkKashflow);

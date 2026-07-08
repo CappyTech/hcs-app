@@ -565,6 +565,7 @@ exports.getPurchaseDraft = async (req, res, next) => {
       bankAccounts,
       paymentAccounts,
       paymentMethods,
+      savedExtraLines: Array.isArray(doc.draftExtraLines) ? doc.draftExtraLines : [],
       sendDirectEnabled: hasDirectAuth,
       sendWebhookEnabled: !!webhookUrl,
       kashflowApiBaseUrl: KF_BASE,
@@ -602,6 +603,134 @@ exports.getPurchaseDraft = async (req, res, next) => {
   } catch (err) {
     logger.error("getPurchaseDraft error:", err);
     next(err);
+  }
+};
+
+/**
+ * Validate user-added draft line rows (posted from the draft view or being
+ * saved to the document). Fully-empty rows are skipped; partially-filled rows
+ * are an error. Returns { lines } with computed Net/Gross, or { error }.
+ */
+function parseExtraLineInput(extras, allowedNominalCodes) {
+  const toNum = (v) => {
+    if (v == null || v === "") return undefined;
+    const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+    return Number.isFinite(n) ? n : undefined;
+  };
+  const lines = [];
+  for (let i = 0; i < extras.length; i++) {
+    const ex = extras[i] || {};
+    const desc = String(ex.Description || "").trim();
+    const qty = toNum(ex.Quantity) ?? 1;
+    const unit = toNum(ex.UnitPrice);
+    const vatAmt = toNum(ex.VATAmount) ?? 0;
+    // Skip fully empty rows
+    if (!desc && unit == null) continue;
+    if (!desc || unit == null || qty <= 0) {
+      return {
+        error: `Added line ${i + 1} is incomplete: description, quantity and unit price are required.`,
+      };
+    }
+    const netAmt = +(qty * unit).toFixed(2);
+    const line = {
+      Description: desc,
+      Quantity: qty,
+      UnitPrice: unit,
+      NetAmount: netAmt,
+      VATAmount: +vatAmt.toFixed(2),
+      GrossAmount: +(netAmt + vatAmt).toFixed(2),
+    };
+    const nom = toNum(ex.NominalCode);
+    if (
+      nom != null &&
+      Number.isInteger(nom) &&
+      (!allowedNominalCodes || allowedNominalCodes.has(nom))
+    ) {
+      line.NominalCode = nom;
+    }
+    const pn = toNum(ex.ProjectNumber);
+    if (pn != null && Number.isInteger(pn) && pn > 0) {
+      line.ProjectNumber = pn;
+    }
+    lines.push(line);
+  }
+  return { lines };
+}
+
+/** Load the set of nominal codes valid for purchase lines (Classification: 'Purchases'). */
+async function loadAllowedNominalCodes() {
+  const Nominal = mdb.REST && mdb.REST.nominal;
+  if (!Nominal) return null;
+  const allowed = await Nominal.find({ Classification: "Purchases" })
+    .select("Code")
+    .lean();
+  return new Set(
+    (allowed || [])
+      .map((n) => (n && typeof n.Code === "number" ? n.Code : undefined))
+      .filter((v) => v !== undefined),
+  );
+}
+
+/**
+ * Save user-added draft line items on the OCR document (subcontractor only),
+ * so they survive draft reloads. POST body: { extraLines: [...] } (JSON).
+ * An empty array clears the saved lines.
+ */
+exports.saveDraftExtraLines = async (req, res) => {
+  try {
+    await mdb.connect();
+    const { OcrDocument } = mdb.PAPERLESS;
+    const paperlessId = parseInt(req.params.paperlessId, 10);
+    if (!Number.isFinite(paperlessId)) {
+      return res.status(400).json({ ok: false, message: "Invalid paperlessId" });
+    }
+    const doc = await OcrDocument.findOne({ paperlessId })
+      .select("documentType")
+      .lean();
+    if (!doc) {
+      return res.status(404).json({ ok: false, message: "Document not found" });
+    }
+    if (!/subcontract/i.test(doc?.documentType?.name || "")) {
+      return res.status(400).json({
+        ok: false,
+        message: "Added line items are only supported on subcontractor documents.",
+      });
+    }
+    const raw = req.body?.extraLines;
+    let extras = Array.isArray(raw) ? raw : null;
+    if (!extras && typeof raw === "string") {
+      try {
+        extras = JSON.parse(raw);
+      } catch (_) {
+        /* handled below */
+      }
+    }
+    if (!Array.isArray(extras)) {
+      return res.status(400).json({ ok: false, message: "extraLines must be an array" });
+    }
+    let allowedNominalCodes = null;
+    try {
+      allowedNominalCodes = await loadAllowedNominalCodes();
+    } catch (e) {
+      logger.warn("Failed to load allowed nominal codes for extra-line save: " + e.message);
+    }
+    const parsed = parseExtraLineInput(extras, allowedNominalCodes);
+    if (parsed.error) {
+      return res.status(400).json({ ok: false, message: parsed.error });
+    }
+    await OcrDocument.updateOne(
+      { paperlessId },
+      parsed.lines.length
+        ? { $set: { draftExtraLines: parsed.lines } }
+        : { $unset: { draftExtraLines: 1 } },
+    );
+    logger.info(
+      `[paperless] Saved ${parsed.lines.length} draft extra line(s) for paperlessId=${paperlessId}`,
+    );
+    res.json({ ok: true, count: parsed.lines.length });
+  } catch (err) {
+    logger.error("saveDraftExtraLines error:", err);
+    res.status(500).json({ ok: false, message: err.message || "Save failed" });
   }
 };
 
@@ -835,50 +964,13 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         await releaseSendClaim();
         return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
       }
-      const toNum = (v) => {
-        if (v == null || v === "") return undefined;
-        const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
-        return Number.isFinite(n) ? n : undefined;
-      };
-      for (let i = 0; i < extras.length; i++) {
-        const ex = extras[i] || {};
-        const desc = String(ex.Description || "").trim();
-        const qty = toNum(ex.Quantity) ?? 1;
-        const unit = toNum(ex.UnitPrice);
-        const vatAmt = toNum(ex.VATAmount) ?? 0;
-        // Skip fully empty rows
-        if (!desc && unit == null) continue;
-        if (!desc || unit == null || qty <= 0) {
-          req.flash(
-            "error",
-            `Added line ${i + 1} is incomplete: description, quantity and unit price are required.`,
-          );
-          await releaseSendClaim();
-          return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
-        }
-        const netAmt = +(qty * unit).toFixed(2);
-        const line = {
-          Description: desc,
-          Quantity: qty,
-          UnitPrice: unit,
-          NetAmount: netAmt,
-          VATAmount: +vatAmt.toFixed(2),
-          GrossAmount: +(netAmt + vatAmt).toFixed(2),
-        };
-        const nom = toNum(ex.NominalCode);
-        if (
-          nom != null &&
-          Number.isInteger(nom) &&
-          (!allowedNominalCodes || allowedNominalCodes.has(nom))
-        ) {
-          line.NominalCode = nom;
-        }
-        const pn = toNum(ex.ProjectNumber);
-        if (pn != null && Number.isInteger(pn) && pn > 0) {
-          line.ProjectNumber = pn;
-        }
-        draft.LineItems.push(line);
+      const parsedExtras = parseExtraLineInput(extras, allowedNominalCodes);
+      if (parsedExtras.error) {
+        req.flash("error", parsedExtras.error);
+        await releaseSendClaim();
+        return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
       }
+      draft.LineItems.push(...parsedExtras.lines);
     }
 
     // Subcontractor-only: attach payment lines posted from the draft view.

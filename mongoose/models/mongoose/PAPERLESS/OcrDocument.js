@@ -13,6 +13,17 @@ const TagSchema = new mongoose.Schema({
   slug: String,
 }, { _id: false });
 
+// Subcontractor draft: user-added line items persisted across draft reloads
+// (Paperless custom fields only have _Line1 slots, so extras live here).
+const DraftExtraLineSchema = new mongoose.Schema({
+  Description: String,
+  Quantity: Number,
+  UnitPrice: Number,
+  VATAmount: Number,
+  NominalCode: Number,
+  ProjectNumber: Number,
+}, { _id: false });
+
 const OcrDocumentSchema = new mongoose.Schema({
   paperlessId: { type: Number, index: true, unique: true },
   title: String,
@@ -36,6 +47,7 @@ const OcrDocumentSchema = new mongoose.Schema({
   lastSendStatus:         { type: Number, default: null },
   modifiedAtLastSend:     { type: Date,   default: null },
   kfSendLockedAt:         { type: Date,   default: null }, // in-flight send claim — blocks concurrent sends (stale after 5 min)
+  draftExtraLines:        { type: [DraftExtraLineSchema], default: undefined },
   sendCount:              { type: Number },
   fetchedAt:              { type: Date, default: () => new Date() },
   // Set by the grab's reconciliation pass when a full unfiltered sweep no longer sees

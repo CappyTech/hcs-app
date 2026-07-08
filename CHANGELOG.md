@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.9.1] - 2026-07-08
+
+### Added
+- **Subcontractor drafts: added line items can be saved.** A "Save added lines" button persists the rows onto the OCR document in MongoDB (`draftExtraLines`, via `POST /paperless/ocr/:id/draft/extra-lines` — same guard chain as the draft, subcontractor documents only, same validation as sending — the send path's inline extra-line validation is extracted into a shared `parseExtraLineInput()` helper). Saved lines are restored as editable rows whenever the draft is reopened; saving with no rows clears them. Paperless custom fields only have `_Line1` slots, so extras live on the MongoDB document rather than being written back to Paperless. Sending remains screen-authoritative: what's in the table is what's sent, saved or not.
+
 ## [6.9.0] - 2026-07-08
 
 ### Changed

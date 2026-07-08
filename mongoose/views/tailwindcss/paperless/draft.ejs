@@ -123,12 +123,16 @@
 					<% } %>
 				</h2>
 				<% if (isSubcontractor) { %>
-				<div class="mb-2 flex items-center gap-2">
+				<div class="mb-2 flex items-center gap-2 flex-wrap">
 					<button type="button" id="add-extra-line" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-green-900/30">
 						<i class="bi bi-plus-lg"></i> Add line item
 					</button>
-					<span class="text-xs text-slate-500">Added lines are appended to this invoice when sending.</span>
+					<button type="button" id="save-extra-lines" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-green-900/30">
+						<i class="bi bi-save"></i> Save added lines
+					</button>
+					<span id="save-extra-lines-status" class="text-xs text-slate-500"><%= (savedExtraLines || []).length ? ((savedExtraLines || []).length + ' saved line(s) restored.') : 'Added lines are appended to this invoice when sending.' %></span>
 				</div>
+				<script type="application/json" id="saved-extra-lines-json"><%- JSON.stringify(savedExtraLines || []).replace(/</g, '\\u003c') %></script>
 				<% } %>
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
@@ -625,19 +629,8 @@
 		  			$form.appendChild(projHid);
 		  		});
 		  		// Subcontractor: serialize user-added line items as JSON
-		  		const extraRows = document.querySelectorAll('#line-items-body tr.extra-line-row');
-		  		if (extraRows.length) {
-		  			const extras = [];
-		  			extraRows.forEach(tr => {
-		  				extras.push({
-		  					Description: (tr.querySelector('.xl-desc')?.value || '').trim(),
-		  					Quantity: tr.querySelector('.xl-qty')?.value || '',
-		  					UnitPrice: tr.querySelector('.xl-unit')?.value || '',
-		  					VATAmount: tr.querySelector('.xl-vat')?.value || '',
-		  					NominalCode: tr.querySelector('select.nominal-select')?.value || '',
-		  					ProjectNumber: tr.querySelector('select.project-select')?.value || ''
-		  				});
-		  			});
+		  		const extras = collectExtraLines();
+		  		if (extras.length) {
 		  			const hid = document.createElement('input');
 		  			hid.type = 'hidden';
 		  			hid.name = 'extraLines';
@@ -670,50 +663,106 @@
 		  const FIELD_CLS = 'w-full rounded-xl border-gray-200 dark:border-gray-700 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500';
 		  const $addLine = document.getElementById('add-extra-line');
 		  const $linesBody = document.getElementById('line-items-body');
+		  function collectExtraLines() {
+		  	const out = [];
+		  	document.querySelectorAll('#line-items-body tr.extra-line-row').forEach(tr => {
+		  		out.push({
+		  			Description: (tr.querySelector('.xl-desc')?.value || '').trim(),
+		  			Quantity: tr.querySelector('.xl-qty')?.value || '',
+		  			UnitPrice: tr.querySelector('.xl-unit')?.value || '',
+		  			VATAmount: tr.querySelector('.xl-vat')?.value || '',
+		  			NominalCode: tr.querySelector('select.nominal-select')?.value || '',
+		  			ProjectNumber: tr.querySelector('select.project-select')?.value || ''
+		  		});
+		  	});
+		  	return out;
+		  }
+		  function addExtraLineRow(data) {
+		  	if (!$linesBody) return;
+		  	data = data || {};
+		  	const template = $linesBody.querySelector('tr');
+		  	const tr = document.createElement('tr');
+		  	tr.className = 'extra-line-row border-b last:border-0';
+		  	tr.innerHTML =
+		  		'<td class="p-2"><button type="button" class="xl-remove text-red-600 hover:text-red-700" title="Remove line"><i class="bi bi-x-circle"></i></button></td>' +
+		  		'<td class="p-2"><input type="text" class="xl-desc ' + FIELD_CLS + '" placeholder="Description"></td>' +
+		  		'<td class="p-2"><input type="number" step="any" min="0" value="1" class="xl-qty ' + FIELD_CLS + '" style="min-width:4rem"></td>' +
+		  		'<td class="p-2"><input type="number" step="0.01" class="xl-unit ' + FIELD_CLS + '" placeholder="0.00" style="min-width:6rem"></td>' +
+		  		'<td class="p-2"><span class="xl-net">-</span></td>' +
+		  		'<td class="p-2"><input type="number" step="0.01" value="0" class="xl-vat ' + FIELD_CLS + '" style="min-width:5rem"></td>' +
+		  		'<td class="p-2"><span class="xl-gross">-</span></td>' +
+		  		'<td class="p-2 project-cell"></td>' +
+		  		'<td class="p-2 nominal-cell" data-explicit="false"></td>';
+		  	// Prefill inputs from saved data (if any)
+		  	if (data.Description) tr.querySelector('.xl-desc').value = data.Description;
+		  	if (data.Quantity != null && data.Quantity !== '') tr.querySelector('.xl-qty').value = data.Quantity;
+		  	if (data.UnitPrice != null && data.UnitPrice !== '') tr.querySelector('.xl-unit').value = data.UnitPrice;
+		  	if (data.VATAmount != null && data.VATAmount !== '') tr.querySelector('.xl-vat').value = data.VATAmount;
+		  	// Reuse the option lists by cloning the selects from the first server row
+		  	const srcProj = template && template.querySelector('select.project-select');
+		  	const srcNom = template && template.querySelector('select.nominal-select');
+		  	if (srcProj) {
+		  		const s = srcProj.cloneNode(true);
+		  		s.value = data.ProjectNumber != null && data.ProjectNumber !== '' ? String(data.ProjectNumber) : '';
+		  		tr.querySelector('td.project-cell').appendChild(s);
+		  	}
+		  	if (srcNom) {
+		  		const s = srcNom.cloneNode(true);
+		  		s.value = data.NominalCode != null && data.NominalCode !== '' ? String(data.NominalCode) : '';
+		  		tr.querySelector('td.nominal-cell').setAttribute('data-explicit', s.value ? 'true' : 'false');
+		  		s.addEventListener('change', () => {
+		  			tr.querySelector('td.nominal-cell').setAttribute('data-explicit', s.value ? 'true' : 'false');
+		  			recomputeCanSend();
+		  		});
+		  		tr.querySelector('td.nominal-cell').appendChild(s);
+		  	}
+		  	const recalc = () => {
+		  		const q = parseFloat(tr.querySelector('.xl-qty').value) || 0;
+		  		const u = parseFloat(tr.querySelector('.xl-unit').value) || 0;
+		  		const v = parseFloat(tr.querySelector('.xl-vat').value) || 0;
+		  		const net = +(q * u).toFixed(2);
+		  		tr.querySelector('.xl-net').textContent = net.toFixed(2);
+		  		tr.querySelector('.xl-gross').textContent = (net + v).toFixed(2);
+		  	};
+		  	['.xl-qty', '.xl-unit', '.xl-vat'].forEach(c => tr.querySelector(c).addEventListener('input', recalc));
+		  	tr.querySelector('.xl-remove').addEventListener('click', () => { tr.remove(); recomputeCanSend(); });
+		  	recalc();
+		  	$linesBody.appendChild(tr);
+		  	recomputeCanSend();
+		  }
 		  if ($addLine && $linesBody) {
-		  	$addLine.addEventListener('click', () => {
-		  		const template = $linesBody.querySelector('tr');
-		  		const tr = document.createElement('tr');
-		  		tr.className = 'extra-line-row border-b last:border-0';
-		  		tr.innerHTML =
-		  			'<td class="p-2"><button type="button" class="xl-remove text-red-600 hover:text-red-700" title="Remove line"><i class="bi bi-x-circle"></i></button></td>' +
-		  			'<td class="p-2"><input type="text" class="xl-desc ' + FIELD_CLS + '" placeholder="Description"></td>' +
-		  			'<td class="p-2"><input type="number" step="any" min="0" value="1" class="xl-qty ' + FIELD_CLS + '" style="min-width:4rem"></td>' +
-		  			'<td class="p-2"><input type="number" step="0.01" class="xl-unit ' + FIELD_CLS + '" placeholder="0.00" style="min-width:6rem"></td>' +
-		  			'<td class="p-2"><span class="xl-net">-</span></td>' +
-		  			'<td class="p-2"><input type="number" step="0.01" value="0" class="xl-vat ' + FIELD_CLS + '" style="min-width:5rem"></td>' +
-		  			'<td class="p-2"><span class="xl-gross">-</span></td>' +
-		  			'<td class="p-2 project-cell"></td>' +
-		  			'<td class="p-2 nominal-cell" data-explicit="false"></td>';
-		  		// Reuse the option lists by cloning the selects from the first server row
-		  		const srcProj = template && template.querySelector('select.project-select');
-		  		const srcNom = template && template.querySelector('select.nominal-select');
-		  		if (srcProj) {
-		  			const s = srcProj.cloneNode(true);
-		  			s.value = '';
-		  			tr.querySelector('td.project-cell').appendChild(s);
-		  		}
-		  		if (srcNom) {
-		  			const s = srcNom.cloneNode(true);
-		  			s.value = '';
-		  			s.addEventListener('change', () => {
-		  				tr.querySelector('td.nominal-cell').setAttribute('data-explicit', s.value ? 'true' : 'false');
-		  				recomputeCanSend();
+		  	$addLine.addEventListener('click', () => addExtraLineRow());
+		  	// Restore lines previously saved on the document
+		  	try {
+		  		const saved = JSON.parse(document.getElementById('saved-extra-lines-json')?.textContent || '[]');
+		  		if (Array.isArray(saved)) saved.forEach(l => addExtraLineRow(l));
+		  	} catch (_) { /* ignore restore errors */ }
+		  }
+		  const $saveLines = document.getElementById('save-extra-lines');
+		  const $saveStatus = document.getElementById('save-extra-lines-status');
+		  if ($saveLines) {
+		  	$saveLines.addEventListener('click', async () => {
+		  		const csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content
+		  			|| document.querySelector('#send-form input[name="_csrf"]')?.value || '';
+		  		$saveLines.disabled = true;
+		  		if ($saveStatus) $saveStatus.textContent = 'Saving…';
+		  		try {
+		  			const r = await fetch('/paperless/ocr/<%= paperlessId %>/draft/extra-lines', {
+		  				method: 'POST',
+		  				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+		  				body: JSON.stringify({ extraLines: collectExtraLines() }),
 		  			});
-		  			tr.querySelector('td.nominal-cell').appendChild(s);
+		  			let data;
+		  			try { data = await r.json(); } catch (_) { data = {}; }
+		  			if ($saveStatus) {
+		  				$saveStatus.textContent = r.ok
+		  					? ('Saved ' + (data.count ?? 0) + ' line(s).')
+		  					: ('Save failed: ' + (data.message || ('HTTP ' + r.status)));
+		  			}
+		  		} catch (err) {
+		  			if ($saveStatus) $saveStatus.textContent = 'Save failed: ' + err.message;
 		  		}
-		  		const recalc = () => {
-		  			const q = parseFloat(tr.querySelector('.xl-qty').value) || 0;
-		  			const u = parseFloat(tr.querySelector('.xl-unit').value) || 0;
-		  			const v = parseFloat(tr.querySelector('.xl-vat').value) || 0;
-		  			const net = +(q * u).toFixed(2);
-		  			tr.querySelector('.xl-net').textContent = net.toFixed(2);
-		  			tr.querySelector('.xl-gross').textContent = (net + v).toFixed(2);
-		  		};
-		  		['.xl-qty', '.xl-unit', '.xl-vat'].forEach(c => tr.querySelector(c).addEventListener('input', recalc));
-		  		tr.querySelector('.xl-remove').addEventListener('click', () => { tr.remove(); recomputeCanSend(); });
-		  		$linesBody.appendChild(tr);
-		  		recomputeCanSend();
+		  		$saveLines.disabled = false;
 		  	});
 		  }
 		  const $addPay = document.getElementById('add-payment-line');
