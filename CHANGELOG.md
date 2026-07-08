@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.9.0] - 2026-07-08
+
+### Changed
+- **Department dashboards reorganised around a single canonical registry.** New `mongoose/config/departmentsConfig.js` defines every department (slug, title, nav label, icon, allowed roles, order). Everything previously duplicated across five files is now derived from it: `roleDepartments` and the dashboard `routeAccess` entries in `rolePermissionsConfig.js` are computed; `indexController.js`'s twelve per-department exports (`renderAdmin`, `renderPayroll`, …) are replaced by a generic `renderDepartment(slug)`; `indexRoutes.js` generates one guarded route per registry entry; and the hardcoded top nav in `layout.ejs` (~80 lines of per-department blocks) is a single loop over the registry (exposed via `res.locals.departmentsConfig`).
+- **KashFlow department merged into Finance.** All KF_* external-link tiles and KashFlow-synced models (customers, invoices, quotes, purchases, projects, suppliers) now appear on the Finance dashboard; `/kashflow` redirects to `/finance`. Accountant access unchanged.
+- **Paperless and Company Docs merged into a new Documents department** at `/documents` — Paperless OCR tiles plus a new "Letterhead & Policies" tile linking `/company-docs`. `/paperless` (the dashboard) redirects to `/documents`; the `/paperless/ocr` routes are unchanged apart from their guard now checking the `documents` department. Top nav drops from 13 items to 11.
+- **Accountants can now open `/payroll`.** `roleDepartments` always granted accountants the payroll department (they saw the nav link) but the route guard was admin-only and 403'd — exactly the config drift this refactor removes. `/payroll/dashboard` already allowed accountants.
+- **`dashboardTilesConfig.js` regrouped into commented department sections**, with cleanups: the redundant Two-Factor Auth tile removed (the User Settings tile covers the same `/user/account` page and its description now mentions 2FA), and the management copy of the weekly attendance tile retitled "Weekly Attendance (Management)" to distinguish it from the payroll/HR tile.
+
 ## [6.8.23] - 2026-07-08
 
 ### Added

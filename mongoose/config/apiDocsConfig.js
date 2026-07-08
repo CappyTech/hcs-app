@@ -3023,6 +3023,8 @@ const apiDocs = [
         notes: [
           'BankBalance is server-computed from transactions — not writable.',
           'DefaultInvoicePaymentType.Name and DefaultPurchasePaymentType.Name are resolved server-side.',
+          'Live-verified 2026-07-08 (hcs-sync shape capture, 9 accounts): every field above is always present. Feed* fields are empty strings (not null) when no bank feed is connected, LastTransactionImportDate is null, and BankFeedsAccountId is 0.',
+          'TransactionLockDate and ReconcileDate return date-only strings (e.g. "2017-05-02").',
         ],
       },
       {
@@ -3121,6 +3123,8 @@ const apiDocs = [
         notes: [
           'StartingDate, StartingAmount, ShowPaidInFirst, IncludeOnDashBoard, Note, and OverrideTransactionLock are only returned by this endpoint — not the list endpoints.',
           'BankBalance is server-computed.',
+          'Live-verified 2026-07-08 (hcs-sync shape capture): StartingDate uses "YYYY-MM-DD HH:mm:ss" ("1970-01-01 12:00:00" when never set); TransactionLockDate and ReconcileDate are date-only strings.',
+          'Order is unreliable on this endpoint — the same account returned Order 0 here but Order 1 in the list response. Use the list endpoint for display order.',
         ],
       },
       {

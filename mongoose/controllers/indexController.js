@@ -5,6 +5,7 @@ const taskService = require("../services/taskService");
 const holidayService = require("../services/holidayService");
 const { getFrequentPages } = require("../services/sessionActivityService");
 const rbac = require("../config/rolePermissionsConfig");
+const departments = require("../config/departmentsConfig");
 const { endOfToday, endOfWeek, endOfMonth } = require("date-fns");
 
 const denyGuard = (config, op) =>
@@ -167,43 +168,19 @@ exports.completeTask = async (req, res, next) => {
   }
 };
 
-const departments = [
-  ["renderAdmin", "Admin", "admin"],
-  ["renderAttendance", "Attendance", "attendance"],
-  [
-    "renderConstructionIndustryScheme",
-    "Construction Industry Scheme",
-    "construction-industry-scheme",
-  ],
-  ["renderManagement", "Management", "management"],
-  ["renderMaintenance", "Maintenance", "maintenance"],
-  ["renderPayroll", "Payroll", "payroll"],
-  ["renderHumanResources", "Human Resources", "human-resources"],
-  ["renderKashflow", "Kashflow", "kashflow"],
-  ["renderCreate", "Create", "create"],
-  ["renderPaperless", "Paperless OCR Documents", "paperless"],
-  ["renderFinance", "Finance", "finance"],
-  ["renderUser", "User", "user"],
-];
-
-departments.forEach(([exportName, title, department]) => {
-  if (exportName === "renderCreate") {
-    exports[exportName] = (req, res, next) => {
-      const userRole = req.user?.role || "subcontractor";
-      const createModels = getCreateModels(userRole);
-      res.render(path.join("tailwindcss", "partials", "listModels"), {
-        title,
-        models: createModels,
-      });
-    };
-  } else {
-    exports[exportName] = (req, res, next) => {
-      const userRole = req.user?.role || "subcontractor";
-      const dashboardModels = getDashboardModels(department, userRole);
-      res.render(path.join("tailwindcss", "partials", "listModels"), {
-        title,
-        models: dashboardModels,
-      });
-    };
-  }
-});
+// Generic department dashboard renderer — one route per departmentsConfig
+// entry is wired up in indexRoutes.js.
+exports.renderDepartment = (slug) => {
+  const dept = departments[slug];
+  return (req, res, next) => {
+    const userRole = req.user?.role || "subcontractor";
+    const models =
+      dept.special === "create"
+        ? getCreateModels(userRole)
+        : getDashboardModels(slug, userRole);
+    res.render(path.join("tailwindcss", "partials", "listModels"), {
+      title: dept.title,
+      models,
+    });
+  };
+};

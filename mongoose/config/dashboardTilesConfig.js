@@ -1,4 +1,11 @@
+/**
+ * Custom dashboard tiles, grouped by department (see departmentsConfig.js
+ * for the canonical department registry). Model-backed tiles are generated
+ * from listControllerConfig.js — this file is for everything else:
+ * admin tools, external links, and workflow shortcuts.
+ */
 module.exports = {
+    // ── Admin ─────────────────────────────────────────────────────────
     DeletedItems: {
         title: 'Deleted Items',
         description: 'Browse and recover soft-deleted records.',
@@ -76,6 +83,22 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-emerald-700 hover:bg-emerald-800'
     },
+
+    // ── User ──────────────────────────────────────────────────────────
+    UserProfile: {
+        title: 'Profile',
+        description: 'View and manage your profile information.',
+        link: '/user/profile',
+        department: ['user'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    UserSettings: {
+        title: 'Settings',
+        description: 'Manage your account, password, preferences, and two-factor authentication.',
+        link: '/user/account',
+        department: ['user'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     GdprRequests: {
         title: 'My GDPR Requests',
         description: 'Submit or track your data subject rights requests (access, erasure, rectification, etc.).',
@@ -83,48 +106,59 @@ module.exports = {
         department: ['user'],
         buttonClass: 'bg-green-600 hover:bg-green-700'
     },
+    Logout: {
+        title: 'Logout',
+        description: 'Sign out of your account.',
+        link: '/user/logout',
+        department: ['user'],
+        buttonClass: 'bg-red-700 hover:bg-red-800'
+    },
+
+    // ── Attendance ────────────────────────────────────────────────────
     SubmitAttendance: {
         title: 'Submit Attendance',
         description: 'Submit your daily attendance records.',
         link: '/attendance/submit',
         department: ['attendance'],
-        buttonClass: 'bg-green-700 hover:bg-green-800',
+        buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     MyDailyAttendance: {
         title: 'Your Daily Attendance',
         description: 'View your daily attendance history.',
         link: '/daily',
         department: ['attendance'],
-        buttonClass: 'bg-green-700 hover:bg-green-800',
+        buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     MyWeeklyAttendance: {
         title: 'Your Weekly Attendance',
         description: 'View your weekly attendance history.',
         link: '/weekly',
         department: ['attendance'],
-        buttonClass: 'bg-green-700 hover:bg-green-800',
-    },
-    WeeklyAttendance: {
-        title: 'Weekly Attendance',
-        description: 'View weekly attendance records',
-        link: '/weekly',
-        department: ['payroll', 'human-resources'],
-        buttonClass: 'bg-green-700 hover:bg-green-800',
-    },
-    WeeklyAttendanceManagement: {
-        title: 'Weekly Attendance',
-        description: 'View weekly attendance records',
-        link: '/weekly-management',
-        department: ['management'],
-        buttonClass: 'bg-green-700 hover:bg-green-800',
+        buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     DailyAttendance: {
         title: 'Daily Attendance',
         description: 'View daily attendance records',
         link: '/daily',
         department: ['payroll', 'human-resources'],
-        buttonClass: 'bg-green-700 hover:bg-green-800',
+        buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    WeeklyAttendance: {
+        title: 'Weekly Attendance',
+        description: 'View weekly attendance records',
+        link: '/weekly',
+        department: ['payroll', 'human-resources'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    WeeklyAttendanceManagement: {
+        title: 'Weekly Attendance (Management)',
+        description: 'Weekly attendance management view with approvals.',
+        link: '/weekly-management',
+        department: ['management'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+
+    // ── Construction Industry Scheme ──────────────────────────────────
     CISDashboard: {
         title: 'CIS Dashboard',
         description: 'Submit CIS returns.',
@@ -146,63 +180,8 @@ module.exports = {
         department: ['construction-industry-scheme'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
-    KF_Customers: {
-        title: 'KF Customers',
-        description: 'View KF Customers',
-        link: 'https://app.kashflow.com/#customers',
-        department: ['kashflow'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
-    },
-    KF_Invoices: {
-        title: 'KF Invoices',
-        description: 'View KF Invoices',
-        link: 'https://app.kashflow.com/#invoices',
-        department: ['kashflow'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
-    },
-    KF_Projects: {
-        title: 'KF Projects',
-        description: 'View KF Projects',
-        link: 'https://app.kashflow.com/projects.asp',
-        department: ['kashflow'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
-    },
-    KF_Quotes: {
-        title: 'KF Quotes',
-        description: 'View KF Quotes',
-        link: 'https://app.kashflow.com/#quotes',
-        department: ['kashflow'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
-    },
-    KF_Receipts: {
-        title: 'KF Receipts',
-        description: 'View KF Receipts',
-        link: 'https://app.kashflow.com/#receipts',
-        department: ['kashflow'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
-    },
-    KF_Suppliers: {
-        title: 'KF Suppliers',
-        description: 'View KF Suppliers',
-        link: 'https://app.kashflow.com/#suppliers',
-        department: ['kashflow'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
-    },
-    Paperlessngx: {
-        title: 'Document Management',
-        description: 'Manage OCR documents imported from docs.heroncs.co.uk.',
-        link: '/paperless/ocr',
-        department: ['paperless'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
-    ExternalPaperlessngx: {
-        title: 'External Document Management',
-        description: 'Access the external purchase invoice document management system.',
-        link: 'https://docs.heroncs.co.uk',
-        department: ['paperless'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
 
-    },
+    // ── Finance (incl. former KashFlow department) ────────────────────
     PayrollOverview: {
         title: 'Payroll Overview',
         description: 'Tax year summary, monthly breakdown, and HMRC submissions.',
@@ -224,6 +203,73 @@ module.exports = {
         department: ['finance', 'payroll'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
+    KF_Customers: {
+        title: 'KF Customers',
+        description: 'View KF Customers',
+        link: 'https://app.kashflow.com/#customers',
+        department: ['finance'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    KF_Invoices: {
+        title: 'KF Invoices',
+        description: 'View KF Invoices',
+        link: 'https://app.kashflow.com/#invoices',
+        department: ['finance'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    KF_Projects: {
+        title: 'KF Projects',
+        description: 'View KF Projects',
+        link: 'https://app.kashflow.com/projects.asp',
+        department: ['finance'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    KF_Quotes: {
+        title: 'KF Quotes',
+        description: 'View KF Quotes',
+        link: 'https://app.kashflow.com/#quotes',
+        department: ['finance'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    KF_Receipts: {
+        title: 'KF Receipts',
+        description: 'View KF Receipts',
+        link: 'https://app.kashflow.com/#receipts',
+        department: ['finance'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    KF_Suppliers: {
+        title: 'KF Suppliers',
+        description: 'View KF Suppliers',
+        link: 'https://app.kashflow.com/#suppliers',
+        department: ['finance'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+
+    // ── Documents (Paperless OCR + company docs) ──────────────────────
+    Paperlessngx: {
+        title: 'Document Management',
+        description: 'Manage OCR documents imported from docs.heroncs.co.uk.',
+        link: '/paperless/ocr',
+        department: ['documents'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    ExternalPaperlessngx: {
+        title: 'External Document Management',
+        description: 'Access the external purchase invoice document management system.',
+        link: 'https://docs.heroncs.co.uk',
+        department: ['documents'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
+    },
+    CompanyDocs: {
+        title: 'Letterhead & Policies',
+        description: 'Manage the company letterhead and internal policy documents.',
+        link: '/company-docs',
+        department: ['documents'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+
+    // ── Management ────────────────────────────────────────────────────
     ExternalOneDrive: {
         title: 'Microsoft OneDrive',
         description: 'Access OneDrive for document storage and management.',
@@ -231,6 +277,8 @@ module.exports = {
         department: ['management'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
+
+    // ── Maintenance ───────────────────────────────────────────────────
     FleetManagement: {
         title: 'Fleet Overview',
         description: 'Manage company vehicles, compliance and assignments.',
@@ -238,6 +286,8 @@ module.exports = {
         department: ['maintenance'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+
+    // ── Human Resources ───────────────────────────────────────────────
     HolidayManagement: {
         title: 'Holiday Overview',
         description: 'Manage holiday accrual, requests and approvals.',
@@ -251,35 +301,5 @@ module.exports = {
         link: '/holidayRequests',
         department: ['human-resources', 'management'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
-    UserProfile: {
-        title: 'Profile',
-        description: 'View and manage your profile information.',
-        link: '/user/profile',
-        department: ['user'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
-    UserSettings: {
-        title: 'Settings',
-        description: 'Manage your account and preferences.',
-        link: '/user/account',
-        department: ['user'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
-    TwoFactorAuth: {
-        title: 'Two-Factor Auth',
-        description: 'Set up or manage your TOTP two-factor authentication.',
-        // 2FA setup/management lives on the account page. /user/2fa is the
-        // pre-login challenge and only works mid-login (requires userPending2FA).
-        link: '/user/account',
-        department: ['user'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
-    Logout: {
-        title: 'Logout',
-        description: 'Sign out of your account.',
-        link: '/user/logout',
-        department: ['user'],
-        buttonClass: 'bg-red-700 hover:bg-red-800'
     }
 };

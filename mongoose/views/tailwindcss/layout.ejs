@@ -99,84 +99,20 @@
           <i class="bi bi-house text-base"></i>
           <span class="hidden sm:inline">Home</span>
         </a>
-        <% if (canDept('admin')) { %>
-        <a href="/admin" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/admin') %>">
-          <i class="bi bi-shield-lock text-base"></i>
-          <span class="hidden sm:inline">Admin</span>
+        <% Object.entries(departmentsConfig).forEach(([slug, dept]) => {
+             if (dept.showInNav === false || !canDept(slug)) return;
+             const href = dept.path || '/' + slug;
+             // Create gets the accented green style; everything else the standard nav style
+             const cls = dept.special === 'create'
+               ? 'font-medium ' + (navActive(href)
+                   ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30'
+                   : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30')
+               : _navCls(href); %>
+        <a href="<%= href %>" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= cls %>">
+          <i class="bi <%= dept.icon %> text-base"></i>
+          <span class="hidden sm:inline"><%= dept.navLabel %></span>
         </a>
-        <% } %>
-        <% if (canDept('construction-industry-scheme')) { %>
-        <a href="/construction-industry-scheme" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/construction-industry-scheme') %>">
-          <i class="bi bi-building text-base"></i>
-          <span class="hidden sm:inline">CIS</span>
-        </a>
-        <% } %>
-        <% if (canDept('management')) { %>
-        <a href="/management" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/management') %>">
-          <i class="bi bi-folder2-open text-base"></i>
-          <span class="hidden sm:inline">Management</span>
-        </a>
-        <% } %>
-        <% if (canDept('maintenance')) { %>
-        <a href="/maintenance" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/maintenance') %>">
-          <i class="bi bi-tools text-base"></i>
-          <span class="hidden sm:inline">Maintenance</span>
-        </a>
-        <% } %>
-        <% if (canDept('payroll')) { %>
-        <a href="/payroll" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/payroll') %>">
-          <i class="bi bi-cash-coin text-base"></i>
-          <span class="hidden sm:inline">Payroll</span>
-        </a>
-        <% } %>
-        <% if (canDept('human-resources')) { %>
-        <a href="/human-resources" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/human-resources') %>">
-          <i class="bi bi-people text-base"></i>
-          <span class="hidden sm:inline">HR</span>
-        </a>
-        <% } %>
-        <% if (canDept('paperless')) { %>
-        <a href="/paperless" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/paperless') %>">
-          <i class="bi bi-file-earmark-text text-base"></i>
-          <span class="hidden sm:inline">Documents</span>
-        </a>
-        <% } %>
-        <% if (canDept('company-docs')) { %>
-        <a href="/company-docs" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/company-docs') %>">
-          <i class="bi bi-file-earmark-richtext text-base"></i>
-          <span class="hidden sm:inline">Docs</span>
-        </a>
-        <% } %>
-        <% if (canDept('finance')) { %>
-        <a href="/finance" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/finance') %>">
-          <i class="bi bi-wallet2 text-base"></i>
-          <span class="hidden sm:inline">Finance</span>
-        </a>
-        <% } %>
-        <% if (canDept('kashflow')) { %>
-        <a href="/kashflow" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/kashflow') %>">
-          <i class="bi bi-graph-up text-base"></i>
-          <span class="hidden sm:inline">KashFlow</span>
-        </a>
-        <% } %>
-        <% if (canDept('attendance')) { %>
-        <a href="/attendance" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/attendance') %>">
-          <i class="bi bi-calendar-check text-base"></i>
-          <span class="hidden sm:inline">Attendance</span>
-        </a>
-        <% } %>
-        <% if (canDept('admin')) { %>
-        <a href="/create" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition font-medium <%= navActive('/create') ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30' : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30' %>">
-          <i class="bi bi-plus-circle text-base"></i>
-          <span class="hidden sm:inline">Create</span>
-        </a>
-        <% } %>
-        <% if (canDept('user')) { %>
-        <a href="/user" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/user') %>">
-          <i class="bi bi-person-circle text-base"></i>
-          <span class="hidden sm:inline">User</span>
-        </a>
-        <% } %>
+        <% }) %>
         <a href="/help" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/help') %>">
           <i class="bi bi-question-circle text-base"></i>
           <span class="hidden sm:inline">Help</span>

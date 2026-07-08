@@ -316,6 +316,7 @@ const main = async () => {
 
     // Attach user info to templates
     const rbac = require('./mongoose/config/rolePermissionsConfig');
+    const departmentsConfig = require('./mongoose/config/departmentsConfig');
     appRouter.use((req, res, next) => {
       res.locals.currentPath = req.path;
       res.locals.navActive = (href) =>
@@ -331,6 +332,8 @@ const main = async () => {
         : [];
       // Helper: check if user can access a department (usable in templates)
       res.locals.canDept = (dept) => req.user ? rbac.canAccessDepartment(req.user.role, dept, _customPerms) : false;
+      // Canonical department registry — drives the top nav in layout.ejs
+      res.locals.departmentsConfig = departmentsConfig;
       // Helper: check CRUD access on a model
       res.locals.canModel = (model, op) => req.user ? rbac.canAccess(req.user.role, model, op, _customPerms).allowed : false;
       // Expose role flags for template convenience

@@ -7,47 +7,20 @@
  * Roles: none | admin | accountant | employee | subcontractor | client | hmrc
  */
 
+const departmentsConfig = require('./departmentsConfig');
+
 // ── Departments each role may access ──────────────────────────────────
-const roleDepartments = {
-  none: [],
-  admin: [
-    'admin',
-    'attendance',
-    'construction-industry-scheme',
-    'management',
-    'maintenance',
-    'payroll',
-    'human-resources',
-    'kashflow',
-    'paperless',
-    'finance',
-    'company-docs',
-    'user',
-  ],
-  accountant: [
-    'construction-industry-scheme',
-    'kashflow',
-    'finance',
-    'payroll',
-    'user',
-  ],
-  employee: [
-    'attendance',
-    'user',
-  ],
-  subcontractor: [
-    'attendance',
-    'construction-industry-scheme', // own CIS returns only
-    'user',
-  ],
-  client: [
-    'user',
-  ],
-  hmrc: [
-    'construction-industry-scheme',
-    'user',
-  ],
-};
+// Derived from departmentsConfig roles: ['public'] departments go to every
+// role except 'none' (unassigned users keep an empty nav).
+const ALL_ROLES = ['admin', 'accountant', 'employee', 'subcontractor', 'client', 'hmrc'];
+const roleDepartments = { none: [] };
+for (const role of ALL_ROLES) roleDepartments[role] = [];
+for (const [slug, dept] of Object.entries(departmentsConfig)) {
+  const roles = dept.roles.includes('public') ? ALL_ROLES : dept.roles;
+  for (const role of roles) {
+    if (roleDepartments[role]) roleDepartments[role].push(slug);
+  }
+}
 
 // ── CRUD permissions per model per role ───────────────────────────────
 // Operations: c = create, r = read, u = update, d = delete, l = list
@@ -169,19 +142,20 @@ const routeAccess = {
   '/receipts/change-submission': ['admin'],
   '/purchase/change':            ['admin'],
 
-  // Department dashboards
-  '/admin':               ['admin'],
-  '/attendance':          ['admin', 'employee', 'subcontractor'],
-  '/construction-industry-scheme': ['admin', 'accountant', 'hmrc', 'subcontractor'],
-  '/management':          ['admin'],
-  '/maintenance':         ['admin'],
+  // Department dashboards — generated from departmentsConfig
+  ...Object.fromEntries(
+    Object.entries(departmentsConfig)
+      .filter(([, dept]) => dept.hasDashboard !== false)
+      .map(([slug, dept]) => [
+        dept.path || `/${slug}`,
+        dept.roles.includes('public') ? '*' : dept.roles,
+      ]),
+  ),
   '/payroll/dashboard':   ['admin', 'accountant'],
-  '/human-resources':     ['admin'],
+  // Legacy dashboard URLs that now redirect (kashflow → finance,
+  // paperless dashboard → documents; /paperless/* OCR routes listed below)
   '/kashflow':            ['admin', 'accountant'],
-  '/create':              ['admin'],
   '/paperless':           ['admin'],
-  '/finance':             ['admin', 'accountant'],
-  '/user':                '*',
 
   // Settings / profile (all authenticated users)
   '/user/profile':        '*',

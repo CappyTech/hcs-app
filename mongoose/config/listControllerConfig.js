@@ -301,7 +301,7 @@ module.exports = {
     },
     sortField: 'Name',
     sortOrder: 1,
-    department: ['kashflow'],
+    department: ['finance'],
     deny: ['c', 'u', 'd'],
     // IsArchived is Boolean — controller casts 'true'/'false' strings to boolean for the query
     tabsby: 'IsArchived',
@@ -456,7 +456,7 @@ module.exports = {
       'EmailCount', 'InvoiceInECMemberState', 'InvoiceOutsideECMemberState', 'UpdateCustomerAddress'],
     sortField: 'Number',
     sortOrder: -1,
-    department: ['kashflow'],
+    department: ['finance'],
     deny: ['c', 'u', 'd'],
     // Tabs give one-click access to the most common status filters
     tabsby: 'Status',
@@ -545,7 +545,7 @@ module.exports = {
       // already shown via ActualSalesAmount / ActualPurchasesAmount
       // ActualJournalsAmount — manual journal adjustments, rarely used; shown on detail
       'ExcludeVAT', 'ActualSalesVATAmount', 'ActualPurchasesVATAmount', 'ActualJournalsAmount'],
-    department: ['kashflow'],
+    department: ['finance'],
     deny: ['c', 'u', 'd'],
     handlesDocuments: true,
     labelOverrides: {
@@ -622,7 +622,7 @@ module.exports = {
       'Status', 'Category', 'Currency'],
     sortField: 'Number',
     sortOrder: -1,
-    department: ['kashflow'],
+    department: ['finance'],
     deny: ['c', 'u', 'd'],
     filters: [
       { field: 'Status', label: 'Status', type: 'select', options: [
@@ -703,7 +703,7 @@ module.exports = {
     searchFields: ['Number', 'SupplierReference'],
     sortField: 'Number',
     sortOrder: -1,
-    department: ['kashflow'],
+    department: ['finance'],
     deny: ['c', 'u', 'd'],
     // Tabs give one-click access to the most common status filters
     tabsby: 'Status',
@@ -887,7 +887,7 @@ module.exports = {
     },
     sortField: 'Name',
     sortOrder: 1,
-    department: ['kashflow', 'construction-industry-scheme'],
+    department: ['finance', 'construction-industry-scheme'],
     deny: ['c', 'u', 'd'],
     // IsArchived is Boolean — controller casts 'true'/'false' strings to boolean for the query
     tabsby: 'IsArchived',
@@ -1252,7 +1252,7 @@ module.exports = {
     fieldOrder: ['title', 'documentType','modified', 'fetchedAt', 'error'],
     sortField: 'modified',
     sortOrder: -1,
-    department: ['paperless'],
+    department: ['documents'],
     deny: ['c', 'u', 'd'],
   },
   OcrDocumentIngest: {
@@ -1265,7 +1265,7 @@ module.exports = {
     fieldOrder: ['paperlessId', 'status', 'lastModified', 'lastFetchedAt', 'error'],
     sortField: 'lastFetchedAt',
     sortOrder: -1,
-    department: ['paperless'],
+    department: ['documents'],
     deny: ['c', 'u', 'd'],
   },
   nominal: {

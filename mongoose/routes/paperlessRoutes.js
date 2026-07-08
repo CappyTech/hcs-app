@@ -15,11 +15,11 @@ const grabLimiter = rateLimit({
   keyGenerator: (req) => getClientIp(req),
 });
 
-// Shared guard layers — authenticated + admin role + paperless department
+// Shared guard layers — authenticated + admin role + documents department
 const paperlessGuard = [
   authService.ensureAuthenticated,
   authService.ensureRole(),
-  authService.ensureDepartment("paperless"),
+  authService.ensureDepartment("documents"),
 ];
 
 router.get("/paperless/ocr", ...paperlessGuard, ctrl.listOcr);
