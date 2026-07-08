@@ -456,6 +456,77 @@ exports.getPurchaseDraft = async (req, res, next) => {
       }
     }
 
+    const isSubcontractor = /subcontract/i.test(doc?.documentType?.name || "");
+
+    // Subcontractor-only: bank accounts synced from KashFlow (hcs-sync) for the
+    // payment-line Account selector, plus Method suggestions from PaymentLines
+    // already present on synced purchases.
+    let bankAccounts = [];
+    let paymentAccounts = [];
+    let paymentMethods = [];
+    if (isSubcontractor) {
+      const BankAccount = mdb.REST && mdb.REST.bankAccount;
+      if (BankAccount) {
+        try {
+          bankAccounts = await BankAccount.find({
+            $or: [{ IsArchived: { $ne: true } }, { IsArchived: { $exists: false } }],
+          })
+            .select("Id AccountName Code IsDefaultAccount")
+            .sort({ IsDefaultAccount: -1, AccountName: 1 })
+            .lean();
+        } catch (e) {
+          logger.warn("Failed to load bank accounts for draft view: " + e.message);
+        }
+      }
+      const PurchaseModel = mdb.REST && mdb.REST.purchase;
+      if (PurchaseModel) {
+        try {
+          const agg = await PurchaseModel.aggregate([
+            {
+              $project: {
+                pl: { $ifNull: ["$PaymentLines", "$data.PaymentLines"] },
+              },
+            },
+            { $unwind: "$pl" },
+            {
+              $facet: {
+                accounts: [
+                  { $match: { "pl.AccountId": { $type: "number" } } },
+                  {
+                    $group: {
+                      _id: "$pl.AccountId",
+                      count: { $sum: 1 },
+                      lastDate: { $max: "$pl.Date" },
+                    },
+                  },
+                  { $sort: { count: -1 } },
+                  { $limit: 20 },
+                ],
+                methods: [
+                  { $match: { "pl.Method": { $type: "number" } } },
+                  { $group: { _id: "$pl.Method", count: { $sum: 1 } } },
+                  { $sort: { count: -1 } },
+                  { $limit: 20 },
+                ],
+              },
+            },
+          ]);
+          paymentAccounts = (agg?.[0]?.accounts || []).map((a) => ({
+            AccountId: a._id,
+            count: a.count,
+          }));
+          paymentMethods = (agg?.[0]?.methods || []).map((m) => ({
+            Method: m._id,
+            count: m.count,
+          }));
+        } catch (e) {
+          logger.warn(
+            "Failed to aggregate payment account suggestions: " + e.message,
+          );
+        }
+      }
+    }
+
     const payloadPreview = (() => {
       try {
         return buildKashFlowPayloadFromDraft(draft);
@@ -477,7 +548,6 @@ exports.getPurchaseDraft = async (req, res, next) => {
         (process.env.KASHFLOW_MEMORABLE || process.env.KFMEMORABLE))
     );
     const webhookUrl = process.env.KASHFLOW_CREATOR_WEBHOOK_URL || "";
-    const isSubcontractor = /subcontract/i.test(doc?.documentType?.name || "");
     res.render(path.join("tailwindcss", "paperless", "draft"), {
       title: isSubcontractor
         ? `Subcontractor Invoice Draft • #${paperlessId}`
@@ -492,6 +562,9 @@ exports.getPurchaseDraft = async (req, res, next) => {
       sources,
       nominalMap,
       activeProjects,
+      bankAccounts,
+      paymentAccounts,
+      paymentMethods,
       sendDirectEnabled: hasDirectAuth,
       sendWebhookEnabled: !!webhookUrl,
       kashflowApiBaseUrl: KF_BASE,
@@ -745,6 +818,125 @@ exports.sendDraftToKashflow = async (req, res, next) => {
         }
         draft.LineItems[i] = li;
       }
+    }
+
+    // Subcontractor-only: append user-added line items posted from the draft view.
+    // Each entry carries its own nominal/project so it doesn't disturb the
+    // index-aligned nominalCodes[]/projectNumbers[] arrays above.
+    if (isSubcontractor && req.body && req.body.extraLines) {
+      let extras;
+      try {
+        extras = JSON.parse(String(req.body.extraLines));
+      } catch (_) {
+        extras = null;
+      }
+      if (!Array.isArray(extras)) {
+        req.flash("error", "Could not read the added line items. Please re-check them and try again.");
+        await releaseSendClaim();
+        return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+      }
+      const toNum = (v) => {
+        if (v == null || v === "") return undefined;
+        const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+        return Number.isFinite(n) ? n : undefined;
+      };
+      for (let i = 0; i < extras.length; i++) {
+        const ex = extras[i] || {};
+        const desc = String(ex.Description || "").trim();
+        const qty = toNum(ex.Quantity) ?? 1;
+        const unit = toNum(ex.UnitPrice);
+        const vatAmt = toNum(ex.VATAmount) ?? 0;
+        // Skip fully empty rows
+        if (!desc && unit == null) continue;
+        if (!desc || unit == null || qty <= 0) {
+          req.flash(
+            "error",
+            `Added line ${i + 1} is incomplete: description, quantity and unit price are required.`,
+          );
+          await releaseSendClaim();
+          return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+        }
+        const netAmt = +(qty * unit).toFixed(2);
+        const line = {
+          Description: desc,
+          Quantity: qty,
+          UnitPrice: unit,
+          NetAmount: netAmt,
+          VATAmount: +vatAmt.toFixed(2),
+          GrossAmount: +(netAmt + vatAmt).toFixed(2),
+        };
+        const nom = toNum(ex.NominalCode);
+        if (
+          nom != null &&
+          Number.isInteger(nom) &&
+          (!allowedNominalCodes || allowedNominalCodes.has(nom))
+        ) {
+          line.NominalCode = nom;
+        }
+        const pn = toNum(ex.ProjectNumber);
+        if (pn != null && Number.isInteger(pn) && pn > 0) {
+          line.ProjectNumber = pn;
+        }
+        draft.LineItems.push(line);
+      }
+    }
+
+    // Subcontractor-only: attach payment lines posted from the draft view.
+    // These pass through buildKashFlowPayloadFromDraft as PaymentLines.
+    if (isSubcontractor && req.body && req.body.paymentLines) {
+      let pls;
+      try {
+        pls = JSON.parse(String(req.body.paymentLines));
+      } catch (_) {
+        pls = null;
+      }
+      if (!Array.isArray(pls)) {
+        req.flash("error", "Could not read the payment lines. Please re-check them and try again.");
+        await releaseSendClaim();
+        return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+      }
+      const toNum = (v) => {
+        if (v == null || v === "") return undefined;
+        const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+        return Number.isFinite(n) ? n : undefined;
+      };
+      const paymentLines = [];
+      for (let i = 0; i < pls.length; i++) {
+        const pl = pls[i] || {};
+        const accountId = toNum(pl.AccountId);
+        const amount = toNum(pl.Amount);
+        const dateStr = String(pl.Date || "").trim();
+        const method = toNum(pl.Method);
+        const note = String(pl.Note || "").trim();
+        // Skip fully empty rows
+        if (accountId == null && amount == null && !dateStr && !note) continue;
+        if (accountId == null || !Number.isInteger(accountId) || accountId <= 0 || amount == null || amount === 0) {
+          req.flash(
+            "error",
+            `Payment line ${i + 1} is incomplete: a valid Account Id and a non-zero amount are required.`,
+          );
+          await releaseSendClaim();
+          return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+        }
+        let date;
+        if (dateStr) {
+          const d = new Date(dateStr);
+          if (isNaN(d)) {
+            req.flash("error", `Payment line ${i + 1} has an invalid date.`);
+            await releaseSendClaim();
+            return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+          }
+          date = d;
+        }
+        paymentLines.push({
+          AccountId: accountId,
+          Amount: +amount.toFixed(2),
+          Date: date,
+          Method: method != null && Number.isInteger(method) ? method : undefined,
+          Note: note || undefined,
+        });
+      }
+      if (paymentLines.length > 0) draft.PaymentLines = paymentLines;
     }
 
     // Look up project names for any line-level project numbers and propagate to header

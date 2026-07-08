@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.8.23] - 2026-07-08
+
+### Added
+- **Subcontractor drafts: add extra line items in the draft view.** An "Add line item" button (subcontractor documents only) appends editable rows — description, qty, unit price, VAT amount, with the same Project and Nominal dropdowns as server-built lines and live Net/Gross calculation. Added rows are validated server-side (description/qty/unit price required, nominal checked against purchase-classified nominals) and appended to the KashFlow payload; they travel as a separate `extraLines` JSON field so the index-aligned `nominalCodes[]`/`projectNumbers[]` arrays for server-built lines are undisturbed.
+- **Subcontractor drafts: payment lines.** A new "Payment Lines" card lets you record payment(s) in the same send — account, amount, date, method, note — passed through to KashFlow's `PaymentLines` on `POST /purchases`. The account selector is a named dropdown of bank accounts synced from KashFlow (new `bankAccount` REST model over hcs-sync 0.6.0's `bankaccounts` collection, default account first, archived excluded); when none are synced yet it falls back to a numeric Account Id input with suggestions aggregated from payments on previously synced purchases. Method suggestions come from the same aggregation. Server-side validation requires a positive integer Account Id and a non-zero amount per line. Recording payment at creation also lands the purchase in the correct CIS month on the next sync (hcs-sync derives `TaxYear`/`TaxMonth` from the earliest payment date).
+
+### Changed
+- Requires `@cappytech/hcs-schemas` 1.0.2 (adds the `bankAccount` entity and the previously-stripped `PaymentLines.BankTransactionId` field).
+
 ## [6.8.22] - 2026-07-07
 
 ### Security
