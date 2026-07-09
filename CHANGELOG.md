@@ -2,10 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.10.0] - 2026-07-09
+
+### Added
+- **Ten new KashFlow REST models**, extending 1-1 API parity with KashFlow (requires `@cappytech/hcs-schemas` 1.1.0; populated by hcs-sync 0.7.0): `bankTransaction`, `journal`, `product`, `purchaseOrder`, `purchaseOrderCategory`, `quoteCategory`, `currency`, `country`, `accountingPeriod`, `vatReturn`. All auto-registered into the REST namespace at startup; schemas use `strict: false` since KashFlow's documented shapes for these entities are incomplete.
+- **/help/api: seven new endpoint groups** — Journal, Product, PurchaseOrder, PurchaseOrderCategory, Currency, Country, AccountingPeriod (BankTransaction, VatReturn and QuoteCategory were already documented). 28 groups / 213 operations total.
+
 ## [6.9.1] - 2026-07-08
 
 ### Added
 - **Subcontractor drafts: added line items can be saved.** A "Save added lines" button persists the rows onto the OCR document in MongoDB (`draftExtraLines`, via `POST /paperless/ocr/:id/draft/extra-lines` — same guard chain as the draft, subcontractor documents only, same validation as sending — the send path's inline extra-line validation is extracted into a shared `parseExtraLineInput()` helper). Saved lines are restored as editable rows whenever the draft is reopened; saving with no rows clears them. Paperless custom fields only have `_Line1` slots, so extras live on the MongoDB document rather than being written back to Paperless. Sending remains screen-authoritative: what's in the table is what's sent, saved or not.
+
+### Fixed
+- **Subcontractor drafts with multiple enumerated lines defaulted rows 2+ to the wrong nominal.** The draft view's row-0 → Sub-contractors / row-1 → Materials nominal defaulting was written for the synthetic two-row labour+materials expansion but applied to every subcontractor draft — with N enumerated `_LineN` lines, row 2 was pre-set to Materials and rows 3+ to the supplier default (also Materials for JOHN02), and those pre-selected values were posted on send (purchase #14522: 8 of 9 labour lines created on 2700 instead of 5300). The labour/materials split now only applies to the fallback expansion; enumerated subcontractor lines default to the sub-contractors nominal.
 
 ## [6.9.0] - 2026-07-08
 

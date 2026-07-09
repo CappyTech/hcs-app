@@ -6714,6 +6714,552 @@ const apiDocs = [
       },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  JOURNALS
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'journals',
+    tag: 'Journal',
+    icon: 'bi-journal-text',
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    bgClass: 'bg-amber-500',
+    borderClass: 'border-amber-500',
+    operations: [
+      {
+        id: 'journals-get-list',
+        method: 'GET',
+        path: '/journals',
+        summary: 'List Journals',
+        description: 'Returns a paginated list of journals.',
+        request: {
+          fields: [
+            { name: 'page',    type: 'integer', required: false, description: 'Query parameter. Page number.' },
+            { name: 'perpage', type: 'integer', required: false, description: 'Query parameter. Records per page.' },
+          ],
+        },
+        response: {
+          status: 200,
+          description: 'Array (or paginated Data array) of journal objects.',
+          fields: [
+            { name: 'Id',          type: 'integer', description: 'Internal KashFlow journal ID.' },
+            { name: 'Number',      type: 'integer', description: 'Journal number.' },
+            { name: 'Date',        type: 'string',  description: 'Journal date.' },
+            { name: 'Description', type: 'string',  description: 'Journal description/narrative.' },
+            { name: 'Lines[]',     type: 'array',   description: 'Journal lines — nominal debit/credit pairs. Line shape is not fully documented by KashFlow.' },
+          ],
+        },
+        notes: [
+          'Synced to the `journals` collection by hcs-sync (list phase, best-effort).',
+        ],
+      },
+      {
+        id: 'journals-get-one',
+        method: 'GET',
+        path: '/journals/{number}',
+        summary: 'Get Journal',
+        description: 'Returns a single journal by its number.',
+        request: {
+          fields: [
+            { name: 'number', type: 'integer', required: true, description: 'Path parameter. Journal number.' },
+          ],
+        },
+        response: { status: 200, description: 'Journal object. Same fields as the list response.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'journals-create',
+        method: 'POST',
+        path: '/journals',
+        summary: 'Create Journal',
+        description: 'Creates a new journal.',
+        request: {
+          fields: [
+            { name: 'Date',        type: 'string', required: true,  description: 'Journal date.' },
+            { name: 'Description', type: 'string', required: false, description: 'Journal description.' },
+            { name: 'Lines',       type: 'array',  required: true,  description: 'Journal lines. Debits and credits must balance.' },
+          ],
+        },
+        response: { status: 201, description: 'Created journal object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'journals-update',
+        method: 'PUT',
+        path: '/journals/{number}',
+        summary: 'Update Journal',
+        description: 'Updates an existing journal by number.',
+        request: { fields: [
+          { name: 'number', type: 'integer', required: true, description: 'Path parameter. Journal number.' },
+        ] },
+        response: { status: 200, description: 'Updated journal object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'journals-delete',
+        method: 'DELETE',
+        path: '/journals/{number}',
+        summary: 'Delete Journal',
+        description: 'Deletes a journal by number.',
+        request: { fields: [
+          { name: 'number', type: 'integer', required: true, description: 'Path parameter. Journal number.' },
+        ] },
+        response: { status: 204, description: 'No content on success.', fields: [] },
+        notes: [],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  PRODUCTS
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'products',
+    tag: 'Product',
+    icon: 'bi-box-seam',
+    colorClass: 'text-teal-600 dark:text-teal-400',
+    bgClass: 'bg-teal-500',
+    borderClass: 'border-teal-500',
+    operations: [
+      {
+        id: 'products-get-list',
+        method: 'GET',
+        path: '/products',
+        summary: 'List Products',
+        description: 'Returns the list of products (sales items / stock).',
+        request: {
+          fields: [
+            { name: 'page',    type: 'integer', required: false, description: 'Query parameter. Page number.' },
+            { name: 'perpage', type: 'integer', required: false, description: 'Query parameter. Records per page.' },
+          ],
+        },
+        response: {
+          status: 200,
+          description: 'Array of product objects.',
+          fields: [
+            { name: 'Id',              type: 'integer', description: 'Internal KashFlow product ID.' },
+            { name: 'Code',            type: 'string',  description: 'Product code.' },
+            { name: 'Name',            type: 'string',  description: 'Product name.' },
+            { name: 'Description',     type: 'string',  description: 'Product description.' },
+            { name: 'Price',           type: 'number',  description: 'Unit sales price (net).' },
+            { name: 'WholesalePrice',  type: 'number',  description: 'Wholesale price.' },
+            { name: 'VATRate',         type: 'number',  description: 'Default VAT rate percentage.' },
+            { name: 'NominalCode',     type: 'integer', description: 'Default nominal code for sales of this product.' },
+            { name: 'ManagesStock',    type: 'boolean', description: 'Whether stock levels are tracked.' },
+            { name: 'QuantityInStock', type: 'number',  description: 'Current stock quantity.' },
+            { name: 'WarnAt',          type: 'number',  description: 'Low-stock warning threshold.' },
+          ],
+        },
+        notes: [
+          'Synced to the `products` collection by hcs-sync (list phase, best-effort).',
+        ],
+      },
+      {
+        id: 'products-get-one',
+        method: 'GET',
+        path: '/products/{id}',
+        summary: 'Get Product',
+        description: 'Returns a single product by ID.',
+        request: { fields: [
+          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Product ID.' },
+        ] },
+        response: { status: 200, description: 'Product object. Same fields as the list response.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'products-create',
+        method: 'POST',
+        path: '/products',
+        summary: 'Create Product',
+        description: 'Creates a new product.',
+        request: { fields: [
+          { name: 'Name',  type: 'string', required: true,  description: 'Product name.' },
+          { name: 'Code',  type: 'string', required: false, description: 'Product code.' },
+          { name: 'Price', type: 'number', required: false, description: 'Unit price.' },
+        ] },
+        response: { status: 201, description: 'Created product object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'products-update',
+        method: 'PUT',
+        path: '/products/{id}',
+        summary: 'Update Product',
+        description: 'Updates an existing product.',
+        request: { fields: [
+          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Product ID.' },
+        ] },
+        response: { status: 200, description: 'Updated product object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'products-delete',
+        method: 'DELETE',
+        path: '/products/{id}',
+        summary: 'Delete Product',
+        description: 'Deletes a product by ID.',
+        request: { fields: [
+          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Product ID.' },
+        ] },
+        response: { status: 204, description: 'No content on success.', fields: [] },
+        notes: [],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  PURCHASE ORDERS
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'purchase-orders',
+    tag: 'PurchaseOrder',
+    icon: 'bi-cart-check',
+    colorClass: 'text-sky-600 dark:text-sky-400',
+    bgClass: 'bg-sky-500',
+    borderClass: 'border-sky-500',
+    operations: [
+      {
+        id: 'purchaseorders-get-list',
+        method: 'GET',
+        path: '/purchaseorders',
+        summary: 'List Purchase Orders',
+        description: 'Returns a paginated list of purchase orders. Shape mirrors /purchases.',
+        request: {
+          fields: [
+            { name: 'page',    type: 'integer', required: false, description: 'Query parameter. Page number.' },
+            { name: 'perpage', type: 'integer', required: false, description: 'Query parameter. Records per page.' },
+          ],
+        },
+        response: {
+          status: 200,
+          description: 'Paginated { MetaData, Data } purchase order list.',
+          fields: [
+            { name: 'Id',                type: 'integer', description: 'Internal KashFlow purchase order ID.' },
+            { name: 'Number',            type: 'integer', description: 'Purchase order number.' },
+            { name: 'IssuedDate',        type: 'string',  description: 'Issue date.' },
+            { name: 'DeliveryDate',      type: 'string',  description: 'Expected delivery date.' },
+            { name: 'SupplierCode',      type: 'string',  description: 'Supplier code.' },
+            { name: 'SupplierName',      type: 'string',  description: 'Resolved supplier name.' },
+            { name: 'SupplierReference', type: 'string',  description: 'Supplier reference.' },
+            { name: 'NetAmount',         type: 'number',  description: 'Net total.' },
+            { name: 'VATAmount',         type: 'number',  description: 'VAT total.' },
+            { name: 'GrossAmount',       type: 'number',  description: 'Gross total.' },
+            { name: 'Status',            type: 'string',  description: 'Order status.' },
+            { name: 'Category',          type: 'object',  description: 'Purchase order category ({Number, Name, IconType, IconColor}).' },
+            { name: 'LineItems[]',       type: 'array',   description: 'Order lines. Same shape as purchase line items.' },
+            { name: 'IsEmailSent',       type: 'boolean', description: 'Whether the order has been emailed.' },
+          ],
+        },
+        notes: [
+          'Synced to the `purchaseorders` collection by hcs-sync (list phase, best-effort).',
+          'Use GET /nextavailablepurchaseordernumber for the next free number.',
+        ],
+      },
+      {
+        id: 'purchaseorders-get-one',
+        method: 'GET',
+        path: '/purchaseorders/{number}',
+        summary: 'Get Purchase Order',
+        description: 'Returns a single purchase order by number.',
+        request: { fields: [
+          { name: 'number', type: 'integer', required: true, description: 'Path parameter. Purchase order number.' },
+        ] },
+        response: { status: 200, description: 'Purchase order object. Same fields as the list response plus Permalink and PreviousNumber/NextNumber.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'purchaseorders-create',
+        method: 'POST',
+        path: '/purchaseorders',
+        summary: 'Create Purchase Order',
+        description: 'Creates a new purchase order. Body mirrors POST /purchases (SupplierCode + LineItems).',
+        request: { fields: [
+          { name: 'SupplierCode', type: 'string', required: 'conditional', description: 'Supplier code to link the order to.' },
+          { name: 'LineItems',    type: 'array',  required: true,          description: 'At least one line item.' },
+        ] },
+        response: { status: 201, description: 'Created purchase order object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'purchaseorders-update',
+        method: 'PUT',
+        path: '/purchaseorders/{number}',
+        summary: 'Update Purchase Order',
+        description: 'Updates an existing purchase order.',
+        request: { fields: [
+          { name: 'number', type: 'integer', required: true, description: 'Path parameter. Purchase order number.' },
+        ] },
+        response: { status: 200, description: 'Updated purchase order object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'purchaseorders-email-flag',
+        method: 'PUT',
+        path: '/purchaseorders/{number}/email',
+        summary: 'Set Email Sent Flag',
+        description: 'Marks the purchase order as emailed.',
+        request: { fields: [
+          { name: 'number', type: 'integer', required: true, description: 'Path parameter. Purchase order number.' },
+        ] },
+        response: { status: 200, description: 'Empty on success.', fields: [] },
+        notes: [],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  PURCHASE ORDER CATEGORIES
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'purchase-order-categories',
+    tag: 'PurchaseOrderCategory',
+    icon: 'bi-tags',
+    colorClass: 'text-cyan-600 dark:text-cyan-400',
+    bgClass: 'bg-cyan-500',
+    borderClass: 'border-cyan-500',
+    operations: [
+      {
+        id: 'purchaseordercategory-get-list',
+        method: 'GET',
+        path: '/purchaseordercategories',
+        summary: 'List Purchase Order Categories',
+        description: 'Returns all purchase order categories. Same shape as quote categories.',
+        request: { fields: [] },
+        response: {
+          status: 200,
+          description: 'Array of category objects.',
+          fields: [
+            { name: 'Number',    type: 'integer', description: 'Category number.' },
+            { name: 'Name',      type: 'string',  description: 'Category name.' },
+            { name: 'IconId',    type: 'integer', description: 'Icon ID.' },
+            { name: 'IconType',  type: 'string',  description: 'Icon type.' },
+            { name: 'IconColor', type: 'string',  description: 'Icon colour.' },
+          ],
+        },
+        notes: [
+          'Synced to the `purchaseordercategories` collection by hcs-sync (list phase, best-effort).',
+        ],
+      },
+      {
+        id: 'purchaseordercategory-create',
+        method: 'POST',
+        path: '/purchaseordercategories',
+        summary: 'Create Purchase Order Category',
+        description: 'Creates a new purchase order category.',
+        request: { fields: [
+          { name: 'Name', type: 'string', required: true, description: 'Category name.' },
+        ] },
+        response: { status: 201, description: 'Created category object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'purchaseordercategory-update',
+        method: 'PUT',
+        path: '/purchaseordercategories/{number}',
+        summary: 'Update Purchase Order Category',
+        description: 'Updates an existing purchase order category.',
+        request: { fields: [
+          { name: 'number', type: 'integer', required: true, description: 'Path parameter. Category number.' },
+        ] },
+        response: { status: 200, description: 'Updated category object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'purchaseordercategory-delete',
+        method: 'DELETE',
+        path: '/purchaseordercategories/{number}',
+        summary: 'Delete Purchase Order Category',
+        description: 'Deletes a purchase order category.',
+        request: { fields: [
+          { name: 'number', type: 'integer', required: true, description: 'Path parameter. Category number.' },
+        ] },
+        response: { status: 204, description: 'No content on success.', fields: [] },
+        notes: [],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  CURRENCIES
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'currencies',
+    tag: 'Currency',
+    icon: 'bi-currency-exchange',
+    colorClass: 'text-lime-600 dark:text-lime-400',
+    bgClass: 'bg-lime-500',
+    borderClass: 'border-lime-500',
+    operations: [
+      {
+        id: 'currencies-get-list',
+        method: 'GET',
+        path: '/currencies',
+        summary: 'List Currencies',
+        description: 'Returns all currencies configured on the account.',
+        request: { fields: [] },
+        response: {
+          status: 200,
+          description: 'Array of currency objects.',
+          fields: [
+            { name: 'Id',                   type: 'integer', description: 'Internal KashFlow currency ID.' },
+            { name: 'Code',                 type: 'string',  description: 'ISO 4217 currency code (e.g. "GBP").' },
+            { name: 'Name',                 type: 'string',  description: 'Full currency name.' },
+            { name: 'Symbol',               type: 'string',  description: 'Currency symbol (e.g. "£").' },
+            { name: 'DisplaySymbolOnRight', type: 'boolean', description: 'Whether the symbol is displayed after the amount.' },
+            { name: 'ExchangeRate',         type: 'number',  description: 'Exchange rate to the base currency.' },
+          ],
+        },
+        notes: [
+          'Synced to the `currencies` collection by hcs-sync (list phase, best-effort).',
+        ],
+      },
+      {
+        id: 'currencies-get-one',
+        method: 'GET',
+        path: '/currencies/{id}',
+        summary: 'Get Currency',
+        description: 'Returns a single currency by ID.',
+        request: { fields: [
+          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Currency ID.' },
+        ] },
+        response: { status: 200, description: 'Currency object. Same fields as the list response.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'currencies-create',
+        method: 'POST',
+        path: '/currencies',
+        summary: 'Create Currency',
+        description: 'Adds a currency to the account.',
+        request: { fields: [
+          { name: 'Code', type: 'string', required: true, description: 'ISO 4217 currency code.' },
+        ] },
+        response: { status: 201, description: 'Created currency object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'currencies-update',
+        method: 'PUT',
+        path: '/currencies/{id}',
+        summary: 'Update Currency',
+        description: 'Updates a currency (e.g. its exchange rate).',
+        request: { fields: [
+          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Currency ID.' },
+        ] },
+        response: { status: 200, description: 'Updated currency object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'currencies-delete',
+        method: 'DELETE',
+        path: '/currencies/{id}',
+        summary: 'Delete Currency',
+        description: 'Removes a currency from the account.',
+        request: { fields: [
+          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Currency ID.' },
+        ] },
+        response: { status: 204, description: 'No content on success.', fields: [] },
+        notes: [],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  COUNTRIES
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'countries',
+    tag: 'Country',
+    icon: 'bi-globe2',
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    bgClass: 'bg-emerald-500',
+    borderClass: 'border-emerald-500',
+    operations: [
+      {
+        id: 'countries-get-list',
+        method: 'GET',
+        path: '/countries',
+        summary: 'List Countries',
+        description: 'Returns the reference list of countries.',
+        request: { fields: [] },
+        response: {
+          status: 200,
+          description: 'Array of country objects.',
+          fields: [
+            { name: 'Id',   type: 'integer', description: 'Internal KashFlow country ID.' },
+            { name: 'Code', type: 'string',  description: 'ISO country code.' },
+            { name: 'Name', type: 'string',  description: 'Country name.' },
+            { name: 'IsEU', type: 'boolean', description: 'Whether the country is in the EU.' },
+          ],
+        },
+        notes: [
+          'Synced to the `countries` collection by hcs-sync (list phase, best-effort).',
+          'GET /countries/vatrates exists but returns an empty object.',
+        ],
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  ACCOUNTING PERIODS
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'accounting-periods',
+    tag: 'AccountingPeriod',
+    icon: 'bi-calendar-range',
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    bgClass: 'bg-rose-500',
+    borderClass: 'border-rose-500',
+    operations: [
+      {
+        id: 'accountingperiods-get-list',
+        method: 'GET',
+        path: '/accountingperiods',
+        summary: 'List Accounting Periods',
+        description: 'Returns the accounting periods (financial years) configured on the account.',
+        request: { fields: [] },
+        response: {
+          status: 200,
+          description: 'Array of accounting period objects.',
+          fields: [
+            { name: 'Id',        type: 'integer', description: 'Internal KashFlow accounting period ID.' },
+            { name: 'StartDate', type: 'string',  description: 'Period start date.' },
+            { name: 'EndDate',   type: 'string',  description: 'Period end date.' },
+          ],
+        },
+        notes: [
+          'Synced to the `accountingperiods` collection by hcs-sync (list phase, best-effort).',
+        ],
+      },
+      {
+        id: 'accountingperiods-create',
+        method: 'POST',
+        path: '/accountingperiods',
+        summary: 'Create Accounting Period',
+        description: 'Creates a new accounting period.',
+        request: { fields: [
+          { name: 'StartDate', type: 'string', required: true, description: 'Period start date.' },
+          { name: 'EndDate',   type: 'string', required: true, description: 'Period end date.' },
+        ] },
+        response: { status: 201, description: 'Created accounting period object.', fields: [] },
+        notes: [],
+      },
+      {
+        id: 'accountingperiods-delete',
+        method: 'DELETE',
+        path: '/accountingperiods/{id}',
+        summary: 'Delete Accounting Period',
+        description: 'Deletes an accounting period by ID, and all subsequent years.',
+        request: { fields: [
+          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Accounting period ID.' },
+        ] },
+        response: { status: 204, description: 'No content on success.', fields: [] },
+        notes: [
+          'Deleting a period also deletes all subsequent years — use with care.',
+        ],
+      },
+    ],
+  },
 ];
 
 module.exports = apiDocs;
