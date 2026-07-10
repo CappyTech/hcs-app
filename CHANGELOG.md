@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.10.1] - 2026-07-10
+
+### Fixed
+- **CIS dashboard: a purchase's `TaxYear`/`TaxMonth` stamp no longer overrides actual payment dates.** The stamp was honoured exclusively, so an invoice part-paid across a tax-month boundary vanished from the month of its later payment. The stamp is now one OR condition alongside the payment-date window checks — HMRC counts each payment in the month it was made.
+- **CIS dashboard: unpaid invoices no longer count as paid purchases.** Legacy stamps derived from `IssuedDate` (hcs-sync ≤0.7.0) put unpaid invoices on the dashboard as if paid (tax month 3 showed 213 "paid" purchases when only ~139 had a payment in the period). A stamped purchase now also requires at least one actual payment (`PaidDate` or any payment line). Pairs with hcs-sync 0.7.1, which stops stamping unpaid purchases and clears stale stamps on its next run.
+
 ## [6.10.0] - 2026-07-09
 
 ### Added

@@ -165,13 +165,24 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const hasPaymentLineInWindow = (p) =>
       Array.isArray(p.PaymentLines) &&
       p.PaymentLines.some((pl) => inWindow(pl?.PayDate || pl?.Date));
+    const hasAnyPayment = (p) =>
+      toDate(p.PaidDate) != null ||
+      (Array.isArray(p.PaymentLines) &&
+        p.PaymentLines.some((pl) => toDate(pl?.PayDate || pl?.Date)));
     const paidPurchases = purchases.filter((p) => {
-      // If the purchase already has an explicit TaxYear/TaxMonth, honour it
-      // and skip date-window matching to avoid double-counting across months.
-      if (p.TaxYear != null && p.TaxMonth != null) {
-        return p.TaxYear === specifiedYear && p.TaxMonth === specifiedMonth;
-      }
-      return inWindow(p.PaidDate) || hasPaymentLineInWindow(p);
+      // A purchase counts for this tax month if its TaxYear/TaxMonth stamp
+      // matches OR any payment falls in the window. HMRC counts each payment
+      // in the month it was made, so a stamp from an earlier part-payment
+      // must not hide later payment lines that land in this period.
+      // A stamp alone is not enough: legacy stamps derived from IssuedDate
+      // exist on unpaid invoices, and CIS only reports actual payments.
+      const stampMatches =
+        p.TaxYear === specifiedYear && p.TaxMonth === specifiedMonth;
+      return (
+        (stampMatches && hasAnyPayment(p)) ||
+        inWindow(p.PaidDate) ||
+        hasPaymentLineInWindow(p)
+      );
     });
 
     // Suppliers for those purchases — only those with a valid HMRC verification number
