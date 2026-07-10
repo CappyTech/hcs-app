@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.10.2] - 2026-07-10
+
+### Added
+- **Setup wizard: per-namespace database name fields** (REST / Internal / Paperless) on step 1, written to `app-config.json` as `MONGO_DBNAME_*`; Test Connection now also lists the databases visible on the server.
+- **Setup wizard: skip options** — step 2 can be skipped (secrets generated server-side), and step 3 can be skipped when the database already has users (no bootstrap admin written).
+
+### Fixed
+- **CIS dashboard: subcontractors invisible because KashFlow stopped returning `SupplierId` (~May 2026).** Purchases created since mid-May carry only `SupplierCode` (e.g. `MICH01`), so the dashboard's Id-based supplier lookup matched nothing — tax month 3 (Jun–Jul 2026) showed zero subcontractors despite 7 verified-subbie purchases existing. Suppliers are now matched by `Id` OR `Code`, and per-supplier totals key off the resolved supplier. Pairs with hcs-sync 0.7.2, which backfills `SupplierId` on future syncs.
+- **Setup wizard: POST handlers crashed with `req.body` undefined.** The wizard mounts before the main app stack's body parsers; `setupRoutes` now mounts its own `express.json()`/`urlencoded()`.
+- **`app-config.json` with a UTF-8 BOM silently parsed as empty config**, which re-armed the setup wizard and let a subsequent save drop every existing key. `configService` now strips a BOM before parsing.
+
 ## [6.10.1] - 2026-07-10
 
 ### Fixed

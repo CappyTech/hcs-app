@@ -77,7 +77,8 @@ exports.getStep1 = (req, res) => {
 };
 
 exports.postStep1 = (req, res) => {
-  const { mongoUri, mongoHost, mongoPort, mongoUser, mongoPass, mongoAuthSource } = req.body;
+  const { mongoUri, mongoHost, mongoPort, mongoUser, mongoPass, mongoAuthSource,
+          mongoDbRest, mongoDbInternal, mongoDbPaperless } = req.body;
 
   if (!mongoUri && !mongoHost) {
     return renderSetup(res, 'step1', {
@@ -89,7 +90,8 @@ exports.postStep1 = (req, res) => {
   }
 
   const w = sessionWizard(req);
-  w.step1 = { mongoUri, mongoHost, mongoPort, mongoUser, mongoPass, mongoAuthSource };
+  w.step1 = { mongoUri, mongoHost, mongoPort, mongoUser, mongoPass, mongoAuthSource,
+              mongoDbRest, mongoDbInternal, mongoDbPaperless };
   writeDraft(w);
   res.redirect('/setup/step2');
 };
@@ -126,8 +128,16 @@ exports.postTestDb = async (req, res) => {
       conn.once('open', resolve);
       conn.on('error', reject);
     });
+    // Best-effort: list database names so the user can fill the namespace
+    // fields with real values (needs listDatabases privilege; ignore if not).
+    let databases;
+    try {
+      const admin = conn.getClient().db().admin();
+      const { databases: dbs } = await admin.listDatabases({ nameOnly: true });
+      databases = dbs.map((d) => d.name).filter((n) => !['admin', 'local', 'config'].includes(n));
+    } catch (_) { /* insufficient privileges — omit */ }
     await conn.close();
-    return res.json({ ok: true });
+    return res.json({ ok: true, databases });
   } catch (err) {
     return res.json({ ok: false, error: err.message });
   }
@@ -151,6 +161,19 @@ exports.getStep2 = (req, res) => {
 
 exports.postStep2 = (req, res) => {
   const { companyName, supportEmail, incorporationYear, notifyEmail, sessionSecret, encryptionKey } = req.body;
+
+  // Skip: no company info, secrets generated server-side (reusing any the
+  // wizard already stored, so a revisit doesn't rotate them).
+  if (req.body.skip === '1') {
+    const w = sessionWizard(req);
+    w.step2 = {
+      sessionSecret: w.step2?.sessionSecret || configService.generateSecret(32),
+      encryptionKey: w.step2?.encryptionKey || configService.generateSecret(32),
+      skipped: true,
+    };
+    writeDraft(w);
+    return res.redirect('/setup/step3');
+  }
 
   if (!sessionSecret || sessionSecret.length < 32) {
     return renderSetup(res, 'step2', {
@@ -201,7 +224,12 @@ exports.postComplete = (req, res) => {
 
   if (!w.step1 || !w.step2) return res.redirect('/setup');
 
-  if (!adminUsername || !adminUsername.trim()) {
+  // Skip: no bootstrap admin — for databases that already have users.
+  // (Phase 2 only creates the bootstrap admin when the users collection is
+  // empty, so skipping is the natural choice for an existing database.)
+  const skipAdmin = req.body.skip === '1';
+
+  if (!skipAdmin && (!adminUsername || !adminUsername.trim())) {
     return renderSetup(res, 'step3', {
       title: 'Setup — Step 3: Admin Account',
       step: 3,
@@ -209,7 +237,7 @@ exports.postComplete = (req, res) => {
       error: 'Username is required.',
     });
   }
-  if (!adminPassword || adminPassword.length < 8) {
+  if (!skipAdmin && (!adminPassword || adminPassword.length < 8)) {
     return renderSetup(res, 'step3', {
       title: 'Setup — Step 3: Admin Account',
       step: 3,
@@ -217,7 +245,7 @@ exports.postComplete = (req, res) => {
       error: 'Password must be at least 8 characters.',
     });
   }
-  if (adminPassword !== adminPasswordConfirm) {
+  if (!skipAdmin && adminPassword !== adminPasswordConfirm) {
     return renderSetup(res, 'step3', {
       title: 'Setup — Step 3: Admin Account',
       step: 3,
@@ -242,6 +270,11 @@ exports.postComplete = (req, res) => {
     if (s1.mongoAuthSource) config.MONGO_AUTH_SOURCE = s1.mongoAuthSource.trim();
   }
 
+  // Per-namespace database names (defaults: rest / internal / paperless)
+  if (s1.mongoDbRest && s1.mongoDbRest.trim())           config.MONGO_DBNAME_REST      = s1.mongoDbRest.trim();
+  if (s1.mongoDbInternal && s1.mongoDbInternal.trim())   config.MONGO_DBNAME_INTERNAL  = s1.mongoDbInternal.trim();
+  if (s1.mongoDbPaperless && s1.mongoDbPaperless.trim()) config.MONGO_DBNAME_PAPERLESS = s1.mongoDbPaperless.trim();
+
   if (s2.companyName)       config.COMPANY_NAME       = s2.companyName.trim();
   if (s2.supportEmail)      config.SUPPORTEMAIL       = s2.supportEmail.trim();
   if (s2.incorporationYear) config.INCORPORATION_YEAR = s2.incorporationYear.trim();
@@ -252,11 +285,13 @@ exports.postComplete = (req, res) => {
 
   // Bootstrap admin — stored plaintext temporarily; Phase 2 startup hashes +
   // creates the user, then removes these keys from the file immediately.
-  config._bootstrapAdmin = {
-    username: adminUsername.trim().toLowerCase(),
-    email: adminEmail ? adminEmail.trim().toLowerCase() : '',
-    password: adminPassword,
-  };
+  if (!skipAdmin) {
+    config._bootstrapAdmin = {
+      username: adminUsername.trim().toLowerCase(),
+      email: adminEmail ? adminEmail.trim().toLowerCase() : '',
+      password: adminPassword,
+    };
+  }
 
   try {
     configService.save(config);

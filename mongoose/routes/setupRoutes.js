@@ -4,6 +4,11 @@ const express = require('express');
 const router = express.Router();
 const setup = require('../controllers/setupController');
 
+// The wizard runs before the main app stack (which normally supplies the
+// body parsers), so it must parse its own request bodies.
+router.use(express.json());
+router.use(express.urlencoded({ extended: true }));
+
 // CSRF is not yet mounted when these routes are active, so they use their own
 // lightweight origin check instead of the app-wide CSRF middleware.
 function sameOriginOnly(req, res, next) {

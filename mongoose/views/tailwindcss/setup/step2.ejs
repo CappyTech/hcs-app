@@ -96,6 +96,16 @@
   </div>
 </form>
 
+<!-- Skip: no company info, secrets generated server-side -->
+<form action="/setup/step2" method="POST" class="mt-3 text-right">
+  <input type="hidden" name="skip" value="1">
+  <button type="submit"
+    class="text-sm text-gray-500 dark:text-gray-400 hover:underline">
+    Skip this step — generate secrets automatically →
+  </button>
+  <p class="mt-1 text-xs text-gray-400">Note: a generated encryption key cannot decrypt data encrypted with a different key (e.g. an existing database's TOTP secrets).</p>
+</form>
+
 <script nonce="<%= locals.cspNonce %>">
 document.getElementById('regenSessionSecret').addEventListener('click', function() { regenerate('sessionSecret', 64); });
 document.getElementById('regenEncryptionKey').addEventListener('click', function() { regenerate('encryptionKey', 64); });

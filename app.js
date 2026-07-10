@@ -131,6 +131,17 @@ const main = async () => {
   });
   app.get('/i-am-stuck', (req, res) => res.redirect(301, '/service-unavailable'));
 
+  // ── Dev-only MongoDB inspector ──────────────────────────────────────
+  // Mounted BEFORE the scanner blocklist (whose /db\b pattern would 403 it
+  // and autoban loopback) and before appRouter so it bypasses session/auth/
+  // CSRF. Triple-gated: DEV_DB_ADMIN=true, non-production, and loopback-only
+  // (enforced inside the router). Handlers access mdb lazily, so mounting
+  // here in Phase 1 is safe — requests simply 404/error until MongoDB connects.
+  if (process.env.DEV_DB_ADMIN === 'true' && process.env.NODE_ENV !== 'production') {
+    logger.warn('[startup] DEV_DB_ADMIN enabled — mounting unauthenticated /admin/db (loopback only, dev use only)');
+    app.use('/admin/db', require('./mongoose/routes/devDbRoutes'));
+  }
+
   // Early request blocklist for common scanner/probe paths
   app.use(require('./services/requestBlocklistService'));
 

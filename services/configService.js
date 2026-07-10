@@ -31,7 +31,11 @@ function loadFileConfig() {
   if (_fileConfig !== null) return _fileConfig;
   if (fs.existsSync(CONFIG_FILE)) {
     try {
-      _fileConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      // Strip a UTF-8 BOM if present — a BOM'd file otherwise parses as
+      // empty config, and a later save() would rewrite the file from that
+      // empty state, silently dropping every existing key.
+      const raw = fs.readFileSync(CONFIG_FILE, 'utf8').replace(/^﻿/, '');
+      _fileConfig = JSON.parse(raw);
     } catch (_) {
       _fileConfig = {};
     }

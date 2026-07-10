@@ -64,6 +64,16 @@
   </div>
 </form>
 
+<!-- Skip: no bootstrap admin — for databases that already have users -->
+<form action="/setup/complete" method="POST" class="mt-3 text-right">
+  <input type="hidden" name="skip" value="1">
+  <button type="submit"
+    class="text-sm text-gray-500 dark:text-gray-400 hover:underline">
+    Skip — my database already has users →
+  </button>
+  <p class="mt-1 text-xs text-gray-400">Finishes setup without creating an admin account. You'll log in with an existing user.</p>
+</form>
+
 <script nonce="<%= locals.cspNonce %>">
 // Restore non-sensitive fields only (no passwords stored).
 // localStorage takes precedence over server-restored values.

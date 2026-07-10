@@ -71,6 +71,34 @@
       class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
   </div>
 
+  <hr class="border-gray-200 dark:border-gray-700">
+
+  <!-- Database names per namespace -->
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Database Names</label>
+    <p class="mb-2 text-xs text-gray-400">The three databases this app uses on the server above. Test Connection lists the databases it can see.</p>
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">REST (KashFlow)</label>
+        <input type="text" name="mongoDbRest" placeholder="rest"
+          value="<%= values.mongoDbRest || '' %>"
+          class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
+      </div>
+      <div>
+        <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Internal</label>
+        <input type="text" name="mongoDbInternal" placeholder="internal"
+          value="<%= values.mongoDbInternal || '' %>"
+          class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
+      </div>
+      <div>
+        <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Paperless</label>
+        <input type="text" name="mongoDbPaperless" placeholder="paperless"
+          value="<%= values.mongoDbPaperless || '' %>"
+          class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
+      </div>
+    </div>
+  </div>
+
   <!-- Test connection -->
   <div>
     <button type="button" id="testBtn"
@@ -95,7 +123,7 @@
 // Restore saved values — localStorage takes precedence over server-restored values.
 // Falls back to server-side wizard-draft.json (via session) if localStorage is empty.
 const _s1 = JSON.parse(localStorage.getItem('hcs_setup_step1') || '{}');
-['mongoUri','mongoHost','mongoPort','mongoUser','mongoAuthSource'].forEach(id => {
+['mongoUri','mongoHost','mongoPort','mongoUser','mongoAuthSource','mongoDbRest','mongoDbInternal','mongoDbPaperless'].forEach(id => {
   const el = document.querySelector(`[name="${id}"]`);
   if (el && _s1[id]) el.value = _s1[id];
 });
@@ -103,7 +131,7 @@ const _s1 = JSON.parse(localStorage.getItem('hcs_setup_step1') || '{}');
 // Save on change
 document.getElementById('dbForm').addEventListener('input', () => {
   const data = {};
-  ['mongoUri','mongoHost','mongoPort','mongoUser','mongoAuthSource'].forEach(id => {
+  ['mongoUri','mongoHost','mongoPort','mongoUser','mongoAuthSource','mongoDbRest','mongoDbInternal','mongoDbPaperless'].forEach(id => {
     const el = document.querySelector(`[name="${id}"]`);
     if (el) data[id] = el.value;
   });
@@ -125,7 +153,9 @@ document.getElementById('testBtn').addEventListener('click', async () => {
     const resp = await fetch('/setup/test-db', { method: 'POST', body: data,
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     const json = await resp.json();
-    result.textContent = json.ok ? '✓ Connected successfully' : '✗ ' + json.error;
+    result.textContent = json.ok
+      ? ('✓ Connected' + (json.databases?.length ? ' — databases: ' + json.databases.join(', ') : ''))
+      : '✗ ' + json.error;
     result.className = 'ml-3 text-sm ' + (json.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400');
   } catch (e) {
     result.textContent = '✗ Request failed';

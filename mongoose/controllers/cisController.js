@@ -185,23 +185,35 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       );
     });
 
-    // Suppliers for those purchases — only those with a valid HMRC verification number
-    // Normalize supplier IDs to numbers to avoid type-mismatch on lookup
+    // Suppliers for those purchases — only those with a valid HMRC verification number.
+    // KashFlow stopped including SupplierId in purchase responses (~May 2026),
+    // so match by Id AND by SupplierCode (e.g. "MICH01" → supplier.Code).
+    // Normalize supplier IDs to numbers to avoid type-mismatch on lookup.
     const supplierIDs = [
       ...new Set(
         (paidPurchases || [])
           .map((p) => Number(p?.SupplierId))
-          .filter((n) => Number.isFinite(n)),
+          .filter((n) => Number.isFinite(n) && n > 0),
+      ),
+    ];
+    const supplierCodes = [
+      ...new Set(
+        (paidPurchases || [])
+          .map((p) => (p?.SupplierCode ? String(p.SupplierCode).trim() : null))
+          .filter(Boolean),
       ),
     ];
     // Optional debugging escape hatch: include all suppliers if requested
     const includeAllSuppliers =
       req.query.includeAll === "1" ||
       req.query.includeNonSubcontractors === "1";
+    const supplierMatch = {
+      $or: [{ Id: { $in: supplierIDs } }, { Code: { $in: supplierCodes } }],
+    };
     const supplierQuery = includeAllSuppliers
-      ? { Id: { $in: supplierIDs } }
+      ? supplierMatch
       : {
-          Id: { $in: supplierIDs },
+          ...supplierMatch,
           WithholdingTaxReferences: {
             $elemMatch: {
               Name: 'Verification Number',
@@ -214,12 +226,20 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
       .sort({ Name: 1 })
       .lean();
 
-    const allowedSupplierIds = new Set(
-      subbieSuppliers.map((s) => String(s.Id)),
+    // Resolve a purchase to its supplier by SupplierId, else SupplierCode.
+    const supplierById = new Map(subbieSuppliers.map((s) => [String(s.Id), s]));
+    const supplierByCode = new Map(
+      subbieSuppliers
+        .filter((s) => s.Code)
+        .map((s) => [String(s.Code).trim().toUpperCase(), s]),
     );
-    const filteredPurchases = paidPurchases.filter((p) =>
-      allowedSupplierIds.has(String(p.SupplierId)),
-    );
+    const resolveSupplier = (p) =>
+      (p?.SupplierId != null ? supplierById.get(String(p.SupplierId)) : null) ||
+      (p?.SupplierCode
+        ? supplierByCode.get(String(p.SupplierCode).trim().toUpperCase())
+        : null) ||
+      null;
+    const filteredPurchases = paidPurchases.filter((p) => resolveSupplier(p));
 
     // CIS rate map per supplier id
     const cisRateBySupplierId = new Map();
@@ -239,7 +259,9 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
     const debugStats = { usedLineItems: 0, usedLines: 0, emptyLines: 0 };
     const debugSamples = [];
     for (const purchase of filteredPurchases) {
-      const supplierId = String(purchase.SupplierId);
+      // Key totals by the resolved supplier's Id — purchase.SupplierId may be
+      // absent on newer records, but resolveSupplier() already matched one.
+      const supplierId = String(resolveSupplier(purchase).Id);
       supplierTotals[supplierId] ??= {
         grossAmount: 0,
         materialsCost: 0,
