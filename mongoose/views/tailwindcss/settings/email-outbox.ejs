@@ -1,0 +1,72 @@
+<%
+function statusBadge(s) {
+  const map = {
+    sent:      'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+    pending:   'bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-100',
+    failed:    'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
+    cancelled: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
+  };
+  return map[s] || map.cancelled;
+}
+%>
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-blue-500 to-sky-500"></div>
+    <div class="p-6 sm:p-8">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-inboxes text-blue-500"></i> Email Outbox</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">The 100 most recent notifications. Delivery runs on the <code>notification-outbox</code> job.</p>
+        </div>
+        <a href="/admin/emails" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Email hub</a>
+      </div>
+
+      <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+            <tr>
+              <th class="text-left px-4 py-2 font-medium">To</th>
+              <th class="text-left px-4 py-2 font-medium">Subject</th>
+              <th class="text-left px-4 py-2 font-medium">Type</th>
+              <th class="text-left px-4 py-2 font-medium">Sender</th>
+              <th class="text-left px-4 py-2 font-medium">Status</th>
+              <th class="text-left px-4 py-2 font-medium">Attempts</th>
+              <th class="text-left px-4 py-2 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <% if (!notifications.length) { %>
+              <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">No notifications yet.</td></tr>
+            <% } %>
+            <% notifications.forEach(function (n) { %>
+            <tr class="text-gray-800 dark:text-gray-200 align-top">
+              <td class="px-4 py-2 whitespace-nowrap"><%= n.to %></td>
+              <td class="px-4 py-2"><%= n.subject %><% if (n.lastError) { %><br><span class="text-xs text-red-500"><%= n.lastError %></span><% } %></td>
+              <td class="px-4 py-2"><code class="text-xs text-gray-400"><%= n.typeKey || n.category || '—' %></code></td>
+              <td class="px-4 py-2 capitalize"><%= n.senderType || 'system' %></td>
+              <td class="px-4 py-2"><span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium <%= statusBadge(n.status) %>"><%= n.status %></span></td>
+              <td class="px-4 py-2"><%= n.attempts %>/<%= n.maxAttempts %></td>
+              <td class="px-4 py-2 whitespace-nowrap">
+                <div class="flex gap-2">
+                  <% if (n.status === 'failed' || n.status === 'cancelled' || n.status === 'sent') { %>
+                  <form method="POST" action="/admin/emails/outbox/<%= n.uuid %>/resend">
+                    <%- include('../partials/csrfHidden.ejs') %>
+                    <button type="submit" class="px-2.5 py-1 rounded text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white">Resend</button>
+                  </form>
+                  <% } %>
+                  <% if (n.status === 'pending') { %>
+                  <form method="POST" action="/admin/emails/outbox/<%= n.uuid %>/cancel">
+                    <%- include('../partials/csrfHidden.ejs') %>
+                    <button type="submit" class="px-2.5 py-1 rounded text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">Cancel</button>
+                  </form>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

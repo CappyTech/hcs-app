@@ -189,6 +189,12 @@ const routeAccess = {
   // External connection settings
   '/admin/connections': ['admin'],
 
+  // Email & notifications admin dashboard
+  '/admin/emails': ['admin'],
+
+  // Personal notification settings (all authenticated users)
+  '/user/account/settings/notifications': '*',
+
   // Internal API reference
   '/help/api': ['admin'],
 

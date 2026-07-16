@@ -259,6 +259,15 @@ const main = async () => {
       logger.error('[migration] Payroll tax rate seeding failed', { error: seedErr.message });
     }
 
+    // Seed the core email/notification type catalog (insert-only — admin edits
+    // in Settings → Emails are preserved).
+    try {
+      const { ensureSeeded } = require('./mongoose/services/emailTypesSeedService');
+      await ensureSeeded(mdb.INTERNAL.emailType);
+    } catch (seedErr) {
+      logger.error('[migration] Email type seeding failed', { error: seedErr.message });
+    }
+
     // Load CIS nominal code mappings from the database
     try {
       const cisMappings = require('./mongoose/config/cisMappings');
@@ -421,6 +430,7 @@ const main = async () => {
     appRouter.use('/', require('./mongoose/routes/loggerRoutes'));
     appRouter.use('/', require('./mongoose/routes/returnsRoutes'));
     appRouter.use('/', require('./mongoose/routes/settingsRoutes'));
+    appRouter.use('/', require('./mongoose/routes/emailRoutes'));
     appRouter.use('/', require('./mongoose/routes/twoFARoutes'));
     appRouter.use('/', require('./mongoose/routes/subcontractorRoutes'));
     appRouter.use('/', require('./mongoose/routes/submissionRoutes'));

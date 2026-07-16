@@ -13,6 +13,10 @@ const PUBLIC_PATHS = new Set([
   "/user/verify-totp-reset",
   "/user/2fa",
   "/health",
+  // Token-scoped unsubscribe. Has no browser session — it is authorised solely
+  // by the per-recipient notificationToken and only ever changes that one
+  // recipient's notification preferences (never a login). GET is read-only.
+  "/notifications/unsubscribe",
   // Machine-to-machine SSO token issuance for hcs-sync. Has no browser session;
   // it authenticates itself via the X-Sync-Api-Key header + credential check,
   // so it must bypass the session-based ensureAuthenticated guard.

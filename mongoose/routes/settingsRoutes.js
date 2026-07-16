@@ -65,4 +65,31 @@ router.post(
   settings.changePassword,
 );
 
+// ── Personal email/notification dashboard ─────────────────────────────────
+router.get(
+  "/user/account/settings/notifications",
+  authService.ensureAnyRole(),
+  settings.getNotificationsPage,
+);
+router.post(
+  "/user/account/settings/notifications/toggle",
+  authService.ensureAnyRole(),
+  settings.toggleNotification,
+);
+router.post(
+  "/user/account/settings/notifications/allow-admin",
+  authService.ensureAnyRole(),
+  settings.setAllowAdminEmails,
+);
+router.post(
+  "/user/account/settings/notifications/send-test",
+  authService.ensureAnyRole(),
+  settings.sendTestNotification,
+);
+router.get(
+  "/user/account/settings/notifications/preview/:key",
+  authService.ensureAnyRole(),
+  settings.previewNotification,
+);
+
 module.exports = router;

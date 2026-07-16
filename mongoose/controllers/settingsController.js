@@ -617,3 +617,120 @@ exports.validateChangePassword = [
     .notEmpty()
     .withMessage("Password confirmation is required."),
 ];
+
+// ── Personal email/notification dashboard ─────────────────────────────
+const emailPreferenceService = require("../services/emailPreferenceService");
+const emailTypeService = require("../services/emailTypeService");
+const notificationService = require("../../services/notificationService");
+
+exports.getNotificationsPage = async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const user = await mdb.INTERNAL.user.findById(userId).select("email allowAdminEmails").lean();
+    const preferences = await emailPreferenceService.getPreferencesForUser(userId);
+    // Group by senderType for display.
+    const groups = {
+      system: preferences.filter((p) => p.senderType === "system"),
+      admin: preferences.filter((p) => p.senderType === "admin"),
+    };
+    res.render(path.join("tailwindcss", "user", "notifications"), {
+      title: "Notification Settings",
+      user,
+      groups,
+      allowAdminEmails: user ? user.allowAdminEmails !== false : true,
+    });
+  } catch (error) {
+    logger.error(`Error loading notification settings: ${error.message}`);
+    next(error);
+  }
+};
+
+exports.toggleNotification = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { typeKey } = req.body;
+    const subscribed = req.body.subscribed === "on" || req.body.subscribed === "true";
+    const ok = await emailPreferenceService.setPreference(userId, typeKey, subscribed);
+    if (ok) req.flash("success", `Preference updated for "${typeKey}".`);
+    else req.flash("error", "That notification type cannot be changed.");
+  } catch (error) {
+    logger.error(`Error toggling notification: ${error.message}`);
+    req.flash("error", "Could not update preference.");
+  }
+  res.redirect("/user/account/settings/notifications");
+};
+
+exports.setAllowAdminEmails = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const allow = req.body.allowAdminEmails === "on" || req.body.allowAdminEmails === "true";
+    await emailPreferenceService.setAllowAdminEmails(userId, allow);
+    req.flash("success", allow ? "Administrators can now email you." : "Administrators can no longer email you.");
+  } catch (error) {
+    logger.error(`Error updating admin-email preference: ${error.message}`);
+    req.flash("error", "Could not update preference.");
+  }
+  res.redirect("/user/account/settings/notifications");
+};
+
+// Send a test email of a given type to the logged-in user ONLY (self-service).
+exports.sendTestNotification = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const user = await mdb.INTERNAL.user.findById(userId).select("email emailVerified").lean();
+    const typeKey = req.body.typeKey;
+    const type = await emailTypeService.get(typeKey);
+    if (!user || !user.email) {
+      req.flash("error", "Your account has no email address.");
+      return res.redirect("/user/account/settings/notifications");
+    }
+    const doc = await notificationService.enqueue({
+      to: user.email,
+      subject: `Test: ${type ? type.label : typeKey}`,
+      html: notificationService.wrapTemplate({
+        heading: `Test — ${type ? type.label : typeKey}`,
+        bodyLines: [
+          "This is a test email you sent to yourself from your notification settings.",
+          type && type.intro ? type.intro : "It shows how this notification type looks when delivered.",
+        ],
+      }),
+      text: "This is a test email you sent to yourself from your notification settings.",
+      typeKey,
+      senderType: "user",
+      senderUserId: userId,
+      recipientUserId: userId,
+    });
+    if (doc) req.flash("success", "Test email queued — check your inbox shortly.");
+    else req.flash("error", "Test not queued (the type may be disabled or you are unsubscribed).");
+  } catch (error) {
+    logger.error(`Error sending test notification: ${error.message}`);
+    req.flash("error", "Could not send test email.");
+  }
+  res.redirect("/user/account/settings/notifications");
+};
+
+// Rendered HTML preview of what a notification type looks like (own account).
+exports.previewNotification = async (req, res, next) => {
+  try {
+    const type = await emailTypeService.get(req.params.key);
+    if (!type) return res.status(404).send("Unknown notification type.");
+    const html = notificationService.wrapTemplate({
+      heading: type.label,
+      bodyLines: [
+        type.description || "Example notification body.",
+        type.intro || "",
+      ].filter(Boolean),
+      ctaText: "Open Heron CS",
+      ctaUrl: notificationService.baseUrl() + "/",
+    });
+    const footer = notificationService.buildFooter({
+      senderType: type.senderType,
+      subscribable: type.subscribable,
+      typeKey: type.key,
+      token: null,
+    });
+    res.send(`<!doctype html><html><body style="margin:0;padding:24px;background:#f3f4f6;">${html}${footer.html}</body></html>`);
+  } catch (error) {
+    next(error);
+  }
+};

@@ -62,6 +62,13 @@ module.exports = {
         department: ['admin'],
         buttonClass: 'bg-indigo-700 hover:bg-indigo-800'
     },
+    EmailDashboard: {
+        title: 'Email & Notifications',
+        description: 'Manage notification types, compose emails to users, and view the delivery outbox.',
+        link: '/admin/emails',
+        department: ['admin'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800'
+    },
     ApiReference: {
         title: 'KashFlow API',
         description: 'Internal KashFlow REST API documentation — request fields, response-only fields, and integration notes.',
@@ -105,6 +112,13 @@ module.exports = {
         link: '/gdpr/requests',
         department: ['user'],
         buttonClass: 'bg-green-600 hover:bg-green-700'
+    },
+    NotificationSettings: {
+        title: 'Notification Settings',
+        description: 'Choose which emails you receive, preview them, and control admin contact.',
+        link: '/user/account/settings/notifications',
+        department: ['user', 'admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     Logout: {
         title: 'Logout',

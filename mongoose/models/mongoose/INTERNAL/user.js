@@ -107,6 +107,21 @@ const userSchema = new mongoose.Schema({
     lockedUntil: {
         type: Date,
         default: null
+    },
+    // Master "let administrators email me directly" switch. When false, admin
+    // direct-send emails (senderType 'admin', non-subscribable) are skipped for
+    // this user. Subscribable notifications are governed per-type via emailPreference.
+    allowAdminEmails: {
+        type: Boolean,
+        default: true
+    },
+    // Random opaque token scoping the logged-out unsubscribe confirmation page
+    // to this recipient. It authorises ONLY notification-preference changes for
+    // this user — never a login session. Rotatable if leaked.
+    notificationToken: {
+        type: String,
+        default: () => crypto.randomBytes(24).toString('hex'),
+        index: true
     }
 }, {
     timestamps: true,

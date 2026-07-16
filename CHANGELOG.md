@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.11.0] - 2026-07-16
+
+### Added
+- **Email & notification management system.** A DB-driven catalog of notification types replaces implicit, hardcoded email categories, with dashboards for both admins and users and a proper unsubscribe flow.
+  - **New models:** `emailType` (catalog: key, label, `senderType` system/admin, `subscribable`, `defaultOn`, `enabled`, `isCore`) and `emailPreference` (per-user subscription; absence falls back to the type's `defaultOn`). `user` gains `allowAdminEmails` + a per-recipient `notificationToken`; `notification` gains `typeKey`, `senderType`, `unsubscribable`, `recipientUserId`, `senderUserId`. Core types are seeded at startup (insert-only, admin edits preserved) via `emailTypesSeedService`.
+  - **Gating:** `notificationService.enqueue` now skips disabled types, recipients who unsubscribed from a subscribable type, and any admin-originated email when the recipient turned off "allow admins to email me". Existing callers keep working (`category` is treated as `typeKey`).
+  - **Admin email dashboard** (`/admin/emails`): manage the type catalog (add / edit / enable-disable / delete, core types protected), compose and send email to a single user or a whole role, and an outbox with delivery status + resend/cancel.
+  - **Personal notification dashboard** (`/user/account/settings/notifications`, also a dashboard tile): per-type subscribe/unsubscribe toggles, a master "allow administrators to email me" switch, per-type preview, and "send myself a test".
+  - **Unsubscribe on every email** with four footers keyed to who sent it (user / system / admin notification / admin direct-send). Links are hostile-safe: `GET /notifications/unsubscribe` only renders a confirmation page (email scanners/prefetchers change nothing), and the token authorises a single preference change — never a login. In-app footer links deep-link to the relevant toggle on the personal dashboard.
+- **Task assignment emails.** Creating a task now queues a `task-assigned` system notification to the assignee (respecting their subscription); recurring spawns are covered via the same path.
+
 ## [6.10.2] - 2026-07-10
 
 ### Added

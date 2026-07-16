@@ -1,0 +1,16 @@
+<div class="max-w-md mx-auto py-16 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r <%= ok ? 'from-green-500 to-emerald-500' : 'from-red-500 to-rose-500' %>"></div>
+    <div class="p-6 sm:p-8 text-center">
+      <div class="<%= ok ? 'text-green-500' : 'text-red-500' %> text-4xl mb-3">
+        <i class="bi <%= ok ? 'bi-check-circle' : 'bi-x-circle' %>"></i>
+      </div>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2"><%= ok ? 'Done' : 'Unable to unsubscribe' %></h1>
+      <p class="text-sm text-gray-600 dark:text-gray-300"><%= message %></p>
+      <p class="text-xs text-gray-400 mt-6">
+        <a href="/user/account/settings/notifications" class="text-blue-600 dark:text-blue-400 hover:underline">Manage your notification settings</a>
+        (sign-in required).
+      </p>
+    </div>
+  </div>
+</div>

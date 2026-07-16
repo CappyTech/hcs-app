@@ -1,0 +1,127 @@
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-blue-500 to-sky-500"></div>
+    <div class="p-6 sm:p-8">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-list-check text-blue-500"></i> Notification Types</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Each type maps to a stable key used by the sending code. Core types can be disabled but not deleted.</p>
+        </div>
+        <a href="/admin/emails" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Email hub</a>
+      </div>
+
+      <!-- Existing types -->
+      <div class="space-y-3 mb-10">
+        <% types.forEach(function (t) { %>
+        <details class="rounded-lg border border-gray-200 dark:border-gray-700">
+          <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer">
+            <span class="min-w-0">
+              <span class="font-medium text-gray-900 dark:text-gray-100"><%= t.label %></span>
+              <code class="ml-2 text-xs text-gray-400"><%= t.key %></code>
+              <% if (t.isCore) { %><span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-100">core</span><% } %>
+            </span>
+            <span class="flex items-center gap-2 whitespace-nowrap">
+              <span class="text-xs capitalize text-gray-500 dark:text-gray-400"><%= t.senderType %></span>
+              <% if (t.enabled) { %>
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">Enabled</span>
+              <% } else { %>
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">Disabled</span>
+              <% } %>
+            </span>
+          </summary>
+
+          <div class="px-4 pb-4 border-t border-gray-100 dark:border-gray-800 pt-4">
+            <form method="POST" action="/admin/emails/types/<%= encodeURIComponent(t.key) %>" class="space-y-4">
+              <%- include('../partials/csrfHidden.ejs') %>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Label</label>
+                  <input type="text" name="label" value="<%= t.label %>" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Sender type</label>
+                  <select name="senderType" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    <option value="system" <%= t.senderType === 'system' ? 'selected' : '' %>>System</option>
+                    <option value="admin" <%= t.senderType === 'admin' ? 'selected' : '' %>>Admin</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                <textarea name="description" rows="2" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= t.description %></textarea>
+              </div>
+              <div class="flex flex-wrap gap-6">
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" name="subscribable" <%= t.subscribable ? 'checked' : '' %>> Subscribable (recipients may unsubscribe)
+                </label>
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" name="defaultOn" <%= t.defaultOn ? 'checked' : '' %>> On by default
+                </label>
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" name="enabled" <%= t.enabled ? 'checked' : '' %>> Enabled
+                </label>
+              </div>
+              <div class="flex justify-between items-center pt-2">
+                <a href="/user/account/settings/notifications/preview/<%= encodeURIComponent(t.key) %>" target="_blank" class="text-sm text-blue-600 dark:text-blue-400 hover:underline"><i class="bi bi-eye"></i> Preview</a>
+                <div class="flex gap-2">
+                  <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white">Save</button>
+                </div>
+              </div>
+            </form>
+
+            <div class="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <form method="POST" action="/admin/emails/types/<%= encodeURIComponent(t.key) %>/toggle">
+                <%- include('../partials/csrfHidden.ejs') %>
+                <input type="hidden" name="enabled" value="<%= t.enabled ? 'false' : 'true' %>">
+                <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"><%= t.enabled ? 'Disable' : 'Enable' %></button>
+              </form>
+              <% if (!t.isCore) { %>
+              <form method="POST" action="/admin/emails/types/<%= encodeURIComponent(t.key) %>/delete" onsubmit="return confirm('Delete the &quot;<%= t.label %>&quot; email type? This cannot be undone.');">
+                <%- include('../partials/csrfHidden.ejs') %>
+                <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 hover:bg-red-700 text-white">Delete</button>
+              </form>
+              <% } %>
+            </div>
+          </div>
+        </details>
+        <% }); %>
+      </div>
+
+      <!-- Add new -->
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Add a new type</h2>
+      <form method="POST" action="/admin/emails/types" class="space-y-4">
+        <%- include('../partials/csrfHidden.ejs') %>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Key</label>
+            <input type="text" name="key" required placeholder="e.g. project-updates" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <p class="text-xs text-gray-400 mt-1">Lowercase, hyphenated.</p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Label</label>
+            <input type="text" name="label" required class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Sender type</label>
+            <select name="senderType" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+              <option value="system">System</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+          <textarea name="description" rows="2" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+        </div>
+        <div class="flex flex-wrap gap-6">
+          <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="subscribable" checked> Subscribable</label>
+          <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="defaultOn" checked> On by default</label>
+          <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="enabled" checked> Enabled</label>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" class="px-5 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white">Create type</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

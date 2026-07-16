@@ -1,5 +1,45 @@
 const mdb = require('./mongooseDatabaseService');
 const logger = require('../../services/loggerService');
+const notificationService = require('../../services/notificationService');
+
+// Fire-and-forget: email the assignee that a task was created for them. Routed
+// through the notification outbox as a 'task-assigned' system notification, so
+// it honours the user's subscription and never blocks/fails task creation.
+async function notifyTaskAssigned(task) {
+  try {
+    if (!task || !task.userId) return;
+    const user = await mdb.INTERNAL.user
+      .findById(task.userId)
+      .select('email emailVerified')
+      .lean();
+    if (!user || !user.email || !user.emailVerified) return;
+
+    const baseUrl = notificationService.baseUrl();
+    const dueLine = task.dueDate
+      ? `Due: ${new Date(task.dueDate).toLocaleDateString('en-GB')}`
+      : 'No due date set.';
+    await notificationService.enqueue({
+      to: user.email,
+      subject: `New task: ${task.title}`,
+      html: notificationService.wrapTemplate({
+        heading: 'A task has been assigned to you',
+        bodyLines: [task.title, task.description || '', dueLine].filter(Boolean),
+        ctaText: 'View your tasks',
+        ctaUrl: `${baseUrl}/`,
+      }),
+      text: [`A task has been assigned to you: ${task.title}`, task.description, dueLine]
+        .filter(Boolean).join('\n\n'),
+      typeKey: 'task-assigned',
+      senderType: 'system',
+      recipientUserId: task.userId,
+      refType: 'task',
+      refId: task.uuid || task._id,
+      dedupeKey: `task-assigned:${task.uuid || task._id}`,
+    });
+  } catch (err) {
+    logger.warn(`[taskService] task-assigned email skipped: ${err.message}`);
+  }
+}
 
 function validateCreateInput({ title, userId, recurrence, dueDate }) {
   if (!title || typeof title !== 'string') throw new Error('Task title is required.');
@@ -13,7 +53,9 @@ async function createTask({ title, description, userId, jobId = null, dueDate = 
   validateCreateInput({ title, userId, recurrence, dueDate });
   const task = new mdb.INTERNAL.task({ title, description, userId, jobId, dueDate, recurrence });
   await task.save();
-  return task.toObject();
+  const obj = task.toObject();
+  await notifyTaskAssigned(obj);
+  return obj;
 }
 
 function advanceDate(date, recurrence) {

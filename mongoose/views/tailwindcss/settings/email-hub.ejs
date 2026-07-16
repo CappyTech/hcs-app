@@ -1,0 +1,66 @@
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-blue-500 to-sky-500"></div>
+    <div class="p-6 sm:p-8">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <i class="bi bi-envelope-paper-fill text-blue-500"></i> Email &amp; Notifications
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Manage which emails the platform sends, compose messages to users, and monitor delivery.
+          <span class="font-medium"><%= counts.enabled %></span> of <%= counts.total %> types enabled.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <a href="/admin/emails/types" class="block rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:border-blue-400 dark:hover:border-blue-500 transition">
+          <div class="text-blue-600 dark:text-blue-400 text-2xl mb-2"><i class="bi bi-list-check"></i></div>
+          <div class="font-semibold text-gray-900 dark:text-gray-100">Notification Types</div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Add, edit, enable/disable or delete email types.</p>
+        </a>
+        <a href="/admin/emails/compose" class="block rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:border-blue-400 dark:hover:border-blue-500 transition">
+          <div class="text-blue-600 dark:text-blue-400 text-2xl mb-2"><i class="bi bi-pencil-square"></i></div>
+          <div class="font-semibold text-gray-900 dark:text-gray-100">Compose &amp; Send</div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Email a single user or everyone in a role.</p>
+        </a>
+        <a href="/admin/emails/outbox" class="block rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:border-blue-400 dark:hover:border-blue-500 transition">
+          <div class="text-blue-600 dark:text-blue-400 text-2xl mb-2"><i class="bi bi-inboxes"></i></div>
+          <div class="font-semibold text-gray-900 dark:text-gray-100">Outbox</div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Delivery status, resend or cancel queued emails.</p>
+        </a>
+      </div>
+
+      <div class="mt-8">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Types at a glance</h2>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+              <tr>
+                <th class="text-left px-4 py-2 font-medium">Type</th>
+                <th class="text-left px-4 py-2 font-medium">Sender</th>
+                <th class="text-left px-4 py-2 font-medium">Subscribable</th>
+                <th class="text-left px-4 py-2 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              <% types.forEach(function (t) { %>
+              <tr class="text-gray-800 dark:text-gray-200">
+                <td class="px-4 py-2"><span class="font-medium"><%= t.label %></span><br><code class="text-xs text-gray-400"><%= t.key %></code></td>
+                <td class="px-4 py-2 capitalize"><%= t.senderType %></td>
+                <td class="px-4 py-2"><%= t.subscribable ? 'Yes' : 'No' %></td>
+                <td class="px-4 py-2">
+                  <% if (t.enabled) { %>
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"><i class="bi bi-check-circle-fill"></i> Enabled</span>
+                  <% } else { %>
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">Disabled</span>
+                  <% } %>
+                </td>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

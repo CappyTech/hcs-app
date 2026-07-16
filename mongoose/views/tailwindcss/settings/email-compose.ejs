@@ -1,0 +1,72 @@
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-blue-500 to-sky-500"></div>
+    <div class="p-6 sm:p-8">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-pencil-square text-blue-500"></i> Compose Email</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Send an email to one user or everyone in a role. Sent as an <strong>admin</strong> message.</p>
+        </div>
+        <a href="/admin/emails" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Email hub</a>
+      </div>
+
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3">
+        <i class="bi bi-info-circle"></i>
+        Recipients who turned off "allow administrators to email me" (or unsubscribed from the chosen
+        type, if it is subscribable) are automatically skipped.
+      </p>
+
+      <form method="POST" action="/admin/emails/compose" class="space-y-5">
+        <%- include('../partials/csrfHidden.ejs') %>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Message type</label>
+          <select name="typeKey" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <% adminTypes.forEach(function (t) { %>
+              <option value="<%= t.key %>" <%= t.key === 'admin-message' ? 'selected' : '' %>><%= t.label %><%= t.subscribable ? '' : ' (direct — no unsubscribe)' %></option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Recipient</label>
+          <div class="mt-1 flex flex-col gap-3">
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input type="radio" name="recipientType" value="user" checked>
+              Single user
+            </label>
+            <select name="userId" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+              <% users.forEach(function (u) { %>
+                <option value="<%= u._id %>"><%= u.username %> — <%= u.email %> (<%= u.role %>)<%= u.emailVerified ? '' : ' [unverified]' %></option>
+              <% }); %>
+            </select>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input type="radio" name="recipientType" value="role">
+              Everyone in a role
+            </label>
+            <select name="role" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+              <% roles.forEach(function (r) { %>
+                <option value="<%= r %>"><%= r %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
+          <input type="text" name="subject" required maxlength="300" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
+          <textarea name="message" rows="8" required class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="Write your message. Blank lines separate paragraphs."></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <a href="/admin/emails" class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">Cancel</a>
+          <button type="submit" class="px-5 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white">Queue email</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

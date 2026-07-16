@@ -3,6 +3,8 @@
 const mdb = require('../mongoose/services/mongooseDatabaseService');
 const emailService = require('./emailService');
 const logger = require('./loggerService');
+const emailTypeService = require('../mongoose/services/emailTypeService');
+const emailPreferenceService = require('../mongoose/services/emailPreferenceService');
 
 /**
  * Central notification service (email outbox).
@@ -11,13 +13,18 @@ const logger = require('./loggerService');
  *   await notificationService.enqueue({
  *     to, subject,
  *     html: notificationService.wrapTemplate({ heading, bodyLines, ctaText, ctaUrl }),
- *     text, category: 'holiday', refType: 'employeeHoliday', refId: doc._id,
- *     dedupeKey: 'holiday-approved-' + doc._id,   // optional idempotency
+ *     text, typeKey: 'task-assigned', senderType: 'system',
+ *     recipientUserId: user._id, refType: 'task', refId: doc._id,
+ *     dedupeKey: 'task-assigned:' + doc.uuid,   // optional idempotency
  *   });
  *
- * Delivery happens asynchronously via the 'notification-outbox' job with
- * exponential backoff (5 attempts), so callers never block on SMTP and a
- * mail outage cannot lose messages.
+ * enqueue() resolves the recipient and the emailType, then GATES the send:
+ *   - a disabled type never sends;
+ *   - a subscribable type is skipped when the recipient has unsubscribed;
+ *   - any admin-originated email is skipped when the recipient turned off
+ *     "allow admins to email me".
+ * It then appends the correct unsubscribe footer for the recipient before
+ * queueing. Delivery happens asynchronously via the 'notification-outbox' job.
  */
 
 const BACKOFF_BASE_MS = 5 * 60 * 1000; // 5 min, doubles per attempt
@@ -60,26 +67,142 @@ function baseUrl() {
   return process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 }
 
+const DASHBOARD_PATH = '/user/account/settings/notifications';
+
+/**
+ * Build the unsubscribe footer (html + text) for one recipient. The link always
+ * points at a page — never a URL that mutates on load. Returns the four variants
+ * the product spec requires, keyed on senderType + subscribable.
+ */
+function buildFooter({ senderType = 'system', subscribable = false, typeKey = null, token = null }) {
+  const root = baseUrl();
+  // Deep-link into the recipient's own dashboard (requires their login).
+  const dashUrl = `${root}${DASHBOARD_PATH}${typeKey ? `#type-${encodeURIComponent(typeKey)}` : ''}`;
+  // Token-scoped confirmation page (works logged-out; read-only until they click).
+  const tokenUnsub = (extra) => token
+    ? `${root}/notifications/unsubscribe?token=${encodeURIComponent(token)}${extra}`
+    : dashUrl;
+
+  let sentence;
+  let link;
+  let linkText = 'unsubscribe here';
+
+  if (senderType === 'admin' && !subscribable) {
+    // Direct email from a human admin — cannot unsubscribe from the message,
+    // but may stop admins contacting them at all.
+    sentence = 'This email was sent by an administrator. You cannot unsubscribe from it — please contact an administrator, or change your notification settings so administrators can no longer contact you.';
+    link = tokenUnsub('&admin=1');
+    linkText = 'change your notification settings';
+  } else if (senderType === 'admin') {
+    sentence = 'This is an admin notification email.';
+    link = tokenUnsub(`&type=${encodeURIComponent(typeKey || '')}`);
+  } else if (senderType === 'user') {
+    sentence = 'This is a user notification email.';
+    link = token ? tokenUnsub(`&type=${encodeURIComponent(typeKey || '')}`) : dashUrl;
+  } else if (!subscribable) {
+    // Mandatory system message (e.g. security) — no unsubscribe.
+    return {
+      html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 16px auto 0; padding-top: 12px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
+      <p style="margin: 0;">This is a system notification email. It is required for the operation of your account and cannot be unsubscribed from.</p>
+    </div>`,
+      text: '\n\n—\nThis is a system notification email. It is required for the operation of your account and cannot be unsubscribed from.',
+    };
+  } else {
+    sentence = 'This is a system notification email.';
+    link = tokenUnsub(`&type=${encodeURIComponent(typeKey || '')}`);
+  }
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 16px auto 0; padding-top: 12px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
+      <p style="margin: 0;">${escapeHtml(sentence)} <a href="${escapeHtml(link)}" style="color: #15803d;">${escapeHtml(linkText)}</a>.</p>
+    </div>`;
+  const text = `\n\n—\n${sentence} ${linkText}: ${link}`;
+  return { html, text };
+}
+
+async function resolveRecipientUser(recipientUserId, to) {
+  const User = mdb.INTERNAL?.user;
+  if (!User) return null;
+  try {
+    if (recipientUserId && typeof User.findById === 'function') {
+      const byId = await User.findById(recipientUserId).lean();
+      if (byId) return byId;
+    }
+    if (to && typeof User.findOne === 'function') {
+      return await User.findOne({ email: String(to).toLowerCase() }).lean();
+    }
+  } catch (_) { /* best-effort — gating/footer degrade gracefully without a user */ }
+  return null;
+}
+
 /**
  * Queue a notification. Returns the created doc, or null when skipped
- * (deduplicated or recipient missing).
+ * (deduplicated, recipient missing, type disabled, or recipient unsubscribed).
  */
-async function enqueue({ to, subject, html, text, category = 'system', refType = null, refId = null, dedupeKey = null }) {
+async function enqueue({
+  to, subject, html, text,
+  category = 'system', typeKey = null,
+  senderType = 'system', senderUserId = null, recipientUserId = null,
+  refType = null, refId = null, dedupeKey = null,
+}) {
   const Notification = mdb.INTERNAL?.notification;
   if (!Notification) {
     logger.warn('[notificationService] Notification model unavailable — dropping: ' + subject);
     return null;
   }
   if (!to) {
-    logger.warn(`[notificationService] No recipient for "${subject}" (${category}) — skipped`);
+    logger.warn(`[notificationService] No recipient for "${subject}" (${typeKey || category}) — skipped`);
     return null;
   }
+
+  const key = (typeKey || category) || null;
+  const type = key ? await emailTypeService.resolveOrRegister(key) : null;
+  const user = await resolveRecipientUser(recipientUserId, to);
+
+  // ── Gating ─────────────────────────────────────────────────────────
+  if (type && type.enabled === false) {
+    logger.info(`[notificationService] Type "${key}" disabled — "${subject}" to ${to} skipped`);
+    return null;
+  }
+  const subscribable = type ? type.subscribable : false;
+  // Any admin-originated email respects the recipient's master switch.
+  if (senderType === 'admin' && user && user.allowAdminEmails === false) {
+    logger.info(`[notificationService] Recipient blocks admin emails — "${subject}" to ${to} skipped`);
+    return null;
+  }
+  // Subscribable types honour the per-type preference (only when we know the user).
+  if (type && subscribable && user) {
+    const subscribed = await emailPreferenceService.isSubscribed(user._id, key, type);
+    if (!subscribed) {
+      logger.info(`[notificationService] Recipient unsubscribed from "${key}" — "${subject}" to ${to} skipped`);
+      return null;
+    }
+  }
+
   if (dedupeKey) {
     const existing = await Notification.findOne({ dedupeKey }).select('_id').lean();
     if (existing) return null;
   }
+
+  // ── Footer ─────────────────────────────────────────────────────────
+  const token = user ? await emailPreferenceService.ensureToken(user) : null;
+  const footer = buildFooter({ senderType, subscribable, typeKey: key, token });
+  const finalHtml = html != null ? `${html}${footer.html}` : html;
+  const finalText = text != null ? `${text}${footer.text}` : text;
+
   const doc = await Notification.create({
-    to, subject, html, text, category, refType,
+    to,
+    subject,
+    html: finalHtml,
+    text: finalText,
+    category: key || category,
+    typeKey: key,
+    senderType,
+    senderUserId: senderUserId != null ? String(senderUserId) : null,
+    recipientUserId: user ? String(user._id) : (recipientUserId != null ? String(recipientUserId) : null),
+    unsubscribable: senderType === 'user' ? true : subscribable,
+    refType,
     refId: refId != null ? String(refId) : null,
     dedupeKey,
   });
@@ -88,9 +211,10 @@ async function enqueue({ to, subject, html, text, category = 'system', refType =
 
 /**
  * Queue the same notification to every user holding one of `roles`
- * (verified email required). Dedupe is applied per recipient.
+ * (verified email required). Gating and the per-recipient footer are applied
+ * individually inside enqueue().
  */
-async function enqueueForRoles(roles, { subject, html, text, category, refType, refId, dedupeKey }) {
+async function enqueueForRoles(roles, { subject, html, text, category, typeKey, senderType = 'system', senderUserId = null, refType, refId, dedupeKey }) {
   const User = mdb.INTERNAL?.user;
   if (!User) return { queued: 0 };
   const users = await User.find({
@@ -102,7 +226,9 @@ async function enqueueForRoles(roles, { subject, html, text, category, refType, 
   let queued = 0;
   for (const u of users) {
     const doc = await enqueue({
-      to: u.email, subject, html, text, category, refType, refId,
+      to: u.email, subject, html, text, category, typeKey,
+      senderType, senderUserId, recipientUserId: u._id,
+      refType, refId,
       dedupeKey: dedupeKey ? `${dedupeKey}:${u.email}` : null,
     });
     if (doc) queued++;
@@ -158,5 +284,6 @@ module.exports = {
   enqueueForRoles,
   processOutbox,
   wrapTemplate,
+  buildFooter,
   baseUrl,
 };
