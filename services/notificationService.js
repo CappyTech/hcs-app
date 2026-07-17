@@ -5,6 +5,7 @@ const emailService = require('./emailService');
 const logger = require('./loggerService');
 const emailTypeService = require('../mongoose/services/emailTypeService');
 const emailPreferenceService = require('../mongoose/services/emailPreferenceService');
+const emailBrandingService = require('../mongoose/services/emailBrandingService');
 const unsubscribeTokenService = require('../mongoose/services/unsubscribeTokenService');
 
 /**
@@ -39,20 +40,44 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
+// Only allow link schemes that are safe inside an email button. Anything else
+// (javascript:, data:, etc.) is neutralised to '#'. Relative paths are allowed.
+function safeUrl(url) {
+  const value = String(url ?? '').trim();
+  if (!value) return '#';
+  if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
+  if (/^\//.test(value)) return value; // app-relative path
+  return '#';
+}
+
+function renderButton(text, url) {
+  return `<a href="${escapeHtml(safeUrl(url))}"
+           style="display: inline-block; background-color: #15803d; color: #fff; margin: 6px; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-size: 16px;">
+          ${escapeHtml(text)}
+        </a>`;
+}
+
 /**
  * Branded HTML wrapper matching the existing verification/reset emails.
  * `bodyLines` are escaped; pass `bodyHtml` instead to supply raw HTML.
+ *
+ * Action buttons: pass a single `ctaText`/`ctaUrl` (legacy) and/or an `actions`
+ * array of `{ text|label, url }`. All are rendered together, centred, wrapping
+ * across lines when there are several.
  */
-function wrapTemplate({ heading, bodyLines = [], bodyHtml = '', ctaText, ctaUrl }) {
+function wrapTemplate({ heading, bodyLines = [], bodyHtml = '', ctaText, ctaUrl, actions = [] }) {
   const paragraphs = bodyHtml ||
     bodyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join('\n      ');
-  const cta = ctaText && ctaUrl
-    ? `<p style="text-align: center; margin: 30px 0;">
-        <a href="${escapeHtml(ctaUrl)}"
-           style="background-color: #15803d; color: #fff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-size: 16px;">
-          ${escapeHtml(ctaText)}
-        </a>
-      </p>`
+  const allActions = [
+    ...(ctaText && ctaUrl ? [{ text: ctaText, url: ctaUrl }] : []),
+    ...(Array.isArray(actions) ? actions : []),
+  ]
+    .map((a) => ({ text: a && (a.text || a.label), url: a && a.url }))
+    .filter((a) => a.text && a.url);
+  const cta = allActions.length
+    ? `<div style="text-align: center; margin: 30px 0;">
+        ${allActions.map((a) => renderButton(a.text, a.url)).join('\n        ')}
+      </div>`
     : '';
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -62,6 +87,34 @@ function wrapTemplate({ heading, bodyLines = [], bodyHtml = '', ctaText, ctaUrl 
       <p style="color: #999; font-size: 12px;">This is an automated message from the Heron CS platform.</p>
     </div>
   `;
+}
+
+/** Crude HTML→text for the plaintext part of branded header/footer blocks. */
+function htmlToText(html) {
+  return String(html || '')
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\/\s*(p|div|h[1-6]|tr|li)\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Resolve the branded header/footer blocks that apply to `type`. Each block is
+ * included only when it is globally enabled AND the type opts in (both flags
+ * default on). Returns { header, footer } HTML strings (possibly empty).
+ */
+function resolveBranding(branding, type) {
+  const out = { header: '', footer: '' };
+  if (!branding) return out;
+  const wantsHeader = !type || type.useGlobalHeader !== false;
+  const wantsFooter = !type || type.useGlobalFooter !== false;
+  if (branding.headerEnabled && branding.headerHtml && wantsHeader) out.header = branding.headerHtml;
+  if (branding.footerEnabled && branding.footerHtml && wantsFooter) out.footer = branding.footerHtml;
+  return out;
 }
 
 function baseUrl() {
@@ -202,8 +255,21 @@ async function enqueue({
     token = unsubscribeTokenService.sign({ userId: user._id, scope, notificationToken: notifToken });
   }
   const footer = buildFooter({ senderType, subscribable, typeKey: key, token });
-  const finalHtml = html != null ? `${html}${footer.html}` : html;
-  const finalText = text != null ? `${text}${footer.text}` : text;
+
+  // ── Branded header / footer ────────────────────────────────────────
+  // Platform-wide branding blocks wrap the body, gated by both the global
+  // switches and this type's per-type opt-in. They sit above the mandatory
+  // unsubscribe footer.
+  const branding = await emailBrandingService.get();
+  const brand = resolveBranding(branding, type);
+  const finalHtml = html != null
+    ? `${brand.header}${html}${brand.footer}${footer.html}`
+    : html;
+  const brandHeaderText = brand.header ? `${htmlToText(brand.header)}\n\n` : '';
+  const brandFooterText = brand.footer ? `\n\n${htmlToText(brand.footer)}` : '';
+  const finalText = text != null
+    ? `${brandHeaderText}${text}${brandFooterText}${footer.text}`
+    : text;
 
   const doc = await Notification.create({
     to,
@@ -298,13 +364,20 @@ async function processOutbox({ batchSize = 20 } = {}) {
 // needs one that permits inline styles but forbids scripts/forms to stay safe.
 const PREVIEW_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data: https:; base-uri 'none'; form-action 'none'";
 
-/** Full standalone HTML document previewing how an emailType's message looks. */
-function renderPreviewDocument(type) {
+/**
+ * Full standalone HTML document previewing how an emailType's message looks.
+ * Pass the current `branding` doc to preview the global header/footer as the
+ * recipient would see it; the type's own `actions` are shown when configured,
+ * otherwise a single example button.
+ */
+function renderPreviewDocument(type, branding = null) {
+  const actions = Array.isArray(type.actions) && type.actions.length
+    ? type.actions.map((a) => ({ text: a.label, url: a.url }))
+    : [{ text: 'Open Heron CS', url: baseUrl() + '/' }];
   const html = wrapTemplate({
     heading: type.heading || type.label,
     bodyLines: [type.intro || '', type.description || 'Example notification body.'].filter(Boolean),
-    ctaText: 'Open Heron CS',
-    ctaUrl: baseUrl() + '/',
+    actions,
   });
   const footer = buildFooter({
     senderType: type.senderType,
@@ -312,8 +385,9 @@ function renderPreviewDocument(type) {
     typeKey: type.key,
     token: null,
   });
+  const brand = resolveBranding(branding, type);
   const safeTitle = escapeHtml(type.label || '');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Email preview — ${safeTitle}</title></head><body style="margin:0;padding:24px;background:#f3f4f6;">${html}${footer.html}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Email preview — ${safeTitle}</title></head><body style="margin:0;padding:24px;background:#f3f4f6;">${brand.header}${html}${brand.footer}${footer.html}</body></html>`;
 }
 
 module.exports = {
@@ -322,6 +396,7 @@ module.exports = {
   processOutbox,
   wrapTemplate,
   buildFooter,
+  resolveBranding,
   baseUrl,
   renderPreviewDocument,
   PREVIEW_CSP,

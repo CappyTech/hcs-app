@@ -23,6 +23,10 @@ router.get("/admin/emails", authService.ensureRole("admin"), ctrl.getHub);
 router.post("/admin/emails/rotation", authService.ensureRole("admin"), ctrl.postRotationSettings);
 router.post("/admin/emails/rotate-now", authService.ensureRole("admin"), ctrl.postRotateNow);
 
+// Global email header & footer branding
+router.get("/admin/emails/branding", authService.ensureRole("admin"), ctrl.getBranding);
+router.post("/admin/emails/branding", authService.ensureRole("admin"), ctrl.postBranding);
+
 // Catalog of email/notification types
 router.get("/admin/emails/types", authService.ensureRole("admin"), ctrl.getTypes);
 router.get("/admin/emails/types/:key/preview", authService.ensureRole("admin"), ctrl.getTypePreview);

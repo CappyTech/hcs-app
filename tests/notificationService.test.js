@@ -57,6 +57,51 @@ describe('notificationService.wrapTemplate', () => {
     const html = notificationService.wrapTemplate({ heading: 'H', bodyLines: ['x'] });
     assert.ok(!html.includes('href='));
   });
+
+  it('renders multiple action buttons from the actions array', () => {
+    const html = notificationService.wrapTemplate({
+      heading: 'H', bodyLines: ['x'],
+      actions: [{ label: 'One', url: 'https://a.test/1' }, { label: 'Two', url: '/local/path' }],
+    });
+    assert.ok(html.includes('href="https://a.test/1"'));
+    assert.ok(html.includes('href="/local/path"'));
+    assert.ok(html.includes('One') && html.includes('Two'));
+  });
+
+  it('neutralises unsafe button URL schemes', () => {
+    const html = notificationService.wrapTemplate({
+      heading: 'H', bodyLines: ['x'],
+      actions: [{ label: 'Bad', url: 'javascript:alert(1)' }],
+    });
+    assert.ok(!html.includes('javascript:'));
+    assert.ok(html.includes('href="#"'));
+  });
+});
+
+describe('notificationService.resolveBranding', () => {
+  const branding = { headerEnabled: true, headerHtml: '<h>', footerEnabled: true, footerHtml: '<f>' };
+
+  it('includes both blocks when enabled and the type opts in', () => {
+    const out = notificationService.resolveBranding(branding, { useGlobalHeader: true, useGlobalFooter: true });
+    assert.equal(out.header, '<h>');
+    assert.equal(out.footer, '<f>');
+  });
+
+  it('omits a block when the type opts out', () => {
+    const out = notificationService.resolveBranding(branding, { useGlobalHeader: false, useGlobalFooter: true });
+    assert.equal(out.header, '');
+    assert.equal(out.footer, '<f>');
+  });
+
+  it('omits a block when globally disabled', () => {
+    const out = notificationService.resolveBranding({ ...branding, footerEnabled: false }, {});
+    assert.equal(out.header, '<h>');
+    assert.equal(out.footer, '');
+  });
+
+  it('returns empty blocks when branding is absent', () => {
+    assert.deepEqual(notificationService.resolveBranding(null, {}), { header: '', footer: '' });
+  });
 });
 
 describe('notificationService.enqueue', () => {

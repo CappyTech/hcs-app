@@ -7,6 +7,7 @@ const logger = require('../../services/loggerService');
 const emailTypeService = require('../services/emailTypeService');
 const notificationService = require('../../services/notificationService');
 const emailPreferenceService = require('../services/emailPreferenceService');
+const emailBrandingService = require('../services/emailBrandingService');
 const unsubscribeTokenService = require('../services/unsubscribeTokenService');
 const unsubscribeRotationService = require('../services/unsubscribeRotationService');
 const configService = require('../../services/configService');
@@ -75,6 +76,22 @@ exports.validateType = [
   body('senderType').optional().isIn(['system', 'admin']).withMessage('Invalid sender type.'),
 ];
 
+// Parse the repeatable action-button rows. Label/URL inputs are named
+// `actionLabel[]` / `actionUrl[]`, which arrive as index-aligned arrays (empty
+// inputs still submit, keeping the pairing intact). Rows missing either half
+// are dropped; capped at 5.
+function readActions(req) {
+  const labels = [].concat(req.body.actionLabel || []);
+  const urls = [].concat(req.body.actionUrl || []);
+  const out = [];
+  for (let i = 0; i < Math.max(labels.length, urls.length); i++) {
+    const label = String(labels[i] || '').trim().slice(0, 60);
+    const url = String(urls[i] || '').trim().slice(0, 500);
+    if (label && url) out.push({ label, url });
+  }
+  return out.slice(0, 5);
+}
+
 function readTypeBody(req) {
   return {
     label: req.body.label,
@@ -85,6 +102,9 @@ function readTypeBody(req) {
     enabled: req.body.enabled === 'on' || req.body.enabled === 'true',
     heading: req.body.heading,
     intro: req.body.intro,
+    useGlobalHeader: req.body.useGlobalHeader === 'on' || req.body.useGlobalHeader === 'true',
+    useGlobalFooter: req.body.useGlobalFooter === 'on' || req.body.useGlobalFooter === 'true',
+    actions: readActions(req),
   };
 }
 
@@ -145,11 +165,37 @@ exports.postDeleteType = async (req, res) => {
 // Admin preview of how a type's email looks (its own route, not the user page).
 exports.getTypePreview = async (req, res, next) => {
   try {
-    const type = await emailTypeService.get(req.params.key);
+    const [type, branding] = await Promise.all([
+      emailTypeService.get(req.params.key),
+      emailBrandingService.get(),
+    ]);
     if (!type) return res.status(404).send('Unknown notification type.');
     res.setHeader('Content-Security-Policy', notificationService.PREVIEW_CSP);
-    res.type('html').send(notificationService.renderPreviewDocument(type));
+    res.type('html').send(notificationService.renderPreviewDocument(type, branding));
   } catch (err) { next(err); }
+};
+
+// ── Global header / footer branding ─────────────────────────────────────
+exports.getBranding = async (req, res, next) => {
+  try {
+    const branding = await emailBrandingService.get();
+    res.render(VIEW('email-branding'), { title: 'Email Header & Footer', branding });
+  } catch (err) { next(err); }
+};
+
+exports.postBranding = async (req, res) => {
+  try {
+    await emailBrandingService.save({
+      headerEnabled: req.body.headerEnabled === 'on' || req.body.headerEnabled === 'true',
+      headerHtml: req.body.headerHtml || '',
+      footerEnabled: req.body.footerEnabled === 'on' || req.body.footerEnabled === 'true',
+      footerHtml: req.body.footerHtml || '',
+    });
+    req.flash('success', 'Email header & footer saved.');
+  } catch (err) {
+    req.flash('error', `Could not save branding: ${err.message}`);
+  }
+  res.redirect('/admin/emails/branding');
 };
 
 // ── Compose & send ──────────────────────────────────────────────────────
@@ -190,6 +236,7 @@ exports.postCompose = async (req, res) => {
         ...(type && type.intro ? [type.intro] : []),
         ...String(message).split(/\n{2,}/).map((s) => s.trim()).filter(Boolean),
       ],
+      actions: (type && Array.isArray(type.actions)) ? type.actions : [],
     });
     const text = String(message);
 

@@ -1,0 +1,44 @@
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-blue-500 to-sky-500"></div>
+    <div class="p-6 sm:p-8">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-window-sidebar text-blue-500"></i> Email Header &amp; Footer</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">A platform-wide branded header and footer wrapped around every outgoing email. Individual types can opt out from the <a href="/admin/emails/types" class="text-blue-600 dark:text-blue-400 hover:underline">Notification Types</a> page.</p>
+        </div>
+        <a href="/admin/emails" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Email hub</a>
+      </div>
+
+      <div class="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 mb-6 text-xs text-amber-800 dark:text-amber-200">
+        <i class="bi bi-info-circle"></i> These blocks accept raw HTML (logos, links, inline styles). The header appears above the message body; the footer appears below it, <strong>above</strong> the mandatory unsubscribe line, which is always present and cannot be removed.
+      </div>
+
+      <form method="POST" action="/admin/emails/branding" class="space-y-8">
+        <%- include('../partials/csrfHidden.ejs') %>
+
+        <!-- Header -->
+        <div>
+          <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+            <input type="checkbox" name="headerEnabled" <%= branding.headerEnabled ? 'checked' : '' %>> Enable email header
+          </label>
+          <textarea name="headerHtml" rows="6" maxlength="20000" placeholder="&lt;div style=&quot;text-align:center&quot;&gt;&lt;img src=&quot;https://…/logo.png&quot; alt=&quot;Heron CS&quot; height=&quot;40&quot;&gt;&lt;/div&gt;" class="w-full font-mono text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= branding.headerHtml || '' %></textarea>
+          <p class="text-xs text-gray-400 mt-1">HTML rendered at the very top of each email.</p>
+        </div>
+
+        <!-- Footer -->
+        <div>
+          <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+            <input type="checkbox" name="footerEnabled" <%= branding.footerEnabled ? 'checked' : '' %>> Enable email footer
+          </label>
+          <textarea name="footerHtml" rows="6" maxlength="20000" placeholder="&lt;p style=&quot;color:#999;font-size:12px&quot;&gt;Heron CS Ltd · 123 Example St · &lt;a href=&quot;https://heroncs.co.uk&quot;&gt;heroncs.co.uk&lt;/a&gt;&lt;/p&gt;" class="w-full font-mono text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= branding.footerHtml || '' %></textarea>
+          <p class="text-xs text-gray-400 mt-1">HTML rendered below the body, above the unsubscribe line.</p>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="submit" class="px-5 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white">Save header &amp; footer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

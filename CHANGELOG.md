@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.12.0] - 2026-07-17
+
+### Added
+- **Platform-wide email header & footer.** A new `emailBranding` singleton (managed at `/admin/emails/branding`, linked from the Email hub) holds a branded header and footer — raw HTML for logos, contact details, address, social links, etc. — that `notificationService.enqueue` now wraps around **every** outgoing email (both HTML and a derived plaintext part). Each block has its own enable switch, and the branded footer sits **above** the mandatory unsubscribe line, which remains always-present. Content is authored by admins (a trusted role) and rendered verbatim.
+- **Per-email header/footer opt-out.** Each email type gains `useGlobalHeader` / `useGlobalFooter` toggles (default on) on its `/admin/emails/types` editor, so a specific type (e.g. a bare security alert) can suppress the global branding while others keep it.
+- **Multiple action buttons per email.** `emailType` gains an ordered `actions[]` array (`{label, url}`, up to 5), edited via repeatable rows in the type editor. `notificationService.wrapTemplate` now renders an `actions` array of centred, wrapping buttons (the legacy single `ctaText`/`ctaUrl` still works and is merged in). Admin-composed messages and the type preview render the configured buttons; button URLs are scheme-checked (`http(s)`/`mailto`/`tel`/relative only — `javascript:` etc. neutralised to `#`).
+
+### Changed
+- **Type preview reflects branding + buttons.** `/admin/emails/types/:key/preview` now renders the global header/footer (respecting the type's opt-in) and the type's own action buttons.
+
 ## [6.11.1] - 2026-07-17
 
 ### Added

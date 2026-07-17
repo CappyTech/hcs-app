@@ -65,6 +65,26 @@ const emailTypeSchema = new mongoose.Schema(
     // is an opening paragraph shown before the body.
     heading: { type: String, default: '', trim: true, maxlength: 120 },
     intro:   { type: String, default: '', trim: true, maxlength: 1000 },
+
+    // Whether this type includes the platform-wide branded header / footer
+    // (managed at /admin/emails/branding). Both default on; an admin can opt a
+    // specific type out (e.g. a bare security alert). The global blocks must
+    // also be enabled for them to appear.
+    useGlobalHeader: { type: Boolean, default: true },
+    useGlobalFooter: { type: Boolean, default: true },
+
+    // Call-to-action buttons rendered in this type's emails (preview +
+    // admin-composed messages). Ordered; rendered left-to-right, wrapping.
+    actions: {
+      type: [
+        {
+          _id: false,
+          label: { type: String, trim: true, maxlength: 60 },
+          url:   { type: String, trim: true, maxlength: 500 },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true },
 );
