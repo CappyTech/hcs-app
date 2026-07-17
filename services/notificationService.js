@@ -84,10 +84,18 @@ function wrapTemplate({ heading, bodyLines = [], bodyHtml = '', ctaText, ctaUrl,
       <h2 style="color: #15803d;">${escapeHtml(heading)}</h2>
       ${paragraphs}
       ${cta}
-      <p style="color: #999; font-size: 12px;">This is an automated message from the Heron CS platform.</p>
     </div>
   `;
 }
+
+// Standing "automated message" notice appended below *everything* (body,
+// branded footer and the mandatory unsubscribe line) by enqueue() and the
+// preview, so it always sits at the very bottom of the email.
+const AUTOMATED_NOTICE_HTML = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 16px auto 0; color: #999; font-size: 12px;">
+      <p style="margin: 0;">This is an automated message from the Heron CS platform.</p>
+    </div>`;
+const AUTOMATED_NOTICE_TEXT = '\n\n—\nThis is an automated message from the Heron CS platform.';
 
 /** Crude HTML→text for the plaintext part of branded header/footer blocks. */
 function htmlToText(html) {
@@ -263,12 +271,12 @@ async function enqueue({
   const branding = await emailBrandingService.get();
   const brand = resolveBranding(branding, type);
   const finalHtml = html != null
-    ? `${brand.header}${html}${brand.footer}${footer.html}`
+    ? `${brand.header}${html}${brand.footer}${footer.html}${AUTOMATED_NOTICE_HTML}`
     : html;
   const brandHeaderText = brand.header ? `${htmlToText(brand.header)}\n\n` : '';
   const brandFooterText = brand.footer ? `\n\n${htmlToText(brand.footer)}` : '';
   const finalText = text != null
-    ? `${brandHeaderText}${text}${brandFooterText}${footer.text}`
+    ? `${brandHeaderText}${text}${brandFooterText}${footer.text}${AUTOMATED_NOTICE_TEXT}`
     : text;
 
   const doc = await Notification.create({
@@ -387,7 +395,7 @@ function renderPreviewDocument(type, branding = null) {
   });
   const brand = resolveBranding(branding, type);
   const safeTitle = escapeHtml(type.label || '');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Email preview — ${safeTitle}</title></head><body style="margin:0;padding:24px;background:#f3f4f6;">${brand.header}${html}${brand.footer}${footer.html}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Email preview — ${safeTitle}</title></head><body style="margin:0;padding:24px;background:#f3f4f6;">${brand.header}${html}${brand.footer}${footer.html}${AUTOMATED_NOTICE_HTML}</body></html>`;
 }
 
 module.exports = {

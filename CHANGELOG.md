@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.12.3] - 2026-07-17
+
+### Changed
+- **"This is an automated message from the Heron CS platform." now sits at the very bottom of the email.** It previously rendered inside the message body (above the branded footer and the unsubscribe line). Moved it out of `wrapTemplate` into a shared `AUTOMATED_NOTICE` block that `enqueue` and the type preview append *after* the branded footer and unsubscribe line, so it's always the last thing in the email (HTML and plaintext parts).
+
 ## [6.12.2] - 2026-07-17
 
 ### Changed

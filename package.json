@@ -1,6 +1,6 @@
 {
   "name": "hcs-app",
-  "version": "6.12.2",
+  "version": "6.12.3",
   "description": "Internal business platform for Heron Constructive Solutions LTD: CIS compliance, HR, attendance, fleet, holidays, document management and finance dashboards. (Payroll and direct HMRC integration are in development, not production-ready.)",
   "main": "app.js",
   "engines": {
