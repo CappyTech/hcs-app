@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.12.1] - 2026-07-17
+
+### Fixed
+- **Email header/footer inline styles were being stripped.** The global `xssSanitize` middleware pipes every field through the `xss` library's default whitelist, which drops `style` attributes — so admin-authored branding HTML rendered as unstyled, left-aligned, default-blue links. Added an `EMAIL_HTML_FIELDS` whitelist (`headerHtml`, `footerHtml`) that preserves inline `style` on the layout/link/image/table tags email clients require, while still stripping `<script>`, event handlers and `javascript:` URLs (CSS values remain filtered by the library's cssfilter). Note: header/footer HTML saved before this fix is already style-stripped in the DB and must be re-saved to pick up styling.
+
 ## [6.12.0] - 2026-07-17
 
 ### Added

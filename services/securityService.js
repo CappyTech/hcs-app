@@ -25,6 +25,33 @@ const richTextXssOptions = {
   },
 };
 
+// Fields holding admin-authored email HTML (the platform-wide email header /
+// footer, /admin/emails/branding). Email clients require inline `style`
+// attributes and table-based layout, so this whitelist is broader than the
+// Quill rich-text one — it permits inline styles on the layout/link/image tags
+// while still stripping <script>, event handlers and javascript: URLs. The CSS
+// values themselves are additionally filtered by the xss library's cssfilter.
+const EMAIL_HTML_FIELDS = new Set(["headerHtml", "footerHtml"]);
+
+const STYLE = ["style", "class"];
+const emailHtmlXssOptions = {
+  whiteList: {
+    div: [...STYLE, "align"], p: [...STYLE, "align"], span: STYLE, center: [],
+    h1: [...STYLE, "align"], h2: [...STYLE, "align"], h3: [...STYLE, "align"],
+    h4: [...STYLE, "align"], h5: [...STYLE, "align"], h6: [...STYLE, "align"],
+    ul: STYLE, ol: [...STYLE, "type"], li: STYLE,
+    strong: STYLE, b: STYLE, em: STYLE, i: STYLE, u: STYLE, s: STYLE, small: STYLE,
+    br: [], hr: STYLE,
+    a: ["href", "title", "target", "rel", ...STYLE],
+    img: ["src", "alt", "width", "height", ...STYLE],
+    font: ["color", "face", "size"],
+    table: [...STYLE, "width", "cellpadding", "cellspacing", "border", "align", "role", "bgcolor"],
+    thead: [...STYLE, "align"], tbody: [...STYLE, "align"], tr: [...STYLE, "align", "bgcolor"],
+    td: [...STYLE, "colspan", "rowspan", "width", "align", "valign", "bgcolor"],
+    th: [...STYLE, "colspan", "rowspan", "width", "align", "valign", "bgcolor"],
+  },
+};
+
 /**
  * Express middleware that sanitises req.body, req.query, and req.params
  * by stripping dangerous HTML/script content.  Replaces the abandoned
@@ -35,9 +62,13 @@ function xssSanitize(req, _res, next) {
     if (!obj || typeof obj !== "object") return obj;
     for (const key of Object.keys(obj)) {
       if (typeof obj[key] === "string") {
-        obj[key] = RICH_TEXT_FIELDS.has(key)
-          ? filterXSS(obj[key], richTextXssOptions)
-          : filterXSS(obj[key]);
+        if (EMAIL_HTML_FIELDS.has(key)) {
+          obj[key] = filterXSS(obj[key], emailHtmlXssOptions);
+        } else if (RICH_TEXT_FIELDS.has(key)) {
+          obj[key] = filterXSS(obj[key], richTextXssOptions);
+        } else {
+          obj[key] = filterXSS(obj[key]);
+        }
       } else if (typeof obj[key] === "object") {
         clean(obj[key]);
       }
