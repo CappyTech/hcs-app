@@ -75,6 +75,13 @@ function registerAll() {
     run: () => require('./policyReviewReminderService').checkAndQueueReminders(),
   });
 
+  scheduler.register('unsubscribe-token-rotation', {
+    description: "Rotate every user's unsubscribe token so email unsubscribe links expire ~daily. Runs on startup (if due) and every 24h; enable/disable and last-run are on the Email & Notifications admin page.",
+    intervalMs: DAY,
+    initialDelayMs: 20_000,
+    run: () => require('./unsubscribeRotationService').rotateAll({ trigger: 'scheduled' }),
+  });
+
   scheduler.register('holiday-carry-over', {
     description: "Roll unused holiday entitlement into the new holiday year, capped by each employee's carry-over policy.",
     intervalMs: DAY,

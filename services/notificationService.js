@@ -5,6 +5,7 @@ const emailService = require('./emailService');
 const logger = require('./loggerService');
 const emailTypeService = require('../mongoose/services/emailTypeService');
 const emailPreferenceService = require('../mongoose/services/emailPreferenceService');
+const unsubscribeTokenService = require('../mongoose/services/unsubscribeTokenService');
 
 /**
  * Central notification service (email outbox).
@@ -73,14 +74,18 @@ const DASHBOARD_PATH = '/user/account/settings/notifications';
  * Build the unsubscribe footer (html + text) for one recipient. The link always
  * points at a page — never a URL that mutates on load. Returns the four variants
  * the product spec requires, keyed on senderType + subscribable.
+ *
+ * `token` is a signed unsubscribe token (see unsubscribeTokenService) whose
+ * scope is baked in, so the URL needs no `type`/`admin` query params. When no
+ * token is supplied (e.g. previews) the link falls back to the dashboard.
  */
 function buildFooter({ senderType = 'system', subscribable = false, typeKey = null, token = null }) {
   const root = baseUrl();
   // Deep-link into the recipient's own dashboard (requires their login).
   const dashUrl = `${root}${DASHBOARD_PATH}${typeKey ? `#type-${encodeURIComponent(typeKey)}` : ''}`;
   // Token-scoped confirmation page (works logged-out; read-only until they click).
-  const tokenUnsub = (extra) => token
-    ? `${root}/notifications/unsubscribe?token=${encodeURIComponent(token)}${extra}`
+  const tokenUnsub = () => token
+    ? `${root}/notifications/unsubscribe?token=${encodeURIComponent(token)}`
     : dashUrl;
 
   let sentence;
@@ -91,14 +96,14 @@ function buildFooter({ senderType = 'system', subscribable = false, typeKey = nu
     // Direct email from a human admin — cannot unsubscribe from the message,
     // but may stop admins contacting them at all.
     sentence = 'This email was sent by an administrator. You cannot unsubscribe from it — please contact an administrator, or change your notification settings so administrators can no longer contact you.';
-    link = tokenUnsub('&admin=1');
+    link = tokenUnsub();
     linkText = 'change your notification settings';
   } else if (senderType === 'admin') {
     sentence = 'This is an admin notification email.';
-    link = tokenUnsub(`&type=${encodeURIComponent(typeKey || '')}`);
+    link = tokenUnsub();
   } else if (senderType === 'user') {
     sentence = 'This is a user notification email.';
-    link = token ? tokenUnsub(`&type=${encodeURIComponent(typeKey || '')}`) : dashUrl;
+    link = tokenUnsub();
   } else if (!subscribable) {
     // Mandatory system message (e.g. security) — no unsubscribe.
     return {
@@ -110,7 +115,7 @@ function buildFooter({ senderType = 'system', subscribable = false, typeKey = nu
     };
   } else {
     sentence = 'This is a system notification email.';
-    link = tokenUnsub(`&type=${encodeURIComponent(typeKey || '')}`);
+    link = tokenUnsub();
   }
 
   const html = `
@@ -186,7 +191,16 @@ async function enqueue({
   }
 
   // ── Footer ─────────────────────────────────────────────────────────
-  const token = user ? await emailPreferenceService.ensureToken(user) : null;
+  // Mint a signed, expiring, per-recipient unsubscribe token. Its scope
+  // (specific type, or the master admin-contact toggle) is baked into the
+  // signature, and the user's notificationToken is mixed into the key so
+  // rotating it invalidates the link.
+  let token = null;
+  if (user) {
+    const notifToken = await emailPreferenceService.ensureToken(user);
+    const scope = (senderType === 'admin' && !subscribable) ? 'admin' : `type:${key}`;
+    token = unsubscribeTokenService.sign({ userId: user._id, scope, notificationToken: notifToken });
+  }
   const footer = buildFooter({ senderType, subscribable, typeKey: key, token });
   const finalHtml = html != null ? `${html}${footer.html}` : html;
   const finalText = text != null ? `${text}${footer.text}` : text;
@@ -279,6 +293,29 @@ async function processOutbox({ batchSize = 20 } = {}) {
   return stats;
 }
 
+// CSP for serving an email preview in the browser. Emails style themselves with
+// inline `style="..."` attributes, which the app-wide CSP strips — so a preview
+// needs one that permits inline styles but forbids scripts/forms to stay safe.
+const PREVIEW_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data: https:; base-uri 'none'; form-action 'none'";
+
+/** Full standalone HTML document previewing how an emailType's message looks. */
+function renderPreviewDocument(type) {
+  const html = wrapTemplate({
+    heading: type.heading || type.label,
+    bodyLines: [type.intro || '', type.description || 'Example notification body.'].filter(Boolean),
+    ctaText: 'Open Heron CS',
+    ctaUrl: baseUrl() + '/',
+  });
+  const footer = buildFooter({
+    senderType: type.senderType,
+    subscribable: type.subscribable,
+    typeKey: type.key,
+    token: null,
+  });
+  const safeTitle = escapeHtml(type.label || '');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Email preview — ${safeTitle}</title></head><body style="margin:0;padding:24px;background:#f3f4f6;">${html}${footer.html}</body></html>`;
+}
+
 module.exports = {
   enqueue,
   enqueueForRoles,
@@ -286,4 +323,6 @@ module.exports = {
   wrapTemplate,
   buildFooter,
   baseUrl,
+  renderPreviewDocument,
+  PREVIEW_CSP,
 };

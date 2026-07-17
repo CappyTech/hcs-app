@@ -7,6 +7,9 @@ const logger = require('../../services/loggerService');
 const emailTypeService = require('../services/emailTypeService');
 const notificationService = require('../../services/notificationService');
 const emailPreferenceService = require('../services/emailPreferenceService');
+const unsubscribeTokenService = require('../services/unsubscribeTokenService');
+const unsubscribeRotationService = require('../services/unsubscribeRotationService');
+const configService = require('../../services/configService');
 
 const VIEW = (name) => path.join('tailwindcss', 'settings', name);
 
@@ -19,15 +22,49 @@ exports.getHub = async (req, res, next) => {
   try {
     const types = await emailTypeService.list();
     const counts = { total: types.length, enabled: types.filter((t) => t.enabled).length };
-    res.render(VIEW('email-hub'), { title: 'Email & Notifications', types, counts });
+    const rotation = await unsubscribeRotationService.getState();
+    res.render(VIEW('email-hub'), {
+      title: 'Email & Notifications',
+      types,
+      counts,
+      rotation,
+      rotationEnvLocked: configService.isFromStartupEnv('UNSUBSCRIBE_ROTATION_ENABLED'),
+    });
   } catch (err) { next(err); }
+};
+
+// Enable/disable the automatic unsubscribe-link rotation (persisted to config).
+exports.postRotationSettings = async (req, res) => {
+  try {
+    if (configService.isFromStartupEnv('UNSUBSCRIBE_ROTATION_ENABLED')) {
+      req.flash('error', 'Rotation is fixed by an environment variable and cannot be changed here.');
+      return res.redirect('/admin/emails');
+    }
+    const enabled = req.body.enabled === 'on' || req.body.enabled === 'true';
+    configService.save({ UNSUBSCRIBE_ROTATION_ENABLED: enabled ? 'true' : 'false' });
+    req.flash('success', `Automatic unsubscribe-link rotation ${enabled ? 'enabled' : 'disabled'}.`);
+  } catch (err) {
+    req.flash('error', `Could not update rotation setting: ${err.message}`);
+  }
+  res.redirect('/admin/emails');
+};
+
+// Rotate every user's unsubscribe token right now (manual, forced).
+exports.postRotateNow = async (req, res) => {
+  try {
+    const result = await unsubscribeRotationService.rotateAll({ force: true, trigger: 'manual' });
+    req.flash('success', `Rotated unsubscribe tokens for ${result.rotated || 0} user(s). All existing unsubscribe links are now invalid.`);
+  } catch (err) {
+    req.flash('error', `Rotation failed: ${err.message}`);
+  }
+  res.redirect('/admin/emails');
 };
 
 // ── Catalog ───────────────────────────────────────────────────────────
 exports.getTypes = async (req, res, next) => {
   try {
     const types = await emailTypeService.list();
-    res.render(VIEW('email-types'), { title: 'Email Types', types });
+    res.render(VIEW('email-types'), { title: 'Email Types', types, openKey: req.query.edit || null });
   } catch (err) { next(err); }
 };
 
@@ -46,7 +83,7 @@ function readTypeBody(req) {
     subscribable: req.body.subscribable === 'on' || req.body.subscribable === 'true',
     defaultOn: req.body.defaultOn === 'on' || req.body.defaultOn === 'true',
     enabled: req.body.enabled === 'on' || req.body.enabled === 'true',
-    subjectPrefix: req.body.subjectPrefix,
+    heading: req.body.heading,
     intro: req.body.intro,
   };
 }
@@ -105,6 +142,16 @@ exports.postDeleteType = async (req, res) => {
   res.redirect('/admin/emails/types');
 };
 
+// Admin preview of how a type's email looks (its own route, not the user page).
+exports.getTypePreview = async (req, res, next) => {
+  try {
+    const type = await emailTypeService.get(req.params.key);
+    if (!type) return res.status(404).send('Unknown notification type.');
+    res.setHeader('Content-Security-Policy', notificationService.PREVIEW_CSP);
+    res.type('html').send(notificationService.renderPreviewDocument(type));
+  } catch (err) { next(err); }
+};
+
 // ── Compose & send ──────────────────────────────────────────────────────
 exports.getCompose = async (req, res, next) => {
   try {
@@ -138,8 +185,11 @@ exports.postCompose = async (req, res) => {
     const senderUserId = req.session.user && req.session.user.id;
 
     const html = notificationService.wrapTemplate({
-      heading: (type && type.subjectPrefix) || subject,
-      bodyLines: String(message).split(/\n{2,}/).map((s) => s.trim()).filter(Boolean),
+      heading: (type && type.heading) || subject,
+      bodyLines: [
+        ...(type && type.intro ? [type.intro] : []),
+        ...String(message).split(/\n{2,}/).map((s) => s.trim()).filter(Boolean),
+      ],
     });
     const text = String(message);
 
@@ -214,26 +264,67 @@ function maskEmail(email) {
   return `${value.slice(0, 2)}***@${value.slice(at + 1)}`;
 }
 
+/**
+ * Resolve who + what an unsubscribe request targets. Prefers a signed token
+ * (scope authoritative from the signature — form fields are ignored). Falls
+ * back to the legacy static per-user token for links sent by 6.11.0, reading
+ * scope from the query/body. Returns { user, mode, type } or null.
+ */
+async function resolveUnsubscribe(req) {
+  const token = req.query.token || req.body.token;
+
+  const signed = await unsubscribeTokenService.verify(token);
+  if (signed.ok) {
+    const parsed = unsubscribeTokenService.parseScope(signed.scope);
+    if (parsed.kind === 'admin-contact') return { user: signed.user, mode: 'admin-contact', type: '' };
+    if (parsed.kind === 'type') return { user: signed.user, mode: 'type', type: parsed.typeKey };
+    return { status: 'invalid' };
+  }
+
+  // A structurally-valid token that no longer validates ⇒ it was rotated for
+  // security (or timed out). Surface the friendly "please log in" page.
+  if (signed.reason === 'expired' || signed.reason === 'bad-signature') {
+    return { status: 'rotated' };
+  }
+
+  // Legacy static token (pre-6.11.1). Scope comes from the untrusted query/body,
+  // which is acceptable: the endpoint is opt-out-only, so the worst a scope
+  // choice can do is unsubscribe the same user from a different type.
+  const user = await emailPreferenceService.resolveByToken(token);
+  if (user) {
+    const type = req.query.type || req.body.type;
+    const isAdmin = req.query.admin || req.body.mode === 'admin-contact' || !type;
+    return isAdmin ? { user, mode: 'admin-contact', type: '' } : { user, mode: 'type', type };
+  }
+
+  // A token was supplied but resolves to nobody — most likely a rotated legacy
+  // link. Treat as rotated rather than a hard error. No token at all ⇒ invalid.
+  if (token) return { status: 'rotated' };
+  return { status: 'invalid' };
+}
+
+function renderUnsubscribeOutcome(res, resolved) {
+  if (resolved.status === 'rotated') {
+    return res.status(410).render(path.join('tailwindcss', 'notifications', 'unsubscribe-expired'), {
+      title: 'Unsubscribe link expired',
+    });
+  }
+  return res.status(400).render(path.join('tailwindcss', 'notifications', 'unsubscribed'), {
+    title: 'Unsubscribe', ok: false,
+    message: 'This unsubscribe link is invalid or has expired.',
+  });
+}
+
 // GET is READ-ONLY: it only renders a confirmation page. Email link-scanners /
 // prefetchers issuing a GET change nothing.
 exports.getUnsubscribe = async (req, res) => {
-  const { token, type, admin } = req.query;
-  const user = await emailPreferenceService.resolveByToken(token);
-  if (!user) {
-    return res.status(400).render(path.join('tailwindcss', 'notifications', 'unsubscribed'), {
-      title: 'Unsubscribe', ok: false,
-      message: 'This unsubscribe link is invalid or has expired.',
-    });
-  }
-  let mode = 'admin-contact';
-  let typeDoc = null;
-  if (!admin && type) {
-    typeDoc = await emailTypeService.get(type);
-    mode = 'type';
-  }
+  const resolved = await resolveUnsubscribe(req);
+  if (!resolved.user) return renderUnsubscribeOutcome(res, resolved);
+  const { user, mode, type } = resolved;
+  const typeDoc = mode === 'type' ? await emailTypeService.get(type) : null;
   res.render(path.join('tailwindcss', 'notifications', 'unsubscribe-confirm'), {
     title: 'Confirm unsubscribe',
-    token,
+    token: req.query.token || '',
     mode,
     type: type || '',
     typeDoc,
@@ -241,17 +332,12 @@ exports.getUnsubscribe = async (req, res) => {
   });
 };
 
-// POST performs the change — only after the explicit button press. The token
-// authorises ONLY this one preference change for this one recipient.
+// POST performs the change — only after the explicit button press. Scope is
+// re-derived from the token (not trusted from the form) for signed tokens.
 exports.postUnsubscribe = async (req, res) => {
-  const { token, type, mode } = req.body;
-  const user = await emailPreferenceService.resolveByToken(token);
-  if (!user) {
-    return res.status(400).render(path.join('tailwindcss', 'notifications', 'unsubscribed'), {
-      title: 'Unsubscribe', ok: false,
-      message: 'This unsubscribe link is invalid or has expired.',
-    });
-  }
+  const resolved = await resolveUnsubscribe(req);
+  if (!resolved.user) return renderUnsubscribeOutcome(res, resolved);
+  const { user, mode, type } = resolved;
   try {
     if (mode === 'admin-contact') {
       await emailPreferenceService.setAllowAdminEmails(user._id, false);

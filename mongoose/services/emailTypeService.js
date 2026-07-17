@@ -39,8 +39,7 @@ async function create(data) {
     subscribable: data.subscribable !== false,
     defaultOn: data.defaultOn !== false,
     enabled: data.enabled !== false,
-    audienceRoles: Array.isArray(data.audienceRoles) ? data.audienceRoles : [],
-    subjectPrefix: data.subjectPrefix || '',
+    heading: data.heading || '',
     intro: data.intro || '',
     isCore: false,
   });
@@ -52,7 +51,7 @@ async function update(key, data) {
   const EmailType = model();
   if (!EmailType) throw new Error('emailType model unavailable');
   const patch = {};
-  for (const f of ['label', 'description', 'senderType', 'subscribable', 'defaultOn', 'enabled', 'subjectPrefix', 'intro', 'audienceRoles']) {
+  for (const f of ['label', 'description', 'senderType', 'subscribable', 'defaultOn', 'enabled', 'heading', 'intro']) {
     if (data[f] !== undefined) patch[f] = data[f];
   }
   if (patch.senderType && patch.senderType !== 'admin') patch.senderType = 'system';

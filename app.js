@@ -268,6 +268,15 @@ const main = async () => {
       logger.error('[migration] Email type seeding failed', { error: seedErr.message });
     }
 
+    // Validate the metadata-driven list/CRUD config against registered models.
+    // Non-fatal: surfaces typo'd option keys and stale model entries that would
+    // otherwise fail silently.
+    try {
+      require('./mongoose/services/configValidatorService').validateAtStartup(mdb);
+    } catch (cfgErr) {
+      logger.warn('[configValidator] validation error: ' + cfgErr.message);
+    }
+
     // Load CIS nominal code mappings from the database
     try {
       const cisMappings = require('./mongoose/config/cisMappings');

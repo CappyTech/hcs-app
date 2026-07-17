@@ -86,6 +86,11 @@ router.post(
   authService.ensureAnyRole(),
   settings.sendTestNotification,
 );
+router.post(
+  "/user/account/settings/notifications/rotate-token",
+  authService.ensureAnyRole(),
+  settings.rotateNotificationToken,
+);
 router.get(
   "/user/account/settings/notifications/preview/:key",
   authService.ensureAnyRole(),

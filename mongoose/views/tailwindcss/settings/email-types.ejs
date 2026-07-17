@@ -13,7 +13,7 @@
       <!-- Existing types -->
       <div class="space-y-3 mb-10">
         <% types.forEach(function (t) { %>
-        <details class="rounded-lg border border-gray-200 dark:border-gray-700">
+        <details id="type-<%= t.key %>" class="rounded-lg border border-gray-200 dark:border-gray-700 scroll-mt-24" <%= (typeof openKey !== 'undefined' && openKey === t.key) ? 'open' : '' %>>
           <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer">
             <span class="min-w-0">
               <span class="font-medium text-gray-900 dark:text-gray-100"><%= t.label %></span>
@@ -50,6 +50,15 @@
                 <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
                 <textarea name="description" rows="2" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= t.description %></textarea>
               </div>
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Email heading <span class="text-gray-400 font-normal">(optional)</span></label>
+                <input type="text" name="heading" maxlength="120" value="<%= t.heading || '' %>" placeholder="Falls back to the type label / message subject" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <p class="text-xs text-gray-400 mt-1">Shown as the large heading at the top of this type's emails.</p>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Intro paragraph <span class="text-gray-400 font-normal">(optional)</span></label>
+                <textarea name="intro" rows="2" maxlength="1000" placeholder="Opening line shown before the message body" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= t.intro || '' %></textarea>
+              </div>
               <div class="flex flex-wrap gap-6">
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <input type="checkbox" name="subscribable" <%= t.subscribable ? 'checked' : '' %>> Subscribable (recipients may unsubscribe)
@@ -62,7 +71,7 @@
                 </label>
               </div>
               <div class="flex justify-between items-center pt-2">
-                <a href="/user/account/settings/notifications/preview/<%= encodeURIComponent(t.key) %>" target="_blank" class="text-sm text-blue-600 dark:text-blue-400 hover:underline"><i class="bi bi-eye"></i> Preview</a>
+                <a href="/admin/emails/types/<%= encodeURIComponent(t.key) %>/preview" target="_blank" class="text-sm text-blue-600 dark:text-blue-400 hover:underline"><i class="bi bi-eye"></i> Preview</a>
                 <div class="flex gap-2">
                   <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white">Save</button>
                 </div>
@@ -112,6 +121,16 @@
         <div>
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
           <textarea name="description" rows="2" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Email heading <span class="text-gray-400 font-normal">(optional)</span></label>
+            <input type="text" name="heading" maxlength="120" placeholder="Falls back to the label / subject" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Intro paragraph <span class="text-gray-400 font-normal">(optional)</span></label>
+            <input type="text" name="intro" maxlength="1000" placeholder="Opening line before the body" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          </div>
         </div>
         <div class="flex flex-wrap gap-6">
           <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="subscribable" checked> Subscribable</label>

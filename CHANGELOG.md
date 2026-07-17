@@ -2,6 +2,28 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.11.1] - 2026-07-17
+
+### Added
+- **Startup config validator** (`configValidatorService`) sanity-checks the metadata-driven list/CRUD config against the registered models on boot: it warns (non-fatal) about unknown/typo'd option keys (e.g. `hideFileds`) and config entries with no backing model. The list/CRUD engines read config as plain objects, so such mistakes previously failed silently. It immediately surfaced a stale `CRUDControllerConfig.contractAssignment` entry (no such model/route; `attendance.contractAssignmentId`'s `linkTo` points at a non-existent `/contractAssignment` route — a half-wired feature to finish or remove).
+
+### Changed
+- **Pre-login landing page now reflects the platform's real scope.** The public home page previously described the app as only subcontractor management, document uploads and CIS reports. The hero tagline and feature highlights now cover the actual departments — CIS compliance, HR & attendance, fleet & assets, document management (OCR / Paperless sync), finance, and projects & tasks — mapped to the same overviews shown after login, with matching Bootstrap icons.
+- **Payroll and direct HMRC integration removed from public-facing copy.** These are still in development and not production-ready, so they are no longer advertised on the landing page or in the `package.json` description: dropped the "Finance & Payroll" (PAYE/payroll submissions) card down to a "Finance" card, removed "HMRC-ready" from the CIS card, and dropped "payroll"/"HMRC" from the hero tagline and package description.
+- **Email type customisation completed; dead config removed.** Removed the unused `audienceRoles` field from email types (it configured nothing). The `subjectPrefix`/`intro` fields shipped in 6.11.0 with no way to set them — renamed `subjectPrefix` → `heading` (it sets the email heading, it never prefixed) and added editor inputs so admins can now give each type a custom heading and intro paragraph, reflected in the preview and admin-composed messages.
+
+### Security
+- **Unsubscribe links auto-expire (~24h) via daily token rotation.** A new `unsubscribe-token-rotation` background job rotates every user's `notificationToken` on startup (if due) and every 24h, so a signed unsubscribe link stops working within ~a day. Enable/disable and last-run are on the Email & Notifications admin page (config key `UNSUBSCRIBE_ROTATION_ENABLED`, default on), plus a manual "Rotate now". Last-run is **persisted** (`jobState` collection / `jobStateService`) so a restart/deploy doesn't re-rotate early and shorten the window — the scheduler is otherwise in-memory. A recipient whose link has rotated now gets a friendly "please sign in to unsubscribe — your link was rotated for security, you have 24h" page (HTTP 410) instead of a bare error.
+- **Unsubscribe links hardened against link-holders.** Email unsubscribe links now carry a **signed, expiring, per-scope token** (`unsubscribeTokenService`, HMAC-SHA256, 90-day expiry) instead of a static per-user token in the query string. The token is tamper-proof (user id, scope and expiry are signed) and scoped to a single preference, so a leaked link can't be repurposed. Layered on the existing protections: the link is opt-out-only (can never re-enable or redirect), GET is read-only (scanners/prefetchers change nothing), POST needs an explicit click + CSRF, and the address is masked on the confirmation page.
+- **Per-user "reset unsubscribe links".** The user's `notificationToken` is mixed into every signed link's HMAC key, and a new control on the notification settings page rotates it — instantly invalidating every outstanding unsubscribe link for that user (and only that user) after a forwarded email or suspected leak. Subscriptions are unaffected.
+- **Dedicated rate limit** on `GET`/`POST /notifications/unsubscribe` (30/15 min per IP) on top of the global limiter, to blunt token-guessing and abuse of the public endpoint.
+- Links sent by 6.11.0 keep working: the endpoint verifies a signed token first and falls back to the legacy static token. Optional `UNSUBSCRIBE_SECRET` config (defaults to `SESSION_SECRET`).
+
+### Fixed
+- **Email preview rendered as unstyled "plain HTML".** The notification preview serves email HTML, which styles itself with inline `style="..."` attributes — stripped by the app-wide CSP (`style-src 'self'` + nonce, no `'unsafe-inline'`), so the preview showed unstyled. The preview response now sets its own scoped CSP that permits inline styles but forbids scripts/forms, so it renders exactly like the delivered email while staying safe.
+- **Admin catalog previewed emails through the user-scoped route.** The admin type catalog linked to `/user/account/settings/notifications/preview/:key` (a personal-account page) instead of an admin route. Added a dedicated admin preview at `/admin/emails/types/:key/preview` (admin-guarded) and pointed the admin views at it; the shared preview rendering now lives in `notificationService.renderPreviewDocument`.
+- **Admin email hub had no way to edit types.** The "types at a glance" table now has Edit and Preview actions per row; Edit deep-links to the catalog with that type's editor expanded (`/admin/emails/types?edit=<key>#type-<key>`).
+
 ## [6.11.0] - 2026-07-16
 
 ### Added

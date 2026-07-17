@@ -55,16 +55,16 @@ const emailTypeSchema = new mongoose.Schema(
     // Master switch: a disabled type never sends.
     enabled: { type: Boolean, default: true, index: true },
 
-    // Informational: which roles this type is aimed at (admin filtering only).
-    audienceRoles: { type: [String], default: [] },
-
     // Core types are seeded because code depends on them: the UI may disable
     // but never delete them.
     isCore: { type: Boolean, default: false },
 
-    // Light "what the email looks like" overrides used by senders/preview.
-    subjectPrefix: { type: String, default: '', trim: true, maxlength: 120 },
-    intro:         { type: String, default: '', trim: true, maxlength: 1000 },
+    // "What the email looks like" overrides used by the preview and by
+    // admin-composed messages of this type. `heading` sets the H2 at the top of
+    // the email body (falls back to the type label / message subject); `intro`
+    // is an opening paragraph shown before the body.
+    heading: { type: String, default: '', trim: true, maxlength: 120 },
+    intro:   { type: String, default: '', trim: true, maxlength: 1000 },
   },
   { timestamps: true },
 );

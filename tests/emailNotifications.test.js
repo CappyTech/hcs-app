@@ -109,15 +109,15 @@ describe('notificationService.buildFooter variants', () => {
   it('system + subscribable → system notification with token unsubscribe link', () => {
     const { html, text } = notificationService.buildFooter({ senderType: 'system', subscribable: true, typeKey: 'task-assigned', token: 'tok123' });
     assert.match(text, /system notification email/i);
-    assert.match(html, /token=tok123/);
-    assert.match(html, /type=task-assigned/);
+    // Scope is baked into the signed token, so the URL carries only the token.
+    assert.match(html, /\/notifications\/unsubscribe\?token=tok123/);
   });
 
   it('admin + non-subscribable → cannot unsubscribe, offers to block admins', () => {
     const { html, text } = notificationService.buildFooter({ senderType: 'admin', subscribable: false, typeKey: 'admin-message', token: 'tok123' });
     assert.match(text, /sent by an administrator/i);
     assert.match(text, /change your notification settings/i);
-    assert.match(html, /admin=1/);
+    assert.match(html, /\/notifications\/unsubscribe\?token=tok123/);
   });
 
   it('admin + subscribable → admin notification email', () => {

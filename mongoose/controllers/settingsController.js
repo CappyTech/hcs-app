@@ -709,27 +709,27 @@ exports.sendTestNotification = async (req, res) => {
   res.redirect("/user/account/settings/notifications");
 };
 
+// Invalidate all of this user's outstanding unsubscribe links (e.g. after a
+// forwarded email or a suspected leak). Rotates their notificationToken, which
+// is mixed into every signed link's signature.
+exports.rotateNotificationToken = async (req, res) => {
+  try {
+    await emailPreferenceService.rotateToken(req.session.user.id);
+    req.flash("success", "Your existing unsubscribe links have been invalidated. Future emails carry fresh links.");
+  } catch (error) {
+    logger.error(`Error rotating notification token: ${error.message}`);
+    req.flash("error", "Could not reset your unsubscribe links.");
+  }
+  res.redirect("/user/account/settings/notifications");
+};
+
 // Rendered HTML preview of what a notification type looks like (own account).
 exports.previewNotification = async (req, res, next) => {
   try {
     const type = await emailTypeService.get(req.params.key);
     if (!type) return res.status(404).send("Unknown notification type.");
-    const html = notificationService.wrapTemplate({
-      heading: type.label,
-      bodyLines: [
-        type.description || "Example notification body.",
-        type.intro || "",
-      ].filter(Boolean),
-      ctaText: "Open Heron CS",
-      ctaUrl: notificationService.baseUrl() + "/",
-    });
-    const footer = notificationService.buildFooter({
-      senderType: type.senderType,
-      subscribable: type.subscribable,
-      typeKey: type.key,
-      token: null,
-    });
-    res.send(`<!doctype html><html><body style="margin:0;padding:24px;background:#f3f4f6;">${html}${footer.html}</body></html>`);
+    res.setHeader("Content-Security-Policy", notificationService.PREVIEW_CSP);
+    res.type("html").send(notificationService.renderPreviewDocument(type));
   } catch (error) {
     next(error);
   }

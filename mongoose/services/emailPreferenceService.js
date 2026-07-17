@@ -9,6 +9,7 @@
  * (they cannot be unsubscribed from).
  */
 
+const crypto = require('crypto');
 const mdb = require('./mongooseDatabaseService');
 const emailTypeService = require('./emailTypeService');
 
@@ -86,17 +87,30 @@ async function ensureToken(userDoc) {
   const User = userModel();
   if (!userDoc) return null;
   if (userDoc.notificationToken) return userDoc.notificationToken;
-  const crypto = require('crypto');
   const token = crypto.randomBytes(24).toString('hex');
   if (User && userDoc._id) await User.updateOne({ _id: userDoc._id }, { notificationToken: token });
   return token;
 }
 
-/** Resolve the user behind an unsubscribe token (lean). */
+/** Resolve the user behind a legacy static unsubscribe token (lean). */
 async function resolveByToken(token) {
   const User = userModel();
   if (!User || !token) return null;
   return User.findOne({ notificationToken: String(token) }).lean();
+}
+
+/**
+ * Rotate a user's notificationToken. Because the token is mixed into the HMAC
+ * key of every signed unsubscribe link (see unsubscribeTokenService), this
+ * invalidates all of that user's outstanding unsubscribe links at once — and
+ * only that user's. Returns the new token.
+ */
+async function rotateToken(userId) {
+  const User = userModel();
+  if (!User || !userId) return null;
+  const token = crypto.randomBytes(24).toString('hex');
+  await User.updateOne({ _id: userId }, { notificationToken: token });
+  return token;
 }
 
 module.exports = {
@@ -106,4 +120,5 @@ module.exports = {
   setAllowAdminEmails,
   ensureToken,
   resolveByToken,
+  rotateToken,
 };
