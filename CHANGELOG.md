@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.12.2] - 2026-07-17
+
+### Changed
+- **Refreshed the default copy for all core email types.** Revised the label and description of every seeded `emailType`, and added a default `heading` and `intro` to each (previously empty). Notable label changes: "Task due / overdue" → "Task reminders", "System broadcast" → "Announcements". The seeder is insert-only, so this only affects **fresh installs** — existing databases keep their current (admin-editable) copy, edited at `/admin/emails/types`. The revised `heading`/`intro` surface in the type preview and admin-composed messages; automated system senders build their own bodies and are unchanged.
+
 ## [6.12.1] - 2026-07-17
 
 ### Fixed
