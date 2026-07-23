@@ -1439,6 +1439,175 @@ export const searchSuppliers = async (req, res, next) => {
   }
 };
 
+/** JSON supplier create: POST /paperless/suppliers { name, code?, defaultNominalCode? }
+ *  Creates the supplier directly in KashFlow, then upserts it into the local
+ *  REST suppliers collection so the draft-page picker can use it immediately
+ *  (the next hcs-sync run reconciles the full record). */
+export const createSupplier = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const Supplier = mdb.REST && mdb.REST.supplier;
+    if (!Supplier)
+      return res.status(501).json({ error: "Supplier model unavailable" });
+
+    const name = String(req.body?.name || "").trim();
+    if (!name)
+      return res.status(400).json({ error: "Supplier name is required." });
+    if (name.length > 200)
+      return res.status(400).json({ error: "Supplier name is too long (max 200 characters)." });
+    let code = String(req.body?.code || "").trim().toUpperCase();
+    if (code && !/^[A-Z0-9_-]{1,20}$/.test(code))
+      return res.status(400).json({
+        error: "Supplier code may only contain letters, numbers, hyphens and underscores (max 20).",
+      });
+
+    // Optional default nominal — must be a valid Purchases nominal when we can check
+    let defaultNominalCode;
+    const nominalRaw = String(req.body?.defaultNominalCode ?? "").trim();
+    if (nominalRaw !== "") {
+      const n = parseInt(nominalRaw, 10);
+      if (!Number.isFinite(n))
+        return res.status(400).json({ error: "Default nominal code must be a number." });
+      try {
+        const Nominal = mdb.REST && mdb.REST.nominal;
+        if (Nominal) {
+          const found = await Nominal.findOne({ Code: n, Classification: "Purchases" })
+            .select("Code")
+            .lean();
+          if (!found)
+            return res.status(400).json({
+              error: `Nominal code ${n} is not a Purchases nominal.`,
+            });
+        }
+      } catch (e) {
+        logger.warn("Nominal validation skipped for supplier create: " + e.message);
+      }
+      defaultNominalCode = n;
+    }
+
+    // If an active supplier with this exact name already exists, hand it back
+    // instead of creating a duplicate in KashFlow.
+    const safe = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const existing = await Supplier.findOne({
+      Name: new RegExp(`^${safe}$`, "i"),
+      IsArchived: { $ne: true },
+    })
+      .select("uuid Id Code Name DefaultNominalCode")
+      .lean();
+    if (existing)
+      return res.status(409).json({
+        error: `A supplier named "${existing.Name}" already exists.`,
+        item: existing,
+      });
+
+    // Creating requires direct KashFlow credentials (same check as sending)
+    const hasDirectAuth = !!(
+      process.env.KASHFLOW_SESSION_TOKEN ||
+      process.env.KFSESSIONTOKEN ||
+      process.env.KASHFLOW_EXTERNAL_TOKEN ||
+      ((process.env.KASHFLOW_API_USERNAME || process.env.KFUSERNAME) &&
+        (process.env.KASHFLOW_API_PASSWORD || process.env.KFPASSWORD) &&
+        (process.env.KASHFLOW_MEMORABLE || process.env.KFMEMORABLE))
+    );
+    if (!hasDirectAuth)
+      return res.status(501).json({
+        error: "KashFlow credentials are not configured on this server; supplier creation is unavailable.",
+      });
+
+    // Derive a code from the name when none supplied; KashFlow de-dupes it for us
+    if (!code) {
+      code = name.toUpperCase().replace(/[^A-Z0-9]+/g, "").slice(0, 12) || "SUPPLIER";
+    }
+    const payload = {
+      Code: code,
+      Name: name,
+      CreateSupplierCodeIfDuplicate: true,
+      ...(defaultNominalCode != null ? { DefaultNominalCode: defaultNominalCode } : {}),
+    };
+
+    const KF_BASE = (
+      process.env.KASHFLOW_API_BASE_URL || "https://api.kashflow.com/v2"
+    ).replace(/\/+$/, "");
+    const url = `${KF_BASE}/suppliers`;
+    let resp;
+    try {
+      resp = await kfSession.withKfAuth(async (token) => {
+        const headers = {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `KfToken ${token}`,
+          "User-Agent": `sms-app/${process.env.npm_package_version || "0.0.0"}`,
+        };
+        return kfAxios.post(url, payload, { headers, timeout: 20000 });
+      });
+    } catch (sendErr) {
+      const status = sendErr?.response?.status;
+      const data = sendErr?.response?.data;
+      logger.error(
+        `[kashflow] Supplier create failed for "${name}": ${status ? status + " " : ""}${sendErr.message}`,
+      );
+      if (data) {
+        logger.error(
+          `[kashflow] Error body: ${typeof data === "object" ? JSON.stringify(data) : String(data).slice(0, 2000)}`,
+        );
+      }
+      const detail =
+        (data && typeof data === "object" && (data.Message || data.message)) ||
+        sendErr.message;
+      return res
+        .status(502)
+        .json({ error: `KashFlow rejected the supplier: ${detail}` });
+    }
+
+    const created = resp?.data || {};
+    const rawId = created.Id;
+    const kfId =
+      typeof rawId === "number" && Number.isFinite(rawId)
+        ? rawId
+        : Number.isFinite(parseInt(rawId, 10))
+          ? parseInt(rawId, 10)
+          : null;
+    const finalCode = created.Code || code;
+    const finalName = created.Name || name;
+
+    // Upsert locally so the picker (and duplicate checks) see it before the next sync
+    const setFields = {
+      Code: finalCode,
+      Name: finalName,
+      IsArchived: false,
+      ...(kfId != null ? { Id: kfId } : {}),
+      ...(typeof created.DefaultNominalCode === "number"
+        ? { DefaultNominalCode: created.DefaultNominalCode }
+        : defaultNominalCode != null
+          ? { DefaultNominalCode: defaultNominalCode }
+          : {}),
+      ...(created.CreatedDate ? { CreatedDate: created.CreatedDate } : {}),
+      ...(created.SourceName ? { SourceName: created.SourceName } : {}),
+    };
+    const doc = await Supplier.findOneAndUpdate(
+      kfId != null ? { Id: kfId } : { Code: finalCode },
+      { $set: setFields },
+      { new: true, upsert: true, setDefaultsOnInsert: true },
+    ).lean();
+
+    logger.info(
+      `[kashflow] Supplier created: "${finalName}" (Code=${finalCode}, Id=${kfId ?? "?"}) by ${req.user?.email || req.user?.username || "unknown user"}`,
+    );
+    return res.status(201).json({
+      item: {
+        uuid: doc.uuid,
+        Id: doc.Id ?? null,
+        Code: doc.Code || null,
+        Name: doc.Name || null,
+        DefaultNominalCode:
+          typeof doc.DefaultNominalCode === "number" ? doc.DefaultNominalCode : null,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 /** POST /paperless/ocr/:paperlessId/ingest — re-ingest a single document from Paperless */
 export const reIngestOne = async (req, res, next) => {
   try {
@@ -2139,4 +2308,4 @@ export const deleteOcrDocument = async (req, res, next) => {
   }
 };
 
-export default { listOcr, readOcr, listIngest, triggerGrab, getPurchaseDraft, saveDraftExtraLines, sendDraftToKashflow, searchSuppliers, reIngestOne, getMatchPurchase, postMatchPurchase, unlinkKashflow, clearOrphans, resolveNumbers, matchReferences, repairDrift, syncPaperlessFields, removeDeletedOcrDocument, deleteOcrDocument };
+export default { listOcr, readOcr, listIngest, triggerGrab, getPurchaseDraft, saveDraftExtraLines, sendDraftToKashflow, searchSuppliers, createSupplier, reIngestOne, getMatchPurchase, postMatchPurchase, unlinkKashflow, clearOrphans, resolveNumbers, matchReferences, repairDrift, syncPaperlessFields, removeDeletedOcrDocument, deleteOcrDocument };

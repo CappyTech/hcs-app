@@ -401,6 +401,30 @@
 						<div class="text-xs text-slate-500 mt-1">Auto-match tries to use the document’s correspondent or draft SupplierName. You can override it here.</div>
 						<div class="text-xs text-slate-500 mt-1">Default nominal code: <span id="supplier-default-nominal" class="font-semibold"><%= supplierDefaultNominal != null ? supplierDefaultNominal : '-' %></span></div>
 					</div>
+					<details id="new-supplier-panel">
+						<summary class="cursor-pointer text-xs font-medium text-green-700 dark:text-green-400">Supplier not in the list? Create it in KashFlow…</summary>
+						<div class="mt-2 space-y-2">
+							<div>
+								<label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Name <span class="text-red-600">*</span></label>
+								<input id="new-supplier-name" type="text" maxlength="200" value="<%= draft.SupplierName || '' %>" placeholder="Supplier name" class="w-full rounded-xl border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500" />
+							</div>
+							<div>
+								<label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Code (optional)</label>
+								<input id="new-supplier-code" type="text" maxlength="20" placeholder="Auto-generated if blank" class="w-full rounded-xl border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500" />
+							</div>
+							<div>
+								<label class="block text-xs text-slate-600 dark:text-slate-300 mb-1">Default nominal (optional)</label>
+								<select id="new-supplier-nominal" class="w-full rounded-xl border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+									<option value="">— None —</option>
+									<% Object.keys(nominalMap || {}).forEach(code => { %>
+										<option value="<%= code %>"><%= code %> — <%= nominalMap[code].Name || nominalMap[code].Description || '' %></option>
+									<% }) %>
+								</select>
+							</div>
+							<button type="button" id="new-supplier-create" class="inline-flex items-center gap-1 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1.5"><i class="bi bi-plus-circle"></i> Create in KashFlow</button>
+							<div id="new-supplier-status" class="text-xs text-slate-500"></div>
+						</div>
+					</details>
 				</div>
 			</div>
 
@@ -832,6 +856,66 @@
 			} catch (_) { /* ignore */ }
 		  }, 250);
 		});
+	  }
+
+	  // Create-new-supplier panel: POST to /paperless/suppliers, then select the result
+	  const $nsName = document.getElementById('new-supplier-name');
+	  const $nsCode = document.getElementById('new-supplier-code');
+	  const $nsNominal = document.getElementById('new-supplier-nominal');
+	  const $nsBtn = document.getElementById('new-supplier-create');
+	  const $nsStatus = document.getElementById('new-supplier-status');
+	  function adoptSupplier(item, note) {
+	  	if (!item || !item.uuid || !$select) return;
+	  	let opt = Array.from($select.options).find(o => o.value === item.uuid);
+	  	if (!opt) {
+	  		const label = `${item.Name || '(no name)'}${item.Code ? ' — ' + item.Code : ''}`;
+	  		opt = new Option(label, item.uuid);
+	  		if (item.Name) opt.setAttribute('data-name', item.Name);
+	  		if (item.Code) opt.setAttribute('data-code', item.Code);
+	  		if (item.DefaultNominalCode != null && item.DefaultNominalCode !== '') {
+	  			opt.setAttribute('data-default-nominal', item.DefaultNominalCode);
+	  		}
+	  		$select.add(opt);
+	  	}
+	  	$select.value = item.uuid;
+	  	$select.dispatchEvent(new Event('change'));
+	  	if ($nsStatus && note) $nsStatus.textContent = note;
+	  }
+	  if ($nsBtn) {
+	  	$nsBtn.addEventListener('click', async () => {
+	  		const name = ($nsName?.value || '').trim();
+	  		if (!name) {
+	  			if ($nsStatus) $nsStatus.textContent = 'Enter a supplier name first.';
+	  			return;
+	  		}
+	  		const csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content
+	  			|| document.querySelector('#send-form input[name="_csrf"]')?.value || '';
+	  		$nsBtn.disabled = true;
+	  		if ($nsStatus) $nsStatus.textContent = 'Creating…';
+	  		try {
+	  			const r = await fetch('/paperless/suppliers', {
+	  				method: 'POST',
+	  				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+	  				body: JSON.stringify({
+	  					name,
+	  					code: ($nsCode?.value || '').trim(),
+	  					defaultNominalCode: ($nsNominal?.value || '').trim(),
+	  				}),
+	  			});
+	  			let data;
+	  			try { data = await r.json(); } catch (_) { data = {}; }
+	  			if (r.status === 201 && data.item) {
+	  				adoptSupplier(data.item, `Created "${data.item.Name}"${data.item.Code ? ' (' + data.item.Code + ')' : ''} and selected it.`);
+	  			} else if (r.status === 409 && data.item) {
+	  				adoptSupplier(data.item, (data.error || 'Supplier already exists.') + ' Selected it instead.');
+	  			} else if ($nsStatus) {
+	  				$nsStatus.textContent = data.error || ('Create failed: HTTP ' + r.status);
+	  			}
+	  		} catch (err) {
+	  			if ($nsStatus) $nsStatus.textContent = 'Create failed: ' + err.message;
+	  		}
+	  		$nsBtn.disabled = false;
+	  	});
 	  }
 	})();
 	</script>

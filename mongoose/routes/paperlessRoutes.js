@@ -35,6 +35,7 @@ router.post("/paperless/ocr/:paperlessId/unlink", ...paperlessGuard, ctrl.unlink
 router.delete("/paperless/ocr/:paperlessId", ...paperlessGuard, ctrl.deleteOcrDocument);
 router.post("/paperless/ocr/:paperlessId/remove", ...paperlessGuard, ctrl.removeDeletedOcrDocument);
 router.get("/paperless/suppliers", ...paperlessGuard, ctrl.searchSuppliers);
+router.post("/paperless/suppliers", ...paperlessGuard, ctrl.createSupplier);
 router.get("/paperless/ingest", ...paperlessGuard, ctrl.listIngest);
 router.post("/paperless/ingest/trigger", ...paperlessGuard, grabLimiter, ctrl.triggerGrab);
 router.post("/paperless/repair-drift",    ...paperlessGuard, ctrl.repairDrift);

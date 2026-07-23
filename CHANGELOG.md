@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.14.0] - 2026-07-23
+
+### Added
+- **Create suppliers from the purchase draft page.** The Supplier panel on `/paperless/ocr/:id/draft` gains a "Supplier not in the list? Create it in KashFlow…" section (name prefilled from the draft, optional code and default Purchases nominal). It POSTs to the new `POST /paperless/suppliers` endpoint, which creates the supplier directly in KashFlow (`POST /v2/suppliers`, with `CreateSupplierCodeIfDuplicate` so a blank/derived code can't collide) and upserts the response into the local REST `suppliers` collection so the picker, nominal fallback and send flow can use it immediately — no waiting for the next hcs-sync run, which then reconciles the full record. The new supplier is auto-selected in the picker on success. Guards: exact-name match against existing non-archived suppliers returns the existing record (and selects it) instead of creating a duplicate; a supplied default nominal must be a `Purchases`-classified nominal; requires direct KashFlow credentials (same as sending) and sits behind the usual paperless auth/role/department guard + CSRF.
+
 ## [6.13.0] - 2026-07-23
 
 ### Changed
