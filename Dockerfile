@@ -7,7 +7,7 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
 COPY assets ./assets
-COPY tailwind.config.js postcss.config.js ./
+COPY tailwind.config.js tailwind.safelist.js postcss.config.js ./
 COPY mongoose/views ./mongoose/views
 COPY mongoose/config ./mongoose/config
 COPY scripts ./scripts
