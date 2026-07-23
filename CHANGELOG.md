@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.14.2] - 2026-07-23
+
+### Changed
+- **`compose.env.example` cleanup.** Removed the dead `FETCH_API_TOKEN` variable and its stale `kashflowAPI/routes.js` comment (that module no longer exists); the variable had also drifted into the People's Pension section. KashFlow section restructured to present the three auth alternatives (credentials, external token, session token) instead of marking credential vars `# required`; `KASHFLOW_DEBUG_SESSION` is now commented out (opt-in) rather than enabled by default. Documented previously missing vars the code reads: `HCS_SYNC_TIMEOUT_MS`, `KASHFLOW_EXTERNAL_TOKEN`/`KASHFLOW_EXTERNAL_UID`, `KASHFLOW_CREATOR_WEBHOOK_URL`/`KASHFLOW_CREATOR_WEBHOOK_TOKEN`, `KASHFLOW_VATLEVEL_TOLERANCE`, and the new `HCS_SYNC_PULL_DELAY_MS`.
+
 ## [6.14.1] - 2026-07-23
 
 ### Changed
