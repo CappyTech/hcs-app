@@ -1,11 +1,10 @@
-'use strict';
-
-const path = require('path');
-const multer = require('multer');
-const mdb = require('../services/mongooseDatabaseService');
-const logger = require('../../services/loggerService');
-const csrfService = require('../../services/csrfService');
-const { POLICY_CATEGORIES } = require('../models/mongoose/INTERNAL/policyDocument');
+import path from 'path';
+import multer from 'multer';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import csrfService from '../../services/csrfService.js';
+import __policyDocument from '../models/mongoose/INTERNAL/policyDocument.js';
+const { POLICY_CATEGORIES } = __policyDocument;
 
 // contentHtml is pre-sanitised by the global xssSanitize middleware
 // (securityService.js) with the richTextXssOptions whitelist.
@@ -26,7 +25,7 @@ const logoUpload = multer({
 });
 
 // ── Hub ──────────────────────────────────────────────────────────────────────
-exports.getIndex = async (req, res, next) => {
+export const getIndex = async (req, res, next) => {
   try {
     const [letterhead, policyCount] = await Promise.all([
       mdb.INTERNAL.letterhead.findOne().select('-logoData').lean(),
@@ -43,7 +42,7 @@ exports.getIndex = async (req, res, next) => {
 };
 
 // ── Letterhead settings ──────────────────────────────────────────────────────
-exports.getLetterhead = async (req, res, next) => {
+export const getLetterhead = async (req, res, next) => {
   try {
     const letterhead = await mdb.INTERNAL.letterhead.findOne().select('-logoData').lean();
     res.render('tailwindcss/company-docs/letterhead', {
@@ -57,7 +56,7 @@ exports.getLetterhead = async (req, res, next) => {
 
 // Streams the stored logo bytes. The letterhead.logoPath the views render
 // points here (with a cache-busting query string set on each upload).
-exports.getLetterheadLogo = async (req, res, next) => {
+export const getLetterheadLogo = async (req, res, next) => {
   try {
     const letterhead = await mdb.INTERNAL.letterhead.findOne().select('logoData logoMime');
     if (!letterhead || !letterhead.logoData || !letterhead.logoData.length) {
@@ -71,7 +70,7 @@ exports.getLetterheadLogo = async (req, res, next) => {
   }
 };
 
-exports.postLetterhead = [
+export const postLetterhead = [
   logoUpload.single('logo'),
   csrfService.validate,
   async (req, res, next) => {
@@ -156,7 +155,7 @@ function buildGroups(defs, items) {
     .filter((g) => g.policies.length > 0);
 }
 
-exports.getPolicyList = async (req, res, next) => {
+export const getPolicyList = async (req, res, next) => {
   try {
     const policies = await mdb.INTERNAL.policyDocument
       .find()
@@ -239,7 +238,7 @@ exports.getPolicyList = async (req, res, next) => {
 };
 
 // ── Create policy ────────────────────────────────────────────────────────────
-exports.getCreatePolicy = async (_req, res, next) => {
+export const getCreatePolicy = async (_req, res, next) => {
   try {
     const employees = await loadEmployeeOptions();
     res.render('tailwindcss/company-docs/policy-form', {
@@ -254,7 +253,7 @@ exports.getCreatePolicy = async (_req, res, next) => {
   }
 };
 
-exports.postCreatePolicy = async (req, res, next) => {
+export const postCreatePolicy = async (req, res, next) => {
   try {
     const safeHtml = req.body.contentHtml || '';
     const reviewIntervalMonths = parseNonNegInt(req.body.reviewIntervalMonths, 12);
@@ -280,7 +279,7 @@ exports.postCreatePolicy = async (req, res, next) => {
 };
 
 // ── Edit policy ──────────────────────────────────────────────────────────────
-exports.getEditPolicy = async (req, res, next) => {
+export const getEditPolicy = async (req, res, next) => {
   try {
     const [policy, employees] = await Promise.all([
       mdb.INTERNAL.policyDocument.findOne({ uuid: req.params.uuid }).lean(),
@@ -299,7 +298,7 @@ exports.getEditPolicy = async (req, res, next) => {
   }
 };
 
-exports.postEditPolicy = async (req, res, next) => {
+export const postEditPolicy = async (req, res, next) => {
   try {
     const policy = await mdb.INTERNAL.policyDocument.findOne({ uuid: req.params.uuid });
     if (!policy) return next(Object.assign(new Error('Policy not found'), { statusCode: 404 }));
@@ -324,7 +323,7 @@ exports.postEditPolicy = async (req, res, next) => {
 };
 
 // ── Delete policy ────────────────────────────────────────────────────────────
-exports.postDeletePolicy = async (req, res, next) => {
+export const postDeletePolicy = async (req, res, next) => {
   try {
     await mdb.INTERNAL.policyDocument.deleteOne({ uuid: req.params.uuid });
     req.session.successMessage = 'Policy deleted.';
@@ -335,7 +334,7 @@ exports.postDeletePolicy = async (req, res, next) => {
 };
 
 // ── Print view ───────────────────────────────────────────────────────────────
-exports.getPrintPolicy = async (req, res, next) => {
+export const getPrintPolicy = async (req, res, next) => {
   try {
     const [policy, letterhead] = await Promise.all([
       mdb.INTERNAL.policyDocument.findOne({ uuid: req.params.uuid }).populate('employee', 'name position').lean(),
@@ -351,3 +350,5 @@ exports.getPrintPolicy = async (req, res, next) => {
     next(err);
   }
 };
+
+export default { getIndex, getLetterhead, getLetterheadLogo, postLetterhead, getPolicyList, getCreatePolicy, postCreatePolicy, getEditPolicy, postEditPolicy, postDeletePolicy, getPrintPolicy };

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * payrollJournalService.js
  *
@@ -21,10 +19,10 @@
  * it to pension control regardless and let the nominal reconcile.
  */
 
-const axios = require('axios');
-const mdb = require('../services/mongooseDatabaseService');
-const kfSession = require('../../services/kashflowSessionService');
-const logger = require('../../services/loggerService');
+import axios from 'axios';
+import mdb from '../services/mongooseDatabaseService.js';
+import kfSession from '../../services/kashflowSessionService.js';
+import logger from '../../services/loggerService.js';
 
 const KF_BASE_URL = () =>
   (process.env.KASHFLOW_API_BASE_URL || 'https://api.kashflow.com/v2').replace(/\/+$/, '');
@@ -251,4 +249,4 @@ async function postPayrollJournal(runUuid) {
   }
 }
 
-module.exports = { buildJournalLines, postPayrollJournal, JOURNAL_CLAIM_STALE_MS };
+export default { buildJournalLines, postPayrollJournal, JOURNAL_CLAIM_STALE_MS };

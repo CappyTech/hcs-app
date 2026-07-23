@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { supplier, uuidField } = require('@cappytech/hcs-schemas');
+import mongoose from 'mongoose';
+import { supplier, uuidField } from '@cappytech/hcs-schemas';
 
 const supplierSchema = new mongoose.Schema({
   uuid: uuidField,
@@ -8,7 +8,7 @@ const supplierSchema = new mongoose.Schema({
 
 supplier.indexes.forEach(idx => supplierSchema.index(idx.fields, idx.options));
 
-module.exports = {
+export default {
   modelName: 'supplier',
   schema: supplierSchema
 };

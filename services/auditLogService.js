@@ -1,7 +1,6 @@
-'use strict';
-
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const logger = require('./loggerService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import logger from './loggerService.js';
+import __ipService from './ipService.js';
 
 /**
  * Security audit log — see the securityEvent model for the event catalogue.
@@ -13,7 +12,7 @@ const logger = require('./loggerService');
 
 function clientIp(req) {
   try {
-    const { getClientIp } = require('./ipService');
+    const { getClientIp } = __ipService;
     return getClientIp(req) || req?.ip || null;
   } catch (_) {
     return req?.ip || null;
@@ -46,4 +45,4 @@ function record(type, req, data = {}) {
   });
 }
 
-module.exports = { record };
+export default { record };

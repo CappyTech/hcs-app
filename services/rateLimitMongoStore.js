@@ -1,6 +1,5 @@
-'use strict';
-
-const logger = require('./loggerService');
+import logger from './loggerService.js';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
 
 /**
  * Mongo-backed store for express-rate-limit (v6 Store interface).
@@ -36,7 +35,6 @@ class RateLimitMongoStore {
   _collection() {
     // Lazy require: this module is loaded (via rateLimiterService) before
     // mongooseDatabaseService.connect() runs in app.js Phase 2.
-    const mdb = require('../mongoose/services/mongooseDatabaseService');
     const conn = mdb.INTERNAL?.connection;
     if (!conn || conn.readyState !== 1) return null;
     const coll = conn.db.collection(COLLECTION);
@@ -112,4 +110,4 @@ class RateLimitMongoStore {
   }
 }
 
-module.exports = RateLimitMongoStore;
+export default RateLimitMongoStore;

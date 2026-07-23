@@ -1,8 +1,6 @@
-'use strict';
-
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const setup = require('../controllers/setupController');
+import setup from '../controllers/setupController.js';
 
 // The wizard runs before the main app stack (which normally supplies the
 // body parsers), so it must parse its own request bodies.
@@ -33,4 +31,4 @@ router.get('/step3',         setup.getStep3);
 router.post('/complete',     setup.postComplete);
 router.post('/clear-draft',  setup.postClearDraft);
 
-module.exports = router;
+export default router;

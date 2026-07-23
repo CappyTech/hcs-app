@@ -1,6 +1,4 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
+import mdb from './mongooseDatabaseService.js';
 
 const DETAIL_LIMIT = 100;
 
@@ -317,4 +315,4 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   };
 }
 
-module.exports = { getDocumentsOverview };
+export default { getDocumentsOverview };

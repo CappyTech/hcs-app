@@ -1,12 +1,12 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
-const logger = require('../services/loggerService');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import logger from '../services/loggerService.js';
 
 /*
  * csrfService only requires logger at top level — real logger is fine.
  * We test the middleware's token generation and validation logic.
  */
-const csrfService = require('../services/csrfService');
+import csrfService from '../services/csrfService.js';
 
 /* ── helpers ──────────────────────────────────────────────────────── */
 function makeReq(overrides = {}) {

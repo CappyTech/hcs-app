@@ -1,5 +1,3 @@
-'use strict';
-
 // ── Dev-only MongoDB inspector API ──────────────────────────────────────────
 // Mounted at /admin/db by app.js ONLY when DEV_DB_ADMIN=true and
 // NODE_ENV !== 'production'. It is mounted BEFORE the session/auth stack so
@@ -13,9 +11,9 @@
 // JSON bodies and query-string JSON support {"$date":"ISO"} markers, revived
 // to real Date objects so date-field filters match.
 
-const express = require('express');
-const mdb = require('../services/mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import express from 'express';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
 const router = express.Router();
 router.use(express.json({ limit: '2mb' }));
@@ -215,4 +213,4 @@ router.post('/:ns/:model/delete', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

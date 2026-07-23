@@ -1,7 +1,5 @@
-"use strict";
-
-const logger = require("./loggerService");
-const mdb = require("../mongoose/services/mongooseDatabaseService");
+import logger from './loggerService.js';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
 
 let _cached = {
   fetchedAt: 0,
@@ -62,6 +60,8 @@ async function getVatLevels(opts = {}) {
   return levels;
 }
 
-module.exports = {
+export default {
   getVatLevels,
 };
+
+export { getVatLevels };

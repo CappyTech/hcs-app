@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 // UK holiday accrual rules vary. This model captures entitlement and accrual for a given holiday year window per employee.
 // It does not record individual leave bookings here (can be a separate model later); it tracks totals for entitlement, accrued and taken.
@@ -44,7 +44,7 @@ const employeeHolidaySchema = new mongoose.Schema({
 // Ensure only one record per employee per period window
 employeeHolidaySchema.index({ employeeId: 1, periodStart: 1, periodEnd: 1 }, { unique: true });
 
-module.exports = {
+export default {
   modelName: 'employeeHoliday',
   schema: employeeHolidaySchema
 };

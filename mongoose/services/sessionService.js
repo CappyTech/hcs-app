@@ -1,18 +1,20 @@
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
-require('dotenv').config({ path: '../.env' });
-const logger = require('../../services/loggerService');
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
+__dotenv.config({ path: '../.env' });
+import logger from '../../services/loggerService.js';
+import __dotenv from 'dotenv';
+import __crypto from 'crypto';
 
 const COOKIE_NAME = 'hms.sid';
 
-module.exports = function createSessionService(mongoClient) {
+export default function createSessionService(mongoClient) {
     if (!process.env.SESSION_SECRET) {
         const msg = 'SESSION_SECRET missing. Refusing to start secure session middleware.';
         if (process.env.NODE_ENV === 'production') {
             throw new Error(msg);
         } else {
             logger.warn(msg + ' (development fallback in use, DO NOT use in production)');
-            process.env.SESSION_SECRET = require('crypto').randomBytes(32).toString('hex');
+            process.env.SESSION_SECRET = __crypto.randomBytes(32).toString('hex');
         }
     }
         // Cookie "secure" handling:

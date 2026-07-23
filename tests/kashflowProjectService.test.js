@@ -1,7 +1,9 @@
-'use strict';
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
-const { describe, it, beforeEach } = require('node:test');
-const assert = require('node:assert/strict');
+// Module mocks are registered with mock.module() (needs
+// --experimental-test-module-mocks, added by scripts/run-tests.js) and the
+// service is dynamically imported afterwards so it sees the mocked modules.
 
 // ── Swappable stubs (replaced per-test via _impl) ─────────────────────────────
 
@@ -32,12 +34,7 @@ const mockProject = {
   aggregate: async () => [],
 };
 const mdbMock = { REST: { project: mockProject } };
-require.cache[require.resolve('../mongoose/services/mongooseDatabaseService')] = {
-  id: require.resolve('../mongoose/services/mongooseDatabaseService'),
-  filename: require.resolve('../mongoose/services/mongooseDatabaseService'),
-  loaded: true,
-  exports: mdbMock,
-};
+mock.module('../mongoose/services/mongooseDatabaseService.js', { defaultExport: mdbMock });
 
 // Mock emailService
 let emailSendMailCalls = [];
@@ -48,12 +45,7 @@ const emailMock = {
     return stubs.sendMailResult;
   },
 };
-require.cache[require.resolve('../services/emailService')] = {
-  id: require.resolve('../services/emailService'),
-  filename: require.resolve('../services/emailService'),
-  loaded: true,
-  exports: emailMock,
-};
+mock.module('../services/emailService.js', { defaultExport: emailMock });
 
 // Mock kashflowSessionService
 let kfAuthCalls = [];
@@ -86,35 +78,22 @@ const axiosMock = {
     return { data: { ok: true, action: 'updated', entityType: body?.entityType, entityId: body?.entityId } };
   },
 };
-require.cache[require.resolve('axios')] = {
-  id: require.resolve('axios'),
-  filename: require.resolve('axios'),
-  loaded: true,
-  exports: axiosMock,
-};
+mock.module('axios', { defaultExport: axiosMock });
 
 // Wire kfAxios now that axiosMock exists, then register session mock
 kfSessionMock.kfAxios = axiosMock;
-require.cache[require.resolve('../services/kashflowSessionService')] = {
-  id: require.resolve('../services/kashflowSessionService'),
-  filename: require.resolve('../services/kashflowSessionService'),
-  loaded: true,
-  exports: kfSessionMock,
-};
+mock.module('../services/kashflowSessionService.js', { defaultExport: kfSessionMock });
 
 // Mock loggerService
-require.cache[require.resolve('../services/loggerService')] = {
-  id: require.resolve('../services/loggerService'),
-  filename: require.resolve('../services/loggerService'),
-  loaded: true,
-  exports: { info: () => {}, warn: () => {}, error: () => {} },
-};
+const loggerMock = { info: () => {}, warn: () => {}, error: () => {} };
+mock.module('../services/loggerService.js', { defaultExport: loggerMock });
 
+// Import the service AFTER the mocks are registered.
 const {
   computeFinancials,
   checkProjectFinancials,
   markProjectComplete,
-} = require('../mongoose/services/kashflowProjectService');
+} = (await import('../mongoose/services/kashflowProjectService.js')).default;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // computeFinancials

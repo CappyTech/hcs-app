@@ -1,8 +1,7 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const taskService = require('./taskService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import taskService from './taskService.js';
+import logger from '../../services/loggerService.js';
+import notificationService from '../../services/notificationService.js';
 
 const DEFAULT_DAYS_AHEAD = 30;
 
@@ -110,7 +109,6 @@ async function checkExpiriesAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } = 
   // Email a daily summary of newly flagged items (deduped: max one per day)
   if (newAlerts.length > 0) {
     try {
-      const notificationService = require('../../services/notificationService');
       const today = new Date().toISOString().slice(0, 10);
       await notificationService.enqueueForRoles(['admin'], {
         subject: `HR compliance: ${newAlerts.length} item(s) need attention`,
@@ -139,6 +137,8 @@ async function checkExpiriesAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } = 
   return stats;
 }
 
-module.exports = {
+export default {
   checkExpiriesAndCreateTasks,
 };
+
+export { checkExpiriesAndCreateTasks };

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * emailTypeService — CRUD + resolver over the DB-driven emailType catalog.
  *
@@ -8,8 +6,8 @@
  *  - notificationService.enqueue to resolve a type and gate sending
  */
 
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
 function model() {
   return mdb.INTERNAL && mdb.INTERNAL.emailType;
@@ -112,7 +110,7 @@ async function resolveOrRegister(key) {
   }
 }
 
-module.exports = {
+export default {
   list,
   get,
   create,
@@ -121,3 +119,5 @@ module.exports = {
   remove,
   resolveOrRegister,
 };
+
+export { list, get, create, update, setEnabled, remove, resolveOrRegister };

@@ -7,8 +7,9 @@
  * that limits results to their own records.
  */
 
-const rbac = require("../mongoose/config/rolePermissionsConfig");
-const logger = require("./loggerService");
+import rbac from '../mongoose/config/rolePermissionsConfig.js';
+import logger from './loggerService.js';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
 
 /**
  * Build a Mongoose filter object that scopes a query to the current user.
@@ -45,7 +46,6 @@ async function scopeQuery(req, model, operation = "r") {
   // Resolve ownership — build filter for the user's primary role, then
   // extend with a secondary role when both employeeId and subcontractorId
   // are set (IR35 off-payroll workers).
-  const mdb = require("../mongoose/services/mongooseDatabaseService");
 
   const primaryFilter = await buildOwnershipFilter(req, mdb, role, model);
   if (!primaryFilter) return null;
@@ -152,7 +152,9 @@ function scopeQueryOrError(req, model, operation = "r") {
   });
 }
 
-module.exports = {
+export default {
   scopeQuery,
   scopeQueryOrError,
 };
+
+export { scopeQuery, scopeQueryOrError };

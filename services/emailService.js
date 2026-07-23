@@ -1,5 +1,5 @@
-const nodemailer = require("nodemailer");
-const logger = require("./loggerService");
+import nodemailer from 'nodemailer';
+import logger from './loggerService.js';
 
 // ── Transporter (lazy-initialised) ───────────────────────────────────
 let _transporter = null;
@@ -141,8 +141,10 @@ async function sendPasswordResetEmail(email, token) {
   return sendMail({ to: email, subject, html, text });
 }
 
-module.exports = {
+export default {
   sendMail,
   sendVerificationEmail,
   sendPasswordResetEmail,
 };
+
+export { sendMail, sendVerificationEmail, sendPasswordResetEmail };

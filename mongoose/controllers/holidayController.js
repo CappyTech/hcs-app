@@ -1,7 +1,7 @@
-const path = require("path");
-const logger = require("../../services/loggerService");
-const holidayService = require("../services/holidayService");
-const mdb = require("../services/mongooseDatabaseService");
+import path from 'path';
+import logger from '../../services/loggerService.js';
+import holidayService from '../services/holidayService.js';
+import mdb from '../services/mongooseDatabaseService.js';
 
 async function checkHoliday(req, res, next) {
   const skipPaths = ["/", "/user/login", "/user/register"];
@@ -70,7 +70,9 @@ async function dismissHoliday(req, res, next) {
   }
 }
 
-module.exports = {
+export default {
   checkHoliday,
   dismissHoliday,
 };
+
+export { checkHoliday, dismissHoliday };

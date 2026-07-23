@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * emailTypesSeedService.js
  *
@@ -16,7 +14,7 @@
  *    vehicle, security, system) plus the new granular task + broadcast types.
  */
 
-const logger = require('../../services/loggerService');
+import logger from '../../services/loggerService.js';
 
 // senderType: 'system' | 'admin'
 // subscribable: recipients may unsubscribe
@@ -121,4 +119,4 @@ async function ensureSeeded(EmailType) {
   return { created };
 }
 
-module.exports = { ensureSeeded, DEFAULT_TYPES };
+export default { ensureSeeded, DEFAULT_TYPES };

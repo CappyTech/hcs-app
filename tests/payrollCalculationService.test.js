@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * tests/payrollCalculationService.test.js
  *
@@ -13,8 +11,9 @@
  * Run with: node --test tests/payrollCalculationService.test.js
  */
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import __payrollCalculationService from '../mongoose/services/payrollCalculationService.js';
 
 const {
   calculatePAYETax,
@@ -25,7 +24,7 @@ const {
   parseTaxCode,
   annualToPeriod,
   periodsInYear
-} = require('../mongoose/services/payrollCalculationService');
+} = __payrollCalculationService;
 
 // ── Standard 2025/26 rates fixture ──────────────────────────────────────────
 

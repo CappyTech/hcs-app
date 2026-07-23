@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const holidayDismissalSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -12,7 +12,7 @@ const holidayDismissalSchema = new mongoose.Schema({
 
 holidayDismissalSchema.index({ userId: 1, holidayId: 1 }, { unique: true });
 
-module.exports = {
+export default {
     modelName: 'holidayDismissal',
     schema: holidayDismissalSchema
 };

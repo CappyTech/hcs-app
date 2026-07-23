@@ -7,7 +7,7 @@
  * Roles: none | admin | accountant | employee | subcontractor | client | hmrc
  */
 
-const departmentsConfig = require('./departmentsConfig');
+import departmentsConfig from './departmentsConfig.js';
 
 // ── Departments each role may access ──────────────────────────────────
 // Derived from departmentsConfig roles: ['public'] departments go to every
@@ -403,7 +403,7 @@ function getListableModels(role, customPerms) {
   return result;
 }
 
-module.exports = {
+export default {
   roleDepartments,
   roleModelAccess,
   ownershipFields,
@@ -417,3 +417,5 @@ module.exports = {
   canAccessDepartment,
   getListableModels,
 };
+
+export { roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels };

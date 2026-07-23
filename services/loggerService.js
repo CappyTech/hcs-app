@@ -1,7 +1,11 @@
-const fs = require("fs");
-const path = require("path");
-const { createLogger, format, transports } = require("winston");
-const Transport = require("winston-transport");
+import fs from 'fs';
+import path from 'path';
+import { createLogger, format, transports } from 'winston';
+import Transport from 'winston-transport';
+import { fileURLToPath } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 const { combine, timestamp, printf, colorize, json } = format;
 
 let io = null;
@@ -83,6 +87,11 @@ function sanitize(value, maxLen = 200) {
     .slice(0, maxLen);
 }
 
-module.exports = logger;
-module.exports.setSocketInstance = setSocketInstance;
-module.exports.sanitize = sanitize;
+// CJS attached these as properties of the logger; keep that shape for
+// consumers that access them via the default export.
+logger.setSocketInstance = setSocketInstance;
+logger.sanitize = sanitize;
+
+export default logger;
+export { setSocketInstance };
+export { sanitize };

@@ -1,7 +1,7 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
-const v = require('../mongoose/services/configValidatorService');
+import v from '../mongoose/services/configValidatorService.js';
 
 const MODELS = ['user', 'employee', 'supplier', 'assignment'];
 

@@ -1,8 +1,8 @@
-const express = require("express");
-const rateLimit = require("express-rate-limit");
+import express from 'express';
+import rateLimit from 'express-rate-limit';
 const router = express.Router();
 
-const ctrl = require("../controllers/ssoController");
+import ctrl from '../controllers/ssoController.js';
 
 // Tight rate limit for the credential-validation endpoint.
 const tokenLimiter = rateLimit({
@@ -21,4 +21,4 @@ router.get("/sso/hcs-sync", ctrl.hcsSyncHandoff);
 // validate credentials and receive a signed JWT without a browser redirect.
 router.post("/api/sso/token", tokenLimiter, ctrl.issueTokenForSync);
 
-module.exports = router;
+export default router;

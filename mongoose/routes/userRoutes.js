@@ -1,8 +1,8 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/userCRUDController");
-const { registerRateLimiter } = require("../../services/rateLimiterService");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/userCRUDController.js';
+import { registerRateLimiter } from '../../services/rateLimiterService.js';
 
 router.get(
   "/user/register",
@@ -93,4 +93,4 @@ router.post(
   ctrl.verifyTotpReset,
 );
 
-module.exports = router;
+export default router;

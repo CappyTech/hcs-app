@@ -1,6 +1,6 @@
-const config = require("../mongoose/config/listControllerConfig");
+import config from '../mongoose/config/listControllerConfig.js';
 
-module.exports = function ensureHandlesDocuments(req, res, next) {
+export default function ensureHandlesDocuments(req, res, next) {
   const model = req.params.model?.toLowerCase();
   const modelConfig = config[model];
 

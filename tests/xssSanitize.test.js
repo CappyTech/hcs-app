@@ -1,6 +1,6 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const securityMiddleware = require('../services/securityService');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import securityMiddleware from '../services/securityService.js';
 
 // securityService exports an array: [helmet, xssSanitize]
 const xssSanitize = securityMiddleware[securityMiddleware.length - 1];

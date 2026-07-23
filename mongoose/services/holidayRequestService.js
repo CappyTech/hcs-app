@@ -1,8 +1,6 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const notificationService = require('../../services/notificationService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import notificationService from '../../services/notificationService.js';
+import logger from '../../services/loggerService.js';
 
 /**
  * Holiday request workflow: notifications on submission and decision, and
@@ -115,4 +113,4 @@ async function handleStatusChange(updated, previous, req) {
   }
 }
 
-module.exports = { notifyNewRequest, handleStatusChange, adjustTakenDays };
+export default { notifyNewRequest, handleStatusChange, adjustTakenDays };

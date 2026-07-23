@@ -1,7 +1,7 @@
 // mongoose/services/paperless/paperlessUpdateService.js
-"use strict";
-const { makeClient } = require("./paperlessClient");
-const logger = require("../../../services/loggerService");
+import __paperlessClient from './paperlessClient.js';
+const { makeClient } = __paperlessClient;
+import logger from '../../../services/loggerService.js';
 
 // Axios errors hide the response body ("Request failed with status code 500") —
 // append what Paperless actually returned so failures are diagnosable from logs.
@@ -112,7 +112,7 @@ async function clearPaperlessKashFlowFields(paperlessId, existingCf) {
   }
 }
 
-module.exports = { updatePaperlessWithKashFlowInfo, clearPaperlessKashFlowFields };
+export default { updatePaperlessWithKashFlowInfo, clearPaperlessKashFlowFields, updatePaperlessDocumentTags };
 
 /**
  * Set or merge tags on a Paperless-ngx document.
@@ -216,4 +216,4 @@ async function updatePaperlessDocumentTags(paperlessId, tags, options = {}) {
   }
 }
 
-module.exports.updatePaperlessDocumentTags = updatePaperlessDocumentTags;
+export { updatePaperlessDocumentTags };

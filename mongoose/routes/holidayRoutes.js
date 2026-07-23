@@ -1,7 +1,7 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/holidayController");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/holidayController.js';
 
 // Any authenticated user can dismiss a holiday notification
 router.post(
@@ -16,4 +16,4 @@ router.post(
   },
 );
 
-module.exports = router;
+export default router;

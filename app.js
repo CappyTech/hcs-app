@@ -1,33 +1,96 @@
-'use strict';
-
-require('dotenv').config();
+__dotenv.config();
 // Apply any values saved via the connections settings UI (app-config.json) for
 // keys not already set by the OS / docker-compose environment.
-require('./services/configService').bootstrap();
-const express = require('express');
-const path = require('path');
-const expressLayouts = require('express-ejs-layouts');
-const useragent = require('express-useragent');
-const cookieParser = require('cookie-parser');
-const logger = require('./services/loggerService');
-const packageJson = require('./package.json');
-const crypto = require('crypto');
+__configService.bootstrap();
+import express from 'express';
+import path from 'path';
+import expressLayouts from 'express-ejs-layouts';
+import useragent from 'express-useragent';
+import cookieParser from 'cookie-parser';
+import logger from './services/loggerService.js';
+import crypto from 'crypto';
+import { readFileSync } from 'node:fs';
+
+const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 // Build/commit identity. In Docker the short SHA is baked in via the GIT_COMMIT
 // build arg (see Dockerfile); in local dev we fall back to reading git directly.
 // Computed once at startup — never per request.
 const gitCommit = (process.env.GIT_COMMIT || (() => {
   try {
-    return require('child_process')
+    return __child_process
       .execSync('git rev-parse --short HEAD', { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] })
       .toString().trim();
   } catch (_) { return ''; }
 })()).trim() || null;
 const gitRepoUrl = (process.env.GIT_REPO_URL || 'https://github.com/CappyTech/hcs-app').replace(/\/+$/, '');
-const authService = require('./services/authService')
+import authService from './services/authService.js';
 
-const mdb = require('./mongoose/services/mongooseDatabaseService');
-const configService = require('./services/configService');
+import mdb from './mongoose/services/mongooseDatabaseService.js';
+import configService from './services/configService.js';
+import __dotenv from 'dotenv';
+import __configService from './services/configService.js';
+import __child_process from 'child_process';
+import http from 'http';
+import maintenance from './services/maintenanceService.js';
+import __devDbRoutes from './mongoose/routes/devDbRoutes.js';
+import __requestBlocklistService from './services/requestBlocklistService.js';
+import __cookie_parser from 'cookie-parser';
+import session from 'express-session';
+import __setupRoutes from './mongoose/routes/setupRoutes.js';
+import bcrypt from 'bcrypt';
+import __payrollTaxRatesSeedService from './mongoose/services/payrollTaxRatesSeedService.js';
+import __emailTypesSeedService from './mongoose/services/emailTypesSeedService.js';
+import __configValidatorService from './mongoose/services/configValidatorService.js';
+import cisMappings from './mongoose/config/cisMappings.js';
+import __socketService from './services/socketService.js';
+import createSessionService from './mongoose/services/sessionService.js';
+import __csrfService from './services/csrfService.js';
+import __securityService from './services/securityService.js';
+import __flashService from './services/flashService.js';
+import __auditContextService from './mongoose/services/auditContextService.js';
+import __logRequestDetailsService from './services/logRequestDetailsService.js';
+import __rateLimiterService from './services/rateLimiterService.js';
+import __sessionActivityService from './mongoose/services/sessionActivityService.js';
+import __authService from './services/authService.js';
+import __ipService from './services/ipService.js';
+import rbac from './mongoose/config/rolePermissionsConfig.js';
+import departmentsConfig from './mongoose/config/departmentsConfig.js';
+import __dateService from './services/dateService.js';
+import __currencyService from './services/currencyService.js';
+import holidayController from './mongoose/controllers/holidayController.js';
+import __userRoutes from './mongoose/routes/userRoutes.js';
+import __attendanceRoutes from './mongoose/routes/attendanceRoutes.js';
+import __cisRoutes from './mongoose/routes/cisRoutes.js';
+import __CRUDRoutes from './mongoose/routes/CRUDRoutes.js';
+import __indexRoutes from './mongoose/routes/indexRoutes.js';
+import __listRoutes from './mongoose/routes/listRoutes.js';
+import __adminRoutes from './mongoose/routes/adminRoutes.js';
+import __loggerRoutes from './mongoose/routes/loggerRoutes.js';
+import __returnsRoutes from './mongoose/routes/returnsRoutes.js';
+import __settingsRoutes from './mongoose/routes/settingsRoutes.js';
+import __emailRoutes from './mongoose/routes/emailRoutes.js';
+import __twoFARoutes from './mongoose/routes/twoFARoutes.js';
+import __subcontractorRoutes from './mongoose/routes/subcontractorRoutes.js';
+import __submissionRoutes from './mongoose/routes/submissionRoutes.js';
+import __holidayRoutes from './mongoose/routes/holidayRoutes.js';
+import __fileRoutes from './mongoose/routes/fileRoutes.js';
+import __paperlessRoutes from './mongoose/routes/paperlessRoutes.js';
+import __overviewRoutes from './mongoose/routes/overviewRoutes.js';
+import __ssoRoutes from './mongoose/routes/ssoRoutes.js';
+import __helpRoutes from './mongoose/routes/helpRoutes.js';
+import __payrollRoutes from './mongoose/routes/payrollRoutes.js';
+import __gdprRoutes from './mongoose/routes/gdprRoutes.js';
+import __legalRoutes from './mongoose/routes/legalRoutes.js';
+import __companyDocsRoutes from './mongoose/routes/companyDocsRoutes.js';
+import __auditRoutes from './mongoose/routes/auditRoutes.js';
+import __errorHandlerService from './services/errorHandlerService.js';
+import __webSocketService from './mongoose/services/webSocketService.js';
+import __jobRegistry from './mongoose/services/jobRegistry.js';
+import { fileURLToPath } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 
 // Process-level diagnostics for transient and unexpected errors
 process.on('unhandledRejection', (reason, promise) => {
@@ -54,7 +117,6 @@ const main = async () => {
   // "Internal Server Error" while MongoDB is still coming up.
 
   const app = express();
-  const http = require('http');
 
   // Behind reverse proxies (Caddy/FRP): trust loopback and the Docker bridge
   // range only. Trusting the full private-IP space would let any LAN host spoof
@@ -123,7 +185,6 @@ const main = async () => {
   // Service status page — renders the current availability state in place
   // (503 + Retry-After while degraded, redirect home when healthy).
   // /i-am-stuck is kept as a legacy alias for old bookmarks and monitors.
-  const maintenance = require('./services/maintenanceService');
   app.get('/service-unavailable', (req, res) => {
     const reason = maintenance.currentReason();
     if (!reason) return res.redirect(302, '/');
@@ -139,11 +200,11 @@ const main = async () => {
   // here in Phase 1 is safe — requests simply 404/error until MongoDB connects.
   if (process.env.DEV_DB_ADMIN === 'true' && process.env.NODE_ENV !== 'production') {
     logger.warn('[startup] DEV_DB_ADMIN enabled — mounting unauthenticated /admin/db (loopback only, dev use only)');
-    app.use('/admin/db', require('./mongoose/routes/devDbRoutes'));
+    app.use('/admin/db', __devDbRoutes);
   }
 
   // Early request blocklist for common scanner/probe paths
-  app.use(require('./services/requestBlocklistService'));
+  app.use(__requestBlocklistService);
 
   // ── First-run setup wizard ──────────────────────────────────────────────────
   // Only active when neither env vars nor app-config.json supply the minimum
@@ -151,8 +212,7 @@ const main = async () => {
   // Existing deployments with env vars set skip this entirely.
   if (!configService.isConfigured()) {
     logger.warn('[startup] Application is not configured — mounting setup wizard at /setup');
-    const cookieParser = require('cookie-parser');
-    const session = require('express-session');
+    const cookieParser = __cookie_parser;
     // Minimal in-memory session for wizard state (never persisted)
     app.use(cookieParser());
     app.use(session({
@@ -161,7 +221,7 @@ const main = async () => {
       saveUninitialized: true,
       cookie: { httpOnly: true, sameSite: 'lax' },
     }));
-    app.use('/setup', require('./mongoose/routes/setupRoutes'));
+    app.use('/setup', __setupRoutes);
     app.get('/', (req, res) => res.redirect('/setup'));
     app.use((req, res) => res.redirect('/setup'));
     // Start the HTTP server so the process stays alive to serve the wizard
@@ -185,7 +245,7 @@ const main = async () => {
   // the (initially empty) appRouter. Once Phase 2 mounts routes, only
   // requests that genuinely have no matching route will reach this, and
   // maintenanceService will pass them through to the 404 handler.
-  app.use(require('./services/maintenanceService'));
+  app.use(maintenance);
 
   // Minimal error handler for the pre-DB phase
   app.use((err, req, res, _next) => {
@@ -227,11 +287,9 @@ const main = async () => {
         const parsed = typeof bootstrap === 'string' ? JSON.parse(bootstrap) : bootstrap;
         const existingCount = await mdb.INTERNAL.user.countDocuments();
         if (existingCount === 0 && parsed.username && parsed.password) {
-          const bcrypt = require('bcrypt');
-          const { v4: uuidv4 } = require('uuid');
           const hashedPassword = await bcrypt.hash(parsed.password, 10);
           await mdb.INTERNAL.user.create({
-            uuid: uuidv4(),
+            uuid: crypto.randomUUID(),
             username: parsed.username,
             email: parsed.email || '',
             password: hashedPassword,
@@ -251,7 +309,7 @@ const main = async () => {
     // in Settings → Payroll → Tax Rates are preserved; known-bad values from
     // pre-6.8.6 seeds are corrected by exact-value match)
     try {
-      const { ensureSeeded } = require('./mongoose/services/payrollTaxRatesSeedService');
+      const { ensureSeeded } = __payrollTaxRatesSeedService;
       const { created, corrected } = await ensureSeeded(mdb.INTERNAL.payrollTaxRates);
       if (created.length > 0) logger.info(`[migration] Seeded payroll tax rates for: ${created.join(', ')}`);
       if (corrected > 0)      logger.info(`[migration] Applied ${corrected} payroll tax rate correction(s)`);
@@ -262,7 +320,7 @@ const main = async () => {
     // Seed the core email/notification type catalog (insert-only — admin edits
     // in Settings → Emails are preserved).
     try {
-      const { ensureSeeded } = require('./mongoose/services/emailTypesSeedService');
+      const { ensureSeeded } = __emailTypesSeedService;
       await ensureSeeded(mdb.INTERNAL.emailType);
     } catch (seedErr) {
       logger.error('[migration] Email type seeding failed', { error: seedErr.message });
@@ -272,25 +330,23 @@ const main = async () => {
     // Non-fatal: surfaces typo'd option keys and stale model entries that would
     // otherwise fail silently.
     try {
-      require('./mongoose/services/configValidatorService').validateAtStartup(mdb);
+      __configValidatorService.validateAtStartup(mdb);
     } catch (cfgErr) {
       logger.warn('[configValidator] validation error: ' + cfgErr.message);
     }
 
     // Load CIS nominal code mappings from the database
     try {
-      const cisMappings = require('./mongoose/config/cisMappings');
       await cisMappings.loadFromDb(mdb.REST.nominal);
       logger.info(`[cis] Loaded nominal codes — materials: [${cisMappings.materialsNominalCodes}], labour: [${cisMappings.labourNominalCodes}], cisDeduction: [${cisMappings.cisDeductionNominalCodes}]`);
     } catch (cisErr) {
       logger.error('[cis] Failed to load nominal codes from DB, using defaults', { error: cisErr.message });
     }
 
-    const { initSocket } = require('./services/socketService');
+    const { initSocket } = __socketService;
 
     // Session store (requires INTERNAL connection)
     const internalClient = mdb.INTERNAL.connection.client;
-    const createSessionService = require('./mongoose/services/sessionService');
     const sessionService = createSessionService(internalClient);
 
     // Mount the full middleware + routes into appRouter
@@ -299,31 +355,31 @@ const main = async () => {
     appRouter.use(express.urlencoded({ extended: true }));
     appRouter.use(cookieParser());
     appRouter.use(sessionService);
-    appRouter.use(require('./services/csrfService'));
+    appRouter.use(__csrfService);
 
     // Protected static assets
     appRouter.use('/resources', authService.ensureAuthenticated, express.static(path.join(__dirname, 'public')));
 
     // Core middleware
     appRouter.use(useragent.express());
-    appRouter.use(require('./services/securityService'));
-    appRouter.use(require('./services/flashService'));
+    appRouter.use(__securityService);
+    appRouter.use(__flashService);
     appRouter.use(authService.ensureAuthenticated);
     appRouter.use(authService.ensureRouteAccess);
     // Bind the authenticated actor to async-local storage so the DB audit plugin
     // can attribute writes (must run after auth populates req.session.user).
-    appRouter.use(require('./mongoose/services/auditContextService').middleware);
-    appRouter.use(require('./services/logRequestDetailsService'));
-    appRouter.use(require('./services/rateLimiterService'));
+    appRouter.use(__auditContextService.middleware);
+    appRouter.use(__logRequestDetailsService);
+    appRouter.use(__rateLimiterService);
     // Maintenance/availability guard (friendly 503 when backing services restart mid-operation)
-    appRouter.use(require('./services/maintenanceService'));
+    appRouter.use(maintenance);
     // Session activity tracking (after auth)
-    appRouter.use(require('./mongoose/services/sessionActivityService').touchSessionActivity);
-    appRouter.use(require('./mongoose/services/sessionActivityService').trackPageVisit);
+    appRouter.use(__sessionActivityService.touchSessionActivity);
+    appRouter.use(__sessionActivityService.trackPageVisit);
 
     // Admin-only debug route to inspect forwarded headers and connection security
-    appRouter.get('/__debug/headers', require('./services/authService').ensureRole('admin'), (req, res) => {
-      const { getClientIp } = require('./services/ipService');
+    appRouter.get('/__debug/headers', __authService.ensureRole('admin'), (req, res) => {
+      const { getClientIp } = __ipService;
       res.json({
         secure: req.secure,
         protocol: req.protocol,
@@ -344,8 +400,6 @@ const main = async () => {
     });
 
     // Attach user info to templates
-    const rbac = require('./mongoose/config/rolePermissionsConfig');
-    const departmentsConfig = require('./mongoose/config/departmentsConfig');
     appRouter.use((req, res, next) => {
       res.locals.currentPath = req.path;
       res.locals.navActive = (href) =>
@@ -378,10 +432,10 @@ const main = async () => {
       res.locals.package = packageJson.version;
       res.locals.commit = gitCommit ? gitCommit.slice(0, 7) : null;
       res.locals.commitUrl = gitCommit ? `${gitRepoUrl}/commit/${gitCommit}` : null;
-      res.locals.slimDateTime = require('./services/dateService').slimDateTime;
-      res.locals.fmtDate = require('./services/dateService').fmtDate;
-      res.locals.formatCurrency = require('./services/currencyService').formatCurrency;
-      res.locals.rounding = require('./services/currencyService').rounding;
+      res.locals.slimDateTime = __dateService.slimDateTime;
+      res.locals.fmtDate = __dateService.fmtDate;
+      res.locals.formatCurrency = __currencyService.formatCurrency;
+      res.locals.rounding = __currencyService.rounding;
       if (!res.locals.csrfToken && req.session?.csrfToken) {
         res.locals.csrfToken = req.session.csrfToken;
       }
@@ -418,7 +472,6 @@ const main = async () => {
     });
 
     // Holiday block page
-    const holidayController = require('./mongoose/controllers/holidayController')
     appRouter.use(holidayController.checkHoliday);
 
     // Encryption key dev hint
@@ -428,32 +481,32 @@ const main = async () => {
       logger.info('Generated ENCRYPTION_KEY (hex): ' + hex.toString('hex'));
     }
 
-    appRouter.use('/', require('./mongoose/routes/userRoutes'));
+    appRouter.use('/', __userRoutes);
     // Routes
-    appRouter.use('/', require('./mongoose/routes/attendanceRoutes'));
-    appRouter.use('/', require('./mongoose/routes/cisRoutes'));
-    appRouter.use('/', require('./mongoose/routes/CRUDRoutes'));
-    appRouter.use('/', require('./mongoose/routes/indexRoutes'));
-    appRouter.use('/', require('./mongoose/routes/listRoutes'));
-    appRouter.use('/', require('./mongoose/routes/adminRoutes'));
-    appRouter.use('/', require('./mongoose/routes/loggerRoutes'));
-    appRouter.use('/', require('./mongoose/routes/returnsRoutes'));
-    appRouter.use('/', require('./mongoose/routes/settingsRoutes'));
-    appRouter.use('/', require('./mongoose/routes/emailRoutes'));
-    appRouter.use('/', require('./mongoose/routes/twoFARoutes'));
-    appRouter.use('/', require('./mongoose/routes/subcontractorRoutes'));
-    appRouter.use('/', require('./mongoose/routes/submissionRoutes'));
-    appRouter.use('/', require('./mongoose/routes/holidayRoutes'));
-    appRouter.use('/', require('./mongoose/routes/fileRoutes'));
-    appRouter.use('/', require('./mongoose/routes/paperlessRoutes'));
-    appRouter.use('/', require('./mongoose/routes/overviewRoutes'));
-    appRouter.use('/', require('./mongoose/routes/ssoRoutes'));
-    appRouter.use('/', require('./mongoose/routes/helpRoutes'));
-    appRouter.use('/', require('./mongoose/routes/payrollRoutes'));
-    appRouter.use('/', require('./mongoose/routes/gdprRoutes'));
-    appRouter.use('/', require('./mongoose/routes/legalRoutes'));
-    appRouter.use('/', require('./mongoose/routes/companyDocsRoutes'));
-    appRouter.use('/', require('./mongoose/routes/auditRoutes'));
+    appRouter.use('/', __attendanceRoutes);
+    appRouter.use('/', __cisRoutes);
+    appRouter.use('/', __CRUDRoutes);
+    appRouter.use('/', __indexRoutes);
+    appRouter.use('/', __listRoutes);
+    appRouter.use('/', __adminRoutes);
+    appRouter.use('/', __loggerRoutes);
+    appRouter.use('/', __returnsRoutes);
+    appRouter.use('/', __settingsRoutes);
+    appRouter.use('/', __emailRoutes);
+    appRouter.use('/', __twoFARoutes);
+    appRouter.use('/', __subcontractorRoutes);
+    appRouter.use('/', __submissionRoutes);
+    appRouter.use('/', __holidayRoutes);
+    appRouter.use('/', __fileRoutes);
+    appRouter.use('/', __paperlessRoutes);
+    appRouter.use('/', __overviewRoutes);
+    appRouter.use('/', __ssoRoutes);
+    appRouter.use('/', __helpRoutes);
+    appRouter.use('/', __payrollRoutes);
+    appRouter.use('/', __gdprRoutes);
+    appRouter.use('/', __legalRoutes);
+    appRouter.use('/', __companyDocsRoutes);
+    appRouter.use('/', __auditRoutes);
 
     // Catch-all 404
     appRouter.use((req, res, next) => {
@@ -463,17 +516,17 @@ const main = async () => {
     });
 
     // Global error handler
-    appRouter.use(require('./services/errorHandlerService'));
+    appRouter.use(__errorHandlerService);
 
     // WebSocket
     const io = initSocket(server);
-    const { setupWebSocket } = require('./mongoose/services/webSocketService');
+    const { setupWebSocket } = __webSocketService;
     setupWebSocket(io, sessionService);
 
     // Start periodic background services
     // All periodic background work runs through the central job scheduler
     // (status + manual trigger at /admin/jobs)
-    try { require('./mongoose/services/jobRegistry').start(); } catch (e) { logger.warn('Job scheduler start failed: ' + e.message); }
+    try { __jobRegistry.start(); } catch (e) { logger.warn('Job scheduler start failed: ' + e.message); }
 
     logger.info(`[startup] Application fully ready in ${process.env.NODE_ENV} on ${host}:${port}`);
 

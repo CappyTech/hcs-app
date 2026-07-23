@@ -1,7 +1,5 @@
-'use strict';
-
-const logger = require('../../services/loggerService');
-const auditContext = require('./auditContextService');
+import logger from '../../services/loggerService.js';
+import auditContext from './auditContextService.js';
 
 /**
  * Central background-job scheduler.
@@ -160,4 +158,4 @@ function _reset() {
   jobs.clear();
 }
 
-module.exports = { register, start, stop, runNow, getStatus, _reset };
+export default { register, start, stop, runNow, getStatus, _reset };

@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * payrollConfig — singleton company-level PAYE payroll configuration.
@@ -54,7 +52,7 @@ const payrollConfigSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = {
+export default {
   modelName: 'payrollConfig',
   schema: payrollConfigSchema
 };

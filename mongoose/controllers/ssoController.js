@@ -1,10 +1,11 @@
-const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const totpService = require("../../services/totpService");
-const logger = require("../../services/loggerService");
-const mdb = require("../services/mongooseDatabaseService");
-const encryptionService = require("../../services/encryptionService");
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import totpService from '../../services/totpService.js';
+import logger from '../../services/loggerService.js';
+import mdb from '../services/mongooseDatabaseService.js';
+import encryptionService from '../../services/encryptionService.js';
+import __auditLogService from '../../services/auditLogService.js';
 
 // Roles allowed to receive an hcs-sync SSO token. The sync dashboard exposes
 // financial data and destructive operations (dedup, manual sync), so it is
@@ -115,7 +116,7 @@ function upgradeReturnToToHttpsIfAllowed(urlObj) {
   return urlObj;
 }
 
-exports.hcsSyncHandoff = async (req, res) => {
+export const hcsSyncHandoff = async (req, res) => {
   const returnTo = upgradeReturnToToHttpsIfAllowed(
     parseReturnTo(req.query?.return_to),
   );
@@ -235,7 +236,7 @@ exports.hcsSyncHandoff = async (req, res) => {
  * Body (JSON):      { username, password }
  * Response (JSON):  { token, expiresIn }
  */
-exports.issueTokenForSync = async (req, res) => {
+export const issueTokenForSync = async (req, res) => {
   const apiKey = String(process.env.HCS_SYNC_API_KEY || "").trim();
   if (!apiKey) {
     logger.error("[sso] HCS_SYNC_API_KEY not configured – /api/sso/token is disabled");
@@ -325,7 +326,7 @@ exports.issueTokenForSync = async (req, res) => {
     logger.warn(
       `[sso] /api/sso/token: role "${user.role}" not permitted for hcs-sync (user=${user.username})`,
     );
-    require("../../services/auditLogService").record("sso_token_denied", req, {
+    __auditLogService.record("sso_token_denied", req, {
       userId: user._id, username: user.username, meta: { role: user.role, reason: "role_denied" },
     });
     return res.status(403).json({
@@ -401,8 +402,10 @@ exports.issueTokenForSync = async (req, res) => {
   );
 
   logger.info("[sso] /api/sso/token: issued token for user \"%s\"", user.username);
-  require("../../services/auditLogService").record("sso_token_issued", req, {
+  __auditLogService.record("sso_token_issued", req, {
     userId: user._id, username: user.username, meta: { ttlSec },
   });
   return res.json({ token, expiresIn: ttlSec });
 };
+
+export default { hcsSyncHandoff, issueTokenForSync };

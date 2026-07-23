@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * paperlessApiLogService.js
  *
@@ -9,7 +7,8 @@
  * Failures are silently swallowed so a logging issue never breaks an API call.
  */
 
-const logger = require('./loggerService');
+import logger from './loggerService.js';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
 
 let _model = null;
 
@@ -58,7 +57,6 @@ function setModel(model) {
 function getModel() {
   if (_model) return _model;
   try {
-    const mdb = require('../mongoose/services/mongooseDatabaseService');
     _model = mdb.INTERNAL?.paperlessApiLog || null;
   } catch (_) {}
   return _model;
@@ -105,4 +103,4 @@ function logError({ method, url, status, message, durationMs }) {
   });
 }
 
-module.exports = { setModel, logRequest, logResponse, logError };
+export default { setModel, logRequest, logResponse, logError };

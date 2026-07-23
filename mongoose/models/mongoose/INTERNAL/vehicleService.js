@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const vehicleServiceSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -78,7 +78,7 @@ vehicleServiceSchema.index({ serviceType: 1 });
 vehicleServiceSchema.index({ status: 1 });
 vehicleServiceSchema.index({ date: -1 });
 
-module.exports = {
+export default {
     modelName: 'vehicleService',
     schema: vehicleServiceSchema
 };

@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * payrollEntry — per-employee calculation record within a payrollRun.
@@ -77,7 +75,7 @@ const payrollEntrySchema = new mongoose.Schema({
 // One entry per employee per run
 payrollEntrySchema.index({ runId: 1, employeeId: 1 }, { unique: true });
 
-module.exports = {
+export default {
   modelName: 'payrollEntry',
   schema: payrollEntrySchema
 };

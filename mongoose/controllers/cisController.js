@@ -1,9 +1,9 @@
-const mongoose = require("mongoose");
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const logger = require("../../services/loggerService");
-const { formatInTimeZone, fromZonedTime, getTimezoneOffset } = require("date-fns-tz");
-const taxService = require("../../services/taxService");
+import mongoose from 'mongoose';
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import { formatInTimeZone, fromZonedTime, getTimezoneOffset } from 'date-fns-tz';
+import taxService from '../../services/taxService.js';
 
 const LONDON_TZ = "Europe/London";
 
@@ -19,10 +19,10 @@ const parseLondonString = (s) => {
     return null;
   }
 };
-const cisMappings = require("../config/cisMappings");
-const { normalizeWhtRate, HMRC_VERIFICATION_REGEX } = require("../../services/cisService");
+import cisMappings from '../config/cisMappings.js';
+import { normalizeWhtRate, HMRC_VERIFICATION_REGEX } from '../../services/cisService.js';
 
-exports.renderCISDashboardMongo = async (req, res, next) => {
+export const renderCISDashboardMongo = async (req, res, next) => {
   try {
     const specifiedYear = parseInt(req.params.year);
     const specifiedMonth = parseInt(req.params.month);
@@ -714,7 +714,9 @@ exports.renderCISDashboardMongo = async (req, res, next) => {
   }
 };
 
-exports.redirectCIS = (req, res, next) => {
+export const redirectCIS = (req, res, next) => {
   const { taxYear, taxMonth } = taxService.calculateTaxYearAndMonth(new Date());
   return res.redirect(`/CIS/Dashboard/${taxYear}/${taxMonth}`);
 };
+
+export default { renderCISDashboardMongo, redirectCIS };

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * tests/readViews.test.js
  *
@@ -9,10 +7,14 @@
  * unguarded references without needing a browser or database.
  */
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const path = require('path');
-const ejs = require('ejs');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import path from 'path';
+import ejs from 'ejs';
+import { fileURLToPath } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 
 const VIEWS_ROOT = path.join(__dirname, '..', 'mongoose', 'views');
 

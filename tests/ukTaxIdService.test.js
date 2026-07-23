@@ -1,7 +1,7 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
-const ukTaxId = require('../services/ukTaxIdService');
+import ukTaxId from '../services/ukTaxIdService.js';
 
 describe('ukTaxIdService', () => {
   describe('isValidUtr', () => {

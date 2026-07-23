@@ -1,5 +1,5 @@
 // mongoose/models/mongoose/PAPERLESS/OcrDocument.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const CustomFieldSchema = new mongoose.Schema({
   fieldId: Number,
@@ -56,7 +56,7 @@ const OcrDocumentSchema = new mongoose.Schema({
   error: { type: String, default: null },
 }, { timestamps: true });
 
-module.exports = {
+export default {
   modelName: 'OcrDocument',
   schema: OcrDocumentSchema,
 };

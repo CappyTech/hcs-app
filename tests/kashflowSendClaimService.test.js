@@ -1,10 +1,9 @@
-'use strict';
-
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import __kashflowSendClaimService from '../mongoose/services/paperless/kashflowSendClaimService.js';
 
 const { claimSend, releaseSend, SEND_CLAIM_STALE_MS } =
-  require('../mongoose/services/paperless/kashflowSendClaimService');
+  __kashflowSendClaimService;
 
 // Chainable mock matching .findOneAndUpdate(...).select(...).lean() and
 // .findOne(...).select(...).lean()

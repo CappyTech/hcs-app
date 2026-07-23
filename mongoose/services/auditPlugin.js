@@ -1,7 +1,6 @@
-'use strict';
-
-const logger = require('../../services/loggerService');
-const auditContext = require('./auditContextService');
+import logger from '../../services/loggerService.js';
+import auditContext from './auditContextService.js';
+import __mongooseDatabaseService from './mongooseDatabaseService.js';
 
 // Models whose single-record reads are logged (GDPR subject-access trail).
 // Override via env, comma-separated. List reads are deliberately NOT logged.
@@ -14,7 +13,7 @@ const IGNORED_DIFF_KEYS = new Set(['updatedAt', '__v']);
 // Resolved lazily to avoid a require cycle with mongooseDatabaseService.
 function auditModel() {
   try {
-    return require('./mongooseDatabaseService').INTERNAL.auditLog;
+    return __mongooseDatabaseService.INTERNAL.auditLog;
   } catch (_) {
     return null;
   }
@@ -72,7 +71,7 @@ async function record(entry) {
 const INTERNAL_OPT = { _auditInternal: true };
 const isInternal = (query) => !!query.getOptions()._auditInternal;
 
-module.exports = function auditPlugin(schema, options) {
+export default function auditPlugin(schema, options) {
   const modelName = (options && options.modelName) || 'unknown';
 
   // ── CREATE / UPDATE via document.save() ──────────────────────────────────

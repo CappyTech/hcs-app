@@ -1,4 +1,5 @@
-const logger = require("./loggerService");
+import logger from './loggerService.js';
+import twilio from 'twilio';
 
 // ── Twilio client (lazy-initialised) ─────────────────────────────────
 let _client = null;
@@ -23,7 +24,6 @@ function getClient() {
     return null;
   }
 
-  const twilio = require("twilio");
   _client = twilio(accountSid, authToken);
   return _client;
 }
@@ -56,7 +56,7 @@ async function sendPasswordResetOtp(phoneNumber, otp) {
   return sendSms({ to: phoneNumber, body });
 }
 
-module.exports = {
+export default {
   sendSms,
   sendPasswordResetOtp,
   resetClient() { _client = null; },

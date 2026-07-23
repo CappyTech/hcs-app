@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { bankAccount, uuidField } = require('@cappytech/hcs-schemas');
+import mongoose from 'mongoose';
+import { bankAccount, uuidField } from '@cappytech/hcs-schemas';
 
 const bankAccountSchema = new mongoose.Schema({
   uuid: uuidField,
@@ -8,7 +8,7 @@ const bankAccountSchema = new mongoose.Schema({
 
 bankAccount.indexes.forEach(idx => bankAccountSchema.index(idx.fields, idx.options));
 
-module.exports = {
+export default {
   modelName: 'bankAccount',
   schema: bankAccountSchema
 };

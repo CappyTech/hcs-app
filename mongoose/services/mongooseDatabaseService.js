@@ -1,13 +1,16 @@
-'use strict';
-
-require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const tunnel = require('tunnel-ssh');
-const mongoose = require('mongoose');
-const logger = require('../../services/loggerService');
-const configService = require('../../services/configService');
-const auditPlugin = require('./auditPlugin');
+__dotenv.config();
+import fs from 'fs';
+import path from 'path';
+import tunnel from 'tunnel-ssh';
+import mongoose from 'mongoose';
+import logger from '../../services/loggerService.js';
+import configService from '../../services/configService.js';
+import auditPlugin from './auditPlugin.js';
+import __dotenv from 'dotenv';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 
 // INTERNAL models excluded from the audit trail: the audit log itself, plus
 // high-frequency infrastructure writes (session activity) that would flood it.
@@ -71,7 +74,8 @@ async function createNamespace(ns, connection) {
   if (!mdb[ns]) mdb[ns] = {};
   for (const file of files) {
     if (!file.endsWith('.js')) continue;
-    const { modelName, schema } = require(path.join(baseDir, file));
+    const modelModule = await import(pathToFileURL(path.join(baseDir, file)).href);
+    const { modelName, schema } = modelModule.default ?? modelModule;
     if (!modelName || !schema) {
       logger.warn(`Skipping model in ${ns}: ${file} (missing modelName/schema)`);
       continue;
@@ -218,4 +222,4 @@ process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
 process.on('exit', cleanup);
 
-module.exports = mdb;
+export default mdb;

@@ -1,9 +1,9 @@
-const { format } = require('date-fns');
-const { formatInTimeZone, fromZonedTime } = require('date-fns-tz');
-const logger = require('../../services/loggerService');
-const mdb = require('./mongooseDatabaseService');
-const taxService = require('../../services/taxService');
-const { HMRC_VERIFICATION_REGEX } = require('../../services/cisService');
+import { format } from 'date-fns';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+import logger from '../../services/loggerService.js';
+import mdb from './mongooseDatabaseService.js';
+import taxService from '../../services/taxService.js';
+import { HMRC_VERIFICATION_REGEX } from '../../services/cisService.js';
 
 const TZ = 'Europe/London';
 
@@ -757,7 +757,7 @@ const getLockedRunForDate = async (date) => {
   }).select('taxYear taxMonth taxWeek frequency status periodStart periodEnd').lean();
 };
 
-module.exports = {
+export default {
   getAttendanceForDay,
   fetchAttendanceForWeek,
   getAttendanceForWeek,
@@ -767,3 +767,5 @@ module.exports = {
   fetchVehicleDeploymentsForWeek,
   getLockedRunForDate
 };
+
+export { getAttendanceForDay, fetchAttendanceForWeek, getAttendanceForWeek, groupAttendanceByPerson, fetchStatementsForWeek, fetchAssignmentsForWeek, fetchVehicleDeploymentsForWeek, getLockedRunForDate };

@@ -1,7 +1,7 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/cisController");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/cisController.js';
 
 router.get(
   "/CIS/Dashboard/:year/:month",
@@ -14,4 +14,4 @@ router.get(
   ctrl.redirectCIS,
 );
 
-module.exports = router;
+export default router;

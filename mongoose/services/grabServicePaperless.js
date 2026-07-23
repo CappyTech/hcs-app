@@ -1,11 +1,13 @@
 // services/grabServicepPaperless.js
-const crypto = require('crypto');
+import crypto from 'crypto';
 // Use promise-limit (installed) instead of ESM-only p-limit to avoid CJS interop issues
-const promiseLimit = require('promise-limit');
-const mdb = require('./mongooseDatabaseService');
-const { makeClient } = require('./paperless/paperlessClient');
-const { updatePaperlessWithKashFlowInfo } = require('./paperless/paperlessUpdateService');
-const logger = require('../../services/loggerService'); // your existing logger
+import promiseLimit from 'promise-limit';
+import mdb from './mongooseDatabaseService.js';
+import __paperlessClient from './paperless/paperlessClient.js';
+const { makeClient } = __paperlessClient;
+import __paperlessUpdateService from './paperless/paperlessUpdateService.js';
+const { updatePaperlessWithKashFlowInfo } = __paperlessUpdateService;
+import logger from '../../services/loggerService.js'; // your existing logger
 
 const VERBOSE = process.env.PAPERLESS_VERBOSE === 'true' || process.env.DEBUG;
 
@@ -575,4 +577,4 @@ async function ingestOnePaperlessDoc(paperlessId) {
   return { paperlessId: doc.id, status: 'fetched' };
 }
 
-module.exports = { grabPaperlessOCR, ingestOnePaperlessDoc, isGrabRunning };
+export default { grabPaperlessOCR, ingestOnePaperlessDoc, isGrabRunning };

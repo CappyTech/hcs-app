@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Records of Processing Activities (RoPA)
  * UK GDPR Art. 30 — maintained as a JS config so it is version-controlled
@@ -119,4 +117,4 @@ const ropa = {
   ],
 };
 
-module.exports = ropa;
+export default ropa;

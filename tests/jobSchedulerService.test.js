@@ -1,7 +1,7 @@
-const { describe, it, beforeEach } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
 
-const scheduler = require('../mongoose/services/jobSchedulerService');
+import scheduler from '../mongoose/services/jobSchedulerService.js';
 
 describe('jobSchedulerService', () => {
   beforeEach(() => scheduler._reset());

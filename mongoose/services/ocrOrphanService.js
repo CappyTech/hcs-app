@@ -1,7 +1,5 @@
-'use strict';
-
-const mdb    = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
 /**
  * Finds OcrDocuments whose kashflowPurchaseId no longer matches an active
@@ -85,4 +83,4 @@ async function detectAndClearOrphans() {
   return stats;
 }
 
-module.exports = { detectAndClearOrphans };
+export default { detectAndClearOrphans };

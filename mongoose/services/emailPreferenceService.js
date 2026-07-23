@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * emailPreferenceService — per-user subscription state and the master
  * "allow admins to email me" switch.
@@ -9,9 +7,9 @@
  * (they cannot be unsubscribed from).
  */
 
-const crypto = require('crypto');
-const mdb = require('./mongooseDatabaseService');
-const emailTypeService = require('./emailTypeService');
+import crypto from 'crypto';
+import mdb from './mongooseDatabaseService.js';
+import emailTypeService from './emailTypeService.js';
 
 function prefModel() {
   return mdb.INTERNAL && mdb.INTERNAL.emailPreference;
@@ -113,7 +111,7 @@ async function rotateToken(userId) {
   return token;
 }
 
-module.exports = {
+export default {
   isSubscribed,
   getPreferencesForUser,
   setPreference,
@@ -122,3 +120,5 @@ module.exports = {
   resolveByToken,
   rotateToken,
 };
+
+export { isSubscribed, getPreferencesForUser, setPreference, setAllowAdminEmails, ensureToken, resolveByToken, rotateToken };

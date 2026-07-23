@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-'use strict';
-
 /**
  * scripts/seed-payroll-tax-rates.js
  *
@@ -17,14 +15,16 @@
  *   node scripts/seed-payroll-tax-rates.js
  */
 
-require('dotenv').config();
+__dotenv.config();
 
-const mongoose = require('mongoose');
-const configService = require('../services/configService');
-const { DEFAULT_RATES } = require('../mongoose/services/payrollTaxRatesSeedService');
+import mongoose from 'mongoose';
+import configService from '../services/configService.js';
+import __payrollTaxRatesSeedService from '../mongoose/services/payrollTaxRatesSeedService.js';
+import __dotenv from 'dotenv';
+import m from '../mongoose/models/mongoose/INTERNAL/payrollTaxRates.js';
+const { DEFAULT_RATES } = __payrollTaxRatesSeedService;
 
 const { payrollTaxRatesSchema } = (() => {
-  const m = require('../mongoose/models/mongoose/INTERNAL/payrollTaxRates');
   return { payrollTaxRatesSchema: m.schema };
 })();
 

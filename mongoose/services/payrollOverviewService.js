@@ -1,7 +1,5 @@
-'use strict';
-
-const mdb        = require('./mongooseDatabaseService');
-const taxService = require('../../services/taxService');
+import mdb from './mongooseDatabaseService.js';
+import taxService from '../../services/taxService.js';
 
 /**
  * Builds data for the payroll overview page.
@@ -116,4 +114,4 @@ function toNum(v) {
   return Number(v) || 0;
 }
 
-module.exports = { getPayrollOverview };
+export default { getPayrollOverview };

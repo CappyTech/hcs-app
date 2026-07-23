@@ -1,6 +1,4 @@
-'use strict';
-
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const paperlessApiLogSchema = new mongoose.Schema({
   direction: { type: String, enum: ['request', 'response', 'error'], required: true, index: true },
@@ -17,4 +15,4 @@ const paperlessApiLogSchema = new mongoose.Schema({
   capped: { size: 50 * 1024 * 1024, max: 10000 }, // 50 MB / 10 k docs rolling window
 });
 
-module.exports = { modelName: 'paperlessApiLog', schema: paperlessApiLogSchema };
+export default { modelName: 'paperlessApiLog', schema: paperlessApiLogSchema };

@@ -1,13 +1,13 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * vehicleComplianceService requires mdb, taskService, and logger at top level.
  * Patch mdb singleton; patch taskService exports; logger is fine as-is.
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const taskService = require('../mongoose/services/taskService');
-const logger = require('../services/loggerService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import taskService from '../mongoose/services/taskService.js';
+import logger from '../services/loggerService.js';
 
 let createTaskCalls = [];
 const origCreateTask = taskService.createTask;
@@ -40,7 +40,7 @@ function patchMdb({ vehicles = [], admins = [], existingTask = null } = {}) {
   };
 }
 
-const { checkComplianceAndCreateTasks, stop } = require('../mongoose/services/vehicleComplianceService');
+import { checkComplianceAndCreateTasks, stop } from '../mongoose/services/vehicleComplianceService.js';
 
 /* ── tests ─────────────────────────────────────────────────────────── */
 describe('vehicleComplianceService', () => {

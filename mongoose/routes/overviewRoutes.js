@@ -1,9 +1,7 @@
-'use strict';
-
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authService = require('../../services/authService');
-const ctrl = require('../controllers/overviewController');
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/overviewController.js';
 
 router.get('/overview/fleet',
   authService.ensureRole('admin'),
@@ -53,4 +51,4 @@ router.get('/overview/policies',
   authService.ensureRole('admin'),
   ctrl.getPoliciesOverview);
 
-module.exports = router;
+export default router;

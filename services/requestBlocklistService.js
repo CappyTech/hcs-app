@@ -1,4 +1,4 @@
-const logger = require("./loggerService");
+import logger from './loggerService.js';
 const { sanitize } = logger;
 
 // Compile a list of patterns commonly used by scanners probing for PHP/WordPress/etc.
@@ -86,7 +86,7 @@ const hitCounters = new Map(); // ip -> { firstTs, hits }
 const bans = new Map();      // ip -> untilTs
 const banStats = new Map();  // ip -> { count, firstPath } — requests blocked during active ban
 
-module.exports = function requestBlocklistService(req, res, next) {
+export default function requestBlocklistService(req, res, next) {
   try {
     // Allow health probes through
     if (req.path === "/healthz") return next();

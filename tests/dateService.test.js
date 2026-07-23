@@ -1,6 +1,7 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { slimDateTime } = require('../services/dateService');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import __dateService from '../services/dateService.js';
+const { slimDateTime } = __dateService;
 
 // ── Default format (DD/MM/YYYY) ─────────────────────────────────────────────
 

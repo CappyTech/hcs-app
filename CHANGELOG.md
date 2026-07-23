@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.13.0] - 2026-07-23
+
+### Changed
+- **Entire codebase converted from CommonJS to ESM** (`"type": "module"`; 250+ files). `require`/`module.exports` → `import`/`export` throughout. Key mechanical details:
+  - Modules that attached extra functions to their main export (loggerService `sanitize`/`setSocketInstance`, maintenanceService, csrfService `validate`) keep that property shape on the default export, so `logger.sanitize(...)` / `csrfService.validate` call sites are unchanged.
+  - `__dirname`/`__filename` shimmed via `import.meta.url` where used; `package.json` reads use `readFileSync` + `JSON.parse` instead of `require`.
+  - The dynamic model loader (`mongooseDatabaseService.createNamespace`) now uses `await import()` with `pathToFileURL`.
+  - Tests that set env vars or patched `require.cache` before requiring modules now use top-level `await import(...)` and `mock.module()` (test runner passes `--experimental-test-module-mocks`).
+  - `scripts/generate-tailwind-safelist.js` emits `export default` (tailwind.safelist.js regenerated accordingly).
+
+### Fixed
+- Removed a latent crash in the bootstrap-admin seeding path: it lazily `require`d the `uuid` package, which was never a declared or installed dependency. Now uses `crypto.randomUUID()`.
+
+### Notes
+- Requires `@cappytech/hcs-schemas` **2.0.0** (ESM) at runtime for model loading: merge the hcs-schemas ESM PR, tag/publish, then `npm update @cappytech/hcs-schemas` and commit the lockfile before deploying.
+- Client-side files under `public/` are untouched (served to browsers, not loaded by Node).
+
 ## [6.12.3] - 2026-07-17
 
 ### Changed

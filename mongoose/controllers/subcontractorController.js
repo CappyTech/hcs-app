@@ -1,6 +1,6 @@
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const ukTaxId = require("../../services/ukTaxIdService");
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import ukTaxId from '../../services/ukTaxIdService.js';
 
 // Format checks per HMRC reference name used on the CIS edit form
 const REF_VALIDATORS = {
@@ -22,7 +22,7 @@ const REF_VALIDATORS = {
  * GET /subcontractor/assign
  * Renders a form to pick a supplier and edit their CIS details.
  */
-exports.renderAssignForm = async (req, res, next) => {
+export const renderAssignForm = async (req, res, next) => {
   try {
     // Show all suppliers so any can be edited — not just unassigned ones
     const suppliers = await mdb.REST.supplier
@@ -44,7 +44,7 @@ exports.renderAssignForm = async (req, res, next) => {
  * POST /subcontractor/assign
  * Redirects to the CIS edit form for the selected supplier.
  */
-exports.assignSubcontractor = async (req, res, next) => {
+export const assignSubcontractor = async (req, res, next) => {
   try {
     const { supplierUuid } = req.body;
     if (!supplierUuid) {
@@ -66,7 +66,7 @@ exports.assignSubcontractor = async (req, res, next) => {
   }
 };
 
-exports.renderChangeSupplierForm = async (req, res, next) => {
+export const renderChangeSupplierForm = async (req, res, next) => {
   try {
     const supplier = await mdb.REST.supplier
       .findOne({ uuid: req.params.uuid })
@@ -84,7 +84,7 @@ exports.renderChangeSupplierForm = async (req, res, next) => {
   }
 };
 
-exports.changeSupplier = async (req, res, next) => {
+export const changeSupplier = async (req, res, next) => {
   try {
     // OLD: const { subcontractor, cisRate, cisNumber } = req.body;
     const { withholdingTaxRate } = req.body;
@@ -141,3 +141,5 @@ exports.changeSupplier = async (req, res, next) => {
     next(error);
   }
 };
+
+export default { renderAssignForm, assignSubcontractor, renderChangeSupplierForm, changeSupplier };

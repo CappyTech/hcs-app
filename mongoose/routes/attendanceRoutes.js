@@ -1,7 +1,7 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/attendanceController");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/attendanceController.js';
 
 // Daily / weekly views — admin sees all; employee/subcontractor sees own (scoped in controller)
 router.get(
@@ -100,4 +100,4 @@ router.patch(
   ctrl.updateVehicleDeployment,
 );
 
-module.exports = router;
+export default router;

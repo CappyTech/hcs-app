@@ -1,7 +1,7 @@
-const logger = require("./loggerService");
-const mdb = require("../mongoose/services/mongooseDatabaseService");
-const configService = require("./configService");
-const path = require("path");
+import logger from './loggerService.js';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import configService from './configService.js';
+import path from 'path';
 
 /**
  * Maintenance/availability middleware.
@@ -112,7 +112,7 @@ function currentReason() {
   return state === "ready" ? null : state;
 }
 
-module.exports = function maintenanceService(req, res, next) {
+function maintenanceService(req, res, next) {
   try {
     const p = req.path || "";
     if (PASS_PATHS.includes(p) || PASS_PREFIXES.some((pre) => p.startsWith(pre))) {
@@ -150,6 +150,13 @@ module.exports = function maintenanceService(req, res, next) {
   }
 };
 
-module.exports.renderUnavailable = renderUnavailable;
-module.exports.currentReason = currentReason;
-module.exports.isMaintenanceOn = isMaintenanceOn;
+// CJS attached these as properties of the middleware; keep that shape for
+// consumers that access them via the default export (e.g. app.js).
+maintenanceService.renderUnavailable = renderUnavailable;
+maintenanceService.currentReason = currentReason;
+maintenanceService.isMaintenanceOn = isMaintenanceOn;
+
+export default maintenanceService;
+export { renderUnavailable };
+export { currentReason };
+export { isMaintenanceOn };

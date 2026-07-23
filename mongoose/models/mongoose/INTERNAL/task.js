@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const taskSchema = new mongoose.Schema({
   uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -27,7 +27,7 @@ taskSchema.pre('validate', function(next) {
 taskSchema.index({ userId: 1, completed: 1, dueDate: 1 });
 
 
-module.exports = {
+export default {
   modelName: 'task',
   schema: taskSchema
 };

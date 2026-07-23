@@ -1,6 +1,4 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
+import mdb from './mongooseDatabaseService.js';
 
 async function getFinanceOverview({ recentLimit = 10 } = {}) {
   const Invoice = mdb.REST?.invoice;
@@ -101,4 +99,4 @@ async function getFinanceOverview({ recentLimit = 10 } = {}) {
   };
 }
 
-module.exports = { getFinanceOverview };
+export default { getFinanceOverview };

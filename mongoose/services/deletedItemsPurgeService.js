@@ -1,8 +1,6 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const configService = require('../../services/configService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import configService from '../../services/configService.js';
+import logger from '../../services/loggerService.js';
 
 /**
  * Scheduled purge of soft-deleted REST records.
@@ -57,4 +55,4 @@ async function purgeOnce() {
   return { enabled: true, retentionDays, purged, byModel };
 }
 
-module.exports = { purgeOnce, getRetentionDays };
+export default { purgeOnce, getRetentionDays };

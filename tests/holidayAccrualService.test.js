@@ -1,12 +1,13 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
-const logger = require('../services/loggerService');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import logger from '../services/loggerService.js';
 
 /*
  * holidayAccrualService requires mdb at top-level (patch singleton)
  * and taxService at top-level (use as-is — pure date math).
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import __holidayAccrualService from '../mongoose/services/holidayAccrualService.js';
 
 /* ── fake employeeHoliday model ───────────────────────────────────── */
 let ehFindOneResult = null;
@@ -60,7 +61,7 @@ function patchMdb({ ehDoc = null, employee = null } = {}) {
 
 // Require AFTER mdb is available (it reads it at module load)
 const { upsertEmployeeHolidayForDate, updateAccrualFromAttendance } =
-  require('../mongoose/services/holidayAccrualService');
+  __holidayAccrualService;
 
 /* ── tests ─────────────────────────────────────────────────────────── */
 describe('holidayAccrualService', () => {

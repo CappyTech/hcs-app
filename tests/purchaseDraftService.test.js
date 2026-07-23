@@ -1,10 +1,11 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import __purchaseDraftService from '../mongoose/services/paperless/purchaseDraftService.js';
 const {
   buildKashFlowPayloadFromDraft,
   buildPurchaseDraftFromOcr,
   defaultMap,
-} = require('../mongoose/services/paperless/purchaseDraftService');
+} = __purchaseDraftService;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

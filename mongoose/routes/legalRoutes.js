@@ -1,8 +1,6 @@
-'use strict';
-
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const path = require('path');
+import path from 'path';
 
 router.get('/legal/cookie-policy', (req, res) => {
   res.render(path.join('tailwindcss', 'legal', 'cookie-policy'), {
@@ -22,4 +20,4 @@ router.get('/legal/terms', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

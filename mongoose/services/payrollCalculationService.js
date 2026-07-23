@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * payrollCalculationService.js
  *
@@ -22,8 +20,8 @@
  *  HMRC NI thresholds — https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026
  */
 
-const mdb = require('../services/mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -733,7 +731,7 @@ async function processPayrollRun(runId) {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = {
+export default {
   // Exported for direct use in controller and tests
   calculatePAYETax,
   calculateEmployeeNI,
@@ -749,3 +747,5 @@ module.exports = {
   periodsInYear,
   toNum
 };
+
+export { calculatePAYETax, calculateEmployeeNI, calculateEmployerNI, calculatePensionContributions, calculateStudentLoan, computeEntryForEmployee, processPayrollRun, getGrossPayFromAttendance, parseTaxCode, annualToPeriod, periodsInYear, toNum };

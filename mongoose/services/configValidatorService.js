@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * configValidatorService — boot-time sanity check for the metadata-driven
  * list/CRUD config.
@@ -20,7 +18,9 @@
  * Non-fatal by design: it logs warnings and returns them; it never blocks boot.
  */
 
-const logger = require('../../services/loggerService');
+import logger from '../../services/loggerService.js';
+import listConfig from '../config/listControllerConfig.js';
+import crudConfig from '../config/CRUDControllerConfig.js';
 
 // Options honoured by listController (+ CRUDController's merged reads).
 const KNOWN_LIST_KEYS = new Set([
@@ -114,8 +114,6 @@ function validate({ listConfig = {}, crudConfig = {}, modelNames = [] }) {
  */
 function validateAtStartup(mdb) {
   try {
-    const listConfig = require('../config/listControllerConfig');
-    const crudConfig = require('../config/CRUDControllerConfig');
     const modelNames = ['INTERNAL', 'REST', 'PAPERLESS']
       .flatMap((ns) => Object.keys((mdb && mdb[ns]) || {}));
     const warnings = validate({ listConfig, crudConfig, modelNames });
@@ -131,4 +129,4 @@ function validateAtStartup(mdb) {
   }
 }
 
-module.exports = { validate, validateAtStartup, KNOWN_LIST_KEYS, KNOWN_CRUD_KEYS };
+export default { validate, validateAtStartup, KNOWN_LIST_KEYS, KNOWN_CRUD_KEYS };

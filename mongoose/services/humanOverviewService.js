@@ -1,6 +1,4 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
+import mdb from './mongooseDatabaseService.js';
 
 /**
  * Fetch a full employee overview: summary stats, contract info,
@@ -223,4 +221,4 @@ async function getHumanOverview({ contractEndDays = 60, recentDays = 30 } = {}) 
   };
 }
 
-module.exports = { getHumanOverview };
+export default { getHumanOverview };

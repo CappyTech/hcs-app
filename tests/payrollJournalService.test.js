@@ -1,7 +1,5 @@
-'use strict';
-
-const { describe, it, before, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, before, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
 
 // ── We need to mock the DB dependency before requiring the service ────────────
 // The service imports mdb at module load time so we use a manual module mock
@@ -11,7 +9,7 @@ const assert = require('node:assert/strict');
 // We load the module and extract the exports; the DB-dependent postPayrollJournal
 // is tested via integration-style stubs further down.
 
-const journalSvc = require('../mongoose/services/payrollJournalService');
+import journalSvc from '../mongoose/services/payrollJournalService.js';
 
 // Extract testable symbols
 const { buildJournalLines } = journalSvc;
@@ -152,8 +150,8 @@ delete process.env.KASHFLOW_API_USERNAME;
 delete process.env.KFUSERNAME;
 process.env.KASHFLOW_SESSION_TOKEN = 'test-token';
 
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const axios = require('axios');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import axios from 'axios';
 const { postPayrollJournal } = journalSvc;
 
 const RUN_UUID = 'aaaabbbb-cccc-dddd-eeee-ffff00001111';

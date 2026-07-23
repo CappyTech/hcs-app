@@ -1,9 +1,7 @@
-'use strict';
-
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authService = require('../../services/authService');
-const ctrl = require('../controllers/payrollController');
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/payrollController.js';
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 router.get('/payroll/dashboard',
@@ -125,4 +123,4 @@ router.post('/payroll/employee/:uuid',
   ctrl.saveEmployeePayroll
 );
 
-module.exports = router;
+export default router;

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const employeeSchema = new mongoose.Schema({
   uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -274,7 +274,7 @@ employeeSchema.pre('validate', function (next) {
   }
 });
 
-module.exports = {
+export default {
   modelName: 'employee',
   schema: employeeSchema
 };

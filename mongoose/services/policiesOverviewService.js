@@ -1,6 +1,4 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
+import mdb from './mongooseDatabaseService.js';
 
 async function getPoliciesOverview({ staleDays = 365 } = {}) {
   const PolicyDocument = mdb.INTERNAL?.policyDocument;
@@ -51,4 +49,4 @@ async function getPoliciesOverview({ staleDays = 365 } = {}) {
   };
 }
 
-module.exports = { getPoliciesOverview };
+export default { getPoliciesOverview };

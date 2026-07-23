@@ -1,3 +1,6 @@
+import __path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+
 /**
  * listControllerConfig.js
  * ─────────────────────────────────────────────────────────────────────────────
@@ -27,7 +30,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-module.exports = {
+export default {
   assignment: {
     title: 'Assignments',
     layout: 'rows',
@@ -81,10 +84,9 @@ module.exports = {
     },
     // Streamlined detail view (replaces the generic invoice-style form-read, whose
     // empty Items/Payments sidebar wastes space for assignments).
-    readView: require('path').join('tailwindcss', 'assignment', 'read'),
+    readView: __path.join('tailwindcss', 'assignment', 'read'),
     // Resolve ObjectId refs to display name + uuid so the custom view stays simple.
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const pick = (ref) =>
         mdb.REST?.[ref] || mdb.INTERNAL?.[ref] || mdb.PAPERLESS?.[ref] || mdb[ref];
       const Contract = pick('contract');
@@ -218,9 +220,8 @@ module.exports = {
     },
     // Streamlined detail view (replaces the generic stacked form-read) with a compact
     // header/meta grid plus a table of the assignments that belong to this contract.
-    readView: require('path').join('tailwindcss', 'contract', 'read'),
+    readView: __path.join('tailwindcss', 'contract', 'read'),
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const pick = (ref) =>
         mdb.REST?.[ref] || mdb.INTERNAL?.[ref] || mdb.PAPERLESS?.[ref] || mdb[ref];
       const Project = pick('project');
@@ -315,9 +316,8 @@ module.exports = {
       { field: 'OutstandingBalance', label: 'Outstanding', type: 'numberrange' },
       { field: 'InvoicedNetAmount', label: 'Net Invoiced', type: 'numberrange' },
     ],
-    readView: require('path').join('tailwindcss', 'customer', 'read'),
+    readView: __path.join('tailwindcss', 'customer', 'read'),
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const [relatedInvoices, relatedQuotes, relatedProjects] = await Promise.all([
         mdb.REST?.invoice?.find({ CustomerId: item.Id }).select('uuid Number Status IssuedDate GrossAmount AmountPaid').sort({ Number: -1 }).limit(50).lean() ?? [],
         mdb.REST?.quote?.find({ CustomerId: item.Id }).select('uuid Number Status Date GrossAmount').sort({ Number: -1 }).limit(50).lean() ?? [],
@@ -382,9 +382,8 @@ module.exports = {
         linkTo: (matched) => `/supplier/read/${matched.uuid}`
       }
     },
-    readView: require('path').join('tailwindcss', 'employee', 'read'),
+    readView: __path.join('tailwindcss', 'employee', 'read'),
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const [relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements, relatedManager, relatedLinkedSupplier] = await Promise.all([
         mdb.INTERNAL?.vehicle?.find({ employeeId: item._id }).select('uuid registrationNumber make model year availabilityStatus').sort({ registrationNumber: 1 }).lean() ?? [],
         mdb.INTERNAL?.holidayRequest?.find({ employeeId: item._id }).select('uuid startDate endDate daysRequested leaveType status').sort({ startDate: -1 }).limit(20).lean() ?? [],
@@ -497,9 +496,8 @@ module.exports = {
         linkTo: (matched) => `/invoice/read/${matched.uuid}`
       },
     },
-    readView: require('path').join('tailwindcss', 'invoice', 'read'),
+    readView: __path.join('tailwindcss', 'invoice', 'read'),
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const customer = item.CustomerId && mdb.REST?.customer
         ? await mdb.REST.customer.findOne({ Id: item.CustomerId }).select('uuid Name Code').lean()
         : null;
@@ -588,9 +586,8 @@ module.exports = {
     description: {
       manage: 'Manage projects and their documents.',
     },
-    readView: require('path').join('tailwindcss', 'project', 'read'),
+    readView: __path.join('tailwindcss', 'project', 'read'),
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const [relatedCustomer, relatedContracts] = await Promise.all([
         item.CustomerCode && mdb.REST?.customer
           ? mdb.REST.customer.findOne({ Code: item.CustomerCode }).select('uuid Name Code').lean()
@@ -649,9 +646,8 @@ module.exports = {
         linkTo: (matched) => `/customer/read/${matched.uuid}`
       }
     },
-    readView: require('path').join('tailwindcss', 'quote', 'read'),
+    readView: __path.join('tailwindcss', 'quote', 'read'),
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const customer = item.CustomerId && mdb.REST?.customer
         ? await mdb.REST.customer.findOne({ Id: item.CustomerId }).select('uuid Name Code').lean()
         : null;
@@ -739,9 +735,8 @@ module.exports = {
         linkTo: (matched) => `/supplier/read/${matched.uuid}`
       }
     },
-    readView: require('path').join('tailwindcss', 'purchase', 'read'),
+    readView: __path.join('tailwindcss', 'purchase', 'read'),
     readLocals: async (item, req) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const supplier = item.SupplierId && mdb.REST?.supplier
         ? await mdb.REST.supplier.findOne({ Id: item.SupplierId }).select('uuid Name Code WithholdingTaxRate').lean()
         : null;
@@ -910,7 +905,7 @@ module.exports = {
       manage: 'Manage suppliers and subcontractors.',
     },
     // Also serves the subcontractor alias (basePath 'supplier').
-    readView: require('path').join('tailwindcss', 'supplier', 'read'),
+    readView: __path.join('tailwindcss', 'supplier', 'read'),
   },
   task: {
     title: 'Tasks',
@@ -1177,9 +1172,8 @@ module.exports = {
         linkTo: (matched) => `/project/read/${matched.uuid}`
       }
     },
-    readView: require('path').join('tailwindcss', 'vehicle', 'read'),
+    readView: __path.join('tailwindcss', 'vehicle', 'read'),
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
       const [relatedEmployee, relatedSubcontractor, relatedProject] = await Promise.all([
         item.employeeId && mdb.INTERNAL?.employee
           ? mdb.INTERNAL.employee.findOne({ _id: item.employeeId }).select('uuid name').lean()

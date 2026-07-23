@@ -1,19 +1,18 @@
-'use strict';
+import path from 'path';
+import fleetService from '../services/fleetService.js';
+import humanOverviewService from '../services/humanOverviewService.js';
+import holidayOverviewService from '../services/holidayOverviewService.js';
+import financeOverviewService from '../services/financeOverviewService.js';
+import projectsOverviewService from '../services/projectsOverviewService.js';
+import kashflowProjectService from '../services/kashflowProjectService.js';
+import adminOverviewService from '../services/adminOverviewService.js';
+import documentsOverviewService from '../services/documentsOverviewService.js';
+import subcontractorsOverviewService from '../services/subcontractorsOverviewService.js';
+import payrollOverviewService from '../services/payrollOverviewService.js';
+import policiesOverviewService from '../services/policiesOverviewService.js';
+import currencyService from '../../services/currencyService.js';
 
-const path = require('path');
-const fleetService = require('../services/fleetService');
-const humanOverviewService = require('../services/humanOverviewService');
-const holidayOverviewService = require('../services/holidayOverviewService');
-const financeOverviewService = require('../services/financeOverviewService');
-const projectsOverviewService = require('../services/projectsOverviewService');
-const kashflowProjectService = require('../services/kashflowProjectService');
-const adminOverviewService = require('../services/adminOverviewService');
-const documentsOverviewService = require('../services/documentsOverviewService');
-const subcontractorsOverviewService = require('../services/subcontractorsOverviewService');
-const payrollOverviewService        = require('../services/payrollOverviewService');
-const policiesOverviewService       = require('../services/policiesOverviewService');
-
-exports.getFleetOverview = async (req, res, next) => {
+export const getFleetOverview = async (req, res, next) => {
   try {
     const expiryDays = parseInt(req.query.days) || 30;
     const overview = await fleetService.getFleetOverview({ expiryDays });
@@ -26,7 +25,7 @@ exports.getFleetOverview = async (req, res, next) => {
   }
 };
 
-exports.getHumanOverview = async (req, res, next) => {
+export const getHumanOverview = async (req, res, next) => {
   try {
     const contractEndDays = parseInt(req.query.days) || 60;
     const overview = await humanOverviewService.getHumanOverview({ contractEndDays });
@@ -39,7 +38,7 @@ exports.getHumanOverview = async (req, res, next) => {
   }
 };
 
-exports.getHolidayOverview = async (req, res, next) => {
+export const getHolidayOverview = async (req, res, next) => {
   try {
     const overview = await holidayOverviewService.getHolidayOverview();
     res.render(path.join('tailwindcss', 'overview', 'holiday'), {
@@ -51,7 +50,7 @@ exports.getHolidayOverview = async (req, res, next) => {
   }
 };
 
-exports.getFinanceOverview = async (req, res, next) => {
+export const getFinanceOverview = async (req, res, next) => {
   try {
     const overview = await financeOverviewService.getFinanceOverview();
     res.render(path.join('tailwindcss', 'overview', 'finance'), {
@@ -63,7 +62,7 @@ exports.getFinanceOverview = async (req, res, next) => {
   }
 };
 
-exports.getProjectsOverview = async (req, res, next) => {
+export const getProjectsOverview = async (req, res, next) => {
   try {
     const overview = await projectsOverviewService.getProjectsOverview();
     res.render(path.join('tailwindcss', 'overview', 'projects'), {
@@ -75,7 +74,7 @@ exports.getProjectsOverview = async (req, res, next) => {
   }
 };
 
-exports.getAdminOverview = async (req, res, next) => {
+export const getAdminOverview = async (req, res, next) => {
   try {
     const overview = await adminOverviewService.getAdminOverview();
     res.render(path.join('tailwindcss', 'overview', 'admin'), {
@@ -87,7 +86,7 @@ exports.getAdminOverview = async (req, res, next) => {
   }
 };
 
-exports.getDocumentsOverview = async (req, res, next) => {
+export const getDocumentsOverview = async (req, res, next) => {
   try {
     const overview = await documentsOverviewService.getDocumentsOverview();
     res.render(path.join('tailwindcss', 'overview', 'documents'), {
@@ -99,7 +98,7 @@ exports.getDocumentsOverview = async (req, res, next) => {
   }
 };
 
-exports.getSubcontractorsOverview = async (req, res, next) => {
+export const getSubcontractorsOverview = async (req, res, next) => {
   try {
     const overview = await subcontractorsOverviewService.getSubcontractorsOverview();
     res.render(path.join('tailwindcss', 'overview', 'subcontractors'), {
@@ -111,10 +110,9 @@ exports.getSubcontractorsOverview = async (req, res, next) => {
   }
 };
 
-exports.getPayrollOverview = async (req, res, next) => {
+export const getPayrollOverview = async (req, res, next) => {
   try {
     const overview = await payrollOverviewService.getPayrollOverview();
-    const currencyService = require('../../services/currencyService');
     res.render(path.join('tailwindcss', 'overview', 'payroll'), {
       title: `Payroll Overview — ${overview.taxYear}`,
       formatCurrency: currencyService.formatCurrency,
@@ -125,7 +123,7 @@ exports.getPayrollOverview = async (req, res, next) => {
   }
 };
 
-exports.postProjectsFinancialCheck = async (req, res, next) => {
+export const postProjectsFinancialCheck = async (req, res, next) => {
   try {
     const notifyEmail = (req.body.notifyEmail || '').trim();
     const result = await kashflowProjectService.checkProjectFinancials({ notifyEmail });
@@ -143,7 +141,7 @@ exports.postProjectsFinancialCheck = async (req, res, next) => {
   res.redirect('/overview/projects');
 };
 
-exports.getPoliciesOverview = async (req, res, next) => {
+export const getPoliciesOverview = async (req, res, next) => {
   try {
     const overview = await policiesOverviewService.getPoliciesOverview();
     res.render(path.join('tailwindcss', 'overview', 'policies'), {
@@ -155,7 +153,7 @@ exports.getPoliciesOverview = async (req, res, next) => {
   }
 };
 
-exports.postProjectMarkComplete = async (req, res, next) => {
+export const postProjectMarkComplete = async (req, res, next) => {
   const projectNumber = parseInt(req.params.number, 10);
   try {
     await kashflowProjectService.markProjectComplete(projectNumber);
@@ -165,3 +163,5 @@ exports.postProjectMarkComplete = async (req, res, next) => {
   }
   res.redirect('/overview/projects');
 };
+
+export default { getFleetOverview, getHumanOverview, getHolidayOverview, getFinanceOverview, getProjectsOverview, getAdminOverview, getDocumentsOverview, getSubcontractorsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };

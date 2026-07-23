@@ -1,5 +1,3 @@
-'use strict';
-
 // Default nominal codes — used as fallback if DB lookup hasn't run yet
 const mappings = {
   materialsNominalCodes: [2700],
@@ -47,4 +45,4 @@ async function loadFromDb(NominalModel) {
 
 mappings.loadFromDb = loadFromDb;
 
-module.exports = mappings;
+export default mappings;

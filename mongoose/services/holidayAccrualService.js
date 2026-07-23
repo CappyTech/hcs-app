@@ -1,5 +1,6 @@
-const mdb = require('./mongooseDatabaseService');
-const taxService = require('../../services/taxService');
+import mdb from './mongooseDatabaseService.js';
+import taxService from '../../services/taxService.js';
+import __loggerService from '../../services/loggerService.js';
 
 function toNumber(x) {
   if (x == null) return 0;
@@ -124,11 +125,13 @@ async function updateAccrualFromAttendance(attendanceDoc) {
     }
   } catch (e) {
     // Swallow errors to avoid blocking attendance CRUD; log if logger available through mdb path
-    try { require('../../services/loggerService').warn('holidayAccrualService error: ' + e.message); } catch {}
+    try { __loggerService.warn('holidayAccrualService error: ' + e.message); } catch {}
   }
 }
 
-module.exports = {
+export default {
   updateAccrualFromAttendance,
   upsertEmployeeHolidayForDate,
 };
+
+export { updateAccrualFromAttendance, upsertEmployeeHolidayForDate };

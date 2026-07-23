@@ -132,7 +132,7 @@ function isHmrcVerified(s) {
     );
 }
 
-module.exports = {
+export default {
   calculateInvoiceAmounts,
   normalizeWhtRate,
   whtRateLabel,
@@ -142,3 +142,5 @@ module.exports = {
   cisVerifiedQuery,
   isHmrcVerified,
 };
+
+export { calculateInvoiceAmounts, normalizeWhtRate, whtRateLabel, cisSupplierQuery, isCisSupplier, HMRC_VERIFICATION_REGEX, cisVerifiedQuery, isHmrcVerified };

@@ -1,17 +1,23 @@
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const logger = require("../../services/loggerService");
-const listControllerConfig = require("../config/listControllerConfig");
-const CRUDControllerConfig = require("../config/CRUDControllerConfig");
-const { scopeQuery } = require("../../services/dataScopingService");
-const rbac = require("../config/rolePermissionsConfig");
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import listControllerConfig from '../config/listControllerConfig.js';
+import CRUDControllerConfig from '../config/CRUDControllerConfig.js';
+import { scopeQuery } from '../../services/dataScopingService.js';
+import rbac from '../config/rolePermissionsConfig.js';
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
 const crudController = {};
 const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
-const mongoose = require("mongoose");
-const e = require("express");
-const holidayAccrualService = require("../services/holidayAccrualService");
+import mongoose from 'mongoose';
+import e from 'express';
+import holidayAccrualService from '../services/holidayAccrualService.js';
+import __fs from 'fs';
+import sanitize from 'sanitize-filename';
+import { fileURLToPath } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 
 /**
  * Sync parent vehicle record when a sub-model (fuel log, mileage log, service) is created/updated.
@@ -452,8 +458,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
 
           // 🔽 Inject documents if the model config says it handles them
           if (config.handlesDocuments) {
-            const fs = require("fs").promises;
-            const sanitize = require("sanitize-filename");
+            const fs = __fs.promises;
             const dirName = sanitize(item.uuid.toString());
             const dirPath = path.join(
               __dirname,
@@ -867,4 +872,4 @@ for (const namespace of ["REST", "INTERNAL"]) {
   }
 }
 
-module.exports = crudController;
+export default crudController;

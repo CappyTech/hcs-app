@@ -1,7 +1,7 @@
-const rateLimit = require("express-rate-limit");
-const { getClientIp } = require("./ipService");
-const logger = require("./loggerService");
-const RateLimitMongoStore = require("./rateLimitMongoStore");
+import rateLimit from 'express-rate-limit';
+import { getClientIp } from './ipService.js';
+import logger from './loggerService.js';
+import RateLimitMongoStore from './rateLimitMongoStore.js';
 const { sanitize } = logger;
 
 // Mongo-backed buckets: counters survive container restarts and are shared
@@ -41,5 +41,5 @@ const registerRateLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-module.exports = rateLimiterService;
-module.exports.registerRateLimiter = registerRateLimiter;
+export default rateLimiterService;
+export { registerRateLimiter };

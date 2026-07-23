@@ -1,7 +1,8 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
-const { nextDeadline, periodLabel } = require('../mongoose/services/cisReturnReminderService');
+import __cisReturnReminderService from '../mongoose/services/cisReturnReminderService.js';
+const { nextDeadline, periodLabel } = __cisReturnReminderService;
 
 describe('cisReturnReminderService.nextDeadline', () => {
   it('returns the 19th of the current month when today is before it', () => {

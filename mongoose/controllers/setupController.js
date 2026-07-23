@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * setupController — handles the first-run setup wizard.
  *
@@ -18,10 +16,15 @@
  *  POST /setup/complete  → write app-config.json, show restart page
  */
 
-const path = require('path');
-const fs = require('fs');
-const configService = require('../../services/configService');
-const logger = require('../../services/loggerService');
+import path from 'path';
+import fs from 'fs';
+import configService from '../../services/configService.js';
+import logger from '../../services/loggerService.js';
+import mongoose from 'mongoose';
+import { fileURLToPath } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -66,7 +69,7 @@ function sessionWizard(req) {
 
 // ── step 1: MongoDB ───────────────────────────────────────────────────────────
 
-exports.getStep1 = (req, res) => {
+export const getStep1 = (req, res) => {
   const w = sessionWizard(req);
   renderSetup(res, 'step1', {
     title: 'Setup — Step 1: Database',
@@ -76,7 +79,7 @@ exports.getStep1 = (req, res) => {
   });
 };
 
-exports.postStep1 = (req, res) => {
+export const postStep1 = (req, res) => {
   const { mongoUri, mongoHost, mongoPort, mongoUser, mongoPass, mongoAuthSource,
           mongoDbRest, mongoDbInternal, mongoDbPaperless } = req.body;
 
@@ -98,7 +101,7 @@ exports.postStep1 = (req, res) => {
 
 // ── AJAX: test DB connection ──────────────────────────────────────────────────
 
-exports.postTestDb = async (req, res) => {
+export const postTestDb = async (req, res) => {
   const { mongoUri, mongoHost, mongoPort, mongoUser, mongoPass, mongoAuthSource } = req.body;
 
   if (!mongoUri && !mongoHost) {
@@ -122,7 +125,6 @@ exports.postTestDb = async (req, res) => {
   }
 
   try {
-    const mongoose = require('mongoose');
     const conn = mongoose.createConnection(uri, { serverSelectionTimeoutMS: 5000 });
     await new Promise((resolve, reject) => {
       conn.once('open', resolve);
@@ -145,7 +147,7 @@ exports.postTestDb = async (req, res) => {
 
 // ── step 2: company info + secrets ───────────────────────────────────────────
 
-exports.getStep2 = (req, res) => {
+export const getStep2 = (req, res) => {
   const w = sessionWizard(req);
   if (!w.step1) return res.redirect('/setup');
 
@@ -159,7 +161,7 @@ exports.getStep2 = (req, res) => {
   });
 };
 
-exports.postStep2 = (req, res) => {
+export const postStep2 = (req, res) => {
   const { companyName, supportEmail, incorporationYear, notifyEmail, sessionSecret, encryptionKey } = req.body;
 
   // Skip: no company info, secrets generated server-side (reusing any the
@@ -204,7 +206,7 @@ exports.postStep2 = (req, res) => {
 
 // ── step 3: first admin user ──────────────────────────────────────────────────
 
-exports.getStep3 = (req, res) => {
+export const getStep3 = (req, res) => {
   const w = sessionWizard(req);
   if (!w.step1 || !w.step2) return res.redirect('/setup');
 
@@ -218,7 +220,7 @@ exports.getStep3 = (req, res) => {
 
 // ── complete: write config + restart ─────────────────────────────────────────
 
-exports.postComplete = (req, res) => {
+export const postComplete = (req, res) => {
   const { adminUsername, adminEmail, adminPassword, adminPasswordConfirm } = req.body;
   const w = sessionWizard(req);
 
@@ -324,8 +326,10 @@ exports.postComplete = (req, res) => {
 
 // ── clear draft ───────────────────────────────────────────────────────────────
 
-exports.postClearDraft = (req, res) => {
+export const postClearDraft = (req, res) => {
   deleteDraft();
   try { if (req.session.setupWizard) delete req.session.setupWizard; } catch (_) {}
   res.json({ ok: true });
 };
+
+export default { getStep1, postStep1, postTestDb, getStep2, postStep2, getStep3, postComplete, postClearDraft };

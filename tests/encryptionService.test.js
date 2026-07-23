@@ -1,11 +1,13 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
 // encryptionService requires ENCRYPTION_KEY at load time
 if (!process.env.ENCRYPTION_KEY) {
   process.env.ENCRYPTION_KEY = 'test-key-for-unit-tests-only';
 }
-const { encrypt, decrypt } = require('../services/encryptionService');
+// Dynamic import so the env assignment above runs first (static imports hoist).
+const { encrypt, decrypt } = await import('../services/encryptionService.js');
+import crypto from 'node:crypto';
 
 describe('encryptionService', () => {
   describe('encrypt / decrypt round-trip', () => {
@@ -66,7 +68,6 @@ describe('encryptionService', () => {
   describe('legacy AES-256-CBC compatibility', () => {
     // Re-create the legacy format so we can prove old ciphertexts still decrypt.
     function legacyEncrypt(text) {
-      const crypto = require('node:crypto');
       const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
       const iv = crypto.randomBytes(16);
       const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);

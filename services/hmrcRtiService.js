@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * hmrcRtiService.js
  *
@@ -15,15 +13,20 @@
  * In all other environments, the HMRC test URL is used automatically.
  */
 
-const axios   = require('axios');
-const os      = require('os');
-const mdb     = require('../mongoose/services/mongooseDatabaseService');
-const logger  = require('./loggerService');
-const encSvc  = require('./encryptionService');
+import axios from 'axios';
+import os from 'os';
+import { readFileSync } from 'node:fs';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import logger from './loggerService.js';
+import encSvc from './encryptionService.js';
 
 // ── Package version (used in Gov-Vendor-Version header) ───────────────────────
 let _appVersion = '0.0.0';
-try { _appVersion = require('../package.json').version; } catch { /* ignore */ }
+try {
+  _appVersion = JSON.parse(
+    readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+  ).version;
+} catch { /* ignore */ }
 
 // ── Persistent server device ID (stable across restarts) ─────────────────────
 // Derived from the first non-internal MAC address; falls back to hostname hash.
@@ -515,10 +518,12 @@ async function submitEPS(taxYear, taxMonth, context = {}) {
   return result;
 }
 
-module.exports = {
+export default {
   buildFPSForRun,
   buildEPS,
   submitFPSForRun,
   submitEPS,
   buildFraudHeaders,
 };
+
+export { buildFPSForRun, buildEPS, submitFPSForRun, submitEPS, buildFraudHeaders };

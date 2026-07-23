@@ -4,7 +4,7 @@
  * from listControllerConfig.js — this file is for everything else:
  * admin tools, external links, and workflow shortcuts.
  */
-module.exports = {
+export default {
     // ── Admin ─────────────────────────────────────────────────────────
     DeletedItems: {
         title: 'Deleted Items',

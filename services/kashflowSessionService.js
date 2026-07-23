@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * kashflowSessionService.js
  *
@@ -36,9 +34,9 @@
  * - KASHFLOW_DEBUG_SESSION=1     – logs redacted step-1 payloads on failure
  */
 
-const axios = require("axios");
-const logger = require("./loggerService");
-const kfApiLog = require("./kashflowApiLogService");
+import axios from 'axios';
+import logger from './loggerService.js';
+import kfApiLog from './kashflowApiLogService.js';
 
 // ── Shared axios instance for all KashFlow API calls ─────────────────────────
 // Authorization headers are stripped before logging to avoid storing credentials.
@@ -640,9 +638,11 @@ async function withKfAuth(fn) {
   }
 }
 
-module.exports = {
+export default {
   ensureSessionToken,
   invalidateSession,
   withKfAuth,
   kfAxios,
 };
+
+export { ensureSessionToken, invalidateSession, withKfAuth, kfAxios };

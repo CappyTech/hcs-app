@@ -1,11 +1,11 @@
-const { describe, it, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * requestBlocklistService only requires loggerService at top level.
  * The real logger is fine — just test the middleware behaviour.
  */
-const requestBlocklistService = require('../services/requestBlocklistService');
+import requestBlocklistService from '../services/requestBlocklistService.js';
 
 /* ── helpers ──────────────────────────────────────────────────────── */
 function makeReq(overrides = {}) {

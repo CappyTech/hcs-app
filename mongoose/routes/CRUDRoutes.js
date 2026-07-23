@@ -1,7 +1,8 @@
-const express = require("express");
-const crudController = require("../controllers/CRUDController");
-const crudConfig = require("../config/CRUDControllerConfig");
-const authService = require("../../services/authService");
+import express from 'express';
+import crudController from '../controllers/CRUDController.js';
+import crudConfig from '../config/CRUDControllerConfig.js';
+import authService from '../../services/authService.js';
+import __listControllerConfig from '../config/listControllerConfig.js';
 
 const router = express.Router();
 
@@ -41,7 +42,7 @@ for (const [key, handler] of Object.entries(crudController)) {
   const originalModel = modelName.charAt(0).toLowerCase() + modelName.slice(1);
   const config = crudConfig[originalModel] || {};
   const listConfig =
-    require("../config/listControllerConfig")[originalModel] || {};
+    __listControllerConfig[originalModel] || {};
   const mergedConfig = { ...listConfig, ...config };
 
   const routeModel = (mergedConfig.modelRename || originalModel).toLowerCase();
@@ -74,4 +75,4 @@ for (const [key, handler] of Object.entries(crudController)) {
   }
 }
 
-module.exports = router;
+export default router;

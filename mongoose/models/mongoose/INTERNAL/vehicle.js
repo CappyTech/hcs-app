@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
-const logger = require('../../../../services/loggerService');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
+import logger from '../../../../services/loggerService.js';
 
 const vehicleSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -134,7 +134,7 @@ vehicleSchema.pre('validate', function (next) {
     next();
 });
 
-module.exports = {
+export default {
     modelName: 'vehicle',
     schema: vehicleSchema
 };

@@ -1,7 +1,14 @@
-const { OcrDocument } = require("./listControllerConfig");
-const path = require('path');
+import __listControllerConfig from './listControllerConfig.js';
+const { OcrDocument } = __listControllerConfig;
+import path from 'path';
+import __attendanceService from '../services/attendanceService.js';
+import auditLog from '../../services/auditLogService.js';
+import crypto from 'crypto';
+import rbac from './rolePermissionsConfig.js';
+import mdb from '../services/mongooseDatabaseService.js';
+import __holidayRequestService from '../services/holidayRequestService.js';
 
-module.exports = {
+export default {
   purchase: {
     middleware: {
       read: ['ensureRoles:admin,accountant,subcontractor'],
@@ -28,7 +35,7 @@ module.exports = {
     // Payroll lock: non-admins cannot create records inside a locked/submitted run
     beforeCreate: async (cleanedData, req) => {
       if (req.user?.role === 'admin') return;
-      const { getLockedRunForDate } = require('../services/attendanceService');
+      const { getLockedRunForDate } = __attendanceService;
       const lockedRun = await getLockedRunForDate(cleanedData.date);
       if (lockedRun) {
         throw new Error(`This date falls in a ${lockedRun.status} payroll period and can no longer be edited.`);
@@ -348,7 +355,6 @@ module.exports = {
     readOnly: ['uuid', 'createdAt'],
     // Security audit: record role/email changes made through the admin CRUD
     afterUpdate: async (updated, req, { previous }) => {
-      const auditLog = require('../../services/auditLogService');
       if (previous && previous.role !== updated.role) {
         auditLog.record('role_changed', req, {
           userId: updated._id, username: updated.username,
@@ -391,13 +397,11 @@ module.exports = {
     beforeCreate: async (data) => {
       // Auto-generate a secure random password when admin creates a user without one
       if (!data.password) {
-        const crypto = require('crypto');
         data.password = crypto.randomBytes(24).toString('base64url');
       }
     },
     updateView: path.join('tailwindcss', 'user', 'update'),
     updateLocals: async (item) => {
-      const rbac = require('./rolePermissionsConfig');
       const allRoles = ['none', 'employee', 'subcontractor', 'client', 'accountant', 'hmrc', 'admin'];
 
       // Build a summary of what each role grants for the permissions preview
@@ -426,8 +430,6 @@ module.exports = {
     },
     readView: path.join('tailwindcss', 'user', 'read'),
     readLocals: async (item) => {
-      const mdb = require('../services/mongooseDatabaseService');
-      const rbac = require('./rolePermissionsConfig');
 
       const employee = item.employeeId ? await mdb.INTERNAL.employee.findById(item.employeeId).lean() : null;
       const subcontractor = item.subcontractorId ? await mdb.REST.supplier.findById(item.subcontractorId).lean() : null;
@@ -523,9 +525,9 @@ module.exports = {
       }
     },
     afterCreate: (doc) =>
-      require('../services/holidayRequestService').notifyNewRequest(doc),
+      __holidayRequestService.notifyNewRequest(doc),
     afterUpdate: (updated, req, { previous }) =>
-      require('../services/holidayRequestService').handleStatusChange(updated, previous, req),
+      __holidayRequestService.handleStatusChange(updated, previous, req),
   },
   vehicle: {
     readOnly: ['uuid', 'createdAt'],

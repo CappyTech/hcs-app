@@ -1,6 +1,4 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
+import mdb from './mongooseDatabaseService.js';
 
 async function getAdminOverview({ recentDays = 30 } = {}) {
   const User = mdb.INTERNAL?.user;
@@ -62,4 +60,4 @@ async function getAdminOverview({ recentDays = 30 } = {}) {
   };
 }
 
-module.exports = { getAdminOverview };
+export default { getAdminOverview };

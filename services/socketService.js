@@ -1,6 +1,6 @@
 // services/socketService.js
-const { Server } = require("socket.io");
-const logger = require('./loggerService');
+import { Server } from 'socket.io';
+import logger from './loggerService.js';
 
 let io = null;
 
@@ -33,4 +33,4 @@ function getIo() {
   return io;
 }
 
-module.exports = { initSocket, getIo };
+export default { initSocket, getIo };

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Format validation for UK tax identifiers used in CIS and payroll.
  * These are format checks only — they do not verify identifiers with HMRC.
@@ -29,9 +27,11 @@ function isValidVerificationNumber(value) {
   return /^V\d{10}[A-Z]{0,2}$/.test(normalise(value));
 }
 
-module.exports = {
+export default {
   normalise,
   isValidUtr,
   isValidNino,
   isValidVerificationNumber,
 };
+
+export { normalise, isValidUtr, isValidNino, isValidVerificationNumber };

@@ -1,5 +1,5 @@
-const { format } = require("date-fns");
-const { fromZonedTime, formatInTimeZone } = require("date-fns-tz");
+import { format } from 'date-fns';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Convert an input date to a UTC instant.
@@ -67,4 +67,4 @@ function fmtDate(input, pattern = "dd/MM/yyyy") {
   return format(d, pattern);
 }
 
-module.exports = { slimDateTime, fmtDate };
+export default { slimDateTime, fmtDate };

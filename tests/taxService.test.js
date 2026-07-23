@@ -1,12 +1,13 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const moment = require('moment-timezone');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import moment from 'moment-timezone';
+import __taxService from '../services/taxService.js';
 const {
   getCurrentTaxYear,
   getTaxYearStartEnd,
   getCurrentMonthlyReturn,
   calculateTaxYearAndMonth,
-} = require('../services/taxService');
+} = __taxService;
 
 // ── getCurrentTaxYear ────────────────────────────────────────────────────────
 

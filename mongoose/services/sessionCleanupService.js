@@ -1,5 +1,5 @@
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
 let intervalHandle = null;
 
@@ -27,4 +27,4 @@ function stop() {
   intervalHandle = null;
 }
 
-module.exports = { start, stop, cleanupOnce };
+export default { start, stop, cleanupOnce };

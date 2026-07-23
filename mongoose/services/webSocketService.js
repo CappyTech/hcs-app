@@ -1,6 +1,6 @@
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
-const { setSocketInstance } = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import { setSocketInstance } from '../../services/loggerService.js';
 
 function setupWebSocket(io, sessionService) {
   setSocketInstance(io);
@@ -38,6 +38,8 @@ function setupWebSocket(io, sessionService) {
   });
 }
 
-module.exports = {
+export default {
   setupWebSocket
 };
+
+export { setupWebSocket };

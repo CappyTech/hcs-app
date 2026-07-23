@@ -1,7 +1,11 @@
-const fs = require("fs");
-const path = require("path");
-const logger = require("../../services/loggerService");
-const mdb = require("../services/mongooseDatabaseService");
+import fs from 'fs';
+import path from 'path';
+import logger from '../../services/loggerService.js';
+import mdb from '../services/mongooseDatabaseService.js';
+import { fileURLToPath } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 
 const LOG_PATH = path.join(__dirname, "..", "..", "logs", "app.json.log");
 
@@ -38,7 +42,7 @@ function bucketByLevel(entries) {
 }
 
 /* ── GET /logs  (HTML page) ── */
-exports.getLogs = async (req, res) => {
+export const getLogs = async (req, res) => {
   const entries = readLogEntries(500);
   const logsByLevel = bucketByLevel(entries);
 
@@ -49,7 +53,7 @@ exports.getLogs = async (req, res) => {
 };
 
 /* ── GET /logs/api?page=1&limit=100&level=error  (JSON – infinite scroll) ── */
-exports.getLogsApi = async (req, res) => {
+export const getLogsApi = async (req, res) => {
   try {
     const all = readLogEntries(2000);
 
@@ -85,7 +89,7 @@ exports.getLogsApi = async (req, res) => {
 };
 
 /* ── DELETE /logs/clear  (clear log file) ── */
-exports.clearLogs = async (req, res) => {
+export const clearLogs = async (req, res) => {
   try {
     fs.writeFileSync(LOG_PATH, "", "utf8");
     logger.info("Log file cleared by admin");
@@ -97,7 +101,7 @@ exports.clearLogs = async (req, res) => {
 };
 
 /* ── GET /logs/download?level=error  (download as .jsonl) ── */
-exports.downloadLogs = async (req, res) => {
+export const downloadLogs = async (req, res) => {
   try {
     const all = readLogEntries(5000);
     const levelFilter = req.query.level?.toLowerCase();
@@ -161,15 +165,15 @@ async function getApiLogPage(res, { modelName, title, source }) {
 }
 
 /* ── GET /logs/kashflow  (KashFlow API log viewer) ── */
-exports.getKashflowApiLogs = (req, res) =>
+export const getKashflowApiLogs = (req, res) =>
   getApiLogPage(res, { modelName: 'kashflowApiLog', title: 'KashFlow API Logs', source: 'kashflow' });
 
 /* ── GET /logs/paperless  (Paperless API log viewer) ── */
-exports.getPaperlessApiLogs = (req, res) =>
+export const getPaperlessApiLogs = (req, res) =>
   getApiLogPage(res, { modelName: 'paperlessApiLog', title: 'Paperless API Logs', source: 'paperless' });
 
 /* ── GET /logs/kashflow/data  (JSON — for live refresh) ── */
-exports.getKashflowApiLogsData = async (req, res) => {
+export const getKashflowApiLogsData = async (req, res) => {
   try {
     const model = mdb.INTERNAL?.kashflowApiLog;
     if (!model) return res.json({ entries: [] });
@@ -184,7 +188,7 @@ exports.getKashflowApiLogsData = async (req, res) => {
 };
 
 /* ── GET /logs/paperless/data  (JSON — for live refresh) ── */
-exports.getPaperlessApiLogsData = async (req, res) => {
+export const getPaperlessApiLogsData = async (req, res) => {
   try {
     const model = mdb.INTERNAL?.paperlessApiLog;
     if (!model) return res.json({ entries: [] });
@@ -197,3 +201,5 @@ exports.getPaperlessApiLogsData = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+export default { getLogs, getLogsApi, clearLogs, downloadLogs, getKashflowApiLogs, getPaperlessApiLogs, getKashflowApiLogsData, getPaperlessApiLogsData };

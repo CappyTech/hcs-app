@@ -1,6 +1,4 @@
-"use strict";
-
-const { fromZonedTime, formatInTimeZone, getTimezoneOffset } = require("date-fns-tz");
+import { fromZonedTime, formatInTimeZone, getTimezoneOffset } from 'date-fns-tz';
 
 const TZ = "Europe/London";
 
@@ -143,9 +141,11 @@ const calculateTaxYearAndMonth = (date) => {
   return { taxYear, taxMonth };
 };
 
-module.exports = {
+export default {
   getCurrentTaxYear,
   getTaxYearStartEnd,
   getCurrentMonthlyReturn,
   calculateTaxYearAndMonth,
 };
+
+export { getCurrentTaxYear, getTaxYearStartEnd, getCurrentMonthlyReturn, calculateTaxYearAndMonth };

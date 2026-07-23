@@ -1,10 +1,8 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const path = require("path");
-const authService = require("../../services/authService");
-const controller = require(
-  path.join("..", "controllers", "submissionController"),
-);
+import path from 'path';
+import authService from '../../services/authService.js';
+import controller from '../controllers/submissionController.js';
 
 // Admin only — previously had NO auth middleware
 router.post(
@@ -18,4 +16,4 @@ router.post(
   controller.changePurchases,
 );
 
-module.exports = router;
+export default router;

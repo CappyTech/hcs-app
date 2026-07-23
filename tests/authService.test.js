@@ -1,11 +1,12 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * authService requires mdb and rbac at top-level.
  * Patch mdb singleton; use real rbac (pure config).
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import __authService from '../services/authService.js';
 
 let userFindByIdResult = null;
 
@@ -27,7 +28,7 @@ const {
   ensureOwnership,
   ensureRouteAccess,
   ensureDepartment,
-} = require('../services/authService');
+} = __authService;
 
 /* ── helpers ──────────────────────────────────────────────────────── */
 function makeReq(overrides = {}) {

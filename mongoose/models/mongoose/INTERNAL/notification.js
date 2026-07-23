@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * Notification outbox.
@@ -70,4 +68,4 @@ const notificationSchema = new mongoose.Schema(
 // Worker query: pending notifications that are due
 notificationSchema.index({ status: 1, nextAttemptAt: 1 });
 
-module.exports = { modelName: 'notification', schema: notificationSchema };
+export default { modelName: 'notification', schema: notificationSchema };

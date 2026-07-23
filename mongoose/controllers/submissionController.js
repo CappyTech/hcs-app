@@ -1,6 +1,6 @@
-const mdb = require("../services/mongooseDatabaseService");
+import mdb from '../services/mongooseDatabaseService.js';
 
-exports.changeReceipts = async (req, res, next) => {
+export const changeReceipts = async (req, res, next) => {
   try {
     const { submissionDate, uuids, redirectPath } = req.body;
     const targetUUIDs =
@@ -30,7 +30,7 @@ exports.changeReceipts = async (req, res, next) => {
  * Update SubmissionDate for one or more REST purchases by uuid.
  * Expects body: { submissionDate: 'YYYY-MM-DD', uuids: string|string[], redirectPath?: string }
  */
-exports.changePurchases = async (req, res, next) => {
+export const changePurchases = async (req, res, next) => {
   try {
     const { submissionDate, uuids, redirectPath } = req.body;
     const targetUUIDs =
@@ -56,3 +56,5 @@ exports.changePurchases = async (req, res, next) => {
     next(error);
   }
 };
+
+export default { changeReceipts, changePurchases };

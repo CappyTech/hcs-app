@@ -1,5 +1,5 @@
-const mdb = require("../mongoose/services/mongooseDatabaseService");
-const rbac = require("../mongoose/config/rolePermissionsConfig");
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import rbac from '../mongoose/config/rolePermissionsConfig.js';
 
 // ── Paths that never require authentication ──────────────────────────
 const PUBLIC_PATHS = new Set([
@@ -302,7 +302,7 @@ function ensureDepartment(department) {
   };
 }
 
-module.exports = {
+export default {
   ensureAuthenticated,
   ensureRouteAccess,
   rolesRequiring2FA,
@@ -313,3 +313,5 @@ module.exports = {
   ensureOwnership,
   ensureDepartment,
 };
+
+export { ensureAuthenticated, ensureRouteAccess, rolesRequiring2FA, ensureRoles, ensureRole, ensureAnyRole, ensureModelAccess, ensureOwnership, ensureDepartment };
