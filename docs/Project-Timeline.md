@@ -12,7 +12,7 @@
 - **Realtime & UX Polish (Jul 2025):** WebSocket logs via [services/socketService.js](../services/socketService.js) and [mongoose/services/webSocketServiceMongoose.js](../mongoose/services/webSocketServiceMongoose.js). Multiple UI iterations across list/read views, weekly attendance tables, dashboard tiles, and CIS pages.
 - **CIS + HR Enhancements (Jul–Aug 2025):** Reworked CIS views and monthly/yearly returns ([mongoose/views/tailwindcss/cis.ejs](../mongoose/views/tailwindcss/cis.ejs), returns forms). Hardened controllers ([mongoose/controllers/cisController.js](../mongoose/controllers/cisController.js)), holiday services, and attendance logic; secured roles and session handling.
 - **KashFlow Integration (Aug–Nov 2025):** Expanded REST syncing and normalization ([services/kashflowNormalizer.js](../services/kashflowNormalizer.js), [kashflowAPI/](../kashflowAPI)). Added docs and curl scripts in [docs/rest-curl](./rest-curl). Linked entities across models (customers, suppliers, projects) via [mongoose/config/listControllerConfig.js](../mongoose/config/listControllerConfig.js).
-- **Infrastructure & CI (Oct 2025):** Added Docker/Caddy setup in [docker-compose.yml](../docker-compose.yml), [Caddyfile](../Caddyfile), env templates, and CI workflows. Introduced version bumps and package updates to stabilize deployments.
+- **Infrastructure & CI (Oct 2025):** Added Docker/Caddy setup in [docker-compose.yml](../docker-compose.yml), a root Caddyfile (since moved to the hcs-docs repo's VPS Caddy config), env templates, and CI workflows. Introduced version bumps and package updates to stabilize deployments.
 - **Paperless Integration (Nov 2025):** Auto-ingest and document view improvements ([mongoose/views/tailwindcss/paperless](../mongoose/views/tailwindcss)), plus links back to KashFlow records.
 - **Tailwind Build Local (Nov 2025):** Moved from CDN to local Tailwind build; added safelist generator in [scripts/generate-tailwind-safelist.js](../scripts/generate-tailwind-safelist.js) and updated configs ([tailwind.config.js](../tailwind.config.js), [postcss.config.js](../postcss.config.js)).
 - **CIS API & Error Handling (Dec 2025):** Added OpenAPI spec for CIS deductions ([docs/API-Swagger.md](./API-Swagger.md)) and refined error page behavior (stack traces only in debug).
@@ -58,7 +58,7 @@
 - [mongoose/config/listControllerConfig.js](../mongoose/config/listControllerConfig.js): Central listing behavior, labels, transforms, tabs.
 - [mongoose/views/tailwindcss/partials/form-read.ejs](../mongoose/views/tailwindcss/partials/form-read.ejs): Read layout with sidebar cards, purchases table.
 - [scripts/generate-tailwind-safelist.js](../scripts/generate-tailwind-safelist.js): Keeps Tailwind classes from being purged.
-- [docker-compose.yml](../docker-compose.yml), [Caddyfile](../Caddyfile): Runtime infrastructure.
+- [docker-compose.yml](../docker-compose.yml): Runtime infrastructure (TLS/proxy config lives in the hcs-docs repo).
 
 ## Next Ideas
 

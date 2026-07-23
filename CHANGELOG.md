@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.14.4] - 2026-07-23
+
+### Removed
+- **`Caddyfile` and the `caddy` service dropped from this repo.** The root `Caddyfile` was a stale copy of the VPS front-door config (it served `team.`/`sync.`/`app.heroncs.co.uk` and proxied to `frps:18080` — an upstream that only exists on the VPS, contradicting this stack's own `tailscale:${PORT}` comment). TLS terminates at the VPS-level Caddy defined in the hcs-docs repo (`caddy/Caddyfile`), which also carries the `-dev` domains for shared dev deployments; local dev uses plain HTTP via `docker-compose.local.yml` or `npm run dev`. The `caddy` service and its `caddy_data`/`caddy_config` volumes were removed from `docker-compose.yml`, and README/docs references updated. **Deploy note:** if a `caddy` container from this stack is running on Server2, `docker compose up -d --remove-orphans` will retire it.
+
 ## [6.14.3] - 2026-07-23
 
 ### Removed

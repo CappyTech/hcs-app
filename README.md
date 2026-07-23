@@ -39,7 +39,7 @@ Provider-agnostic on the accounting side: it reads synced accounting data from M
 | Uploads | Multer (type + size restricted) |
 | Tooling | Tailwind CLI, PostCSS, Autoprefixer, Nodemon, Concurrently |
 | Tests | Node built-in test runner (unit) + Playwright (e2e) |
-| Delivery | Docker (multi-stage) · Caddy (auto-HTTPS reverse proxy) · Tailscale (private networking) · GitHub Container Registry (CI images) |
+| Delivery | Docker (multi-stage) · Tailscale (private networking) · GitHub Container Registry (CI images) — TLS terminates at the VPS Caddy (see hcs-docs) |
 
 Shared Mongoose schemas are published separately via [`@cappytech/hcs-schemas`](https://github.com/CappyTech/hcs-schemas).
 
@@ -50,9 +50,8 @@ Shared Mongoose schemas are published separately via [`@cappytech/hcs-schemas`](
 ```
 app.js                  # Entry point — two-phase boot, middleware chain, route mounting
 Dockerfile              # Multi-stage build (CSS builder → production image)
-docker-compose.yml      # Production stack (Tailscale + app + Caddy)
+docker-compose.yml      # Production stack (Tailscale + app)
 docker-compose.local.yml# Local stack (Tailscale + app + MongoDB)
-Caddyfile               # Reverse-proxy / TLS config
 compose.env.example     # Template for runtime environment variables
 docker-entrypoint.sh    # Container entrypoint
 
@@ -216,7 +215,7 @@ This brings up Tailscale, the app, and a `mongo:8` container. The app is reachab
 
 ## Production Deployment
 
-Production runs the published CI image from GitHub Container Registry behind Caddy, with all app traffic routed through Tailscale.
+Production runs the published CI image from GitHub Container Registry, with all app traffic routed through Tailscale. TLS terminates at the VPS-level Caddy (configured in the hcs-docs repo), which forwards traffic through the FRP tunnel to this stack.
 
 ```bash
 cp compose.env.example compose.env   # set APP_IMAGE_TAG, secrets, domain, etc.
@@ -227,10 +226,10 @@ docker compose up -d
 Key details ([`docker-compose.yml`](docker-compose.yml)):
 
 - **Image:** `ghcr.io/cappytech/hcs-app:${APP_IMAGE_TAG:-ci-latest}` with `pull_policy: always`.
-- **Networking:** the app shares the **Tailscale** container's network namespace, so Caddy proxies to `tailscale:${PORT}` (not `hcs-app:${PORT}`).
-- **TLS:** **Caddy** terminates HTTPS automatically — edit the [`Caddyfile`](Caddyfile) for your domain.
+- **Networking:** the app shares the **Tailscale** container's network namespace, so anything proxying to it must target `tailscale:${PORT}` (not `hcs-app:${PORT}`).
+- **TLS:** terminated upstream by the VPS **Caddy** (see `caddy/Caddyfile` in the hcs-docs repo) — no proxy runs in this stack.
 - **Health:** Docker health check hits `GET /healthz` (loopback-only; reports readiness of all three DB connections).
-- **Persistence:** `./uploads` and `./logs` are bind-mounted; Caddy and Tailscale keep their own named volumes.
+- **Persistence:** `./uploads` and `./logs` are bind-mounted; Tailscale keeps its own named volume.
 - **Build identity:** pass `--build-arg GIT_COMMIT=$(git rev-parse --short HEAD)` so the short SHA appears in the app footer.
 
 The container is built from a multi-stage [`Dockerfile`](Dockerfile): stage 1 compiles Tailwind CSS, stage 2 produces a slim `node:24-alpine` production image (`npm ci --omit=dev`, `dumb-init` as PID 1, `NODE_ENV=production`, listening on port `5000`).
