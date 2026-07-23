@@ -43,6 +43,7 @@ import __kashflowSessionService from '../../services/kashflowSessionService.js';
 import kfVat from '../../services/kashflowVatService.js';
 import __paperlessClient_ from '../services/paperless/paperlessClient.js';
 import __ocrOrphanService from '../services/ocrOrphanService.js';
+import hcsSync from '../services/hcsSyncService.js';
 
 // Helpers
 
@@ -1593,6 +1594,20 @@ export const createSupplier = async (req, res, next) => {
     logger.info(
       `[kashflow] Supplier created: "${finalName}" (Code=${finalCode}, Id=${kfId ?? "?"}) by ${req.user?.email || req.user?.username || "unknown user"}`,
     );
+
+    // Fire-and-forget: ask hcs-sync to re-pull the full supplier record after a
+    // short grace period (KashFlow needs a moment before the new supplier is
+    // readable via GET /suppliers/{code}). Failure is non-fatal — the next
+    // scheduled sync run reconciles it anyway.
+    const pullDelayMs = Number(process.env.HCS_SYNC_PULL_DELAY_MS) || 5000;
+    setTimeout(() => {
+      hcsSync.pullEntity("supplier", finalCode).catch((e) => {
+        logger.warn(
+          `[kashflow] Post-create supplier pull failed for Code=${finalCode}: ${e.message}`,
+        );
+      });
+    }, pullDelayMs).unref();
+
     return res.status(201).json({
       item: {
         uuid: doc.uuid,

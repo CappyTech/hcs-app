@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.14.1] - 2026-07-23
+
+### Changed
+- **Draft-page supplier creation now auto-refreshes the full record from KashFlow.** After `POST /paperless/suppliers` creates a supplier, hcs-app schedules a fire-and-forget `hcsSyncService.pullEntity('supplier', <Code>)` call to hcs-sync's `POST /api/pull` after a short grace period (default 5s, tunable via `HCS_SYNC_PULL_DELAY_MS`) so KashFlow has time to make the new supplier readable. This backfills the fields the create payload doesn't carry (address, payment terms, contacts, etc.) without waiting for the next scheduled sync run. Requires `HCS_SYNC_API_KEY`/`HCS_SYNC_BASE_URL`; failures are logged and non-fatal — the scheduled sync still reconciles.
+
 ## [6.14.0] - 2026-07-23
 
 ### Added
