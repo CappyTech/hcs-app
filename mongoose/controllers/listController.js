@@ -1,8 +1,8 @@
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const logger = require("../../services/loggerService");
-const listControllerConfig = require("../config/listControllerConfig");
-const { scopeQuery } = require("../../services/dataScopingService");
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import listControllerConfig from '../config/listControllerConfig.js';
+import { scopeQuery } from '../../services/dataScopingService.js';
 
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
@@ -855,4 +855,4 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
   };
 }
 
-module.exports = listController;
+export default listController;

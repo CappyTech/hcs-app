@@ -1,5 +1,5 @@
-﻿const mongoose = require('mongoose');
-const { bankTransaction, uuidField } = require('@cappytech/hcs-schemas');
+import mongoose from 'mongoose';
+import { bankTransaction, uuidField } from '@cappytech/hcs-schemas';
 
 // strict: false — KashFlow's documented shape for this entity is incomplete;
 // undeclared fields written by hcs-sync must survive round-trips.
@@ -10,7 +10,7 @@ const bankTransactionSchema = new mongoose.Schema({
 
 bankTransaction.indexes.forEach(idx => bankTransactionSchema.index(idx.fields, idx.options));
 
-module.exports = {
+export default {
   modelName: 'bankTransaction',
   schema: bankTransactionSchema
 };

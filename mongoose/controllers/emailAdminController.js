@@ -1,16 +1,14 @@
-'use strict';
-
-const path = require('path');
-const { body, validationResult } = require('express-validator');
-const mdb = require('../services/mongooseDatabaseService');
-const logger = require('../../services/loggerService');
-const emailTypeService = require('../services/emailTypeService');
-const notificationService = require('../../services/notificationService');
-const emailPreferenceService = require('../services/emailPreferenceService');
-const emailBrandingService = require('../services/emailBrandingService');
-const unsubscribeTokenService = require('../services/unsubscribeTokenService');
-const unsubscribeRotationService = require('../services/unsubscribeRotationService');
-const configService = require('../../services/configService');
+import path from 'path';
+import { body, validationResult } from 'express-validator';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import emailTypeService from '../services/emailTypeService.js';
+import notificationService from '../../services/notificationService.js';
+import emailPreferenceService from '../services/emailPreferenceService.js';
+import emailBrandingService from '../services/emailBrandingService.js';
+import unsubscribeTokenService from '../services/unsubscribeTokenService.js';
+import unsubscribeRotationService from '../services/unsubscribeRotationService.js';
+import configService from '../../services/configService.js';
 
 const VIEW = (name) => path.join('tailwindcss', 'settings', name);
 
@@ -19,7 +17,7 @@ function firstError(errors) {
 }
 
 // ── Hub ───────────────────────────────────────────────────────────────
-exports.getHub = async (req, res, next) => {
+export const getHub = async (req, res, next) => {
   try {
     const types = await emailTypeService.list();
     const counts = { total: types.length, enabled: types.filter((t) => t.enabled).length };
@@ -35,7 +33,7 @@ exports.getHub = async (req, res, next) => {
 };
 
 // Enable/disable the automatic unsubscribe-link rotation (persisted to config).
-exports.postRotationSettings = async (req, res) => {
+export const postRotationSettings = async (req, res) => {
   try {
     if (configService.isFromStartupEnv('UNSUBSCRIBE_ROTATION_ENABLED')) {
       req.flash('error', 'Rotation is fixed by an environment variable and cannot be changed here.');
@@ -51,7 +49,7 @@ exports.postRotationSettings = async (req, res) => {
 };
 
 // Rotate every user's unsubscribe token right now (manual, forced).
-exports.postRotateNow = async (req, res) => {
+export const postRotateNow = async (req, res) => {
   try {
     const result = await unsubscribeRotationService.rotateAll({ force: true, trigger: 'manual' });
     req.flash('success', `Rotated unsubscribe tokens for ${result.rotated || 0} user(s). All existing unsubscribe links are now invalid.`);
@@ -62,14 +60,14 @@ exports.postRotateNow = async (req, res) => {
 };
 
 // ── Catalog ───────────────────────────────────────────────────────────
-exports.getTypes = async (req, res, next) => {
+export const getTypes = async (req, res, next) => {
   try {
     const types = await emailTypeService.list();
     res.render(VIEW('email-types'), { title: 'Email Types', types, openKey: req.query.edit || null });
   } catch (err) { next(err); }
 };
 
-exports.validateType = [
+export const validateType = [
   body('key').optional({ checkFalsy: true }).trim()
     .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).withMessage('Key must be kebab-case (lowercase letters, digits, hyphens).'),
   body('label').trim().notEmpty().withMessage('Label is required.').isLength({ max: 120 }),
@@ -108,7 +106,7 @@ function readTypeBody(req) {
   };
 }
 
-exports.postCreateType = async (req, res) => {
+export const postCreateType = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     req.flash('error', firstError(errors));
@@ -123,7 +121,7 @@ exports.postCreateType = async (req, res) => {
   res.redirect('/admin/emails/types');
 };
 
-exports.postUpdateType = async (req, res) => {
+export const postUpdateType = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     req.flash('error', firstError(errors));
@@ -139,7 +137,7 @@ exports.postUpdateType = async (req, res) => {
   res.redirect('/admin/emails/types');
 };
 
-exports.postToggleType = async (req, res) => {
+export const postToggleType = async (req, res) => {
   try {
     const enabled = !(req.body.enabled === 'false' || req.body.enabled === false);
     await emailTypeService.setEnabled(req.params.key, enabled);
@@ -150,7 +148,7 @@ exports.postToggleType = async (req, res) => {
   res.redirect('/admin/emails/types');
 };
 
-exports.postDeleteType = async (req, res) => {
+export const postDeleteType = async (req, res) => {
   try {
     const result = await emailTypeService.remove(req.params.key);
     if (result.removed) req.flash('success', `Email type "${req.params.key}" deleted.`);
@@ -163,7 +161,7 @@ exports.postDeleteType = async (req, res) => {
 };
 
 // Admin preview of how a type's email looks (its own route, not the user page).
-exports.getTypePreview = async (req, res, next) => {
+export const getTypePreview = async (req, res, next) => {
   try {
     const [type, branding] = await Promise.all([
       emailTypeService.get(req.params.key),
@@ -176,14 +174,14 @@ exports.getTypePreview = async (req, res, next) => {
 };
 
 // ── Global header / footer branding ─────────────────────────────────────
-exports.getBranding = async (req, res, next) => {
+export const getBranding = async (req, res, next) => {
   try {
     const branding = await emailBrandingService.get();
     res.render(VIEW('email-branding'), { title: 'Email Header & Footer', branding });
   } catch (err) { next(err); }
 };
 
-exports.postBranding = async (req, res) => {
+export const postBranding = async (req, res) => {
   try {
     await emailBrandingService.save({
       headerEnabled: req.body.headerEnabled === 'on' || req.body.headerEnabled === 'true',
@@ -199,7 +197,7 @@ exports.postBranding = async (req, res) => {
 };
 
 // ── Compose & send ──────────────────────────────────────────────────────
-exports.getCompose = async (req, res, next) => {
+export const getCompose = async (req, res, next) => {
   try {
     const [users, allTypes] = await Promise.all([
       mdb.INTERNAL.user.find({ email: { $nin: [null, ''] } })
@@ -212,13 +210,13 @@ exports.getCompose = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.validateCompose = [
+export const validateCompose = [
   body('subject').trim().notEmpty().withMessage('Subject is required.').isLength({ max: 300 }),
   body('message').trim().notEmpty().withMessage('Message body is required.'),
   body('recipientType').isIn(['user', 'role']).withMessage('Choose a recipient.'),
 ];
 
-exports.postCompose = async (req, res) => {
+export const postCompose = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     req.flash('error', firstError(errors));
@@ -269,7 +267,7 @@ exports.postCompose = async (req, res) => {
 };
 
 // ── Outbox ──────────────────────────────────────────────────────────────
-exports.getOutbox = async (req, res, next) => {
+export const getOutbox = async (req, res, next) => {
   try {
     const notifications = await mdb.INTERNAL.notification.find({})
       .sort({ createdAt: -1 }).limit(100).lean();
@@ -277,7 +275,7 @@ exports.getOutbox = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.postResend = async (req, res) => {
+export const postResend = async (req, res) => {
   try {
     await mdb.INTERNAL.notification.updateOne(
       { uuid: req.params.uuid },
@@ -290,7 +288,7 @@ exports.postResend = async (req, res) => {
   res.redirect('/admin/emails/outbox');
 };
 
-exports.postCancel = async (req, res) => {
+export const postCancel = async (req, res) => {
   try {
     await mdb.INTERNAL.notification.updateOne(
       { uuid: req.params.uuid, status: 'pending' },
@@ -364,7 +362,7 @@ function renderUnsubscribeOutcome(res, resolved) {
 
 // GET is READ-ONLY: it only renders a confirmation page. Email link-scanners /
 // prefetchers issuing a GET change nothing.
-exports.getUnsubscribe = async (req, res) => {
+export const getUnsubscribe = async (req, res) => {
   const resolved = await resolveUnsubscribe(req);
   if (!resolved.user) return renderUnsubscribeOutcome(res, resolved);
   const { user, mode, type } = resolved;
@@ -381,7 +379,7 @@ exports.getUnsubscribe = async (req, res) => {
 
 // POST performs the change — only after the explicit button press. Scope is
 // re-derived from the token (not trusted from the form) for signed tokens.
-exports.postUnsubscribe = async (req, res) => {
+export const postUnsubscribe = async (req, res) => {
   const resolved = await resolveUnsubscribe(req);
   if (!resolved.user) return renderUnsubscribeOutcome(res, resolved);
   const { user, mode, type } = resolved;
@@ -408,3 +406,5 @@ exports.postUnsubscribe = async (req, res) => {
     });
   }
 };
+
+export default { getHub, postRotationSettings, postRotateNow, getTypes, validateType, postCreateType, postUpdateType, postToggleType, postDeleteType, getTypePreview, getBranding, postBranding, getCompose, validateCompose, postCompose, getOutbox, postResend, postCancel, getUnsubscribe, postUnsubscribe };

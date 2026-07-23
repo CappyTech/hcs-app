@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * payrollTaxRates — database-driven UK tax year rate table.
@@ -62,7 +60,7 @@ const payrollTaxRatesSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = {
+export default {
   modelName: 'payrollTaxRates',
   schema: payrollTaxRatesSchema
 };

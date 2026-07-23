@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * peoplesPensionService.js
  *
@@ -13,9 +11,9 @@
  * Reference: https://thepeoplespension.co.uk/employers/
  */
 
-const encSvc   = require('./encryptionService');
-const mdb      = require('../mongoose/services/mongooseDatabaseService');
-const logger   = require('./loggerService');
+import encSvc from './encryptionService.js';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import logger from './loggerService.js';
 
 function safeDecrypt(enc) {
   if (!enc) return '';
@@ -132,4 +130,4 @@ async function submitViaAPI(run, entries) {
   throw new Error("People's Pension API integration is not yet available. Please use CSV download.");
 }
 
-module.exports = { generateContributionsCSV, submitViaAPI };
+export default { generateContributionsCSV, submitViaAPI };

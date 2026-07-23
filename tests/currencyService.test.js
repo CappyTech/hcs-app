@@ -1,6 +1,6 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { formatCurrency, rounding } = require('../services/currencyService');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { formatCurrency, rounding } from '../services/currencyService.js';
 
 // ── formatCurrency ───────────────────────────────────────────────────────────
 

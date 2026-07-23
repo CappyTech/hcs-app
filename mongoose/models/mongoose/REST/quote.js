@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { quote, uuidField } = require('@cappytech/hcs-schemas');
+import mongoose from 'mongoose';
+import { quote, uuidField } from '@cappytech/hcs-schemas';
 
 const quoteSchema = new mongoose.Schema({
   uuid: uuidField,
@@ -10,7 +10,7 @@ const quoteSchema = new mongoose.Schema({
 
 quote.indexes.forEach(idx => quoteSchema.index(idx.fields, idx.options));
 
-module.exports = {
+export default {
   modelName: 'quote',
   schema: quoteSchema
 };

@@ -1,6 +1,4 @@
-"use strict";
-
-const net = require("net");
+import net from 'net';
 
 function normalizeIp(raw) {
   if (raw === undefined || raw === null) return "";
@@ -127,7 +125,9 @@ function getClientIp(req) {
   return ip || remoteAddress || "unknown";
 }
 
-module.exports = {
+export default {
   normalizeIp,
   getClientIp,
 };
+
+export { normalizeIp, getClientIp };

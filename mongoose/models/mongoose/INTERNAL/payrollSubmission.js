@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * payrollSubmission — record of an HMRC RTI or People's Pension submission.
@@ -60,7 +58,7 @@ payrollSubmissionSchema.index({ taxYear: 1, type: 1 });
 payrollSubmissionSchema.index({ runId: 1 });
 payrollSubmissionSchema.index({ status: 1 });
 
-module.exports = {
+export default {
   modelName: 'payrollSubmission',
   schema: payrollSubmissionSchema
 };

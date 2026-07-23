@@ -1,5 +1,5 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 // ── Stubs ────────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ function fakeQuery(docs) {
  * Patch mdb with mock model factories before requiring
  * any module that uses mongooseDatabaseService.
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
 
 function stubModels({ ocrDocs = [], purchases = [], suppliers = [] } = {}) {
   mdb.PAPERLESS = {
@@ -48,10 +48,11 @@ function stubModels({ ocrDocs = [], purchases = [], suppliers = [] } = {}) {
 // Require the service AFTER patching mdb so it picks up our stubs
 const {
   fetchStatementsForWeek,
-} = require('../mongoose/services/attendanceService');
-const attendanceController = require('../mongoose/controllers/attendanceController');
+} = __attendanceService;
+import attendanceController from '../mongoose/controllers/attendanceController.js';
 
-const moment = require('moment');
+import moment from 'moment';
+import __attendanceService from '../mongoose/services/attendanceService.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

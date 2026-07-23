@@ -1,5 +1,5 @@
-const crypto = require("crypto");
-const logger = require("./loggerService");
+import crypto from 'crypto';
+import logger from './loggerService.js';
 const { sanitize } = logger;
 
 // Lightweight CSRF middleware (strict mode by default).
@@ -46,7 +46,7 @@ function tokensMatch(supplied, expected) {
   return crypto.timingSafeEqual(ha, hb);
 }
 
-module.exports = function csrfService(req, res, next) {
+function csrfService(req, res, next) {
   try {
     if (!req.session) return next();
     let createdToken = false;
@@ -104,7 +104,7 @@ module.exports = function csrfService(req, res, next) {
 // Per-route CSRF validation for use after multer (or any middleware that parses multipart
 // body). Add this as a middleware in route arrays after your upload middleware:
 //   router.post('/upload', upload.single('file'), csrfService.validate, handler)
-module.exports.validate = function validateCsrf(req, res, next) {
+export const validate = function validateCsrf(req, res, next) {
   if (SAFE_METHODS.has(req.method)) return next();
   try {
     return validateToken(req, res, next);
@@ -140,3 +140,9 @@ function validateToken(req, res, next) {
       return next();
     }
 }
+
+// CJS attached validate as a property of the middleware; keep that shape for
+// consumers that use csrfService.validate off the default export.
+csrfService.validate = validate;
+
+export default csrfService;

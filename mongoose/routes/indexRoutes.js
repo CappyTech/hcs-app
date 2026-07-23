@@ -1,8 +1,8 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const index = require("../controllers/indexController");
-const departments = require("../config/departmentsConfig");
+import authService from '../../services/authService.js';
+import index from '../controllers/indexController.js';
+import departments from '../config/departmentsConfig.js';
 
 router.get("/", authService.ensureRole("public"), index.renderIndex);
 router.post("/quick-task", authService.ensureRole("public"), index.quickAddTask);
@@ -28,4 +28,4 @@ router.get("/paperless", authService.ensureRole("admin"), (req, res) =>
   res.redirect("/documents"),
 );
 
-module.exports = router;
+export default router;

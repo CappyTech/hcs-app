@@ -1,8 +1,7 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const taxService = require('../../services/taxService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import taxService from '../../services/taxService.js';
+import logger from '../../services/loggerService.js';
+import holidayAccrualService from './holidayAccrualService.js';
 
 /**
  * Year-end holiday carry-over.
@@ -55,7 +54,6 @@ async function applyCarryOverOnce({ now = new Date() } = {}) {
         continue;
       }
 
-      const holidayAccrualService = require('./holidayAccrualService');
       const curr = await holidayAccrualService.upsertEmployeeHolidayForDate(employee._id, now);
 
       // Already applied, or carry-over set manually — leave alone
@@ -101,6 +99,8 @@ async function applyCarryOverOnce({ now = new Date() } = {}) {
   return stats;
 }
 
-module.exports = {
+export default {
   applyCarryOverOnce,
 };
+
+export { applyCarryOverOnce };

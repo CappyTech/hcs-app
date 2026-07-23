@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * connectionSettingsController.js
  *
@@ -17,9 +15,12 @@
  * env is updated.
  */
 
-const path = require('path');
-const configService = require('../../services/configService');
-const logger = require('../../services/loggerService');
+import path from 'path';
+import configService from '../../services/configService.js';
+import logger from '../../services/loggerService.js';
+import nodemailer from 'nodemailer';
+import kashflowSessionService from '../../services/kashflowSessionService.js';
+import smsService from '../../services/smsService.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ const MONGO_DISPLAY_KEYS = [
   'MONGO_AUTH_SOURCE', 'SSH_TUNNEL_ENABLED',
 ];
 
-exports.getConnectionsHub = (req, res, next) => {
+export const getConnectionsHub = (req, res, next) => {
   try {
     const mongo = MONGO_DISPLAY_KEYS.map(key => ({
       key,
@@ -117,7 +118,7 @@ const KASHFLOW_KEYS = [
   'KASHFLOW_DEFER_DEFAULTS',
 ];
 
-exports.getKashflowSettings = (req, res, next) => {
+export const getKashflowSettings = (req, res, next) => {
   try {
     const fields = Object.fromEntries(KASHFLOW_KEYS.map(k => [k, field(k)]));
     res.render(path.join('tailwindcss', 'admin', 'kashflow'), {
@@ -130,7 +131,7 @@ exports.getKashflowSettings = (req, res, next) => {
   }
 };
 
-exports.postKashflowSettings = (req, res, next) => {
+export const postKashflowSettings = (req, res, next) => {
   try {
     const saved = applySettings(req.body, KASHFLOW_KEYS);
     logger.info(`[connectionSettings] KashFlow settings updated: ${saved} key(s) changed`);
@@ -155,7 +156,7 @@ const SMTP_KEYS = [
   'BASE_URL',
 ];
 
-exports.getSmtpSettings = (req, res, next) => {
+export const getSmtpSettings = (req, res, next) => {
   try {
     const fields = Object.fromEntries(SMTP_KEYS.map(k => [k, field(k)]));
     res.render(path.join('tailwindcss', 'admin', 'smtp'), {
@@ -168,7 +169,7 @@ exports.getSmtpSettings = (req, res, next) => {
   }
 };
 
-exports.postSmtpSettings = (req, res, next) => {
+export const postSmtpSettings = (req, res, next) => {
   try {
     const saved = applySettings(req.body, SMTP_KEYS);
     logger.info(`[connectionSettings] SMTP settings updated: ${saved} key(s) changed`);
@@ -196,7 +197,7 @@ const PAPERLESS_KEYS = [
   'PEOPLES_PENSION_API_KEY',
 ];
 
-exports.getPaperlessSettings = (req, res, next) => {
+export const getPaperlessSettings = (req, res, next) => {
   try {
     const fields = Object.fromEntries(PAPERLESS_KEYS.map(k => [k, field(k)]));
     res.render(path.join('tailwindcss', 'admin', 'paperless'), {
@@ -209,7 +210,7 @@ exports.getPaperlessSettings = (req, res, next) => {
   }
 };
 
-exports.postPaperlessSettings = (req, res, next) => {
+export const postPaperlessSettings = (req, res, next) => {
   try {
     const saved = applySettings(req.body, PAPERLESS_KEYS);
     logger.info(`[connectionSettings] Paperless settings updated: ${saved} key(s) changed`);
@@ -231,7 +232,7 @@ const TWILIO_KEYS = [
   'TWILIO_FROM_NUMBER',
 ];
 
-exports.getSmsSettings = (req, res, next) => {
+export const getSmsSettings = (req, res, next) => {
   try {
     const fields = Object.fromEntries(TWILIO_KEYS.map(k => [k, field(k)]));
     res.render(path.join('tailwindcss', 'admin', 'sms'), {
@@ -248,7 +249,6 @@ exports.getSmsSettings = (req, res, next) => {
 
 const TESTS = {
   smtp: async () => {
-    const nodemailer = require('nodemailer');
     const host = configService.get('SMTP_HOST');
     const user = configService.get('SMTP_USER');
     const pass = configService.get('SMTP_PASS');
@@ -282,7 +282,6 @@ const TESTS = {
   },
 
   kashflow: async () => {
-    const kashflowSessionService = require('../../services/kashflowSessionService');
     const token = await kashflowSessionService.ensureSessionToken();
     if (!token) throw new Error('Could not obtain a KashFlow session token.');
     return 'KashFlow authentication succeeded — session token obtained.';
@@ -303,7 +302,7 @@ const TESTS = {
 };
 
 /** POST /admin/connections/test/:service — live credential check, result via flash */
-exports.testConnection = async (req, res) => {
+export const testConnection = async (req, res) => {
   const service = req.params.service;
   const test = TESTS[service];
   const back = req.get('referer') || '/admin/connections';
@@ -322,11 +321,10 @@ exports.testConnection = async (req, res) => {
   res.redirect(back);
 };
 
-exports.postSmsSettings = (req, res, next) => {
+export const postSmsSettings = (req, res, next) => {
   try {
     const saved = applySettings(req.body, TWILIO_KEYS);
     // Reset the cached Twilio client so it picks up the new credentials
-    const smsService = require('../../services/smsService');
     if (typeof smsService.resetClient === 'function') smsService.resetClient();
     logger.info(`[connectionSettings] SMS settings updated: ${saved} key(s) changed`);
     req.flash('success', saved
@@ -338,3 +336,5 @@ exports.postSmsSettings = (req, res, next) => {
     next(err);
   }
 };
+
+export default { getConnectionsHub, getKashflowSettings, postKashflowSettings, getSmtpSettings, postSmtpSettings, getPaperlessSettings, postPaperlessSettings, getSmsSettings, testConnection, postSmsSettings };

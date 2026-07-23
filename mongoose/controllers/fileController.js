@@ -1,15 +1,20 @@
-const path = require("path");
-const fs = require("fs"); // for existsSync
-const fsp = require("fs").promises; // for async file ops if needed
-const mime = require("mime-types");
-const sanitize = require("sanitize-filename");
-const logger = require("../../services/loggerService");
-const mdb = require("../services/mongooseDatabaseService");
+import path from 'path';
+import fs from 'fs'; // for existsSync
+const fsp = __fs.promises; // for async file ops if needed
+import mime from 'mime-types';
+import sanitize from 'sanitize-filename';
+import logger from '../../services/loggerService.js';
+import mdb from '../services/mongooseDatabaseService.js';
+import __fs from 'fs';
+import { fileURLToPath } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 
 const getBaseDir = (modelName) =>
   path.join(__dirname, "../../public", modelName.toLowerCase());
 
-exports.viewFile = async (req, res, next) => {
+export const viewFile = async (req, res, next) => {
   try {
     const { model, uuid, filename } = req.params;
     const safeDir = sanitize(String(uuid));
@@ -54,7 +59,7 @@ exports.viewFile = async (req, res, next) => {
   }
 };
 
-exports.renderUploadForm = async (req, res, next) => {
+export const renderUploadForm = async (req, res, next) => {
   const { model, uuid } = req.params;
   const modelName = model.toLowerCase();
 
@@ -73,7 +78,7 @@ exports.renderUploadForm = async (req, res, next) => {
   }
 };
 
-exports.uploadFiles = async (req, res, next) => {
+export const uploadFiles = async (req, res, next) => {
   const { model, uuid } = req.params;
   const modelName = model.toLowerCase();
   const dirName = sanitize(uuid);
@@ -113,7 +118,7 @@ exports.uploadFiles = async (req, res, next) => {
   }
 };
 
-exports.downloadFile = async (req, res, next) => {
+export const downloadFile = async (req, res, next) => {
   const { model, uuid, filename } = req.params;
   const modelName = model.toLowerCase();
   const dirName = sanitize(uuid);
@@ -135,7 +140,7 @@ exports.downloadFile = async (req, res, next) => {
   }
 };
 
-exports.deleteFile = async (req, res, next) => {
+export const deleteFile = async (req, res, next) => {
   const { model, uuid, filename } = req.params;
   const modelName = model.toLowerCase();
   const dirName = sanitize(uuid);
@@ -154,3 +159,5 @@ exports.deleteFile = async (req, res, next) => {
     next(err);
   }
 };
+
+export default { viewFile, renderUploadForm, uploadFiles, downloadFile, deleteFile };

@@ -1,7 +1,5 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const notificationService = require('../../services/notificationService');
+import mdb from './mongooseDatabaseService.js';
+import notificationService from '../../services/notificationService.js';
 
 /**
  * GDPR request deadline tracking.
@@ -68,4 +66,4 @@ async function checkDeadlines(now = new Date()) {
   return stats;
 }
 
-module.exports = { checkDeadlines };
+export default { checkDeadlines };

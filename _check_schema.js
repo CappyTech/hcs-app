@@ -1,6 +1,8 @@
-const mongoose = require('mongoose');
-const p = require('@cappytech/hcs-schemas').purchase;
-const { schema } = require('./mongoose/models/mongoose/REST/purchase');
+import mongoose from 'mongoose';
+const p = __hcs_schemas.purchase;
+import __purchase from './mongoose/models/mongoose/REST/purchase.js';
+import __hcs_schemas from '@cappytech/hcs-schemas';
+const { schema } = __purchase;
 console.log('fields:', JSON.stringify(Object.keys(p.fields)));
 console.log('indexes:', JSON.stringify(p.indexes));
 console.log('Schema paths:', Object.keys(schema.paths));

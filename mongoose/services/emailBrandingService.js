@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * emailBrandingService — read/upsert the single platform-wide email branding
  * document (global header + footer). Used by:
@@ -7,7 +5,7 @@
  *   - notificationService to wrap outgoing emails with the branded blocks
  */
 
-const mdb = require('./mongooseDatabaseService');
+import mdb from './mongooseDatabaseService.js';
 
 const SINGLETON = 'global';
 
@@ -43,4 +41,4 @@ async function save(data) {
   ).lean();
 }
 
-module.exports = { get, save };
+export default { get, save };

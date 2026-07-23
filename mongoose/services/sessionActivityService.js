@@ -1,7 +1,7 @@
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
-const listConfig = require('../config/listControllerConfig');
+import listConfig from '../config/listControllerConfig.js';
 
 // Pages to skip when tracking visit history
 const SKIP_PREFIXES = ['/resources/', '/favicon.', '/healthz', '/i-am-stuck', '/service-unavailable', '/__debug'];
@@ -51,7 +51,7 @@ function labelForPath(p) {
 }
 
 // Middleware: track page visits in session for "frequently visited" feature
-module.exports.trackPageVisit = function trackPageVisit(req, res, next) {
+export const trackPageVisit = function trackPageVisit(req, res, next) {
   if (req.method !== 'GET' || !req.session?.user) return next();
   const p = req.path || '';
   if (SKIP_PREFIXES.some(pre => p.startsWith(pre))) return next();
@@ -66,7 +66,7 @@ module.exports.trackPageVisit = function trackPageVisit(req, res, next) {
 };
 
 // Get the top N most-visited pages for a session, with labels
-module.exports.getFrequentPages = function getFrequentPages(session, limit = MAX_FREQUENT_PAGES) {
+export const getFrequentPages = function getFrequentPages(session, limit = MAX_FREQUENT_PAGES) {
   const visits = session?._pageVisits || {};
   return Object.entries(visits)
     .sort((a, b) => b[1] - a[1])
@@ -75,7 +75,7 @@ module.exports.getFrequentPages = function getFrequentPages(session, limit = MAX
 };
 
 // Middleware: update lastActivity for current session (throttled)
-module.exports.touchSessionActivity = async function touchSessionActivity(req, res, next) {
+export const touchSessionActivity = async function touchSessionActivity(req, res, next) {
   if (!req.sessionID || !req.session?.user) return next();
   try {
     const now = new Date();
@@ -90,3 +90,5 @@ module.exports.touchSessionActivity = async function touchSessionActivity(req, r
     next();
   }
 };
+
+export default { trackPageVisit, getFrequentPages, touchSessionActivity };

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const sessionSchema = new mongoose.Schema({
   _id: { type: String },
@@ -23,7 +23,7 @@ sessionSchema.index({ userId: 1, expires: 1 });
 // Track recent activity (optional display / idle detection)
 sessionSchema.add({ lastActivity: { type: Date, index: true } });
 
-module.exports = {
+export default {
   modelName: 'session',
   schema: sessionSchema
 };

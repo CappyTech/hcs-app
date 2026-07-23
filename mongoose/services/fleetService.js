@@ -1,7 +1,5 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
 /**
  * Fetch a full fleet overview: summary stats, vehicles expiring soon,
@@ -132,4 +130,4 @@ async function getFleetOverview({ expiryDays = 30 } = {}) {
   };
 }
 
-module.exports = { getFleetOverview };
+export default { getFleetOverview };

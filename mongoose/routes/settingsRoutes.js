@@ -1,8 +1,8 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const settings = require("../controllers/settingsController");
-const connSettings = require("../controllers/connectionSettingsController");
+import authService from '../../services/authService.js';
+import settings from '../controllers/settingsController.js';
+import connSettings from '../controllers/connectionSettingsController.js';
 
 // ── External connection settings (admin only) ─────────────────────────────────
 router.get('/admin/connections', authService.ensureRoles('admin'), connSettings.getConnectionsHub);
@@ -97,4 +97,4 @@ router.get(
   settings.previewNotification,
 );
 
-module.exports = router;
+export default router;

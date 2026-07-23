@@ -1,14 +1,14 @@
-const { describe, it, beforeEach } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * Covers the DB-driven notification gating + unsubscribe-footer logic added on
  * top of the email outbox. Patches the mdb singleton (same approach as
  * notificationService.test.js) so no real database is required.
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const notificationService = require('../services/notificationService');
-const emailPreferenceService = require('../mongoose/services/emailPreferenceService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import notificationService from '../services/notificationService.js';
+import emailPreferenceService from '../mongoose/services/emailPreferenceService.js';
 
 // A chainable stub usable for findOne(...).lean() AND findOne(...).select().lean()
 function query(val) {

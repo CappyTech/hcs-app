@@ -1,6 +1,4 @@
-'use strict';
-
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 /**
  * Security audit trail — authentication and account-security events, kept
@@ -55,4 +53,4 @@ const securityEventSchema = new mongoose.Schema(
 securityEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 400 * 24 * 60 * 60 });
 securityEventSchema.index({ type: 1, createdAt: -1 });
 
-module.exports = { modelName: 'securityEvent', schema: securityEventSchema };
+export default { modelName: 'securityEvent', schema: securityEventSchema };

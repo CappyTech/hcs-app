@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * Persisted background-job state.
@@ -23,4 +21,4 @@ const jobStateSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-module.exports = { modelName: 'jobState', schema: jobStateSchema };
+export default { modelName: 'jobState', schema: jobStateSchema };

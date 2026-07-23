@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * Individual leave bookings (the request → approval workflow).
@@ -47,4 +45,4 @@ holidayRequestSchema.pre('validate', function (next) {
 // Manager dashboard: pending first, newest first
 holidayRequestSchema.index({ status: 1, startDate: 1 });
 
-module.exports = { modelName: 'holidayRequest', schema: holidayRequestSchema };
+export default { modelName: 'holidayRequest', schema: holidayRequestSchema };

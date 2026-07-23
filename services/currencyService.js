@@ -1,4 +1,4 @@
-const logger = require("./loggerService");
+import logger from './loggerService.js';
 
 /**
  * Formats a given amount as a currency string in GBP (£).
@@ -28,7 +28,9 @@ function rounding(amount, up) {
   return up ? Math.ceil(amount) : Math.floor(amount);
 }
 
-module.exports = {
+export default {
   formatCurrency,
   rounding,
 };
+
+export { formatCurrency, rounding };

@@ -1,8 +1,8 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const crypto = require('crypto');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'crypto';
 
-const hibpService = require('../services/hibpService');
+import hibpService from '../services/hibpService.js';
 
 // Build a fake range response containing the given password at `count` hits
 function rangeBodyFor(password, count, extraLines = []) {

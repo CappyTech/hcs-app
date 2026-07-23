@@ -1,12 +1,12 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * dataScopingService requires rbac at top-level (pure config, use as-is)
  * and mdb lazily inside scopeQuery(). Patch the mdb singleton.
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const { scopeQuery, scopeQueryOrError } = require('../services/dataScopingService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import { scopeQuery, scopeQueryOrError } from '../services/dataScopingService.js';
 
 /* ── helpers ──────────────────────────────────────────────────────── */
 function fakeQuery(result = null) {

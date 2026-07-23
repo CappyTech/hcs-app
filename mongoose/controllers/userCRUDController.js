@@ -1,15 +1,16 @@
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const logger = require("../../services/loggerService");
-const axios = require("axios");
-const bcrypt = require("bcrypt");
-const crypto = require("crypto");
-const encryptionService = require("../../services/encryptionService");
-const { getClientIp } = require("../../services/ipService");
-const emailService = require("../../services/emailService");
-const smsService = require("../../services/smsService");
-const auditLog = require("../../services/auditLogService");
-const hibpService = require("../../services/hibpService");
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import axios from 'axios';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import encryptionService from '../../services/encryptionService.js';
+import { getClientIp } from '../../services/ipService.js';
+import emailService from '../../services/emailService.js';
+import smsService from '../../services/smsService.js';
+import auditLog from '../../services/auditLogService.js';
+import hibpService from '../../services/hibpService.js';
+import totpService from '../../services/totpService.js';
 
 function hasCookie(req, cookieName) {
   try {
@@ -63,14 +64,14 @@ function getSafeNext(raw) {
   return v;
 }
 
-exports.renderRegistrationForm = (req, res, next) => {
+export const renderRegistrationForm = (req, res, next) => {
   res.render(path.join("mongoose", "user", "register"), {
     title: "Register",
     siteKey: process.env.TURNSTILE_SITE_KEY,
   });
 };
 
-exports.registerUser = async (req, res, next) => {
+export const registerUser = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
     const token = req.body["cf-turnstile-response"];
@@ -164,7 +165,7 @@ exports.registerUser = async (req, res, next) => {
   }
 };
 
-exports.renderLoginForm = (req, res) => {
+export const renderLoginForm = (req, res) => {
   // Render TailwindCSS version of login template
   const next = getSafeNext(req.query?.next);
   res.render(path.join("tailwindcss", "user", "login"), {
@@ -175,7 +176,7 @@ exports.renderLoginForm = (req, res) => {
   });
 };
 
-exports.loginUser = async (req, res) => {
+export const loginUser = async (req, res) => {
   try {
     const next = getSafeNext(req.body?.next || req.query?.next);
     const { usernameOrEmail, password } = req.body;
@@ -341,7 +342,6 @@ exports.loginUser = async (req, res) => {
       const inlineTotp = String(req.body.totp || "").trim();
       if (inlineTotp) {
         const decryptedSecret = encryptionService.decrypt(user.totpSecret);
-        const totpService = require("../../services/totpService");
         let totpValid = totpService.verifyTOTP(decryptedSecret, inlineTotp);
 
         if (!totpValid && Array.isArray(user.totpBackupCodes) && user.totpBackupCodes.length) {
@@ -432,7 +432,7 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-exports.logoutUser = (req, res) => {
+export const logoutUser = (req, res) => {
   auditLog.record("logout", req, {
     userId: req.user?._id ?? null,
     username: req.user?.username ?? req.session?.user?.username ?? null,
@@ -450,7 +450,7 @@ exports.logoutUser = (req, res) => {
 };
 
 // ── Email verification ───────────────────────────────────────────────
-exports.verifyEmail = async (req, res) => {
+export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) {
@@ -484,7 +484,7 @@ exports.verifyEmail = async (req, res) => {
 };
 
 // ── Render verification-pending page ─────────────────────────────────
-exports.renderVerifyPending = (req, res) => {
+export const renderVerifyPending = (req, res) => {
   res.render(path.join("tailwindcss", "user", "verify-pending"), {
     title: "Email Verification Required",
     email: req.user?.email || req.session?.user?.email || "",
@@ -492,7 +492,7 @@ exports.renderVerifyPending = (req, res) => {
 };
 
 // ── Resend verification email ────────────────────────────────────────
-exports.resendVerification = async (req, res) => {
+export const resendVerification = async (req, res) => {
   try {
     const userId = req.user?._id || req.session?.user?.id;
     if (!userId) {
@@ -553,14 +553,14 @@ function maskPhone(phone) {
 }
 
 // ── Forgot password — render form ────────────────────────────────────
-exports.renderForgotPasswordForm = (req, res) => {
+export const renderForgotPasswordForm = (req, res) => {
   res.render(path.join("tailwindcss", "user", "forgot-password"), {
     title: "Forgot Password",
   });
 };
 
 // ── Forgot password — look up user, route to choice or send email ────
-exports.sendPasswordReset = async (req, res) => {
+export const sendPasswordReset = async (req, res) => {
   const identifier = (req.body.usernameOrEmail || "").trim();
   const genericMsg =
     "If that account is registered, you will receive reset instructions shortly.";
@@ -634,7 +634,7 @@ exports.sendPasswordReset = async (req, res) => {
 };
 
 // ── Forgot password — render method-choice page ───────────────────────
-exports.renderChooseResetMethod = (req, res) => {
+export const renderChooseResetMethod = (req, res) => {
   const pending = req.session.passwordResetPending;
   if (!pending) {
     req.flash("error", "Session expired. Please try again.");
@@ -648,7 +648,7 @@ exports.renderChooseResetMethod = (req, res) => {
 };
 
 // ── Forgot password — dispatch chosen method ──────────────────────────
-exports.dispatchResetMethod = async (req, res) => {
+export const dispatchResetMethod = async (req, res) => {
   const pending = req.session.passwordResetPending;
   if (!pending) {
     req.flash("error", "Session expired. Please try again.");
@@ -723,7 +723,7 @@ exports.dispatchResetMethod = async (req, res) => {
 };
 
 // ── Reset password — render form ─────────────────────────────────────
-exports.renderResetPasswordForm = async (req, res) => {
+export const renderResetPasswordForm = async (req, res) => {
   const { token } = req.query;
 
   if (!token) {
@@ -748,7 +748,7 @@ exports.renderResetPasswordForm = async (req, res) => {
 };
 
 // ── Reset password — update password ─────────────────────────────────
-exports.resetPassword = async (req, res) => {
+export const resetPassword = async (req, res) => {
   const { token, password, confirmPassword } = req.body;
 
   if (!token) {
@@ -812,7 +812,7 @@ exports.resetPassword = async (req, res) => {
 };
 
 // ── SMS OTP — render verification form ───────────────────────────────
-exports.renderVerifySmsOtp = (req, res) => {
+export const renderVerifySmsOtp = (req, res) => {
   if (!req.session.passwordResetPending) {
     req.flash("error", "Session expired. Please try again.");
     return res.redirect("/user/forgot-password");
@@ -824,7 +824,7 @@ exports.renderVerifySmsOtp = (req, res) => {
 };
 
 // ── SMS OTP — verify code and reset password ──────────────────────────
-exports.verifySmsOtp = async (req, res) => {
+export const verifySmsOtp = async (req, res) => {
   const pending = req.session.passwordResetPending;
   if (!pending) {
     req.flash("error", "Session expired. Please try again.");
@@ -888,7 +888,7 @@ exports.verifySmsOtp = async (req, res) => {
 };
 
 // ── TOTP reset — render form ────────────────────────────────────
-exports.renderVerifyTotpReset = (req, res) => {
+export const renderVerifyTotpReset = (req, res) => {
   if (!req.session.passwordResetPending) {
     req.flash("error", "Session expired. Please try again.");
     return res.redirect("/user/forgot-password");
@@ -899,7 +899,7 @@ exports.renderVerifyTotpReset = (req, res) => {
 };
 
 // ── TOTP reset — verify code and reset password ──────────────────────
-exports.verifyTotpReset = async (req, res) => {
+export const verifyTotpReset = async (req, res) => {
   const pending = req.session.passwordResetPending;
   if (!pending) {
     req.flash("error", "Session expired. Please try again.");
@@ -934,7 +934,6 @@ exports.verifyTotpReset = async (req, res) => {
     // totpSecret getter auto-decrypts, but we need the raw decrypted value for verification
     const decryptedSecret = encryptionService.decrypt(user.totpSecret);
 
-    const totpService = require("../../services/totpService");
     const isValid = totpService.verifyTOTP(decryptedSecret, totpToken);
 
     if (!isValid) {
@@ -966,3 +965,5 @@ exports.verifyTotpReset = async (req, res) => {
     return res.redirect("/user/forgot-password");
   }
 };
+
+export default { renderRegistrationForm, registerUser, renderLoginForm, loginUser, logoutUser, verifyEmail, renderVerifyPending, resendVerification, renderForgotPasswordForm, sendPasswordReset, renderChooseResetMethod, dispatchResetMethod, renderResetPasswordForm, resetPassword, renderVerifySmsOtp, verifySmsOtp, renderVerifyTotpReset, verifyTotpReset };

@@ -1,7 +1,7 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/loggerController");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/loggerController.js';
 
 router.get("/logs", authService.ensureRole(), ctrl.getLogs);
 router.get("/logs/api", authService.ensureRole(), ctrl.getLogsApi);
@@ -13,4 +13,4 @@ router.get("/logs/kashflow/data", authService.ensureRole(), ctrl.getKashflowApiL
 router.get("/logs/paperless", authService.ensureRole(), ctrl.getPaperlessApiLogs);
 router.get("/logs/paperless/data", authService.ensureRole(), ctrl.getPaperlessApiLogsData);
 
-module.exports = router;
+export default router;

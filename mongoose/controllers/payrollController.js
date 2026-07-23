@@ -1,16 +1,14 @@
-'use strict';
-
-const path = require('path');
-const mdb = require('../services/mongooseDatabaseService');
-const logger = require('../../services/loggerService');
-const taxService = require('../../services/taxService');
-const encryptionService = require('../../services/encryptionService');
-const payrollCalc = require('../services/payrollCalculationService');
-const payrollJournal = require('../services/payrollJournalService');
-const hmrcRti = require('../../services/hmrcRtiService');
-const { getClientIp } = require('../../services/ipService');
-const peoplesPension = require('../../services/peoplesPensionService');
-const ukTaxId = require('../../services/ukTaxIdService');
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import taxService from '../../services/taxService.js';
+import encryptionService from '../../services/encryptionService.js';
+import payrollCalc from '../services/payrollCalculationService.js';
+import payrollJournal from '../services/payrollJournalService.js';
+import hmrcRti from '../../services/hmrcRtiService.js';
+import { getClientIp } from '../../services/ipService.js';
+import peoplesPension from '../../services/peoplesPensionService.js';
+import ukTaxId from '../../services/ukTaxIdService.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,7 +38,7 @@ function fmt(v, dp = 2) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
-exports.renderDashboard = async (req, res, next) => {
+export const renderDashboard = async (req, res, next) => {
   try {
     const PayrollRun = mdb.INTERNAL?.payrollRun;
     const currentYear = taxService.getCurrentTaxYear();
@@ -85,7 +83,7 @@ exports.renderDashboard = async (req, res, next) => {
 
 // ── Run list ──────────────────────────────────────────────────────────────────
 
-exports.renderRunList = async (req, res, next) => {
+export const renderRunList = async (req, res, next) => {
   try {
     const PayrollRun = mdb.INTERNAL?.payrollRun;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -119,7 +117,7 @@ exports.renderRunList = async (req, res, next) => {
 
 // ── Create run ────────────────────────────────────────────────────────────────
 
-exports.createRun = async (req, res, next) => {
+export const createRun = async (req, res, next) => {
   try {
     const PayrollRun = mdb.INTERNAL?.payrollRun;
     const { frequency, periodStart, periodEnd, paymentDate, taxYear, taxMonth, taxWeek } = req.body;
@@ -161,7 +159,7 @@ exports.createRun = async (req, res, next) => {
 
 // ── Run detail ────────────────────────────────────────────────────────────────
 
-exports.renderRunDetail = async (req, res, next) => {
+export const renderRunDetail = async (req, res, next) => {
   try {
     const PayrollRun   = mdb.INTERNAL?.payrollRun;
     const PayrollEntry = mdb.INTERNAL?.payrollEntry;
@@ -193,7 +191,7 @@ exports.renderRunDetail = async (req, res, next) => {
 
 // ── Calculate ─────────────────────────────────────────────────────────────────
 
-exports.calculateRun = async (req, res, next) => {
+export const calculateRun = async (req, res, next) => {
   try {
     await payrollCalc.processPayrollRun(req.params.uuid);
     req.flash?.('success', 'Payroll run calculated successfully.');
@@ -206,7 +204,7 @@ exports.calculateRun = async (req, res, next) => {
 
 // ── Override entry ────────────────────────────────────────────────────────────
 
-exports.overrideEntry = async (req, res, next) => {
+export const overrideEntry = async (req, res, next) => {
   try {
     const PayrollEntry = mdb.INTERNAL?.payrollEntry;
     const PayrollRun   = mdb.INTERNAL?.payrollRun;
@@ -246,7 +244,7 @@ exports.overrideEntry = async (req, res, next) => {
 
 // ── Lock / unlock ─────────────────────────────────────────────────────────────
 
-exports.lockRun = async (req, res, next) => {
+export const lockRun = async (req, res, next) => {
   try {
     const PayrollRun   = mdb.INTERNAL?.payrollRun;
     const PayrollEntry = mdb.INTERNAL?.payrollEntry;
@@ -266,7 +264,7 @@ exports.lockRun = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.unlockRun = async (req, res, next) => {
+export const unlockRun = async (req, res, next) => {
   try {
     const PayrollRun = mdb.INTERNAL?.payrollRun;
     const run = await PayrollRun.findOne({ uuid: req.params.uuid });
@@ -283,7 +281,7 @@ exports.unlockRun = async (req, res, next) => {
 
 // ── KashFlow journal ──────────────────────────────────────────────────────────
 
-exports.postJournal = async (req, res, next) => {
+export const postJournal = async (req, res, next) => {
   try {
     await payrollJournal.postPayrollJournal(req.params.uuid);
     req.flash?.('success', 'Payroll journal posted to KashFlow.');
@@ -297,7 +295,7 @@ exports.postJournal = async (req, res, next) => {
 
 // ── HMRC RTI — FPS ────────────────────────────────────────────────────────────
 
-exports.downloadFPS = async (req, res, next) => {
+export const downloadFPS = async (req, res, next) => {
   try {
     const xmlBuffer = await hmrcRti.buildFPSForRun(req.params.uuid);
     const filename = `FPS_${req.params.uuid}.xml`;
@@ -310,7 +308,7 @@ exports.downloadFPS = async (req, res, next) => {
   }
 };
 
-exports.submitFPS = async (req, res, next) => {
+export const submitFPS = async (req, res, next) => {
   try {
     const context = { clientIp: getClientIp(req), userId: req.user?.username || req.user?.email || 'unknown' };
     const result = await hmrcRti.submitFPSForRun(req.params.uuid, context);
@@ -329,7 +327,7 @@ exports.submitFPS = async (req, res, next) => {
 
 // ── HMRC RTI — EPS ────────────────────────────────────────────────────────────
 
-exports.downloadEPS = async (req, res, next) => {
+export const downloadEPS = async (req, res, next) => {
   try {
     const xmlBuffer = await hmrcRti.buildEPS(req.params.year, parseInt(req.params.month));
     const filename = `EPS_${req.params.year}_M${req.params.month}.xml`;
@@ -339,7 +337,7 @@ exports.downloadEPS = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.submitEPS = async (req, res, next) => {
+export const submitEPS = async (req, res, next) => {
   try {
     const context = { clientIp: getClientIp(req), userId: req.user?.username || req.user?.email || 'unknown' };
     const result = await hmrcRti.submitEPS(req.params.year, parseInt(req.params.month), context);
@@ -354,7 +352,7 @@ exports.submitEPS = async (req, res, next) => {
 
 // ── Submissions list ──────────────────────────────────────────────────────────
 
-exports.renderSubmissions = async (req, res, next) => {
+export const renderSubmissions = async (req, res, next) => {
   try {
     const PayrollSubmission = mdb.INTERNAL?.payrollSubmission;
     const submissions = await PayrollSubmission.find({})
@@ -372,7 +370,7 @@ exports.renderSubmissions = async (req, res, next) => {
 
 // ── People's Pension ──────────────────────────────────────────────────────────
 
-exports.downloadPensionCSV = async (req, res, next) => {
+export const downloadPensionCSV = async (req, res, next) => {
   try {
     const PayrollRun   = mdb.INTERNAL?.payrollRun;
     const PayrollEntry = mdb.INTERNAL?.payrollEntry;
@@ -392,7 +390,7 @@ exports.downloadPensionCSV = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.submitPension = async (req, res, next) => {
+export const submitPension = async (req, res, next) => {
   try {
     const PayrollRun   = mdb.INTERNAL?.payrollRun;
     const PayrollEntry = mdb.INTERNAL?.payrollEntry;
@@ -410,7 +408,7 @@ exports.submitPension = async (req, res, next) => {
 
 // ── Payroll settings ──────────────────────────────────────────────────────────
 
-exports.renderPayrollSettings = async (req, res, next) => {
+export const renderPayrollSettings = async (req, res, next) => {
   try {
     const PayrollConfig = mdb.INTERNAL?.payrollConfig;
     const raw = await PayrollConfig.findOne().lean();
@@ -433,7 +431,7 @@ exports.renderPayrollSettings = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.savePayrollSettings = async (req, res, next) => {
+export const savePayrollSettings = async (req, res, next) => {
   try {
     const PayrollConfig = mdb.INTERNAL?.payrollConfig;
     const {
@@ -489,7 +487,7 @@ exports.savePayrollSettings = async (req, res, next) => {
 
 // ── Tax rates management ──────────────────────────────────────────────────────
 
-exports.renderTaxRates = async (req, res, next) => {
+export const renderTaxRates = async (req, res, next) => {
   try {
     const PayrollTaxRates = mdb.INTERNAL?.payrollTaxRates;
     const rates = await PayrollTaxRates.find({}).sort({ taxYear: -1 }).lean();
@@ -500,7 +498,7 @@ exports.renderTaxRates = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.renderEditTaxRate = async (req, res, next) => {
+export const renderEditTaxRate = async (req, res, next) => {
   try {
     const PayrollTaxRates = mdb.INTERNAL?.payrollTaxRates;
     const isNew = req.params.year === 'new';
@@ -518,7 +516,7 @@ exports.renderEditTaxRate = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.saveEditTaxRate = async (req, res, next) => {
+export const saveEditTaxRate = async (req, res, next) => {
   try {
     const PayrollTaxRates = mdb.INTERNAL?.payrollTaxRates;
     const isNew = req.params.year === 'new';
@@ -552,7 +550,7 @@ exports.saveEditTaxRate = async (req, res, next) => {
 
 // ── Employee payroll settings ─────────────────────────────────────────────────
 
-exports.renderEmployeePayroll = async (req, res, next) => {
+export const renderEmployeePayroll = async (req, res, next) => {
   try {
     const Employee = mdb.INTERNAL?.employee;
     const employee = await Employee.findOne({ uuid: req.params.uuid }).lean();
@@ -576,7 +574,7 @@ exports.renderEmployeePayroll = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.saveEmployeePayroll = async (req, res, next) => {
+export const saveEmployeePayroll = async (req, res, next) => {
   try {
     const Employee = mdb.INTERNAL?.employee;
     const employee = await Employee.findOne({ uuid: req.params.uuid });
@@ -627,3 +625,5 @@ exports.saveEmployeePayroll = async (req, res, next) => {
     res.redirect(`/payroll/employee/${req.params.uuid}`);
   } catch (err) { next(err); }
 };
+
+export default { renderDashboard, renderRunList, createRun, renderRunDetail, calculateRun, overrideEntry, lockRun, unlockRun, postJournal, downloadFPS, submitFPS, downloadEPS, submitEPS, renderSubmissions, downloadPensionCSV, submitPension, renderPayrollSettings, savePayrollSettings, renderTaxRates, renderEditTaxRate, saveEditTaxRate, renderEmployeePayroll, saveEmployeePayroll };

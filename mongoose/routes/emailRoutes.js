@@ -1,8 +1,8 @@
-const express = require("express");
-const rateLimit = require("express-rate-limit");
+import express from 'express';
+import rateLimit from 'express-rate-limit';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/emailAdminController");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/emailAdminController.js';
 
 // The unsubscribe endpoint is public (token-authorised, no login). A dedicated
 // tight per-IP limiter blocks token-guessing and abuse on top of the global
@@ -49,4 +49,4 @@ router.post("/admin/emails/outbox/:uuid/cancel", authService.ensureRole("admin")
 router.get("/notifications/unsubscribe", unsubscribeLimiter, ctrl.getUnsubscribe);
 router.post("/notifications/unsubscribe", unsubscribeLimiter, ctrl.postUnsubscribe);
 
-module.exports = router;
+export default router;

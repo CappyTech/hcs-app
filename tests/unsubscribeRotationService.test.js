@@ -1,8 +1,8 @@
-const { describe, it, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
 
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const svc = require('../mongoose/services/unsubscribeRotationService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import svc from '../mongoose/services/unsubscribeRotationService.js';
 
 let users = [];
 let updates = [];

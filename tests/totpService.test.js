@@ -1,5 +1,5 @@
-const { describe, it, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * totpService requires otplib, qrcode, encryptionService, logger.
@@ -15,12 +15,14 @@ if (!process.env.ENCRYPTION_KEY) {
 }
 
 // Patch qrcode BEFORE totpService is required so it picks up the stub.
-const qrcode = require('qrcode');
+import qrcode from 'qrcode';
 const FAKE_QR_URL = 'data:image/png;base64,' + 'A'.repeat(128);
 mock.method(qrcode, 'toDataURL', async () => FAKE_QR_URL);
 
-const { generateTOTPSecret, generateQRCode, verifyTOTP } = require('../services/totpService');
-const { authenticator } = require('otplib');
+// Dynamic import so the env assignment and qrcode stub above run first
+// (static imports hoist).
+const { generateTOTPSecret, generateQRCode, verifyTOTP } = await import('../services/totpService.js');
+import { authenticator } from 'otplib';
 
 /* ── tests ─────────────────────────────────────────────────────────── */
 describe('totpService', () => {

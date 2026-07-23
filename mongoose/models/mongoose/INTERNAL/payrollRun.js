@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * payrollRun — a single payroll processing run for a given period.
@@ -76,7 +74,7 @@ payrollRunSchema.index({ taxYear: 1, taxMonth: 1, taxWeek: 1, frequency: 1 }, { 
 payrollRunSchema.index({ periodStart: 1, periodEnd: 1, frequency: 1 });
 payrollRunSchema.index({ status: 1 });
 
-module.exports = {
+export default {
   modelName: 'payrollRun',
   schema: payrollRunSchema
 };

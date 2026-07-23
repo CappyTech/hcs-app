@@ -1,11 +1,9 @@
-'use strict';
-
-const mdb = require('../services/mongooseDatabaseService');
+import mdb from '../services/mongooseDatabaseService.js';
 
 const PAGE_SIZE = 50;
 
 // Read-only viewer for the INTERNAL audit trail. Admin-only (enforced on the route).
-exports.getAuditLog = async (req, res, next) => {
+export const getAuditLog = async (req, res, next) => {
   try {
     const Audit = mdb.INTERNAL.auditLog;
 
@@ -42,3 +40,5 @@ exports.getAuditLog = async (req, res, next) => {
     next(err);
   }
 };
+
+export default { getAuditLog };

@@ -1,11 +1,12 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * taskService requires mdb at top-level.
  * Patch the mdb singleton before tests.
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import __taskService from '../mongoose/services/taskService.js';
 
 let savedTasks = [];
 let findResult = [];
@@ -58,7 +59,7 @@ const {
   getTaskCountsForUser,
   processRecurringTasks,
   advanceDate,
-} = require('../mongoose/services/taskService');
+} = __taskService;
 
 /* ── tests ─────────────────────────────────────────────────────────── */
 describe('taskService', () => {

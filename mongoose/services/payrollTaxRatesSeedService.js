@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * payrollTaxRatesSeedService.js
  *
@@ -23,7 +21,7 @@
  * All rates are fractions (0.20 = 20%).
  */
 
-const logger = require('../../services/loggerService');
+import logger from '../../services/loggerService.js';
 
 const DEFAULT_RATES = [
   {
@@ -150,4 +148,4 @@ async function ensureSeeded(PayrollTaxRates) {
   return { created, corrected };
 }
 
-module.exports = { DEFAULT_RATES, CORRECTIONS, ensureSeeded };
+export default { DEFAULT_RATES, CORRECTIONS, ensureSeeded };

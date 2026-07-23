@@ -1,6 +1,4 @@
-'use strict';
-
-const { AsyncLocalStorage } = require('async_hooks');
+import { AsyncLocalStorage } from 'async_hooks';
 
 // Carries the acting user + request context for the lifetime of a request so the
 // Mongoose audit plugin can attribute DB writes without threading `req` through
@@ -35,4 +33,4 @@ function runAs(ctx, fn) {
   return als.run(ctx, fn);
 }
 
-module.exports = { middleware, get, runAs };
+export default { middleware, get, runAs };

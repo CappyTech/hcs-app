@@ -1,9 +1,9 @@
-"use strict";
-
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const ropa = require("../config/ropaConfig");
-const jobScheduler = require("../services/jobSchedulerService");
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import ropa from '../config/ropaConfig.js';
+import jobScheduler from '../services/jobSchedulerService.js';
+import configService from '../../services/configService.js';
+import maintenanceService from '../../services/maintenanceService.js';
 
 const MODEL_LABEL = {
   purchase: (doc) =>
@@ -33,7 +33,7 @@ const DELETED_FILTER = {
   ],
 };
 
-exports.getDeletedItems = async (req, res, next) => {
+export const getDeletedItems = async (req, res, next) => {
   try {
     const filterModel = req.query.model || null;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -167,13 +167,13 @@ exports.getDeletedItems = async (req, res, next) => {
 };
 
 /** GET /admin/ui-guidelines — living component board */
-exports.getUiGuidelines = (req, res) => {
+export const getUiGuidelines = (req, res) => {
   res.render(path.join('tailwindcss', 'admin', 'uiGuidelines'), {
     title: 'UI Component Board',
   });
 };
 
-exports.getGdprOverview = (_req, res) => {
+export const getGdprOverview = (_req, res) => {
   res.render(path.join("tailwindcss", "admin", "gdpr"), {
     title: "GDPR Compliance",
     ropaVersion: ropa.version,
@@ -183,27 +183,27 @@ exports.getGdprOverview = (_req, res) => {
   });
 };
 
-exports.downloadRopa = (_req, res) => {
+export const downloadRopa = (_req, res) => {
   res.render(path.join('tailwindcss', 'admin', 'gdprRopa'), {
     title: 'Records of Processing Activities',
     ropa,
   });
 };
 
-exports.viewIncidentResponse = (_req, res) => {
+export const viewIncidentResponse = (_req, res) => {
   res.render(path.join("tailwindcss", "admin", "gdprIncidentResponse"), {
     title: "Incident Response Playbook",
   });
 };
 
-exports.viewDpiaTemplate = (_req, res) => {
+export const viewDpiaTemplate = (_req, res) => {
   res.render(path.join("tailwindcss", "admin", "gdprDpiaTemplate"), {
     title: "DPIA Template",
   });
 };
 
 /** GET /admin/jobs — background job status dashboard */
-exports.getJobs = async (req, res, next) => {
+export const getJobs = async (req, res, next) => {
   try {
     // Recent notification outbox summary alongside the jobs that feed it
     const Notification = mdb.INTERNAL.notification;
@@ -223,7 +223,7 @@ exports.getJobs = async (req, res, next) => {
 };
 
 /** GET /admin/security-events — paginated security audit trail */
-exports.getSecurityEvents = async (req, res, next) => {
+export const getSecurityEvents = async (req, res, next) => {
   try {
     const SecurityEvent = mdb.INTERNAL.securityEvent;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -256,9 +256,7 @@ exports.getSecurityEvents = async (req, res, next) => {
 };
 
 /** GET /admin/maintenance — runtime maintenance mode controls */
-exports.getMaintenance = (req, res) => {
-  const configService = require("../../services/configService");
-  const maintenanceService = require("../../services/maintenanceService");
+export const getMaintenance = (req, res) => {
   res.render(path.join("tailwindcss", "admin", "maintenance"), {
     title: "Maintenance Mode",
     active: maintenanceService.isMaintenanceOn(),
@@ -268,13 +266,11 @@ exports.getMaintenance = (req, res) => {
 };
 
 /** POST /admin/maintenance — toggle maintenance mode / set the notice banner */
-exports.postMaintenance = (req, res) => {
-  const configService = require("../../services/configService");
+export const postMaintenance = (req, res) => {
   if (configService.isFromStartupEnv("MAINTENANCE")) {
     req.flash("error", "MAINTENANCE is set by the deployment environment and cannot be changed here.");
     return res.redirect("/admin/maintenance");
   }
-  const maintenanceService = require("../../services/maintenanceService");
   let active;
   if (req.body.action === "enable") active = true;
   else if (req.body.action === "disable") active = false;
@@ -297,7 +293,7 @@ exports.postMaintenance = (req, res) => {
 };
 
 /** POST /admin/jobs/:name/run — manually trigger a job */
-exports.runJob = async (req, res) => {
+export const runJob = async (req, res) => {
   const name = req.params.name;
   try {
     const outcome = await jobScheduler.runNow(name);
@@ -313,3 +309,5 @@ exports.runJob = async (req, res) => {
   }
   res.redirect("/admin/jobs");
 };
+
+export default { getDeletedItems, getUiGuidelines, getGdprOverview, downloadRopa, viewIncidentResponse, viewDpiaTemplate, getJobs, getSecurityEvents, getMaintenance, postMaintenance, runJob };

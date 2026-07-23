@@ -1,7 +1,5 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const { cisSupplierQuery, isCisSupplier, isHmrcVerified } = require('../../services/cisService');
+import mdb from './mongooseDatabaseService.js';
+import { cisSupplierQuery, isCisSupplier, isHmrcVerified } from '../../services/cisService.js';
 
 async function getSubcontractorsOverview() {
   const Supplier = mdb.REST?.supplier;
@@ -96,4 +94,4 @@ async function getSubcontractorsOverview() {
   };
 }
 
-module.exports = { getSubcontractorsOverview };
+export default { getSubcontractorsOverview };

@@ -1,6 +1,4 @@
-'use strict';
-
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Singleton document — only one letterhead config exists per installation.
 // Use Letterhead.findOneAndUpdate({}, data, { upsert: true }) to save.
@@ -28,7 +26,7 @@ const letterheadSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-module.exports = {
+export default {
   modelName: 'letterhead',
   schema: letterheadSchema,
 };

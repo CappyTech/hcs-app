@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * kashflowSendClaimService.js
  *
@@ -20,7 +18,7 @@
  * never wedges the document permanently.
  */
 
-const logger = require('../../../services/loggerService');
+import logger from '../../../services/loggerService.js';
 
 const SEND_CLAIM_STALE_MS = 5 * 60 * 1000;
 
@@ -95,4 +93,4 @@ async function releaseSend(OcrDocument, paperlessId) {
   }
 }
 
-module.exports = { claimSend, releaseSend, SEND_CLAIM_STALE_MS };
+export default { claimSend, releaseSend, SEND_CLAIM_STALE_MS };

@@ -1,9 +1,7 @@
-'use strict';
-
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authService = require('../../services/authService');
-const ctrl = require('../controllers/companyDocsController');
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/companyDocsController.js';
 
 // All company-docs routes are admin-only
 const adminOnly = authService.ensureRole('admin');
@@ -20,4 +18,4 @@ router.post('/company-docs/policies/:uuid',        adminOnly, ctrl.postEditPolic
 router.post('/company-docs/policies/:uuid/delete', adminOnly, ctrl.postDeletePolicy);
 router.get('/company-docs/policies/:uuid/print',   adminOnly, ctrl.getPrintPolicy);
 
-module.exports = router;
+export default router;

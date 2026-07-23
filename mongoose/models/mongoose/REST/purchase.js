@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { purchase, uuidField } = require('@cappytech/hcs-schemas');
+import mongoose from 'mongoose';
+import { purchase, uuidField } from '@cappytech/hcs-schemas';
 
 const PaymentLineSchema = new mongoose.Schema(purchase.paymentLineFields, { _id: false });
 
@@ -13,7 +13,7 @@ const purchaseSchema = new mongoose.Schema({
 
 purchase.indexes.forEach(idx => purchaseSchema.index(idx.fields, idx.options));
 
-module.exports = {
+export default {
   modelName: 'purchase',
   schema: purchaseSchema
 };

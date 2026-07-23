@@ -1,8 +1,9 @@
 // services/paperless/paperlessClient.js
-const axios = require("axios");
-const tunnel = require("tunnel-ssh");
-const logger = require("../../../services/loggerService");
-const paperlessApiLog = require("../../../services/paperlessApiLogService");
+import axios from 'axios';
+import tunnel from 'tunnel-ssh';
+import logger from '../../../services/loggerService.js';
+import paperlessApiLog from '../../../services/paperlessApiLogService.js';
+import fs from 'fs';
 
 let sshServer = null;
 let localPort = null;
@@ -102,7 +103,6 @@ function makeClient() {
     const pass =
       process.env.PAPERLESS_SSH_PASS?.trim() || process.env.SSH_PASS?.trim();
     if (keyPath) {
-      const fs = require("fs");
       try {
         sshConfig.privateKey = fs.readFileSync(keyPath);
       } catch (err) {
@@ -618,4 +618,4 @@ async function warmCfCache(OcrDocument = null) {
   logger.info(`[paperlessClient] CF cache warmed from MongoDB fallback: ${map.size} field definitions`);
 }
 
-module.exports = { makeClient, invalidateCfCache: _invalidateCfCache, warmCfCache };
+export default { makeClient, invalidateCfCache: _invalidateCfCache, warmCfCache };

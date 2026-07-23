@@ -1,6 +1,4 @@
-'use strict';
-
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 /**
  * Platform-wide email branding (a single, admin-managed document).
@@ -32,4 +30,4 @@ const emailBrandingSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-module.exports = { modelName: 'emailBranding', schema: emailBrandingSchema };
+export default { modelName: 'emailBranding', schema: emailBrandingSchema };

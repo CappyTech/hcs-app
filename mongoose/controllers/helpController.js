@@ -1,6 +1,4 @@
-'use strict';
-
-const apiDocs = require('../config/apiDocsConfig');
+import apiDocs from '../config/apiDocsConfig.js';
 
 const helpContent = [
   // ─────────────────────────────────────────────────────────────────────────
@@ -1217,7 +1215,7 @@ const helpContent = [
   },
 ];
 
-exports.getHelp = function (req, res) {
+export const getHelp = function (req, res) {
   const role = req.user && req.user.role;
 
   // Map badge strings → which roles may read that article.
@@ -1299,7 +1297,7 @@ function methodBadgeSmall(method) {
   return '<span class="flex-shrink-0 inline-block text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ' + cls + '">' + method + '</span>';
 }
 
-exports.getApiDocs = function (req, res) {
+export const getApiDocs = function (req, res) {
   res.render('tailwindcss/help/api', {
     title: 'KashFlow API',
     apiDocs,
@@ -1308,3 +1306,5 @@ exports.getApiDocs = function (req, res) {
     methodBadgeSmall,
   });
 };
+
+export default { getHelp, getApiDocs };

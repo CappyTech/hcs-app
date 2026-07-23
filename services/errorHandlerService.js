@@ -1,6 +1,7 @@
-const logger = require("./loggerService");
+import logger from './loggerService.js';
 const { sanitize } = logger;
-const path = require("path");
+import path from 'path';
+import __maintenanceService from './maintenanceService.js';
 
 function truncate(value, max = 180) {
   const text = String(value || "");
@@ -83,7 +84,7 @@ const errorHandlerService = (error, req, res, next) => {
     if (statusCode === 503) {
       // Render the maintenance page in place — preserves the requested URL
       // (auto-refresh recovers the user) and returns a true 503 with Retry-After
-      return require("./maintenanceService").renderUnavailable(req, res, "unavailable");
+      return __maintenanceService.renderUnavailable(req, res, "unavailable");
     }
     res.render(path.join("tailwindcss", "error"), {
       title,
@@ -100,4 +101,4 @@ const errorHandlerService = (error, req, res, next) => {
   }
 };
 
-module.exports = errorHandlerService;
+export default errorHandlerService;

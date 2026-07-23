@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Internal KashFlow API reference.
  *
@@ -7262,4 +7260,4 @@ const apiDocs = [
   },
 ];
 
-module.exports = apiDocs;
+export default apiDocs;

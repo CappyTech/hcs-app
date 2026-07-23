@@ -1,5 +1,5 @@
 // mongoose/models/mongoose/PAPERLESS/OcrDocumentIngest.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const OcrDocumentIngestSchema = new mongoose.Schema({
   paperlessId: { type: Number, index: true, unique: true, required: true },
@@ -14,7 +14,7 @@ const OcrDocumentIngestSchema = new mongoose.Schema({
   error: { type: String, default: null },
 }, { timestamps: true });
 
-module.exports = {
+export default {
   modelName: 'OcrDocumentIngest',
   schema: OcrDocumentIngestSchema,
 };

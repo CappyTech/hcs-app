@@ -1,10 +1,8 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const path = require("path");
-const authService = require("../../services/authService");
-const controller = require(
-  path.join("..", "controllers", "subcontractorController"),
-);
+import path from 'path';
+import authService from '../../services/authService.js';
+import controller from '../controllers/subcontractorController.js';
 
 // Admin only — previously had NO auth middleware
 router.get(
@@ -28,4 +26,4 @@ router.post(
   controller.changeSupplier,
 );
 
-module.exports = router;
+export default router;

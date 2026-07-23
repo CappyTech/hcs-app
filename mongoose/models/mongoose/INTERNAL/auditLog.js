@@ -1,6 +1,4 @@
-'use strict';
-
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Append-only audit trail of INTERNAL database operations. Written by the
 // global audit plugin (mongoose/services/auditPlugin.js); never edited in place.
@@ -42,7 +40,7 @@ if (Number.isFinite(ttlDays) && ttlDays > 0) {
   auditLogSchema.index({ at: 1 }, { expireAfterSeconds: ttlDays * 86400 });
 }
 
-module.exports = {
+export default {
   modelName: 'auditLog',
   schema: auditLogSchema,
 };

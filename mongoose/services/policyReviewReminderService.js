@@ -1,7 +1,6 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import notificationService from '../../services/notificationService.js';
 
 const DEFAULT_DAYS_AHEAD = 30;
 
@@ -48,7 +47,6 @@ async function checkAndQueueReminders({ daysAhead = DEFAULT_DAYS_AHEAD } = {}) {
   });
 
   try {
-    const notificationService = require('../../services/notificationService');
     const today = now.toISOString().slice(0, 10);
     const result = await notificationService.enqueueForRoles(['admin'], {
       subject: `Policy review: ${duePolicies.length} polic${duePolicies.length === 1 ? 'y' : 'ies'} due for review`,
@@ -73,6 +71,8 @@ async function checkAndQueueReminders({ daysAhead = DEFAULT_DAYS_AHEAD } = {}) {
   return stats;
 }
 
-module.exports = {
+export default {
   checkAndQueueReminders,
 };
+
+export { checkAndQueueReminders };

@@ -1,11 +1,9 @@
-'use strict';
-
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const authService = require('../../services/authService');
-const helpController = require('../controllers/helpController');
+import authService from '../../services/authService.js';
+import helpController from '../controllers/helpController.js';
 
 router.get('/help', authService.ensureAnyRole(), helpController.getHelp);
 router.get('/help/api', authService.ensureRole('admin'), helpController.getApiDocs);
 
-module.exports = router;
+export default router;

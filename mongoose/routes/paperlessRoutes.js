@@ -1,9 +1,9 @@
-const express = require("express");
-const rateLimit = require("express-rate-limit");
-const { getClientIp } = require("../../services/ipService");
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import { getClientIp } from '../../services/ipService.js';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/paperlessController");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/paperlessController.js';
 
 // Stricter rate limiter for the grab trigger (fires background API calls)
 const grabLimiter = rateLimit({
@@ -42,4 +42,4 @@ router.post("/paperless/resolve-numbers", ...paperlessGuard, ctrl.resolveNumbers
 router.post("/paperless/match-references", ...paperlessGuard, ctrl.matchReferences);
 router.post("/paperless/clear-orphans",   ...paperlessGuard, ctrl.clearOrphans);
 
-module.exports = router;
+export default router;

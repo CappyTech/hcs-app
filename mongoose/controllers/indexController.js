@@ -1,12 +1,12 @@
-const path = require("path");
-const listConfig = require("../config/listControllerConfig");
-const customTiles = require("../config/dashboardTilesConfig");
-const taskService = require("../services/taskService");
-const holidayService = require("../services/holidayService");
-const { getFrequentPages } = require("../services/sessionActivityService");
-const rbac = require("../config/rolePermissionsConfig");
-const departments = require("../config/departmentsConfig");
-const { endOfToday, endOfWeek, endOfMonth } = require("date-fns");
+import path from 'path';
+import listConfig from '../config/listControllerConfig.js';
+import customTiles from '../config/dashboardTilesConfig.js';
+import taskService from '../services/taskService.js';
+import holidayService from '../services/holidayService.js';
+import { getFrequentPages } from '../services/sessionActivityService.js';
+import rbac from '../config/rolePermissionsConfig.js';
+import departments from '../config/departmentsConfig.js';
+import { endOfToday, endOfWeek, endOfMonth } from 'date-fns';
 
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
@@ -60,7 +60,7 @@ const getCreateModels = (userRole) => {
 };
 
 // Home / Index Page
-exports.renderIndex = async (req, res, next) => {
+export const renderIndex = async (req, res, next) => {
   try {
     const nextHoliday = await holidayService.getNextHoliday();
     let tasks = {
@@ -128,7 +128,7 @@ exports.renderIndex = async (req, res, next) => {
 };
 
 // Quick-add task from home page
-exports.quickAddTask = async (req, res, next) => {
+export const quickAddTask = async (req, res, next) => {
   try {
     const title = (req.body.title || "").trim();
     if (!title) {
@@ -151,7 +151,7 @@ exports.quickAddTask = async (req, res, next) => {
 };
 
 // Complete a task from home page
-exports.completeTask = async (req, res, next) => {
+export const completeTask = async (req, res, next) => {
   try {
     const result = await taskService.completeTask(
       req.params.uuid,
@@ -170,7 +170,7 @@ exports.completeTask = async (req, res, next) => {
 
 // Generic department dashboard renderer — one route per departmentsConfig
 // entry is wired up in indexRoutes.js.
-exports.renderDepartment = (slug) => {
+export const renderDepartment = (slug) => {
   const dept = departments[slug];
   return (req, res, next) => {
     const userRole = req.user?.role || "subcontractor";
@@ -184,3 +184,5 @@ exports.renderDepartment = (slug) => {
     });
   };
 };
+
+export default { renderIndex, quickAddTask, completeTask, renderDepartment };

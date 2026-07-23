@@ -1,7 +1,5 @@
-'use strict';
-
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
 // ── hmrcRtiService — pure-function tests ──────────────────────────────────────
 //
@@ -238,9 +236,10 @@ describe('EPS XML structure', () => {
 if (!process.env.ENCRYPTION_KEY) {
   process.env.ENCRYPTION_KEY = 'test-key-for-unit-tests-only';
 }
-const { encrypt } = require('../services/encryptionService');
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const { buildFPSForRun, buildEPS, buildFraudHeaders } = require('../services/hmrcRtiService');
+// Dynamic imports so the env assignment above runs first (static imports hoist).
+const { encrypt } = await import('../services/encryptionService.js');
+const mdb = (await import('../mongoose/services/mongooseDatabaseService.js')).default;
+const { buildFPSForRun, buildEPS, buildFraudHeaders } = await import('../services/hmrcRtiService.js');
 
 // Minimal chainable model mocks matching the query shapes the service uses.
 function findOneModel(doc) {

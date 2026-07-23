@@ -1,8 +1,8 @@
 // services/logRequestDetailsService.js
 
-const logger = require("./loggerService");
+import logger from './loggerService.js';
 const { sanitize } = logger;
-const { getClientIp } = require("./ipService");
+import { getClientIp } from './ipService.js';
 
 const SESSION_COOKIE_NAME = "hms.sid";
 
@@ -146,4 +146,4 @@ const logRequestDetailsService = (req, res, next) => {
   next();
 };
 
-module.exports = logRequestDetailsService;
+export default logRequestDetailsService;

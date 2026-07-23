@@ -1,6 +1,4 @@
-'use strict';
-
-const notificationService = require('../../services/notificationService');
+import notificationService from '../../services/notificationService.js';
 
 /**
  * CIS monthly-return deadline reminders.
@@ -71,4 +69,4 @@ async function checkAndQueueReminders(now = new Date()) {
   return { ...result, daysUntil, deadline: deadline.toISOString().slice(0, 10) };
 }
 
-module.exports = { checkAndQueueReminders, nextDeadline, periodLabel };
+export default { checkAndQueueReminders, nextDeadline, periodLabel };

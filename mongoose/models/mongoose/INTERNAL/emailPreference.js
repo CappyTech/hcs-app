@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * Per-user subscription state for a single emailType.
@@ -34,4 +32,4 @@ const emailPreferenceSchema = new mongoose.Schema(
 // One preference per (user, type).
 emailPreferenceSchema.index({ userId: 1, typeKey: 1 }, { unique: true });
 
-module.exports = { modelName: 'emailPreference', schema: emailPreferenceSchema };
+export default { modelName: 'emailPreference', schema: emailPreferenceSchema };

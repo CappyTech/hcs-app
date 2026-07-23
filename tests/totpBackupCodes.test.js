@@ -1,16 +1,18 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 // totpService transitively requires encryptionService, which needs a key at load time
 if (!process.env.ENCRYPTION_KEY) {
   process.env.ENCRYPTION_KEY = 'test-key-for-totp-service-unit-tests-32ch';
 }
 
+// Dynamic import so the env assignment above runs first (static imports hoist).
+const __totpService = (await import('../services/totpService.js')).default;
+
 const {
   generateBackupCodes,
   normalizeBackupCode,
   verifyAndConsumeBackupCode,
-} = require('../services/totpService');
+} = __totpService;
 
 describe('totpService backup codes', () => {
   it('generates the requested number of unique formatted codes', async () => {

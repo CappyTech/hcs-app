@@ -1,12 +1,10 @@
-'use strict';
-
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const emailService = require('./emailService');
-const logger = require('./loggerService');
-const emailTypeService = require('../mongoose/services/emailTypeService');
-const emailPreferenceService = require('../mongoose/services/emailPreferenceService');
-const emailBrandingService = require('../mongoose/services/emailBrandingService');
-const unsubscribeTokenService = require('../mongoose/services/unsubscribeTokenService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import emailService from './emailService.js';
+import logger from './loggerService.js';
+import emailTypeService from '../mongoose/services/emailTypeService.js';
+import emailPreferenceService from '../mongoose/services/emailPreferenceService.js';
+import emailBrandingService from '../mongoose/services/emailBrandingService.js';
+import unsubscribeTokenService from '../mongoose/services/unsubscribeTokenService.js';
 
 /**
  * Central notification service (email outbox).
@@ -398,7 +396,7 @@ function renderPreviewDocument(type, branding = null) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Email preview — ${safeTitle}</title></head><body style="margin:0;padding:24px;background:#f3f4f6;">${brand.header}${html}${brand.footer}${footer.html}${AUTOMATED_NOTICE_HTML}</body></html>`;
 }
 
-module.exports = {
+export default {
   enqueue,
   enqueueForRoles,
   processOutbox,
@@ -409,3 +407,5 @@ module.exports = {
   renderPreviewDocument,
   PREVIEW_CSP,
 };
+
+export { enqueue, enqueueForRoles, processOutbox, wrapTemplate, buildFooter, resolveBranding, baseUrl, renderPreviewDocument, PREVIEW_CSP };

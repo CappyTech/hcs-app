@@ -1,9 +1,9 @@
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const taxService = require("../../services/taxService");
-const cisMappings = require("../config/cisMappings");
-const { whtRateLabel } = require("../../services/cisService");
-const { formatInTimeZone } = require("date-fns-tz");
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import taxService from '../../services/taxService.js';
+import cisMappings from '../config/cisMappings.js';
+import { whtRateLabel } from '../../services/cisService.js';
+import { formatInTimeZone } from 'date-fns-tz';
 
 // Tax months run April(1) → March(12)
 const TAX_MONTH_NAMES = ["April", "May", "June", "July", "August", "September",
@@ -29,7 +29,7 @@ const monthNames = [
 
 // Note: Month name mapping handled by CIS dashboard utilities; not needed here.
 
-exports.renderMonthlyReturnsForm = async (req, res, next) => {
+export const renderMonthlyReturnsForm = async (req, res, next) => {
   try {
     // A supplier appears in CIS reports only if they have a valid HMRC
     // verification number (V + 7-10 digits, optional /A-ZZ suffix).
@@ -120,7 +120,7 @@ exports.renderMonthlyReturnsForm = async (req, res, next) => {
   }
 };
 
-exports.renderMonthlyReturns = async (req, res, next) => {
+export const renderMonthlyReturns = async (req, res, next) => {
   try {
     const { month, year, uuid } = req.params;
     const debug = !!req.query.debug;
@@ -242,7 +242,7 @@ exports.renderMonthlyReturns = async (req, res, next) => {
   }
 };
 
-exports.renderYearlyReturns = async (req, res, next) => {
+export const renderYearlyReturns = async (req, res, next) => {
   try {
     const { year, uuid } = req.params;
     const debug = !!req.query.debug;
@@ -449,7 +449,7 @@ function buildSubEntry(supplier, purchases) {
   };
 }
 
-exports.renderYearlyReturnsForAll = async (req, res, next) => {
+export const renderYearlyReturnsForAll = async (req, res, next) => {
   try {
     const { year } = req.params;
     if (!year) return res.status(400).send("Year required");
@@ -502,7 +502,7 @@ exports.renderYearlyReturnsForAll = async (req, res, next) => {
   }
 };
 
-exports.renderMonthlyReturnsForAll = async (req, res, next) => {
+export const renderMonthlyReturnsForAll = async (req, res, next) => {
   try {
     const { year, month } = req.params;
     if (!year || !month) return res.status(400).send("Year and Month required");
@@ -557,3 +557,5 @@ exports.renderMonthlyReturnsForAll = async (req, res, next) => {
     next(err);
   }
 };
+
+export default { renderMonthlyReturnsForm, renderMonthlyReturns, renderYearlyReturns, renderYearlyReturnsForAll, renderMonthlyReturnsForAll };

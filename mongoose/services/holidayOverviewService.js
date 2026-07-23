@@ -1,6 +1,4 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
+import mdb from './mongooseDatabaseService.js';
 
 /**
  * Holiday Overview landing page data: a hub that pulls together the three
@@ -175,4 +173,4 @@ async function getHolidayOverview({ upcomingDays = 60, lowBalanceThreshold = 3 }
   };
 }
 
-module.exports = { getHolidayOverview };
+export default { getHolidayOverview };

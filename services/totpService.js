@@ -1,7 +1,9 @@
-const { authenticator } = require("otplib");
-const qrcode = require("qrcode");
-const encryptionService = require("./encryptionService");
-const logger = require("./loggerService");
+import { authenticator } from 'otplib';
+import qrcode from 'qrcode';
+import encryptionService from './encryptionService.js';
+import logger from './loggerService.js';
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 
 /**
  * Generates a TOTP (Time-Based One-Time Password) secret for a user, encrypts it,
@@ -73,8 +75,6 @@ const verifyTOTP = (secret, token) => {
  * @returns {Promise<{ plain: string[], hashed: string[] }>}
  */
 const generateBackupCodes = async (count = 10) => {
-  const crypto = require("crypto");
-  const bcrypt = require("bcrypt");
   const plain = Array.from({ length: count }, () => {
     // 10 hex chars grouped as XXXXX-XXXXX for readability
     const hex = crypto.randomBytes(5).toString("hex").toUpperCase();
@@ -93,7 +93,6 @@ const normalizeBackupCode = (input) =>
  * @returns {Promise<{ ok: boolean, remaining: string[] }>} remaining hashes after use
  */
 const verifyAndConsumeBackupCode = async (input, hashedCodes = []) => {
-  const bcrypt = require("bcrypt");
   const normalized = normalizeBackupCode(input);
   if (normalized.length < 8) return { ok: false, remaining: hashedCodes };
   for (let i = 0; i < hashedCodes.length; i++) {
@@ -104,7 +103,7 @@ const verifyAndConsumeBackupCode = async (input, hashedCodes = []) => {
   return { ok: false, remaining: hashedCodes };
 };
 
-module.exports = {
+export default {
   generateQRCode,
   generateTOTPSecret,
   verifyTOTP,
@@ -112,3 +111,5 @@ module.exports = {
   normalizeBackupCode,
   verifyAndConsumeBackupCode,
 };
+
+export { generateQRCode, generateTOTPSecret, verifyTOTP, generateBackupCodes, normalizeBackupCode, verifyAndConsumeBackupCode };

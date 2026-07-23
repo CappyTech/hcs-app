@@ -1,7 +1,5 @@
-'use strict';
-
-const axios = require('axios');
-const logger = require('../../services/loggerService');
+import axios from 'axios';
+import logger from '../../services/loggerService.js';
 
 const SYNC_BASE = (
   process.env.HCS_SYNC_BASE_URL || 'https://sync.heroncs.co.uk'
@@ -43,4 +41,4 @@ async function pullEntity(entityType, entityId) {
   return data;
 }
 
-module.exports = { pullEntity };
+export default { pullEntity };

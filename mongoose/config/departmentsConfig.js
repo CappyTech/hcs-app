@@ -23,7 +23,7 @@
  * Object order defines nav + route order. Keep this file dependency-free
  * (it is required by rolePermissionsConfig, which everything else imports).
  */
-module.exports = {
+export default {
   admin: {
     title: 'Admin',
     navLabel: 'Admin',

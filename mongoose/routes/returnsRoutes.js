@@ -1,7 +1,7 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/returnsController");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/returnsController.js';
 
 // Monthly returns selection form
 router.get(
@@ -38,4 +38,4 @@ router.get(
   ctrl.renderMonthlyReturns,
 );
 
-module.exports = router;
+export default router;

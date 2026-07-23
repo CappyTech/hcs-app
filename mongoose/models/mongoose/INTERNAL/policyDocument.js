@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 // Single source of truth for category options (consumed by the form + grouping).
 const POLICY_CATEGORIES = [
@@ -45,7 +43,7 @@ const policyDocumentSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-module.exports = {
+export default {
   modelName: 'policyDocument',
   schema: policyDocumentSchema,
   POLICY_CATEGORIES,

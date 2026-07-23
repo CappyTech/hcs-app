@@ -1,8 +1,8 @@
-const axios = require('axios');
-const { format } = require('date-fns');
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
-const crypto = require('crypto');
+import axios from 'axios';
+import { format } from 'date-fns';
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import crypto from 'crypto';
 const HOLIDAY_API_URL = 'https://www.gov.uk/bank-holidays.json';
 
 // Custom holidays are still in memory for now
@@ -194,4 +194,4 @@ const holidayService = {
 
 };
 
-module.exports = holidayService;
+export default holidayService;

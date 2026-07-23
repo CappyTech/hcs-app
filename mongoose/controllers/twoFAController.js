@@ -1,8 +1,10 @@
-const mongoose = require("mongoose");
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const logger = require("../../services/loggerService");
-const encryptionService = require("../../services/encryptionService");
+import mongoose from 'mongoose';
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import encryptionService from '../../services/encryptionService.js';
+import totpService from '../../services/totpService.js';
+import __auditLogService from '../../services/auditLogService.js';
 
 function getSafeNext(raw) {
   const v = String(raw || "").trim();
@@ -19,7 +21,7 @@ function getSafeNext(raw) {
   return v;
 }
 
-exports.render2FAPage = (req, res) => {
+export const render2FAPage = (req, res) => {
   if (req.session.user) {
     return res.redirect("/");
   }
@@ -37,7 +39,7 @@ exports.render2FAPage = (req, res) => {
   });
 };
 
-exports.verify2FA = async (req, res) => {
+export const verify2FA = async (req, res) => {
   try {
     const code = req.body.totpToken;
     const pending = req.session.userPending2FA;
@@ -57,7 +59,6 @@ exports.verify2FA = async (req, res) => {
 
     const decryptedSecret = encryptionService.decrypt(user.totpSecret);
 
-    const totpService = require("../../services/totpService");
     let isValid = totpService.verifyTOTP(decryptedSecret, code);
 
     // Fallback: accept a one-time backup code (consumed on use)
@@ -68,7 +69,7 @@ exports.verify2FA = async (req, res) => {
         await user.save();
         isValid = true;
         logger.warn(`[2fa] Backup code used by ${user.username} — ${result.remaining.length} remaining`);
-        require("../../services/auditLogService").record("login_success", req, {
+        __auditLogService.record("login_success", req, {
           userId: user._id, username: user.username,
           meta: { twoFactor: true, backupCodeUsed: true, backupCodesRemaining: result.remaining.length },
         });
@@ -148,3 +149,5 @@ exports.verify2FA = async (req, res) => {
     return res.redirect("/user/login");
   }
 };
+
+export default { render2FAPage, verify2FA };

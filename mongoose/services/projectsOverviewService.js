@@ -1,7 +1,6 @@
-'use strict';
-
-const mdb = require('./mongooseDatabaseService');
-const { computeFinancials } = require('./kashflowProjectService');
+import mdb from './mongooseDatabaseService.js';
+import __kashflowProjectService from './kashflowProjectService.js';
+const { computeFinancials } = __kashflowProjectService;
 
 async function getProjectsOverview() {
   const Contract = mdb.INTERNAL?.contract;
@@ -129,4 +128,4 @@ async function getProjectsOverview() {
   };
 }
 
-module.exports = { getProjectsOverview };
+export default { getProjectsOverview };

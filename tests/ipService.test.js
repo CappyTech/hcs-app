@@ -1,6 +1,6 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { normalizeIp, getClientIp } = require('../services/ipService');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { normalizeIp, getClientIp } from '../services/ipService.js';
 
 // ── normalizeIp ──────────────────────────────────────────────────────────────
 

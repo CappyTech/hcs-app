@@ -1,7 +1,5 @@
-'use strict';
-
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
 // peoplesPensionService → encryptionService throws if ENCRYPTION_KEY is missing
 if (!process.env.ENCRYPTION_KEY) {
@@ -14,7 +12,8 @@ if (!process.env.ENCRYPTION_KEY) {
 // by inspecting the exported submitViaAPI stub and the CSV format via a
 // lightweight internal reimplementation of the helpers.
 
-const pensionSvc = require('../services/peoplesPensionService');
+// Dynamic import so the env assignment above runs first (static imports hoist).
+const pensionSvc = (await import('../services/peoplesPensionService.js')).default;
 
 // ── submitViaAPI stub ─────────────────────────────────────────────────────────
 

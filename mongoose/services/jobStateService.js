@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * jobStateService — read/write persisted last-run state for background jobs.
  *
@@ -8,8 +6,8 @@
  * or DB error never throws into a job run.
  */
 
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
 function model() {
   return mdb.INTERNAL && mdb.INTERNAL.jobState;
@@ -43,4 +41,4 @@ async function record(name, { outcome = 'ok', result = null, error = null } = {}
   }
 }
 
-module.exports = { get, record };
+export default { get, record };

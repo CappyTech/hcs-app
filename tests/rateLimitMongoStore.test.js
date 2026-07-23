@@ -1,11 +1,11 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * The store reaches MongoDB through the mdb singleton's INTERNAL connection;
  * patch it with a fake native collection.
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
 
 let coll;
 
@@ -28,7 +28,7 @@ function patchMdb({ connected = true } = {}) {
   };
 }
 
-const RateLimitMongoStore = require('../services/rateLimitMongoStore');
+import RateLimitMongoStore from '../services/rateLimitMongoStore.js';
 
 function makeStore() {
   const store = new RateLimitMongoStore({ prefix: 'test:' });

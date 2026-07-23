@@ -1,10 +1,9 @@
-'use strict';
-
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import __payrollTaxRatesSeedService from '../mongoose/services/payrollTaxRatesSeedService.js';
 
 const { DEFAULT_RATES, CORRECTIONS, ensureSeeded } =
-  require('../mongoose/services/payrollTaxRatesSeedService');
+  __payrollTaxRatesSeedService;
 
 // ── Shipped default data — guard against statutory regressions ──────────────
 

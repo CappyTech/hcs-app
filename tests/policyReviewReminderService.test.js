@@ -1,8 +1,8 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const notificationService = require('../services/notificationService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import notificationService from '../services/notificationService.js';
 
 let enqueueCalls = [];
 const origEnqueueForRoles = notificationService.enqueueForRoles;
@@ -24,7 +24,7 @@ function patchAll({ policies = [] } = {}) {
   };
 }
 
-const { checkAndQueueReminders } = require('../mongoose/services/policyReviewReminderService');
+import { checkAndQueueReminders } from '../mongoose/services/policyReviewReminderService.js';
 
 function daysFromNow(days) {
   const d = new Date();

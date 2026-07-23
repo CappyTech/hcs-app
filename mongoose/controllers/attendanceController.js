@@ -1,7 +1,7 @@
-const path = require("path");
-const { format } = require("date-fns");
-const { formatInTimeZone } = require("date-fns-tz");
-const attendanceService = require("../services/attendanceService");
+import path from 'path';
+import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
+import attendanceService from '../services/attendanceService.js';
 
 /**
  * Strict "YYYY-MM-DD" parser returning a server-local-midnight Date, or null.
@@ -14,9 +14,13 @@ function parseYMDLocal(s) {
   const dt = new Date(y, m - 1, d);
   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d ? dt : null;
 }
-const mdb = require("../services/mongooseDatabaseService");
-const logger = require("../../services/loggerService");
-const { scopeQuery } = require("../../services/dataScopingService");
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import { scopeQuery } from '../../services/dataScopingService.js';
+import holidayAccrualService from '../services/holidayAccrualService.js';
+import __paperlessUpdateService from '../services/paperless/paperlessUpdateService.js';
+import __paperlessClient from '../services/paperless/paperlessClient.js';
+import mongoose from 'mongoose';
 
 /**
  * Filter attendance records array to only those the user owns.
@@ -34,7 +38,7 @@ async function filterAttendanceForUser(req, records) {
   });
 }
 
-exports.getDailyAttendance = async (req, res, next) => {
+export const getDailyAttendance = async (req, res, next) => {
   const date = req.params.date || format(new Date(), "yyyy-MM-dd");
   try {
     let attendance = await attendanceService.getAttendanceForDay(date);
@@ -49,7 +53,7 @@ exports.getDailyAttendance = async (req, res, next) => {
   }
 };
 
-exports.getWeeklyAttendance = async (req, res, next) => {
+export const getWeeklyAttendance = async (req, res, next) => {
   try {
     const yearParam = parseInt(req.params.year);
     const weekParam = parseInt(req.params.week);
@@ -300,7 +304,7 @@ function stripPayroll(record) {
   return clone;
 }
 
-exports.approveAttendance = async (req, res, next) => {
+export const approveAttendance = async (req, res, next) => {
   try {
     const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
       { uuid: req.params.uuid, status: "pending" },
@@ -312,7 +316,6 @@ exports.approveAttendance = async (req, res, next) => {
       return res.status(404).redirect("back");
     }
     // Trigger holiday accrual now that it's approved
-    const holidayAccrualService = require("../services/holidayAccrualService");
     await holidayAccrualService.updateAccrualFromAttendance(updated);
     logger.info(`[attendanceController] Attendance ${req.params.uuid} approved`);
     res.redirect("back");
@@ -322,7 +325,7 @@ exports.approveAttendance = async (req, res, next) => {
   }
 };
 
-exports.rejectAttendance = async (req, res, next) => {
+export const rejectAttendance = async (req, res, next) => {
   try {
     const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
       { uuid: req.params.uuid, status: "pending" },
@@ -341,7 +344,7 @@ exports.rejectAttendance = async (req, res, next) => {
   }
 };
 
-exports.bulkApproveAttendance = async (req, res, next) => {
+export const bulkApproveAttendance = async (req, res, next) => {
   try {
     const { weekStart, weekEnd } = req.body;
     if (!weekStart || !weekEnd) {
@@ -361,7 +364,6 @@ exports.bulkApproveAttendance = async (req, res, next) => {
 
     // Trigger holiday accrual for each approved record
     if (result.modifiedCount > 0) {
-      const holidayAccrualService = require("../services/holidayAccrualService");
       const approvedRecords = await mdb.INTERNAL.attendance.find({
         date: { $gte: start, $lte: end },
         status: "approved",
@@ -385,7 +387,7 @@ exports.bulkApproveAttendance = async (req, res, next) => {
 
 // ── Self-service attendance submission ──────────────────────────────────
 
-exports.renderSubmitAttendance = async (req, res, next) => {
+export const renderSubmitAttendance = async (req, res, next) => {
   try {
     const role = req.user.role;
     const isEmployee = role === "employee";
@@ -428,7 +430,7 @@ exports.renderSubmitAttendance = async (req, res, next) => {
   }
 };
 
-exports.submitAttendance = async (req, res, next) => {
+export const submitAttendance = async (req, res, next) => {
   try {
     const role = req.user.role;
     const isEmployee = role === "employee";
@@ -533,8 +535,8 @@ async function saveStatementInvoiceNumbers(paperlessId, numbers) {
 
   // Best-effort sync back to Paperless-ngx
   try {
-    const { updatePaperlessWithKashFlowInfo } = require("../services/paperless/paperlessUpdateService");
-    const { makeClient } = require("../services/paperless/paperlessClient");
+    const { updatePaperlessWithKashFlowInfo } = __paperlessUpdateService;
+    const { makeClient } = __paperlessClient;
     const api = makeClient();
     await api.updateDocumentCustomFields(paperlessId, {
       "Invoice Number": csvValue,
@@ -548,7 +550,7 @@ async function saveStatementInvoiceNumbers(paperlessId, numbers) {
  * POST /statement/:paperlessId/add-purchase
  * Adds a purchase number to the statement's "Invoice Number" custom field.
  */
-exports.addStatementPurchase = async (req, res, next) => {
+export const addStatementPurchase = async (req, res, next) => {
   try {
     const paperlessId = parseInt(req.params.paperlessId, 10);
     const purchaseNumber = String(req.body.purchaseNumber || "").trim();
@@ -594,7 +596,7 @@ exports.addStatementPurchase = async (req, res, next) => {
  * POST /statement/:paperlessId/remove-purchase
  * Removes a purchase number from the statement's "Invoice Number" custom field.
  */
-exports.removeStatementPurchase = async (req, res, next) => {
+export const removeStatementPurchase = async (req, res, next) => {
   try {
     const paperlessId = parseInt(req.params.paperlessId, 10);
     const purchaseNumber = String(req.body.purchaseNumber || "").trim();
@@ -635,7 +637,7 @@ const VALID_TYPES = ["work", "training", "sick", "holiday", "off", "leave"];
  * Update fields on a pending attendance record. Returns JSON.
  * Only admin/accountant may call this (enforced in routes).
  */
-exports.updateAttendance = async (req, res, next) => {
+export const updateAttendance = async (req, res, next) => {
   try {
     const record = await mdb.INTERNAL.attendance
       .findOne({ uuid: req.params.uuid })
@@ -718,7 +720,7 @@ exports.updateAttendance = async (req, res, next) => {
  * Create a new pending attendance record via inline cell editor. Returns JSON.
  * Only admin/accountant may call this (enforced in routes).
  */
-exports.inlineCreateAttendance = async (req, res, next) => {
+export const inlineCreateAttendance = async (req, res, next) => {
   try {
     const {
       employeeId,
@@ -768,7 +770,6 @@ exports.inlineCreateAttendance = async (req, res, next) => {
     }
     if (subcontractorId) {
       // subcontractorId may be a UUID (from the weekly table) — look up the supplier ObjectId
-      const mongoose = require("mongoose");
       if (mongoose.Types.ObjectId.isValid(subcontractorId)) {
         data.subcontractorId = subcontractorId;
       } else {
@@ -834,7 +835,7 @@ exports.inlineCreateAttendance = async (req, res, next) => {
  * POST /assignment/inline
  * Create a new assignment for this week's contract. Returns JSON.
  */
-exports.inlineCreateAssignment = async (req, res, next) => {
+export const inlineCreateAssignment = async (req, res, next) => {
   try {
     const { contractId, weekStart, title, description, assignedEmployees, assignedSubcontractors, estimatedHours, status } = req.body;
 
@@ -873,7 +874,7 @@ exports.inlineCreateAssignment = async (req, res, next) => {
  * PATCH /assignment/:uuid
  * Update fields on an assignment. Returns JSON.
  */
-exports.updateAssignment = async (req, res, next) => {
+export const updateAssignment = async (req, res, next) => {
   try {
     const record = await mdb.INTERNAL.assignment.findOne({ uuid: req.params.uuid }).lean();
     if (!record) return res.status(404).json({ success: false, error: 'Assignment not found.' });
@@ -914,7 +915,7 @@ const VALID_USAGE_TYPES = ['site', 'delivery', 'maintenance', 'office', 'other']
  * POST /vehicle-deployment/inline
  * Create a new vehicle deployment record for a specific vehicle and date. Returns JSON.
  */
-exports.inlineCreateVehicleDeployment = async (req, res, next) => {
+export const inlineCreateVehicleDeployment = async (req, res, next) => {
   try {
     const { vehicleId, date, driverEmployeeId, driverSubcontractorId, locationId, contractId, startMileage, endMileage, usageType, notes } = req.body;
 
@@ -967,7 +968,7 @@ exports.inlineCreateVehicleDeployment = async (req, res, next) => {
  * PATCH /vehicle-deployment/:uuid
  * Update a vehicle deployment record. Returns JSON.
  */
-exports.updateVehicleDeployment = async (req, res, next) => {
+export const updateVehicleDeployment = async (req, res, next) => {
   try {
     const record = await mdb.INTERNAL.vehicleDeployment.findOne({ uuid: req.params.uuid }).lean();
     if (!record) return res.status(404).json({ success: false, error: 'Vehicle deployment not found.' });
@@ -1010,3 +1011,5 @@ exports.updateVehicleDeployment = async (req, res, next) => {
   }
 };
 
+
+export default { getDailyAttendance, getWeeklyAttendance, approveAttendance, rejectAttendance, bulkApproveAttendance, renderSubmitAttendance, submitAttendance, addStatementPurchase, removeStatementPurchase, updateAttendance, inlineCreateAttendance, inlineCreateAssignment, updateAssignment, inlineCreateVehicleDeployment, updateVehicleDeployment };

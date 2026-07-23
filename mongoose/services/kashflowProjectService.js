@@ -1,11 +1,9 @@
-'use strict';
-
-const logger = require('../../services/loggerService');
-const emailService = require('../../services/emailService');
-const kfSession = require('../../services/kashflowSessionService');
+import logger from '../../services/loggerService.js';
+import emailService from '../../services/emailService.js';
+import kfSession from '../../services/kashflowSessionService.js';
 const axios = kfSession.kfAxios;
-const mdb = require('./mongooseDatabaseService');
-const hcsSyncService = require('./hcsSyncService');
+import mdb from './mongooseDatabaseService.js';
+import hcsSyncService from './hcsSyncService.js';
 
 const KF_BASE = (
   process.env.KASHFLOW_API_BASE_URL || 'https://api.kashflow.com/v2'
@@ -282,4 +280,4 @@ async function refreshLocalProject(projectNumber) {
   }
 }
 
-module.exports = { checkProjectFinancials, markProjectComplete, computeFinancials };
+export default { checkProjectFinancials, markProjectComplete, computeFinancials };

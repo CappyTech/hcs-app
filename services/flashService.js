@@ -1,4 +1,4 @@
-module.exports = (req, res, next) => {
+export default (req, res, next) => {
   let flashData = {};
   const raw = req.cookies?.__flash;
   if (raw) {

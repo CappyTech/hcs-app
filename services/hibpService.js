@@ -1,8 +1,6 @@
-'use strict';
-
-const axios = require('axios');
-const crypto = require('crypto');
-const logger = require('./loggerService');
+import axios from 'axios';
+import crypto from 'crypto';
+import logger from './loggerService.js';
 
 /**
  * Have I Been Pwned breached-password check (k-anonymity model).
@@ -60,8 +58,10 @@ async function isPasswordPwned(password, { fetch = fetchRange } = {}) {
   }
 }
 
-module.exports = {
+export default {
   isPasswordPwned,
   countInRange,
   PWNED_MESSAGE,
 };
+
+export { isPasswordPwned, countInRange, PWNED_MESSAGE };

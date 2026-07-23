@@ -1,5 +1,3 @@
-"use strict";
-
 // NOTE: Statement document type handler implemented.
 //
 // Paperless setup required:
@@ -13,35 +11,43 @@
 //   - Parses "Invoice Number" custom field as comma-separated, looks up matching REST purchases.
 //   - Displayed as a separate "Statements" section on weekly payroll.
 
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const logger = require("../../services/loggerService");
-const kfSession = require("../../services/kashflowSessionService");
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import kfSession from '../../services/kashflowSessionService.js';
 const kfAxios = kfSession.kfAxios;
-const axios = require("axios"); // non-KashFlow requests (Paperless-ngx etc.)
+import axios from 'axios'; // non-KashFlow requests (Paperless-ngx etc.)
 const {
   grabPaperlessOCR,
   ingestOnePaperlessDoc,
   isGrabRunning,
-} = require("../services/grabServicePaperless");
+} = __grabServicePaperless;
 const {
   buildPurchaseDraftFromOcr,
   buildPurchaseDraftById,
   buildKashFlowPayloadFromDraft,
   defaultMap,
-} = require("../services/paperless/purchaseDraftService");
+} = __purchaseDraftService;
 const {
   updatePaperlessWithKashFlowInfo,
   updatePaperlessDocumentTags,
   clearPaperlessKashFlowFields,
-} = require("../services/paperless/paperlessUpdateService");
-const { warmCfCache } = require("../services/paperless/paperlessClient");
-const kfSendClaim = require("../services/paperless/kashflowSendClaimService");
+} = __paperlessUpdateService;
+import __paperlessClient from '../services/paperless/paperlessClient.js';
+const { warmCfCache } = __paperlessClient;
+import kfSendClaim from '../services/paperless/kashflowSendClaimService.js';
+import __grabServicePaperless from '../services/grabServicePaperless.js';
+import __purchaseDraftService from '../services/paperless/purchaseDraftService.js';
+import __paperlessUpdateService from '../services/paperless/paperlessUpdateService.js';
+import __kashflowSessionService from '../../services/kashflowSessionService.js';
+import kfVat from '../../services/kashflowVatService.js';
+import __paperlessClient_ from '../services/paperless/paperlessClient.js';
+import __ocrOrphanService from '../services/ocrOrphanService.js';
 
 // Helpers
 
 /** List OCR docs (PAPERLESS DB) */
-exports.listOcr = async (req, res, next) => {
+export const listOcr = async (req, res, next) => {
   try {
     await mdb.connect();
     const { OcrDocument } = mdb.PAPERLESS;
@@ -189,7 +195,7 @@ exports.listOcr = async (req, res, next) => {
 };
 
 /** Read one OCR doc */
-exports.readOcr = async (req, res, next) => {
+export const readOcr = async (req, res, next) => {
   try {
     await mdb.connect();
     const { OcrDocument, OcrDocumentIngest } = mdb.PAPERLESS;
@@ -239,7 +245,7 @@ exports.readOcr = async (req, res, next) => {
 };
 
 /** List ingest tracker with filters */
-exports.listIngest = async (req, res, next) => {
+export const listIngest = async (req, res, next) => {
   try {
     await mdb.connect();
     const { OcrDocumentIngest } = mdb.PAPERLESS;
@@ -284,7 +290,7 @@ exports.listIngest = async (req, res, next) => {
 };
 
 /** Trigger a background grab (manual) */
-exports.triggerGrab = async (req, res, next) => {
+export const triggerGrab = async (req, res, next) => {
   try {
     let since = (req.body.since || "").trim() || null;
     // Normalize 'none'/'null'/'invalid' or non-date inputs to null to avoid 400s from API params
@@ -325,7 +331,7 @@ exports.triggerGrab = async (req, res, next) => {
 };
 
 /** Render the draft page for creating a purchase from an OCR document */
-exports.getPurchaseDraft = async (req, res, next) => {
+export const getPurchaseDraft = async (req, res, next) => {
   try {
     await mdb.connect();
     const paperlessId = parseInt(req.params.paperlessId, 10);
@@ -676,7 +682,7 @@ async function loadAllowedNominalCodes() {
  * so they survive draft reloads. POST body: { extraLines: [...] } (JSON).
  * An empty array clears the saved lines.
  */
-exports.saveDraftExtraLines = async (req, res) => {
+export const saveDraftExtraLines = async (req, res) => {
   try {
     await mdb.connect();
     const { OcrDocument } = mdb.PAPERLESS;
@@ -735,7 +741,7 @@ exports.saveDraftExtraLines = async (req, res) => {
 };
 
 /** Handle POST to send the draft to KashFlow (placeholder – external integration lives elsewhere) */
-exports.sendDraftToKashflow = async (req, res, next) => {
+export const sendDraftToKashflow = async (req, res, next) => {
   // Send-claim state: released on every exit path; the 5-minute stale-claim
   // timeout in kashflowSendClaimService is the fallback if a release is missed.
   let sendClaimed = false;
@@ -1071,8 +1077,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
       process.env.KASHFLOW_API_BASE_URL || "https://api.kashflow.com/v2"
     ).replace(/\/+$/, "");
     // We now prefer session-token auth (KfToken) over Basic
-    const kfSession = require("../../services/kashflowSessionService");
-    const kfVat = require("../../services/kashflowVatService");
+    const kfSession = __kashflowSessionService;
     const hasDirectAuth = !!(
       process.env.KASHFLOW_SESSION_TOKEN ||
       process.env.KFSESSIONTOKEN ||
@@ -1404,7 +1409,7 @@ exports.sendDraftToKashflow = async (req, res, next) => {
 };
 
 /** JSON supplier search: GET /paperless/suppliers?q=&limit= */
-exports.searchSuppliers = async (req, res, next) => {
+export const searchSuppliers = async (req, res, next) => {
   try {
     await mdb.connect();
     const Supplier = mdb.REST && mdb.REST.supplier;
@@ -1435,7 +1440,7 @@ exports.searchSuppliers = async (req, res, next) => {
 };
 
 /** POST /paperless/ocr/:paperlessId/ingest — re-ingest a single document from Paperless */
-exports.reIngestOne = async (req, res, next) => {
+export const reIngestOne = async (req, res, next) => {
   try {
     const paperlessId = parseInt(req.params.paperlessId, 10);
     if (!Number.isFinite(paperlessId)) {
@@ -1455,7 +1460,7 @@ exports.reIngestOne = async (req, res, next) => {
 };
 
 /** GET /paperless/ocr/:paperlessId/match — manual purchase-matching UI */
-exports.getMatchPurchase = async (req, res, next) => {
+export const getMatchPurchase = async (req, res, next) => {
   try {
     await mdb.connect();
     const { OcrDocument } = mdb.PAPERLESS;
@@ -1519,7 +1524,7 @@ exports.getMatchPurchase = async (req, res, next) => {
 };
 
 /** POST /paperless/ocr/:paperlessId/match — confirm a purchase link */
-exports.postMatchPurchase = async (req, res, next) => {
+export const postMatchPurchase = async (req, res, next) => {
   try {
     await mdb.connect();
     const { OcrDocument } = mdb.PAPERLESS;
@@ -1587,7 +1592,7 @@ exports.postMatchPurchase = async (req, res, next) => {
 };
 
 /** POST /paperless/ocr/:paperlessId/unlink — clear stale KashFlow linkage */
-exports.unlinkKashflow = async (req, res, next) => {
+export const unlinkKashflow = async (req, res, next) => {
   try {
     await mdb.connect();
     const { OcrDocument } = mdb.PAPERLESS;
@@ -1607,7 +1612,7 @@ exports.unlinkKashflow = async (req, res, next) => {
     );
     // Clear the matching custom fields on the Paperless-ngx document too
     try {
-      const { makeClient } = require('../services/paperless/paperlessClient');
+      const { makeClient } = __paperlessClient_;
       await makeClient().updateDocumentCustomFields(paperlessId, {
         'KashFlow Purchase Id':        null,
         'KashFlow Purchase Number':    null,
@@ -1628,7 +1633,7 @@ exports.unlinkKashflow = async (req, res, next) => {
 
 /** POST /paperless/clear-orphans — manually trigger an orphan-link sweep (runs in background) */
 let _clearOrphansRunning = false;
-exports.clearOrphans = async (req, res) => {
+export const clearOrphans = async (req, res) => {
   if (_clearOrphansRunning) {
     logger.warn('[clearOrphans] Already running — ignoring duplicate request');
     return res.redirect('/overview/documents');
@@ -1637,7 +1642,7 @@ exports.clearOrphans = async (req, res) => {
   setImmediate(async () => {
     _clearOrphansRunning = true;
     try {
-      const { detectAndClearOrphans } = require('../services/ocrOrphanService');
+      const { detectAndClearOrphans } = __ocrOrphanService;
       const stats = await detectAndClearOrphans();
       logger.info(`[clearOrphans] Manual run complete. checked=${stats.checked} cleared=${stats.cleared} errors=${stats.errors}`);
     } catch (err) {
@@ -1653,7 +1658,7 @@ exports.clearOrphans = async (req, res) => {
 /** POST /paperless/resolve-numbers — for each unlinked doc with a kashflowPurchaseNumber,
  *  look up the purchase in REST by that number and populate kashflowPurchaseId. */
 let _resolveNumbersRunning = false;
-exports.resolveNumbers = async (req, res) => {
+export const resolveNumbers = async (req, res) => {
   if (_resolveNumbersRunning) {
     logger.warn('[resolveNumbers] Already running — ignoring duplicate request');
     return res.redirect('/overview/documents');
@@ -1757,7 +1762,7 @@ exports.resolveNumbers = async (req, res) => {
  *  purchase whose SupplierReference equals that value is almost certainly the created purchase.
  *  A doc is linked only when exactly one candidate purchase survives the safety checks. */
 let _matchReferencesRunning = false;
-exports.matchReferences = async (req, res) => {
+export const matchReferences = async (req, res) => {
   if (_matchReferencesRunning) {
     logger.warn('[matchReferences] Already running — ignoring duplicate request');
     return res.redirect('/overview/documents');
@@ -1890,7 +1895,7 @@ exports.matchReferences = async (req, res) => {
 
 /** POST /paperless/repair-drift — bulk write-back KashFlow custom fields to Paperless for drifted docs */
 let _repairDriftRunning = false;
-exports.repairDrift = async (req, res) => {
+export const repairDrift = async (req, res) => {
   if (_repairDriftRunning) {
     logger.warn('[repairDrift] Already running — ignoring duplicate request');
     return res.redirect('/overview/documents');
@@ -2044,7 +2049,7 @@ exports.repairDrift = async (req, res) => {
 };
 
 /** POST /paperless/ocr/:paperlessId/sync-fields — write KashFlow fields back to Paperless for one document */
-exports.syncPaperlessFields = async (req, res, next) => {
+export const syncPaperlessFields = async (req, res, next) => {
   const paperlessId = parseInt(req.params.paperlessId, 10);
   try {
     if (!Number.isFinite(paperlessId)) {
@@ -2083,7 +2088,7 @@ exports.syncPaperlessFields = async (req, res, next) => {
 /** POST /paperless/ocr/:paperlessId/remove — remove a MongoDB copy of a document that was
  *  deleted in Paperless (flagged by the grab reconciliation). Only allows removal of docs
  *  actually flagged deletedInPaperlessAt, and returns to the Documents overview. */
-exports.removeDeletedOcrDocument = async (req, res, next) => {
+export const removeDeletedOcrDocument = async (req, res, next) => {
   try {
     await mdb.connect();
     const { OcrDocument, OcrDocumentIngest } = mdb.PAPERLESS;
@@ -2113,7 +2118,7 @@ exports.removeDeletedOcrDocument = async (req, res, next) => {
   }
 };
 
-exports.deleteOcrDocument = async (req, res, next) => {
+export const deleteOcrDocument = async (req, res, next) => {
   try {
     await mdb.connect();
     const { OcrDocument, OcrDocumentIngest } = mdb.PAPERLESS;
@@ -2133,3 +2138,5 @@ exports.deleteOcrDocument = async (req, res, next) => {
     next(err);
   }
 };
+
+export default { listOcr, readOcr, listIngest, triggerGrab, getPurchaseDraft, saveDraftExtraLines, sendDraftToKashflow, searchSuppliers, reIngestOne, getMatchPurchase, postMatchPurchase, unlinkKashflow, clearOrphans, resolveNumbers, matchReferences, repairDrift, syncPaperlessFields, removeDeletedOcrDocument, deleteOcrDocument };

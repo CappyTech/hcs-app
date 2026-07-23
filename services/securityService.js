@@ -1,6 +1,6 @@
-const helmet = require("helmet");
-const { filterXSS } = require("xss");
-const crypto = require("crypto");
+import helmet from 'helmet';
+import { filterXSS } from 'xss';
+import crypto from 'crypto';
 
 // Fields that may contain Quill-generated rich-text HTML.
 // These are sanitised with a permissive-but-safe whitelist that
@@ -165,4 +165,4 @@ const securityService = [
   xssSanitize,
 ];
 
-module.exports = securityService;
+export default securityService;

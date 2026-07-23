@@ -1,5 +1,5 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * holidayCarryOverService requires mdb, taxService (pure) and, lazily,
@@ -7,8 +7,8 @@ const assert = require('node:assert/strict');
  * mocked employeeHoliday model). findOne is awaited both directly and via
  * .lean(), so the mock returns a promise that also exposes .lean().
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const taxService = require('../services/taxService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import taxService from '../services/taxService.js';
 
 function queryResult(value) {
   const p = Promise.resolve(value);
@@ -43,7 +43,7 @@ function patchMdb({ employees = [], prevRecord = null, currentRecord = null } = 
   };
 }
 
-const { applyCarryOverOnce } = require('../mongoose/services/holidayCarryOverService');
+import { applyCarryOverOnce } from '../mongoose/services/holidayCarryOverService.js';
 
 describe('holidayCarryOverService', () => {
   beforeEach(() => patchMdb());

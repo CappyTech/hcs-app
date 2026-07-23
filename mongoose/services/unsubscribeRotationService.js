@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * unsubscribeRotationService — periodically rotates every user's
  * notificationToken so unsubscribe links expire ~daily.
@@ -15,11 +13,11 @@
  * (UNSUBSCRIBE_ROTATION_ENABLED, default on).
  */
 
-const crypto = require('crypto');
-const mdb = require('./mongooseDatabaseService');
-const jobStateService = require('./jobStateService');
-const configService = require('../../services/configService');
-const logger = require('../../services/loggerService');
+import crypto from 'crypto';
+import mdb from './mongooseDatabaseService.js';
+import jobStateService from './jobStateService.js';
+import configService from '../../services/configService.js';
+import logger from '../../services/loggerService.js';
 
 const JOB_NAME = 'unsubscribe-token-rotation';
 const INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
@@ -83,4 +81,4 @@ async function rotateAll({ force = false, trigger = 'interval' } = {}) {
   return { rotated, total: users.length, trigger };
 }
 
-module.exports = { rotateAll, getState, isEnabled, JOB_NAME, INTERVAL_MS };
+export default { rotateAll, getState, isEnabled, JOB_NAME, INTERVAL_MS };

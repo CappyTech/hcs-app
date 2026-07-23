@@ -1,7 +1,5 @@
-'use strict';
-
-const mdb = require('../services/mongooseDatabaseService');
-const logger = require('../../services/loggerService');
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 
 // Human-readable labels for each UK GDPR right
 const TYPE_LABELS = {
@@ -270,7 +268,7 @@ async function adminReviewRequest(req, res, next) {
   }
 }
 
-module.exports = {
+export default {
   listMyRequests,
   newRequestForm,
   submitRequest,
@@ -279,3 +277,5 @@ module.exports = {
   adminListRequests,
   adminReviewRequest,
 };
+
+export { listMyRequests, newRequestForm, submitRequest, getRequest, withdrawRequest, adminListRequests, adminReviewRequest };

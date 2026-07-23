@@ -1,11 +1,11 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const multer = require("multer");
-const path = require("path");
-const authService = require("../../services/authService");
-const ensureHandlesDocuments = require("../../services/ensureHandlesDocuments");
-const fileController = require("../controllers/fileController");
-const csrfService = require("../../services/csrfService");
+import multer from 'multer';
+import path from 'path';
+import authService from '../../services/authService.js';
+import ensureHandlesDocuments from '../../services/ensureHandlesDocuments.js';
+import fileController from '../controllers/fileController.js';
+import csrfService from '../../services/csrfService.js';
 
 const upload = multer({
   dest: "uploads/",
@@ -62,4 +62,4 @@ router.post(
   fileController.deleteFile,
 );
 
-module.exports = router;
+export default router;

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * configService — multi-company configuration layer
  *
@@ -12,9 +10,13 @@
  * always take priority, so the file is never consulted.
  */
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { fileURLToPath } from 'node:url';
+import { dirname as _esmDirname } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = _esmDirname(__filename);
 
 // Keys present in process.env at module load time (i.e. set by docker-compose / OS env).
 // Used by the connections settings UI to show an "Env" badge and warn that these
@@ -133,4 +135,4 @@ function isFromStartupEnv(key) {
   return _startupEnvKeys.has(key);
 }
 
-module.exports = { get, isConfigured, save, remove, generateSecret, bootstrap, isFromStartupEnv };
+export default { get, isConfigured, save, remove, generateSecret, bootstrap, isFromStartupEnv };

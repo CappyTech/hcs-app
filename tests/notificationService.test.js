@@ -1,12 +1,12 @@
-const { describe, it, beforeEach, mock } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
 
 /*
  * notificationService requires the mdb singleton; patch INTERNAL models
  * before each test (same pattern as taskService.test.js).
  */
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const notificationService = require('../services/notificationService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import notificationService from '../services/notificationService.js';
 
 let createdDocs = [];
 let existingByDedupe = null;

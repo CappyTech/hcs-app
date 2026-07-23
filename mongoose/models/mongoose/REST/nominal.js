@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { nominal, uuidField } = require('@cappytech/hcs-schemas');
+import mongoose from 'mongoose';
+import { nominal, uuidField } from '@cappytech/hcs-schemas';
 
 const nominalSchema = new mongoose.Schema({
   uuid: uuidField,
@@ -8,7 +8,7 @@ const nominalSchema = new mongoose.Schema({
 
 nominal.indexes.forEach(idx => nominalSchema.index(idx.fields, idx.options));
 
-module.exports = {
+export default {
   modelName: 'nominal',
   schema: nominalSchema
 };

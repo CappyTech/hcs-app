@@ -1,7 +1,9 @@
-const express = require("express");
-const listController = require("../controllers/listController");
-const authService = require("../../services/authService");
-const rbac = require("../config/rolePermissionsConfig");
+import express from 'express';
+import listController from '../controllers/listController.js';
+import authService from '../../services/authService.js';
+import rbac from '../config/rolePermissionsConfig.js';
+import __listControllerConfig from '../config/listControllerConfig.js';
+import __CRUDControllerConfig from '../config/CRUDControllerConfig.js';
 
 const router = express.Router();
 
@@ -13,7 +15,7 @@ for (const [functionName, handler] of Object.entries(listController)) {
   const modelName = match[1];
   const originalModel = modelName.charAt(0).toLowerCase() + modelName.slice(1);
   const listConfig =
-    require("../config/listControllerConfig")[originalModel] || {};
+    __listControllerConfig[originalModel] || {};
   const routeModel = (listConfig.modelRename || originalModel).toLowerCase();
   let routePath;
   if (listConfig.pathOverride) {
@@ -31,9 +33,9 @@ for (const [functionName, handler] of Object.entries(listController)) {
   // Build role list. Admin always has access.
   // Check which other roles can list this model via RBAC config.
   const crudConfig =
-    require("../config/CRUDControllerConfig")[originalModel] || {};
+    __CRUDControllerConfig[originalModel] || {};
   const middlewares = crudConfig.middleware?.read ||
-    require("../config/CRUDControllerConfig").default?.middleware?.read || [
+    __CRUDControllerConfig.default?.middleware?.read || [
       "ensureRole:admin",
     ];
 
@@ -54,4 +56,4 @@ for (const [functionName, handler] of Object.entries(listController)) {
   router.get(routePath, ...resolved, handler);
 }
 
-module.exports = router;
+export default router;

@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 // UK GDPR Art. 15–22 request types
 const REQUEST_TYPES = [
@@ -98,4 +96,4 @@ gdprRequestSchema.pre('save', function (next) {
 // Compound index: admin dashboard sorted by status + date
 gdprRequestSchema.index({ status: 1, createdAt: -1 });
 
-module.exports = { modelName: 'gdprRequest', schema: gdprRequestSchema };
+export default { modelName: 'gdprRequest', schema: gdprRequestSchema };

@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const encryptionService = require('../../../../services/encryptionService');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import encryptionService from '../../../../services/encryptionService.js';
+import crypto from 'crypto';
 
 const userSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -150,7 +150,7 @@ userSchema.pre('save', async function (next) {
     next();
 });
 
-module.exports = {
+export default {
     modelName: 'user',
     schema: userSchema
 };

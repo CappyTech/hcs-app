@@ -2,7 +2,7 @@
 // Build a KashFlow-style purchase draft JSON from a PAPERLESS OcrDocument.
 // This is consumed by an external creator; we only produce the draft here.
 
-const mdb = require("../mongooseDatabaseService");
+import mdb from '../mongooseDatabaseService.js';
 
 // Default name-based mapping from custom field names to target purchase fields
 const defaultMap = {
@@ -815,10 +815,11 @@ async function buildPurchaseDraftById(paperlessId, opts = {}) {
   return buildPurchaseDraftFromOcr(ocr, opts);
 }
 
-module.exports = {
+export default {
   buildPurchaseDraftFromOcr,
   buildPurchaseDraftById,
   defaultMap,
+  buildKashFlowPayloadFromDraft,
 };
 
 /**
@@ -1052,4 +1053,6 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
   return prune(payload);
 }
 
-module.exports.buildKashFlowPayloadFromDraft = buildKashFlowPayloadFromDraft;
+export { buildKashFlowPayloadFromDraft };
+
+export { buildPurchaseDraftFromOcr, buildPurchaseDraftById, defaultMap };

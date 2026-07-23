@@ -1,11 +1,9 @@
-'use strict';
-
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authService = require('../../services/authService');
-const ctrl = require('../controllers/auditController');
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/auditController.js';
 
 // The audit trail is admin-only.
 router.get('/audit', authService.ensureRole('admin'), ctrl.getAuditLog);
 
-module.exports = router;
+export default router;

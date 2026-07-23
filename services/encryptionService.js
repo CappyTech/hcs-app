@@ -1,5 +1,6 @@
-const crypto = require("crypto");
-require("dotenv").config();
+import crypto from 'crypto';
+import __dotenv from 'dotenv';
+__dotenv.config();
 
 // Validate environment variable
 if (!process.env.ENCRYPTION_KEY) {
@@ -106,7 +107,9 @@ function decrypt(encryptedText) {
   }
 }
 
-module.exports = {
+export default {
   encrypt,
   decrypt,
 };
+
+export { encrypt, decrypt };

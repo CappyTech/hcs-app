@@ -1,6 +1,6 @@
-const mdb = require('./mongooseDatabaseService');
-const logger = require('../../services/loggerService');
-const notificationService = require('../../services/notificationService');
+import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import notificationService from '../../services/notificationService.js';
 
 // Fire-and-forget: email the assignee that a task was created for them. Routed
 // through the notification outbox as a 'task-assigned' system notification, so
@@ -144,7 +144,7 @@ async function getTaskCountsForUser(userId) {
   return { total, overdue };
 }
 
-module.exports = {
+export default {
   createTask,
   completeTask,
   getPendingTasksForUser,
@@ -152,3 +152,5 @@ module.exports = {
   processRecurringTasks,
   advanceDate // exported for potential testing
 };
+
+export { createTask, completeTask, getPendingTasksForUser, getTaskCountsForUser, processRecurringTasks, advanceDate };

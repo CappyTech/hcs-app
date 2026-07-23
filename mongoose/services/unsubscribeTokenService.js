@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * unsubscribeTokenService — stateless, signed, expiring unsubscribe tokens.
  *
@@ -21,9 +19,9 @@
  * per-user rotation is the everyday "my link leaked" control.
  */
 
-const crypto = require('crypto');
-const configService = require('../../services/configService');
-const mdb = require('./mongooseDatabaseService');
+import crypto from 'crypto';
+import configService from '../../services/configService.js';
+import mdb from './mongooseDatabaseService.js';
 
 const DEFAULT_TTL_DAYS = 90;
 
@@ -112,4 +110,4 @@ function parseScope(scope) {
   return { kind: 'unknown' };
 }
 
-module.exports = { sign, verify, parseScope, DEFAULT_TTL_DAYS };
+export default { sign, verify, parseScope, DEFAULT_TTL_DAYS };

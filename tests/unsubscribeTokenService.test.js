@@ -1,11 +1,11 @@
-const { describe, it, beforeEach } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
 
 // A stable server secret so sign/verify agree across the test run.
 process.env.UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_SECRET || 'test-unsub-secret';
 
-const mdb = require('../mongoose/services/mongooseDatabaseService');
-const svc = require('../mongoose/services/unsubscribeTokenService');
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import svc from '../mongoose/services/unsubscribeTokenService.js';
 
 // Minimal user store keyed by id, returning the CURRENT notificationToken.
 let store = {};

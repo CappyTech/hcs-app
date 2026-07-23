@@ -1,7 +1,5 @@
-'use strict';
-
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 /**
  * Email/notification type catalog (DB-driven).
@@ -89,4 +87,4 @@ const emailTypeSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-module.exports = { modelName: 'emailType', schema: emailTypeSchema, SENDER_TYPES };
+export default { modelName: 'emailType', schema: emailTypeSchema, SENDER_TYPES };

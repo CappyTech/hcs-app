@@ -1,19 +1,19 @@
-const mongoose = require("mongoose");
-const path = require("path");
-const mdb = require("../services/mongooseDatabaseService");
-const logger = require("../../services/loggerService");
-const { formatDistanceToNow } = require("date-fns");
-const bcrypt = require("bcrypt");
-const encryptionService = require("../../services/encryptionService");
-const totpService = require("../../services/totpService");
-const rbac = require("../config/rolePermissionsConfig");
-const crypto = require("crypto");
-const emailService = require("../../services/emailService");
-const auditLog = require("../../services/auditLogService");
-const hibpService = require("../../services/hibpService");
-const { validationResult, body } = require("express-validator");
+import mongoose from 'mongoose';
+import path from 'path';
+import mdb from '../services/mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
+import { formatDistanceToNow } from 'date-fns';
+import bcrypt from 'bcrypt';
+import encryptionService from '../../services/encryptionService.js';
+import totpService from '../../services/totpService.js';
+import rbac from '../config/rolePermissionsConfig.js';
+import crypto from 'crypto';
+import emailService from '../../services/emailService.js';
+import auditLog from '../../services/auditLogService.js';
+import hibpService from '../../services/hibpService.js';
+import { validationResult, body } from 'express-validator';
 
-exports.getProfilePage = async (req, res, next) => {
+export const getProfilePage = async (req, res, next) => {
   try {
     const user = await mdb.INTERNAL.user.findById(req.session.user.id);
     const employee = user.employeeId
@@ -104,7 +104,7 @@ exports.getProfilePage = async (req, res, next) => {
   }
 };
 
-exports.getAccountPage = async (req, res, next) => {
+export const getAccountPage = async (req, res, next) => {
   try {
     const user = await mdb.INTERNAL.user.findById(req.session.user.id);
     if (!user) {
@@ -192,7 +192,7 @@ exports.getAccountPage = async (req, res, next) => {
       });
     }
 
-    const { rolesRequiring2FA } = require("../../services/authService");
+    const { rolesRequiring2FA } = __authService;
     res.render(path.join("tailwindcss", "user", "account"), {
       title: "Account Settings",
       qrCodeUrl,
@@ -211,7 +211,7 @@ exports.getAccountPage = async (req, res, next) => {
   }
 };
 
-exports.updateAccountSettings = async (req, res) => {
+export const updateAccountSettings = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     req.flash(
@@ -297,7 +297,7 @@ exports.updateAccountSettings = async (req, res) => {
   }
 };
 
-exports.logoutSession = async (req, res, next) => {
+export const logoutSession = async (req, res, next) => {
   try {
     const { sessionId } = req.body;
     if (!sessionId) {
@@ -361,7 +361,7 @@ exports.logoutSession = async (req, res, next) => {
 // Revoke every session belonging to the user except the current one.
 // Covers denormalized sessions (userId field) and legacy sessions where the
 // user id only exists inside the JSON payload.
-exports.logoutAllOtherSessions = async (req, res) => {
+export const logoutAllOtherSessions = async (req, res) => {
   try {
     const userId = req.session.user.id;
     const result = await mdb.INTERNAL.session.deleteMany({
@@ -407,7 +407,7 @@ exports.logoutAllOtherSessions = async (req, res) => {
   }
 };
 
-exports.changePassword = async (req, res) => {
+export const changePassword = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     req.flash(
@@ -469,7 +469,7 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-exports.verifyAndEnableTotp = async (req, res) => {
+export const verifyAndEnableTotp = async (req, res) => {
   try {
     const { totpToken } = req.body;
     if (!totpToken || totpToken.length !== 6) {
@@ -518,7 +518,7 @@ exports.verifyAndEnableTotp = async (req, res) => {
   }
 };
 
-exports.disableTotp = async (req, res) => {
+export const disableTotp = async (req, res) => {
   try {
     const { confirmPassword } = req.body;
     if (!confirmPassword) {
@@ -562,7 +562,7 @@ exports.disableTotp = async (req, res) => {
   }
 };
 
-exports.regenerateBackupCodes = async (req, res) => {
+export const regenerateBackupCodes = async (req, res) => {
   try {
     const { confirmPassword } = req.body;
     if (!confirmPassword) {
@@ -601,12 +601,12 @@ exports.regenerateBackupCodes = async (req, res) => {
   }
 };
 
-exports.validateAccountSettings = [
+export const validateAccountSettings = [
   body("newUsername").notEmpty().withMessage("Username is required."),
   body("newEmail").isEmail().withMessage("Invalid email address."),
 ];
 
-exports.validateChangePassword = [
+export const validateChangePassword = [
   body("currentPassword")
     .notEmpty()
     .withMessage("Current password is required."),
@@ -619,11 +619,12 @@ exports.validateChangePassword = [
 ];
 
 // ── Personal email/notification dashboard ─────────────────────────────
-const emailPreferenceService = require("../services/emailPreferenceService");
-const emailTypeService = require("../services/emailTypeService");
-const notificationService = require("../../services/notificationService");
+import emailPreferenceService from '../services/emailPreferenceService.js';
+import emailTypeService from '../services/emailTypeService.js';
+import notificationService from '../../services/notificationService.js';
+import __authService from '../../services/authService.js';
 
-exports.getNotificationsPage = async (req, res, next) => {
+export const getNotificationsPage = async (req, res, next) => {
   try {
     const userId = req.session.user.id;
     const user = await mdb.INTERNAL.user.findById(userId).select("email allowAdminEmails").lean();
@@ -645,7 +646,7 @@ exports.getNotificationsPage = async (req, res, next) => {
   }
 };
 
-exports.toggleNotification = async (req, res) => {
+export const toggleNotification = async (req, res) => {
   try {
     const userId = req.session.user.id;
     const { typeKey } = req.body;
@@ -660,7 +661,7 @@ exports.toggleNotification = async (req, res) => {
   res.redirect("/user/account/settings/notifications");
 };
 
-exports.setAllowAdminEmails = async (req, res) => {
+export const setAllowAdminEmails = async (req, res) => {
   try {
     const userId = req.session.user.id;
     const allow = req.body.allowAdminEmails === "on" || req.body.allowAdminEmails === "true";
@@ -674,7 +675,7 @@ exports.setAllowAdminEmails = async (req, res) => {
 };
 
 // Send a test email of a given type to the logged-in user ONLY (self-service).
-exports.sendTestNotification = async (req, res) => {
+export const sendTestNotification = async (req, res) => {
   try {
     const userId = req.session.user.id;
     const user = await mdb.INTERNAL.user.findById(userId).select("email emailVerified").lean();
@@ -712,7 +713,7 @@ exports.sendTestNotification = async (req, res) => {
 // Invalidate all of this user's outstanding unsubscribe links (e.g. after a
 // forwarded email or a suspected leak). Rotates their notificationToken, which
 // is mixed into every signed link's signature.
-exports.rotateNotificationToken = async (req, res) => {
+export const rotateNotificationToken = async (req, res) => {
   try {
     await emailPreferenceService.rotateToken(req.session.user.id);
     req.flash("success", "Your existing unsubscribe links have been invalidated. Future emails carry fresh links.");
@@ -724,7 +725,7 @@ exports.rotateNotificationToken = async (req, res) => {
 };
 
 // Rendered HTML preview of what a notification type looks like (own account).
-exports.previewNotification = async (req, res, next) => {
+export const previewNotification = async (req, res, next) => {
   try {
     const type = await emailTypeService.get(req.params.key);
     if (!type) return res.status(404).send("Unknown notification type.");
@@ -734,3 +735,5 @@ exports.previewNotification = async (req, res, next) => {
     next(error);
   }
 };
+
+export default { getProfilePage, getAccountPage, updateAccountSettings, logoutSession, logoutAllOtherSessions, changePassword, verifyAndEnableTotp, disableTotp, regenerateBackupCodes, validateAccountSettings, validateChangePassword, getNotificationsPage, toggleNotification, setAllowAdminEmails, sendTestNotification, rotateNotificationToken, previewNotification };

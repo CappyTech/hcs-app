@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const crypto = require('crypto');
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const holidayCustomSchema = new mongoose.Schema({
   uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -10,7 +10,7 @@ const holidayCustomSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = {
+export default {
   modelName: 'holidayCustom',
   schema: holidayCustomSchema
 };

@@ -1,9 +1,10 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import __cisService from '../services/cisService.js';
 const {
   calculateInvoiceAmounts, normalizeWhtRate, whtRateLabel,
   isCisSupplier, isHmrcVerified, HMRC_VERIFICATION_REGEX
-} = require('../services/cisService');
+} = __cisService;
 
 // ── normalizeWhtRate ─────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
-const express = require("express");
+import express from 'express';
 const router = express.Router();
-const authService = require("../../services/authService");
-const ctrl = require("../controllers/adminController");
+import authService from '../../services/authService.js';
+import ctrl from '../controllers/adminController.js';
 
 router.get(
   "/admin/deleted-items",
@@ -69,4 +69,4 @@ router.post(
   ctrl.runJob,
 );
 
-module.exports = router;
+export default router;

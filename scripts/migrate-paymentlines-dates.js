@@ -3,8 +3,9 @@
   Usage (PowerShell):
     node scripts/migrate-paymentlines-dates.js
 */
-const mongoose = require('mongoose');
-const { schema, modelName } = require('../mongoose/models/mongoose/REST/purchase');
+import mongoose from 'mongoose';
+import __purchase from '../mongoose/models/mongoose/REST/purchase.js';
+const { schema, modelName } = __purchase;
 
 async function run() {
   const mongoUri = process.env.MONGODB_URI || process.env.DB_URI || 'mongodb://localhost:27017/hcs-app';
