@@ -21,7 +21,6 @@ Where hcs-app does call an external API directly (e.g. `kashflowSessionService.j
 - Trace from `app.js` that any new file is included at some point, or is a child of another file that is included in `app.js`.
 - Do **not** use `mongoose/views/mongoose/` — always use `mongoose/views/tailwindcss/`.
 - The `kashflowAPI/` folder is unused. Data sync is handled by [hcs-sync](https://github.com/cappytech/hcs-sync).
-- `_check_schema.js` is a temporary debug script for inspecting schema fields from `@cappytech/hcs-schemas`.
 
 ---
 

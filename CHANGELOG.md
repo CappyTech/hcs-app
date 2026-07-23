@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.14.3] - 2026-07-23
+
+### Removed
+- **`_check_schema.js` deleted.** Root-level temporary debug script for dumping schema paths from `@cappytech/hcs-schemas`; also removed its mention from `AGENTS.md`. All remaining root files were audited and are in active use.
+
 ## [6.14.2] - 2026-07-23
 
 ### Changed
