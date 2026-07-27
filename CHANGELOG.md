@@ -2,6 +2,25 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.15.0] - 2026-07-27
+
+### Changed
+- **Entire codebase converted from CommonJS to ESM** (`"type": "module"`; 250+ files). `require`/`module.exports` → `import`/`export` throughout. Key mechanical details:
+  - Modules that attached extra functions to their main export (loggerService `sanitize`/`setSocketInstance`, maintenanceService, csrfService `validate`) keep that property shape on the default export, so `logger.sanitize(...)` / `csrfService.validate` call sites are unchanged.
+  - `__dirname`/`__filename` shimmed via `import.meta.url` where used; `package.json` reads use `readFileSync` + `JSON.parse` instead of `require`.
+  - The dynamic model loader (`mongooseDatabaseService.createNamespace`) now uses `await import()` with `pathToFileURL`.
+  - Tests that set env vars or patched `require.cache` before requiring modules now use top-level `await import(...)` and `mock.module()` (test runner passes `--experimental-test-module-mocks`).
+  - `scripts/generate-tailwind-safelist.js` emits `export default` (tailwind.safelist.js regenerated accordingly).
+
+### Fixed
+- Removed a latent crash in the bootstrap-admin seeding path: it lazily `require`d the `uuid` package, which was never a declared or installed dependency. Now uses `crypto.randomUUID()`.
+- REST model files import `@cappytech/hcs-schemas` via default-import + destructure — the guaranteed CJS/ESM interop path — so the app works against both schemas 1.1.0 (CJS) and 2.0.0 (ESM) and app/schemas releases are not deploy-order-coupled. (Named imports from the CJS package fail at model load; the test suite never exercises that path.)
+- Docker builder stage now copies `tailwind.safelist.js`. The old CJS config loaded it in a try/catch, so Docker CSS builds silently ran without the generated safelist; the ESM static import surfaced this.
+
+### Notes
+- `@cappytech/hcs-schemas` updated to **2.0.0** (ESM) in the lockfile.
+- Client-side files under `public/` are untouched (served to browsers, not loaded by Node).
+
 ## [6.14.4] - 2026-07-23
 
 ### Removed
@@ -26,23 +45,6 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
 ### Added
 - **Create suppliers from the purchase draft page.** The Supplier panel on `/paperless/ocr/:id/draft` gains a "Supplier not in the list? Create it in KashFlow…" section (name prefilled from the draft, optional code and default Purchases nominal). It POSTs to the new `POST /paperless/suppliers` endpoint, which creates the supplier directly in KashFlow (`POST /v2/suppliers`, with `CreateSupplierCodeIfDuplicate` so a blank/derived code can't collide) and upserts the response into the local REST `suppliers` collection so the picker, nominal fallback and send flow can use it immediately — no waiting for the next hcs-sync run, which then reconciles the full record. The new supplier is auto-selected in the picker on success. Guards: exact-name match against existing non-archived suppliers returns the existing record (and selects it) instead of creating a duplicate; a supplied default nominal must be a `Purchases`-classified nominal; requires direct KashFlow credentials (same as sending) and sits behind the usual paperless auth/role/department guard + CSRF.
-
-## [6.13.0] - 2026-07-23
-
-### Changed
-- **Entire codebase converted from CommonJS to ESM** (`"type": "module"`; 250+ files). `require`/`module.exports` → `import`/`export` throughout. Key mechanical details:
-  - Modules that attached extra functions to their main export (loggerService `sanitize`/`setSocketInstance`, maintenanceService, csrfService `validate`) keep that property shape on the default export, so `logger.sanitize(...)` / `csrfService.validate` call sites are unchanged.
-  - `__dirname`/`__filename` shimmed via `import.meta.url` where used; `package.json` reads use `readFileSync` + `JSON.parse` instead of `require`.
-  - The dynamic model loader (`mongooseDatabaseService.createNamespace`) now uses `await import()` with `pathToFileURL`.
-  - Tests that set env vars or patched `require.cache` before requiring modules now use top-level `await import(...)` and `mock.module()` (test runner passes `--experimental-test-module-mocks`).
-  - `scripts/generate-tailwind-safelist.js` emits `export default` (tailwind.safelist.js regenerated accordingly).
-
-### Fixed
-- Removed a latent crash in the bootstrap-admin seeding path: it lazily `require`d the `uuid` package, which was never a declared or installed dependency. Now uses `crypto.randomUUID()`.
-
-### Notes
-- Requires `@cappytech/hcs-schemas` **2.0.0** (ESM) at runtime for model loading: merge the hcs-schemas ESM PR, tag/publish, then `npm update @cappytech/hcs-schemas` and commit the lockfile before deploying.
-- Client-side files under `public/` are untouched (served to browsers, not loaded by Node).
 
 ## [6.12.3] - 2026-07-17
 
