@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { purchase, uuidField } from '@cappytech/hcs-schemas';
+import schemas from '@cappytech/hcs-schemas';
+const { purchase, uuidField } = schemas;
 
 const PaymentLineSchema = new mongoose.Schema(purchase.paymentLineFields, { _id: false });
 

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { nominal, uuidField } from '@cappytech/hcs-schemas';
+import schemas from '@cappytech/hcs-schemas';
+const { nominal, uuidField } = schemas;
 
 const nominalSchema = new mongoose.Schema({
   uuid: uuidField,

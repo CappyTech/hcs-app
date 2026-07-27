@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { purchaseOrderCategory, uuidField } from '@cappytech/hcs-schemas';
+import schemas from '@cappytech/hcs-schemas';
+const { purchaseOrderCategory, uuidField } = schemas;
 
 // strict: false — KashFlow's documented shape for this entity is incomplete;
 // undeclared fields written by hcs-sync must survive round-trips.

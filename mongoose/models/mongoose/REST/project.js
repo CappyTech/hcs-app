@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { project, uuidField } from '@cappytech/hcs-schemas';
+import schemas from '@cappytech/hcs-schemas';
+const { project, uuidField } = schemas;
 
 const projectSchema = new mongoose.Schema({
   uuid: uuidField,
