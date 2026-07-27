@@ -62,9 +62,7 @@ import holidayController from './mongoose/controllers/holidayController.js';
 import __userRoutes from './mongoose/routes/userRoutes.js';
 import __attendanceRoutes from './mongoose/routes/attendanceRoutes.js';
 import __cisRoutes from './mongoose/routes/cisRoutes.js';
-import __CRUDRoutes from './mongoose/routes/CRUDRoutes.js';
 import __indexRoutes from './mongoose/routes/indexRoutes.js';
-import __listRoutes from './mongoose/routes/listRoutes.js';
 import __adminRoutes from './mongoose/routes/adminRoutes.js';
 import __loggerRoutes from './mongoose/routes/loggerRoutes.js';
 import __returnsRoutes from './mongoose/routes/returnsRoutes.js';
@@ -480,6 +478,12 @@ const main = async () => {
       const hex = Buffer.from(newKey, 'hex');
       logger.info('Generated ENCRYPTION_KEY (hex): ' + hex.toString('hex'));
     }
+
+    // CRUD/list routes generate handlers by iterating mdb.REST/INTERNAL models,
+    // so they must be imported after mdb.connect() — a static top-level import
+    // would evaluate them against empty namespaces and register no routes.
+    const __CRUDRoutes = (await import('./mongoose/routes/CRUDRoutes.js')).default;
+    const __listRoutes = (await import('./mongoose/routes/listRoutes.js')).default;
 
     appRouter.use('/', __userRoutes);
     // Routes

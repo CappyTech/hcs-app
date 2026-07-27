@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.15.1] - 2026-07-27
+
+### Fixed
+- **All generic CRUD/list routes were missing in production (every `/suppliers`, `/supplier/read/:uuid`, `/purchases`, etc. returned "Page Not Found").** ESM-migration regression: `CRUDController.js` and `listController.js` generate their handlers by iterating `mdb.REST`/`mdb.INTERNAL` at module-evaluation time, and the migration turned app.js's Phase-2 `require()` of `CRUDRoutes`/`listRoutes` into hoisted static imports — so both controllers ran against empty namespaces before `mdb.connect()` and registered zero routes. app.js now dynamically `await import()`s both routers inside Phase 2, after the models are loaded, restoring the CJS-era timing. Note for future modules: anything that enumerates `mdb` models at import time must be imported after `mdb.connect()`.
+
 ## [6.15.0] - 2026-07-27
 
 ### Changed
