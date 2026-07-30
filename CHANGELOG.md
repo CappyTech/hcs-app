@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.17.1] - 2026-07-30
+
+### Security
+- **Pinned `quill` back to 2.0.2** ([GHSA-v3m3-f69x-jf25](https://github.com/advisories/GHSA-v3m3-f69x-jf25) — XSS via the HTML export feature, affects exactly 2.0.3, no patched release). 6.16.0 vendored Quill from the CDN and pinned 2.0.3, a version bump the app never asked for; 2.0.2 is what it had been loading all along and is unaffected. Practical exposure was low — the advisory targets `getSemanticHTML()`, which this app does not call — but there is no reason to carry it. `npm audit` is now clean.
+
 ## [6.17.0] - 2026-07-30
 
 ### Security
