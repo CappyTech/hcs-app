@@ -41,8 +41,19 @@ describe('PWA wiring', () => {
     assert.equal(manifest.scope, '/');
   });
 
+  it('points every shortcut at a real department route', () => {
+    const departments = read('mongoose/config/departmentsConfig.js');
+    assert.ok(manifest.shortcuts?.length, 'manifest should declare shortcuts');
+    for (const s of manifest.shortcuts) {
+      const slug = s.url.replace(/^\//, '');
+      assert.ok(departments.includes(slug), `shortcut ${s.url} has no matching department`);
+      assert.ok(s.icons?.length, `shortcut ${s.name} needs an icon`);
+    }
+  });
+
   it('ships every icon file the manifest references', () => {
-    for (const icon of manifest.icons) {
+    const shortcutIcons = (manifest.shortcuts || []).flatMap((s) => s.icons || []);
+    for (const icon of [...manifest.icons, ...shortcutIcons]) {
       const rel = icon.src.replace('/resources/images/', 'public/images/');
       assert.ok(fs.existsSync(path.join(ROOT, rel)), `missing icon file: ${icon.src}`);
     }
@@ -86,8 +97,14 @@ describe('third-party browser assets are self-hosted', () => {
     }
   });
 
-  it('keeps jsdelivr out of the CSP', () => {
-    assert.ok(!/cdn\.jsdelivr\.net/.test(read('services/securityService.js')));
+  it('allows no third-party script, style or font origin except Turnstile', () => {
+    // Everything else in these three directives was dead allowlist. imgSrc is excluded
+    // on purpose — its origins may be referenced by database content.
+    const src = read('services/securityService.js');
+    const block = src.slice(src.indexOf('styleSrc:'), src.indexOf('imgSrc:'));
+    const origins = [...block.matchAll(/"(https:\/\/[^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(origins, ['https://challenges.cloudflare.com'],
+      `unexpected third-party origins in script/style/font CSP: ${origins.join(', ')}`);
   });
 
   it('pins the vendored libraries to exact versions', () => {

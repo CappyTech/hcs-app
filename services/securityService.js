@@ -88,27 +88,25 @@ const cspDirectives = {
   baseUri: ["'self'"],
   objectSrc: ["'none'"],
   frameAncestors: ["'self'"],
-  // The jsDelivr CDN origin was dropped once Alpine, Quill, Chart.js and Bootstrap Icons
-  // moved to public/vendor/ (see scripts/vendor-assets.js). Nothing loads from it now.
+  // Script, style and font origins are 'self' only. Alpine, Quill, Chart.js and Bootstrap
+  // Icons now come from public/vendor/ (see scripts/vendor-assets.js), and the remaining
+  // entries — jsDelivr, unpkg, cdn.tailwindcss.com, Google Fonts — were dead allowlist
+  // left over from earlier designs: nothing in the app loaded from any of them. Cloudflare
+  // Turnstile stays in scriptSrc; it is genuinely used by the auth views.
+  //
+  // imgSrc is deliberately NOT pruned the same way. Its third-party origins are unused in
+  // source, but image URLs can come from database content, which a code search cannot see.
+  // Tightening it needs a data audit, not a grep.
   styleSrc: [
     "'self'",
     (_req, res) => `'nonce-${res.locals.cspNonce}'`,
-    "https://fonts.googleapis.com",
-    "https://unpkg.com",
-    "https://cdn.tailwindcss.com/",
   ],
   scriptSrc: [
     "'self'",
     (_req, res) => `'nonce-${res.locals.cspNonce}'`,
-    "https://unpkg.com",
     "https://challenges.cloudflare.com",
-    "https://cdn.tailwindcss.com/",
   ],
-  fontSrc: [
-    "'self'",
-    "https://fonts.gstatic.com",
-    "https://fonts.googleapis.com",
-  ],
+  fontSrc: ["'self'"],
   imgSrc: [
     "'self'",
     "data:",
