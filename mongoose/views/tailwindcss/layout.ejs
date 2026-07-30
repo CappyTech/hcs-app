@@ -9,7 +9,11 @@
   </title>
 
   <link rel="icon" href="/resources/images/favicon.ico" type="image/x-icon">
-  <link rel="manifest" href="/resources/manifest/manifest.json">
+  <!-- Served from the site root, outside authentication: the browser fetches the
+       manifest while logged out, which is when installability is decided. -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/resources/images/HCS-Logo-v5-Icon192.png">
+  <meta name="theme-color" content="#047857">
 
   <!-- Prevent theme flash: set initial theme class and base background before CSS loads -->
   <script nonce="<%= locals.cspNonce %>">
@@ -74,12 +78,13 @@
   <!-- Compiled Tailwind CSS -->
   <link rel="stylesheet" href="/resources/css/tailwind.css">
 
-  <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Bootstrap Icons (self-hosted — the nav is icon-driven, so a CDN failure would
+       leave staff on poor site connections with an unusable navigation) -->
+  <link href="/resources/vendor/bootstrap-icons.min.css" rel="stylesheet">
 
   <% if (typeof quillEditor !== 'undefined' && quillEditor) { %>
   <!-- Quill rich text editor (only on pages that need it) -->
-  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+  <link href="/resources/vendor/quill.snow.css" rel="stylesheet">
   <% } %>
 
   <!-- CSRF token for fetch/AJAX calls — attribute value, CSP-safe without unsafe-inline -->
@@ -90,14 +95,19 @@
 
   <% if (isAuthenticated) { %>
     <!-- Top Nav -->
-    <nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden">
+    <nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden" aria-label="Main navigation">
       <div class="max-w-7xl mx-auto flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 overflow-x-auto">
         <% const _navCls = (href) => navActive(href)
              ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 font-medium'
              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400'; %>
-        <a href="/" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/') %>">
-          <i class="bi bi-house text-base"></i>
-          <span class="hidden sm:inline">Home</span>
+        <%# Labels stay visible at every breakpoint. They used to be hidden below the sm
+            breakpoint, which left phone users — the on-site staff who most need this —
+            with ~11 unlabelled icons and no way to tell CIS from Payroll from Finance.
+            The row already scrolls horizontally, so the labels cost nothing but width. %>
+        <% const _navItem = 'inline-flex flex-col items-center gap-0.5 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs leading-tight whitespace-nowrap shrink-0 transition'; %>
+        <a href="/" class="<%= _navItem %> <%= _navCls('/') %>" <%- navActive('/') ? 'aria-current="page"' : '' %>>
+          <i class="bi bi-house text-base" aria-hidden="true"></i>
+          <span>Home</span>
         </a>
         <% Object.entries(departmentsConfig).forEach(([slug, dept]) => {
              if (dept.showInNav === false || !canDept(slug)) return;
@@ -108,18 +118,18 @@
                    ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30'
                    : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30')
                : _navCls(href); %>
-        <a href="<%= href %>" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= cls %>">
-          <i class="bi <%= dept.icon %> text-base"></i>
-          <span class="hidden sm:inline"><%= dept.navLabel %></span>
+        <a href="<%= href %>" class="<%= _navItem %> <%= cls %>" <%- navActive(href) ? 'aria-current="page"' : '' %>>
+          <i class="bi <%= dept.icon %> text-base" aria-hidden="true"></i>
+          <span><%= dept.navLabel %></span>
         </a>
         <% }) %>
-        <a href="/help" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition <%= _navCls('/help') %>">
-          <i class="bi bi-question-circle text-base"></i>
-          <span class="hidden sm:inline">Help</span>
+        <a href="/help" class="<%= _navItem %> <%= _navCls('/help') %>" <%- navActive('/help') ? 'aria-current="page"' : '' %>>
+          <i class="bi bi-question-circle text-base" aria-hidden="true"></i>
+          <span>Help</span>
         </a>
-        <button id="theme-toggle" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition cursor-pointer">
-          <i id="theme-icon" class="bi bi-moon-stars text-base"></i>
-          <span class="hidden sm:inline">Theme</span>
+        <button id="theme-toggle" type="button" aria-label="Toggle light or dark theme" class="<%= _navItem %> text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 cursor-pointer">
+          <i id="theme-icon" class="bi bi-moon-stars text-base" aria-hidden="true"></i>
+          <span>Theme</span>
         </button>
       </div>
     </nav>
@@ -156,8 +166,8 @@
           <!-- Bottom Nav -->
           <nav class="fixed bottom-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 z-50 print:hidden">
             <div class="max-w-7xl mx-auto flex items-center justify-center px-2 py-1.5">
-              <button id="theme-toggle" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition cursor-pointer">
-                <i id="theme-icon" class="bi bi-moon-stars text-base"></i>
+              <button id="theme-toggle" type="button" aria-label="Toggle light or dark theme" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition cursor-pointer">
+                <i id="theme-icon" class="bi bi-moon-stars text-base" aria-hidden="true"></i>
                 <span>Theme</span>
               </button>
             </div>
@@ -172,21 +182,24 @@
           <script src="/resources/js/ui-helpers.js" defer></script>
           <!-- Alpine.js CSP-safe components (must load before Alpine) -->
           <script src="/resources/js/alpine-components.js" defer></script>
-          <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/alpine-csp.min.js"></script>
+          <!-- Alpine's CSP build, self-hosted and pinned via package.json. The previous
+               CDN URL (alpinejs@3.x.x/dist/alpine-csp.min.js) returns 404 — that path
+               does not exist, so Alpine was never loading at all. -->
+          <script defer src="/resources/vendor/alpine-csp.min.js"></script>
 
 
-          <!-- JS: Service Worker -->
+          <!-- JS: Service Worker (root-scoped — see public/service-worker.js) -->
           <script defer nonce="<%= locals.cspNonce %>">
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/resources/js/service-worker.js').catch(console.error);
+                navigator.serviceWorker.register('/service-worker.js').catch(console.error);
               });
             }
           </script>
 
           <% if (typeof quillEditor !== 'undefined' && quillEditor) { %>
           <!-- Quill JS + init (policy editor pages only) -->
-          <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.min.js"></script>
+          <script src="/resources/vendor/quill.js"></script>
           <script nonce="<%= locals.cspNonce %>">
             (function () {
               var quill = new Quill('#quill-editor', {

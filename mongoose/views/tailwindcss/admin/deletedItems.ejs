@@ -142,7 +142,7 @@
 </div>
 
 <% if (distribution.length > 0) { %>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="/resources/vendor/chart.umd.js"></script>
 <script nonce="<%= locals.cspNonce %>">
 (function () {
   const labels = <%- JSON.stringify(distribution.map(d => d.month)) %>;

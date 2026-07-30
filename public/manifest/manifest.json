@@ -1,25 +1,37 @@
 {
+  "id": "/",
   "name": "Heron Constructive Solutions LTD",
-  "short_name": "HeronCSLTD",
+  "short_name": "Heron CS",
+  "description": "Heron Constructive Solutions management system — CIS, payroll, HR, attendance and finance.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#818181",
-  "theme_color": "#4e4e4e",
+  "background_color": "#f9fafb",
+  "theme_color": "#047857",
   "icons": [
     {
-      "src": "/resources/images/HCS-Logo-v4-Icon32.png",
-      "sizes": "32x32",
-      "type": "image/png"
+      "src": "/resources/images/HCS-Logo-v5-Icon192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/resources/images/HCS-Logo-v4-Icon64.png",
-      "sizes": "64x64",
-      "type": "image/png"
+      "src": "/resources/images/HCS-Logo-v5-Icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/resources/images/HCS-Logo-v5-Maskable512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/resources/images/HCS-Logo-v4-Icon256.png",
       "sizes": "256x256",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "screenshots": [
