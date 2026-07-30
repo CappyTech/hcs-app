@@ -34,6 +34,36 @@
       "purpose": "any"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "Attendance",
+      "short_name": "Attendance",
+      "description": "Record and review attendance",
+      "url": "/attendance",
+      "icons": [{ "src": "/resources/images/HCS-Logo-v5-Icon192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Create",
+      "short_name": "Create",
+      "description": "Create a new record",
+      "url": "/create",
+      "icons": [{ "src": "/resources/images/HCS-Logo-v5-Icon192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "CIS",
+      "short_name": "CIS",
+      "description": "Construction Industry Scheme",
+      "url": "/construction-industry-scheme",
+      "icons": [{ "src": "/resources/images/HCS-Logo-v5-Icon192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Documents",
+      "short_name": "Documents",
+      "description": "Company documents",
+      "url": "/documents",
+      "icons": [{ "src": "/resources/images/HCS-Logo-v5-Icon192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "screenshots": [
     {
       "src": "/resources/images/lg-hcs.jpg",
