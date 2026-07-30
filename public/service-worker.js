@@ -25,9 +25,14 @@
 const VERSION = 'v2';
 const STATIC_CACHE = `hcs-static-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
+// The offline page embeds this logo. It must be precached alongside the page: it is
+// otherwise only cached opportunistically, and the layout references it just as an
+// apple-touch-icon, which most browsers never request — so an offline device could
+// render the fallback page with a broken image.
+const OFFLINE_LOGO = '/resources/images/HCS-Logo-v5-Icon192.png';
 
 // Kept minimal on purpose: anything listed here that 404s aborts the whole install.
-const PRECACHE = [OFFLINE_URL];
+const PRECACHE = [OFFLINE_URL, OFFLINE_LOGO];
 
 // Prefixes whose responses are safe to cache (same for all users, no personal data).
 const STATIC_PREFIXES = [
