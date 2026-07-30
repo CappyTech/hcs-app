@@ -2,6 +2,27 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.16.0] - 2026-07-30
+
+Makes the app genuinely installable and usable on a phone. The PWA scaffolding has been in the repo for a long time but has never done anything; this wires it up and fixes the mobile navigation.
+
+### Fixed
+- **Alpine.js was never loading.** The layout pulled `alpinejs@3.x.x/dist/alpine-csp.min.js` from jsDelivr — a path that returns **404** — so every Alpine-driven component in the app has been silently dead. Alpine's CSP build moved to its own package (`@alpinejs/csp`) at 3.15; it is now installed, pinned and self-hosted.
+- **The service worker controlled nothing.** It was registered from `/resources/js/service-worker.js`, and a worker's scope is the path it is served from, so its scope was `/resources/js/` — it could never intercept `/`, `/cis`, `/payroll` or any real page. Now served and registered from `/service-worker.js`.
+- **The manifest and worker sat behind `ensureAuthenticated`.** Both redirected to the login page for logged-out visitors, which is precisely when the browser evaluates installability. Both are now served from unauthenticated routes, along with `/resources/images` and `/resources/vendor` (branding and vendored libraries, needed by the login and setup pages).
+- **The manifest could not trigger an install prompt.** Icons were 32/64/256 only; Chrome and Android require 192×192 and 512×512. Added both, plus a `maskable` variant, `id` and `scope`.
+- Mobile nav labels were `hidden` below the `sm` breakpoint, leaving phone users — the on-site staff who most need it — with ~11 unlabelled icons and no way to distinguish CIS from Payroll from Finance. Labels are now visible at every breakpoint at a smaller size; the row already scrolled horizontally.
+
+### Added
+- **Offline fallback.** A self-contained `public/offline.html`, precached by the worker and shown when a navigation fails.
+- **Accessibility attributes in the layout**, which previously contained none: `aria-label` on the nav and the icon-only theme toggle, `aria-hidden` on decorative icons, `aria-current="page"` on the active nav item.
+- `tests/pwaAssets.test.js` — regression cover for the worker's location, manifest icon sizes, the absence of CDN references, exact version pins, and the nav label/ARIA rules.
+
+### Changed
+- **Third-party browser assets are now self-hosted.** Alpine, Quill, Chart.js and Bootstrap Icons are installed as exact-pinned devDependencies and copied into `public/vendor/` by `scripts/vendor-assets.js` (`npm run build:vendor`, run by the Docker builder stage and copied into the runtime image, the same pattern as `tailwind.css`). `public/vendor/` is generated, not committed. `cdn.jsdelivr.net` has been removed from the CSP entirely. Bootstrap Icons matters most here: the nav is icon-driven, so a CDN failure on a poor site connection left staff with an unusable navigation.
+- **The service worker no longer caches page HTML.** The previous implementation was cache-first across every request with no versioning and no cleanup, which would have pinned staff to a permanently stale dashboard with no way to clear it. It now caches only static assets (stale-while-revalidate, versioned, with an `activate` cleanup); navigations are network-only with the offline fallback. Page HTML is deliberately never cached — this is an ERP holding payroll, HR and CIS data on shared site devices, and cached pages would let the next user page back through the previous user's data after logout.
+- Manifest `theme_color` is now the brand emerald `#047857` (was a neutral grey unrelated to the app's palette), and `short_name` is "Heron CS".
+
 ## [6.15.1] - 2026-07-27
 
 ### Fixed

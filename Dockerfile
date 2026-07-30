@@ -11,7 +11,7 @@ COPY tailwind.config.js tailwind.safelist.js postcss.config.js ./
 COPY mongoose/views ./mongoose/views
 COPY mongoose/config ./mongoose/config
 COPY scripts ./scripts
-RUN npm run build:css
+RUN npm run build:vendor && npm run build:css
 
 # ── Stage 2: production image ─────────────────────────────────────────────────
 FROM node:24-alpine
@@ -25,6 +25,7 @@ RUN --mount=type=cache,target=/root/.npm \
 
 COPY . .
 COPY --from=builder /app/public/css/tailwind.css ./public/css/tailwind.css
+COPY --from=builder /app/public/vendor ./public/vendor
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

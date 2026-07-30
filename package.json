@@ -1,6 +1,6 @@
 {
   "name": "hcs-app",
-  "version": "6.15.1",
+  "version": "6.16.0",
   "type": "module",
   "description": "Internal business platform for Heron Constructive Solutions LTD: CIS compliance, HR, attendance, fleet, holidays, document management and finance dashboards. (Payroll and direct HMRC integration are in development, not production-ready.)",
   "main": "app.js",
@@ -10,11 +10,13 @@
   "scripts": {
     "test": "node scripts/run-tests.js",
     "start": "node app.js",
-    "dev": "concurrently -k -n server,css -c green,cyan \"npm:dev:server\" \"npm:dev:css\"",
+    "dev": "npm run build:vendor && concurrently -k -n server,css -c green,cyan \"npm:dev:server\" \"npm:dev:css\"",
     "dev:server": "nodemon app.js",
     "build:css": "tailwindcss -c ./tailwind.config.js -i ./assets/tailwind.css -o ./public/css/tailwind.css --minify",
     "dev:css": "tailwindcss -c ./tailwind.config.js -i ./assets/tailwind.css -o ./public/css/tailwind.css --watch",
-    "gen:tailwind-safelist": "node scripts/generate-tailwind-safelist.js"
+    "gen:tailwind-safelist": "node scripts/generate-tailwind-safelist.js",
+    "build:vendor": "node scripts/vendor-assets.js",
+    "build": "npm run build:vendor && npm run build:css"
   },
   "keywords": [
     "cis",
@@ -61,15 +63,19 @@
     "xss": "^1.0.15"
   },
   "devDependencies": {
+    "@alpinejs/csp": "3.15.0",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/typography": "^0.5.13",
     "autoprefixer": "^10.4.20",
+    "bootstrap-icons": "1.13.1",
+    "chart.js": "4.5.0",
     "concurrently": "^9.2.4",
     "fast-glob": "^3.3.2",
     "moment": "^2.30.1",
     "moment-timezone": "^0.6.2",
     "nodemon": "^3.1.4",
     "postcss": "^8.4.47",
+    "quill": "2.0.3",
     "tailwindcss": "^3.4.13"
   },
   "overrides": {

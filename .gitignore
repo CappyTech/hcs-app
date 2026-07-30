@@ -7,6 +7,8 @@ compose.env
 # Build outputs
 /config/
 /dist/
+# Third-party browser assets copied out of node_modules by scripts/vendor-assets.js
+/public/vendor/
 
 # Logs
 app.log

@@ -130,6 +130,30 @@ const main = async () => {
 
   // Static assets (no DB required)
   app.use('/resources/css', express.static(path.join(__dirname, 'public', 'css')));
+  // Branding images and vendored browser libraries must be public: they are needed by
+  // the login and setup pages, and the manifest icons are fetched by the browser while
+  // the user is logged out (which is exactly when installability is evaluated).
+  app.use('/resources/images', express.static(path.join(__dirname, 'public', 'images')));
+  app.use('/resources/vendor', express.static(path.join(__dirname, 'public', 'vendor')));
+
+  // PWA. The service worker's scope is the path it is served from, so it MUST be served
+  // from the site root — at /resources/js/service-worker.js its scope was /resources/js/
+  // and it could never control a single real page. Both this and the manifest are
+  // deliberately outside ensureAuthenticated; neither contains anything sensitive.
+  app.get('/service-worker.js', (req, res) => {
+    res.type('application/javascript');
+    // The worker itself must never be served from cache, or clients can be pinned to a
+    // stale worker indefinitely.
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(__dirname, 'public', 'service-worker.js'));
+  });
+  app.get('/manifest.json', (req, res) => {
+    res.type('application/manifest+json');
+    res.sendFile(path.join(__dirname, 'public', 'manifest', 'manifest.json'));
+  });
+  app.get('/offline.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'offline.html'));
+  });
   app.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'images', 'favicon.ico'));
   });

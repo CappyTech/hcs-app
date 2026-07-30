@@ -88,10 +88,11 @@ const cspDirectives = {
   baseUri: ["'self'"],
   objectSrc: ["'none'"],
   frameAncestors: ["'self'"],
+  // The jsDelivr CDN origin was dropped once Alpine, Quill, Chart.js and Bootstrap Icons
+  // moved to public/vendor/ (see scripts/vendor-assets.js). Nothing loads from it now.
   styleSrc: [
     "'self'",
     (_req, res) => `'nonce-${res.locals.cspNonce}'`,
-    "https://cdn.jsdelivr.net",
     "https://fonts.googleapis.com",
     "https://unpkg.com",
     "https://cdn.tailwindcss.com/",
@@ -99,14 +100,12 @@ const cspDirectives = {
   scriptSrc: [
     "'self'",
     (_req, res) => `'nonce-${res.locals.cspNonce}'`,
-    "https://cdn.jsdelivr.net",
     "https://unpkg.com",
     "https://challenges.cloudflare.com",
     "https://cdn.tailwindcss.com/",
   ],
   fontSrc: [
     "'self'",
-    "https://cdn.jsdelivr.net",
     "https://fonts.gstatic.com",
     "https://fonts.googleapis.com",
   ],
