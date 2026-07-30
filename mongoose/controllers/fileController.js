@@ -1,50 +1,55 @@
 import path from 'path';
-import fs from 'fs'; // for existsSync
-const fsp = __fs.promises; // for async file ops if needed
+import fsp from 'fs/promises';
 import mime from 'mime-types';
 import sanitize from 'sanitize-filename';
 import logger from '../../services/loggerService.js';
 import mdb from '../services/mongooseDatabaseService.js';
-import __fs from 'fs';
-import { fileURLToPath } from 'node:url';
-import { dirname as _esmDirname } from 'node:path';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = _esmDirname(__filename);
+import fileStorage from '../../services/fileStorage.js';
 
-const getBaseDir = (modelName) =>
-  path.join(__dirname, "../../public", modelName.toLowerCase());
+const { getRecordDir, resolveFilePath } = fileStorage;
+
+/**
+ * Documents are served through the authenticated download route, never as static
+ * files. They used to be written into public/<model>/ and linked as
+ * /resources/<Model>/<uuid>/<file>, which express served to anyone — no session
+ * required. See services/fileStorage.js.
+ */
+const buildFileUrl = (modelName, safeDir, safeFile) =>
+  `/${modelName}/download/${encodeURIComponent(safeDir)}/${encodeURIComponent(safeFile)}`;
 
 export const viewFile = async (req, res, next) => {
   try {
     const { model, uuid, filename } = req.params;
+    const modelName = model.toLowerCase();
     const safeDir = sanitize(String(uuid));
     const safeFile = sanitize(String(filename));
-    const modelName = model.toLowerCase();
-    const baseDir = getBaseDir(modelName);
-    const filePath = path.join(baseDir, safeDir, safeFile);
+
+    const filePath = resolveFilePath(modelName, safeDir, safeFile);
+    if (!filePath) {
+      return next({ statusCode: 400, name: 'BadRequestError', message: 'Invalid file path' });
+    }
 
     await fsp.access(filePath); // Throws if not found
 
     const mimeType = mime.lookup(filePath);
-    const modelDisplay = model.charAt(0).toUpperCase() + model.slice(1);
-    const fileUrl = `/resources/${modelDisplay}/${safeDir}/${safeFile}`;
+    const fileUrl = buildFileUrl(modelName, safeDir, safeFile);
 
-    if (mimeType?.startsWith("image/")) {
-      return res.render("tailwindcss/partials/view-file", {
+    if (mimeType?.startsWith('image/')) {
+      return res.render('tailwindcss/partials/view-file', {
         title: `Viewing ${safeFile}`,
         fileUrl,
-        fileType: "image",
+        fileType: 'image',
         filename: safeFile,
         uuid,
         basePath: modelName,
       });
     }
 
-    if (mimeType === "application/pdf") {
-      return res.render("tailwindcss/partials/view-file", {
+    if (mimeType === 'application/pdf') {
+      return res.render('tailwindcss/partials/view-file', {
         title: `Viewing ${safeFile}`,
         fileUrl,
-        fileType: "pdf",
+        fileType: 'pdf',
         filename: safeFile,
         uuid,
         basePath: modelName,
@@ -64,11 +69,12 @@ export const renderUploadForm = async (req, res, next) => {
   const modelName = model.toLowerCase();
 
   try {
-    const item = await mdb[modelName]?.findOne({ uuid }).lean();
-    if (!item) return res.status(404).send("Not found");
+    // ensureCanAccessRecord has already loaded and authorised the parent record.
+    const item = req.parentRecord || (await mdb[modelName]?.findOne({ uuid }).lean());
+    if (!item) return res.status(404).send('Not found');
 
-    res.render(path.join("tailwindcss", "partials", "form-upload"), {
-      title: `Upload Documents`,
+    res.render(path.join('tailwindcss', 'partials', 'form-upload'), {
+      title: 'Upload Documents',
       item,
       modelName,
       basePath: modelName,
@@ -82,21 +88,23 @@ export const uploadFiles = async (req, res, next) => {
   const { model, uuid } = req.params;
   const modelName = model.toLowerCase();
   const dirName = sanitize(uuid);
-  const baseDir = getBaseDir(modelName);
-  const targetDir = path.join(baseDir, dirName);
+  const targetDir = getRecordDir(modelName, dirName);
 
   try {
     await fsp.mkdir(targetDir, { recursive: true });
 
     for (const file of req.files) {
       const sanitizedFileName = sanitize(file.originalname);
-      const filePath = path.join(targetDir, sanitizedFileName);
+      const filePath = resolveFilePath(modelName, dirName, sanitizedFileName);
+      if (!filePath) {
+        logger.warn(`[fileController] Rejected suspicious filename: ${file.originalname}`);
+        await fsp.unlink(file.path).catch(() => {});
+        continue;
+      }
 
       await fsp.rename(file.path, filePath);
 
-      logger.info(
-        `📄 Uploaded: ${sanitizedFileName} to ${modelName}/${dirName}`,
-      );
+      logger.info(`📄 Uploaded: ${sanitizedFileName} to ${modelName}/${dirName}`);
 
       if (mdb[`${modelName}_files`]) {
         await mdb[`${modelName}_files`].create({
@@ -123,8 +131,11 @@ export const downloadFile = async (req, res, next) => {
   const modelName = model.toLowerCase();
   const dirName = sanitize(uuid);
   const sanitizedFile = sanitize(filename);
-  const baseDir = getBaseDir(modelName);
-  const filePath = path.join(baseDir, dirName, sanitizedFile);
+  const filePath = resolveFilePath(modelName, dirName, sanitizedFile);
+
+  if (!filePath) {
+    return next({ statusCode: 400, name: 'BadRequestError', message: 'Invalid file path' });
+  }
 
   try {
     await fsp.access(filePath); // throws if file doesn't exist
@@ -145,8 +156,11 @@ export const deleteFile = async (req, res, next) => {
   const modelName = model.toLowerCase();
   const dirName = sanitize(uuid);
   const sanitizedFile = sanitize(filename);
-  const dirPath = getBaseDir(modelName);
-  const filePath = path.join(dirPath, dirName, sanitizedFile);
+  const filePath = resolveFilePath(modelName, dirName, sanitizedFile);
+
+  if (!filePath) {
+    return next({ statusCode: 400, name: 'BadRequestError', message: 'Invalid file path' });
+  }
 
   try {
     await fsp.unlink(filePath);
