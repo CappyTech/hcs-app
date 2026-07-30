@@ -22,7 +22,24 @@ const PUBLIC_PATHS = new Set([
   // so it must bypass the session-based ensureAuthenticated guard.
   "/api/sso/token",
 ]);
-const PUBLIC_PREFIXES = ["/resources/", "/manifest/", "/legal/"];
+// Only the static asset subtrees are public — NOT all of /resources/.
+//
+// "/resources/" used to be listed here, which made isPublicPath() return true for
+// everything under it. That silently defeated the ensureAuthenticated guard on the
+// /resources static mount in app.js, so uploaded documents written to public/<model>/
+// were downloadable by anyone with the URL. The upload store has moved out of public/
+// (see services/fileStorage.js); this narrowing stops the prefix from ever granting
+// blanket access again if something else lands in public/.
+//
+// These four must stay public: the login and setup pages load them while logged out.
+const PUBLIC_PREFIXES = [
+  "/resources/css/",
+  "/resources/js/",
+  "/resources/images/",
+  "/resources/vendor/",
+  "/manifest/",
+  "/legal/",
+];
 
 // Paths accessible to authenticated-but-unverified users
 const UNVERIFIED_PATHS = new Set([
@@ -315,3 +332,7 @@ export default {
 };
 
 export { ensureAuthenticated, ensureRouteAccess, rolesRequiring2FA, ensureRoles, ensureRole, ensureAnyRole, ensureModelAccess, ensureOwnership, ensureDepartment };
+
+// Exposed for tests only — a blanket "/resources/" entry here silently disables the
+// auth guard on the static mount, so it is worth asserting against.
+export const PUBLIC_PREFIXES_FOR_TEST = PUBLIC_PREFIXES;

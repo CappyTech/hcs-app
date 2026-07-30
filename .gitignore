@@ -4,6 +4,11 @@ compose.env
 # Node modules
 /node_modules/
 
+# Uploaded documents (see services/fileStorage.js). Never commit user files —
+# and never let them back under public/, which is served statically.
+/storage/
+/uploads/
+
 # Build outputs
 /config/
 /dist/

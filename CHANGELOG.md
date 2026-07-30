@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.17.0] - 2026-07-30
+
+### Security
+- **Uploaded documents were publicly downloadable.** `fileController.getBaseDir()` wrote every upload into `public/<model>/`, and `services/authService.js` listed `/resources/` in `PUBLIC_PREFIXES` — so `isPublicPath()` returned true for it and the `ensureAuthenticated` guard on the `/resources` static mount in `app.js` never gated anything. Any document attached to any record (CIS, HR, payroll, project) could be fetched by anyone with the URL, no session required. Confirmed live before the fix. The store now lives outside `public/` (`services/fileStorage.js`, `FILE_STORAGE_DIR`) and is reachable only through the authenticated file routes. `PUBLIC_PREFIXES` is narrowed to the four static asset subtrees the logged-out login and setup pages actually need.
+- **File routes now authorise against the parent record instead of a flat role check.** They were gated on `ensureRole("admin")`, which said nothing about whether the caller may see the record a document hangs off. `services/ensureCanAccessRecord.js` reuses the existing RBAC primitives — `rbac.canAccess(role, model, op)` for model access and `rbac.getOwnershipConfig()` for own-only roles — and loads the parent record through that ownership filter; if it does not come back, the request 404s (not 403, which would confirm the record exists). Reading a document needs `r` on the model, adding or removing one needs `u`. Admin keeps its existing bypass.
+- Added path-traversal backstops in `resolveFilePath()` for the view, download, delete and upload paths.
+
+### Fixed
+- **Uploads did not survive a deploy.** multer's `dest: "uploads/"` was relative, resolving against the process working directory, and the final store sat in the container's writable layer with no volume behind it. With `pull_policy: always`, every deploy destroyed everything uploaded since the last one. Both the temp dir and the store are now absolute and under `FILE_STORAGE_DIR`, which must be mounted. **Deploy note: `docker-compose.yml` needs a volume at that path — the existing `./uploads:/uploads` bind pointed at a path nothing uses and can be replaced.**
+- Model directory names are now lowercased on both the write and read paths. Uploads went to `public/<model>/` while `viewFile` built URLs with a capitalised name — different paths on a case-sensitive filesystem.
+- multer's temp dir now shares a root with the destination, so the `fs.rename` into place cannot fail with `EXDEV`.
+
+### Removed
+- `public/Project/a7430e9e-…/` — two real client files (a photo and a Word document) committed in `515833e1` (2025-07-18) and baked into every image since. They remain in git history; purging that requires a history rewrite and force-push, which has not been done.
+
 ## [6.16.0] - 2026-07-30
 
 Makes the app genuinely installable and usable on a phone. The PWA scaffolding has been in the repo for a long time but has never done anything; this wires it up and fixes the mobile navigation.
