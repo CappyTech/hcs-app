@@ -59,6 +59,20 @@ describe('PWA wiring', () => {
       'the offline fallback page must exist or install fails',
     );
   });
+
+  it('precaches every asset the offline page embeds', () => {
+    // Opportunistic caching is not enough: an offline device that never happened to
+    // fetch the logo would render the fallback page with a broken image.
+    const sw = read('public/service-worker.js');
+    const offline = read('public/offline.html');
+    const embedded = [...offline.matchAll(/<img[^>]+src="([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(embedded.length > 0, 'offline page should embed the logo');
+    for (const src of embedded) {
+      assert.ok(sw.includes(src), `${src} is embedded in offline.html but not precached`);
+      const rel = src.replace('/resources/images/', 'public/images/');
+      assert.ok(fs.existsSync(path.join(ROOT, rel)), `missing file: ${src}`);
+    }
+  });
 });
 
 describe('third-party browser assets are self-hosted', () => {
