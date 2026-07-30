@@ -71,6 +71,14 @@ describe('PWA wiring', () => {
     );
   });
 
+  it('never caches a redirected response', () => {
+    // An auth-gated asset redirects to the login page, which answers 200 with HTML.
+    // Caching that would pin login HTML under a .js/.css URL.
+    const sw = read('public/service-worker.js');
+    assert.match(sw, /!response\.redirected/);
+    assert.match(sw, /response\.type === 'basic'/);
+  });
+
   it('precaches every asset the offline page embeds', () => {
     // Opportunistic caching is not enough: an offline device that never happened to
     // fetch the logo would render the fallback page with a broken image.
