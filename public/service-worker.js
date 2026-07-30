@@ -89,8 +89,13 @@ self.addEventListener('fetch', (event) => {
         const cached = await cache.match(request);
         const network = fetch(request)
           .then((response) => {
-            // Opaque/error responses are not worth persisting.
-            if (response && response.ok) cache.put(request, response.clone());
+            // Only persist a direct, successful, same-origin hit. `redirected` is the
+            // important one: an asset behind authentication redirects to the login page,
+            // which answers 200 with HTML — caching that would pin the login page under
+            // a .js or .css URL and break the app for the rest of the cache's life.
+            if (response && response.ok && !response.redirected && response.type === 'basic') {
+              cache.put(request, response.clone());
+            }
             return response;
           })
           .catch(() => cached);
