@@ -2,6 +2,29 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.18.0] - 2026-07-31
+
+Makes every outgoing email a responsive HTML email. They were not merely unstyled for mobile — they were structurally incapable of it.
+
+### Fixed
+- **Emails had no `<html>` or `<head>` at all.** Every message was a bare `<div style="max-width:600px">` fragment handed straight to nodemailer. No `<head>` means no `<style>`, and no `<style>` means **no media queries** — nothing could respond to screen width under any circumstances. `services/emailLayout.js` now supplies a real document and every email is delivered inside it.
+- **No `<meta name="viewport">`**, so mobile clients chose their own scale and the recipient pinch-zoomed to read a notification.
+- **`max-width` on a `<div>` does nothing in Outlook for Windows**, which renders through Word. The body stretched the full width of the window. Centring is now a table plus an MSO conditional fixed-width table, which Word does honour.
+- **The action buttons collapsed in Outlook.** They were an inline `<a>` carrying `padding` and `background-color` — both ignored by Word — so "Verify Email" and "Reset Password" arrived as bare underlined text. They are now the standard bulletproof construction: background on the `<td>`, padding on the `<a>`.
+- **The KashFlow "below income target" alert was a five-column currency table** with no mobile handling, unreadable on a phone. It goes through `emailLayout.dataTable`, which stays a table on desktop and becomes one labelled card per project below 600px.
+- `tests/emailNotifications.test.js` — the "queues a subscribed system notification" case threw instead of asserting, because signing an unsubscribe token needs a server secret the test never set. Unrelated to this work, but it was the only red test in the suite.
+
+### Added
+- **`services/emailLayout.js`** — the responsive shell and the primitives built on it (`button`, `buttonRow`, `dataTable`, `note`, `link`, plus `escapeHtml`/`safeUrl` moved here so `emailService` can use them without importing the notification service). The document carries a viewport meta, a `<style>` block with a 600px breakpoint, `color-scheme` and a `prefers-color-scheme: dark` block, and Outlook conditionals. Below 600px the container goes fluid, outer gutters shrink, buttons become full-width tap targets, and data tables stack into labelled rows.
+- **Every style is inline *as well as* in the stylesheet.** Gmail's web client keeps `<style>` in the head (so the media queries work) but plenty of clients strip it, so the inline styles carry the desktop rendering on their own and the classes only ever *override* for small screens. Do not move a style that matters into the stylesheet alone.
+- **Preheader support** — the hidden line clients show beside the subject in the inbox list. Without one they scrape whatever visible text comes first, which for a branded email is the header or an image alt.
+- `tests/emailLayout.test.js` — 38 cases covering the document structure, the breakpoint and dark-mode blocks, the Outlook conditionals, button escaping and URL sanitising, the stacking data table, preheader hiding/escaping, and `isDocument` round-tripping.
+
+### Changed
+- `emailService.sendMail` is now the guaranteed wrapping point: any caller's fragment gets the responsive document, and anything already a full document is left alone. `notificationService.enqueue` wraps the assembled email itself so the unsubscribe and automated-message footers sit *below* the card rather than inside it; the wrap is idempotent, so it is not applied twice.
+- The email-type preview (`renderPreviewDocument`) renders through the same shell, so previewing now shows the real responsive behaviour. `PREVIEW_CSP` already allowed `'unsafe-inline'` styles and needed no change.
+- Notification headings are `<h1>` rather than `<h2>`, and the KashFlow alert's indigo links now match the app's emerald.
+
 ## [6.17.2] - 2026-07-31
 
 ### Fixed
