@@ -11,6 +11,7 @@ import smsService from '../../services/smsService.js';
 import auditLog from '../../services/auditLogService.js';
 import hibpService from '../../services/hibpService.js';
 import totpService from '../../services/totpService.js';
+import passwordResetDraft from '../../services/passwordResetDraft.js';
 
 function hasCookie(req, cookieName) {
   try {
@@ -817,9 +818,13 @@ export const renderVerifySmsOtp = (req, res) => {
     req.flash("error", "Session expired. Please try again.");
     return res.redirect("/user/forgot-password");
   }
+  // Single-use: rendering the form consumes the draft, so coming back to this
+  // page later starts blank.
+  const draft = passwordResetDraft.take(req);
   res.render(path.join("tailwindcss", "user", "verify-sms-otp"), {
     title: "Enter Verification Code",
     maskedPhone: req.session.passwordResetPending.maskedPhone,
+    draft,
   });
 };
 
@@ -832,6 +837,11 @@ export const verifySmsOtp = async (req, res) => {
   }
 
   const { otp, password, confirmPassword } = req.body;
+
+  // Stashed up front so it covers every failure branch below; the redirect back
+  // to the form consumes it. Success deletes passwordResetPending, which takes
+  // the draft with it.
+  passwordResetDraft.stash(req, { password, confirmPassword });
 
   if (!otp || otp.trim().length !== 6 || !/^\d{6}$/.test(otp.trim())) {
     req.flash("error", "Please enter the 6-digit code sent to your phone.");
@@ -862,6 +872,9 @@ export const verifySmsOtp = async (req, res) => {
 
     const breach = await hibpService.isPasswordPwned(password);
     if (breach.pwned) {
+      // Deliberately not carried over: this password has to be replaced, not
+      // corrected, and handing it back invites a one-character edit.
+      passwordResetDraft.clear(req);
       req.flash("error", hibpService.PWNED_MESSAGE);
       return res.redirect("/user/verify-sms-otp");
     }
@@ -893,8 +906,11 @@ export const renderVerifyTotpReset = (req, res) => {
     req.flash("error", "Session expired. Please try again.");
     return res.redirect("/user/forgot-password");
   }
+  // Single-use — see renderVerifySmsOtp.
+  const draft = passwordResetDraft.take(req);
   res.render(path.join("tailwindcss", "user", "verify-totp-reset"), {
     title: "Authenticator Verification",
+    draft,
   });
 };
 
@@ -907,6 +923,9 @@ export const verifyTotpReset = async (req, res) => {
   }
 
   const { totpToken, password, confirmPassword } = req.body;
+
+  // See verifySmsOtp — stashed up front, consumed by the redirect back here.
+  passwordResetDraft.stash(req, { password, confirmPassword });
 
   if (!totpToken || !/^\d{6}$/.test(totpToken.trim())) {
     req.flash("error", "Please enter the 6-digit code from your authenticator app.");
@@ -943,6 +962,8 @@ export const verifyTotpReset = async (req, res) => {
 
     const breach = await hibpService.isPasswordPwned(password);
     if (breach.pwned) {
+      // See verifySmsOtp — a breached password is not worth carrying back.
+      passwordResetDraft.clear(req);
       req.flash("error", hibpService.PWNED_MESSAGE);
       return res.redirect("/user/verify-totp-reset");
     }

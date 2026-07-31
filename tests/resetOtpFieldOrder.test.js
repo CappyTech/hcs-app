@@ -50,11 +50,29 @@ describe('password reset — one-time code field ordering', () => {
     it(`${view} keeps the one-time-code autofill hint on ${code}`, () => {
       // Moving the field must not cost the browser/OS autofill of an incoming code.
       const html = read(path.join(VIEWS, view));
+      // The tag closes on a line of its own; do not stop at the first ">", which
+      // now belongs to an embedded EJS tag.
       const field = html.slice(html.indexOf(`name="${code}"`));
-      assert.match(
-        field.slice(0, field.indexOf('>')),
-        /autocomplete="one-time-code"/,
-      );
+      const end = field.search(/^\s*>\s*$/m);
+      assert.ok(end > -1, 'could not find the end of the code input tag');
+      assert.match(field.slice(0, end), /autocomplete="one-time-code"/);
+    });
+  }
+
+  for (const { view } of CODE_LAST) {
+    it(`${view} repopulates both password fields from the draft`, () => {
+      // A rejected code must not also cost the user the passwords they typed.
+      const html = read(path.join(VIEWS, view));
+      // Escaped output only — a password interpolated with <%- would be an XSS sink.
+      assert.match(html, /value="<%= locals\.draft && draft\.password \|\| ''\s*%>"/);
+      assert.match(html, /value="<%= locals\.draft && draft\.confirmPassword \|\| ''\s*%>"/);
+      assert.ok(!/<%-\s*draft/.test(html), 'draft values must never be interpolated unescaped');
+    });
+
+    it(`${view} focuses the code field when the passwords came back filled in`, () => {
+      const html = read(path.join(VIEWS, view));
+      assert.match(html, /<% if \(!\(locals\.draft && draft\.password\)\) { %>autofocus/);
+      assert.match(html, /<% if \(locals\.draft && draft\.password\) { %>autofocus/);
     });
   }
 
