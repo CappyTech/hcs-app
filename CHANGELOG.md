@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.17.2] - 2026-07-31
+
+### Fixed
+- **The password reset 2FA forms asked for the one-time code first, so it could expire before the form was submitted.** `verify-totp-reset.ejs` and `verify-sms-otp.ejs` both put the code field at the top, above the new password and confirm-password fields. An authenticator code lives 30 seconds; a user reading it off their phone, then typing a password twice, then finding the button, can easily post a code that has already rolled. `verifyTOTP` allows a ±1 step window, which absorbs clock skew, not a slow form. The code is now the last field before submit on both views, the passwords come first (with `autofocus` on the new password), and the intro copy leads with the password step. This matches `login.ejs`, which has always asked for the password before the 2FA code.
+- The failure path still redirects and clears the form, so a rejected code costs the user both passwords as well. Left as is here — fixing it means round-tripping the entered values through the session, which is a larger change than the reordering.
+
+### Added
+- `tests/resetOtpFieldOrder.test.js` — asserts the code field follows both password fields and precedes the submit button on both reset views, keeps `autocomplete="one-time-code"` on it, and pins the same order on the login form.
+
 ## [6.17.1] - 2026-07-30
 
 ### Security
