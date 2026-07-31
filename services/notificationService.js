@@ -5,6 +5,7 @@ import emailTypeService from '../mongoose/services/emailTypeService.js';
 import emailPreferenceService from '../mongoose/services/emailPreferenceService.js';
 import emailBrandingService from '../mongoose/services/emailBrandingService.js';
 import unsubscribeTokenService from '../mongoose/services/unsubscribeTokenService.js';
+import emailLayout from './emailLayout.js';
 
 /**
  * Central notification service (email outbox).
@@ -30,69 +31,43 @@ import unsubscribeTokenService from '../mongoose/services/unsubscribeTokenServic
 const BACKOFF_BASE_MS = 5 * 60 * 1000; // 5 min, doubles per attempt
 const BACKOFF_MAX_MS = 6 * 60 * 60 * 1000; // cap at 6 h
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-// Only allow link schemes that are safe inside an email button. Anything else
-// (javascript:, data:, etc.) is neutralised to '#'. Relative paths are allowed.
-function safeUrl(url) {
-  const value = String(url ?? '').trim();
-  if (!value) return '#';
-  if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
-  if (/^\//.test(value)) return value; // app-relative path
-  return '#';
-}
-
-function renderButton(text, url) {
-  return `<a href="${escapeHtml(safeUrl(url))}"
-           style="display: inline-block; background-color: #15803d; color: #fff; margin: 6px; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-size: 16px;">
-          ${escapeHtml(text)}
-        </a>`;
-}
+// Escaping, URL sanitising and the responsive primitives all live in
+// emailLayout so emailService can use them without pulling in this module (and
+// with it the whole mdb singleton). Re-exported below for existing callers.
+const { escapeHtml, buttonRow, note } = emailLayout;
 
 /**
- * Branded HTML wrapper matching the existing verification/reset emails.
- * `bodyLines` are escaped; pass `bodyHtml` instead to supply raw HTML.
+ * The content block of a notification email: heading, body copy, action
+ * buttons. `bodyLines` are escaped; pass `bodyHtml` instead to supply raw HTML.
  *
  * Action buttons: pass a single `ctaText`/`ctaUrl` (legacy) and/or an `actions`
- * array of `{ text|label, url }`. All are rendered together, centred, wrapping
- * across lines when there are several.
+ * array of `{ text|label, url }`. All are rendered together, centred, and stack
+ * to full width below 600px.
+ *
+ * This returns a *fragment*, not a document — `emailService.sendMail` wraps the
+ * assembled email (branding, body, footers) in the responsive shell exactly
+ * once, on the way out.
  */
 function wrapTemplate({ heading, bodyLines = [], bodyHtml = '', ctaText, ctaUrl, actions = [] }) {
   const paragraphs = bodyHtml ||
-    bodyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join('\n      ');
+    bodyLines
+      .map((line) => `<p style="margin:0 0 14px;">${escapeHtml(line)}</p>`)
+      .join('\n      ');
   const allActions = [
     ...(ctaText && ctaUrl ? [{ text: ctaText, url: ctaUrl }] : []),
     ...(Array.isArray(actions) ? actions : []),
-  ]
-    .map((a) => ({ text: a && (a.text || a.label), url: a && a.url }))
-    .filter((a) => a.text && a.url);
-  const cta = allActions.length
-    ? `<div style="text-align: center; margin: 30px 0;">
-        ${allActions.map((a) => renderButton(a.text, a.url)).join('\n        ')}
-      </div>`
-    : '';
+  ];
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #15803d;">${escapeHtml(heading)}</h2>
+      <h1 class="email-heading" style="margin:0 0 16px;font-size:24px;line-height:31px;font-weight:700;color:${emailLayout.BRAND};">${escapeHtml(heading)}</h1>
       ${paragraphs}
-      ${cta}
-    </div>
+      ${buttonRow(allActions)}
   `;
 }
 
 // Standing "automated message" notice appended below *everything* (body,
 // branded footer and the mandatory unsubscribe line) by enqueue() and the
 // preview, so it always sits at the very bottom of the email.
-const AUTOMATED_NOTICE_HTML = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 16px auto 0; color: #999; font-size: 12px;">
-      <p style="margin: 0;">This is an automated message from the Heron CS platform.</p>
-    </div>`;
+const AUTOMATED_NOTICE_HTML = note('<p style="margin:0;">This is an automated message from the Heron CS platform.</p>');
 const AUTOMATED_NOTICE_TEXT = '\n\n—\nThis is an automated message from the Heron CS platform.';
 
 /** Crude HTML→text for the plaintext part of branded header/footer blocks. */
@@ -148,40 +123,40 @@ function buildFooter({ senderType = 'system', subscribable = false, typeKey = nu
     : dashUrl;
 
   let sentence;
-  let link;
+  let url;
   let linkText = 'unsubscribe here';
 
   if (senderType === 'admin' && !subscribable) {
     // Direct email from a human admin — cannot unsubscribe from the message,
     // but may stop admins contacting them at all.
     sentence = 'This email was sent by an administrator. You cannot unsubscribe from it — please contact an administrator, or change your notification settings so administrators can no longer contact you.';
-    link = tokenUnsub();
+    url = tokenUnsub();
     linkText = 'change your notification settings';
   } else if (senderType === 'admin') {
     sentence = 'This is an admin notification email.';
-    link = tokenUnsub();
+    url = tokenUnsub();
   } else if (senderType === 'user') {
     sentence = 'This is a user notification email.';
-    link = tokenUnsub();
+    url = tokenUnsub();
   } else if (!subscribable) {
     // Mandatory system message (e.g. security) — no unsubscribe.
     return {
-      html: `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 16px auto 0; padding-top: 12px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
-      <p style="margin: 0;">This is a system notification email. It is required for the operation of your account and cannot be unsubscribed from.</p>
-    </div>`,
+      html: note(
+        '<p style="margin:0;">This is a system notification email. It is required for the operation of your account and cannot be unsubscribed from.</p>',
+        { rule: true },
+      ),
       text: '\n\n—\nThis is a system notification email. It is required for the operation of your account and cannot be unsubscribed from.',
     };
   } else {
     sentence = 'This is a system notification email.';
-    link = tokenUnsub();
+    url = tokenUnsub();
   }
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 16px auto 0; padding-top: 12px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
-      <p style="margin: 0;">${escapeHtml(sentence)} <a href="${escapeHtml(link)}" style="color: #15803d;">${escapeHtml(linkText)}</a>.</p>
-    </div>`;
-  const text = `\n\n—\n${sentence} ${linkText}: ${link}`;
+  const html = note(
+    `<p style="margin:0;">${escapeHtml(sentence)} ${emailLayout.link(linkText, url)}.</p>`,
+    { rule: true },
+  );
+  const text = `\n\n—\n${sentence} ${linkText}: ${url}`;
   return { html, text };
 }
 
@@ -268,8 +243,16 @@ async function enqueue({
   // unsubscribe footer.
   const branding = await emailBrandingService.get();
   const brand = resolveBranding(branding, type);
+  // Assembled into the responsive shell here rather than left to sendMail, so
+  // the footers can sit *below* the card instead of inside it. sendMail's own
+  // wrap is idempotent and leaves a finished document alone.
   const finalHtml = html != null
-    ? `${brand.header}${html}${brand.footer}${footer.html}${AUTOMATED_NOTICE_HTML}`
+    ? emailLayout.renderDocument({
+        title: subject,
+        preheader: type && type.intro ? type.intro : '',
+        contentHtml: `${brand.header}${html}${brand.footer}`,
+        afterHtml: `${footer.html}${AUTOMATED_NOTICE_HTML}`,
+      })
     : html;
   const brandHeaderText = brand.header ? `${htmlToText(brand.header)}\n\n` : '';
   const brandFooterText = brand.footer ? `\n\n${htmlToText(brand.footer)}` : '';
@@ -392,8 +375,16 @@ function renderPreviewDocument(type, branding = null) {
     token: null,
   });
   const brand = resolveBranding(branding, type);
-  const safeTitle = escapeHtml(type.label || '');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Email preview — ${safeTitle}</title></head><body style="margin:0;padding:24px;background:#f3f4f6;">${brand.header}${html}${brand.footer}${footer.html}${AUTOMATED_NOTICE_HTML}</body></html>`;
+  // Rendered through the same shell the recipient gets, so the preview shows
+  // the real responsive behaviour — resize the pane and it reflows as the email
+  // would. Note PREVIEW_CSP allows 'unsafe-inline' styles, which covers both the
+  // inline attributes and the shell's <style> block.
+  return emailLayout.renderDocument({
+    title: `Email preview — ${type.label || ''}`,
+    preheader: type.intro || '',
+    contentHtml: `${brand.header}${html}${brand.footer}`,
+    afterHtml: `${footer.html}${AUTOMATED_NOTICE_HTML}`,
+  });
 }
 
 export default {

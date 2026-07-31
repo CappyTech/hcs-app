@@ -6,6 +6,13 @@ import assert from 'node:assert/strict';
  * top of the email outbox. Patches the mdb singleton (same approach as
  * notificationService.test.js) so no real database is required.
  */
+// enqueue() mints a signed unsubscribe token, which needs a server secret.
+// Without one the "queues a subscribed system notification" case threw instead
+// of asserting anything. unsubscribeTokenService reads the secret lazily when
+// signing, not at import, so setting it here is enough despite ESM hoisting the
+// imports below above this line.
+process.env.UNSUBSCRIBE_SECRET ||= 'test-unsubscribe-secret';
+
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
 import notificationService from '../services/notificationService.js';
 import emailPreferenceService from '../mongoose/services/emailPreferenceService.js';
@@ -102,6 +109,49 @@ describe('notificationService.enqueue gating', () => {
     assert.equal(createdDocs.length, 1);
     assert.equal(createdDocs[0].typeKey, 'task-assigned');
     assert.equal(createdDocs[0].unsubscribable, true);
+  });
+
+  it('queues a responsive document, not a bare fragment', async () => {
+    patchMdb({ type: systemSubscribable, prefRow: { subscribed: true }, user: { _id: 'u1', notificationToken: 't' } });
+    await notificationService.enqueue({
+      to: 'a@b.com',
+      subject: 'S',
+      html: notificationService.wrapTemplate({ heading: 'H', bodyLines: ['B'] }),
+      text: 'B',
+      typeKey: 'task-assigned',
+      senderType: 'system',
+      recipientUserId: 'u1',
+    });
+    const { html } = createdDocs[0];
+    assert.match(html, /^<!doctype html>/i);
+    assert.match(html, /name="viewport"/);
+    assert.match(html, /@media only screen and \(max-width: 600px\)/);
+    // The footers belong below the card, not inside it.
+    assert.ok(html.indexOf('email-card') < html.indexOf('automated message'));
+  });
+
+  it('leaves the queued document alone on the way out — no double wrapping', async () => {
+    patchMdb({ type: systemSubscribable, prefRow: { subscribed: true }, user: { _id: 'u1', notificationToken: 't' } });
+    await notificationService.enqueue({
+      to: 'a@b.com', subject: 'S',
+      html: notificationService.wrapTemplate({ heading: 'H', bodyLines: ['B'] }),
+      text: 'B', typeKey: 'task-assigned', senderType: 'system', recipientUserId: 'u1',
+    });
+    const { html } = createdDocs[0];
+    assert.equal((html.match(/<!doctype html>/gi) || []).length, 1);
+    assert.equal((html.match(/<html/gi) || []).length, 1);
+  });
+
+  it('text bodies are unaffected by the HTML wrapper', async () => {
+    patchMdb({ type: systemSubscribable, prefRow: { subscribed: true }, user: { _id: 'u1', notificationToken: 't' } });
+    await notificationService.enqueue({
+      to: 'a@b.com', subject: 'S', text: 'Plain body',
+      typeKey: 'task-assigned', senderType: 'system', recipientUserId: 'u1',
+    });
+    const { text, html } = createdDocs[0];
+    assert.match(text, /Plain body/);
+    assert.match(text, /automated message/);
+    assert.equal(html, undefined, 'no html in means no html out');
   });
 });
 
