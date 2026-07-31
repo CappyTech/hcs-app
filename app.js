@@ -48,6 +48,7 @@ import createSessionService from './mongoose/services/sessionService.js';
 import __csrfService from './services/csrfService.js';
 import __securityService from './services/securityService.js';
 import __flashService from './services/flashService.js';
+import __passwordResetDraft from './services/passwordResetDraft.js';
 import __auditContextService from './mongoose/services/auditContextService.js';
 import __logRequestDetailsService from './services/logRequestDetailsService.js';
 import __rateLimiterService from './services/rateLimiterService.js';
@@ -386,6 +387,10 @@ const main = async () => {
     appRouter.use(useragent.express());
     appRouter.use(__securityService);
     appRouter.use(__flashService);
+    // Drop any carried-over reset password the moment the browser navigates
+    // outside the password reset flow. Mounted after the /resources static
+    // handler so the reset page's own assets never look like leaving.
+    appRouter.use(__passwordResetDraft.dropOnLeave);
     appRouter.use(authService.ensureAuthenticated);
     appRouter.use(authService.ensureRouteAccess);
     // Bind the authenticated actor to async-local storage so the DB audit plugin
