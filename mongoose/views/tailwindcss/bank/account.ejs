@@ -1,0 +1,190 @@
+<%
+/* Preserve the active filters on every pagination link. */
+const qs = (over = {}) => {
+  const p = new URLSearchParams();
+  const merged = { ...filters, page, ...over };
+  Object.entries(merged).forEach(([k, v]) => {
+    if (v !== '' && v != null && k !== 'pageSize') p.set(k, v);
+  });
+  return p.toString();
+};
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/bank" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; All accounts</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold"><%= account.accountName %></h1>
+    <% if (!account.known) { %>
+      <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">
+        deleted in KashFlow
+      </span>
+    <% } %>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" action="/bank/accounts/<%= account.accountId %>" class="flex gap-2 flex-wrap mb-4">
+    <input name="search" value="<%= filters.search %>" placeholder="Search description, party or number&hellip;"
+      class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+             bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+             focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+
+    <select name="state"
+      class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+             bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+      <option value="outstanding" <%= filters.state === 'outstanding' ? 'selected' : '' %>>Awaiting review</option>
+      <option value="confirmed"   <%= filters.state === 'confirmed'   ? 'selected' : '' %>>Confirmed</option>
+      <option value="rejected"    <%= filters.state === 'rejected'    ? 'selected' : '' %>>Rejected</option>
+      <option value="unmatched"   <%= filters.state === 'unmatched'   ? 'selected' : '' %>>No match record</option>
+      <option value="all"         <%= filters.state === 'all'         ? 'selected' : '' %>>All</option>
+    </select>
+
+    <select name="entity"
+      class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+             bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+      <option value="">All kinds</option>
+      <option value="purchase"             <%= filters.entity === 'purchase' ? 'selected' : '' %>>Purchase</option>
+      <option value="invoice"              <%= filters.entity === 'invoice' ? 'selected' : '' %>>Invoice</option>
+      <option value="purchasebatchpayment" <%= filters.entity === 'purchasebatchpayment' ? 'selected' : '' %>>Purchase batch</option>
+      <option value="invoicebatchpayment"  <%= filters.entity === 'invoicebatchpayment' ? 'selected' : '' %>>Invoice batch</option>
+      <option value="banktransaction"      <%= filters.entity === 'banktransaction' ? 'selected' : '' %>>Unlinked</option>
+      <option value="journal"              <%= filters.entity === 'journal' ? 'selected' : '' %>>Journal</option>
+    </select>
+
+    <input type="date" name="from" value="<%= filters.from %>"
+      class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+             bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+    <input type="date" name="to" value="<%= filters.to %>"
+      class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+             bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+
+    <button type="submit"
+      class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+      Filter
+    </button>
+    <a href="/bank/accounts/<%= account.accountId %>"
+      class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600
+             bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300
+             hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">
+      Reset
+    </a>
+  </form>
+
+  <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+    <%= total.toLocaleString('en-GB') %> line<%= total === 1 ? '' : 's' %> match these filters.
+  </p>
+
+  <% if (!rows.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      Nothing here. Try widening the filters, or generate suggestions from the
+      <a href="/bank" class="text-green-700 dark:text-green-400 hover:underline">accounts page</a>.
+    </div>
+  <% } else { %>
+
+  <!--
+    Bulk confirm. One form wraps the whole table so a reviewer can tick many
+    resolved lines and confirm them in a single action - which is how a decade
+    of backlog gets cleared without 10,000 individual clicks.
+  -->
+  <form method="POST" action="/bank/accounts/<%= account.accountId %>/bulk-confirm">
+    <%- include('../partials/csrfHidden') %>
+
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 w-8"></th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Resolves to</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% rows.forEach(row => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3">
+                <% if (row.match && row.match.status === 'suggested') { %>
+                  <input type="checkbox" name="uuid" value="<%= row.match.uuid %>"
+                    class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500" />
+                <% } %>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300">
+                <%= slimDateTime(row.Date, true) %>
+              </td>
+              <td class="px-4 py-3 text-gray-900 dark:text-white">
+                <%= row.Comment || row.Type || '' %>
+                <% if (row.SupplierName || row.CustomerName) { %>
+                  <div class="text-xs text-gray-500 dark:text-gray-400"><%= row.SupplierName || row.CustomerName %></div>
+                <% } %>
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap <%= row.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
+                <%= formatCurrency(row.amount) %>
+              </td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                <% if (row.match && row.match.documents && row.match.documents.length) { %>
+                  <% row.match.documents.slice(0, 3).forEach(d => { %>
+                    <div class="text-xs">
+                      <%= d.kind %> <%= d.kfNumber %>
+                      <span class="text-gray-500 dark:text-gray-400"><%= formatCurrency(d.allocatedAmount) %></span>
+                    </div>
+                  <% }) %>
+                  <% if (row.match.documents.length > 3) { %>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      and <%= row.match.documents.length - 3 %> more
+                    </div>
+                  <% } %>
+                <% } else if (row.strategy === 'unlinked') { %>
+                  <span class="text-xs text-gray-400 dark:text-gray-500">&mdash;</span>
+                <% } else { %>
+                  <span class="text-xs text-gray-500 dark:text-gray-400"><%= row.EntityName %> <%= row.ResourceNumber %></span>
+                <% } %>
+              </td>
+              <td class="px-4 py-3">
+                <%- include('partials/_match-badge', { match: row.match, strategy: row.strategy }) %>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <a href="/bank/lines/<%= row.Id %>"
+                  class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
+                         bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
+                  Open
+                </a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <% if (pageCount > 1) { %>
+        <div class="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+          <% if (page > 1) { %>
+            <a href="?<%= qs({ page: page - 1 }) %>"
+               class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
+                      bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">&larr; Prev</a>
+          <% } else { %><span></span><% } %>
+          <span class="text-xs text-gray-500">Page <%= page %> of <%= pageCount %></span>
+          <% if (page < pageCount) { %>
+            <a href="?<%= qs({ page: page + 1 }) %>"
+               class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
+                      bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">Next &rarr;</a>
+          <% } else { %><span></span><% } %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="mt-4 flex items-center gap-3">
+      <button type="submit"
+        class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+        <i class="bi bi-check2"></i> Confirm selected
+      </button>
+      <span class="text-xs text-gray-500 dark:text-gray-400">
+        Only lines awaiting review can be selected. Each is validated individually &mdash;
+        anything that fails is reported and the rest still go through.
+      </span>
+    </div>
+  </form>
+
+  <% } %>
+</div>

@@ -217,6 +217,21 @@ export default {
         department: ['finance', 'payroll'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
+    // ── Bank reconciliation ───────────────────────────────────────────
+    BankReconciliation: {
+        title: 'Bank Reconciliation',
+        description: 'Match bank transactions to invoices and purchases, and sign off periods.',
+        link: '/bank',
+        department: ['finance'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    BankExceptions: {
+        title: 'Bank Exceptions',
+        description: 'Bank lines that will not resolve, matches whose documents have changed, and long-outstanding items.',
+        link: '/bank/exceptions',
+        department: ['finance'],
+        buttonClass: 'bg-amber-600 hover:bg-amber-700'
+    },
     KF_Customers: {
         title: 'KF Customers',
         description: 'View KF Customers',

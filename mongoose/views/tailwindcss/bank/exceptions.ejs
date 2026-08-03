@@ -1,0 +1,186 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/bank" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; Bank</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Reconciliation exceptions</h1>
+  </div>
+
+  <!-- 1. Drifted -->
+  <div class="mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      Confirmed, but the document has since changed
+    </h2>
+    <% if (!drifted.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        Nothing has drifted.
+      </div>
+    <% } else { %>
+      <div class="divide-y divide-gray-100 dark:divide-gray-700 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl">
+        <% drifted.forEach(m => { %>
+          <div class="flex items-start gap-4 px-4 py-3">
+            <div class="flex-1">
+              <div class="text-sm text-gray-900 dark:text-white">
+                <%= (m.documents || []).map(d => `${d.kind} ${d.kfNumber}`).join(', ') || 'no documents' %>
+              </div>
+              <div class="text-xs text-gray-600 dark:text-gray-400">
+                <%= (m.driftFlags || []).join('; ') %>
+                &middot; confirmed by <%= m.reviewedByName %>
+              </div>
+            </div>
+            <% (m.bankLines || []).slice(0, 1).forEach(l => { %>
+              <a href="/bank/lines/<%= l.bankTransactionId %>"
+                class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
+                Open
+              </a>
+            <% }) %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- 2. Unresolvable -->
+  <div class="mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      KashFlow link will not resolve
+    </h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+      The bank line names a document that is missing, or the amounts do not agree.
+      An amount difference is normal for part payments and CIS deductions.
+    </p>
+    <% if (!unresolvable.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        Every linked bank line resolves cleanly.
+      </div>
+    <% } else { %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Problem</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% unresolvable.forEach(row => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(row.line.Date, true) %></td>
+                <td class="px-4 py-3 text-gray-900 dark:text-white"><%= row.line.Comment || '' %></td>
+                <td class="px-4 py-3 text-right whitespace-nowrap"><%= formatCurrency(row.line.amount) %></td>
+                <td class="px-4 py-3 text-xs <%= row.resolved ? 'text-amber-700 dark:text-amber-400' : 'text-red-700 dark:text-red-400' %>">
+                  <%= row.problems.join('; ') %>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a href="/bank/lines/<%= row.line.Id %>"
+                    class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
+                    Open
+                  </a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- 3. Disagreement with KashFlow -->
+  <div class="mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      Disagrees with KashFlow
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          KashFlow says reconciled, we have not confirmed
+          <span class="text-gray-500 dark:text-gray-400">(<%= kfDisagreement.kfOnly.length %>)</span>
+        </h3>
+        <% if (!kfDisagreement.kfOnly.length) { %>
+          <p class="text-sm text-gray-400 dark:text-gray-500">None.</p>
+        <% } else { %>
+          <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% kfDisagreement.kfOnly.slice(0, 20).forEach(l => { %>
+              <div class="py-2 text-sm">
+                <a href="/bank/lines/<%= l.Id %>" class="text-green-700 dark:text-green-400 hover:underline">
+                  <%= slimDateTime(l.Date, true) %>
+                </a>
+                <span class="text-gray-700 dark:text-gray-300"><%= l.Comment || '' %></span>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          We have confirmed, KashFlow has not reconciled
+          <span class="text-gray-500 dark:text-gray-400">(<%= kfDisagreement.usOnly.length %>)</span>
+        </h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          Expected: we reconcile here and never write back to KashFlow.
+        </p>
+        <% if (!kfDisagreement.usOnly.length) { %>
+          <p class="text-sm text-gray-400 dark:text-gray-500">None.</p>
+        <% } else { %>
+          <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% kfDisagreement.usOnly.slice(0, 20).forEach(l => { %>
+              <div class="py-2 text-sm">
+                <a href="/bank/lines/<%= l.Id %>" class="text-green-700 dark:text-green-400 hover:underline">
+                  <%= slimDateTime(l.Date, true) %>
+                </a>
+                <span class="text-gray-700 dark:text-gray-300"><%= l.Comment || '' %></span>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Long outstanding -->
+  <div>
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      Outstanding more than 45 days
+    </h2>
+    <% if (!staleUnmatched.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        Nothing outstanding beyond <%= slimDateTime(staleCutoff, true) %>.
+      </div>
+    <% } else { %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% staleUnmatched.forEach(l => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(l.Date, true) %></td>
+                <td class="px-4 py-3 text-gray-900 dark:text-white"><%= l.Comment || l.EntityName || '' %></td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                  <%= formatCurrency((l.PaidIn || 0) > 0 ? l.PaidIn : -(l.PaidOut || 0)) %>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a href="/bank/lines/<%= l.Id %>"
+                    class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
+                    Open
+                  </a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+</div>

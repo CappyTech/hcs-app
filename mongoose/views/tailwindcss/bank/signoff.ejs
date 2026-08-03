@@ -1,0 +1,152 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/bank" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; Bank</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Period sign-off</h1>
+  </div>
+
+  <!-- New sign-off -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      Sign off a period
+    </h2>
+
+    <form method="POST" action="/bank/signoff" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <%- include('../partials/csrfHidden') %>
+
+      <div class="md:col-span-3">
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="accountId">Account</label>
+        <select id="accountId" name="accountId" required
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">&mdash; Choose &mdash;</option>
+          <% accounts.forEach(a => { %>
+            <option value="<%= a.accountId %>"><%= a.accountName %> (<%= a.outstandingCount %> outstanding)</option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="periodStart">Period start</label>
+        <input type="date" id="periodStart" name="periodStart" required
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="periodEnd">Period end</label>
+        <input type="date" id="periodEnd" name="periodEnd" required
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="openingBalance">Opening balance</label>
+        <input type="number" step="0.01" id="openingBalance" name="openingBalance" value="0"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="closingBalancePerStatement">
+          Closing balance per statement
+        </label>
+        <input type="number" step="0.01" id="closingBalancePerStatement" name="closingBalancePerStatement" placeholder="optional"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="notes">Notes</label>
+        <input id="notes" name="notes" maxlength="2000"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div class="md:col-span-3 flex items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" name="force"
+            class="rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500" />
+          Sign off even though matches are still awaiting review
+        </label>
+      </div>
+      <div class="md:col-span-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Signing off over unreviewed lines is recorded on the sign-off itself, so the gap stays visible.
+        </p>
+        <button type="submit"
+          class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+          Sign off period
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Existing sign-offs -->
+  <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">History</h2>
+
+  <% if (!signOffs.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No periods have been signed off yet.
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Period</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Matched</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Unreviewed</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Variance</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Signed</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% signOffs.forEach(s => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3 text-gray-900 dark:text-white"><%= s.accountName || s.accountId %></td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                <%= slimDateTime(s.periodStart, true) %> &ndash; <%= slimDateTime(s.periodEnd, true) %>
+              </td>
+              <td class="px-4 py-3 text-right"><%= s.matchedCount %></td>
+              <td class="px-4 py-3 text-right <%= s.unmatchedCount > 0 ? 'text-amber-700 dark:text-amber-400' : '' %>">
+                <%= s.unmatchedCount %>
+              </td>
+              <td class="px-4 py-3 text-right <%= s.variance !== 0 ? 'text-red-700 dark:text-red-400' : '' %>">
+                <%= formatCurrency(s.variance) %>
+              </td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                <%= s.signedByName || '—' %>
+                <div class="text-xs text-gray-500 dark:text-gray-400"><%= s.signedAt ? slimDateTime(s.signedAt) : '' %></div>
+                <% if (s.status === 'reopened') { %>
+                  <div class="text-xs text-amber-700 dark:text-amber-400">
+                    reopened by <%= s.reopenedByName %>: <%= s.reopenReason %>
+                  </div>
+                <% } %>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <% if (s.status === 'signed' && typeof user !== 'undefined' && user && user.role === 'admin') { %>
+                  <form method="POST" action="/bank/signoff/<%= s.uuid %>/reopen" class="flex gap-1 justify-end">
+                    <%- include('../partials/csrfHidden') %>
+                    <input name="reason" required placeholder="Reason" maxlength="1000"
+                      class="w-40 text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1
+                             bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                             focus:outline-none focus:ring-2 focus:ring-green-500" />
+                    <button type="submit"
+                      class="text-xs px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-sm font-medium transition">
+                      Reopen
+                    </button>
+                  </form>
+                <% } else { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">
+                    <%= s.status %>
+                  </span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>

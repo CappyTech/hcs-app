@@ -75,6 +75,7 @@ import __submissionRoutes from './mongoose/routes/submissionRoutes.js';
 import __holidayRoutes from './mongoose/routes/holidayRoutes.js';
 import __fileRoutes from './mongoose/routes/fileRoutes.js';
 import __paperlessRoutes from './mongoose/routes/paperlessRoutes.js';
+import __bankRoutes from './mongoose/routes/bankRoutes.js';
 import __overviewRoutes from './mongoose/routes/overviewRoutes.js';
 import __ssoRoutes from './mongoose/routes/ssoRoutes.js';
 import __helpRoutes from './mongoose/routes/helpRoutes.js';
@@ -532,6 +533,7 @@ const main = async () => {
     appRouter.use('/', __holidayRoutes);
     appRouter.use('/', __fileRoutes);
     appRouter.use('/', __paperlessRoutes);
+    appRouter.use('/', __bankRoutes);
     appRouter.use('/', __overviewRoutes);
     appRouter.use('/', __ssoRoutes);
     appRouter.use('/', __helpRoutes);
