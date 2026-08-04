@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.19.3] - 2026-08-04
+
+### Fixed
+- **"Generate suggestions" reported four zeros when there was simply nothing left to do**, which reads as total failure. It only ever showed what that run *added*, and the six-hourly jobs normally get there first — so the usual outcome was `0 from KashFlow links, 0 transfers, 0 inter-account movements, 0 from rules`. It now reports the resulting state ("13,174 bank lines now have a suggestion; 255 need a rule or a decision of their own") and says plainly when there is nothing new.
+
 ## [6.19.2] - 2026-08-04
 
 ### Fixed

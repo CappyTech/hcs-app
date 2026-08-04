@@ -248,12 +248,41 @@ export const postGenerate = async (req, res, next) => {
     const moved = await transferService.detectAccountNamedMovements();
     const ruled = await ruleService.applyRules({ accountId });
 
-    req.flash(
-      'success',
-      `${linked.created} from KashFlow links, ${paired.created} transfers, `
-      + `${moved.created} inter-account movements, ${ruled.created} from rules. `
-      + `${ruled.unmatched} line${ruled.unmatched === 1 ? '' : 's'} still need a rule or a manual decision.`,
-    );
+    const created = linked.created + paired.created + moved.created + ruled.created;
+
+    // Report the resulting STATE, not just what this run happened to add.
+    // Four zeros read as total failure when they usually mean the scheduled
+    // jobs already did the work — which is the normal case, since they run
+    // every six hours.
+    const BankMatch = mdb.INTERNAL?.bankMatch;
+    const BankTransaction = mdb.REST?.bankTransaction;
+    let covered = null;
+    let outstanding = null;
+    if (BankMatch && BankTransaction) {
+      const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
+        .filter(v => v != null);
+      covered = claimed.length;
+      outstanding = await BankTransaction.countDocuments({ deletedAt: null, Id: { $nin: claimed } });
+    }
+
+    const state = covered == null
+      ? ''
+      : ` ${covered.toLocaleString('en-GB')} bank lines now have a suggestion; `
+        + `${outstanding.toLocaleString('en-GB')} need a rule or a decision of their own.`;
+
+    if (created > 0) {
+      req.flash(
+        'success',
+        `Added ${created.toLocaleString('en-GB')} suggestion${created === 1 ? '' : 's'} — `
+        + `${linked.created} from KashFlow links, ${paired.created} transfers, `
+        + `${moved.created} inter-account movements, ${ruled.created} from rules.${state}`,
+      );
+    } else {
+      req.flash(
+        'success',
+        `Nothing new to suggest — everything resolvable already has one.${state}`,
+      );
+    }
     res.redirect(backTo(req));
   } catch (err) { next(err); }
 };
