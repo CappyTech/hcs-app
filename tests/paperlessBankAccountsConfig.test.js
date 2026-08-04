@@ -53,13 +53,20 @@ describe('paperlessBankAccountsConfig', () => {
   });
 
   it('never parses the account id out of the correspondent name', () => {
-    // 'Petty Cash - 5714888' carries a real-world account number, not the
-    // KashFlow id (571488) or its nominal code (69500). Correspondent names
-    // follow a human convention; reading ids out of them is the same mistake
-    // as matching document types by name.
+    // Correspondent names carry the KashFlow id by convention, but nothing
+    // validates them. The live 'Petty Cash - 5714888' has an extra digit — the
+    // real account is 571488 — so parsing the name would yield 5714888: a
+    // plausible id matching no account, failing silently.
     const r = resolveAccountId(doc({ correspondent: { id: 999, name: 'Petty Cash - 5714888' } }));
     assert.equal(r.accountId, null, 'a name-derived number must never be used as an account id');
     assert.notEqual(r.accountId, 5714888);
+  });
+
+  it('resolves Petty Cash to the real account despite the name being wrong', () => {
+    // The map is keyed on the correspondent id, so a typo in the display name
+    // — or a rename — cannot affect which account a statement lands in.
+    const r = resolveAccountId(doc({ correspondent: { id: 68, name: 'Petty Cash - 5714888' } }));
+    assert.equal(r.accountId, 571488);
   });
 
   it('returns nothing rather than guessing when it cannot tell', () => {

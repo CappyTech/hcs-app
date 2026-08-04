@@ -10,11 +10,18 @@
  *   3. Nothing — the statement is held unattributed for a human to assign.
  *
  * Deliberately NOT a fourth option: parsing the account id out of the
- * correspondent's name. Those names follow a human convention rather than a
- * machine one — 'Petty Cash - 5714888' carries a real-world account number,
- * not the KashFlow id (571488) or its nominal code (69500). Reading ids out of
- * display names is the same mistake as matching document types and tags by
- * name, which broke three queries when the types were renamed.
+ * correspondent's name.
+ *
+ * Correspondent names do carry the KashFlow id by convention, and it is
+ * tempting to read it from there. But a display name is written by hand and
+ * nothing validates it — 'Petty Cash - 5714888' has an extra digit; the real
+ * account is 571488. Parsing that would have produced 5714888: a plausible
+ * account id that matches nothing, resolving silently to a statement attached
+ * to an account that does not exist.
+ *
+ * Reading identifiers out of display names is the same mistake as matching
+ * document types and tags by name, which broke three queries when the types
+ * were renamed.
  *
  * Correspondent ids come from Paperless and are stable across renames. The map
  * can be overridden wholesale with PAPERLESS_BANK_CORRESPONDENTS, a
