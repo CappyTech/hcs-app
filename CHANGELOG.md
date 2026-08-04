@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.20.2] - 2026-08-04
+
+Restores printf-style logging, which has never worked.
+
+### Fixed
+- **Every `logger.info('… %s', value)` call logged the placeholder verbatim and discarded the argument.** winston only interpolates `%s`/`%d` when `format.splat()` is in the format chain, and `services/loggerService.js` combined `timestamp()` with `json()` and nothing else. So the 12 printf-style call sites across the app — 9 of them in `ssoController.js` — have been writing `invalid credentials for "%s"` to the log with no username attached, for as long as the logger has existed. This is not cosmetic: a failed hcs-sync SSO login recorded *which endpoint* rejected the attempt but never *whose account*, so a locked-out user could only be identified by scanning the users collection for a non-zero `loginAttempts`. `splat()` now sits between `timestamp()` and `json()`, which fixes all 12 sites at once. It has to precede any format that consumes `message` — putting it after `json()` would silently do nothing, which is the failure mode being fixed.
+
+### Security
+- **`logger.sanitize` had no callers.** It strips newlines and control characters to stop a user-controlled value forging a second log line, and it was written for exactly this interpolation — but since interpolation never happened, nothing was ever injectable and the helper was never wired up. Turning `splat()` on makes those arguments land in the log for the first time, so the one attacker-controlled site is now sanitised: `ssoController.js` logs the `username` straight off the SSO request body. The other 11 sites interpolate an `err.message` or a `user.username` already loaded from the database and are left as they are.
+
+### Added
+- `tests/loggerService.test.js` — 7 cases. Interpolation of a single `%s`, of mixed `%d`/`%s`, and the no-placeholder-with-meta case that must stay untouched; then sanitising: newline stripping against a forged-log-line payload, control characters and the length cap, nullish input, and reachability via the default export. The two interpolation cases fail against the unfixed logger; the no-placeholder case passes either way, since it is guarding against a regression from `splat()` rather than the bug itself.
+
 ## [6.20.1] - 2026-08-04
 
 ### Changed

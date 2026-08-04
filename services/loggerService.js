@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname as _esmDirname } from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = _esmDirname(__filename);
-const { combine, timestamp, printf, colorize, json } = format;
+const { combine, timestamp, printf, colorize, json, splat } = format;
 
 let io = null;
 
@@ -58,7 +58,10 @@ const isTest = process.env.NODE_ENV === 'test';
 
 const logger = createLogger({
   level: "debug",
-  format: combine(timestamp({ format: "DD-MM-YYYY HH:mm:ss" }), json()),
+  // splat() must precede any format that consumes `message`, otherwise
+  // printf-style calls such as logger.info('... "%s"', username) log the
+  // placeholder verbatim and silently drop the argument.
+  format: combine(timestamp({ format: "DD-MM-YYYY HH:mm:ss" }), splat(), json()),
   transports: [
     new transports.Console({
       format: combine(
