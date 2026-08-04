@@ -101,6 +101,11 @@ const ropa = {
       systems: [
         'REST.bankAccount', 'REST.bankTransaction', 'REST.bankReconciliation',
         'INTERNAL.bankMatch', 'INTERNAL.bankSignOff',
+        // Imported bank statements. A wider disclosure than the ledger:
+        // a statement lists every payee and wage transfer on the account,
+        // including people who appear nowhere else in the system.
+        'INTERNAL.statementImport', 'INTERNAL.statementLine',
+        'PAPERLESS.bankStatementDocument',
       ],
       retention: '6 years (statutory accounting records)',
       recipients: ['internal_finance'],

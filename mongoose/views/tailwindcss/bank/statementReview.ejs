@@ -1,0 +1,131 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/bank/statements" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; Statements</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold"><%= statementImport.originalFileName || statementImport.uuid %></h1>
+  </div>
+
+  <!-- Balance verdict: the thing that decides whether these lines mean anything -->
+  <% if (statementImport.balanceChainOk) { %>
+    <div class="border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 mb-6">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-green-700 dark:text-green-400 mb-1">
+        <i class="bi bi-check-circle-fill"></i> Running balance reconciles
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300">
+        Every line agrees with the balance printed beside it, so these lines can be relied on.
+      </p>
+    </div>
+  <% } else { %>
+    <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 mb-6">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-amber-700 dark:text-amber-400 mb-1">
+        <i class="bi bi-exclamation-triangle-fill"></i> Not trusted
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+        The running balance does not reconcile, which means the file was read wrongly somewhere.
+        These lines are stored so you can see what happened, but nothing downstream treats them as fact.
+      </p>
+      <% if (statementImport.balanceChainError) { %>
+        <p class="text-sm font-mono text-xs text-gray-700 dark:text-gray-300"><%= statementImport.balanceChainError %></p>
+      <% } %>
+    </div>
+  <% } %>
+
+  <!-- Summary -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Account</div>
+      <div class="text-sm font-bold mt-1"><%= statementImport.accountName || statementImport.accountId %></div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Period</div>
+      <div class="text-sm font-bold mt-1">
+        <% if (statementImport.periodStart) { %>
+          <%= slimDateTime(statementImport.periodStart, true) %> &ndash; <%= slimDateTime(statementImport.periodEnd, true) %>
+        <% } else { %>&mdash;<% } %>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Lines</div>
+      <div class="text-2xl font-bold mt-1"><%= statementImport.lineCount %></div>
+      <% if (statementImport.duplicateCount) { %>
+        <div class="text-xs text-gray-500 dark:text-gray-400"><%= statementImport.duplicateCount %> already held</div>
+      <% } %>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Read by</div>
+      <div class="text-sm font-bold mt-1 font-mono text-xs"><%= statementImport.parserProfile || '—' %></div>
+    </div>
+  </div>
+
+  <!-- Warnings -->
+  <% if (statementImport.warnings && statementImport.warnings.length) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 mb-6">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+        Notes from reading the file
+      </h2>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1">
+        <% statementImport.warnings.forEach(w => { %><li><%= w %></li><% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <!-- Lines -->
+  <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Statement lines</h2>
+
+  <% if (!lines.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No lines were read from this file.
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Balance</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">In KashFlow</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% lines.forEach(l => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(l.date, true) %></td>
+              <td class="px-4 py-3 text-gray-900 dark:text-white"><%= l.description %></td>
+              <td class="px-4 py-3 text-right whitespace-nowrap <%= l.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
+                <%= formatCurrency(l.amount) %>
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap text-gray-500 dark:text-gray-400">
+                <%= l.balance == null ? '—' : formatCurrency(l.balance) %>
+              </td>
+              <td class="px-4 py-3">
+                <% if (l.matchedBankTransactionId) { %>
+                  <a href="/bank/lines/<%= l.matchedBankTransactionId %>"
+                     class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">
+                    matched
+                  </a>
+                <% } else if (l.status === 'ignored') { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">
+                    ignored
+                  </span>
+                <% } else { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">
+                    not found
+                  </span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+      &ldquo;Not found&rdquo; means no KashFlow bank transaction corresponds to this line.
+      Matching statement lines against KashFlow is not yet wired up &mdash; it lands with the
+      three-way reconciliation.
+    </p>
+  <% } %>
+</div>

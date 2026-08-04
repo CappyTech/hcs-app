@@ -42,9 +42,28 @@ describe('bank routes / permissions consistency', () => {
       '/bank/lines/:bankTransactionId',
       '/bank/matches/:uuid/confirm',
       '/bank/signoff',
+      '/bank/statements',
+      '/bank/statements/upload',
     ]) {
       assert.ok(paths.includes(expected), `missing route ${expected}`);
     }
+  });
+
+  it('validates CSRF after multer on the statement upload', () => {
+    // The global CSRF middleware runs before the multipart body is parsed, so
+    // it sees no token on this request. Validation has to run again once
+    // multer has populated req.body — and after, never before, or it reads an
+    // empty body and rejects every upload.
+    const upload = routesSrc.match(/router\.post\(\s*'\/bank\/statements\/upload'[\s\S]*?\);/);
+    assert.ok(upload, 'upload route not found');
+
+    const body = upload[0];
+    const multerAt = body.indexOf('statementUpload.single');
+    const csrfAt = body.indexOf('csrfService.validate');
+
+    assert.ok(multerAt > -1, 'upload route does not use multer');
+    assert.ok(csrfAt > -1, 'upload route does not re-validate CSRF');
+    assert.ok(csrfAt > multerAt, 'csrfService.validate must come after multer');
   });
 
   it('puts every bank route under a routeAccess entry', () => {

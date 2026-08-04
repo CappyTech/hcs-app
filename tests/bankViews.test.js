@@ -109,6 +109,46 @@ const CASES = {
     },
     minimal: { accounts: [], signOffs: [] },
   },
+  statements: {
+    full: {
+      accounts: [account],
+      layouts: {
+        'paid-in-out': { label: 'Separate Paid In / Paid Out columns' },
+        'signed-amount': { label: 'Single signed Amount column' },
+      },
+      selectedAccountId: 611594,
+      imports: [
+        { uuid: 'i-1', originalFileName: 'aug.csv', source: 'upload', parserProfile: 'csv', importedByName: 'A',
+          accountId: 611594, accountName: 'Main', periodStart: new Date(), periodEnd: new Date(),
+          lineCount: 42, duplicateCount: 3, balanceChainOk: true, status: 'parsed' },
+        { uuid: 'i-2', originalFileName: 'jul.pdf', source: 'paperless', parserProfile: 'ocr:uk-generic-3col',
+          accountId: 611594, accountName: 'Main', periodStart: null, periodEnd: null,
+          lineCount: 12, duplicateCount: 0, balanceChainOk: false, status: 'needs-review' },
+        { uuid: 'i-3', originalFileName: 'junk.csv', source: 'upload', parserProfile: 'csv',
+          accountId: 611594, lineCount: 0, duplicateCount: 0, balanceChainOk: false, status: 'failed' },
+      ],
+    },
+    minimal: { accounts: [], layouts: {}, imports: [], selectedAccountId: null },
+  },
+  statementReview: {
+    full: {
+      statementImport: {
+        uuid: 'i-1', originalFileName: 'aug.csv', accountId: 611594, accountName: 'Main',
+        periodStart: new Date(), periodEnd: new Date(), lineCount: 3, duplicateCount: 1,
+        balanceChainOk: false, balanceChainError: 'Running balance breaks at 2026-08-04 "BACS": …',
+        parserProfile: 'csv', status: 'needs-review', warnings: ['Row 5: unrecognised date "n/a"'],
+      },
+      lines: [
+        { uuid: 'l-1', date: new Date(), description: 'CARD PAYMENT TO SCREWFIX', amount: -16.46, balance: 983.54, status: 'unmatched', matchedBankTransactionId: null },
+        { uuid: 'l-2', date: new Date(), description: 'BACS CREDIT', amount: 250, balance: 1233.54, status: 'matched', matchedBankTransactionId: 47766903 },
+        { uuid: 'l-3', date: new Date(), description: 'BANK CHARGE', amount: -3, balance: null, status: 'ignored', matchedBankTransactionId: null },
+      ],
+    },
+    minimal: {
+      statementImport: { uuid: 'i-0', accountId: 1, lineCount: 0, duplicateCount: 0, balanceChainOk: true, warnings: [] },
+      lines: [],
+    },
+  },
   exceptions: {
     full: {
       drifted: [{ uuid: 'm-9', documents: fullMatch.documents, driftFlags: ['gross changed'], reviewedByName: 'A', bankLines: [{ bankTransactionId: 1 }] }],
@@ -180,6 +220,31 @@ describe('bank views', () => {
     for (const view of referenced) {
       assert.ok(fs.existsSync(path.join(VIEWS, `${view}.ejs`)), `controller renders missing view ${view}`);
     }
+  });
+
+  it('marks an unverified statement as not trusted, not as success', async () => {
+    // A failed balance chain must never read as an ordinary import. The lines
+    // are kept so a person can look at them; the page has to say plainly that
+    // nothing downstream believes them.
+    const html = await render('statementReview', CASES.statementReview.full);
+    assert.match(html, /Not trusted/);
+    assert.match(html, /Running balance breaks/);
+    assert.ok(!/Running balance reconciles/.test(html));
+  });
+
+  it('marks a verified statement as reconciling', async () => {
+    const html = await render('statementReview', {
+      ...CASES.statementReview.full,
+      statementImport: { ...CASES.statementReview.full.statementImport, balanceChainOk: true, balanceChainError: '' },
+    });
+    assert.match(html, /Running balance reconciles/);
+    assert.ok(!/Not trusted/.test(html));
+  });
+
+  it('gives the upload form multipart encoding', async () => {
+    // Without this the file never arrives and multer sees an empty request.
+    const html = await render('statements', CASES.statements.full);
+    assert.match(html, /enctype=["']multipart\/form-data["']/);
   });
 
   it('renders the status badge for every match state', async () => {

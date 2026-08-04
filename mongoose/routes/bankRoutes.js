@@ -1,10 +1,32 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import multer from 'multer';
+import path from 'path';
 import { getClientIp } from '../../services/ipService.js';
 import authService from '../../services/authService.js';
+import csrfService from '../../services/csrfService.js';
+import fileStorage from '../../services/fileStorage.js';
 import ctrl from '../controllers/bankController.js';
 
 const router = express.Router();
+
+fileStorage.ensureStorageDirs();
+
+/**
+ * Statement uploads land under the managed storage root, never public/ — see
+ * the 6.15.x change that moved uploaded documents out of the web root.
+ */
+const statementUpload = multer({
+  dest: fileStorage.TEMP_DIR,
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowed = /\.(csv|txt|ofx|qfx)$/;
+    // Banks serve these under a wide range of content types, and some browsers
+    // send application/octet-stream for .ofx, so the extension is the check.
+    cb(allowed.test(ext) ? null : new Error('Upload a CSV or OFX statement.'), allowed.test(ext));
+  },
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 /**
  * Bank reconciliation routes.
@@ -52,6 +74,18 @@ router.post('/bank/matches/:uuid/reject', ...bankGuard, ctrl.postReject);
 router.post('/bank/matches/:uuid/unconfirm', ...adminGuard, ctrl.postUnconfirm);
 
 router.post('/bank/generate', ...bankGuard, generateLimiter, ctrl.postGenerate);
+
+router.get('/bank/statements', ...bankGuard, ctrl.getStatements);
+router.get('/bank/statements/:uuid', ...bankGuard, ctrl.getStatement);
+// csrfService.validate runs AFTER multer: the global CSRF middleware sees no
+// body on a multipart request, because it has not been parsed at that point.
+router.post(
+  '/bank/statements/upload',
+  ...bankGuard,
+  statementUpload.single('statement'),
+  csrfService.validate,
+  ctrl.postStatementUpload,
+);
 
 router.get('/bank/signoff', ...bankGuard, ctrl.getSignOffs);
 router.post('/bank/signoff', ...bankGuard, ctrl.postSignOff);

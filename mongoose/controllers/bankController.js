@@ -1,8 +1,10 @@
 import path from 'path';
+import fs from 'fs/promises';
 import mdb from '../services/mongooseDatabaseService.js';
 import auditLog from '../../services/auditLogService.js';
 import worklist from '../services/bankWorklistService.js';
 import recon from '../services/bankReconciliationService.js';
+import statements from '../services/statementImportService.js';
 import { resolveBankLine, signedAmount } from '../services/bankLinkService.js';
 
 /**
@@ -244,6 +246,125 @@ export const postGenerate = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+/* ── statements ───────────────────────────────────────────────────── */
+
+export const getStatements = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const accountId = req.query.accountId ? Number(req.query.accountId) : null;
+    const [imports, accounts] = await Promise.all([
+      statements.listImports({ accountId }),
+      worklist.listAccounts(),
+    ]);
+
+    res.render(VIEW('statements'), {
+      title: 'Bank statements',
+      imports,
+      accounts,
+      layouts: statements.CSV_LAYOUTS,
+      selectedAccountId: accountId,
+    });
+  } catch (err) { next(err); }
+};
+
+export const getStatement = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const found = await statements.getImport(req.params.uuid);
+    if (!found) {
+      req.flash('error', 'That statement import no longer exists.');
+      return res.redirect('/bank/statements');
+    }
+
+    res.render(VIEW('statementReview'), {
+      title: `Statement — ${found.statementImport.originalFileName || found.statementImport.uuid}`,
+      ...found,
+    });
+  } catch (err) { next(err); }
+};
+
+export const postStatementUpload = async (req, res, next) => {
+  // multer wrote the upload to a temp path; it must not be left behind on any
+  // exit path, including the failures.
+  const tempPath = req.file?.path || null;
+
+  try {
+    await mdb.connect();
+
+    if (!req.file) {
+      req.flash('error', 'Choose a CSV or OFX file to upload.');
+      return res.redirect('/bank/statements');
+    }
+
+    const accountId = Number(req.body.accountId);
+    if (!Number.isFinite(accountId)) {
+      req.flash('error', 'Choose which account this statement belongs to.');
+      return res.redirect('/bank/statements');
+    }
+
+    const format = statements.detectFormat(req.file.originalname);
+    if (!format) {
+      req.flash('error', 'Could not tell whether that file is CSV or OFX from its name.');
+      return res.redirect('/bank/statements');
+    }
+
+    const text = await fs.readFile(tempPath, 'utf8');
+    const accounts = await worklist.listAccounts();
+    const account = accounts.find(a => a.accountId === accountId);
+
+    const result = await statements.importStatement({
+      text,
+      accountId,
+      accountName: account?.accountName || '',
+      format,
+      layout: String(req.body.layout || 'paid-in-out'),
+      openingBalance: req.body.openingBalance === '' ? null : Number(req.body.openingBalance),
+      closingBalance: req.body.closingBalance === '' ? null : Number(req.body.closingBalance),
+      source: 'upload',
+      originalFileName: req.file.originalname,
+      user: req.user,
+    });
+
+    auditLog.record('bank_statement_imported', req, {
+      meta: {
+        importUuid: result.import.uuid,
+        accountId,
+        fileName: req.file.originalname,
+        status: result.status,
+        inserted: result.inserted,
+        duplicates: result.duplicates,
+        balanceChainOk: result.import.balanceChainOk,
+      },
+    });
+
+    if (result.unchanged) {
+      req.flash('success', 'That statement had already been imported — nothing changed.');
+    } else if (result.status === 'parsed') {
+      req.flash('success',
+        `Imported ${result.inserted} line${result.inserted === 1 ? '' : 's'}`
+        + `${result.duplicates ? `, skipping ${result.duplicates} already held` : ''}. `
+        + 'The running balance reconciles.');
+    } else if (result.status === 'needs-review') {
+      // Deliberately not a success: the lines are stored but not trusted.
+      req.flash('error',
+        'The statement was read but its running balance does not reconcile, '
+        + 'so its lines are not trusted. Open it to see where it breaks.');
+    } else {
+      req.flash('error', 'That statement could not be read. Check the layout matches the file.');
+    }
+
+    return res.redirect(`/bank/statements/${result.import.uuid}`);
+  } catch (err) {
+    if (err.name === 'StatementImportError') {
+      req.flash('error', err.message);
+      return res.redirect('/bank/statements');
+    }
+    return next(err);
+  } finally {
+    if (tempPath) await fs.unlink(tempPath).catch(() => {});
+  }
+};
+
 /* ── sign-off ─────────────────────────────────────────────────────── */
 
 export const getSignOffs = async (req, res, next) => {
@@ -410,6 +531,9 @@ export default {
   postUnconfirm,
   postBulkConfirm,
   postGenerate,
+  getStatements,
+  getStatement,
+  postStatementUpload,
   getSignOffs,
   postSignOff,
   postReopen,
