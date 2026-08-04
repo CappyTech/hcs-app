@@ -14,7 +14,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
   The view tests missed it because they stubbed `slimDateTime` with a one-argument fake, which silently ignored the bad second argument. They now use the **real** `dateService` and `currencyService`, and a new assertion rejects any boolean passed as options. Reintroducing the bug fails five tests with the same error production gave.
 
-  Note the same mistake exists in 22 calls elsewhere in the codebase. Those have not surfaced because `slimDateTime` returns `"Never"` for a null date before it reaches `options.includes`, so they only throw where the date is populated. Worth a sweep.
+  All 22 occurrences were in the bank views, across 17 lines — several lines carried two calls. A repo-wide check confirms no other caller passes a boolean; everything else correctly uses `['displayFormat']`, `['includeTime']` or the default.
 
 ## [6.19.1] - 2026-08-04
 
