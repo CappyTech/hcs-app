@@ -172,6 +172,12 @@ const CASES = {
       unresolvable: [{ line: fullLine, problems: ['purchase 35 no longer exists'], resolved: false }],
       staleUnmatched: [fullLine],
       kfDisagreement: { kfOnly: [fullLine], usOnly: [fullLine] },
+      threeWayGaps: {
+        hasStatements: true,
+        covered: [{ accountId: 611594, ranges: [{ start: new Date(), end: new Date() }] }],
+        statementOnly: [{ accountId: 611594, line: { uuid: 'l-9', date: new Date(), description: 'UNKNOWN DEBIT', amount: -500 } }],
+        bankOnly: [{ accountId: 611594, transaction: { Id: 47766903, Date: new Date(), Comment: 'Purchase - SCRE01', amount: -16.46 } }],
+      },
       vanished: [{
         match: { uuid: 'm-8', status: 'confirmed', matchType: 'document', documents: fullMatch.documents },
         lines: [{ bankTransactionId: 47766903, amount: -16.46, deleted: { deletedAt: new Date() } }],
@@ -180,7 +186,9 @@ const CASES = {
     },
     minimal: {
       drifted: [], unresolvable: [], staleUnmatched: [],
-      kfDisagreement: { kfOnly: [], usOnly: [] }, vanished: [], staleCutoff: new Date(),
+      kfDisagreement: { kfOnly: [], usOnly: [] }, vanished: [],
+      threeWayGaps: { hasStatements: false, covered: [], statementOnly: [], bankOnly: [] },
+      staleCutoff: new Date(),
     },
   },
 };

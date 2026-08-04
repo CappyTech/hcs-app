@@ -14,6 +14,7 @@ import __holidayCarryOverService from './holidayCarryOverService.js';
 import __bankWorklistService from './bankWorklistService.js';
 import __bankRuleService from './bankRuleService.js';
 import __bankTransferService from './bankTransferService.js';
+import __bankThreeWayService from './bankThreeWayService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -72,6 +73,17 @@ function registerAll() {
         stillUnmatched: ruled.unmatched,
       };
     },
+  });
+
+  scheduler.register('bank-statement-reconcile', {
+    description:
+      'Match imported bank statement lines against KashFlow transactions. '
+      + 'Surfaces money that moved but was never booked - the one discrepancy '
+      + 'reconciling KashFlow against itself cannot find. No-op until a '
+      + 'statement whose running balance verified has been imported.',
+    intervalMs: 6 * HOUR,
+    initialDelayMs: 45_000,
+    run: () => __bankThreeWayService.reconcileStatements(),
   });
 
   scheduler.register('vehicle-compliance', {

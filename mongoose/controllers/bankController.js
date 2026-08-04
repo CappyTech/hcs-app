@@ -7,6 +7,7 @@ import recon from '../services/bankReconciliationService.js';
 import statements from '../services/statementImportService.js';
 import ruleService from '../services/bankRuleService.js';
 import transferService from '../services/bankTransferService.js';
+import threeWay from '../services/bankThreeWayService.js';
 import { resolveBankLine, signedAmount } from '../services/bankLinkService.js';
 
 /**
@@ -616,7 +617,7 @@ export const getExceptions = async (req, res, next) => {
 
     const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
 
-    const [drifted, unresolvable, staleUnmatched, kfDisagreement, vanished] = await Promise.all([
+    const [drifted, unresolvable, staleUnmatched, kfDisagreement, vanished, threeWayGaps] = await Promise.all([
       // Confirmed, but the underlying document has since changed or vanished.
       BankMatch
         ? BankMatch.find({ status: 'confirmed', integrity: { $ne: 'ok' }, deletedAt: null })
@@ -694,6 +695,10 @@ export const getExceptions = async (req, res, next) => {
             .map(l => ({ ...l, deleted: byId.get(l.bankTransactionId) })),
         }));
       })(),
+
+      // Statement against ledger. Reports nothing until a statement whose
+      // balance chain verified has been imported — see bankThreeWayService.
+      threeWay.findDiscrepancies(),
     ]);
 
     res.render(VIEW('exceptions'), {
@@ -703,6 +708,7 @@ export const getExceptions = async (req, res, next) => {
       staleUnmatched,
       kfDisagreement,
       vanished,
+      threeWayGaps,
       staleCutoff: fortyFiveDaysAgo,
     });
   } catch (err) { next(err); }
