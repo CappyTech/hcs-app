@@ -13,6 +13,7 @@
 
 import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
+import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
 import logger from '../../services/loggerService.js';
 import kfSession from '../../services/kashflowSessionService.js';
 const kfAxios = kfSession.kfAxios;
@@ -1968,7 +1969,7 @@ export const matchReferences = async (req, res) => {
       const unlinked = await OcrDocument
         .find({
           kashflowPurchaseId: null,
-          'documentType.name': { $regex: /^purchase$/i },
+          ...documentTypeQuery('purchaseInvoice'),
           title: { $not: /credit/i },
           tags: { $not: { $elemMatch: { name: { $in: [/original\/multiple invoice one pdf/i, /credit\/refund/i] } } } },
           deletedInPaperlessAt: null,

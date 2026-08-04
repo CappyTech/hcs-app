@@ -1,4 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
+import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
 
 const DETAIL_LIMIT = 100;
 
@@ -14,7 +15,9 @@ const NOT_FOR_KASHFLOW_TAGS = [
   /credit\/refund/i,                     // credit notes (automatic tag; title regex kept as fallback)
 ];
 const KF_ELIGIBLE_MATCH = {
-  'documentType.name': { $regex: /^purchase$/i },
+  // Matched by id-or-known-name: the type was renamed 'purchase' ->
+  // 'Purchase Invoice', which a literal name match stopped seeing.
+  ...documentTypeQuery('purchaseInvoice'),
   title: { $not: /credit/i },
   tags: { $not: { $elemMatch: { name: { $in: NOT_FOR_KASHFLOW_TAGS } } } },
   // Ghosts deleted in Paperless can't be actioned — they get their own panel
