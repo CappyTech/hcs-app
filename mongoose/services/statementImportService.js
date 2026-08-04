@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import mdb from './mongooseDatabaseService.js';
 import parser from './statementParserService.js';
+import { resolveAccountId } from '../config/paperlessBankAccountsConfig.js';
 
 /**
  * Persists a parsed statement: one statementImport plus its statementLine
@@ -217,11 +218,25 @@ export async function getImport(uuid) {
   return { statementImport: doc, lines };
 }
 
+/**
+ * Work out which account a Paperless statement belongs to.
+ *
+ * Thin wrapper over paperlessBankAccountsConfig, kept here so the ingest has a
+ * single obvious entry point. Returns accountId null when it cannot tell — the
+ * statement is then held for a human to assign rather than guessed at, because
+ * attributing one to the wrong account produces a confidently wrong
+ * reconciliation.
+ */
+export function accountForPaperlessDocument(doc) {
+  return resolveAccountId(doc);
+}
+
 export default {
   importStatement,
   listImports,
   getImport,
   detectFormat,
+  accountForPaperlessDocument,
   CSV_LAYOUTS,
   StatementImportError,
 };
