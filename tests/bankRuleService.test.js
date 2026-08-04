@@ -175,15 +175,32 @@ describe('bankRuleService', () => {
       assert.equal(stats.byRule.Wages, 2);
     });
 
-    it('skips lines that already carry a match', async () => {
+    it('excludes already-matched lines in the QUERY, not after fetching', async () => {
+      // Filtering after the fetch makes `limit` apply to already-processed
+      // rows, so each run re-reads the same newest `limit` lines and the older
+      // backlog is never reached. That shipped: 13,429 lines, a 5,000 limit,
+      // and exactly 5,000 suggestions that would never have grown.
       patchMdb({
         rules: [rule({ typeContains: 'wages' }, { name: 'Wages' })],
-        lines: [line({ Id: 1 }), line({ Id: 2 })],
-        claimed: [1],
+        lines: [line({ Id: 2 })],
+        claimed: [1, 5, 9],
       });
-      const stats = await applyRules();
-      assert.equal(stats.skipped, 1);
-      assert.equal(stats.created, 1);
+      await applyRules();
+
+      const query = mdb.REST.bankTransaction.find.mock.calls[0].arguments[0];
+      assert.deepEqual(query.Id, { $nin: [1, 5, 9] }, 'claimed ids must be excluded by the query');
+      assert.equal(query.EntityName, 'banktransaction');
+    });
+
+    it('omits the exclusion entirely when nothing is claimed', async () => {
+      patchMdb({
+        rules: [rule({ typeContains: 'wages' }, { name: 'Wages' })],
+        lines: [line({ Id: 1 })],
+        claimed: [],
+      });
+      await applyRules();
+      const query = mdb.REST.bankTransaction.find.mock.calls[0].arguments[0];
+      assert.equal(query.Id, undefined, 'an empty $nin would be pointless');
     });
 
     it('does nothing when no rules exist', async () => {

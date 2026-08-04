@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.19.1] - 2026-08-04
+
+### Fixed
+- **Suggestion generation stalled once it hit its row limit.** All four generators fetched the newest `limit` bank lines and *then* filtered out ones already carrying a match. After the first run every one of those rows was claimed, so each subsequent run re-read the same set and created nothing — the older backlog was never reached. Caught on the first production run: 13,429 lines, a 5,000 limit, and exactly 5,000 suggestions that would never have grown. Claimed ids are now excluded in the query, so the limit applies to unprocessed rows. Affects `generateSuggestions`, `applyRules`, `detectTransfers` and `detectAccountNamedMovements`.
+
 ## [6.19.0] - 2026-08-04
 
 Bank reconciliation. Nobody was reconciling the bank: 459 of 13,429 transactions were marked reconciled in KashFlow (3.4%), and on the main trading account 7,470 of 7,908 lines were outstanding going back to 2016. There was no view anywhere in the app of bank accounts, balances, or which payments had been accounted for.

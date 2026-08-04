@@ -175,9 +175,11 @@ export async function applyRules({ accountId = null, limit = 10000 } = {}) {
   const query = { EntityName: 'banktransaction', ...LIVE_BANK_LINE };
   if (accountId != null) query.AccountId = Number(accountId);
 
-  const claimed = new Set(
-    (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null })).filter(v => v != null),
-  );
+  // See generateSuggestions: excluding claimed lines after the fetch would make
+  // `limit` apply to already-processed rows and stall the backlog.
+  const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
+    .filter(v => v != null);
+  if (claimed.length) query.Id = { $nin: claimed };
 
   const lines = await BankTransaction.find(query)
     .sort({ Date: -1 }).limit(limit)
@@ -189,8 +191,6 @@ export async function applyRules({ accountId = null, limit = 10000 } = {}) {
   const applied = new Map();
 
   for (const line of lines) {
-    if (claimed.has(line.Id)) { stats.skipped += 1; continue; }
-
     const rule = firstMatchingRule(rules, line);
     if (!rule) { stats.unmatched += 1; continue; }
 

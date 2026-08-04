@@ -114,15 +114,17 @@ export async function detectTransfers({ windowDays = 1, limit = 10000 } = {}) {
   const BankMatch = mdb.INTERNAL?.bankMatch;
   if (!BankTransaction || !BankMatch) return { examined: 0, pairs: 0, created: 0 };
 
-  const claimed = new Set(
-    (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null })).filter(v => v != null),
-  );
+  // Excluded in the query — see generateSuggestions for why filtering after the
+  // fetch stalls the backlog once `limit` is reached.
+  const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
+    .filter(v => v != null);
+  const lineQuery = { EntityName: 'banktransaction', ...LIVE_BANK_LINE };
+  if (claimed.length) lineQuery.Id = { $nin: claimed };
 
-  const lines = (await BankTransaction.find({ EntityName: 'banktransaction', ...LIVE_BANK_LINE })
+  const lines = await BankTransaction.find(lineQuery)
     .sort({ Date: -1 }).limit(limit)
     .select('Id AccountId Date Type Comment PaidIn PaidOut')
-    .lean())
-    .filter(l => !claimed.has(l.Id));
+    .lean();
 
   const pairs = findTransferPairs(lines, { windowDays });
   if (!pairs.length) return { examined: lines.length, pairs: 0, created: 0 };
@@ -164,15 +166,17 @@ export async function detectAccountNamedMovements({ limit = 10000 } = {}) {
   );
   if (!byName.size) return { examined: 0, created: 0 };
 
-  const claimed = new Set(
-    (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null })).filter(v => v != null),
-  );
+  // Excluded in the query — see generateSuggestions for why filtering after the
+  // fetch stalls the backlog once `limit` is reached.
+  const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
+    .filter(v => v != null);
+  const lineQuery = { EntityName: 'banktransaction', ...LIVE_BANK_LINE };
+  if (claimed.length) lineQuery.Id = { $nin: claimed };
 
-  const lines = (await BankTransaction.find({ EntityName: 'banktransaction', ...LIVE_BANK_LINE })
+  const lines = await BankTransaction.find(lineQuery)
     .sort({ Date: -1 }).limit(limit)
     .select('Id AccountId Date Type Comment PaidIn PaidOut')
-    .lean())
-    .filter(l => !claimed.has(l.Id));
+    .lean();
 
   const pending = [];
   for (const line of lines) {

@@ -220,9 +220,15 @@ export async function generateSuggestions({ accountId = null, limit = 5000 } = {
   // rules engine and the matcher.
   query.EntityName = { $in: ['purchase', 'invoice', 'purchasebatchpayment', 'invoicebatchpayment', 'journal'] };
 
-  const claimed = new Set(
-    (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null })).filter(v => v != null),
-  );
+  const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
+    .filter(v => v != null);
+
+  // Excluded in the QUERY, not after fetching. Filtering afterwards makes the
+  // limit apply to already-processed lines, so every run re-reads the same
+  // newest `limit` rows and the older backlog is never reached — which is
+  // exactly what happened on the first production run: 13,429 lines, a 5,000
+  // limit, and precisely 5,000 suggestions that would never have grown.
+  if (claimed.length) query.Id = { $nin: claimed };
 
   const lines = await BankTransaction.find(query)
     .sort({ Date: -1 })
@@ -234,8 +240,6 @@ export async function generateSuggestions({ accountId = null, limit = 5000 } = {
   const pending = [];
 
   for (const line of lines) {
-    if (claimed.has(line.Id)) { stats.skipped += 1; continue; }
-
     const payload = await buildMatchFromLink(line);
     if (!payload) { stats.unresolved += 1; continue; }
 
