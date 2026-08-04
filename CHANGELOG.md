@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.20.1] - 2026-08-04
+
+### Changed
+- **"Confirm selected" now sits above the worklist table rather than below it.** With 50 rows a page it was off-screen at the point you had finished ticking, so every batch ended with a scroll back down.
+
 ## [6.20.0] - 2026-08-04
 
 ### Added

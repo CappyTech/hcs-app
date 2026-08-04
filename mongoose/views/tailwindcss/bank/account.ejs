@@ -89,6 +89,17 @@ const qs = (over = {}) => {
   <form method="POST" action="/bank/accounts/<%= account.accountId %>/bulk-confirm">
     <%- include('../partials/csrfHidden') %>
 
+    <div class="flex items-center gap-3 mb-4">
+      <button type="submit"
+        class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+        <i class="bi bi-check2"></i> Confirm selected
+      </button>
+      <span class="text-xs text-gray-500 dark:text-gray-400">
+        Only lines awaiting review can be selected. Each is validated individually &mdash;
+        anything that fails is reported and the rest still go through.
+      </span>
+    </div>
+
     <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
       <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800">
@@ -174,16 +185,6 @@ const qs = (over = {}) => {
       <% } %>
     </div>
 
-    <div class="mt-4 flex items-center gap-3">
-      <button type="submit"
-        class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
-        <i class="bi bi-check2"></i> Confirm selected
-      </button>
-      <span class="text-xs text-gray-500 dark:text-gray-400">
-        Only lines awaiting review can be selected. Each is validated individually &mdash;
-        anything that fails is reported and the rest still go through.
-      </span>
-    </div>
   </form>
 
   <% } %>
