@@ -1,5 +1,6 @@
 import mdb from './mongooseDatabaseService.js';
 import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
+import { lacksAllTagsQuery, hasTagQuery } from '../config/paperlessTagsConfig.js';
 
 const DETAIL_LIMIT = 100;
 
@@ -10,16 +11,15 @@ const DETAIL_LIMIT = 100;
 // that actually need action.
 // Note: uses `tags: { $not: { $elemMatch } }` rather than a 'tags.name' key so it
 // can coexist with facets that also match on 'tags.name' (e.g. addedNoKf).
-const NOT_FOR_KASHFLOW_TAGS = [
-  /original\/multiple invoice one pdf/i, // reference originals; invoices entered separately
-  /credit\/refund/i,                     // credit notes (automatic tag; title regex kept as fallback)
-];
+// Tags are resolved by id-or-known-name via paperlessTagsConfig, so renaming
+// one in Paperless does not silently empty these panels.
+const NOT_FOR_KASHFLOW_TAGS = ['originalMultiInvoice', 'creditRefund'];
 const KF_ELIGIBLE_MATCH = {
   // Matched by id-or-known-name: the type was renamed 'purchase' ->
   // 'Purchase Invoice', which a literal name match stopped seeing.
   ...documentTypeQuery('purchaseInvoice'),
   title: { $not: /credit/i },
-  tags: { $not: { $elemMatch: { name: { $in: NOT_FOR_KASHFLOW_TAGS } } } },
+  ...lacksAllTagsQuery(NOT_FOR_KASHFLOW_TAGS),
   // Ghosts deleted in Paperless can't be actioned — they get their own panel
   deletedInPaperlessAt: null,
 };
@@ -29,7 +29,11 @@ const KF_ELIGIBLE_MATCH = {
 // Match References / Resolve Numbers can still attach them to their purchase.
 const NEVER_SENT_ELIGIBLE_MATCH = {
   ...KF_ELIGIBLE_MATCH,
-  tags: { $not: { $elemMatch: { name: { $in: [...NOT_FOR_KASHFLOW_TAGS, /manually added to kashflow/i] } } } },
+  // Intentionally replaces KF_ELIGIBLE_MATCH's `tags` clause with a wider one
+  // — same list plus 'manually added to kashflow'. Safe because it is a
+  // superset; spreading a tag *requirement* here instead would silently drop
+  // the exclusion, which is why addedNoKf below uses an explicit $and.
+  ...lacksAllTagsQuery([...NOT_FOR_KASHFLOW_TAGS, 'manuallyAddedToKashflow']),
 };
 
 // Shared aggregation stages to extract the cached Paperless CF value for 'kashflow purchase id'
@@ -82,10 +86,15 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       ],
       // Tagged 'added' in Paperless but no KashFlow purchase number recorded in MongoDB
       addedNoKf: [
+        // $and rather than a spread: KF_ELIGIBLE_MATCH excludes tags and
+        // hasTagQuery requires one, so both set a `tags` key and a spread
+        // would silently drop whichever came first.
         { $match: {
-          kashflowPurchaseNumber: null,
-          'tags.name': { $regex: /^added$/i },
-          ...KF_ELIGIBLE_MATCH,
+          $and: [
+            { kashflowPurchaseNumber: null },
+            KF_ELIGIBLE_MATCH,
+            hasTagQuery('added'),
+          ],
         }},
         { $count: 'n' },
       ],

@@ -74,6 +74,7 @@ import __subcontractorRoutes from './mongoose/routes/subcontractorRoutes.js';
 import __submissionRoutes from './mongoose/routes/submissionRoutes.js';
 import __holidayRoutes from './mongoose/routes/holidayRoutes.js';
 import __fileRoutes from './mongoose/routes/fileRoutes.js';
+import __paperlessTags from './mongoose/config/paperlessTagsConfig.js';
 import __paperlessRoutes from './mongoose/routes/paperlessRoutes.js';
 import __bankRoutes from './mongoose/routes/bankRoutes.js';
 import __overviewRoutes from './mongoose/routes/overviewRoutes.js';
@@ -463,6 +464,9 @@ const main = async () => {
       res.locals.slimDateTime = __dateService.slimDateTime;
       res.locals.fmtDate = __dateService.fmtDate;
       res.locals.formatCurrency = __currencyService.formatCurrency;
+      // Lets views ask "does this document carry tag X?" without hardcoding a
+      // tag name that a Paperless rename would silently invalidate.
+      res.locals.hasTag = __paperlessTags.hasTag;
       res.locals.rounding = __currencyService.rounding;
       if (!res.locals.csrfToken && req.session?.csrfToken) {
         res.locals.csrfToken = req.session.csrfToken;
