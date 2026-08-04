@@ -91,6 +91,18 @@ describe('statementParserService', () => {
       assert.equal(toPence('84.20CR'), 8420);
     });
 
+    it('reads a Paperless monetary value with its currency prefix', () => {
+      // A 'monetary' custom field comes back as "GBP1234.56", not a number.
+      assert.equal(toPence('GBP1234.56'), 123456);
+      assert.equal(toPence('GBP-84.20'), -8420);
+      assert.equal(toPence('USD1,000.00'), 100000);
+    });
+
+    it('does not mistake letters for a currency prefix', () => {
+      assert.equal(toPence('ABCDEF'), null);
+      assert.equal(toPence('N/A'), null);
+    });
+
     it('returns null for anything it cannot read, rather than guessing', () => {
       for (const bad of ['', null, undefined, 'n/a', 'abc', '--']) {
         assert.equal(toPence(bad), null, `toPence(${JSON.stringify(bad)})`);

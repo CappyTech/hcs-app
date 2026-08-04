@@ -26,7 +26,11 @@ export function toPence(value) {
   if (value == null || value === '') return null;
   if (typeof value === 'number') return Math.round(value * 100);
 
-  let cleaned = String(value).replace(/[£$€,\s]/g, '').trim();
+  // Paperless returns a 'monetary' custom field as a string carrying an
+  // ISO 4217 prefix, e.g. "GBP1234.56". Stripped before the symbol pass, or
+  // the letters survive and the value is rejected as unparseable.
+  let cleaned = String(value).replace(/^\s*[A-Z]{3}(?=[\d\-(.])/i, '');
+  cleaned = cleaned.replace(/[£$€,\s]/g, '').trim();
 
   // Trailing CR/DR markers. Stripped before the sign is applied, so the minus
   // lands at the front where Number() can see it rather than being appended.
