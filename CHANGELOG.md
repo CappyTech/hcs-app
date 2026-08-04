@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.19.2] - 2026-08-04
+
+### Fixed
+- **Every `/bank` page with a date on it returned a 500.** The views called `slimDateTime(date, true)`, but the signature is `(dateString, options = [], timezone)` and it calls `options.includes(...)` — which a boolean does not have. The default already produces `dd/MM/yyyy`, so the second argument was wrong *and* unnecessary; all 17 calls are removed.
+
+  The view tests missed it because they stubbed `slimDateTime` with a one-argument fake, which silently ignored the bad second argument. They now use the **real** `dateService` and `currencyService`, and a new assertion rejects any boolean passed as options. Reintroducing the bug fails five tests with the same error production gave.
+
+  Note the same mistake exists in 22 calls elsewhere in the codebase. Those have not surfaced because `slimDateTime` returns `"Never"` for a null date before it reaches `options.includes`, so they only throw where the date is populated. Worth a sweep.
+
 ## [6.19.1] - 2026-08-04
 
 ### Fixed

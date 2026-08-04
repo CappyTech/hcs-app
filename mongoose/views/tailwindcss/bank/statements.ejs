@@ -121,7 +121,7 @@
               <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= imp.accountName || imp.accountId %></td>
               <td class="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap text-xs">
                 <% if (imp.periodStart) { %>
-                  <%= slimDateTime(imp.periodStart, true) %> &ndash; <%= slimDateTime(imp.periodEnd, true) %>
+                  <%= slimDateTime(imp.periodStart) %> &ndash; <%= slimDateTime(imp.periodEnd) %>
                 <% } else { %>&mdash;<% } %>
               </td>
               <td class="px-4 py-3 text-right">

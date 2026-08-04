@@ -68,7 +68,7 @@
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
             <% unresolvable.forEach(row => { %>
               <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(row.line.Date, true) %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(row.line.Date) %></td>
                 <td class="px-4 py-3 text-gray-900 dark:text-white"><%= row.line.Comment || '' %></td>
                 <td class="px-4 py-3 text-right whitespace-nowrap"><%= formatCurrency(row.line.amount) %></td>
                 <td class="px-4 py-3 text-xs <%= row.resolved ? 'text-amber-700 dark:text-amber-400' : 'text-red-700 dark:text-red-400' %>">
@@ -118,7 +118,7 @@
             <div class="divide-y divide-gray-100 dark:divide-gray-700">
               <% threeWayGaps.statementOnly.slice(0, 25).forEach(g => { %>
                 <div class="py-2 text-sm flex items-start gap-3">
-                  <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= slimDateTime(g.line.date, true) %></span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= slimDateTime(g.line.date) %></span>
                   <span class="flex-1 text-gray-900 dark:text-white"><%= g.line.description %></span>
                   <span class="whitespace-nowrap <%= g.line.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
                     <%= formatCurrency(g.line.amount) %>
@@ -144,7 +144,7 @@
               <% threeWayGaps.bankOnly.slice(0, 25).forEach(g => { %>
                 <div class="py-2 text-sm flex items-start gap-3">
                   <a href="/bank/lines/<%= g.transaction.Id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">
-                    <%= slimDateTime(g.transaction.Date, true) %>
+                    <%= slimDateTime(g.transaction.Date) %>
                   </a>
                   <span class="flex-1 text-gray-900 dark:text-white"><%= g.transaction.Comment || g.transaction.Type || '' %></span>
                   <span class="whitespace-nowrap text-gray-700 dark:text-gray-300"><%= formatCurrency(g.transaction.amount) %></span>
@@ -187,7 +187,7 @@
               <% v.lines.forEach(l => { %>
                 <div class="text-xs text-gray-600 dark:text-gray-400">
                   bank line <%= l.bankTransactionId %> &middot; <%= formatCurrency(l.amount) %>
-                  &middot; removed from KashFlow <%= slimDateTime(l.deleted.deletedAt, true) %>
+                  &middot; removed from KashFlow <%= slimDateTime(l.deleted.deletedAt) %>
                 </div>
               <% }) %>
             </div>
@@ -221,7 +221,7 @@
             <% kfDisagreement.kfOnly.slice(0, 20).forEach(l => { %>
               <div class="py-2 text-sm">
                 <a href="/bank/lines/<%= l.Id %>" class="text-green-700 dark:text-green-400 hover:underline">
-                  <%= slimDateTime(l.Date, true) %>
+                  <%= slimDateTime(l.Date) %>
                 </a>
                 <span class="text-gray-700 dark:text-gray-300"><%= l.Comment || '' %></span>
               </div>
@@ -245,7 +245,7 @@
             <% kfDisagreement.usOnly.slice(0, 20).forEach(l => { %>
               <div class="py-2 text-sm">
                 <a href="/bank/lines/<%= l.Id %>" class="text-green-700 dark:text-green-400 hover:underline">
-                  <%= slimDateTime(l.Date, true) %>
+                  <%= slimDateTime(l.Date) %>
                 </a>
                 <span class="text-gray-700 dark:text-gray-300"><%= l.Comment || '' %></span>
               </div>
@@ -263,7 +263,7 @@
     </h2>
     <% if (!staleUnmatched.length) { %>
       <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
-        Nothing outstanding beyond <%= slimDateTime(staleCutoff, true) %>.
+        Nothing outstanding beyond <%= slimDateTime(staleCutoff) %>.
       </div>
     <% } else { %>
       <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
@@ -279,7 +279,7 @@
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
             <% staleUnmatched.forEach(l => { %>
               <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(l.Date, true) %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(l.Date) %></td>
                 <td class="px-4 py-3 text-gray-900 dark:text-white"><%= l.Comment || l.EntityName || '' %></td>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                   <%= formatCurrency((l.PaidIn || 0) > 0 ? l.PaidIn : -(l.PaidOut || 0)) %>

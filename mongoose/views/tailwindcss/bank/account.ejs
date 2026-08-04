@@ -112,7 +112,7 @@ const qs = (over = {}) => {
                 <% } %>
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300">
-                <%= slimDateTime(row.Date, true) %>
+                <%= slimDateTime(row.Date) %>
               </td>
               <td class="px-4 py-3 text-gray-900 dark:text-white">
                 <%= row.Comment || row.Type || '' %>

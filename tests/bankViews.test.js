@@ -18,13 +18,26 @@ import ejs from 'ejs';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VIEWS = path.join(ROOT, 'mongoose/views/tailwindcss/bank');
 
-/* Locals that layout.ejs normally supplies via res.locals. */
+/*
+ * Locals that layout.ejs normally supplies via res.locals.
+ *
+ * These are the REAL implementations, not stand-ins. A stub that ignored the
+ * second argument let `slimDateTime(date, true)` through every test and then
+ * 500'd in production on the first page with a non-null date: the real
+ * signature is (dateString, options = [], timezone), and it calls
+ * options.includes(...), which a boolean does not have. Faking a helper hides
+ * exactly the mismatch these tests exist to catch.
+ */
+import dateService from '../services/dateService.js';
+import currencyService from '../services/currencyService.js';
+
 const baseLocals = {
   title: 'Bank',
   csrfToken: 'test-csrf-token',
   user: { role: 'admin', name: 'Test Admin' },
-  slimDateTime: (d) => (d ? new Date(d).toISOString().slice(0, 10) : ''),
-  formatCurrency: (n) => `£${(Number(n) || 0).toFixed(2)}`,
+  slimDateTime: dateService.slimDateTime,
+  fmtDate: dateService.fmtDate,
+  formatCurrency: currencyService.formatCurrency,
 };
 
 const render = (view, locals) => ejs.renderFile(
@@ -239,6 +252,19 @@ describe('bank views', () => {
         tokens.length >= postForms.length,
         `${view}: ${postForms.length} POST forms but only ${tokens.length} CSRF tokens`,
       );
+    }
+  });
+
+  it('never passes a boolean as slimDateTime options', () => {
+    // slimDateTime(dateString, options = [], timezone) calls options.includes.
+    // A boolean throws — and only on a page where the date is non-null, since
+    // a null date returns "Never" before options is touched. That is why this
+    // reached production.
+    for (const file of fs.readdirSync(VIEWS)) {
+      if (!file.endsWith('.ejs')) continue;
+      const src = fs.readFileSync(path.join(VIEWS, file), 'utf8');
+      const bad = src.match(/slimDateTime\([^)]*,\s*(true|false)\s*\)/g);
+      assert.equal(bad, null, `${file} passes a boolean to slimDateTime: ${bad}`);
     }
   });
 

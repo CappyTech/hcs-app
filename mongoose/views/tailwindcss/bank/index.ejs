@@ -96,7 +96,7 @@
               <td class="px-4 py-3 text-right text-green-700 dark:text-green-400"><%= a.confirmedCount.toLocaleString('en-GB') %></td>
               <td class="px-4 py-3 text-right"><%= a.outstandingCount.toLocaleString('en-GB') %></td>
               <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
-                <% if (a.oldest) { %><%= slimDateTime(a.oldest, true) %> &ndash; <%= slimDateTime(a.newest, true) %><% } %>
+                <% if (a.oldest) { %><%= slimDateTime(a.oldest) %> &ndash; <%= slimDateTime(a.newest) %><% } %>
               </td>
               <td class="px-4 py-3 text-right">
                 <a href="/bank/accounts/<%= a.accountId %>"
@@ -122,7 +122,7 @@
           <div class="flex-1">
             <div class="text-sm text-gray-900 dark:text-white"><%= s.accountName || s.accountId %></div>
             <div class="text-xs text-gray-500 dark:text-gray-400">
-              <%= slimDateTime(s.periodStart, true) %> &ndash; <%= slimDateTime(s.periodEnd, true) %>
+              <%= slimDateTime(s.periodStart) %> &ndash; <%= slimDateTime(s.periodEnd) %>
               &middot; <%= s.signedByName || '' %>
             </div>
           </div>

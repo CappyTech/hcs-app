@@ -106,7 +106,7 @@
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
               <td class="px-4 py-3 text-gray-900 dark:text-white"><%= s.accountName || s.accountId %></td>
               <td class="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                <%= slimDateTime(s.periodStart, true) %> &ndash; <%= slimDateTime(s.periodEnd, true) %>
+                <%= slimDateTime(s.periodStart) %> &ndash; <%= slimDateTime(s.periodEnd) %>
               </td>
               <td class="px-4 py-3 text-right"><%= s.matchedCount %></td>
               <td class="px-4 py-3 text-right <%= s.unmatchedCount > 0 ? 'text-amber-700 dark:text-amber-400' : '' %>">

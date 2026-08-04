@@ -41,7 +41,7 @@
       <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Period</div>
       <div class="text-sm font-bold mt-1">
         <% if (statementImport.periodStart) { %>
-          <%= slimDateTime(statementImport.periodStart, true) %> &ndash; <%= slimDateTime(statementImport.periodEnd, true) %>
+          <%= slimDateTime(statementImport.periodStart) %> &ndash; <%= slimDateTime(statementImport.periodEnd) %>
         <% } else { %>&mdash;<% } %>
       </div>
     </div>
@@ -92,7 +92,7 @@
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
           <% lines.forEach(l => { %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-              <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(l.date, true) %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(l.date) %></td>
               <td class="px-4 py-3 text-gray-900 dark:text-white"><%= l.description %></td>
               <td class="px-4 py-3 text-right whitespace-nowrap <%= l.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
                 <%= formatCurrency(l.amount) %>
