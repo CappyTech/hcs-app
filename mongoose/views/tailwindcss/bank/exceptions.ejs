@@ -88,7 +88,48 @@
     <% } %>
   </div>
 
-  <!-- 3. Disagreement with KashFlow -->
+  <!-- 3. Bank line deleted in KashFlow -->
+  <div class="mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      Matched against a bank line KashFlow has deleted
+    </h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+      The transaction was removed in KashFlow after this match was made, so the match now
+      refers to something that no longer exists.
+    </p>
+    <% if (!vanished || !vanished.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        None.
+      </div>
+    <% } else { %>
+      <div class="divide-y divide-gray-100 dark:divide-gray-700 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl">
+        <% vanished.forEach(v => { %>
+          <div class="flex items-start gap-4 px-4 py-3">
+            <div class="flex-1">
+              <div class="text-sm text-gray-900 dark:text-white">
+                <%= (v.match.documents || []).map(d => `${d.kind} ${d.kfNumber}`).join(', ') || v.match.matchType %>
+                &mdash; <%= v.match.status %>
+              </div>
+              <% v.lines.forEach(l => { %>
+                <div class="text-xs text-gray-600 dark:text-gray-400">
+                  bank line <%= l.bankTransactionId %> &middot; <%= formatCurrency(l.amount) %>
+                  &middot; removed from KashFlow <%= slimDateTime(l.deleted.deletedAt, true) %>
+                </div>
+              <% }) %>
+            </div>
+            <% if (v.lines.length) { %>
+              <a href="/bank/lines/<%= v.lines[0].bankTransactionId %>"
+                class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
+                Open
+              </a>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- 4. Disagreement with KashFlow -->
   <div class="mb-6">
     <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
       Disagrees with KashFlow
@@ -141,7 +182,7 @@
     </div>
   </div>
 
-  <!-- 4. Long outstanding -->
+  <!-- 5. Long outstanding -->
   <div>
     <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
       Outstanding more than 45 days

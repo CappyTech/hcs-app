@@ -616,7 +616,7 @@ export const getExceptions = async (req, res, next) => {
 
     const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
 
-    const [drifted, unresolvable, staleUnmatched, kfDisagreement] = await Promise.all([
+    const [drifted, unresolvable, staleUnmatched, kfDisagreement, vanished] = await Promise.all([
       // Confirmed, but the underlying document has since changed or vanished.
       BankMatch
         ? BankMatch.find({ status: 'confirmed', integrity: { $ne: 'ok' }, deletedAt: null })
@@ -669,6 +669,31 @@ export const getExceptions = async (req, res, next) => {
         ]);
         return { kfOnly, usOnly };
       })(),
+
+      // Matches whose bank line KashFlow has since deleted. hcs-sync
+      // soft-deletes those, so a confirmed match can end up pointing at a
+      // transaction that no longer exists — which is exactly the sort of thing
+      // that must not sit silently inside a signed-off period.
+      (async () => {
+        if (!BankTransaction || !BankMatch) return [];
+        const gone = await BankTransaction.find({ deletedAt: { $ne: null } })
+          .select('Id AccountId Date Comment PaidIn PaidOut deletedAt').limit(500).lean();
+        if (!gone.length) return [];
+
+        const byId = new Map(gone.map(l => [l.Id, l]));
+        const matches = await BankMatch.find({
+          'bankLines.bankTransactionId': { $in: [...byId.keys()] },
+          status: { $in: ['suggested', 'confirmed'] },
+          deletedAt: null,
+        }).limit(200).lean();
+
+        return matches.map(m => ({
+          match: m,
+          lines: (m.bankLines || [])
+            .filter(l => byId.has(l.bankTransactionId))
+            .map(l => ({ ...l, deleted: byId.get(l.bankTransactionId) })),
+        }));
+      })(),
     ]);
 
     res.render(VIEW('exceptions'), {
@@ -677,6 +702,7 @@ export const getExceptions = async (req, res, next) => {
       unresolvable,
       staleUnmatched,
       kfDisagreement,
+      vanished,
       staleCutoff: fortyFiveDaysAgo,
     });
   } catch (err) { next(err); }

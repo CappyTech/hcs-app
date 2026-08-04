@@ -1,5 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
-import { classify, buildMatchFromLink, signedAmount } from './bankLinkService.js';
+import { classify, buildMatchFromLink, signedAmount, LIVE_BANK_LINE } from './bankLinkService.js';
 
 /**
  * Reads for the reconciliation UI: the per-account worklist, the account
@@ -49,6 +49,7 @@ export async function listAccounts() {
   const [accounts, txAgg, confirmedAgg] = await Promise.all([
     BankAccount ? BankAccount.find({}).select('Id AccountName IsArchived BankBalance ReconcileDate').lean() : [],
     BankTransaction.aggregate([
+      { $match: { ...LIVE_BANK_LINE } },
       { $group: { _id: '$AccountId', total: { $sum: 1 }, oldest: { $min: '$Date' }, newest: { $max: '$Date' } } },
     ]),
     BankMatch
@@ -106,7 +107,7 @@ export async function getWorklist({
   const size = clampPageSize(pageSize);
   const current = Math.max(parseInt(page, 10) || 1, 1);
 
-  const query = { AccountId: Number(accountId) };
+  const query = { AccountId: Number(accountId), ...LIVE_BANK_LINE };
 
   if (from || to) {
     query.Date = {};
@@ -212,7 +213,7 @@ export async function generateSuggestions({ accountId = null, limit = 5000 } = {
     return { examined: 0, created: 0, skipped: 0, unresolved: 0, unlinked: 0 };
   }
 
-  const query = {};
+  const query = { ...LIVE_BANK_LINE };
   if (accountId != null) query.AccountId = Number(accountId);
 
   // Only the linked kinds are this service's business; the rest belong to the
@@ -260,7 +261,7 @@ export async function getOverview() {
 
   const [accounts, transactions, byStatus, drifted, recentSignOffs] = await Promise.all([
     listAccounts(),
-    BankTransaction.countDocuments({}),
+    BankTransaction.countDocuments({ ...LIVE_BANK_LINE }),
     BankMatch
       ? BankMatch.aggregate([
         { $match: { deletedAt: null } },

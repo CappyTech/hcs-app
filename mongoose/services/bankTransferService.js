@@ -1,5 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
-import { signedAmount, bankLineFactHash } from './bankLinkService.js';
+import { signedAmount, bankLineFactHash, LIVE_BANK_LINE } from './bankLinkService.js';
 
 /**
  * Pairs up money moving between the company's own accounts.
@@ -118,7 +118,7 @@ export async function detectTransfers({ windowDays = 1, limit = 10000 } = {}) {
     (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null })).filter(v => v != null),
   );
 
-  const lines = (await BankTransaction.find({ EntityName: 'banktransaction' })
+  const lines = (await BankTransaction.find({ EntityName: 'banktransaction', ...LIVE_BANK_LINE })
     .sort({ Date: -1 }).limit(limit)
     .select('Id AccountId Date Type Comment PaidIn PaidOut')
     .lean())
@@ -168,7 +168,7 @@ export async function detectAccountNamedMovements({ limit = 10000 } = {}) {
     (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null })).filter(v => v != null),
   );
 
-  const lines = (await BankTransaction.find({ EntityName: 'banktransaction' })
+  const lines = (await BankTransaction.find({ EntityName: 'banktransaction', ...LIVE_BANK_LINE })
     .sort({ Date: -1 }).limit(limit)
     .select('Id AccountId Date Type Comment PaidIn PaidOut')
     .lean())

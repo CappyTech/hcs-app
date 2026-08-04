@@ -172,11 +172,15 @@ const CASES = {
       unresolvable: [{ line: fullLine, problems: ['purchase 35 no longer exists'], resolved: false }],
       staleUnmatched: [fullLine],
       kfDisagreement: { kfOnly: [fullLine], usOnly: [fullLine] },
+      vanished: [{
+        match: { uuid: 'm-8', status: 'confirmed', matchType: 'document', documents: fullMatch.documents },
+        lines: [{ bankTransactionId: 47766903, amount: -16.46, deleted: { deletedAt: new Date() } }],
+      }],
       staleCutoff: new Date(),
     },
     minimal: {
       drifted: [], unresolvable: [], staleUnmatched: [],
-      kfDisagreement: { kfOnly: [], usOnly: [] }, staleCutoff: new Date(),
+      kfDisagreement: { kfOnly: [], usOnly: [] }, vanished: [], staleCutoff: new Date(),
     },
   },
 };

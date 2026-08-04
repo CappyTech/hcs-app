@@ -1,5 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
-import { signedAmount, bankLineFactHash } from './bankLinkService.js';
+import { signedAmount, bankLineFactHash, LIVE_BANK_LINE } from './bankLinkService.js';
 
 /**
  * Applies accountant-authored rules to bank lines that carry no KashFlow
@@ -126,7 +126,7 @@ export async function testRule(rule, { limit = 20 } = {}) {
   const { BankMatch } = models();
   if (!BankTransaction) throw new BankRuleError('bankTransaction model is not loaded', 503);
 
-  const query = { EntityName: 'banktransaction' };
+  const query = { EntityName: 'banktransaction', ...LIVE_BANK_LINE };
   if (rule?.conditions?.accountId != null) query.AccountId = Number(rule.conditions.accountId);
 
   const lines = await BankTransaction.find(query)
@@ -172,7 +172,7 @@ export async function applyRules({ accountId = null, limit = 10000 } = {}) {
     .sort({ priority: 1, createdAt: 1 }).lean();
   if (!rules.length) return { examined: 0, created: 0, skipped: 0, unmatched: 0, byRule: {} };
 
-  const query = { EntityName: 'banktransaction' };
+  const query = { EntityName: 'banktransaction', ...LIVE_BANK_LINE };
   if (accountId != null) query.AccountId = Number(accountId);
 
   const claimed = new Set(

@@ -25,6 +25,17 @@ import mdb from './mongooseDatabaseService.js';
  * produces proposals for a person to review.
  */
 
+/**
+ * Bank lines that still exist in KashFlow.
+ *
+ * hcs-sync soft-deletes transactions KashFlow stops returning. A deleted line
+ * must never reach the worklist: it looks perfectly reconcilable and could be
+ * matched against a document it never paid for.
+ *
+ * Spread into every query that reads bank transactions.
+ */
+export const LIVE_BANK_LINE = { deletedAt: null };
+
 // Bank lines KashFlow generated from a document.
 const DIRECT_ENTITIES = { purchase: 'purchase', invoice: 'invoice' };
 const BATCH_ENTITIES = { purchasebatchpayment: 'purchase', invoicebatchpayment: 'invoice' };
