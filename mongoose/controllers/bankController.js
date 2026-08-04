@@ -5,6 +5,8 @@ import auditLog from '../../services/auditLogService.js';
 import worklist from '../services/bankWorklistService.js';
 import recon from '../services/bankReconciliationService.js';
 import statements from '../services/statementImportService.js';
+import ruleService from '../services/bankRuleService.js';
+import transferService from '../services/bankTransferService.js';
 import { resolveBankLine, signedAmount } from '../services/bankLinkService.js';
 
 /**
@@ -235,14 +237,172 @@ export const postGenerate = async (req, res, next) => {
   try {
     await mdb.connect();
     const accountId = req.body.accountId ? Number(req.body.accountId) : null;
-    const stats = await worklist.generateSuggestions({ accountId });
+
+    // One sweep, in the order that produces the best answer: KashFlow's own
+    // links first, then paired transfers, then one-sided account movements,
+    // then rules over whatever is left. Each step skips lines already claimed,
+    // so the ordering decides which explanation wins.
+    const linked = await worklist.generateSuggestions({ accountId });
+    const paired = await transferService.detectTransfers();
+    const moved = await transferService.detectAccountNamedMovements();
+    const ruled = await ruleService.applyRules({ accountId });
 
     req.flash(
       'success',
-      `Examined ${stats.examined} linked lines: ${stats.created} new suggestion${stats.created === 1 ? '' : 's'}, `
-      + `${stats.skipped} already tracked, ${stats.unresolved} could not be resolved.`,
+      `${linked.created} from KashFlow links, ${paired.created} transfers, `
+      + `${moved.created} inter-account movements, ${ruled.created} from rules. `
+      + `${ruled.unmatched} line${ruled.unmatched === 1 ? '' : 's'} still need a rule or a manual decision.`,
     );
     res.redirect(backTo(req));
+  } catch (err) { next(err); }
+};
+
+/* ── rules ────────────────────────────────────────────────────────── */
+
+export const getRules = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const BankRule = mdb.INTERNAL?.bankRule;
+    const [rules, accounts] = await Promise.all([
+      BankRule ? BankRule.find({ deletedAt: null }).sort({ priority: 1, createdAt: 1 }).lean() : [],
+      worklist.listAccounts(),
+    ]);
+
+    res.render(VIEW('rules'), { title: 'Bank rules', rules, accounts });
+  } catch (err) { next(err); }
+};
+
+/** Read a rule out of the submitted form, dropping blanks. */
+function ruleFromBody(body) {
+  const num = (v) => (v === '' || v == null ? null : Number(v));
+  return {
+    name: String(body.name || '').trim().slice(0, 200),
+    priority: Number(body.priority) || 100,
+    enabled: body.enabled === 'on' || body.enabled === 'true',
+    conditions: {
+      typeEquals: String(body.typeEquals || '').trim(),
+      typeContains: String(body.typeContains || '').trim(),
+      commentContains: String(body.commentContains || '').trim(),
+      accountId: num(body.accountId),
+      direction: ['in', 'out', 'any'].includes(body.direction) ? body.direction : 'any',
+      amountEquals: num(body.amountEquals),
+      amountMin: num(body.amountMin),
+      amountMax: num(body.amountMax),
+    },
+    action: {
+      matchType: ['no-document', 'transfer', 'journal'].includes(body.matchType) ? body.matchType : 'no-document',
+      category: String(body.category || '').trim().slice(0, 100),
+      note: String(body.note || '').trim().slice(0, 500),
+    },
+  };
+}
+
+export const postRuleCreate = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const BankRule = mdb.INTERNAL?.bankRule;
+    const payload = ruleFromBody(req.body);
+
+    if (!payload.name) {
+      req.flash('error', 'Give the rule a name.');
+      return res.redirect('/bank/rules');
+    }
+    // A rule with no conditions would match nothing, which is confusing to
+    // debug — reject it at the door rather than let someone wonder why.
+    const c = payload.conditions;
+    const hasCondition = Boolean(c.typeEquals || c.typeContains || c.commentContains
+      || c.accountId != null || c.amountEquals != null || c.amountMin != null || c.amountMax != null);
+    if (!hasCondition) {
+      req.flash('error', 'A rule needs at least one condition, or it will never match anything.');
+      return res.redirect('/bank/rules');
+    }
+
+    const rule = await BankRule.create({
+      ...payload,
+      createdBy: req.user?._id || null,
+      createdByName: req.user?.name || req.user?.email || '',
+    });
+
+    auditLog.record('bank_rule_created', req, { meta: { ruleUuid: rule.uuid, name: rule.name } });
+    req.flash('success', `Rule "${rule.name}" created. Use Preview to see what it would claim.`);
+    res.redirect('/bank/rules');
+  } catch (err) { next(err); }
+};
+
+export const postRuleUpdate = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const BankRule = mdb.INTERNAL?.bankRule;
+    const rule = await BankRule.findOne({ uuid: req.params.uuid, deletedAt: null });
+    if (!rule) {
+      req.flash('error', 'That rule no longer exists.');
+      return res.redirect('/bank/rules');
+    }
+
+    // autoConfirm is the only place the "a person confirms every match"
+    // guarantee is relaxed, so only an admin may turn it on.
+    const wantsAutoConfirm = req.body.autoConfirm === 'on' || req.body.autoConfirm === 'true';
+    if (wantsAutoConfirm && req.user?.role !== 'admin') {
+      req.flash('error', 'Only an admin can make a rule confirm matches without review.');
+      return res.redirect('/bank/rules');
+    }
+
+    Object.assign(rule, ruleFromBody(req.body));
+    rule.autoConfirm = wantsAutoConfirm;
+    await rule.save();
+
+    auditLog.record(wantsAutoConfirm ? 'bank_rule_autoconfirm' : 'bank_rule_updated', req, {
+      meta: { ruleUuid: rule.uuid, name: rule.name, autoConfirm: rule.autoConfirm },
+    });
+    req.flash('success', `Rule "${rule.name}" updated.`);
+    res.redirect('/bank/rules');
+  } catch (err) { next(err); }
+};
+
+export const postRuleDelete = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const BankRule = mdb.INTERNAL?.bankRule;
+    const rule = await BankRule.findOne({ uuid: req.params.uuid, deletedAt: null });
+    if (rule) {
+      // Soft delete: matches reference the rule that produced them.
+      rule.deletedAt = new Date();
+      rule.enabled = false;
+      await rule.save();
+      auditLog.record('bank_rule_deleted', req, { meta: { ruleUuid: rule.uuid, name: rule.name } });
+      req.flash('success', `Rule "${rule.name}" removed.`);
+    }
+    res.redirect('/bank/rules');
+  } catch (err) { next(err); }
+};
+
+export const postRuleTest = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const BankRule = mdb.INTERNAL?.bankRule;
+    const rule = await BankRule.findOne({ uuid: req.params.uuid, deletedAt: null }).lean();
+    if (!rule) {
+      req.flash('error', 'That rule no longer exists.');
+      return res.redirect('/bank/rules');
+    }
+
+    const result = await ruleService.testRule(rule);
+    req.flash(
+      'success',
+      `"${rule.name}" matches ${result.matched} line${result.matched === 1 ? '' : 's'}: `
+      + `${result.wouldCreate} would get a new suggestion, ${result.alreadyTracked} already have one.`,
+    );
+    res.redirect('/bank/rules');
+  } catch (err) { next(err); }
+};
+
+export const postRuleSeed = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const result = await ruleService.seedRules({ user: req.user });
+    auditLog.record('bank_rules_seeded', req, { meta: result });
+    req.flash('success', `Added ${result.created} starter rule${result.created === 1 ? '' : 's'}. All are suggest-only.`);
+    res.redirect('/bank/rules');
   } catch (err) { next(err); }
 };
 
@@ -524,6 +684,12 @@ export const getExceptions = async (req, res, next) => {
 
 export default {
   getOverview,
+  getRules,
+  postRuleCreate,
+  postRuleUpdate,
+  postRuleDelete,
+  postRuleTest,
+  postRuleSeed,
   getAccount,
   getLine,
   postConfirm,

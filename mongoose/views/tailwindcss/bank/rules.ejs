@@ -1,0 +1,227 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/bank" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; Bank</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Bank rules</h1>
+  </div>
+
+  <div class="border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 mb-6">
+    <p class="text-sm text-gray-700 dark:text-gray-300">
+      Some bank lines settle no invoice or purchase &mdash; wages, tax, pension, loan repayments,
+      bank charges. KashFlow names the nominal account in the line&rsquo;s type, and a rule matching
+      on that classifies every future occurrence, so a recurring monthly job becomes a one-time setup.
+    </p>
+    <p class="text-sm text-gray-700 dark:text-gray-300 mt-2">
+      Rules propose; a person still confirms. The one exception is a rule set to confirm
+      automatically, which only an admin can turn on.
+    </p>
+  </div>
+
+  <!-- New rule -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">New rule</h2>
+
+    <form method="POST" action="/bank/rules" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <%- include('../partials/csrfHidden') %>
+
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="name">Name</label>
+        <input id="name" name="name" required maxlength="200" placeholder="e.g. Monthly loan repayment"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="priority">Priority</label>
+        <input id="priority" name="priority" type="number" value="100"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Lower runs first.</p>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="category">Category</label>
+        <input id="category" name="category" maxlength="100" placeholder="payroll, tax&hellip;"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div class="md:col-span-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+          Conditions &mdash; all of those you fill in must hold. At least one is required.
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="typeEquals">Type is exactly</label>
+        <input id="typeEquals" name="typeEquals" maxlength="200" placeholder="Wages Control Net Pay"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="typeContains">Type contains</label>
+        <input id="typeContains" name="typeContains" maxlength="200" placeholder="pension"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="commentContains">Description contains</label>
+        <input id="commentContains" name="commentContains" maxlength="200" placeholder="BBLS"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="accountId">Account</label>
+        <select id="accountId" name="accountId"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Any account</option>
+          <% accounts.forEach(a => { %>
+            <option value="<%= a.accountId %>"><%= a.accountName %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="direction">Direction</label>
+        <select id="direction" name="direction"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="any">Either</option>
+          <option value="out">Money out</option>
+          <option value="in">Money in</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="amountEquals">Amount is exactly</label>
+        <input id="amountEquals" name="amountEquals" type="number" step="0.01" placeholder="887.37"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="amountMin">Amount at least</label>
+        <input id="amountMin" name="amountMin" type="number" step="0.01"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="amountMax">Amount at most</label>
+        <input id="amountMax" name="amountMax" type="number" step="0.01"
+          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div class="md:col-span-4 flex items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" name="enabled" checked
+            class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500" />
+          Enabled
+        </label>
+        <button type="submit"
+          class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+          Create rule
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Existing rules -->
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      Rules <span class="text-gray-400">(<%= rules.length %>)</span>
+    </h2>
+    <form method="POST" action="/bank/rules/seed">
+      <%- include('../partials/csrfHidden') %>
+      <button type="submit"
+        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600
+               bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300
+               hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">
+        Add starter rules
+      </button>
+    </form>
+  </div>
+
+  <% if (!rules.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No rules yet. &ldquo;Add starter rules&rdquo; creates a set covering wages, tax, pension,
+      loans and bank charges &mdash; all suggest-only.
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pri</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Rule</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">When</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Then</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Applied</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% rules.forEach(r => { const c = r.conditions || {}; const a = r.action || {}; %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition <%= r.enabled ? '' : 'opacity-60' %>">
+              <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400"><%= r.priority %></td>
+              <td class="px-4 py-3 text-gray-900 dark:text-white">
+                <%= r.name %>
+                <div class="flex gap-1 mt-1">
+                  <% if (!r.enabled) { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">disabled</span>
+                  <% } %>
+                  <% if (r.autoConfirm) { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">confirms automatically</span>
+                  <% } %>
+                  <% if (r.seeded) { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">starter</span>
+                  <% } %>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
+                <% if (c.typeEquals) { %><div>type is &ldquo;<%= c.typeEquals %>&rdquo;</div><% } %>
+                <% if (c.typeContains) { %><div>type contains &ldquo;<%= c.typeContains %>&rdquo;</div><% } %>
+                <% if (c.commentContains) { %><div>description contains &ldquo;<%= c.commentContains %>&rdquo;</div><% } %>
+                <% if (c.accountId != null) { %><div>account <%= c.accountId %></div><% } %>
+                <% if (c.direction && c.direction !== 'any') { %><div>money <%= c.direction %></div><% } %>
+                <% if (c.amountEquals != null) { %><div>amount = <%= formatCurrency(c.amountEquals) %></div><% } %>
+                <% if (c.amountMin != null) { %><div>amount &ge; <%= formatCurrency(c.amountMin) %></div><% } %>
+                <% if (c.amountMax != null) { %><div>amount &le; <%= formatCurrency(c.amountMax) %></div><% } %>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
+                <%= a.matchType || 'no-document' %>
+                <% if (a.category) { %><div class="text-gray-500 dark:text-gray-400"><%= a.category %></div><% } %>
+              </td>
+              <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                <%= (r.stats && r.stats.appliedCount) || 0 %>
+                <% if (r.stats && r.stats.lastAppliedAt) { %>
+                  <div class="text-xs text-gray-500 dark:text-gray-400"><%= slimDateTime(r.stats.lastAppliedAt, true) %></div>
+                <% } %>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-1 justify-end">
+                  <form method="POST" action="/bank/rules/<%= r.uuid %>/test">
+                    <%- include('../partials/csrfHidden') %>
+                    <button type="submit"
+                      class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
+                      Preview
+                    </button>
+                  </form>
+                  <form method="POST" action="/bank/rules/<%= r.uuid %>/delete">
+                    <%- include('../partials/csrfHidden') %>
+                    <button type="submit"
+                      class="text-xs px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-sm font-medium transition">
+                      Remove
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+      Preview reports what a rule would claim without writing anything.
+      Removing a rule leaves the matches it already produced untouched.
+    </p>
+  <% } %>
+</div>

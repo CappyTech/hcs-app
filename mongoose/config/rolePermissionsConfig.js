@@ -55,6 +55,9 @@ const roleModelAccess = {
     bankReconciliation: 'r,l',
     bankMatch:          'r,l',
     bankSignOff:        'r,l',
+    bankRule:           'r,l',
+    statementImport:    'r,l',
+    statementLine:      'r,l',
   },
 
   employee: {

@@ -12,6 +12,8 @@ import __policyReviewReminderService from './policyReviewReminderService.js';
 import __unsubscribeRotationService from './unsubscribeRotationService.js';
 import __holidayCarryOverService from './holidayCarryOverService.js';
 import __bankWorklistService from './bankWorklistService.js';
+import __bankRuleService from './bankRuleService.js';
+import __bankTransferService from './bankTransferService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -46,6 +48,30 @@ function registerAll() {
     // Idempotent: a bank line that already has any match record is skipped, so
     // re-running neither duplicates suggestions nor churns the audit log.
     run: () => __bankWorklistService.generateSuggestions(),
+  });
+
+  scheduler.register('bank-rule-apply', {
+    description:
+      'Classify bank lines that settle no document - wages, tax, pension, loan '
+      + 'repayments, charges - using the accountant\'s rules, plus internal '
+      + 'transfers and movements between our own accounts. Suggests only, unless '
+      + 'a rule is explicitly set to confirm automatically.',
+    intervalMs: 6 * HOUR,
+    initialDelayMs: 30_000,
+    run: async () => {
+      // Order matters: paired transfers and account-named movements are
+      // stronger explanations than a rule, and each step skips lines already
+      // claimed, so whichever runs first wins.
+      const paired = await __bankTransferService.detectTransfers();
+      const moved = await __bankTransferService.detectAccountNamedMovements();
+      const ruled = await __bankRuleService.applyRules();
+      return {
+        transfers: paired.created,
+        movements: moved.created,
+        rules: ruled.created,
+        stillUnmatched: ruled.unmatched,
+      };
+    },
   });
 
   scheduler.register('vehicle-compliance', {

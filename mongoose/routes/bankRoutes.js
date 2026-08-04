@@ -75,6 +75,13 @@ router.post('/bank/matches/:uuid/unconfirm', ...adminGuard, ctrl.postUnconfirm);
 
 router.post('/bank/generate', ...bankGuard, generateLimiter, ctrl.postGenerate);
 
+router.get('/bank/rules', ...bankGuard, ctrl.getRules);
+router.post('/bank/rules', ...bankGuard, ctrl.postRuleCreate);
+router.post('/bank/rules/seed', ...bankGuard, ctrl.postRuleSeed);
+router.post('/bank/rules/:uuid/test', ...bankGuard, ctrl.postRuleTest);
+router.post('/bank/rules/:uuid/update', ...bankGuard, ctrl.postRuleUpdate);
+router.post('/bank/rules/:uuid/delete', ...bankGuard, ctrl.postRuleDelete);
+
 router.get('/bank/statements', ...bankGuard, ctrl.getStatements);
 router.get('/bank/statements/:uuid', ...bankGuard, ctrl.getStatement);
 // csrfService.validate runs AFTER multer: the global CSRF middleware sees no

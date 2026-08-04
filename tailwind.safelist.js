@@ -775,6 +775,7 @@ export default [
   "mb-8",
   "md:col-span-2",
   "md:col-span-3",
+  "md:col-span-4",
   "md:grid",
   "md:grid-cols-2",
   "md:grid-cols-3",

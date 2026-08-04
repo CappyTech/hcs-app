@@ -109,6 +109,23 @@ const CASES = {
     },
     minimal: { accounts: [], signOffs: [] },
   },
+  rules: {
+    full: {
+      accounts: [account],
+      rules: [
+        { uuid: 'r-1', name: 'Wages — net pay', priority: 10, enabled: true, seeded: true, autoConfirm: false,
+          conditions: { typeEquals: 'Wages Control Net Pay', direction: 'any' },
+          action: { matchType: 'no-document', category: 'payroll' },
+          stats: { appliedCount: 609, lastAppliedAt: new Date() } },
+        { uuid: 'r-2', name: 'BBLS repayment', priority: 20, enabled: false, seeded: false, autoConfirm: true,
+          conditions: { commentContains: 'BBLS', accountId: 818695, direction: 'in', amountEquals: 887.37,
+            amountMin: 100, amountMax: 1000, typeContains: 'loan' },
+          action: { matchType: 'transfer', category: 'loans' },
+          stats: { appliedCount: 0, lastAppliedAt: null } },
+      ],
+    },
+    minimal: { accounts: [], rules: [] },
+  },
   statements: {
     full: {
       accounts: [account],
