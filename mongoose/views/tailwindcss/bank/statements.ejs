@@ -14,6 +14,25 @@
     </p>
   </div>
 
+  <!-- Fetch from Paperless -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      From Paperless
+    </h2>
+    <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
+      Statements emailed to <span class="font-mono text-xs">bank.statements@heroncs.co.uk</span>
+      are filed in Paperless and tagged <span class="font-mono text-xs">bank-statement</span>.
+      This reads them and writes the outcome back as a tag. It also runs on its own every six hours.
+    </p>
+    <form method="POST" action="/bank/statements/grab">
+      <%- include('../partials/csrfHidden') %>
+      <button type="submit"
+        class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+        <i class="bi bi-arrow-repeat"></i> Fetch from Paperless
+      </button>
+    </form>
+  </div>
+
   <!-- Upload -->
   <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 mb-6">
     <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">

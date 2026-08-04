@@ -277,11 +277,21 @@ function makeClient() {
       pageSize = 50,
       query = null,
       modified__gte = null,
+      // Filter by tag ID rather than a `tag:name` search string. Names drift —
+      // there is already a `statements` tag holding supplier statements of
+      // account, which is a different document that shares a word — and an id
+      // cannot be renamed into matching the wrong thing.
+      tagsIdAll = null,
+      fields = null,
     } = {}) {
       const api = await createApi();
       const params = { page, page_size: pageSize, ordering: "-modified" };
       if (query) params.query = query;
       if (modified__gte) params.modified__gte = modified__gte;
+      if (tagsIdAll != null) {
+        params.tags__id__all = Array.isArray(tagsIdAll) ? tagsIdAll.join(",") : tagsIdAll;
+      }
+      if (fields) params.fields = Array.isArray(fields) ? fields.join(",") : fields;
       const { data } = await api.get("/documents/", { params });
       if (typeof data !== "object" || data === null) {
         throw new Error("Unexpected response from Paperless API (non-JSON)");

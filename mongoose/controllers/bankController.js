@@ -5,6 +5,7 @@ import auditLog from '../../services/auditLogService.js';
 import worklist from '../services/bankWorklistService.js';
 import recon from '../services/bankReconciliationService.js';
 import statements from '../services/statementImportService.js';
+import statementIngest from '../services/bankStatementIngestService.js';
 import ruleService from '../services/bankRuleService.js';
 import transferService from '../services/bankTransferService.js';
 import threeWay from '../services/bankThreeWayService.js';
@@ -473,6 +474,30 @@ export const getStatement = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const postStatementGrab = async (req, res, next) => {
+  try {
+    await mdb.connect();
+    const r = await statementIngest.ingestStatements();
+
+    auditLog.record('bank_statement_grab', req, { meta: r });
+
+    if (r.error) {
+      req.flash('error', `Could not reach Paperless: ${r.error}`);
+    } else if (!r.fetched) {
+      req.flash('success', 'No documents tagged bank-statement in Paperless yet.');
+    } else {
+      const bits = [`${r.fetched} found`];
+      if (r.parsed) bits.push(`${r.parsed} parsed`);
+      if (r.needsReview) bits.push(`${r.needsReview} need review`);
+      if (r.unattributed) bits.push(`${r.unattributed} with no account`);
+      if (r.failed) bits.push(`${r.failed} failed`);
+      if (r.skipped) bits.push(`${r.skipped} unchanged`);
+      req.flash('success', bits.join(', ') + '.');
+    }
+    res.redirect('/bank/statements');
+  } catch (err) { next(err); }
+};
+
 export const postStatementUpload = async (req, res, next) => {
   // multer wrote the upload to a temp path; it must not be left behind on any
   // exit path, including the failures.
@@ -760,6 +785,7 @@ export default {
   postGenerate,
   getStatements,
   getStatement,
+  postStatementGrab,
   postStatementUpload,
   getSignOffs,
   postSignOff,

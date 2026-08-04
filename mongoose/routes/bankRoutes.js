@@ -86,6 +86,7 @@ router.get('/bank/statements', ...bankGuard, ctrl.getStatements);
 router.get('/bank/statements/:uuid', ...bankGuard, ctrl.getStatement);
 // csrfService.validate runs AFTER multer: the global CSRF middleware sees no
 // body on a multipart request, because it has not been parsed at that point.
+router.post('/bank/statements/grab', ...bankGuard, generateLimiter, ctrl.postStatementGrab);
 router.post(
   '/bank/statements/upload',
   ...bankGuard,

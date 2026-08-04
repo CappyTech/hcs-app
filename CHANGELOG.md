@@ -2,6 +2,22 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.20.0] - 2026-08-04
+
+### Added
+- **Bank statements are now ingested from Paperless.** Statements emailed to `bank.statements@heroncs.co.uk` are filed by a Paperless mail rule with document type `Bank Statement` and tag `bank-statement`; `bankStatementIngestService` reads their OCR text, parses it, and writes the outcome back as `bank-statement/parsed`, `/needs-review` or `/failed`. Runs six-hourly as `bank-statement-grab`, or on demand from **Fetch from Paperless** on `/bank/statements`.
+
+  Everything lands in the same `statementImport` / `statementLine` models the CSV/OFX upload uses, so three-way matching and the exceptions page work identically whichever route a line took.
+
+  Three decisions worth keeping:
+  - **Documents are selected by tag id, never by a `tag:` search string.** A pre-existing `statements` tag holds 33 *supplier* statements of account — a different document that happens to share a word — and an id cannot be renamed into matching it.
+  - **The outcome tag is merged, not replaced.** Replacing would drop `bank-statement` and make the document invisible to the next run.
+  - **An account is never guessed.** Resolution is the `Bank Account ID` custom field, then a correspondent-id map, then nothing — a statement attributed to the wrong account produces a confidently wrong reconciliation, so an unresolvable one is held for a human and tagged `needs-review`.
+
+  Idempotent on two levels: a document whose OCR text is unchanged is skipped outright, and `importStatement` no-ops on an unchanged source hash.
+
+- `listDocuments` in the Paperless client accepts `tagsIdAll` and `fields`.
+
 ## [6.19.3] - 2026-08-04
 
 ### Fixed

@@ -15,6 +15,7 @@ import __bankWorklistService from './bankWorklistService.js';
 import __bankRuleService from './bankRuleService.js';
 import __bankTransferService from './bankTransferService.js';
 import __bankThreeWayService from './bankThreeWayService.js';
+import __bankStatementIngestService from './bankStatementIngestService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -73,6 +74,17 @@ function registerAll() {
         stillUnmatched: ruled.unmatched,
       };
     },
+  });
+
+  scheduler.register('bank-statement-grab', {
+    description:
+      'Pull bank statements tagged bank-statement out of Paperless, parse their '
+      + 'OCR text, and tag the outcome back. A statement is only trusted if its '
+      + 'running balance reconciles; otherwise it is marked needs-review and none '
+      + 'of its lines are used.',
+    intervalMs: 6 * HOUR,
+    initialDelayMs: 60_000,
+    run: () => __bankStatementIngestService.ingestStatements(),
   });
 
   scheduler.register('bank-statement-reconcile', {
