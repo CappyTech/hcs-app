@@ -4,6 +4,7 @@ import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
 import taxService from '../../services/taxService.js';
 import { HMRC_VERIFICATION_REGEX } from '../../services/cisService.js';
+import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
 
 const TZ = 'Europe/London';
 
@@ -615,8 +616,10 @@ const fetchStatementsForWeek = async (payrollWeekStart, endDate) => {
   // Find statements whose DueDate (from custom field "Invoice Due Date") falls
   // within or overlaps the week, or that were created/modified this week.
   // We fetch broadly and filter client-side to keep the query simple.
+  // Matched via documentTypeQuery rather than the literal name: renaming the
+  // type in Paperless used to make this silently return nothing.
   const statements = await mdb.PAPERLESS.OcrDocument.find({
-    'documentType.name': 'statement',
+    ...documentTypeQuery('supplierStatement'),
     modified: { $gte: start, $lte: end }
   }).lean();
 

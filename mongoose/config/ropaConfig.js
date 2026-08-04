@@ -7,8 +7,8 @@
  * beyond the normal deployment cycle.
  */
 const ropa = {
-  version: '2026-05-26',
-  lastUpdated: '2026-05-26',
+  version: '2026-08-03',
+  lastUpdated: '2026-08-03',
   controller: {
     name: 'Heron Constructive Solutions LTD',
     system: 'hcs-app',
@@ -86,6 +86,30 @@ const ropa = {
       retention: 'Not stored — transient delivery only; SMTP logs per provider policy',
       recipients: ['smtp_provider', 'twilio'],
       crossBorderTransfer: 'Dependent on SMTP/Twilio provider region',
+    },
+    {
+      id: 'A7',
+      name: 'Bank reconciliation and payment matching',
+      purpose:
+        'Match bank transactions to sales and purchase documents, and evidence reviewer sign-off '
+        + 'of each accounting period',
+      lawfulBasis: ['legal_obligation', 'legitimate_interests'],
+      // Bank narrative is personal data: it carries individual payee names,
+      // subcontractor payments and wage transfers, not just amounts.
+      dataCategories: ['financial', 'identity', 'transaction narrative'],
+      subjectCategories: ['suppliers', 'subcontractors', 'customers', 'employees'],
+      systems: [
+        'REST.bankAccount', 'REST.bankTransaction', 'REST.bankReconciliation',
+        'INTERNAL.bankMatch', 'INTERNAL.bankSignOff',
+        // Imported bank statements. A wider disclosure than the ledger:
+        // a statement lists every payee and wage transfer on the account,
+        // including people who appear nowhere else in the system.
+        'INTERNAL.statementImport', 'INTERNAL.statementLine',
+        'PAPERLESS.bankStatementDocument',
+      ],
+      retention: '6 years (statutory accounting records)',
+      recipients: ['internal_finance'],
+      crossBorderTransfer: 'None',
     },
   ],
 

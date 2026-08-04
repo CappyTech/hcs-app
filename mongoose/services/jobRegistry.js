@@ -11,6 +11,10 @@ import __hrComplianceService from './hrComplianceService.js';
 import __policyReviewReminderService from './policyReviewReminderService.js';
 import __unsubscribeRotationService from './unsubscribeRotationService.js';
 import __holidayCarryOverService from './holidayCarryOverService.js';
+import __bankWorklistService from './bankWorklistService.js';
+import __bankRuleService from './bankRuleService.js';
+import __bankTransferService from './bankTransferService.js';
+import __bankThreeWayService from './bankThreeWayService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -35,6 +39,51 @@ function registerAll() {
     intervalMs: MINUTE,
     initialDelayMs: 15_000,
     run: () => __notificationService.processOutbox(),
+  });
+
+  scheduler.register('bank-link-resolve', {
+    description:
+      'Turn KashFlow\'s own bank-line links into reviewable match suggestions. '
+      + 'Suggests only — nothing is confirmed automatically, and KashFlow is never written to.',
+    intervalMs: 6 * HOUR,
+    // Idempotent: a bank line that already has any match record is skipped, so
+    // re-running neither duplicates suggestions nor churns the audit log.
+    run: () => __bankWorklistService.generateSuggestions(),
+  });
+
+  scheduler.register('bank-rule-apply', {
+    description:
+      'Classify bank lines that settle no document - wages, tax, pension, loan '
+      + 'repayments, charges - using the accountant\'s rules, plus internal '
+      + 'transfers and movements between our own accounts. Suggests only, unless '
+      + 'a rule is explicitly set to confirm automatically.',
+    intervalMs: 6 * HOUR,
+    initialDelayMs: 30_000,
+    run: async () => {
+      // Order matters: paired transfers and account-named movements are
+      // stronger explanations than a rule, and each step skips lines already
+      // claimed, so whichever runs first wins.
+      const paired = await __bankTransferService.detectTransfers();
+      const moved = await __bankTransferService.detectAccountNamedMovements();
+      const ruled = await __bankRuleService.applyRules();
+      return {
+        transfers: paired.created,
+        movements: moved.created,
+        rules: ruled.created,
+        stillUnmatched: ruled.unmatched,
+      };
+    },
+  });
+
+  scheduler.register('bank-statement-reconcile', {
+    description:
+      'Match imported bank statement lines against KashFlow transactions. '
+      + 'Surfaces money that moved but was never booked - the one discrepancy '
+      + 'reconciling KashFlow against itself cannot find. No-op until a '
+      + 'statement whose running balance verified has been imported.',
+    intervalMs: 6 * HOUR,
+    initialDelayMs: 45_000,
+    run: () => __bankThreeWayService.reconcileStatements(),
   });
 
   scheduler.register('vehicle-compliance', {

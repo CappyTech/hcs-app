@@ -2,6 +2,41 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.19.0] - 2026-08-04
+
+Bank reconciliation. Nobody was reconciling the bank: 459 of 13,429 transactions were marked reconciled in KashFlow (3.4%), and on the main trading account 7,470 of 7,908 lines were outstanding going back to 2016. There was no view anywhere in the app of bank accounts, balances, or which payments had been accounted for.
+
+**KashFlow is never written to.** It stays the system of record; the app holds its own account of what has been reconciled and who said so. The two destructive KashFlow endpoints (`PUT /bankaccounts/{id}/transactionlist` and `POST /bankaccounts/assign-transaction-to-new-entity`, both of which delete the source transaction) have no client wrapper in hcs-sync at all — their absence is the enforcement mechanism.
+
+97.9% of all bank lines now arrive with a suggestion for review.
+
+### Added
+- **`/bank`** — accounts with reconciliation progress, and a one-button sweep that runs every detector in order.
+- **`/bank/accounts/:id`** — the worklist. Filter by state, kind, date range and free text; open a line; or tick many and confirm them in a single action. Bulk confirm is the point: 12,991 outstanding lines were never going to be reviewed one modal at a time. Each selected line is still validated individually, and one failure reports itself without abandoning the batch.
+- **`/bank/lines/:id`** — one line, its resolution, its allocations (editable before confirming) and its history.
+- **`/bank/rules`** — accountant-authored rules for lines that settle no document, with a preview that reports what a rule would claim before it is turned on, and a set of starter rules.
+- **`/bank/statements`** — import a CSV or OFX statement and review what was read from it.
+- **`/bank/signoff`** — close a period per account, with variance against the statement balance.
+- **`/bank/exceptions`** — six sections of what needs a human.
+
+- **Link resolution.** 81% of bank lines already carry KashFlow's own link to the document they settle, via `EntityName` + `ResourceNumber`. `bankLinkService` resolves all four shapes: direct purchase/invoice, batch payments fanning out to every document a batch settled, and journals. Measured against a copy of the live database, **10,882 of 10,882 linked lines resolve and all 10,870 allocations agree on amount**. `scripts/verify-bank-links.js` is the harness (read-only, developer-only, not wired into the app).
+- **Rules engine** for the 2,547 lines that settle nothing. These are not unmatched purchases waiting to be found — they are postings to nominal accounts, and KashFlow already names the nominal in `Type`: only 47 distinct values, the top 20 covering 92.5%. From those 2,547 lines: 1,861 matched by rule, 409 inter-account movements, 22 paired transfers — **2,292 covered (90%)**, the rest left for a human or a rule of their own.
+- **Inter-account movements are detected, not seeded.** KashFlow writes the counterparty account's *name* into `Type` for a movement between two of our own accounts. Compared against the live account list rather than hardcoded, so a new account is recognised without a code change. Recorded as one-sided on purpose: money-in rows outnumber money-out roughly thirty to one, so pairing them like a true transfer would misrepresent what is there.
+- **Statement import** (CSV/OFX now; Paperless when its mail rule exists). `statementParserService` is pure and testable against fixtures. **The balance chain is the safety mechanism**: every UK statement carries a running balance, so `balance[n-1] + amount[n] === balance[n]` is asserted down the page, plus opening + movement === closing. If it does not hold the parse is wrong, the import is marked `needs-review`, and **none of its lines are trusted**. OCR can transpose a digit and produce a perfectly plausible line; this is what makes that detectable. OFX carries no running balance, so an OFX import can never reach `parsed` — it is trusted by the reviewer, not the parser.
+- **Three-way matching** — statement line ↔ bank transaction ↔ document. The finding worth acting on is a statement line with no KashFlow transaction: money that moved and was never booked, which reconciling KashFlow against itself cannot find. Only balance-verified statements are used, and gaps are reported only inside periods a statement actually covers — otherwise every transaction outside the imported range reads as missing and the report is noise.
+- Five background jobs: `bank-link-resolve`, `bank-rule-apply`, `bank-statement-reconcile`, and the existing sweep. All idempotent — `bankMatch` is INTERNAL so `auditPlugin` records every write, and a job rewriting the same suggestions each run would bury the audit log.
+- RoPA activity **A7**. Bank narrative is personal data: individual payee names, wage transfers and subcontractor payments, including people who appear nowhere else in the system.
+
+### Fixed
+- **Document types were matched by literal name**, so renaming one in Paperless silently broke three queries — `attendanceService.fetchStatementsForWeek`, `documentsOverviewService.KF_ELIGIBLE_MATCH` and the unlinked-docs query in `paperlessController`. None of them error; they match nothing and return empty. The breakage had not surfaced only because hcs-app caches `documentType.name` and all 814 cached documents still held the pre-rename names — it would have appeared gradually as the grab refreshed them. Now resolved by id (what Paperless uses as its key, and what survives a rename) through `mongoose/config/paperlessTypesConfig.js`, falling back to any known past or present name.
+- **Tags were matched by literal name** in the same way — the `NOT_FOR_KASHFLOW` exclusions, the `manually added to kashflow` exclusion, the `added` requirement, and the duplicate-send lock's "the only tag is `added`" check. Now resolved by tag id through `mongoose/config/paperlessTagsConfig.js`, with a `res.locals.hasTag` helper for views. Note the live tag is `data entry done` with spaces while the code has always said `data-entry-done`; that one was safe (its filter uses a separator-tolerant regex) and both spellings are now registered.
+
+### Notes
+- Requires `@cappytech/hcs-schemas` ≥ 2.1.0. Invoice `PaymentLines` become a typed sub-document; `invoice.fields.PaymentLines` deliberately stays `[{}]` there so a consumer that only spreads `...invoice.fields` keeps working.
+- **A statement's account is never parsed out of a correspondent's name.** Names carry the KashFlow id by convention but nothing validates them — the live `Petty Cash - 5714888` has an extra digit, and parsing it would have resolved to an account that does not exist. Resolution is the `Bank Account ID` custom field, then a correspondent-id map, then nothing.
+- **No document-scoring matcher.** It was planned, and the data says it would find nothing: against the properly-computed unsettled set (1,333 purchases, 108 invoices genuinely unreferenced by any bank line), exactly **one** of the 2,547 unlinked lines has an exact-amount candidate within a week, and it is a coincidence. Relaxing to ±5% over 60 days reaches 29%, which is the false-positive explosion rather than a signal. Left out rather than shipped as noise.
+- Money is compared in integer pence throughout. `Math.abs(100 - 100.01)` is `0.010000000000005`, so a float comparison rejects an exact penny.
+
 ## [6.18.0] - 2026-07-31
 
 Makes every outgoing email a responsive HTML email. They were not merely unstyled for mobile — they were structurally incapable of it.

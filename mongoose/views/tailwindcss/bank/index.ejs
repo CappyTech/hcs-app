@@ -1,0 +1,137 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <h1 class="text-2xl font-bold">Bank Reconciliation</h1>
+    <span class="text-gray-400">/</span>
+    <a href="/bank/exceptions" class="text-sm text-green-700 dark:text-green-400 hover:underline">Exceptions</a>
+    <span class="text-gray-400">&middot;</span>
+    <a href="/bank/signoff" class="text-sm text-green-700 dark:text-green-400 hover:underline">Sign-off</a>
+  </div>
+
+  <!-- Totals -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Bank lines</div>
+      <div class="text-2xl font-bold mt-1"><%= (totals.transactions || 0).toLocaleString('en-GB') %></div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Confirmed</div>
+      <div class="text-2xl font-bold mt-1 text-green-700 dark:text-green-400">
+        <%= (totals.confirmed || 0).toLocaleString('en-GB') %>
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= totals.progress || 0 %>% of all lines</div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Awaiting review</div>
+      <div class="text-2xl font-bold mt-1 text-blue-700 dark:text-blue-400">
+        <%= (totals.suggested || 0).toLocaleString('en-GB') %>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Needs attention</div>
+      <div class="text-2xl font-bold mt-1 <%= (totals.drifted || 0) > 0 ? 'text-amber-700 dark:text-amber-400' : '' %>">
+        <%= (totals.drifted || 0).toLocaleString('en-GB') %>
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">confirmed but since changed</div>
+    </div>
+  </div>
+
+  <!-- Generate suggestions -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      Suggestions
+    </h2>
+    <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
+      Most bank lines already carry KashFlow&rsquo;s own link to the invoice or purchase they settle.
+      Generating suggestions resolves those links so they can be reviewed and confirmed here.
+      Nothing is written back to KashFlow, and nothing is confirmed automatically.
+    </p>
+    <form method="POST" action="/bank/generate">
+      <%- include('../partials/csrfHidden') %>
+      <button type="submit"
+        class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+        <i class="bi bi-arrow-repeat"></i> Generate suggestions
+      </button>
+    </form>
+  </div>
+
+  <!-- Accounts -->
+  <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Accounts</h2>
+
+  <% if (!accounts || accounts.length === 0) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No bank transactions have been synced yet.
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Lines</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Confirmed</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Outstanding</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Range</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% accounts.forEach(a => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3 text-gray-900 dark:text-white">
+                <%= a.accountName %>
+                <% if (!a.known) { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">
+                    deleted in KashFlow
+                  </span>
+                <% } %>
+                <% if (a.isArchived) { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">
+                    archived
+                  </span>
+                <% } %>
+                <div class="font-mono text-xs text-gray-500 dark:text-gray-400"><%= a.accountId %></div>
+              </td>
+              <td class="px-4 py-3 text-right"><%= a.transactionCount.toLocaleString('en-GB') %></td>
+              <td class="px-4 py-3 text-right text-green-700 dark:text-green-400"><%= a.confirmedCount.toLocaleString('en-GB') %></td>
+              <td class="px-4 py-3 text-right"><%= a.outstandingCount.toLocaleString('en-GB') %></td>
+              <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                <% if (a.oldest) { %><%= slimDateTime(a.oldest, true) %> &ndash; <%= slimDateTime(a.newest, true) %><% } %>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <a href="/bank/accounts/<%= a.accountId %>"
+                  class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">
+                  Review
+                </a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+
+  <!-- Recent sign-offs -->
+  <% if (recentSignOffs && recentSignOffs.length) { %>
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-8 mb-3">
+      Recent sign-offs
+    </h2>
+    <div class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-900">
+      <% recentSignOffs.forEach(s => { %>
+        <div class="flex items-start gap-4 px-4 py-3">
+          <div class="flex-1">
+            <div class="text-sm text-gray-900 dark:text-white"><%= s.accountName || s.accountId %></div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              <%= slimDateTime(s.periodStart, true) %> &ndash; <%= slimDateTime(s.periodEnd, true) %>
+              &middot; <%= s.signedByName || '' %>
+            </div>
+          </div>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">
+            <%= s.status %>
+          </span>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+</div>

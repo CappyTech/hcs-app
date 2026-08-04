@@ -13,6 +13,8 @@
 
 import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
+import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
+import { hasTag, lacksAllTagsQuery } from '../config/paperlessTagsConfig.js';
 import logger from '../../services/loggerService.js';
 import kfSession from '../../services/kashflowSessionService.js';
 const kfAxios = kfSession.kfAxios;
@@ -595,16 +597,18 @@ export const getPurchaseDraft = async (req, res, next) => {
         const _n = toNum(draft.NetAmount), _v = toNum(draft.VATAmount), _g = toNum(draft.GrossAmount);
         const totalsConsistent = (_n != null && _v != null && _g != null) ? Math.abs((_n + _v) - _g) < 0.01 : true;
         const tags = Array.isArray(doc?.tags) ? doc.tags : [];
-        const tagNames = [...new Set(tags.map((t) => (typeof t === 'string' ? t : String(t?.name || t?.Name || '')).trim().toLowerCase()).filter(Boolean))];
+        // "the only tag present is 'added'" — resolved via paperlessTagsConfig
+        // so renaming the tag does not quietly disable the duplicate-send lock.
+        const onlyAddedTag = tags.length > 0 && tags.every((t) => hasTag([t], 'added'));
         const hasKfNumber = !!(doc && (typeof doc.kashflowPurchaseNumber === 'number' || (typeof doc.kashflowPurchaseNumber === 'string' && doc.kashflowPurchaseNumber.trim() !== '')));
-        const alreadySentLock = hasKfNumber && tagNames.length > 0 && tagNames.every((n) => n === 'added') && Number(doc?.lastSendStatus) === 201;
+        const alreadySentLock = hasKfNumber && onlyAddedTag && Number(doc?.lastSendStatus) === 201;
         return hasSupplier && lineItems.length > 0 && hasNominalPerLine && !!draft.Currency && totalsConsistent && !alreadySentLock;
       })(),
       alreadySentLock: (() => {
         const tags = Array.isArray(doc?.tags) ? doc.tags : [];
-        const tagNames = [...new Set(tags.map((t) => (typeof t === 'string' ? t : String(t?.name || t?.Name || '')).trim().toLowerCase()).filter(Boolean))];
+        const onlyAddedTag = tags.length > 0 && tags.every((t) => hasTag([t], 'added'));
         const hasKfNumber = !!(doc && (typeof doc.kashflowPurchaseNumber === 'number' || (typeof doc.kashflowPurchaseNumber === 'string' && doc.kashflowPurchaseNumber.trim() !== '')));
-        return hasKfNumber && tagNames.length > 0 && tagNames.every((n) => n === 'added') && Number(doc?.lastSendStatus) === 201;
+        return hasKfNumber && onlyAddedTag && Number(doc?.lastSendStatus) === 201;
       })(),
     });
   } catch (err) {
@@ -1968,9 +1972,9 @@ export const matchReferences = async (req, res) => {
       const unlinked = await OcrDocument
         .find({
           kashflowPurchaseId: null,
-          'documentType.name': { $regex: /^purchase$/i },
+          ...documentTypeQuery('purchaseInvoice'),
           title: { $not: /credit/i },
-          tags: { $not: { $elemMatch: { name: { $in: [/original\/multiple invoice one pdf/i, /credit\/refund/i] } } } },
+          ...lacksAllTagsQuery(['originalMultiInvoice', 'creditRefund']),
           deletedInPaperlessAt: null,
         })
         .select('paperlessId title correspondent customFields created lastSendStatus')

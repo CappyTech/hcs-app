@@ -47,6 +47,17 @@ const roleModelAccess = {
     note:               'r,l',
     vehicleDeployment:  'c,r,u,l',
     assignment:         'c,r,u,l',
+    // Bank reconciliation. The KashFlow-synced collections are read-only
+    // everywhere; matches and sign-offs are created through /bank, which has
+    // its own validation, not through the generic CRUD routes.
+    bankAccount:        'r,l',
+    bankTransaction:    'r,l',
+    bankReconciliation: 'r,l',
+    bankMatch:          'r,l',
+    bankSignOff:        'r,l',
+    bankRule:           'r,l',
+    statementImport:    'r,l',
+    statementLine:      'r,l',
   },
 
   employee: {
@@ -133,6 +144,18 @@ const routeAccess = {
   // CIS
   '/CIS/Dashboard':       ['admin', 'accountant', 'hmrc'],
   '/CIS/returns':         ['admin', 'accountant', 'hmrc', 'subcontractor'],
+
+  // Bank reconciliation.
+  //
+  // matchRoutePattern does literal longest-prefix matching with no support for
+  // :params, so '/bank' alone covers the whole module. Listing something like
+  // '/bank/matches/:uuid/unconfirm' here would never match a real request and
+  // would read as protection that does not exist.
+  //
+  // The two admin-only actions — reversing a confirmation, and reopening a
+  // signed period, both of which undo something a reviewer put their name to —
+  // are enforced by the adminGuard on those routes in bankRoutes.js.
+  '/bank':                ['admin', 'accountant'],
 
   // Subcontractor administration
   '/subcontractor/assign':['admin'],

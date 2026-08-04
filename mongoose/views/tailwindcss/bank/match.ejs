@@ -1,0 +1,223 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <% if (account) { %>
+      <a href="/bank/accounts/<%= account.accountId %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">
+        &larr; <%= account.accountName %>
+      </a>
+    <% } else { %>
+      <a href="/bank" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; Bank</a>
+    <% } %>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Bank line <span class="font-mono text-base"><%= line.Id %></span></h1>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+    <!-- The bank line itself -->
+    <div class="lg:col-span-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Bank line</h2>
+
+      <dl class="space-y-2 text-sm">
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date</dt>
+          <dd class="text-gray-900 dark:text-white"><%= slimDateTime(line.Date, true) %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Amount</dt>
+          <dd class="text-lg font-bold <%= line.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
+            <%= formatCurrency(line.amount) %>
+            <span class="text-xs font-normal text-gray-500 dark:text-gray-400">
+              <%= line.amount < 0 ? 'out' : 'in' %>
+            </span>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Description</dt>
+          <dd class="text-gray-900 dark:text-white"><%= line.Comment || line.Type || '—' %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">KashFlow link</dt>
+          <dd class="font-mono text-xs text-gray-700 dark:text-gray-300">
+            <%= line.EntityName || 'none' %><% if (line.ResourceNumber) { %> &middot; <%= line.ResourceNumber %><% } %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Reconciled in KashFlow</dt>
+          <dd class="text-gray-900 dark:text-white"><%= line.Reconciled ? 'Yes' : 'No' %></dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Resolution and decision -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <% if (resolution.problems && resolution.problems.length) { %>
+        <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4">
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-amber-700 dark:text-amber-400 mb-2">
+            <i class="bi bi-exclamation-triangle-fill"></i> Worth checking
+          </h2>
+          <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1">
+            <% resolution.problems.forEach(p => { %><li><%= p %></li><% }) %>
+          </ul>
+        </div>
+      <% } %>
+
+      <% if (!resolution.resolved && resolution.strategy === 'unlinked') { %>
+        <div class="border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4">
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            KashFlow records no document for this line. Lines like this &mdash; wages, transfers,
+            loan repayments, bank charges &mdash; are handled by matching rules and suggestions,
+            which are not part of this release.
+          </p>
+        </div>
+      <% } %>
+
+      <% if (current) { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Proposed match
+            </h2>
+            <%- include('partials/_match-badge', { match: current }) %>
+          </div>
+
+          <% if (current.reasons && current.reasons.length) { %>
+            <ul class="text-sm text-gray-700 dark:text-gray-300 mb-3 space-y-1">
+              <% current.reasons.forEach(r => { %>
+                <li><i class="bi bi-check2 text-green-600"></i> <%= r %></li>
+              <% }) %>
+            </ul>
+          <% } %>
+
+          <% if (current.status === 'suggested') { %>
+            <form method="POST" action="/bank/matches/<%= current.uuid %>/confirm">
+              <%- include('../partials/csrfHidden') %>
+
+              <% if (current.documents && current.documents.length) { %>
+                <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl mb-3">
+                  <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Document</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Party</th>
+                        <th class="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Gross</th>
+                        <th class="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Allocated</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                      <% current.documents.forEach(d => { %>
+                        <tr>
+                          <td class="px-4 py-2 text-gray-900 dark:text-white">
+                            <%= d.kind %> <%= d.kfNumber %>
+                            <input type="hidden" name="docKey" value="<%= d.docKey %>">
+                          </td>
+                          <td class="px-4 py-2 text-gray-700 dark:text-gray-300"><%= d.partyName || '—' %></td>
+                          <td class="px-4 py-2 text-right text-gray-700 dark:text-gray-300"><%= formatCurrency(d.docGross) %></td>
+                          <td class="px-4 py-2 text-right">
+                            <input type="number" step="0.01" name="allocatedAmount" value="<%= d.allocatedAmount %>"
+                              class="w-32 text-sm text-right border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1
+                                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                                     focus:outline-none focus:ring-2 focus:ring-green-500" />
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Allocations must account for the full bank amount. Adjust them here if the split is wrong.
+                </p>
+              <% } %>
+
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="reviewNote">Note (optional)</label>
+              <input id="reviewNote" name="reviewNote" maxlength="1000"
+                class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mb-3
+                       bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:outline-none focus:ring-2 focus:ring-green-500" />
+
+              <button type="submit"
+                class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+                <i class="bi bi-check2"></i> Confirm match
+              </button>
+            </form>
+
+            <form method="POST" action="/bank/matches/<%= current.uuid %>/reject" class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <%- include('../partials/csrfHidden') %>
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="rejectReason">
+                Reject this suggestion &mdash; reason required
+              </label>
+              <div class="flex gap-2">
+                <input id="rejectReason" name="reason" required maxlength="1000" placeholder="Why is this wrong?"
+                  class="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                         focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <button type="submit"
+                  class="text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition">
+                  Reject
+                </button>
+              </div>
+            </form>
+
+          <% } else if (current.status === 'confirmed') { %>
+            <div class="text-sm text-gray-700 dark:text-gray-300">
+              Confirmed by <span class="font-medium"><%= current.reviewedByName %></span>
+              on <%= slimDateTime(current.reviewedAt) %>.
+              <% if (current.reviewNote) { %><div class="mt-1 text-gray-500 dark:text-gray-400"><%= current.reviewNote %></div><% } %>
+            </div>
+
+            <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
+              <form method="POST" action="/bank/matches/<%= current.uuid %>/unconfirm" class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <%- include('../partials/csrfHidden') %>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1" for="unconfirmReason">
+                  Reopen this match
+                </label>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  The existing confirmation is kept on the record and superseded, not erased.
+                </p>
+                <div class="flex gap-2">
+                  <input id="unconfirmReason" name="reason" maxlength="1000" placeholder="Reason"
+                    class="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+                           bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                           focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  <button type="submit"
+                    class="text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition">
+                    Reopen
+                  </button>
+                </div>
+              </form>
+            <% } %>
+          <% } %>
+        </div>
+      <% } else if (resolution.resolved) { %>
+        <div class="border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4">
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            This line resolves to <%= resolution.documents.length %> document<%= resolution.documents.length === 1 ? '' : 's' %>,
+            but no suggestion has been generated yet. Use
+            <a href="/bank" class="text-green-700 dark:text-green-400 hover:underline">Generate suggestions</a>.
+          </p>
+        </div>
+      <% } %>
+
+      <!-- History -->
+      <% if (matches && matches.length > 1) { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">History</h2>
+          <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% matches.forEach(m => { %>
+              <div class="flex items-start gap-4 py-2">
+                <div class="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                  <%= m.reviewedByName || 'System' %>
+                  <span class="text-gray-500 dark:text-gray-400"><%= slimDateTime(m.reviewedAt || m.createdAt) %></span>
+                  <% if (m.rejectedReason) { %><div class="text-xs text-gray-500 dark:text-gray-400"><%= m.rejectedReason %></div><% } %>
+                </div>
+                <%- include('partials/_match-badge', { match: m }) %>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+</div>
