@@ -316,7 +316,9 @@ export const issueTokenForSync = async (req, res) => {
   }
 
   if (!authOk) {
-    logger.info("[sso] /api/sso/token: invalid credentials for \"%s\"", username);
+    // `username` is straight off the request body — sanitize before it reaches
+    // the log line. Every other %s here interpolates a trusted value.
+    logger.info("[sso] /api/sso/token: invalid credentials for \"%s\"", logger.sanitize(username));
     await recordFailedAttempt();
     return res.status(401).json({ error: "Invalid credentials" });
   }
