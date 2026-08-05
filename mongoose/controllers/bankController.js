@@ -9,7 +9,7 @@ import statementIngest from '../services/bankStatementIngestService.js';
 import ruleService from '../services/bankRuleService.js';
 import transferService from '../services/bankTransferService.js';
 import threeWay from '../services/bankThreeWayService.js';
-import { resolveBankLine, signedAmount } from '../services/bankLinkService.js';
+import { resolveBankLine, signedAmount, bankLineKey, claimedLines } from '../services/bankLinkService.js';
 
 /**
  * HTTP layer for bank reconciliation. Thin by design: parse and validate,
@@ -82,20 +82,26 @@ export const getLine = async (req, res, next) => {
   try {
     await mdb.connect();
     const bankTransactionId = Number(req.params.bankTransactionId);
+    const bankAccountId = Number(req.params.bankAccountId);
     const BankTransaction = mdb.REST?.bankTransaction;
     if (!BankTransaction) throw Object.assign(new Error('Bank data is unavailable'), { statusCode: 503 });
 
-    const line = await BankTransaction.findOne({ Id: bankTransactionId }).lean();
+    // Both halves of the composite. An internal transfer is two ledger lines
+    // sharing one KashFlow Id, so `Id` alone would resolve to whichever half
+    // Mongo happened to return.
+    const line = await BankTransaction.findOne({ AccountId: bankAccountId, Id: bankTransactionId }).lean();
     if (!line) {
       req.flash('error', 'That bank line no longer exists.');
       return res.redirect('/bank');
     }
 
+    const key = bankLineKey(line);
     const resolution = await resolveBankLine(line);
     const BankMatch = mdb.INTERNAL?.bankMatch;
     const matches = BankMatch
-      ? await BankMatch.find({ 'bankLines.bankTransactionId': bankTransactionId, deletedAt: null })
-        .sort({ createdAt: -1 }).lean()
+      ? (await BankMatch.find({ 'bankLines.bankTransactionId': bankTransactionId, deletedAt: null })
+        .sort({ createdAt: -1 }).lean())
+        .filter(m => (m.bankLines || []).some(l => (l.bankLineKey || bankLineKey(l)) === key))
       : [];
 
     const accounts = await worklist.listAccounts();
@@ -260,10 +266,12 @@ export const postGenerate = async (req, res, next) => {
     let covered = null;
     let outstanding = null;
     if (BankMatch && BankTransaction) {
-      const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
-        .filter(v => v != null);
-      covered = claimed.length;
-      outstanding = await BankTransaction.countDocuments({ deletedAt: null, Id: { $nin: claimed } });
+      // Counted by (account, id): the halves of a transfer are two ledger lines,
+      // and counting distinct Ids would report one covered line where there are
+      // two. Outstanding is the remainder, which needs no second query.
+      const { keys: claimedKeys } = await claimedLines(BankMatch, BankTransaction);
+      covered = claimedKeys.size;
+      outstanding = Math.max(await BankTransaction.countDocuments({ deletedAt: null }) - covered, 0);
     }
 
     const state = covered == null
@@ -699,29 +707,37 @@ export const getExceptions = async (req, res, next) => {
       // Old and still not accounted for.
       (async () => {
         if (!BankTransaction || !BankMatch) return [];
-        const claimed = await BankMatch.distinct('bankLines.bankTransactionId', {
+        const { keys: confirmedKeys, exclude } = await claimedLines(BankMatch, BankTransaction, {
           status: { $in: ['confirmed'] }, deletedAt: null,
         });
-        return BankTransaction.find({
+        return (await BankTransaction.find({
           Date: { $lt: fortyFiveDaysAgo },
-          Id: { $nin: claimed.filter(v => v != null) },
+          ...exclude,
         }).sort({ Date: 1 }).limit(200)
-          .select('Id AccountId Date EntityName ResourceNumber PaidIn PaidOut Comment').lean();
+          .select('Id AccountId Date EntityName ResourceNumber PaidIn PaidOut Comment').lean())
+          .filter(l => !confirmedKeys.has(bankLineKey(l)));
       })(),
 
       // KashFlow says reconciled, we have no confirmed match — and the inverse.
       (async () => {
         if (!BankTransaction || !BankMatch) return { kfOnly: [], usOnly: [] };
-        const confirmedIds = (await BankMatch.distinct('bankLines.bankTransactionId', {
+        const { keys: confirmedKeys } = await claimedLines(BankMatch, BankTransaction, {
           status: 'confirmed', deletedAt: null,
-        })).filter(v => v != null);
+        });
+        const confirmedIds = [...new Set([...confirmedKeys]
+          .map(k => Number(String(k).slice(String(k).indexOf(':') + 1))))]
+          .filter(Number.isFinite);
 
-        const [kfOnly, usOnly] = await Promise.all([
-          BankTransaction.find({ Reconciled: true, Id: { $nin: confirmedIds } })
-            .limit(100).select('Id AccountId Date Comment PaidIn PaidOut').lean(),
+        // Both sides over-fetch on Id and are narrowed by key: an Id is a
+        // transfer, a key is the ledger line that was actually confirmed.
+        const [kfCandidates, usCandidates] = await Promise.all([
+          BankTransaction.find({ Reconciled: true })
+            .limit(400).select('Id AccountId Date Comment PaidIn PaidOut').lean(),
           BankTransaction.find({ Reconciled: { $ne: true }, Id: { $in: confirmedIds } })
-            .limit(100).select('Id AccountId Date Comment PaidIn PaidOut').lean(),
+            .limit(400).select('Id AccountId Date Comment PaidIn PaidOut').lean(),
         ]);
+        const kfOnly = kfCandidates.filter(l => !confirmedKeys.has(bankLineKey(l))).slice(0, 100);
+        const usOnly = usCandidates.filter(l => confirmedKeys.has(bankLineKey(l))).slice(0, 100);
         return { kfOnly, usOnly };
       })(),
 
@@ -735,9 +751,11 @@ export const getExceptions = async (req, res, next) => {
           .select('Id AccountId Date Comment PaidIn PaidOut deletedAt').limit(500).lean();
         if (!gone.length) return [];
 
-        const byId = new Map(gone.map(l => [l.Id, l]));
+        // Keyed on (account, id): only the deleted half of a transfer is an
+        // exception, and reporting its live counterpart would be a false alarm.
+        const byKey = new Map(gone.map(l => [bankLineKey(l), l]));
         const matches = await BankMatch.find({
-          'bankLines.bankTransactionId': { $in: [...byId.keys()] },
+          'bankLines.bankTransactionId': { $in: [...new Set(gone.map(l => l.Id))] },
           status: { $in: ['suggested', 'confirmed'] },
           deletedAt: null,
         }).limit(200).lean();
@@ -745,9 +763,10 @@ export const getExceptions = async (req, res, next) => {
         return matches.map(m => ({
           match: m,
           lines: (m.bankLines || [])
-            .filter(l => byId.has(l.bankTransactionId))
-            .map(l => ({ ...l, deleted: byId.get(l.bankTransactionId) })),
-        }));
+            .map(l => ({ line: l, key: l.bankLineKey || bankLineKey(l) }))
+            .filter(({ key }) => byKey.has(key))
+            .map(({ line, key }) => ({ ...line, deleted: byKey.get(key) })),
+        })).filter(r => r.lines.length);
       })(),
 
       // Statement against ledger. Reports nothing until a statement whose

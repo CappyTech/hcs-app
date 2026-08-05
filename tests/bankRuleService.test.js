@@ -36,9 +36,28 @@ function fakeChain(result) {
   return q;
 }
 
-function patchMdb({ rules = [], lines = [], claimed = [], inserted = null } = {}) {
+/**
+ * `claimed` is a list of (account, id) keys — "611594:1" — because that, not a
+ * bare Id, is what identifies a bank line: the two halves of an internal
+ * transfer share one KashFlow Id.
+ *
+ * `halves` answers "which accounts does this Id exist under", the aggregation
+ * claimedLines() uses to decide which Ids can be excluded in the query itself.
+ * Defaults to one account per claimed key, i.e. no transfers.
+ */
+function patchMdb({ rules = [], lines = [], claimed = [], halves = null, inserted = null } = {}) {
   const insertMany = mock.fn((docs) => Promise.resolve(inserted ?? docs));
-  mdb.REST = { bankTransaction: { find: mock.fn(() => fakeChain(lines)) } };
+  const defaultHalves = [...new Set(claimed.map(k => String(k).split(':')[1]))]
+    .map(id => ({
+      _id: Number(id),
+      accounts: claimed.filter(k => String(k).endsWith(`:${id}`)).map(k => Number(String(k).split(':')[0])),
+    }));
+  mdb.REST = {
+    bankTransaction: {
+      find: mock.fn(() => fakeChain(lines)),
+      aggregate: mock.fn(() => Promise.resolve(halves ?? defaultHalves)),
+    },
+  };
   mdb.INTERNAL = {
     ...mdb.INTERNAL,
     bankRule: {
@@ -183,7 +202,7 @@ describe('bankRuleService', () => {
       patchMdb({
         rules: [rule({ typeContains: 'wages' }, { name: 'Wages' })],
         lines: [line({ Id: 2 })],
-        claimed: [1, 5, 9],
+        claimed: ['611594:1', '611594:5', '611594:9'],
       });
       await applyRules();
 
@@ -201,6 +220,34 @@ describe('bankRuleService', () => {
       await applyRules();
       const query = mdb.REST.bankTransaction.find.mock.calls[0].arguments[0];
       assert.equal(query.Id, undefined, 'an empty $nin would be pointless');
+    });
+
+    it('keeps the unclaimed half of a transfer, having claimed the other', async () => {
+      // The two halves share Id 7. Claiming account 611594's half must neither
+      // exclude Id 7 in the query nor filter out account 938298's half after
+      // the fetch — they are separate ledger lines and may settle separately.
+      patchMdb({
+        rules: [rule({ typeContains: 'wages' }, { name: 'Wages' })],
+        lines: [line({ Id: 7, AccountId: 938298 })],
+        claimed: ['611594:7'],
+        halves: [{ _id: 7, accounts: [611594, 938298] }],
+      });
+      const stats = await applyRules();
+
+      const query = mdb.REST.bankTransaction.find.mock.calls[0].arguments[0];
+      assert.equal(query.Id, undefined, 'Id 7 is only half claimed, so it must not be excluded');
+      assert.equal(stats.created, 1, 'the unclaimed half must still be matched');
+    });
+
+    it('drops a line whose own half is claimed', async () => {
+      patchMdb({
+        rules: [rule({ typeContains: 'wages' }, { name: 'Wages' })],
+        lines: [line({ Id: 7, AccountId: 611594 })],
+        claimed: ['611594:7'],
+        halves: [{ _id: 7, accounts: [611594, 938298] }],
+      });
+      const stats = await applyRules();
+      assert.equal(stats.created, 0, 'the claimed half must not be matched twice');
     });
 
     it('does nothing when no rules exist', async () => {
@@ -254,6 +301,35 @@ describe('bankTransferService', () => {
       assert.equal(pairs.length, 1);
       assert.equal(pairs[0].out.Id, 1);
       assert.equal(pairs[0].in.Id, 2);
+    });
+
+    it('pairs the two halves of one transfer, which share a KashFlow Id', () => {
+      // This is the real shape of a transfer and the case the whole
+      // (AccountId, Id) re-key exists for. KashFlow returns one transaction in
+      // both accounts' feeds, so both halves carry Id 213715814 and differ only
+      // in whose ledger they are on. While the mirror keyed on Id alone the two
+      // were merged into one document and this pair could not exist at all —
+      // which is why the service was finding 22 pairs instead of a few hundred.
+      const pairs = findTransferPairs([
+        tx({ Id: 213715814, AccountId: 611594, PaidOut: 312.17 }),
+        tx({ Id: 213715814, AccountId: 938298, PaidIn: 312.17 }),
+      ]);
+      assert.equal(pairs.length, 1);
+      assert.equal(pairs[0].out.AccountId, 611594);
+      assert.equal(pairs[0].in.AccountId, 938298);
+    });
+
+    it('does not treat one half as having used the other up', () => {
+      // The `used` set is keyed on (account, id). Keyed on Id it would mark
+      // both halves spent the moment either was taken, and every pair sharing
+      // an Id — i.e. every real transfer — would be silently dropped.
+      const pairs = findTransferPairs([
+        tx({ Id: 100, AccountId: 611594, PaidOut: 50 }),
+        tx({ Id: 100, AccountId: 938298, PaidIn: 50 }),
+        tx({ Id: 200, AccountId: 611594, PaidOut: 75 }),
+        tx({ Id: 200, AccountId: 578587, PaidIn: 75 }),
+      ]);
+      assert.equal(pairs.length, 2);
     });
 
     it('will not pair two lines on the same account', () => {

@@ -29,7 +29,7 @@
               </div>
             </div>
             <% (m.bankLines || []).slice(0, 1).forEach(l => { %>
-              <a href="/bank/lines/<%= l.bankTransactionId %>"
+              <a href="/bank/lines/<%= l.bankAccountId %>/<%= l.bankTransactionId %>"
                 class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
                 Open
               </a>
@@ -75,7 +75,7 @@
                   <%= row.problems.join('; ') %>
                 </td>
                 <td class="px-4 py-3 text-right">
-                  <a href="/bank/lines/<%= row.line.Id %>"
+                  <a href="/bank/lines/<%= row.line.AccountId %>/<%= row.line.Id %>"
                     class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
                     Open
                   </a>
@@ -143,7 +143,7 @@
             <div class="divide-y divide-gray-100 dark:divide-gray-700">
               <% threeWayGaps.bankOnly.slice(0, 25).forEach(g => { %>
                 <div class="py-2 text-sm flex items-start gap-3">
-                  <a href="/bank/lines/<%= g.transaction.Id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">
+                  <a href="/bank/lines/<%= g.transaction.AccountId %>/<%= g.transaction.Id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">
                     <%= slimDateTime(g.transaction.Date) %>
                   </a>
                   <span class="flex-1 text-gray-900 dark:text-white"><%= g.transaction.Comment || g.transaction.Type || '' %></span>
@@ -192,7 +192,7 @@
               <% }) %>
             </div>
             <% if (v.lines.length) { %>
-              <a href="/bank/lines/<%= v.lines[0].bankTransactionId %>"
+              <a href="/bank/lines/<%= v.lines[0].bankAccountId %>/<%= v.lines[0].bankTransactionId %>"
                 class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
                 Open
               </a>
@@ -220,7 +220,7 @@
           <div class="divide-y divide-gray-100 dark:divide-gray-700">
             <% kfDisagreement.kfOnly.slice(0, 20).forEach(l => { %>
               <div class="py-2 text-sm">
-                <a href="/bank/lines/<%= l.Id %>" class="text-green-700 dark:text-green-400 hover:underline">
+                <a href="/bank/lines/<%= l.AccountId %>/<%= l.Id %>" class="text-green-700 dark:text-green-400 hover:underline">
                   <%= slimDateTime(l.Date) %>
                 </a>
                 <span class="text-gray-700 dark:text-gray-300"><%= l.Comment || '' %></span>
@@ -244,7 +244,7 @@
           <div class="divide-y divide-gray-100 dark:divide-gray-700">
             <% kfDisagreement.usOnly.slice(0, 20).forEach(l => { %>
               <div class="py-2 text-sm">
-                <a href="/bank/lines/<%= l.Id %>" class="text-green-700 dark:text-green-400 hover:underline">
+                <a href="/bank/lines/<%= l.AccountId %>/<%= l.Id %>" class="text-green-700 dark:text-green-400 hover:underline">
                   <%= slimDateTime(l.Date) %>
                 </a>
                 <span class="text-gray-700 dark:text-gray-300"><%= l.Comment || '' %></span>
@@ -285,7 +285,7 @@
                   <%= formatCurrency((l.PaidIn || 0) > 0 ? l.PaidIn : -(l.PaidOut || 0)) %>
                 </td>
                 <td class="px-4 py-3 text-right">
-                  <a href="/bank/lines/<%= l.Id %>"
+                  <a href="/bank/lines/<%= l.AccountId %>/<%= l.Id %>"
                     class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
                     Open
                   </a>

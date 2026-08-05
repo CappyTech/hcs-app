@@ -15,6 +15,8 @@ import {
   expectedAllocation,
   bankLineFactHash,
   documentFactHash,
+  bankLineKey,
+  claimedLines,
 } from '../mongoose/services/bankLinkService.js';
 
 /* ── helpers ──────────────────────────────────────────────────────── */
@@ -352,5 +354,70 @@ describe('bankLinkService', () => {
       const b = documentFactHash({ Id: 1, Number: 2, GrossAmount: 11 });
       assert.notEqual(a, b);
     });
+  });
+});
+
+
+describe('bankLineKey()', () => {
+  it('identifies a line by account and id, not id alone', () => {
+    // The two halves of an internal transfer share one KashFlow Id and differ
+    // only in whose ledger they sit on.
+    assert.equal(bankLineKey({ AccountId: 611594, Id: 213715814 }), '611594:213715814');
+    assert.notEqual(
+      bankLineKey({ AccountId: 611594, Id: 213715814 }),
+      bankLineKey({ AccountId: 938298, Id: 213715814 }),
+    );
+  });
+
+  it('reads a stored match line as well as a bank transaction', () => {
+    assert.equal(bankLineKey({ bankAccountId: 611594, bankTransactionId: 7 }), '611594:7');
+  });
+
+  it('returns null rather than a "null:null" key when either half is missing', () => {
+    // A malformed key would collide with every other malformed key, quietly
+    // claiming unrelated lines.
+    assert.equal(bankLineKey({ Id: 7 }), null);
+    assert.equal(bankLineKey({ AccountId: 611594 }), null);
+    assert.equal(bankLineKey(null), null);
+  });
+});
+
+describe('claimedLines()', () => {
+  const fakes = (keys, halves) => ({
+    BankMatch: { distinct: mock.fn(() => Promise.resolve(keys)) },
+    BankTransaction: { aggregate: mock.fn(() => Promise.resolve(halves)) },
+  });
+
+  it('excludes an Id in the query only when every one of its halves is claimed', async () => {
+    const { BankMatch, BankTransaction } = fakes(
+      ['611594:100', '938298:100', '611594:200'],
+      [{ _id: 100, accounts: [611594, 938298] }, { _id: 200, accounts: [611594, 578587] }],
+    );
+    const { exclude } = await claimedLines(BankMatch, BankTransaction);
+
+    // 100 is claimed on both halves, so it can go in the query. 200 has a free
+    // half on 578587 and must survive to be filtered by key afterwards.
+    assert.deepEqual(exclude, { Id: { $nin: [100] } });
+  });
+
+  it('returns the keys so a half-claimed Id can be filtered exactly', async () => {
+    const { BankMatch, BankTransaction } = fakes(
+      ['611594:200'],
+      [{ _id: 200, accounts: [611594, 578587] }],
+    );
+    const { keys } = await claimedLines(BankMatch, BankTransaction);
+
+    assert.ok(keys.has(bankLineKey({ AccountId: 611594, Id: 200 })));
+    assert.ok(!keys.has(bankLineKey({ AccountId: 578587, Id: 200 })));
+  });
+
+  it('spreads to nothing when no line is claimed', async () => {
+    const { BankMatch, BankTransaction } = fakes([], []);
+    const { exclude, keys } = await claimedLines(BankMatch, BankTransaction);
+    assert.deepEqual(exclude, {});
+    assert.equal(keys.size, 0);
+    // An empty $nin would be a pointless query term, and the aggregation is
+    // wasted work when there is nothing to resolve.
+    assert.equal(BankTransaction.aggregate.mock.calls.length, 0);
   });
 });

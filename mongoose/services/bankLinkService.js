@@ -40,6 +40,67 @@ export const LIVE_BANK_LINE = { deletedAt: null };
 const DIRECT_ENTITIES = { purchase: 'purchase', invoice: 'invoice' };
 const BATCH_ENTITIES = { purchasebatchpayment: 'purchase', invoicebatchpayment: 'invoice' };
 
+/**
+ * Identity of a bank *line*, which is not its KashFlow Id.
+ *
+ * An internal transfer between two company accounts is two ledger lines sharing
+ * one Id — KashFlow returns it in both accounts' feeds, each rendered from that
+ * account's point of view — and hcs-schemas 3.0.0 keys `banktransactions` on
+ * (AccountId, Id) so both are stored. Anything that identifies, claims, or
+ * de-duplicates a line must key on this, or matching one half silently claims
+ * the other.
+ *
+ * Accepts a bank transaction (`AccountId`/`Id`) or a stored match line
+ * (`bankAccountId`/`bankTransactionId`). Returns null when either half is
+ * missing, so callers can filter rather than key on a malformed "null:null".
+ */
+export function bankLineKey(line) {
+  const accountId = line?.AccountId ?? line?.bankAccountId;
+  const id = line?.Id ?? line?.bankTransactionId;
+  if (accountId == null || id == null) return null;
+  return `${accountId}:${id}`;
+}
+
+/**
+ * Bank lines already claimed by a match, as keys plus a query fragment.
+ *
+ * Claiming used to be expressible as `Id: { $nin: [...] }`, because one Id was
+ * one line. It no longer is: the two halves of a transfer share an Id, and
+ * excluding by Id would hide the *other* account's half the moment either one
+ * was matched.
+ *
+ * `exclude` therefore only removes Ids whose every live half is claimed —
+ * a deliberate under-exclusion, so it stays safe to spread into a query. The
+ * remainder are filtered by key after the fetch via `keys`. That keeps the
+ * query-side exclusion doing nearly all the work: the only rows that survive it
+ * are Ids with one half claimed and one free, which are exactly the rows still
+ * worth processing, so `limit` does not stall on already-handled lines.
+ *
+ * Callers scoped to a single account do not need this — within one account an
+ * Id is unique again, so an id list is exact.
+ */
+export async function claimedLines(BankMatch, BankTransaction, matchQuery = { deletedAt: null }) {
+  const keys = new Set(
+    (await BankMatch.distinct('bankLines.bankLineKey', matchQuery)).filter(v => v != null),
+  );
+  if (!keys.size) return { keys, exclude: {} };
+
+  const ids = [...new Set([...keys].map(k => Number(String(k).slice(String(k).indexOf(':') + 1))))]
+    .filter(Number.isFinite);
+  if (!ids.length) return { keys, exclude: {} };
+
+  const halves = await BankTransaction.aggregate([
+    { $match: { Id: { $in: ids }, ...LIVE_BANK_LINE } },
+    { $group: { _id: '$Id', accounts: { $addToSet: '$AccountId' } } },
+  ]);
+
+  const fully = halves
+    .filter(h => h.accounts.length && h.accounts.every(a => keys.has(`${a}:${h._id}`)))
+    .map(h => h._id);
+
+  return { keys, exclude: fully.length ? { Id: { $nin: fully } } : {} };
+}
+
 /** Money in is positive, money out negative, so allocations are plain addition. */
 export function signedAmount(bankTx) {
   const paidIn = Number(bankTx?.PaidIn) || 0;
@@ -280,6 +341,8 @@ export async function buildMatchFromLink(bankTx) {
     bankLines: [{
       source: 'banktransaction',
       bankTransactionId: bankTx.Id,
+      bankAccountId: bankTx.AccountId ?? null,
+      bankLineKey: bankLineKey(bankTx),
       date: bankTx.Date || null,
       amount: bankAmount,
       description: bankTx.Comment || bankTx.Type || '',
@@ -304,6 +367,8 @@ export async function buildMatchFromLink(bankTx) {
 export default {
   classify,
   resolveBankLine,
+  bankLineKey,
+  claimedLines,
   buildMatchFromLink,
   signedAmount,
   amountsAgree,

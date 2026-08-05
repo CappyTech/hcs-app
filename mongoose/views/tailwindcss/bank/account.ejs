@@ -157,7 +157,7 @@ const qs = (over = {}) => {
                 <%- include('partials/_match-badge', { match: row.match, strategy: row.strategy }) %>
               </td>
               <td class="px-4 py-3 text-right">
-                <a href="/bank/lines/<%= row.Id %>"
+                <a href="/bank/lines/<%= row.AccountId %>/<%= row.Id %>"
                   class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
                          bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
                   Open

@@ -186,6 +186,7 @@ export async function reconcileStatements({ accountId = null, windowDays = DEFAU
           update: {
             $set: {
               matchedBankTransactionId: p.transaction.Id,
+              matchedBankAccountId: p.transaction.AccountId ?? null,
               matchedAt: new Date(),
               matchConfidence: p.dayGap === 0 ? 100 : Math.max(60, 100 - p.dayGap * 10),
               status: 'matched',
@@ -200,7 +201,7 @@ export async function reconcileStatements({ accountId = null, windowDays = DEFAU
     if (unmatchedIds.length) {
       await StatementLine.updateMany(
         { _id: { $in: unmatchedIds }, status: { $ne: 'ignored' } },
-        { $set: { status: 'unmatched', matchedBankTransactionId: null, matchedAt: null, matchConfidence: 0 } },
+        { $set: { status: 'unmatched', matchedBankTransactionId: null, matchedBankAccountId: null, matchedAt: null, matchConfidence: 0 } },
       );
     }
 

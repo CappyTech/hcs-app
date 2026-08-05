@@ -1,5 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
-import { amountsAgree, expectedAllocation } from './bankLinkService.js';
+import { amountsAgree, expectedAllocation, bankLineKey } from './bankLinkService.js';
 
 /**
  * Write side of bank reconciliation: confirming, rejecting and superseding
@@ -83,17 +83,25 @@ export async function findConflicts(match, { excludeId = null } = {}) {
   const { BankMatch } = models();
   const conflicts = [];
 
-  const bankIds = (match.bankLines || []).map(l => l.bankTransactionId).filter(v => v != null);
+  // Keyed on (account, id), matching the confirmed_bankline_unique index. By
+  // bankTransactionId alone, confirming one half of an internal transfer would
+  // report a conflict against the other account's half — a separate ledger line
+  // that may legitimately settle something else.
+  const bankKeys = (match.bankLines || [])
+    .map(l => l.bankLineKey || bankLineKey(l))
+    .filter(Boolean);
   const docKeys = (match.documents || []).map(d => d.docKey).filter(Boolean);
 
   const base = { status: 'confirmed' };
   if (excludeId) base._id = { $ne: excludeId };
 
-  if (bankIds.length) {
-    const clashes = await BankMatch.find({ ...base, 'bankLines.bankTransactionId': { $in: bankIds } })
-      .select('uuid bankLines.bankTransactionId').lean();
+  if (bankKeys.length) {
+    const clashes = await BankMatch.find({ ...base, 'bankLines.bankLineKey': { $in: bankKeys } })
+      .select('uuid bankLines.bankLineKey bankLines.bankTransactionId bankLines.bankAccountId').lean();
     for (const c of clashes) {
-      const overlap = (c.bankLines || []).map(l => l.bankTransactionId).filter(id => bankIds.includes(id));
+      const overlap = (c.bankLines || [])
+        .map(l => l.bankLineKey || bankLineKey(l))
+        .filter(k => bankKeys.includes(k));
       conflicts.push({ kind: 'bankLine', uuid: c.uuid, values: overlap });
     }
   }
