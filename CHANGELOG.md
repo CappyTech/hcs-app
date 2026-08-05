@@ -2,6 +2,29 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.21.0] - 2026-08-05
+
+Requires **hcs-schemas 3.0.0** and pairs with **hcs-sync 0.11.0**. A bank line is now identified by *(account, KashFlow Id)* rather than Id alone, throughout `/bank`.
+
+### Fixed
+- **A bank line is two things when it is an internal transfer, and `/bank` treated it as one.** KashFlow returns a transfer between two company accounts in **both** accounts' feeds — each rendered from that account's point of view, `PaidIn`/`PaidOut` swapped, `Balance` being that account's running balance, `Type` naming the *other* account — and the mirror's unique index on `Id` merged the two into a single document. hcs-schemas 3.0.0 stores both halves; everything here stops assuming an Id resolves to one line.
+
+  On the live database that merge had been costing 422 documents rewritten twice per hourly sync, and 483 lines fetched under the main trading account (611594) stored under a counterparty account instead — absent from its ledger, so the account with the largest outstanding balance could not reconcile.
+
+  `bankTransferService` is the clearest casualty: it exists to pair the two halves of a transfer, and its own header describes them correctly ("appears twice — once leaving one account, once arriving in another"), but the merge destroyed the pairs before it ran. It recorded finding 22 candidate pairs across 2,547 unlinked lines and called transfers "rare in this dataset". They are not rare; they were being deleted.
+
+### Changed
+- **`bankLineKey(line)`** — `"<AccountId>:<Id>"`, the same materialised-composite device `bankReconciliation.ReconKey` already uses. Every place that identifies, claims, or de-duplicates a bank line now keys on it.
+- **`bankMatch.bankLines[]` carries `bankAccountId` and `bankLineKey`**, and `statementLine` carries `matchedBankAccountId`. The `confirmed_bankline_unique` index moves to `bankLines.bankLineKey`: keyed on `bankTransactionId`, a confirmed match on one account's half would have blocked the other account's half from ever being matched, though it is a separate ledger line that may settle something else entirely. `findConflicts()` — the write-time guard that exists because that index cannot be relied on alone — moves with it.
+- **`claimedLines()`** replaces eight hand-rolled `distinct('bankLines.bankTransactionId')` claimed-sets. Claiming used to be expressible as `Id: { $nin: [...] }`; it no longer is, because excluding by Id hides the *other* half the moment either is matched. It returns a query fragment excluding only Ids whose every live half is claimed, plus the key set for an exact filter afterwards. That preserves the property the `$nin` was there for in the first place — `limit` must not be spent on already-processed rows, the bug that capped the first production run at exactly 5,000 suggestions — because the only rows surviving the query-side exclusion are half-claimed transfers, which *are* still worth processing.
+- **`findTransferPairs()` keys its `used` set on the composite.** The two halves of a transfer share an Id, so an Id-keyed `used` set would mark both spent the moment either was taken — dropping every genuine pair, precisely as the service started being able to see them.
+- **The worklist derives its state filter from keys, then narrows to ids.** It is always scoped to one account, and within one account an Id is unique again, so the id list is exact. Note a `distinct` filtered on `bankLines.bankAccountId` would *not* work: the filter selects whole match documents, so a match spanning two accounts contributes both of its ids.
+- **`GET /bank/lines/:bankTransactionId` → `GET /bank/lines/:bankAccountId/:bankTransactionId`.** The account is part of the line's identity; without it the lookup returned an arbitrary half. All nine links across `account.ejs`, `exceptions.ejs` and `statementReview.ejs` updated.
+
+### Added
+- **`scripts/backfill-bank-line-keys.js`** — stamps `bankAccountId`/`bankLineKey` onto all 13,176 existing `bankmatches` lines and onto `statementlines`. **Must run before hcs-sync 0.11.0 deploys**: it reads each match's account off the single document that Id still resolves to, and once both halves exist nothing records which one a pre-existing match meant. It refuses to run if any Id already has two documents, rather than guessing. Idempotent, `--dry-run` supported, writes through the native driver so a migration does not appear in the audit log as a decision.
+- Tests for the composite key, `claimedLines()`'s under-exclusion, and — the one that would have caught the original bug — `findTransferPairs()` pairing two halves that share a KashFlow Id.
+
 ## [6.20.2] - 2026-08-04
 
 Restores printf-style logging, which has never worked.

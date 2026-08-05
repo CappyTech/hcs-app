@@ -39,7 +39,9 @@ describe('bank routes / permissions consistency', () => {
       '/bank',
       '/bank/exceptions',
       '/bank/accounts/:accountId',
-      '/bank/lines/:bankTransactionId',
+      // The account is part of the line's identity: an internal transfer is two
+      // ledger lines sharing one KashFlow Id.
+      '/bank/lines/:bankAccountId/:bankTransactionId',
       '/bank/matches/:uuid/confirm',
       '/bank/signoff',
       '/bank/statements',

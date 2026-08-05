@@ -67,7 +67,9 @@ router.get('/bank/exceptions', ...bankGuard, ctrl.getExceptions);
 router.get('/bank/accounts/:accountId', ...bankGuard, ctrl.getAccount);
 router.post('/bank/accounts/:accountId/bulk-confirm', ...bankGuard, ctrl.postBulkConfirm);
 
-router.get('/bank/lines/:bankTransactionId', ...bankGuard, ctrl.getLine);
+// The account is part of the path because it is part of the line's identity:
+// an internal transfer is two ledger lines sharing one KashFlow Id.
+router.get('/bank/lines/:bankAccountId/:bankTransactionId', ...bankGuard, ctrl.getLine);
 
 router.post('/bank/matches/:uuid/confirm', ...bankGuard, ctrl.postConfirm);
 router.post('/bank/matches/:uuid/reject', ...bankGuard, ctrl.postReject);

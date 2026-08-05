@@ -45,7 +45,12 @@ const statementLineSchema = new mongoose.Schema(
      */
     lineHash: { type: String, required: true },
 
+    // The account is part of a bank line's identity, not decoration: an
+    // internal transfer is two ledger lines sharing one KashFlow Id. A
+    // statement line belongs to exactly one account, so recording only the id
+    // would leave the ledger line it matched ambiguous.
     matchedBankTransactionId: { type: Number, default: null, index: true },
+    matchedBankAccountId: { type: Number, default: null, index: true },
     matchedAt: { type: Date, default: null },
     matchConfidence: { type: Number, default: 0 },
 

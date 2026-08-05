@@ -1,5 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
-import { signedAmount, bankLineFactHash, LIVE_BANK_LINE } from './bankLinkService.js';
+import { signedAmount, bankLineFactHash, bankLineKey, claimedLines, LIVE_BANK_LINE } from './bankLinkService.js';
 
 /**
  * Applies accountant-authored rules to bank lines that carry no KashFlow
@@ -94,6 +94,8 @@ export function buildMatchFromRule(rule, bankTx) {
     bankLines: [{
       source: 'banktransaction',
       bankTransactionId: bankTx.Id,
+      bankAccountId: bankTx.AccountId ?? null,
+      bankLineKey: bankLineKey(bankTx),
       date: bankTx.Date || null,
       amount,
       description: bankTx.Comment || bankTx.Type || '',
@@ -135,13 +137,15 @@ export async function testRule(rule, { limit = 20 } = {}) {
 
   const matched = lines.filter(l => ruleMatches(rule, l));
 
-  const claimed = BankMatch
-    ? new Set((await BankMatch.distinct('bankLines.bankTransactionId', {
+  const { keys: claimed } = BankMatch
+    ? await claimedLines(BankMatch, BankTransaction, {
       status: { $in: ['suggested', 'confirmed'] }, deletedAt: null,
-    })).filter(v => v != null))
-    : new Set();
+    })
+    : { keys: new Set() };
 
-  const fresh = matched.filter(l => !claimed.has(l.Id));
+  // Keyed on (account, id): the two halves of a transfer share an Id, and
+  // claiming one must not hide the other.
+  const fresh = matched.filter(l => !claimed.has(bankLineKey(l)));
 
   return {
     examined: lines.length,
@@ -177,14 +181,14 @@ export async function applyRules({ accountId = null, limit = 10000 } = {}) {
 
   // See generateSuggestions: excluding claimed lines after the fetch would make
   // `limit` apply to already-processed rows and stall the backlog.
-  const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
-    .filter(v => v != null);
-  if (claimed.length) query.Id = { $nin: claimed };
+  const { keys: claimedKeys, exclude } = await claimedLines(BankMatch, BankTransaction);
+  Object.assign(query, exclude);
 
-  const lines = await BankTransaction.find(query)
+  const lines = (await BankTransaction.find(query)
     .sort({ Date: -1 }).limit(limit)
     .select('Id AccountId Date Type Comment PaidIn PaidOut')
-    .lean();
+    .lean())
+    .filter(l => !claimedKeys.has(bankLineKey(l)));
 
   const stats = { examined: lines.length, created: 0, skipped: 0, unmatched: 0, byRule: {} };
   const pending = [];

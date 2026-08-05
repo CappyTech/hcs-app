@@ -45,7 +45,21 @@ const bankLineSchema = new mongoose.Schema({
 
   // KashFlow bankTransaction.Id. Not a ref — it lives in the REST namespace,
   // on a different connection, and is replaced wholesale by each sync.
+  //
+  // Id alone does NOT identify a bank line. An internal transfer between two
+  // company accounts is two ledger lines sharing one KashFlow Id, one per
+  // account, and hcs-schemas 3.0.0 keys `banktransactions` on (AccountId, Id)
+  // to store both. Always carry the account alongside the id, or a lookup
+  // resolves to an arbitrary half and matching one half claims the other.
   bankTransactionId: { type: Number, default: null, index: true },
+  bankAccountId:     { type: Number, default: null, index: true },
+
+  // The (AccountId, Id) composite materialised as a single field, the same
+  // device `bankReconciliation.ReconKey` uses and for the same reason: the
+  // uniqueness rule below has to be enforced by one index key. A compound
+  // index over two subfields of the same array is multikey on both, and the
+  // key generation is not something to bet a correctness rule on.
+  bankLineKey: { type: String, default: null, index: true },
   statementLineId:   { type: mongoose.Schema.Types.ObjectId, ref: 'statementLine', default: null },
 
   date:        { type: Date, default: null },
@@ -151,8 +165,12 @@ const bankMatchSchema = new mongoose.Schema(
 // Do not rely on these alone: src/db/mongo.js in hcs-sync already carries
 // workarounds for restricted partialFilterExpression support, so
 // bankReconciliationService performs the same check at write time.
+// Keyed on the composite, not bankTransactionId: the two halves of an internal
+// transfer share one KashFlow Id, so claiming by id alone would let a confirmed
+// match on one account's half block the other account's half from ever being
+// matched — the halves are separate ledger lines and may settle separately.
 bankMatchSchema.index(
-  { 'bankLines.bankTransactionId': 1 },
+  { 'bankLines.bankLineKey': 1 },
   { unique: true, partialFilterExpression: { status: 'confirmed' }, name: 'confirmed_bankline_unique' },
 );
 bankMatchSchema.index(

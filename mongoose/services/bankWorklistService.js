@@ -1,5 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
-import { classify, buildMatchFromLink, signedAmount, LIVE_BANK_LINE } from './bankLinkService.js';
+import { classify, buildMatchFromLink, signedAmount, bankLineKey, claimedLines, LIVE_BANK_LINE } from './bankLinkService.js';
 
 /**
  * Reads for the reconciliation UI: the per-account worklist, the account
@@ -143,15 +143,30 @@ export async function getWorklist({
       rejected: 'rejected',
     }[state];
 
+    // Ids claimed *on this account*. Derived from the (account, id) keys rather
+    // than from bankTransactionId, because the two halves of a transfer share an
+    // Id: a bare id list would report this account's half as matched whenever
+    // the other account's half was. Filtering the keys by account first makes
+    // the id list exact again, since the query is already scoped to one account
+    // and an Id is unique within one.
+    //
+    // Note a `distinct` filtered on `bankLines.bankAccountId` would NOT do this:
+    // the filter selects whole match documents, so a match spanning two accounts
+    // would contribute both of its ids.
+    const idsOnThisAccount = async (matchQuery) => {
+      const prefix = `${Number(accountId)}:`;
+      return (await BankMatch.distinct('bankLines.bankLineKey', matchQuery))
+        .filter(k => typeof k === 'string' && k.startsWith(prefix))
+        .map(k => Number(k.slice(prefix.length)))
+        .filter(Number.isFinite);
+    };
+
     if (state === 'unmatched') {
       // Lines with no match record at all.
-      const claimed = await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null });
-      query.Id = { $nin: claimed.filter(v => v != null) };
+      query.Id = { $nin: await idsOnThisAccount({ deletedAt: null }) };
     } else if (statusFor) {
-      stateFilterIds = await BankMatch.distinct('bankLines.bankTransactionId', {
-        status: statusFor, deletedAt: null,
-      });
-      query.Id = { $in: stateFilterIds.filter(v => v != null) };
+      stateFilterIds = await idsOnThisAccount({ status: statusFor, deletedAt: null });
+      query.Id = { $in: stateFilterIds };
     }
   }
 
@@ -165,21 +180,26 @@ export async function getWorklist({
       .lean(),
   ]);
 
-  // Attach match state for just this page.
+  // Attach match state for just this page. Keyed on (account, id) throughout:
+  // keying on bankTransactionId would show this account's line the match that
+  // belongs to the other half of a transfer.
   const ids = lines.map(l => l.Id);
+  const pageKeys = new Set(lines.map(l => bankLineKey(l)));
   const matches = BankMatch
     ? await BankMatch.find({ 'bankLines.bankTransactionId': { $in: ids }, deletedAt: null })
-      .select('uuid status integrity confidence matchType documents totals reasons origin reviewedByName reviewedAt bankLines.bankTransactionId')
+      .select('uuid status integrity confidence matchType documents totals reasons origin reviewedByName reviewedAt bankLines.bankTransactionId bankLines.bankAccountId bankLines.bankLineKey')
       .lean()
     : [];
 
-  const matchByBankId = new Map();
+  const matchByBankKey = new Map();
   for (const m of matches) {
     for (const line of m.bankLines || []) {
+      const key = line.bankLineKey || bankLineKey(line);
+      if (!pageKeys.has(key)) continue;
       // A confirmed match wins over a rejected or superseded one for display.
-      const existing = matchByBankId.get(line.bankTransactionId);
+      const existing = matchByBankKey.get(key);
       if (!existing || (existing.status !== 'confirmed' && m.status === 'confirmed')) {
-        matchByBankId.set(line.bankTransactionId, m);
+        matchByBankKey.set(key, m);
       }
     }
   }
@@ -188,7 +208,7 @@ export async function getWorklist({
     ...line,
     amount: signedAmount(line),
     strategy: classify(line).strategy,
-    match: matchByBankId.get(line.Id) || null,
+    match: matchByBankKey.get(bankLineKey(line)) || null,
   }));
 
   return {
@@ -220,21 +240,25 @@ export async function generateSuggestions({ accountId = null, limit = 5000 } = {
   // rules engine and the matcher.
   query.EntityName = { $in: ['purchase', 'invoice', 'purchasebatchpayment', 'invoicebatchpayment', 'journal'] };
 
-  const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
-    .filter(v => v != null);
-
   // Excluded in the QUERY, not after fetching. Filtering afterwards makes the
   // limit apply to already-processed lines, so every run re-reads the same
   // newest `limit` rows and the older backlog is never reached — which is
   // exactly what happened on the first production run: 13,429 lines, a 5,000
   // limit, and precisely 5,000 suggestions that would never have grown.
-  if (claimed.length) query.Id = { $nin: claimed };
+  //
+  // `exclude` drops only the Ids whose every half is claimed, so that property
+  // survives; the key filter below removes the few remaining half-claimed
+  // transfer lines, which are rows still worth processing rather than
+  // already-processed ones.
+  const { keys: claimedKeys, exclude } = await claimedLines(BankMatch, BankTransaction);
+  Object.assign(query, exclude);
 
-  const lines = await BankTransaction.find(query)
+  const lines = (await BankTransaction.find(query)
     .sort({ Date: -1 })
     .limit(limit)
     .select('Id AccountId Date EntityName ResourceNumber PaidIn PaidOut Comment Type')
-    .lean();
+    .lean())
+    .filter(l => !claimedKeys.has(bankLineKey(l)));
 
   const stats = { examined: lines.length, created: 0, skipped: 0, unresolved: 0, unlinked: 0 };
   const pending = [];

@@ -1,5 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
-import { signedAmount, bankLineFactHash, LIVE_BANK_LINE } from './bankLinkService.js';
+import { signedAmount, bankLineFactHash, bankLineKey, claimedLines, LIVE_BANK_LINE } from './bankLinkService.js';
 
 /**
  * Pairs up money moving between the company's own accounts.
@@ -41,17 +41,21 @@ export function findTransferPairs(lines, { windowDays = 1 } = {}) {
     byAmount.get(key).push(line);
   }
 
+  // Keyed on (account, id), not Id. The two halves of a transfer now share one
+  // KashFlow Id — that is what makes them a pair — so an Id-keyed `used` set
+  // would mark both halves spent the moment either one was taken, and every
+  // pair would be dropped as already-used.
   const used = new Set();
   const pairs = [];
 
   for (const out of outs) {
-    if (used.has(out.Id)) continue;
+    if (used.has(bankLineKey(out))) continue;
 
     const key = pence(Math.abs(signedAmount(out)));
     const outTime = new Date(out.Date).getTime();
 
     const candidates = (byAmount.get(key) || [])
-      .filter(c => !used.has(c.Id)
+      .filter(c => !used.has(bankLineKey(c))
         && Number(c.AccountId) !== Number(out.AccountId)
         && Math.abs(new Date(c.Date).getTime() - outTime) <= windowDays * DAY_MS)
       .sort((a, b) => {
@@ -63,8 +67,8 @@ export function findTransferPairs(lines, { windowDays = 1 } = {}) {
     if (!candidates.length) continue;
 
     const match = candidates[0];
-    used.add(out.Id);
-    used.add(match.Id);
+    used.add(bankLineKey(out));
+    used.add(bankLineKey(match));
     pairs.push({ out, in: match });
   }
 
@@ -85,6 +89,8 @@ export function buildMatchFromTransfer(pair) {
     bankLines: [out, incoming].map(l => ({
       source: 'banktransaction',
       bankTransactionId: l.Id,
+      bankAccountId: l.AccountId ?? null,
+      bankLineKey: bankLineKey(l),
       date: l.Date || null,
       amount: signedAmount(l),
       description: l.Comment || l.Type || '',
@@ -116,15 +122,14 @@ export async function detectTransfers({ windowDays = 1, limit = 10000 } = {}) {
 
   // Excluded in the query — see generateSuggestions for why filtering after the
   // fetch stalls the backlog once `limit` is reached.
-  const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
-    .filter(v => v != null);
-  const lineQuery = { EntityName: 'banktransaction', ...LIVE_BANK_LINE };
-  if (claimed.length) lineQuery.Id = { $nin: claimed };
+  const { keys: claimedKeys, exclude } = await claimedLines(BankMatch, BankTransaction);
+  const lineQuery = { EntityName: 'banktransaction', ...LIVE_BANK_LINE, ...exclude };
 
-  const lines = await BankTransaction.find(lineQuery)
+  const lines = (await BankTransaction.find(lineQuery)
     .sort({ Date: -1 }).limit(limit)
     .select('Id AccountId Date Type Comment PaidIn PaidOut')
-    .lean();
+    .lean())
+    .filter(l => !claimedKeys.has(bankLineKey(l)));
 
   const pairs = findTransferPairs(lines, { windowDays });
   if (!pairs.length) return { examined: lines.length, pairs: 0, created: 0 };
@@ -168,15 +173,14 @@ export async function detectAccountNamedMovements({ limit = 10000 } = {}) {
 
   // Excluded in the query — see generateSuggestions for why filtering after the
   // fetch stalls the backlog once `limit` is reached.
-  const claimed = (await BankMatch.distinct('bankLines.bankTransactionId', { deletedAt: null }))
-    .filter(v => v != null);
-  const lineQuery = { EntityName: 'banktransaction', ...LIVE_BANK_LINE };
-  if (claimed.length) lineQuery.Id = { $nin: claimed };
+  const { keys: claimedKeys, exclude } = await claimedLines(BankMatch, BankTransaction);
+  const lineQuery = { EntityName: 'banktransaction', ...LIVE_BANK_LINE, ...exclude };
 
-  const lines = await BankTransaction.find(lineQuery)
+  const lines = (await BankTransaction.find(lineQuery)
     .sort({ Date: -1 }).limit(limit)
     .select('Id AccountId Date Type Comment PaidIn PaidOut')
-    .lean();
+    .lean())
+    .filter(l => !claimedKeys.has(bankLineKey(l)));
 
   const pending = [];
   for (const line of lines) {
@@ -193,6 +197,8 @@ export async function detectAccountNamedMovements({ limit = 10000 } = {}) {
       bankLines: [{
         source: 'banktransaction',
         bankTransactionId: line.Id,
+        bankAccountId: line.AccountId ?? null,
+        bankLineKey: bankLineKey(line),
         date: line.Date || null,
         amount,
         description: line.Comment || line.Type || '',
