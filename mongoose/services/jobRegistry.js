@@ -16,6 +16,7 @@ import __bankRuleService from './bankRuleService.js';
 import __bankTransferService from './bankTransferService.js';
 import __bankThreeWayService from './bankThreeWayService.js';
 import __bankStatementIngestService from './bankStatementIngestService.js';
+import __bankStrandedLineService from './bankStrandedLineService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -74,6 +75,20 @@ function registerAll() {
         stillUnmatched: ruled.unmatched,
       };
     },
+  });
+
+  scheduler.register('bank-stranded-lines', {
+    description:
+      'Retire bank lines left behind by the (account, id) re-key: rows stored '
+      + 'under an account KashFlow no longer lists, which the sync has since '
+      + 'rewritten under the account whose feed returns them. Moves any match '
+      + 'onto the replacement and soft-deletes the original. Only ever acts '
+      + 'where a replacement genuinely exists.',
+    intervalMs: 6 * HOUR,
+    // After bank-link-resolve and bank-rule-apply: this moves match lines, so
+    // it is cheapest once those have settled rather than racing them.
+    initialDelayMs: 90_000,
+    run: () => __bankStrandedLineService.reconcileStrandedLines(),
   });
 
   scheduler.register('bank-statement-grab', {
