@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.21.2] - 2026-08-06
+
+### Fixed
+- **The test runner was silently discarding up to 49 tests per run.** `scripts/run-tests.js` passed `--test-force-exit`, which brings the process down as soon as the runner believes it is finished — racing the slower test files still reporting their results. Those tests were **dropped, not failed**, so the run reported success either way. The visible symptom was a test count wandering between 1,037 and 1,086 across runs, which read like harmless flakiness; it meant a regression in the affected files could never surface. `tests/bankViews.test.js` (39 tests) was the usual casualty, and is perfectly deterministic in isolation.
+
+  The flag is normally a workaround for a leaked handle keeping the process alive. There is no such handle here — without it the suite exits 0 on its own in ~1.6s, and five consecutive runs report exactly **1086 passed**. Verified on Node 20 and Node 24 (CI's version).
+
+### Changed
+- **CI now installs dependencies and runs the tests.** `npm test` was commented out in `.github/workflows/ci.yml` and there was no `npm ci` step at all, so this repo's tests had **never run in CI** — every image was published on the strength of a local run. Both steps now run before the image is built, because the box deploys from `:latest` and a failing suite must not reach that tag.
+
+  Enabling this depended on the fix above: enforcing a suite whose own count moved by 49 between runs would have produced exactly the kind of unexplained red build that gets commented out again.
+
 ## [6.21.1] - 2026-08-06
 
 ### Added
