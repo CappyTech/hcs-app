@@ -5,6 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import rbac from '../mongoose/config/rolePermissionsConfig.js';
+import departmentsConfig from '../mongoose/config/departmentsConfig.js';
+import customTiles from '../mongoose/config/dashboardTilesConfig.js';
 
 /**
  * `rbac.canAccess` returns `{ allowed, ownOnly }`, so using its return value as
@@ -41,6 +43,51 @@ describe('dashboard tile role filtering', () => {
         `"${call}" reads canAccess as a boolean; it returns { allowed, ownOnly }`,
       );
     }
+  });
+
+  it('no custom tile advertises a route its department cannot open', () => {
+    // The invariant: for every department, every custom tile on it, and every
+    // role that may open that department, the tile's target must be reachable.
+    // Two of these were live — a subcontractor was shown the CIS Dashboard and
+    // Assign Subcontractors, and an admin-only department showed Submit
+    // Attendance, which admins may not open.
+    const offenders = [];
+
+    for (const [slug, dept] of Object.entries(departmentsConfig)) {
+      for (const tile of Object.values(customTiles)) {
+        if (!tile.department?.includes(slug)) continue;
+
+        const link = String(tile.link || '');
+        if (!link.startsWith('/')) continue;              // external
+        const pattern = rbac.matchRoutePattern(link);
+        if (!pattern) continue;                            // uncontrolled
+
+        for (const role of dept.roles) {
+          if (role === 'public' || role === 'admin') continue;
+          if (!rbac.canAccessRoute(role, pattern)) {
+            offenders.push(`${slug}/${role} -> ${link}`);
+          }
+        }
+      }
+    }
+
+    // canUseTile filters these out at render time; this asserts we know about
+    // every one, so a new mismatch is a decision rather than a surprise.
+    assert.deepEqual(
+      offenders.sort(),
+      [
+        // A subcontractor's CIS department is wider than these two pages.
+        'construction-industry-scheme/accountant -> /subcontractor/assign',
+        'construction-industry-scheme/hmrc -> /subcontractor/assign',
+        'construction-industry-scheme/subcontractor -> /CIS/Dashboard/',
+        'construction-industry-scheme/subcontractor -> /subcontractor/assign',
+        // Payroll needs attendance, but /daily and /weekly do not admit
+        // accountants. A real gap, filtered out rather than papered over.
+        'payroll/accountant -> /daily',
+        'payroll/accountant -> /weekly',
+      ],
+      'a custom tile points somewhere its department cannot reach',
+    );
   });
 
   it('a role with no model grants can list nothing', () => {
