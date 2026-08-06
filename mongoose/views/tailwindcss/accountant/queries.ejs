@@ -1,0 +1,149 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <h1 class="text-2xl font-bold mb-1">Queries</h1>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+    Lines that need an explanation before the accounts can be relied on.
+  </p>
+
+  <%- include('partials/_portal-nav', { active: 'queries' }) %>
+
+  <!--
+    Statement against ledger. This is the finding that matters most and the one
+    a KashFlow-only reconciliation structurally cannot produce, so it leads.
+  -->
+  <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+    Money that moved but was never recorded
+  </h2>
+
+  <% if (!gaps.hasStatements) { %>
+    <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-6 mb-8">
+      <p class="text-sm text-gray-700 dark:text-gray-300">
+        No statement has been loaded whose running balance reconciles, so this check has nothing to
+        compare against and reports nothing. It is not a clean result &mdash; it is an absent one.
+      </p>
+    </div>
+  <% } else if (!gaps.statementOnly.length && !gaps.bankOnly.length) { %>
+    <div class="border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 mb-8">
+      <p class="text-sm text-gray-700 dark:text-gray-300">
+        Every statement line in the periods covered has a matching entry in KashFlow, and every
+        entry appears on a statement.
+      </p>
+    </div>
+  <% } else { %>
+    <% if (gaps.statementOnly.length) { %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-4">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">On the statement</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% gaps.statementOnly.forEach(g => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= g.accountId %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(g.line.date) %></td>
+                <td class="px-4 py-3 text-gray-900 dark:text-white"><%= g.line.description %></td>
+                <td class="px-4 py-3 text-right whitespace-nowrap <%= g.line.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
+                  <%= formatCurrency(g.line.amount) %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (gaps.bankOnly.length) { %>
+      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+        Recorded in KashFlow but not on the statement
+      </h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+        Usually a timing difference at the edge of a statement period; occasionally something that
+        never actually cleared.
+      </p>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-8">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% gaps.bankOnly.forEach(g => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(g.transaction.Date) %></td>
+                <td class="px-4 py-3 text-gray-900 dark:text-white"><%= g.transaction.Comment || g.transaction.Type || '' %></td>
+                <td class="px-4 py-3 text-right whitespace-nowrap <%= g.transaction.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
+                  <%= formatCurrency(g.transaction.amount) %>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a href="/accountant/lines/<%= g.transaction.AccountId %>/<%= g.transaction.Id %>"
+                     class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
+                            bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">Open</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  <% } %>
+
+  <!-- Unexplained lines -->
+  <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+    Lines with no explanation
+  </h2>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+    No invoice or purchase attached, and no standing rule covers them. Most will be wages, tax,
+    pension, loan repayments or charges &mdash; each needs identifying once, after which the same
+    kind of line is recognised automatically.
+  </p>
+
+  <% if (!unexplained.length) { %>
+    <div class="border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-2xl p-4">
+      <p class="text-sm text-gray-700 dark:text-gray-300">Every line has either a document or a rule behind it.</p>
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% unexplained.forEach(l => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= slimDateTime(l.Date) %></td>
+              <td class="px-4 py-3 text-gray-900 dark:text-white"><%= l.Comment || l.Type || '' %></td>
+              <td class="px-4 py-3 text-right whitespace-nowrap <%= l.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
+                <%= formatCurrency(l.amount) %>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400"><%= l.AccountId %></td>
+              <td class="px-4 py-3 text-right">
+                <a href="/accountant/lines/<%= l.AccountId %>/<%= l.Id %>"
+                   class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
+                          bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">Open</a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+      Showing the most recent <%= unexplained.length %>.
+    </p>
+  <% } %>
+
+</div>

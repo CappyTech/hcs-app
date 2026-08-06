@@ -1,0 +1,75 @@
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <h1 class="text-2xl font-bold mb-1">Signed periods</h1>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+    Periods a reviewer has closed, with the balance they signed against.
+  </p>
+
+  <%- include('partials/_portal-nav', { active: 'signoff' }) %>
+
+  <% if (!signOffs.length) { %>
+    <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center">
+      <i class="bi bi-check2-square text-3xl text-gray-300 dark:text-gray-600" aria-hidden="true"></i>
+      <h2 class="font-semibold mt-3 mb-2">No periods signed off yet</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
+        Sign-off records who checked a period and what the closing balance was at the time.
+        Nothing has been closed so far, so every line remains open to change.
+      </p>
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Period</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Closing (ledger)</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Closing (statement)</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Difference</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Signed</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% signOffs.forEach(s => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <td class="px-4 py-3">
+                <div class="font-medium text-gray-900 dark:text-white"><%= s.accountName || s.accountId %></div>
+                <div class="text-xs text-gray-500 dark:text-gray-400"><%= s.accountId %></div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300">
+                <%= slimDateTime(s.periodStart) %> &ndash; <%= slimDateTime(s.periodEnd) %>
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">
+                <%= formatCurrency(s.closingBalancePerLedger) %>
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap text-gray-700 dark:text-gray-300">
+                <%= s.closingBalancePerStatement == null ? '—' : formatCurrency(s.closingBalancePerStatement) %>
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap <%= (s.variance || 0) !== 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400' %>">
+                <%= formatCurrency(s.variance || 0) %>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-gray-900 dark:text-white"><%= s.signedByName || 'Unknown' %></div>
+                <div class="text-xs text-gray-500 dark:text-gray-400"><%= slimDateTime(s.signedAt) %></div>
+              </td>
+              <td class="px-4 py-3">
+                <% if (s.status === 'signed') { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">signed</span>
+                <% } else { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">reopened</span>
+                <% } %>
+                <% if (s.unmatchedCount) { %>
+                  <div class="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                    <%= s.unmatchedCount %> unreviewed at sign-off
+                  </div>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+
+</div>

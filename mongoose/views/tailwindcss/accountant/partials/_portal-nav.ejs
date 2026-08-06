@@ -1,0 +1,40 @@
+<%
+/*
+ * Sub-navigation for the accountant portal, plus the read-only notice.
+ *
+ * The notice is not decoration. An external accountant landing on a finance
+ * system needs to know immediately that nothing they do here can alter the
+ * books — otherwise the safe assumption is the opposite one, and they hesitate
+ * over every link. Expects `active` (a slug) from the including view.
+ */
+const items = [
+  { slug: 'overview',   href: '/accountant',            label: 'Overview',   icon: 'bi-grid-1x2' },
+  { slug: 'statements', href: '/accountant/statements', label: 'Statements', icon: 'bi-file-earmark-text' },
+  { slug: 'queries',    href: '/accountant/queries',    label: 'Queries',    icon: 'bi-question-circle' },
+  { slug: 'signoff',    href: '/accountant/signoff',    label: 'Signed periods', icon: 'bi-check2-square' },
+];
+%>
+<div class="flex flex-wrap items-center gap-2 mb-6">
+  <% items.forEach(item => { %>
+    <% if (item.slug === active) { %>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+                   bg-green-600 text-white shadow-sm">
+        <i class="bi <%= item.icon %>" aria-hidden="true"></i> <%= item.label %>
+      </span>
+    <% } else { %>
+      <a href="<%= item.href %>"
+         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+                border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900
+                text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800
+                transition shadow-sm">
+        <i class="bi <%= item.icon %>" aria-hidden="true"></i> <%= item.label %>
+      </a>
+    <% } %>
+  <% }) %>
+
+  <span class="ml-auto inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full
+               bg-slate-100 text-slate-700 border border-slate-200
+               dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">
+    <i class="bi bi-eye" aria-hidden="true"></i> Read-only
+  </span>
+</div>

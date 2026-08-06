@@ -56,7 +56,10 @@ const UNVERIFIED_PATHS = new Set([
 // Override with REQUIRE_2FA_ROLES (comma-separated; empty string disables).
 function rolesRequiring2FA() {
   const raw = process.env.REQUIRE_2FA_ROLES;
-  const value = raw === undefined ? "admin,accountant" : raw;
+  // 'auditor' is in the default because it is the one role issued to someone
+  // outside the company, reaching a public hostname. Leaving it out would make
+  // the least-trusted account the only one without a second factor.
+  const value = raw === undefined ? "admin,accountant,auditor" : raw;
   return value.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
