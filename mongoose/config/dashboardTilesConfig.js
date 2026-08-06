@@ -320,16 +320,18 @@ export default {
         title: 'Holiday Overview',
         description: 'Manage holiday accrual, requests and approvals.',
         link: '/overview/holiday',
-        // HR owns holidays. Management is also admin-only, so dropping it here
-        // takes the tile off a second dashboard without taking it from anyone.
-        department: ['human-resources'],
+        // Listed in both on purpose: approving holiday is a management job and
+        // administering it is an HR job. A tile belongs wherever the work
+        // happens, so the same tool appearing in two departments is the system
+        // working, not duplication to be tidied away.
+        department: ['human-resources', 'management'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     HolidayRequests: {
         title: 'Holiday Requests',
         description: 'Review, approve and reject employee holiday requests.',
         link: '/holidayRequests',
-        department: ['human-resources'],
+        department: ['human-resources', 'management'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     }
 };

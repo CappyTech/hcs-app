@@ -127,10 +127,11 @@ export default {
     fieldOrder: ['date', 'type', 'status', 'employeeId', 'subcontractorId', 'hoursWorked', 'overtimeHours', 'dayRate', 'payRate', 'locationId', 'projectId', 'notes'],
     sortField: 'date',
     sortOrder: -1,
-    // The eponymous department. Model tiles are role-filtered by
-    // rbac.canAccess(role, model, 'l'), so employees and subcontractors see
-    // this only to the extent their own 'l:own' grant allows.
-    department: ['attendance'],
+    // The eponymous department, plus management, which reviews it. Tiles are
+    // role-filtered by rbac.canAccess(...).allowed — note the `.allowed`: that
+    // filter was reading a truthy object and letting everything through until
+    // it was fixed alongside this.
+    department: ['attendance', 'management'],
     tabsby: 'type',
     tabsValues: [
       { value: 'all', label: 'All' },
@@ -1063,10 +1064,9 @@ export default {
     ],
     sortField: 'startDate',
     sortOrder: -1,
-    // HR owns holidays outright. Management showed the same list to the same
-    // audience (both departments are admin-only), so listing it twice split
-    // ownership without widening access to anyone.
-    department: ['human-resources'],
+    // Both: HR administers holiday, management approves it. Two workflows over
+    // one list, which is a reason to appear twice rather than a duplication.
+    department: ['human-resources', 'management'],
     labelOverrides: {
       employeeId: 'Employee',
       startDate: 'From',
