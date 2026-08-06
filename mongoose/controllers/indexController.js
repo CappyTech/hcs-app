@@ -18,7 +18,11 @@ const getDashboardModels = (department, userRole) => {
       ([model, config]) =>
         config?.department?.includes(department) &&
         !denyGuard(config, "l") &&
-        (userRole === "admin" || rbac.canAccess(userRole, model, "l")),
+        // .allowed, not the bare return value: canAccess returns
+        // { allowed, ownOnly }, and an object is always truthy — so this
+        // filter passed for every role and every model, showing a
+        // department's whole tile list to anyone who could open it.
+        (userRole === "admin" || rbac.canAccess(userRole, model, "l").allowed),
     )
     .map(([model, config]) => {
       const desc =
@@ -49,7 +53,10 @@ const getCreateModels = (userRole) => {
     .filter(
       ([model, config]) =>
         !denyGuard(config, "c") &&
-        (userRole === "admin" || rbac.canAccess(userRole, model, "c")),
+        // Same bug as getDashboardModels above. Currently masked because the
+        // 'create' department is admin-only and admin short-circuits, but it
+        // would open the moment that department is opened up.
+        (userRole === "admin" || rbac.canAccess(userRole, model, "c").allowed),
     )
     .map(([model, config]) => ({
       model,
