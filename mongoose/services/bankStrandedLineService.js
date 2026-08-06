@@ -1,4 +1,5 @@
 import mdb from './mongooseDatabaseService.js';
+import logger from '../../services/loggerService.js';
 import { bankLineKey, LIVE_BANK_LINE } from './bankLinkService.js';
 
 /**
@@ -121,6 +122,16 @@ export async function reconcileStrandedLines({ dryRun = false } = {}) {
     }
 
     stats.retired += 1;
+  }
+
+  // Logged only when it acts. The scheduler keeps `lastResult` for /admin/jobs
+  // but logs nothing on success, and this job soft-deletes rows and moves match
+  // lines — that should leave a trace somewhere durable, not only in a UI panel.
+  if (stats.retired > 0 && !dryRun) {
+    logger.info(
+      `[bank-stranded-lines] retired ${stats.retired} stranded bank line(s); `
+      + `moved ${stats.matchLinesMoved} match line(s) and ${stats.statementLinesMoved} statement line(s)`,
+    );
   }
 
   return stats;

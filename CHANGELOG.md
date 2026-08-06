@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.21.1] - 2026-08-06
+
+### Added
+- **The build fails when the `hcs-schemas` pin is stale.** `npm ci` installs the commit pinned in `package-lock.json`, so merging hcs-schemas to its default branch does not update this repo. That step has now been missed twice, both times publishing an image built against the wrong schema — most recently 6.21.0 itself, pinned to schemas 2.1.0 whose `bankTransaction` still declared the unique `Id` index that release exists to replace. Deploying it would have recreated the index hcs-sync 0.11.0's migration removes.
+
+  `scripts/check-schemas-version.js` compares the installed version against `requiredSchemasVersion` in package.json and fails with the exact fix command. It runs in the **Dockerfile builder stage**, not the workflow: CI has no `npm ci` step of its own, and this way it guards the exact image being published, before it can reach `:latest`. Verified by building with a deliberately stale requirement — exit 1, no image.
+
+### Changed
+- `bank-stranded-lines` logs when it acts. The scheduler keeps `lastResult` for `/admin/jobs` but logs nothing on success, and this job soft-deletes rows and rewrites match lines; that belongs somewhere more durable than a UI panel. Silent on a no-op, which is its normal state.
+
+### Note
+`npm test` is commented out in `.github/workflows/ci.yml` and there is no install step, so this repo's 1,076 tests **do not run in CI**. Unchanged here, but worth fixing.
+
 ## [6.21.0] - 2026-08-05
 
 Requires **hcs-schemas 3.0.0** and pairs with **hcs-sync 0.11.0**. A bank line is now identified by *(account, KashFlow Id)* rather than Id alone, throughout `/bank`.
