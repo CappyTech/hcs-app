@@ -171,6 +171,29 @@ const routeAccess = {
   // routing, not merely by hidden buttons.
   '/accountant':          ['admin', 'accountant', 'auditor'],
 
+  // Overview (analytics) pages.
+  //
+  // These were guarded only by ensureRole* in overviewRoutes.js and had no
+  // entry here at all, which made routeAccess incomplete as a registry — and
+  // dashboard tiles pointing at them could not be role-filtered, because
+  // matchRoutePattern returned nothing to filter on.
+  //
+  // Every line below mirrors the guard already on the route, so nothing gains
+  // or loses access; the point is that the fact is now written down where the
+  // rest of the app can read it. '/overview' is deliberately NOT a blanket
+  // entry: '/overview/finance' and '/overview/payroll' are wider than the
+  // rest, and longest-prefix matching would hide that.
+  '/overview/admin':          ['admin'],
+  '/overview/documents':      ['admin'],
+  '/overview/finance':        ['admin', 'accountant'],
+  '/overview/fleet':          ['admin'],
+  '/overview/holiday':        ['admin'],
+  '/overview/human':          ['admin'],
+  '/overview/payroll':        ['admin', 'accountant'],
+  '/overview/policies':       ['admin'],
+  '/overview/projects':       ['admin'],
+  '/overview/subcontractors': ['admin', 'accountant', 'hmrc'],
+
   // Subcontractor administration
   '/subcontractor/assign':['admin'],
   '/supplier/change':     ['admin'],
