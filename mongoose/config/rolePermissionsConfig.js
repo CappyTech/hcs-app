@@ -5,6 +5,7 @@
  * Used by authService middleware, route files, controllers, templates.
  *
  * Roles: none | admin | accountant | employee | subcontractor | client | hmrc
+ *        | auditor (external, read-only)
  */
 
 import departmentsConfig from './departmentsConfig.js';
@@ -12,7 +13,11 @@ import departmentsConfig from './departmentsConfig.js';
 // ── Departments each role may access ──────────────────────────────────
 // Derived from departmentsConfig roles: ['public'] departments go to every
 // role except 'none' (unassigned users keep an empty nav).
-const ALL_ROLES = ['admin', 'accountant', 'employee', 'subcontractor', 'client', 'hmrc'];
+// 'auditor' is an external, read-only role: an outside accountant who may look
+// at the reconciliation but change nothing. It has no roleModelAccess entry at
+// all — that absence is what keeps it off every generic CRUD route — and the
+// only routes it can reach are the GET-only ones in accountantRoutes.js.
+const ALL_ROLES = ['admin', 'accountant', 'employee', 'subcontractor', 'client', 'hmrc', 'auditor'];
 const roleDepartments = { none: [] };
 for (const role of ALL_ROLES) roleDepartments[role] = [];
 for (const [slug, dept] of Object.entries(departmentsConfig)) {
@@ -156,6 +161,15 @@ const routeAccess = {
   // signed period, both of which undo something a reviewer put their name to —
   // are enforced by the adminGuard on those routes in bankRoutes.js.
   '/bank':                ['admin', 'accountant'],
+
+  // Read-only accountant portal. Same longest-prefix rule as '/bank' above, so
+  // this one entry covers the whole surface.
+  //
+  // 'auditor' appears here and nowhere else. Note this does NOT give it '/bank':
+  // that pattern is longer and more specific, so a request to /bank matches
+  // '/bank' and is refused. The write half of the module stays unreachable by
+  // routing, not merely by hidden buttons.
+  '/accountant':          ['admin', 'accountant', 'auditor'],
 
   // Subcontractor administration
   '/subcontractor/assign':['admin'],

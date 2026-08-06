@@ -31,7 +31,8 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['none', 'subcontractor', 'employee', 'accountant', 'hmrc', 'admin', 'client'],
+        // 'auditor' is an external accountant: read-only, portal only.
+        enum: ['none', 'subcontractor', 'employee', 'accountant', 'hmrc', 'admin', 'client', 'auditor'],
         default: 'none'
     },
     subcontractorId: {

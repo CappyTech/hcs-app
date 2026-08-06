@@ -1,0 +1,210 @@
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-1 flex-wrap">
+    <% if (account) { %>
+      <a href="/accountant/accounts/<%= line.AccountId %>"
+         class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; <%= account.accountName %></a>
+      <span class="text-gray-400">/</span>
+    <% } %>
+    <h1 class="text-xl font-bold">Bank line <span class="font-mono"><%= line.Id %></span></h1>
+    <%- include('../bank/partials/_match-badge', { match: current, strategy: resolution.strategy }) %>
+  </div>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+    <%= slimDateTime(line.Date) %> &middot; <%= formatCurrency(line.amount) %>
+  </p>
+
+  <%- include('partials/_portal-nav', { active: 'overview' }) %>
+
+  <!-- The line as the bank and KashFlow each describe it -->
+  <div class="grid gap-4 md:grid-cols-2 mb-6">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+        In KashFlow
+      </h2>
+      <dl class="text-sm space-y-2">
+        <div class="flex justify-between gap-4">
+          <dt class="text-gray-500 dark:text-gray-400">Description</dt>
+          <dd class="text-right text-gray-900 dark:text-white"><%= line.Comment || line.Type || '—' %></dd>
+        </div>
+        <div class="flex justify-between gap-4">
+          <dt class="text-gray-500 dark:text-gray-400">Amount</dt>
+          <dd class="text-right <%= line.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
+            <%= formatCurrency(line.amount) %>
+          </dd>
+        </div>
+        <div class="flex justify-between gap-4">
+          <dt class="text-gray-500 dark:text-gray-400">Account</dt>
+          <dd class="text-right text-gray-900 dark:text-white">
+            <%= account ? account.accountName : line.AccountId %>
+          </dd>
+        </div>
+        <div class="flex justify-between gap-4">
+          <dt class="text-gray-500 dark:text-gray-400">Reference</dt>
+          <dd class="text-right font-mono text-xs text-gray-700 dark:text-gray-300">
+            <%= line.EntityName || '—' %> <%= line.ResourceNumber || '' %>
+          </dd>
+        </div>
+        <% if (line.SupplierName || line.CustomerName) { %>
+          <div class="flex justify-between gap-4">
+            <dt class="text-gray-500 dark:text-gray-400">Party</dt>
+            <dd class="text-right text-gray-900 dark:text-white"><%= line.SupplierName || line.CustomerName %></dd>
+          </div>
+        <% } %>
+      </dl>
+    </div>
+
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+        On the statement
+      </h2>
+      <% if (statementLine) { %>
+        <dl class="text-sm space-y-2">
+          <div class="flex justify-between gap-4">
+            <dt class="text-gray-500 dark:text-gray-400">Dated</dt>
+            <dd class="text-right text-gray-900 dark:text-white"><%= slimDateTime(statementLine.date) %></dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-gray-500 dark:text-gray-400">Description</dt>
+            <dd class="text-right text-gray-900 dark:text-white"><%= statementLine.description || '—' %></dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-gray-500 dark:text-gray-400">Amount</dt>
+            <dd class="text-right text-gray-900 dark:text-white"><%= formatCurrency(statementLine.amount) %></dd>
+          </div>
+          <% if (statementLine.balance != null) { %>
+            <div class="flex justify-between gap-4">
+              <dt class="text-gray-500 dark:text-gray-400">Balance after</dt>
+              <dd class="text-right text-gray-900 dark:text-white"><%= formatCurrency(statementLine.balance) %></dd>
+            </div>
+          <% } %>
+        </dl>
+      <% } else { %>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          No imported statement covers this line, so it has been checked against KashFlow only.
+          That confirms the entry exists &mdash; it cannot confirm the money actually moved.
+        </p>
+      <% } %>
+    </div>
+  </div>
+
+  <!--
+    The other half of a transfer. On a statement this appears once; in the
+    ledger it is two lines under one KashFlow number, one per account. Without
+    this panel the second half looks like a duplicate.
+  -->
+  <% if (otherHalf) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 mb-6">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+        Internal transfer
+      </h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
+        This is one side of a movement between two Heron CS accounts. KashFlow records both sides
+        under the same number, each from its own account&rsquo;s point of view, so the pair nets to nil.
+      </p>
+      <a href="/accountant/lines/<%= otherHalf.AccountId %>/<%= otherHalf.Id %>"
+         class="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700
+                hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+        <span class="text-gray-500 dark:text-gray-400">Other side:</span>
+        <span class="font-medium"><%= otherHalf.Comment || otherHalf.Type || 'account ' + otherHalf.AccountId %></span>
+        <span class="<%= otherHalf.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>">
+          <%= formatCurrency(otherHalf.amount) %>
+        </span>
+      </a>
+    </div>
+  <% } %>
+
+  <!-- What it settles -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 mb-6">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      Supporting documents
+    </h2>
+
+    <% const docs = (current && current.documents && current.documents.length) ? current.documents : (resolution.documents || []); %>
+
+    <% if (!docs.length) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        No invoice or purchase is attached to this line. That is expected for wages, tax, pension,
+        loan repayments, bank charges and transfers, which post to a nominal account rather than
+        settling a document.
+      </p>
+    <% } else { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead>
+            <tr>
+              <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Document</th>
+              <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Party</th>
+              <th class="px-2 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Gross</th>
+              <th class="px-2 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Applied</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% docs.forEach(d => { %>
+              <tr>
+                <td class="px-2 py-2 text-gray-900 dark:text-white"><%= d.kind %> <%= d.kfNumber %></td>
+                <td class="px-2 py-2 text-gray-700 dark:text-gray-300"><%= d.partyName || '—' %></td>
+                <td class="px-2 py-2 text-right text-gray-500 dark:text-gray-400"><%= formatCurrency(d.docGross) %></td>
+                <td class="px-2 py-2 text-right text-gray-900 dark:text-white"><%= formatCurrency(d.allocatedAmount) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (resolution.reasons && resolution.reasons.length) { %>
+      <ul class="mt-4 text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1">
+        <% resolution.reasons.forEach(r => { %><li><%= r %></li><% }) %>
+      </ul>
+    <% } %>
+
+    <% if (resolution.problems && resolution.problems.length) { %>
+      <div class="mt-4 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
+        <h3 class="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">Worth a look</h3>
+        <ul class="text-sm text-gray-700 dark:text-gray-300 list-disc list-inside space-y-1">
+          <% resolution.problems.forEach(p => { %><li><%= p %></li><% }) %>
+        </ul>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          A difference between the bank amount and the document total is normal for a part payment
+          or a CIS deduction. It is recorded rather than treated as an error.
+        </p>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Who agreed it -->
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      History
+    </h2>
+    <% if (!matches.length) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Nothing has been recorded against this line yet.</p>
+    <% } else { %>
+      <ul class="space-y-3">
+        <% matches.forEach(m => { %>
+          <li class="flex items-start gap-3">
+            <span class="mt-0.5"><%- include('../bank/partials/_match-badge', { match: m }) %></span>
+            <div class="text-sm">
+              <div class="text-gray-900 dark:text-white">
+                <%= m.reviewedByName || 'Not yet reviewed' %>
+                <% if (m.reviewedAt) { %>
+                  <span class="text-gray-500 dark:text-gray-400">&middot; <%= slimDateTime(m.reviewedAt) %></span>
+                <% } %>
+              </div>
+              <% if (m.reasons && m.reasons.length) { %>
+                <div class="text-xs text-gray-500 dark:text-gray-400"><%= m.reasons.join(' · ') %></div>
+              <% } %>
+              <% if (m.rejectedReason) { %>
+                <div class="text-xs text-red-700 dark:text-red-400">Set aside: <%= m.rejectedReason %></div>
+              <% } %>
+              <% if (m.reviewNote) { %>
+                <div class="text-xs text-gray-500 dark:text-gray-400"><%= m.reviewNote %></div>
+              <% } %>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+
+</div>

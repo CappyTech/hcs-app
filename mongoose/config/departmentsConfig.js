@@ -79,6 +79,26 @@ export default {
     icon: 'bi-wallet2',
     roles: ['admin', 'accountant'],
   },
+  'accountant-portal': {
+    // Read-only bank reconciliation surface for an external accountant.
+    //
+    // Deliberately its own department rather than a widening of 'finance':
+    // ensureDepartment('finance') would also hand the auditor role the finance
+    // dashboard and every KashFlow-synced tile on it. The portal needs none of
+    // that, and the blast radius of an external login should be exactly the
+    // pages it was issued for.
+    //
+    // hasDashboard:false keeps indexRoutes from generating a route for it —
+    // accountantRoutes.js serves the page — and keeps it out of the
+    // auto-generated routeAccess block, so the entry in rolePermissionsConfig
+    // is written by hand and reads as deliberate.
+    title: 'Accountant',
+    navLabel: 'Accountant',
+    icon: 'bi-clipboard-check',
+    path: '/accountant',
+    hasDashboard: false,
+    roles: ['admin', 'accountant', 'auditor'],
+  },
   attendance: {
     title: 'Attendance',
     navLabel: 'Attendance',

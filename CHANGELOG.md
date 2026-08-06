@@ -2,6 +2,24 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.22.0] - 2026-08-06
+
+### Added
+- **A read-only bank reconciliation portal for an external accountant, at `/accountant`.** Seven pages — overview, per-account ledger, single line, statements, one statement, queries, signed periods — all reading through the same services `/bank` uses, so the two views of the data cannot drift apart.
+
+  It is a **separate surface rather than `/bank` with its buttons hidden**, because read-only had to be a fact about the routing table rather than a claim about the templates. `accountantRoutes.js` registers no `POST`, `PUT`, `PATCH` or `DELETE` at all; `tests/accountantRoutes.test.js` fails the build if one appears, and separately asserts the controller calls no write method.
+
+  The ordering is deliberately **statement-first**. The house method is to reconcile from a printed statement, writing the KashFlow number beside each line; the portal leads with statements and the statement page carries a "KashFlow no." column that is the on-screen form of that annotation, with a print stylesheet so it prints as the same marked-up sheet. Leading with KashFlow's own ledger would put the screen in the opposite order from the work.
+
+  Two smaller differences from `/bank`, both deliberate. The ledger defaults to **all lines, not `outstanding`** — "awaiting review" is a positive filter on holding a proposal, so it hides every line nothing has explained, which is what an accountant most wants to see. And the line page shows **the other half of an internal transfer**, which appears once on a statement but as two ledger lines under one KashFlow number.
+
+- **New `auditor` role: external, read-only.** It has **no `roleModelAccess` entry at all** — that absence is what keeps it off every generic CRUD route in the app — and `routeAccess` maps it to `/accountant` only. `matchRoutePattern` takes the longest matching prefix, so a request to `/bank` matches the more specific `/bank` pattern and is refused for auditors by the global `ensureRouteAccess` middleware before any route guard runs. The write half of the module is unreachable by routing.
+
+  The portal gets **its own department** rather than widening `finance`: `ensureDepartment('finance')` would also have handed an external login the finance dashboard and every KashFlow-synced tile on it. `admin` and `accountant` can open the portal too — one nobody in-house can see is one nobody in-house can support.
+
+### Changed
+- `REQUIRE_2FA_ROLES` now defaults to `admin,accountant,auditor`. `auditor` is the one role issued to somebody outside the company, reaching a public hostname; leaving it out would have made the least-trusted account the only one without a second factor.
+
 ## [6.21.2] - 2026-08-06
 
 ### Fixed
