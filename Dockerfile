@@ -6,6 +6,14 @@ COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
+# Fails the build when the hcs-schemas commit pinned in package-lock.json is
+# older than this code needs. Placed here, in the builder, so a bad pin never
+# reaches a published image: the box deploys from :latest. `npm ci` installs the
+# pinned commit, so merging hcs-schemas alone does not update this repo - a step
+# missed twice, both times publishing an image built against the wrong schema.
+COPY scripts/check-schemas-version.js ./scripts/
+RUN node scripts/check-schemas-version.js
+
 COPY assets ./assets
 COPY tailwind.config.js tailwind.safelist.js postcss.config.js ./
 COPY mongoose/views ./mongoose/views
