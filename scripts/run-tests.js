@@ -25,7 +25,19 @@ if (files.length === 0) {
   process.exit(1);
 }
 
-const result = spawnSync(process.execPath, ['--test', '--test-force-exit', '--experimental-test-module-mocks', ...files], {
+// NB: no `--test-force-exit`. It forces the process down as soon as the runner
+// believes it is finished, which races the slower test files still reporting
+// their results — they were silently dropped from the run, not failed. The
+// visible symptom was a test count that wandered between 1,037 and 1,086
+// across runs while always reporting success, so up to 49 tests could vanish
+// without a trace and a regression in them would never surface. `tests/bankViews.test.js`
+// (39 tests) was the usual casualty; it is deterministic in isolation.
+//
+// The flag is normally a workaround for a leaked handle keeping the process
+// alive. There isn't one here: without it the suite exits 0 on its own in
+// ~1.6s. If a hang ever appears, find the open handle rather than reinstating
+// this — the cure hid 5% of the suite.
+const result = spawnSync(process.execPath, ['--test', '--experimental-test-module-mocks', ...files], {
   cwd: path.join(__dirname, '..'),
   stdio: 'inherit',
   env: { ...process.env, NODE_ENV: 'test' },
