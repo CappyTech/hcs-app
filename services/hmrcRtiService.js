@@ -50,16 +50,36 @@ function _deriveDeviceId() {
 const SERVER_DEVICE_ID = _deriveDeviceId();
 
 // ── London UTC offset string (handles BST/GMT automatically) ─────────────────
+/**
+ * `Gov-Client-Timezone` for HMRC's fraud-prevention headers, e.g. "UTC+01:00".
+ *
+ * Asks Intl for the offset directly rather than reconstructing it by
+ * subtracting two formatted timestamps. The previous implementation formatted
+ * `now` in both zones with `en-GB` — which produces `DD/MM/YYYY` — and fed
+ * those strings back to `new Date()`, which reads them as `MM/DD/YYYY`.
+ *
+ * Both sides misparsed identically for most of the day, so the difference came
+ * out right and the bug stayed invisible. Between 00:00 and 01:00 BST the two
+ * zones fall on **different dates**: at 00:01 on 7 August, London formatted as
+ * `07/08/2026` (read as 8 July) and UTC as `06/08/2026` (read as 8 June) — 30
+ * days apart, giving `UTC+697:00`. HMRC would have received that as a
+ * fraud-prevention header on any RTI submission made in that hour. Past the
+ * 12th of a month the same round-trip yields `Invalid Date` and `UTCNaN:NaN`
+ * instead.
+ *
+ * `longOffset` returns "GMT" exactly (no numeric part) during GMT, which is
+ * why the no-match branch returns +00:00 rather than treating it as an error.
+ */
 function _londonOffset() {
-  const now = new Date();
-  const londonTime = new Date(now.toLocaleString('en-GB', { timeZone: 'Europe/London' }));
-  const utcTime    = new Date(now.toLocaleString('en-GB', { timeZone: 'UTC' }));
-  const diffMins   = Math.round((londonTime - utcTime) / 60000);
-  const sign       = diffMins >= 0 ? '+' : '-';
-  const abs        = Math.abs(diffMins);
-  const hh         = String(Math.floor(abs / 60)).padStart(2, '0');
-  const mm         = String(abs % 60).padStart(2, '0');
-  return `UTC${sign}${hh}:${mm}`;
+  const name = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London',
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(new Date())
+    .find(p => p.type === 'timeZoneName')?.value || 'GMT';
+
+  const m = /^GMT([+-])(\d{2}):(\d{2})$/.exec(name);
+  return m ? `UTC${m[1]}${m[2]}:${m[3]}` : 'UTC+00:00';
 }
 
 /**
