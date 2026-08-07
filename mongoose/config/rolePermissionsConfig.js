@@ -42,6 +42,11 @@ const roleModelAccess = {
   },
 
   accountant: {
+    // Unscoped, not ':own' — running payroll means reading everyone's
+    // attendance for the period. The weekly controller already treated
+    // accountant as payroll-privileged when deciding whether to strip pay
+    // figures; only the route guard had never been updated to let them in.
+    attendance:         'r,l',
     invoice:            'r,l',
     purchase:           'r,l',    // listed as "supplier" receipts in KashFlow
     supplier:           'r,l',
@@ -138,8 +143,11 @@ const ownershipFields = {
 // Maps route pattern → allowed roles.
 const routeAccess = {
   // Attendance views
-  '/daily':               ['admin', 'employee', 'subcontractor'],
-  '/weekly':              ['admin', 'employee', 'subcontractor'],
+  // 'accountant' reads these for payroll: Payroll is a periodic run, and the
+  // attendance for the period is its input. Everyone else here is scoped to
+  // their own records in the controller; the accountant is not, deliberately.
+  '/daily':               ['admin', 'accountant', 'employee', 'subcontractor'],
+  '/weekly':              ['admin', 'accountant', 'employee', 'subcontractor'],
   '/weekly-management':   ['admin'],
   '/attendance/submit':   ['employee', 'subcontractor'],
   '/attendance/approve':  ['admin'],
