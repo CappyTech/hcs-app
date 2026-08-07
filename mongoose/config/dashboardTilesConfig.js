@@ -48,13 +48,10 @@ export default {
         department: ['admin'],
         buttonClass: 'bg-amber-700 hover:bg-amber-800'
     },
-    AdminSettings: {
-        title: 'Settings',
-        description: 'Manage your account settings, password, and preferences.',
-        link: '/user/account',
-        department: ['admin'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
+    // AdminSettings removed: it was byte-for-byte UserSettings (same title,
+    // same /user/account link) filed under admin as well. An admin's own
+    // password is a personal setting, and it is already one tile away under
+    // User — putting it beside Maintenance Mode implied it was an admin tool.
     ConnectionSettings: {
         title: 'External Connections',
         description: 'Configure KashFlow API, SMTP email, and Paperless-ngx credentials.',
@@ -117,7 +114,9 @@ export default {
         title: 'Notification Settings',
         description: 'Choose which emails you receive, preview them, and control admin contact.',
         link: '/user/account/settings/notifications',
-        department: ['user', 'admin'],
+        // Personal preference, so it belongs under User only. Same reasoning
+        // as the removed AdminSettings tile.
+        department: ['user'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     Logout: {
@@ -322,6 +321,10 @@ export default {
         title: 'Holiday Overview',
         description: 'Manage holiday accrual, requests and approvals.',
         link: '/overview/holiday',
+        // Listed in both on purpose: approving holiday is a management job and
+        // administering it is an HR job. A tile belongs wherever the work
+        // happens, so the same tool appearing in two departments is the system
+        // working, not duplication to be tidied away.
         department: ['human-resources', 'management'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },

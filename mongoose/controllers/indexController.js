@@ -11,6 +11,32 @@ import { endOfToday, endOfWeek, endOfMonth } from 'date-fns';
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
 
+/**
+ * May this role actually use the page a custom tile points at?
+ *
+ * Model tiles have always been role-filtered; custom tiles were filtered by
+ * department alone, so any department wider than the routes inside it
+ * advertised links that answer 403. That was live in two places: a
+ * subcontractor saw the CIS Dashboard and Assign Subcontractors tiles (both
+ * narrower than the CIS department), and an admin saw Submit Attendance, which
+ * only employees and subcontractors may open.
+ *
+ * The answer is derived from routeAccess rather than declared per tile, so it
+ * cannot drift out of step with the guard it describes. Two deliberate
+ * fallbacks to department membership, both meaning "routeAccess has no opinion":
+ * external links (nothing to match), and internal paths with no entry.
+ */
+const canUseTile = (tile, userRole) => {
+  if (userRole === 'admin') return true;
+  const link = String(tile?.link || '');
+  if (!link.startsWith('/')) return true; // external link
+
+  const pattern = rbac.matchRoutePattern(link);
+  if (!pattern) return true; // not a controlled route
+
+  return rbac.canAccessRoute(userRole, pattern);
+};
+
 // Helper: get all visible listable models for a department, filtered by role
 const getDashboardModels = (department, userRole) => {
   const standardModels = Object.entries(listConfig)
@@ -18,7 +44,11 @@ const getDashboardModels = (department, userRole) => {
       ([model, config]) =>
         config?.department?.includes(department) &&
         !denyGuard(config, "l") &&
-        (userRole === "admin" || rbac.canAccess(userRole, model, "l")),
+        // .allowed, not the bare return value: canAccess returns
+        // { allowed, ownOnly }, and an object is always truthy — so this
+        // filter passed for every role and every model, showing a
+        // department's whole tile list to anyone who could open it.
+        (userRole === "admin" || rbac.canAccess(userRole, model, "l").allowed),
     )
     .map(([model, config]) => {
       const desc =
@@ -36,8 +66,8 @@ const getDashboardModels = (department, userRole) => {
       };
     });
 
-  const extraTiles = Object.values(customTiles).filter((tile) =>
-    tile.department?.includes(department),
+  const extraTiles = Object.values(customTiles).filter(
+    (tile) => tile.department?.includes(department) && canUseTile(tile, userRole),
   );
 
   return [...standardModels, ...extraTiles];
@@ -49,7 +79,10 @@ const getCreateModels = (userRole) => {
     .filter(
       ([model, config]) =>
         !denyGuard(config, "c") &&
-        (userRole === "admin" || rbac.canAccess(userRole, model, "c")),
+        // Same bug as getDashboardModels above. Currently masked because the
+        // 'create' department is admin-only and admin short-circuits, but it
+        // would open the moment that department is opened up.
+        (userRole === "admin" || rbac.canAccess(userRole, model, "c").allowed),
     )
     .map(([model, config]) => ({
       model,

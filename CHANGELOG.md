@@ -2,6 +2,32 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.23.0] - 2026-08-07
+
+### Fixed
+- **`Gov-Client-Timezone` sent `UTC+697:00` to HMRC between 00:00 and 01:00 BST.** `_londonOffset()` formatted the current time in `Europe/London` and `UTC` using `'en-GB'` — `DD/MM/YYYY` — then fed both strings back to `new Date()`, which reads them as `MM/DD/YYYY`. Both sides misparsed *identically* for most of the day, so the subtraction came out right and the fault stayed invisible.
+
+  Between midnight and 01:00 BST the two zones fall on different dates. At 00:01 on 7 August, London formatted as `07/08/2026` (read as 8 July) and UTC as `06/08/2026` (read as 8 June) — 30 days apart, i.e. `UTC+697:00`, sent as a fraud-prevention header on any RTI submission made in that hour. Past the 12th of a month the same round-trip yields `Invalid Date` and `UTCNaN:NaN` instead.
+
+  Now asks `Intl` for the offset directly via `timeZoneName: 'longOffset'`. Verified across midsummer, midwinter, both DST transitions, the 00:xx window in each direction, and a day-of-month past 12. The existing test was correct all along — it simply had a one-hour-a-day window in which to catch this, and happened to run inside it.
+
+- **Dashboard tiles ignored role entirely.** `rbac.canAccess` returns `{ allowed, ownOnly }`; every consumer destructures `.allowed` except the two filters in `indexController`, which used the bare return value. An object is always truthy, so both filters passed for every role and every model — a department showed its whole tile list to anyone who could open it. Never a permission bypass, since the list and CRUD routes carry their own guards, but the dashboards advertised links that answer 403.
+
+- **Custom tiles are now filtered by the route they point at.** They were filtered by department alone, so any department wider than the pages inside it advertised 403s. Two were live: a subcontractor was shown *CIS Dashboard* and *Edit CIS Details*, and *Edit CIS Details* was also shown to accountant and hmrc despite being admin-only. The check derives from `routeAccess` rather than a per-tile role list, so it cannot drift from the guard it describes; external links and paths with no entry fall back to department membership, both meaning "routeAccess has no opinion".
+
+### Changed
+- **`routeAccess` now covers the ten `/overview/*` pages.** They were guarded only by `ensureRole*` in `overviewRoutes.js` with no entry in the registry that claims to be the single source of truth — so `matchRoutePattern` returned nothing and tiles pointing at them could not be role-filtered at all. Every entry mirrors the guard already on its route, so nothing gains or loses access. Deliberately not a blanket `/overview`: `/overview/finance` and `/overview/payroll` are wider than the other eight, and longest-prefix matching would have hidden that.
+
+- **Dashboard filing.** Users moves from HR to Admin — HR manages *employees*, this manages *login accounts*, and every route behind it was already `ensureRole:admin` while the landing page's own admin overview is captioned "Users, roles & 2FA". Attendances gains the Attendance department alongside Management. The duplicate `AdminSettings` tile is removed (byte-for-byte identical to `UserSettings`, same `/user/account` link), and Notification Settings is under User only — an admin's own password is not an admin tool. The Users list gains an **Auditor** tab for the role added in 6.22.0.
+
+  Holiday Overview, Holiday Requests and the `holidayRequest` list stay in **both** HR and Management: approving holiday is a management job and administering it is an HR job. A tile belongs wherever the work happens, so the same tool in two departments is the system working rather than duplication to tidy away.
+
+### Note
+Two gaps are now visible rather than fixed, both instances of permissions having been dropped down route by route from an originally admin-only default while the department gates stayed put:
+
+- Payroll is `admin, accountant`, but `/daily` and `/weekly` admit only `admin, employee, subcontractor` — so an accountant cannot open the attendance that running payroll needs. The tiles are hidden rather than 403ing; widening the route is an access decision.
+- Five department gates are narrower than the routes inside them (`maintenance`, `human-resources`, `management`, `payroll`, `finance`). `session` and `meta` are **not** among them: both carry `deny: ['c','r','u','d','l']` because they hold auth tokens, CSRF state and TOTP data, and are hidden on purpose.
+
 ## [6.22.0] - 2026-08-06
 
 ### Added

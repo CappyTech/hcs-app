@@ -127,7 +127,11 @@ export default {
     fieldOrder: ['date', 'type', 'status', 'employeeId', 'subcontractorId', 'hoursWorked', 'overtimeHours', 'dayRate', 'payRate', 'locationId', 'projectId', 'notes'],
     sortField: 'date',
     sortOrder: -1,
-    department: ['management'],
+    // The eponymous department, plus management, which reviews it. Tiles are
+    // role-filtered by rbac.canAccess(...).allowed — note the `.allowed`: that
+    // filter was reading a truthy object and letting everything through until
+    // it was fixed alongside this.
+    department: ['attendance', 'management'],
     tabsby: 'type',
     tabsValues: [
       { value: 'all', label: 'All' },
@@ -957,7 +961,12 @@ export default {
     fieldOrder: ['username', 'email', 'emailVerified', 'role', 'employeeId', 'subcontractorId', 'clientId'],
     sortField: 'username',
     sortOrder: 1,
-    department: ['human-resources'],
+    // Admin, not HR. HR manages *employees*; this manages *login accounts* —
+    // the same people, but a different noun and a different audience. Every
+    // route behind it is already `ensureRole:admin`, and the landing page's
+    // own admin overview is captioned "Users, roles & 2FA", so filing it under
+    // HR was the only thing saying otherwise.
+    department: ['admin'],
     // Filter by role — useful for quickly seeing all admins, employees, subcontractors etc.
     tabsby: 'role',
     tabsValues: [
@@ -968,6 +977,9 @@ export default {
       { value: 'subcontractor', label: 'Subcontractor' },
       { value: 'client', label: 'Client' },
       { value: 'hmrc', label: 'HMRC' },
+      // External read-only accountant. Without a tab here the role exists and
+      // is assignable but its users are invisible on every tab except "All".
+      { value: 'auditor', label: 'Auditor' },
       { value: 'none', label: 'None' },
     ],
     labelOverrides: {
@@ -1052,6 +1064,8 @@ export default {
     ],
     sortField: 'startDate',
     sortOrder: -1,
+    // Both: HR administers holiday, management approves it. Two workflows over
+    // one list, which is a reason to appear twice rather than a duplication.
     department: ['human-resources', 'management'],
     labelOverrides: {
       employeeId: 'Employee',
