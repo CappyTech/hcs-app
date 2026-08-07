@@ -3,15 +3,19 @@ const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/attendanceController.js';
 
-// Daily / weekly views — admin sees all; employee/subcontractor sees own (scoped in controller)
+// Daily / weekly views — admin and accountant see all; employee/subcontractor
+// see their own (scoped in controller). The accountant is here because payroll
+// is a periodic run over the period's attendance, and Payroll is an
+// admin+accountant department that previously linked to a page its own users
+// could not open.
 router.get(
   "/daily/:date?",
-  authService.ensureRoles("admin", "employee", "subcontractor"),
+  authService.ensureRoles("admin", "accountant", "employee", "subcontractor"),
   ctrl.getDailyAttendance,
 );
 router.get(
   "/weekly/:year?/:week?",
-  authService.ensureRoles("admin", "employee", "subcontractor"),
+  authService.ensureRoles("admin", "accountant", "employee", "subcontractor"),
   ctrl.getWeeklyAttendance,
 );
 router.get(

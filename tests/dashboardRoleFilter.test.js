@@ -81,10 +81,9 @@ describe('dashboard tile role filtering', () => {
         'construction-industry-scheme/hmrc -> /subcontractor/assign',
         'construction-industry-scheme/subcontractor -> /CIS/Dashboard/',
         'construction-industry-scheme/subcontractor -> /subcontractor/assign',
-        // Payroll needs attendance, but /daily and /weekly do not admit
-        // accountants. A real gap, filtered out rather than papered over.
-        'payroll/accountant -> /daily',
-        'payroll/accountant -> /weekly',
+        // The two payroll/accountant entries that used to be here are gone:
+        // /daily and /weekly now admit accountants, because running payroll
+        // means reading the period's attendance.
       ],
       'a custom tile points somewhere its department cannot reach',
     );

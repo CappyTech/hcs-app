@@ -29,7 +29,14 @@ import mongoose from 'mongoose';
 async function filterAttendanceForUser(req, records) {
   if (!req.user || req.user.role === "admin") return records;
   const filter = await scopeQuery(req, "attendance", "r");
-  if (!filter || Object.keys(filter).length === 0) return records;
+  // scopeQuery draws a distinction this used to collapse: `null` means the
+  // role may not read this model at all, `{}` means it may read all of it.
+  // Treating both as "return everything" made a denial indistinguishable from
+  // unrestricted access. Latent until now — every role that could reach this
+  // route already held an attendance grant — but it would have become live
+  // the moment one that did not was let in.
+  if (filter === null) return [];
+  if (Object.keys(filter).length === 0) return records;
   return records.filter((rec) => {
     return Object.entries(filter).every(([k, v]) => {
       const val = rec[k]?._id || rec[k]; // handle populated refs
@@ -97,7 +104,10 @@ export const getWeeklyAttendance = async (req, res, next) => {
     let scopedGrouped = groupedAttendance;
     if (req.user && req.user.role !== "admin") {
       const filter = await scopeQuery(req, "attendance", "r");
-      if (filter && Object.keys(filter).length > 0) {
+      // Same null-means-denied distinction as filterAttendanceForUser above.
+      if (filter === null) {
+        scopedGrouped = {};
+      } else if (Object.keys(filter).length > 0) {
         // groupedAttendance is keyed by person uuid; each value has entityId (the ObjectId)
         const filterField = Object.keys(filter)[0]; // e.g. 'employeeId' or 'subcontractorId'
         const filterValue = String(filter[filterField]);

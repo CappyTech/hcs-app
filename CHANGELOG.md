@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.24.0] - 2026-08-07
+
+### Added
+- **Accountants can open the daily and weekly attendance views.** Payroll is an `admin, accountant` department whose dashboard linked to `/daily` and `/weekly`, but those routes admitted only `admin, employee, subcontractor` — so an accountant could not open the attendance that running payroll depends on. 6.23.0 hid the broken tiles; this grants the access they were advertising.
+
+  Granted deliberately and unscoped (`attendance: 'r,l'`, not `:own`): a payroll run reads the whole period, not the accountant's own records. The weekly controller already treated `accountant` as payroll-privileged when deciding whether to strip pay figures — `!["admin", "accountant"].includes(role)` — so the intent was there all along and only the route guard had never caught up. Changed in all three places that have to agree: `roleModelAccess`, the two `ensureRoles` guards, and `routeAccess`.
+
+### Fixed
+- **The attendance controller treated "denied" and "unrestricted" as the same thing.** `scopeQuery` returns `null` when a role may not read a model at all and `{}` when it may read all of it — opposite outcomes. Both the daily filter (`if (!filter || Object.keys(filter).length === 0) return records`) and the weekly scoping block (`if (filter && Object.keys(filter).length > 0)`) fell through to *no filtering* on `null`, so a denial produced exactly the output of unrestricted access.
+
+  Latent rather than live: every role that could reach these routes already held an attendance grant, so the `null` branch was unreachable. That was a property of the route guard, not of the scoping — and this release widens that guard, which is precisely when it would have started returning every employee's attendance to a role the permission system had just refused. Fixed first, then the widening applied on top.
+
 ## [6.23.0] - 2026-08-07
 
 ### Fixed
