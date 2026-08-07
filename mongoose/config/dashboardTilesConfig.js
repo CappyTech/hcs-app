@@ -232,6 +232,7 @@ export default {
         department: ['finance'],
         buttonClass: 'bg-amber-600 hover:bg-amber-700'
     },
+    /*
     KF_Customers: {
         title: 'KF Customers',
         description: 'View KF Customers',
@@ -274,7 +275,7 @@ export default {
         department: ['finance'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
-
+    */
     // ── Documents (Paperless OCR + company docs) ──────────────────────
     Paperlessngx: {
         title: 'Document Management',
