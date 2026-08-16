@@ -2,6 +2,12 @@
   <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6 mb-6">
     <h1 class="text-2xl font-bold text-center lg:text-left"><%= title %></h1>
     <div class="flex items-center gap-3">
+      <% const _openIds = (items || []).map(it => it.paperlessId).filter(id => id != null).sort((a, b) => Number(a) - Number(b)); %>
+      <button type="button" id="open-all-tabs" data-ids='<%= JSON.stringify(_openIds) %>'
+              class="text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition shadow-sm font-medium disabled:opacity-50"
+              <%= _openIds.length === 0 ? 'disabled' : '' %>>
+        Open all in new tabs (<%= _openIds.length %>)
+      </button>
       <a href="/paperless/ingest" class="text-sm text-green-700 dark:text-green-400 hover:underline">Ingest tracker</a>
     </div>
   </div>
@@ -103,6 +109,26 @@
   </div>
 
   <script nonce="<%= locals.cspNonce %>">
+    (function(){
+      // "Open all in new tabs" — open each listed document (ascending paperless number) in its own tab
+      const btn = document.getElementById('open-all-tabs');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          let ids = [];
+          try { ids = JSON.parse(btn.dataset.ids || '[]'); } catch (_) { ids = []; }
+          if (!ids.length) return;
+          let blocked = 0;
+          ids.forEach(id => {
+            const w = window.open('/paperless/ocr/' + encodeURIComponent(id), '_blank', 'noopener');
+            if (!w) blocked++;
+          });
+          if (blocked) {
+            alert('Your browser blocked ' + blocked + ' of ' + ids.length +
+                  ' tabs. Allow pop-ups for this site to open them all.');
+          }
+        });
+      }
+    })();
     (function(){
       // Only poll if the server actually started a background ingest
       const started = <%= startedBgIngest ? 'true' : 'false' %>;
