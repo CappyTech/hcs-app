@@ -55,6 +55,18 @@ const roleModelAccess = {
     quote:              'r,l',
     nominal:            'r,l',
     note:               'r,l',
+    // KashFlow reference collections mirrored by hcs-sync. Read-only
+    // everywhere — the write ops are denied in listControllerConfig, so 'r,l'
+    // is the whole grant. Without these the finance dashboard filters the
+    // tiles out for accountants (getDashboardModels checks canAccess) and the
+    // pages exist for admins only.
+    journal:               'r,l',
+    vatReturn:             'r,l',
+    accountingPeriod:      'r,l',
+    country:               'r,l',
+    currency:              'r,l',
+    quoteCategory:         'r,l',
+    purchaseOrderCategory: 'r,l',
     vehicleDeployment:  'c,r,u,l',
     assignment:         'c,r,u,l',
     // Bank reconciliation. The KashFlow-synced collections are read-only

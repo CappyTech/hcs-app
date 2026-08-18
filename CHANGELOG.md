@@ -2,6 +2,34 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.26.0] - 2026-08-18
+
+### Added
+- **Seven KashFlow collections that hcs-sync has been mirroring hourly are now readable.** `journals`, `vatreturns`, `accountingperiods`, `countries`, `currencies`, `quotecategories` and `purchaseordercategories` were synced on every run and read by nothing. They were never *unreachable* — the generic list route is registered for every model in the namespace whether or not it has a config — but with no `listControllerConfig` entry they had no title, no field order, no hidden sync metadata, and above all **no `department`**, which is what puts a tile on a dashboard. So they existed for admins only, rendered raw, at URLs nothing linked to.
+
+  Each is read-only (`deny: ['c','u','d']`) and on the finance dashboard, with the accountant granted `r,l`. KashFlow remains the system of record.
+
+  **Surfacing one of these takes four declarations that do not share a key**, and the two path keys are the trap: `listRoutes.js` reads `pathOverride` for the route, `indexController.js` reads `listPath` for the tile link, neither falls back to the other, and both default to a naive `model + 's'`. An irregular plural therefore yields a tile pointing at `/countrys` while the route is `/countries`. `tests/listConfigPaths.test.js` pins route-equals-tile for **every** entry that earns a tile, not just the new ones.
+
+- **`product` and `purchaseOrder` are deliberately left unconfigured**, and a test asserts it. Both return 0 rows from KashFlow on every run — this business uses neither the product catalogue nor purchase orders — so a tile would advertise a permanently empty page. The models and routes already exist if that changes.
+
+### Fixed
+- **The "OCR Documents" dashboard tile linked to a page that does not exist.** `OcrDocument` sets `pathOverride: '/paperless'`, which moves the route; the tile link comes from `listPath`, which was unset, so it fell back to `/OcrDocuments` — a path no router registers. The documents dashboard has been advertising a 404. This is the same shape as the 6.23.0 tile bug (dashboards advertising links that answer 403) and was missed for the same reason: the two halves are declared in different files under different names.
+
+  Eight further entries (`employeeHoliday`, `holidayRequest`, `holidayDismissal`, `holidayCustom`, `OcrDocumentIngest`, `vehicleFuelLog`, `vehicleMileageLog`, `vehicleService`) had camelCase tile links against lowercased routes. Those worked, but only because Express routing is case-insensitive by default — a framework default nobody set on purpose. All now state the path explicitly.
+
+- **`fieldOrder` orders columns but does not restrict them**, so every field not in `hideFields` was appended after it — the VAT returns table came out 22 columns wide, nine of them VAT boxes, and `countries` grew a stray KashFlow `Id`. All seven now set `strictOrder`, which makes `fieldOrder` definitive and stops a field KashFlow starts returning from arriving as an unannounced column (`PVABoxTextChangeFrom` did exactly that). The VAT return list is eight columns — Box 5, the net payable, being the one box worth a column — while the detail page still shows all 21 fields, via a `fieldOrder` in `CRUDControllerConfig`, which wins in `getMergedConfig`.
+
+- **A filter type that silently filtered nothing.** `applyFilterParams` implements `boolean`, `select`, `daterange` and `numberrange`; anything else renders a control that never applies. The VAT return payment filter is a `select` over KashFlow's real values (`Paid`, `Unpaid`, `-`).
+
+### Notes
+Two things found while reading the synced data that are **not** fixed here, because both belong upstream in `@cappytech/hcs-schemas`:
+
+- **The `journal` entity does not describe the payload KashFlow actually returns.** It declares `Id`, `Date`, `Description` and `Lines`; the list endpoint returns none of them (0 of 400 rows have `Id` or `Date`). The real fields are `Number`, `JournalName`, `JournalDate`, `Comment`, `TotalAmount` and friends, which survive only because the model is `strict: false`. **`Lines` — the nominal debit/credit pairs — is not synced at all**, existing only on the per-journal detail endpoint that hcs-sync never calls. Anything intending to reconcile a bank line against a journal needs that fetch added to hcs-sync first; note also that `LockedBankLines` is 0 on all 400 rows, so no journal in this ledger currently touches a bank line.
+- **`accountingPeriod.IsLocked` does not exist.** 0 of 8 rows carry it. `IsCurrentPeriod` is the field that distinguishes the open period. A period-close check must derive "closed" from the dates and `IsCurrentPeriod`, not from `IsLocked`.
+
+Dates in all three of these collections are stored as `"YYYY-MM-DDTHH:mm:ss"` **strings**, not `Date`s — the same cause as the `banktransactions.Date` migration (hcs-sync upserts through the native driver with `$literal` and never hits Mongoose casting). Sorting works, since that format is lexicographically chronological; date-range filters would not, so none are configured. `vatreturns.FileDate` carries the .NET sentinel `0001-01-01T00:00:00` for "never filed".
+
 ## [6.25.0] - 2026-08-18
 
 ### Added
