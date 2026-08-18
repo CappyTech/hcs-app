@@ -1,0 +1,184 @@
+<%
+  /**
+   * One field of the website content form, dispatched on field.type.
+   *
+   * Locals: field, value, media (the picker's options).
+   *
+   * Repeating groups (gallery, hours, offices) render the rows that exist plus
+   * two blank ones, and the controller drops any row left empty. That is
+   * deliberate rather than a limitation: the CSP forbids inline scripts, so an
+   * "add row" button would need JS in a vendored file to earn its place, and
+   * two spare rows covers how these are actually edited. Saving twice adds four.
+   */
+  const INPUT = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 '
+    + 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white '
+    + 'focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent';
+  const LABEL = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
+  const HELP = 'mt-1 text-xs text-gray-500 dark:text-gray-400';
+  const SUBLABEL = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
+
+  const v = value === undefined || value === null ? '' : value;
+  const dateValue = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+  const blankRows = 2;
+%>
+
+<% if (field.type === 'richtext') { %>
+  <%# The Quill toolbar/editor/hidden-input trio. layout.ejs binds these by id,
+      so there can only ever be one on the page — see webContentConfig. %>
+  <label class="<%= LABEL %>"><%= field.label %></label>
+  <div id="quill-toolbar" class="rounded-t-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+    <span class="ql-formats">
+      <select class="ql-header">
+        <option selected></option>
+        <option value="1"></option>
+        <option value="2"></option>
+        <option value="3"></option>
+      </select>
+    </span>
+    <span class="ql-formats">
+      <button class="ql-bold"></button>
+      <button class="ql-italic"></button>
+      <button class="ql-underline"></button>
+    </span>
+    <span class="ql-formats">
+      <button class="ql-list" value="ordered"></button>
+      <button class="ql-list" value="bullet"></button>
+    </span>
+    <span class="ql-formats">
+      <button class="ql-blockquote"></button>
+      <button class="ql-link"></button>
+    </span>
+    <span class="ql-formats">
+      <button class="ql-clean"></button>
+    </span>
+  </div>
+  <div id="quill-editor"
+    class="min-h-64 rounded-b-lg border border-t-0 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+    style="min-height:260px"><%- v %></div>
+  <input type="hidden" name="<%= field.name %>" id="contentHtml-input">
+
+<% } else if (field.type === 'textarea') { %>
+  <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
+  <textarea id="f-<%= field.name %>" name="<%= field.name %>" rows="3" class="<%= INPUT %>"><%= v %></textarea>
+
+<% } else if (field.type === 'number') { %>
+  <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
+  <input id="f-<%= field.name %>" type="number" name="<%= field.name %>" value="<%= v === '' ? 0 : v %>" class="<%= INPUT %>">
+
+<% } else if (field.type === 'date') { %>
+  <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
+  <input id="f-<%= field.name %>" type="date" name="<%= field.name %>" value="<%= dateValue(v) %>" class="<%= INPUT %>">
+
+<% } else if (field.type === 'url') { %>
+  <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
+  <input id="f-<%= field.name %>" type="url" name="<%= field.name %>" value="<%= v %>" class="<%= INPUT %>">
+
+<% } else if (field.type === 'tags') { %>
+  <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
+  <input id="f-<%= field.name %>" type="text" name="<%= field.name %>"
+    value="<%= Array.isArray(v) ? v.join(', ') : v %>" class="<%= INPUT %>">
+
+<% } else if (field.type === 'image' || field.type === 'panel') { %>
+  <%
+    const img = v && typeof v === 'object' ? v : {};
+    const isPanel = field.type === 'panel';
+  %>
+  <label class="<%= LABEL %>"><%= field.label %></label>
+  <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+    <div class="flex gap-3 items-start">
+      <% if (img.media) { %>
+        <img src="/website/media/<%= img.media %>/file" alt=""
+          class="w-24 h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700">
+      <% } else { %>
+        <div class="w-24 h-24 rounded-lg border border-dashed border-gray-300 dark:border-gray-600
+                    flex items-center justify-center text-gray-400">
+          <i class="bi bi-image"></i>
+        </div>
+      <% } %>
+      <div class="flex-1 space-y-2">
+        <select name="<%= field.name %>[media]" class="<%= INPUT %>">
+          <option value="">— No image —</option>
+          <% media.forEach(function (m) { %>
+            <option value="<%= m.uuid %>" <%= img.media === m.uuid ? 'selected' : '' %>>
+              <%= m.filename %> (<%= m.width %>×<%= m.height %>)
+            </option>
+          <% }); %>
+        </select>
+        <div>
+          <label class="<%= SUBLABEL %>" for="f-<%= field.name %>-alt">Alt text — describe what is in the photo</label>
+          <input id="f-<%= field.name %>-alt" type="text" name="<%= field.name %>[alt]" value="<%= img.alt || '' %>" class="<%= INPUT %>">
+        </div>
+        <% if (isPanel) { %>
+          <div>
+            <label class="<%= SUBLABEL %>" for="f-<%= field.name %>-caption">Caption</label>
+            <input id="f-<%= field.name %>-caption" type="text" name="<%= field.name %>[caption]" value="<%= img.caption || '' %>" class="<%= INPUT %>">
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+<% } else if (field.type === 'gallery') { %>
+  <% const rows = (Array.isArray(v) ? v : []).concat(Array.from({ length: blankRows }, () => ({}))); %>
+  <label class="<%= LABEL %>"><%= field.label %></label>
+  <div class="space-y-3">
+    <% rows.forEach(function (row, i) { %>
+      <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex gap-3 items-start">
+        <% if (row.media) { %>
+          <img src="/website/media/<%= row.media %>/file" alt=""
+            class="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-gray-700">
+        <% } %>
+        <div class="flex-1 grid gap-2 sm:grid-cols-3">
+          <select name="<%= field.name %>[<%= i %>][media]" class="<%= INPUT %>">
+            <option value="">— Empty —</option>
+            <% media.forEach(function (m) { %>
+              <option value="<%= m.uuid %>" <%= row.media === m.uuid ? 'selected' : '' %>><%= m.filename %></option>
+            <% }); %>
+          </select>
+          <input type="text" name="<%= field.name %>[<%= i %>][alt]" value="<%= row.alt || '' %>" placeholder="Alt text" class="<%= INPUT %>">
+          <input type="text" name="<%= field.name %>[<%= i %>][caption]" value="<%= row.caption || '' %>" placeholder="Caption" class="<%= INPUT %>">
+        </div>
+      </div>
+    <% }); %>
+  </div>
+
+<% } else if (field.type === 'hours') { %>
+  <% const rows = (Array.isArray(v) ? v : []).concat(Array.from({ length: blankRows }, () => ({}))); %>
+  <label class="<%= LABEL %>"><%= field.label %></label>
+  <div class="space-y-2">
+    <% rows.forEach(function (row, i) { %>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <input type="text" name="<%= field.name %>[<%= i %>][days]" value="<%= row.days || '' %>" placeholder="Monday – Friday" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][time]" value="<%= row.time || '' %>" placeholder="8:00am – 5:00pm" class="<%= INPUT %>">
+      </div>
+    <% }); %>
+  </div>
+
+<% } else if (field.type === 'offices') { %>
+  <% const rows = (Array.isArray(v) ? v : []).concat(Array.from({ length: blankRows }, () => ({}))); %>
+  <label class="<%= LABEL %>"><%= field.label %></label>
+  <div class="space-y-3">
+    <% rows.forEach(function (row, i) { const a = row.address || {}; %>
+      <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-3 grid gap-2 sm:grid-cols-2">
+        <input type="text" name="<%= field.name %>[<%= i %>][label]" value="<%= row.label || '' %>" placeholder="Liverpool office" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][phone]" value="<%= row.phone || '' %>" placeholder="0151 475 1217" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][line1]" value="<%= a.line1 || '' %>" placeholder="Address line 1" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][line2]" value="<%= a.line2 || '' %>" placeholder="Address line 2" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][line3]" value="<%= a.line3 || '' %>" placeholder="Town / city" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][line4]" value="<%= a.line4 || '' %>" placeholder="County" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][postcode]" value="<%= a.postcode || '' %>" placeholder="Postcode" class="<%= INPUT %>">
+      </div>
+    <% }); %>
+  </div>
+
+<% } else { %>
+  <label class="<%= LABEL %>" for="f-<%= field.name %>">
+    <%= field.label %><% if (field.required) { %> <span class="text-red-600">*</span><% } %>
+  </label>
+  <input id="f-<%= field.name %>" type="text" name="<%= field.name %>" value="<%= v %>"
+    <%= field.required ? 'required' : '' %> class="<%= INPUT %>">
+<% } %>
+
+<% if (field.help) { %>
+  <p class="<%= HELP %>"><%= field.help %></p>
+<% } %>

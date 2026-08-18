@@ -198,21 +198,28 @@
           </script>
 
           <% if (typeof quillEditor !== 'undefined' && quillEditor) { %>
-          <!-- Quill JS + init (policy editor pages only) -->
+          <!-- Quill JS + init. Used by the policy editor and by /website.
+               Still exactly one instance per page: the ids below are hardcoded
+               and a second editor would write into the first one's input. -->
           <script src="/resources/vendor/quill.js"></script>
           <script nonce="<%= locals.cspNonce %>">
             (function () {
               var quill = new Quill('#quill-editor', {
                 theme: 'snow',
                 modules: { toolbar: '#quill-toolbar' },
-                placeholder: 'Start typing your policy content…',
+                placeholder: 'Start typing…',
               });
 
               // Pre-populate from existing hidden input (edit mode) — content already rendered
               // in the div by EJS, so Quill reads the DOM directly.
 
-              // On submit: copy Quill HTML into the hidden input
-              var form = document.getElementById('policy-form');
+              // On submit: copy Quill HTML into the hidden input.
+              // closest('form') rather than a hardcoded id, so any page that
+              // opts in with quillEditor works without registering its form id
+              // here. The #policy-form fallback keeps the original behaviour if
+              // the editor is ever rendered outside a form.
+              var editorEl = document.getElementById('quill-editor');
+              var form = (editorEl && editorEl.closest('form')) || document.getElementById('policy-form');
               if (form) {
                 form.addEventListener('submit', function () {
                   document.getElementById('contentHtml-input').value = quill.root.innerHTML;
