@@ -2,6 +2,25 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.28.0] - 2026-08-19
+
+### Changed
+- **Promoted 35 spec-derived operations into the curated API docs.** The generator had found endpoints on entities the app already documents by hand — supplier and customer transaction feeds, journal templates, reminder letters, bulk email, four bulk deletes — and they were rendering as machine text under groups full of curated prose. They are now hand-written entries with real descriptions, and the generated file no longer carries them.
+
+  Hand-written **213 → 248** across the same 28 groups; generated **492 → 457** across 53. **Merged stays 705** — nothing gained or lost, 35 moved. The removal was not done by hand: promoting an operation into `apiDocsConfig.js` is exactly what stops `scripts/generate-api-docs.mjs` emitting it, so re-running the generator did the deletion and a second run is byte-identical. Operation ids were kept unchanged so existing `/help/api` anchors still resolve.
+
+  Field tables are still the spec's — that is the part machine generation gets right. What was written by hand is the prose around them, and the useful half of that is where KashFlow's published surface and this estate's actual usage disagree:
+
+  - **`GET /vatrates` is not the path hcs-sync calls.** It reads `GET /vat/settings/vatrates` — two published paths for one dataset. Same pattern for `GET /currencies/list` vs `/currencies` and `GET /products/list` vs `/products`. Anyone reconciling documented endpoints against synced collections hits this and concludes something is broken.
+  - **`DELETE /journallist` is unwrapped in hcs-sync, but `DELETE /journals/{number}` is wrapped.** The bulk form is the one with no safe failure mode — a partial success leaves no record of what went — and the docs now say so rather than leaving the asymmetry to be rediscovered.
+  - **`POST /journals/template` returns `LineItems[]` with `NominalCode`, `Debit`, `Credit`.** That is the nominal detail the journal *list* endpoint does not return, and it is the shape anything reconciling a bank line against a journal would need.
+  - **`GET /nominals/{nominalcode}/products` is why a product is keyed on `(nominalCode, code)`** — the catalogue hangs off the chart of accounts, so the same product code can exist under more than one nominal.
+  - KashFlow's own summary for `GET /suppliers/{code}/recurringpurchases` says "by customer code". The spec text is wrong, not the path.
+  - The six GoCardless mandate operations are documented and marked unused — GoCardless is not connected on this account.
+  - `POST /internal/invoices/refund/baddebt` sits under `/internal/`, KashFlow's own application API. Published in the spec, but unsupported and liable to change.
+
+  The remaining 457 generated operations stay generated, and deliberately: they are whole KashFlow subsystems this business does not touch (ITSA, Dropbox, ViaPost, GoCardless, Fixed Asset Register, 66 report endpoints). Moving them would relabel 41,000 lines of machine text as curated prose, which is the one thing the `generated` flag exists to prevent.
+
 ## [6.27.0] - 2026-08-18
 
 [#79](https://github.com/CappyTech/hcs-app/pull/79) · pairs with [hcs-web#7](https://github.com/CappyTech/hcs-web/pull/7)
