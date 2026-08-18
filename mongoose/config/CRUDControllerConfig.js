@@ -581,6 +581,60 @@ export default {
       read: ['ensureRoles:admin,accountant'],
     }
   },
+  // KashFlow reference collections mirrored by hcs-sync. Read-only for the
+  // same reason as `nominal` above: KashFlow owns them, the generic write
+  // routes are denied in listControllerConfig, and only the read middleware
+  // is widened. Without an entry here the list route defaults to
+  // `ensureRole:admin` and an accountant gets a 403 on a tile they can see.
+  journal: {
+    readOnly: ['uuid', 'createdAt'],
+    middleware: {
+      read: ['ensureRoles:admin,accountant'],
+    }
+  },
+  vatReturn: {
+    readOnly: ['uuid', 'createdAt'],
+    // The detail page shows the whole return; the list shows eight columns.
+    // getMergedConfig spreads CRUDControllerConfig over listControllerConfig,
+    // so this fieldOrder overrides the narrow one there rather than merging.
+    fieldOrder: ['PeriodId', 'StartDate', 'EndDate', 'DueDate', 'Status', 'PaidStatus',
+      'Box1', 'Box2', 'Box3', 'Box4', 'Box5', 'Box6', 'Box7', 'Box8', 'Box9',
+      'TransactionsCount', 'FileDate', 'SubmissionErrorMessage',
+      'IsSourceMTD', 'IsCashAccounting', 'AreVatNumbersValid'],
+    middleware: {
+      read: ['ensureRoles:admin,accountant'],
+    }
+  },
+  accountingPeriod: {
+    readOnly: ['uuid', 'createdAt'],
+    middleware: {
+      read: ['ensureRoles:admin,accountant'],
+    }
+  },
+  country: {
+    readOnly: ['uuid', 'createdAt'],
+    middleware: {
+      read: ['ensureRoles:admin,accountant'],
+    }
+  },
+  currency: {
+    readOnly: ['uuid', 'createdAt'],
+    middleware: {
+      read: ['ensureRoles:admin,accountant'],
+    }
+  },
+  quoteCategory: {
+    readOnly: ['uuid', 'createdAt'],
+    middleware: {
+      read: ['ensureRoles:admin,accountant'],
+    }
+  },
+  purchaseOrderCategory: {
+    readOnly: ['uuid', 'createdAt'],
+    middleware: {
+      read: ['ensureRoles:admin,accountant'],
+    }
+  },
   note: { 
     readOnly: ['uuid', 'createdAt'],
     middleware: {

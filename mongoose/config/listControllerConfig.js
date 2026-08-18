@@ -1010,6 +1010,10 @@ export default {
   },
   employeeHoliday: {
     title: 'Employee Holiday',
+    // Stated explicitly: `listPath` (tile) defaults to camelCase while the
+    // route is lowercased, so these matched only because Express routing is
+    // case-insensitive by default.
+    listPath: '/employeeholidays',
     // Show periodStart as the clickable link into the record
     linkField: 'periodStart',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
@@ -1056,6 +1060,10 @@ export default {
   },
   holidayRequest: {
     title: 'Holiday Requests',
+    // Stated explicitly: `listPath` (tile) defaults to camelCase while the
+    // route is lowercased, so these matched only because Express routing is
+    // case-insensitive by default.
+    listPath: '/holidayrequests',
     linkField: 'startDate',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
     fieldOrder: [
@@ -1207,6 +1215,10 @@ export default {
   },
   holidayDismissal: {
     title: 'Dismissed Holidays',
+    // Stated explicitly: `listPath` (tile) defaults to camelCase while the
+    // route is lowercased, so these matched only because Express routing is
+    // case-insensitive by default.
+    listPath: '/holidaydismissals',
     description: {
       manage: 'Manage company holidays'
     },
@@ -1239,6 +1251,10 @@ export default {
   },
   holidayCustom: {
     title: 'Company Holidays',
+    // Stated explicitly: `listPath` (tile) defaults to camelCase while the
+    // route is lowercased, so these matched only because Express routing is
+    // case-insensitive by default.
+    listPath: '/holidaycustoms',
     description: {
       create: 'Create a company holiday',
       manage: 'Manage company holidays'
@@ -1251,6 +1267,10 @@ export default {
   },
   OcrDocument: {
     title: 'OCR Documents',
+    // The route is `/paperless` (pathOverride above), so the tile must say so
+    // too. `listPath` defaults to `/OcrDocuments`, which is not a route on
+    // this app at all — the documents dashboard tile linked to a 404.
+    listPath: '/paperless',
     description: {
       manage: 'Manage OCR documents imported from Paperless-ngx.'
     },
@@ -1265,6 +1285,10 @@ export default {
   },
   OcrDocumentIngest: {
     title: 'OCR Ingest Log',
+    // Stated explicitly: `listPath` (tile) defaults to camelCase while the
+    // route is lowercased, so these matched only because Express routing is
+    // case-insensitive by default.
+    listPath: '/ocrdocumentingests',
     description: {
       manage: 'Paperless-ngx document ingest status and sync tracking.'
     },
@@ -1363,8 +1387,270 @@ export default {
     department: ['finance'],
     deny: ['c', 'u', 'd'],
   },
+
+  // ── KashFlow reference collections synced by hcs-sync ─────────────────
+  //
+  // These are mirrored on every hourly run and, until now, read by nothing:
+  // no config meant no title, no field order, no department — so no dashboard
+  // tile, and the generic list route rendered every raw sync field to admins
+  // at an URL nothing linked to. All are read-only here; KashFlow owns them.
+  //
+  // Three files have to agree to surface one of these, and they use different
+  // keys for the same idea:
+  //   1. here          — `pathOverride` sets the ROUTE (listRoutes.js)
+  //   2. here          — `listPath` sets the TILE LINK (indexController.js)
+  //   3. CRUDControllerConfig — middleware.read, or the route stays admin-only
+  //   4. rolePermissionsConfig — roleModelAccess, or the tile is filtered out
+  // `pathOverride` and `listPath` are read by different modules and neither
+  // falls back to the other, so an irregular plural needs BOTH or the tile
+  // links to a 404 (`/countrys`). Keys must be the exact camelCase modelName:
+  // listRoutes looks up `__listControllerConfig[originalModel]` and a
+  // lowercased key silently misses (see `vatrate`, which only works because
+  // its default plural happens to be correct).
+  //
+  // `product` and `purchaseOrder` are deliberately NOT configured: both return
+  // 0 rows from KashFlow on every run (checked across 12 consecutive runs —
+  // this business uses neither the product catalogue nor purchase orders), so
+  // a tile would advertise a permanently empty page. Add config here if that
+  // ever changes; the models and routes already exist.
+  journal: {
+    title: 'Journals',
+    description: {
+      manage: 'KashFlow journal entries — manual double-entry adjustments.'
+    },
+    linkField: 'JournalName',
+    // NOTE: the hcs-schemas `journal` entity does not describe this payload.
+    // It declares Id / Date / Description / Lines; KashFlow's list endpoint
+    // returns none of those. The real fields are below. The model is
+    // `strict: false`, which is the only reason the data survived at all.
+    // `Lines` (the nominal debit/credit pairs) is NOT synced — it exists only
+    // on the per-journal detail endpoint, which hcs-sync never calls.
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // hcs-sync bookkeeping, meaningless to a reader
+      '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt',
+      // Category is KashFlow's integer enum; CategoryDescription is the label
+      'Category',
+      // Journal templates are not used here — both fields are empty on all rows
+      'IsTemplate', 'TemplateName'],
+    fieldOrder: ['Number', 'JournalName', 'JournalDate', 'Comment', 'TotalAmount',
+      'CategoryDescription', 'TradeBorderType', 'ExcludedFromProfitAndLoss',
+      'VATReturnId', 'LockedBankLines'],
+    strictOrder: true,
+    labelOverrides: {
+      JournalName: 'Reference',
+      JournalDate: 'Date',
+      Comment: 'Description',
+      TotalAmount: 'Total',
+      CategoryDescription: 'Category',
+      ExcludedFromProfitAndLoss: 'Excluded from P&L',
+      VATReturnId: 'VAT Return',
+      LockedBankLines: 'Locked Bank Lines',
+    },
+    // JournalDate is stored as a "YYYY-MM-DDTHH:mm:ss" STRING, not a Date —
+    // hcs-sync upserts through the native driver with $literal and never hits
+    // Mongoose casting (the same fault as banktransactions.Date before its
+    // migration). Sorting still works because that format is lexicographically
+    // chronological. A date-RANGE filter would not, which is why there is none.
+    sortField: 'JournalDate',
+    sortOrder: -1,
+    department: ['finance'],
+    deny: ['c', 'u', 'd'],
+    tabsby: 'CategoryDescription',
+    tabsDynamic: true,
+  },
+  vatReturn: {
+    title: 'VAT Returns',
+    description: {
+      manage: 'VAT returns as filed in KashFlow, with box figures and payment status.'
+    },
+    linkField: 'PeriodId',
+    // Stated explicitly rather than relying on the default plural: the tile
+    // link would otherwise be camelCase (`/vatReturns`) and the route lowercase,
+    // matching only because Express routing is case-insensitive by default.
+    pathOverride: '/vatreturns',
+    listPath: '/vatreturns',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt',
+      // EC Sales List — not applicable to a domestic construction business
+      'ECSLStatus', 'ECSLSubmissionErrorMessage', 'ECSLSubmissionResponseTimeStamp',
+      // KashFlow internals with no meaning outside it
+      'SubmittedBy', 'VatReturnBatchItemId', 'RegisteredIn', 'HasCSV',
+      'SubmissionResponseTimeStamp', 'PVABoxTextChangeFrom',
+      // Flat-rate scheme is not in use; both are null on every row
+      'IsFRS', 'FRSRate'],
+    // LIST columns only. fieldOrder does not restrict columns by itself —
+    // anything not hidden is appended after it — so `strictOrder` below makes
+    // this the definitive set. All 21 fields, including the other eight boxes,
+    // are on the detail page: CRUDControllerConfig wins in getMergedConfig.
+    // Box 5 is the headline figure (net VAT payable), so it is the one box
+    // worth a column; nine box columns make the table unreadable.
+    fieldOrder: ['PeriodId', 'StartDate', 'EndDate', 'DueDate', 'Status', 'PaidStatus',
+      'Box5', 'TransactionsCount'],
+    strictOrder: true,
+    labelOverrides: {
+      PeriodId: 'Period',
+      DueDate: 'Due',
+      PaidStatus: 'Payment',
+      Box1: 'Box 1 — VAT due on sales',
+      Box2: 'Box 2 — VAT due on EC acquisitions',
+      Box3: 'Box 3 — Total VAT due',
+      Box4: 'Box 4 — VAT reclaimed',
+      Box5: 'Box 5 — Net VAT to pay',
+      Box6: 'Box 6 — Total sales ex VAT',
+      Box7: 'Box 7 — Total purchases ex VAT',
+      Box8: 'Box 8 — EC supplies',
+      Box9: 'Box 9 — EC acquisitions',
+      TransactionsCount: 'Transactions',
+      FileDate: 'Filed',
+      IsSourceMTD: 'MTD',
+      IsCashAccounting: 'Cash Accounting',
+      AreVatNumbersValid: 'VAT Numbers Valid',
+      SubmissionErrorMessage: 'Submission Error',
+    },
+    // Same string-date caveat as `journal` above; ISO strings sort correctly.
+    // FileDate carries the .NET "never" sentinel 0001-01-01T00:00:00 on
+    // returns that were never filed — it is not a real date, do not parse it
+    // into a "filed 2000 years ago" figure.
+    sortField: 'EndDate',
+    sortOrder: -1,
+    department: ['finance'],
+    deny: ['c', 'u', 'd'],
+    tabsby: 'Status',
+    tabsDynamic: true,
+    filters: [
+      // Only 'boolean', 'select', 'daterange' and 'numberrange' are implemented
+      // in applyFilterParams — an unrecognised type renders a control that
+      // silently filters nothing. '-' is KashFlow's own value for a return
+      // with no payment status, not a placeholder for missing data.
+      { field: 'PaidStatus', label: 'Payment', type: 'select', options: [
+        { value: 'Paid', label: 'Paid' },
+        { value: 'Unpaid', label: 'Unpaid' },
+        { value: '-', label: 'Not applicable' },
+      ] },
+    ],
+    // Deliberately no 'daterange' filter on StartDate/EndDate/DueDate: those
+    // are stored as strings, and the daterange branch builds `new Date(...)`
+    // bounds, which match no string value at all — a filter that quietly
+    // returns nothing is worse than no filter.
+  },
+  accountingPeriod: {
+    title: 'Accounting Periods',
+    description: {
+      manage: 'KashFlow accounting periods and which one is currently open.'
+    },
+    linkField: 'StartDate',
+    // Stated explicitly rather than relying on the default plural: the tile
+    // link would otherwise be camelCase (`/accountingPeriods`) and the route lowercase,
+    // matching only because Express routing is case-insensitive by default.
+    pathOverride: '/accountingperiods',
+    listPath: '/accountingperiods',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt'],
+    // NOTE: hcs-schemas declares `IsLocked` on this entity. KashFlow does not
+    // return it — 0 of 8 rows have the field. `IsCurrentPeriod` is what
+    // actually distinguishes the open period, and it is the only boolean here.
+    // Anything asking "is this period closed?" must derive it from the dates
+    // and IsCurrentPeriod, not from IsLocked.
+    fieldOrder: ['Id', 'StartDate', 'EndDate', 'IsCurrentPeriod', 'JournalRef', 'YearEndJournalId'],
+    strictOrder: true,
+    labelOverrides: {
+      IsCurrentPeriod: 'Current',
+      JournalRef: 'Journal Ref',
+      YearEndJournalId: 'Year-End Journal',
+    },
+    sortField: 'StartDate',
+    sortOrder: -1,
+    department: ['finance'],
+    deny: ['c', 'u', 'd'],
+  },
+  country: {
+    title: 'Countries',
+    description: {
+      manage: 'KashFlow country list used for supplier and customer addresses.'
+    },
+    linkField: 'Name',
+    // Irregular plural: both keys required, and they must match. See the
+    // block comment at the head of this group.
+    pathOverride: '/countries',
+    listPath: '/countries',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt'],
+    fieldOrder: ['Code', 'Name', 'IsEU'],
+    strictOrder: true,
+    labelOverrides: { IsEU: 'EU' },
+    sortField: 'Name',
+    sortOrder: 1,
+    department: ['finance'],
+    deny: ['c', 'u', 'd'],
+    filters: [
+      { field: 'IsEU', label: 'EU', type: 'boolean', falseLabel: 'Non-EU', trueLabel: 'EU' },
+    ],
+  },
+  currency: {
+    title: 'Currencies',
+    description: {
+      manage: 'KashFlow currencies and exchange rates.'
+    },
+    linkField: 'Code',
+    pathOverride: '/currencies',
+    listPath: '/currencies',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt'],
+    fieldOrder: ['Code', 'Name', 'Symbol', 'ExchangeRate', 'AutoUpdate', 'DisplaySymbolOnRight'],
+    strictOrder: true,
+    labelOverrides: {
+      ExchangeRate: 'Exchange Rate',
+      AutoUpdate: 'Auto Update',
+      DisplaySymbolOnRight: 'Symbol on Right',
+    },
+    sortField: 'Code',
+    sortOrder: 1,
+    department: ['finance'],
+    deny: ['c', 'u', 'd'],
+  },
+  quoteCategory: {
+    title: 'Quote Categories',
+    description: {
+      manage: 'Categories used to group KashFlow quotes.'
+    },
+    linkField: 'Name',
+    pathOverride: '/quotecategories',
+    listPath: '/quotecategories',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt',
+      // KashFlow UI icon styling — no meaning in this app
+      'IconColor', 'IconId', 'IconType'],
+    fieldOrder: ['Number', 'Name'],
+    strictOrder: true,
+    sortField: 'Number',
+    sortOrder: 1,
+    department: ['finance'],
+    deny: ['c', 'u', 'd'],
+  },
+  purchaseOrderCategory: {
+    title: 'Purchase Order Categories',
+    description: {
+      manage: 'Categories used to group KashFlow purchase orders.'
+    },
+    linkField: 'Name',
+    pathOverride: '/purchaseordercategories',
+    listPath: '/purchaseordercategories',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt',
+      'IconColor', 'IconId', 'IconType'],
+    fieldOrder: ['Number', 'Name'],
+    strictOrder: true,
+    sortField: 'Number',
+    sortOrder: 1,
+    department: ['finance'],
+    deny: ['c', 'u', 'd'],
+  },
   vehicleFuelLog: {
     title: 'Fuel Logs',
+    // Stated explicitly: `listPath` (tile) defaults to camelCase while the
+    // route is lowercased, so these matched only because Express routing is
+    // case-insensitive by default.
+    listPath: '/vehiclefuellogs',
     description: {
       create: 'Record a fuel fill-up for a vehicle.',
       manage: 'Track fuel receipts, costs and consumption across the fleet.',
@@ -1422,6 +1708,10 @@ export default {
   },
   vehicleMileageLog: {
     title: 'Mileage Logs',
+    // Stated explicitly: `listPath` (tile) defaults to camelCase while the
+    // route is lowercased, so these matched only because Express routing is
+    // case-insensitive by default.
+    listPath: '/vehiclemileagelogs',
     description: {
       create: 'Record a trip / odometer reading for a vehicle.',
       manage: 'Track mileage, trips and HMRC mileage claims.',
@@ -1488,6 +1778,10 @@ export default {
   },
   vehicleService: {
     title: 'Service History',
+    // Stated explicitly: `listPath` (tile) defaults to camelCase while the
+    // route is lowercased, so these matched only because Express routing is
+    // case-insensitive by default.
+    listPath: '/vehicleservices',
     description: {
       create: 'Record a service, MOT or repair for a vehicle.',
       manage: 'View and manage vehicle service history and costs.',
