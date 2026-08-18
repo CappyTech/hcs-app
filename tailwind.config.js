@@ -15,7 +15,11 @@ const staticSafelist = [
   'bg-green-700', 'hover:bg-green-800',
   'bg-blue-800', 'bg-green-800',
   // Common text colors potentially applied via config
-  'text-green-600', 'text-green-700', 'text-blue-700'
+  'text-green-600', 'text-green-700', 'text-blue-700',
+  // renderFieldTableHtml (mongoose/controllers/helpController.js) indents nested API-doc
+  // fields with `pl-${depth * 4}`. Controllers are not in `content`, so without these the
+  // second and third levels of every request-field table render with no indent at all.
+  'pl-8', 'pl-12'
 ];
 
 export default {

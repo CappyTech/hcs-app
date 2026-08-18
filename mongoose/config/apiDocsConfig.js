@@ -19,6 +19,8 @@
  *     readOnly: true  — returned in responses but MUST NOT be sent in requests
  */
 
+import apiDocsGenerated from './apiDocsGenerated.js';
+
 const apiDocs = [
   // ─────────────────────────────────────────────────────────────────────────
   //  PURCHASES
@@ -1266,7 +1268,7 @@ const apiDocs = [
       },
       {
         id: 'suppliers-suggested-code',
-        method: 'GET',
+        method: 'POST',
         path: '/suppliers/suggestedcode',
         summary: 'Generate Suggested Supplier Code',
         description: 'Generates a suggested unique supplier code from a supplier name. Useful for pre-populating the Code field before creating a supplier.',
@@ -2294,7 +2296,7 @@ const apiDocs = [
       {
         id: 'vatreport-zero-rated',
         method: 'GET',
-        path: '/reports/vat/zeroquoted',
+        path: '/reports/vat/zerorated',
         summary: 'Get Zero-Rated VAT Report',
         description: 'Returns all 0% and N/A VAT transactions for invoices, purchases, and bank entries within a date range.',
         request: {
@@ -3971,6 +3973,7 @@ const apiDocs = [
         },
         notes: [
           'This operation is destructive — the original bank transaction is deleted after the new entity is created.',
+          'hcs-sync deliberately ships no wrapper for this endpoint — that absence is what keeps KashFlow the system of record. Do not add one.',
         ],
       },
       {
@@ -4072,6 +4075,7 @@ const apiDocs = [
         },
         notes: [
           'The original bank transactions are deleted after successful assignment.',
+          'hcs-sync deliberately ships no wrapper for this endpoint — that absence is what keeps KashFlow the system of record. Do not add one.',
           'Check FailedTransactions to identify any that could not be processed.',
         ],
       },
@@ -4116,6 +4120,7 @@ const apiDocs = [
         },
         notes: [
           'Swagger documents HTTP 204 as success but also defines a response body for failures — check the array for partial failures.',
+          'hcs-sync deliberately ships no wrapper for this endpoint — that absence is what keeps KashFlow the system of record. Do not add one.',
         ],
       },
     ],
@@ -6855,14 +6860,17 @@ const apiDocs = [
       {
         id: 'products-get-one',
         method: 'GET',
-        path: '/products/{id}',
+        path: '/products/{nominalCode}/{code}',
         summary: 'Get Product',
-        description: 'Returns a single product by ID.',
+        description: 'Returns a single product, addressed by its nominal code and product code.',
         request: { fields: [
-          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Product ID.' },
+          { name: 'nominalCode', type: 'integer', required: true, description: 'Path parameter. Nominal code the product sits under.' },
+          { name: 'code',        type: 'string',  required: true, description: 'Path parameter. Product code.' },
         ] },
         response: { status: 200, description: 'Product object. Same fields as the list response.', fields: [] },
-        notes: [],
+        notes: [
+          'A product is addressed by (nominalCode, code), not by a bare id — the same product code can exist under more than one nominal. hcs-sync\'s client calls /products/${id}, which does not exist in the published spec.',
+        ],
       },
       {
         id: 'products-create',
@@ -6881,11 +6889,12 @@ const apiDocs = [
       {
         id: 'products-update',
         method: 'PUT',
-        path: '/products/{id}',
+        path: '/products/{nominalCode}/{code}',
         summary: 'Update Product',
-        description: 'Updates an existing product.',
+        description: 'Updates an existing product, addressed by its nominal code and product code.',
         request: { fields: [
-          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Product ID.' },
+          { name: 'nominalCode', type: 'integer', required: true, description: 'Path parameter. Nominal code the product sits under.' },
+          { name: 'code',        type: 'string',  required: true, description: 'Path parameter. Product code.' },
         ] },
         response: { status: 200, description: 'Updated product object.', fields: [] },
         notes: [],
@@ -6893,11 +6902,12 @@ const apiDocs = [
       {
         id: 'products-delete',
         method: 'DELETE',
-        path: '/products/{id}',
+        path: '/products/{nominalCode}/{code}',
         summary: 'Delete Product',
-        description: 'Deletes a product by ID.',
+        description: 'Deletes a product, addressed by its nominal code and product code.',
         request: { fields: [
-          { name: 'id', type: 'integer', required: true, description: 'Path parameter. Product ID.' },
+          { name: 'nominalCode', type: 'integer', required: true, description: 'Path parameter. Nominal code the product sits under.' },
+          { name: 'code',        type: 'string',  required: true, description: 'Path parameter. Product code.' },
         ] },
         response: { status: 204, description: 'No content on success.', fields: [] },
         notes: [],
@@ -7260,4 +7270,44 @@ const apiDocs = [
   },
 ];
 
-export default apiDocs;
+/**
+ * The hand-written operations alone, before the generated ones are folded in.
+ *
+ * scripts/generate-api-docs.mjs imports THIS, not the default export: it emits only
+ * operations that are not already documented, so reading the merged array would make
+ * every generated operation look covered and the next run would emit nothing.
+ */
+export const handWrittenApiDocs = apiDocs;
+
+/**
+ * Fold in the spec-derived operations.
+ *
+ * apiDocsGenerated.js is produced by scripts/generate-api-docs.mjs from KashFlow's
+ * published Swagger spec and holds only what is NOT documented above, so nothing
+ * here is ever overwritten by machine text. A generated group whose `tag` matches a
+ * hand-written one is appended into it — otherwise the sidebar would show two
+ * "Customer" sections — and only unmatched groups become new sections.
+ *
+ * Hand-written operations therefore always sort first within a group, which is
+ * deliberate: the curated prose is the part worth reading.
+ */
+function mergeGenerated(curated, generated) {
+  // Copy rather than mutate: `handWrittenApiDocs` above is the same array, and the
+  // generator reads it to decide what still needs generating. Mutating it here made
+  // every generated operation look hand-written, and the next run emitted nothing.
+  const merged = curated.map((g) => ({ ...g, operations: [...g.operations] }));
+  const byTag = new Map(merged.map((g) => [g.tag, g]));
+  for (const group of generated) {
+    const target = byTag.get(group.tag);
+    if (target) {
+      target.operations = target.operations.concat(group.operations);
+    } else {
+      const copy = { ...group, operations: [...group.operations] };
+      merged.push(copy);
+      byTag.set(copy.tag, copy);
+    }
+  }
+  return merged;
+}
+
+export default mergeGenerated(apiDocs, apiDocsGenerated);

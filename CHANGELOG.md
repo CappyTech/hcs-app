@@ -2,6 +2,29 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.25.0] - 2026-08-18
+
+### Added
+- **`/help/api` now documents KashFlow's whole published surface, not just the curated quarter of it.** `scripts/generate-api-docs.mjs` reads IRIS KashFlow's Swagger 2.0 spec and emits `mongoose/config/apiDocsGenerated.js`; `apiDocsConfig.js` folds the two together. 213 hand-written operations across 28 groups, plus 492 generated ones across 65 — 705 in total, up from 213.
+
+  **The generator only emits operations that are not already documented by hand**, so curated prose is never overwritten by spec text. That is why `apiDocsConfig.js` exports `handWrittenApiDocs` separately: the generator imports *that*, not the default export. Read the merged array instead and every generated operation looks covered, so the next run emits an empty file — `mergeGenerated()` copies rather than mutates for the same reason, and a test pins the invariant (`hand + generated === merged`).
+
+  A generated group whose `tag` matches a hand-written one is appended into it rather than added alongside, or the sidebar would grow a second "Customer" section; hand-written operations therefore always sort first within a group, which is deliberate. Generated operations carry `generated: true` — that flag is how the page distinguishes curated wording from spec-derived wording.
+
+  Re-run it after KashFlow ships new endpoints (`--spec kf.json` to work from a saved copy, `--dry` to report without writing); the diff shows exactly what they added.
+
+  Three limits in the generator are tuned to what the view can actually render, not to the spec: request nesting stops at depth 3 because `renderFieldTableHtml` indents with `pl-{4*depth}` and only those classes are in the build; responses flatten at depth 2 because the view renders them flat; and tables cap at 60 rows, since a few KashFlow models run past 300 properties and stop being documentation. Spec descriptions are stripped of HTML because the view interpolates them unescaped.
+
+### Fixed
+- **Three hand-written endpoints were documented at paths that do not exist.** `POST /suppliers/suggestedcode` was listed as `GET`; the zero-rated VAT report was listed at `/reports/vat/zeroquoted` rather than `/reports/vat/zerorated`. Found by generating from the spec and reconciling — the generator refuses to emit a duplicate, so a hand-written entry that matches nothing in the spec surfaces as an operation that got generated anyway.
+
+- **A product is addressed by `(nominalCode, code)`, not by a bare id.** Get, update and delete were all documented as `/products/{id}`. The same product code can exist under more than one nominal, which is why the spec keys on both. Noted on the operation that hcs-sync's client calls `/products/${id}`, which is not in the published spec at all.
+
+- **Nested API-doc field tables rendered with no indent.** `renderFieldTableHtml` builds `pl-${depth * 4}` in `mongoose/controllers/helpController.js`, and controllers are not in Tailwind's `content` globs, so `pl-8` and `pl-12` were purged from the build — every second- and third-level request field sat flush against the first. Both are now in the static safelist.
+
+### Changed
+- The three destructive KashFlow endpoints (`PUT /bankaccounts/{id}/transactionlist`, `POST /bankaccounts/assign-transaction-to-new-entity`, and the batch assign) now say in their notes that hcs-sync deliberately ships no wrapper for them, and that the absence is what keeps KashFlow the system of record. The rule was only recorded outside the codebase; anyone reading the API docs to build an integration is exactly who needed to see it.
+
 ## [6.24.0] - 2026-08-07
 
 ### Added

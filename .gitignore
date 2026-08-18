@@ -37,3 +37,6 @@ tests/cookies.txt
 tests/headers.txt
 tests/login1.html
 tests/login2.html
+
+# Claude Code worktrees and local agent state
+.claude/
