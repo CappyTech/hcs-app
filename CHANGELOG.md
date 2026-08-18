@@ -4,18 +4,18 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
 ## [6.27.0] - 2026-08-18
 
-### Added
-- **A website content editor at `/website`, and a read-only API the public site pulls from.** Every content file in [hcs-web](https://github.com/CappyTech/hcs-web) — `blogData.js`, `caseStudyData.js`, `servicesData.js`, `accreditationsData.js`, `siteData.js` — carries the same comment: *"Swap this in-memory array for a DB/CMS later without touching the service, controller, or views."* Until now a copy change was a developer, a commit, and a manual deploy in cPanel. The Website Design Brief asks the site to be evidence rather than advertising — real projects, real accreditations, `[TO SUPPLY]` wherever a fact is missing — and the people who can fill those gaps are not the people who can run `git push`.
+[#79](https://github.com/CappyTech/hcs-app/pull/79) · pairs with [hcs-web#7](https://github.com/CappyTech/hcs-web/pull/7)
 
-  **hcs-web is a cache of this data, not a client of it.** It pulls the payload, writes it to disk and serves the public site from that copy, so heroncs.co.uk keeps working with hcs-app switched off entirely — which is what makes it safe to put the company's public site behind a service on a domestic connection. Nothing here should acquire a behaviour that assumes the consumer is live at the moment of a change; the revalidate hook in `webRevalidateService.js` is an optimisation over the consumer's own polling and is deliberately fire-and-forget.
+### Added
+- **A website content editor at `/website`, and a read-only API the public site pulls from.** Every content file in [hcs-web](https://github.com/CappyTech/hcs-web) — `blogData.js`, `caseStudyData.js`, `servicesData.js`, `accreditationsData.js`, `siteData.js` — carries the same comment: *"Swap this in-memory array for a DB/CMS later without touching the service, controller, or views."* Until now a copy change was a developer, a commit, and a manual **Update from Remote → Deploy HEAD Commit** in cPanel. The Website Design Brief asks the site to be evidence rather than advertising — real projects, real accreditations, `[TO SUPPLY]` wherever a fact is missing — and the people who can fill those gaps are not the people who can run `git push`.
+
+  **hcs-web is a cache of this data, not a client of it.** It pulls the payload, writes it to disk and serves the public site from that copy, so heroncs.co.uk keeps working with hcs-app switched off entirely — which is what makes it safe to put the company's public site behind a service on a domestic connection. hcs-app being reachable governs *editing*, never *serving*. Nothing here should acquire a behaviour that assumes the consumer is live at the moment of a change; the revalidate hook in `webRevalidateService.js` is an optimisation over the consumer's own polling and is deliberately fire-and-forget.
 
 - **A fourth Mongo namespace, `WEB`** (`MONGO_DBNAME_WEB`, default `hcs-webdb`), holding six models: `webCaseStudy`, `webPost`, `webService`, `webAccreditation`, `webSiteSettings` and `webMedia`.
 
   **The `hcs_app` Mongo user needs `readWrite` + `dbAdmin` on the new database.** It is scoped to `rest-kashflowdb`, `kashflowdb` and `paperless-kashflowdb`; without the grant the app connects and then every write fails `Unauthorized`. That is the step most likely to be missed on deploy, and the symptom does not name the cause.
 
   `auditPlugin` now attaches to `WEB` as well as `INTERNAL`. It was INTERNAL-only, so a new namespace would have had no audit trail at all — and "who changed this published copy, and when" is the whole point of an editorial trail. The plugin's `sanitize()` already renders Buffers as `[Buffer N bytes]`, so this does not copy every photograph into the audit log.
-
-  **`WEB` is reported by `/healthz` but is not part of `ok`, and is excluded from `maintenanceService.dbState()`.** `mdb.connect()` awaits all four connections, so a misconfigured namespace fails loudly at boot; losing it later must not mark the container unhealthy or 503 CIS, payroll and attendance over marketing copy. The models are also not registered with the generic CRUD/list controllers, which iterate REST and INTERNAL — website content is edited only through `/website`, which owns the draft/publish gate.
 
 - **Draft/publish per record, with publishing on its own route.** `status` is not a form field: `webContentConfig.fields[]` is the write whitelist and the controller builds every update from it, so a record cannot be pushed onto the public internet by adding a hidden input. `publishedAt` is stamped once, on first publication — it is the date the site displays, not a "last touched" timestamp, so fixing a typo does not move an article back to the top of the blog.
 
@@ -24,6 +24,8 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   `sharp` is a new dependency — the app had no image processing of any kind. Uploads are re-encoded to WebP down a ladder that steps **quality first, then dimensions**, because quality alone does not converge: pure noise at the old floor still came out at 634KB against the brief's 300KB ceiling, and foliage, gravel and brickwork — most of what this company photographs — compress much like noise. **EXIF is stripped**, which matters more than it sounds: these photographs are taken on phones on customers' estates, and EXIF carries GPS coordinates. **SVG is rejected**, unlike the letterhead upload it is otherwise modelled on: these bytes are mirrored and served by heroncs.co.uk, and an SVG is a script-bearing document.
 
 ### Changed
+- **`WEB` is reported by `/healthz` but is not part of `ok`, and is excluded from `maintenanceService.dbState()`.** `mdb.connect()` awaits all four connections, so a misconfigured namespace fails loudly at boot; losing it later must not mark the container unhealthy or 503 CIS, payroll and attendance over marketing copy. The models are also not registered with the generic CRUD/list controllers, which iterate REST and INTERNAL — website content is edited only through `/website`, which owns the draft/publish gate.
+
 - **The Quill initialiser in `layout.ejs` now binds `closest('form')`** rather than the hardcoded `#policy-form`, so any page opting in with `quillEditor: true` works without registering its form id there. It is still **one editor per page** — the `#quill-editor`, `#quill-toolbar` and `#contentHtml-input` ids are hardcoded, and a second instance would silently write into the first one's hidden input, saving one of the two fields empty. `tests/webContentService.test.js` asserts no content type declares more than one `richtext` field.
 
 ### Notes
@@ -34,6 +36,24 @@ Three things worth knowing before touching this next.
 - **The path may not contain `db`, `backup` or `database`, or end `.zip`/`.gz`/`.sql`.** `requestBlocklistService` 403s those *and* counts them toward a one-hour autoban of the caller — which, here, would be the public website.
 
 `scripts/seed-web-content.js --from ~/code/hcs-web` imports the live site's content and its 7.3MB of photographs, idempotent by slug and by image hash, so the editor opens on the real site rather than an empty one. It takes a path rather than bundling a fixture, so the photographs are not carried in every image build for the sake of a script that runs once.
+
+### Verification
+Run against a throwaway `mongo:8.0`, never the production database.
+
+- **1285 tests pass**, up from 1205 — new coverage for the route guards, the payload, the image pipeline, and every view at every declared field.
+- The seed imported the live site whole: 10 images, 2 case studies, 1 post, 6 services, 5 accreditations, site settings. `Living wage LOGO.png` came down from 321KB to 90KB.
+- The API answered 401 without a token, 200 with, 304 on a matching ETag, and carried no image bytes in the manifest.
+- **Unpublishing a case study removed it from the payload** on the next request.
+- hcs-web pulled it and rendered every page; **with this app killed and hcs-web restarted, every page still rendered, images included**, from its disk mirror. Deleting the mirror fell through to the seed arrays.
+
+### Deploying
+1. Grant the Mongo user `readWrite` + `dbAdmin` on `hcs-webdb` (above).
+2. `MONGO_DBNAME_WEB` and `WEB_API_TOKEN` in `docker/app/compose.env` — `env_file:` vars need `docker compose up -d`, not `restart`.
+3. Deploy, then check the log for the WEB connection opening and no `Unauthorized`.
+4. `node scripts/seed-web-content.js --from ~/code/hcs-web` once.
+5. Then the hcs-web side.
+
+hcs-web is safe to deploy at any point: with no token or no API it serves its built-in seed content, which is what the site shows today. There is no window where the public site is broken.
 
 ## [6.26.0] - 2026-08-18
 
