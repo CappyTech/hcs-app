@@ -105,6 +105,17 @@ export default {
     icon: 'bi-calendar-check',
     roles: ['admin', 'employee', 'subcontractor'],
   },
+  website: {
+    // Authoring surface for the public site at heroncs.co.uk (hcs-web).
+    //
+    // Admin only, and deliberately not folded into 'management': what is
+    // published here is read by the whole internet, so the set of people who
+    // can change it should be named rather than inherited.
+    title: 'Website',
+    navLabel: 'Website',
+    icon: 'bi-globe',
+    roles: ['admin'],
+  },
   create: {
     title: 'Create',
     navLabel: 'Create',

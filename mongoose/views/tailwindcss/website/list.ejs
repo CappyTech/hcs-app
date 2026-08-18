@@ -1,0 +1,89 @@
+<%
+  // Generic list for any collection type in webContentConfig.
+  // `cfg.listColumns` names the columns; `status` is rendered as a badge and
+  // everything else as text, so a new column is a config change, not a view one.
+  function cellValue(record, key) {
+    const v = record[key];
+    if (v === undefined || v === null || v === '') return '—';
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    return String(v);
+  }
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/website" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Website</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold"><i class="bi <%= cfg.icon %> mr-1"></i> <%= cfg.plural %></h1>
+    <span class="ml-auto"></span>
+    <a href="/website/<%= type %>/create"
+      class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+      New <%= cfg.label %>
+    </a>
+  </div>
+
+  <% if (!records.length) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-8 text-center">
+      <p class="text-sm text-gray-700 dark:text-gray-300">
+        Nothing here yet. Anything you create starts as a draft — the public site only ever shows published records.
+      </p>
+    </div>
+  <% } else { %>
+    <div class="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <% cfg.listColumns.forEach(function (col) { %>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <%= col === 'publishedAt' ? 'Published' : col === 'href' ? 'Links to' : col === 'validTo' ? 'Valid to' : col === 'membershipNumber' ? 'Membership no.' : col %>
+                </th>
+              <% }); %>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% records.forEach(function (record) { %>
+              <tr>
+                <% cfg.listColumns.forEach(function (col) { %>
+                  <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                    <% if (col === 'status') { %>
+                      <% if (record.status === 'published') { %>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                                     border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20
+                                     text-green-700 dark:text-green-400">
+                          <i class="bi bi-globe"></i> Live
+                        </span>
+                      <% } else { %>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                                     border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400">
+                          Draft
+                        </span>
+                      <% } %>
+                    <% } else if (col === cfg.listColumns[0]) { %>
+                      <a href="/website/<%= type %>/<%= record.uuid %>/edit"
+                        class="font-medium text-green-700 dark:text-green-400 hover:underline">
+                        <%= cellValue(record, col) %>
+                      </a>
+                    <% } else { %>
+                      <%= cellValue(record, col) %>
+                    <% } %>
+                  </td>
+                <% }); %>
+                <td class="px-4 py-3 text-right">
+                  <a href="/website/<%= type %>/<%= record.uuid %>/edit"
+                    class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600
+                           bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300
+                           hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition shadow-sm">
+                    Edit
+                  </a>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+
+</div>

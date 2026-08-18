@@ -182,6 +182,15 @@ const routeAccess = {
   // are enforced by the adminGuard on those routes in bankRoutes.js.
   '/bank':                ['admin', 'accountant'],
 
+  // Website content editor. Same longest-prefix rule as '/bank': one entry
+  // covers the whole module.
+  //
+  // The public content API is NOT listed here on purpose. routeAccess is only
+  // consulted for a request that already has req.user, and that API is read by
+  // hcs-web with a bearer token and no session at all — an entry here would
+  // govern nothing. Its guard is the token check in webApiRoutes.js.
+  '/website':             ['admin'],
+
   // Read-only accountant portal. Same longest-prefix rule as '/bank' above, so
   // this one entry covers the whole surface.
   //

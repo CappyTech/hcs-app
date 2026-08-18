@@ -114,6 +114,11 @@ function validate({ listConfig = {}, crudConfig = {}, modelNames = [] }) {
  */
 function validateAtStartup(mdb) {
   try {
+    // WEB is deliberately absent. Its models are edited only through /website,
+    // which owns the draft/publish gate; they are not registered with the
+    // generic CRUD/list controllers (those iterate REST and INTERNAL), so there
+    // is no config for them to validate. Adding WEB here would only produce
+    // warnings about configs that should not exist.
     const modelNames = ['INTERNAL', 'REST', 'PAPERLESS']
       .flatMap((ns) => Object.keys((mdb && mdb[ns]) || {}));
     const warnings = validate({ listConfig, crudConfig, modelNames });

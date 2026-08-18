@@ -2,6 +2,39 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.27.0] - 2026-08-18
+
+### Added
+- **A website content editor at `/website`, and a read-only API the public site pulls from.** Every content file in [hcs-web](https://github.com/CappyTech/hcs-web) — `blogData.js`, `caseStudyData.js`, `servicesData.js`, `accreditationsData.js`, `siteData.js` — carries the same comment: *"Swap this in-memory array for a DB/CMS later without touching the service, controller, or views."* Until now a copy change was a developer, a commit, and a manual deploy in cPanel. The Website Design Brief asks the site to be evidence rather than advertising — real projects, real accreditations, `[TO SUPPLY]` wherever a fact is missing — and the people who can fill those gaps are not the people who can run `git push`.
+
+  **hcs-web is a cache of this data, not a client of it.** It pulls the payload, writes it to disk and serves the public site from that copy, so heroncs.co.uk keeps working with hcs-app switched off entirely — which is what makes it safe to put the company's public site behind a service on a domestic connection. Nothing here should acquire a behaviour that assumes the consumer is live at the moment of a change; the revalidate hook in `webRevalidateService.js` is an optimisation over the consumer's own polling and is deliberately fire-and-forget.
+
+- **A fourth Mongo namespace, `WEB`** (`MONGO_DBNAME_WEB`, default `hcs-webdb`), holding six models: `webCaseStudy`, `webPost`, `webService`, `webAccreditation`, `webSiteSettings` and `webMedia`.
+
+  **The `hcs_app` Mongo user needs `readWrite` + `dbAdmin` on the new database.** It is scoped to `rest-kashflowdb`, `kashflowdb` and `paperless-kashflowdb`; without the grant the app connects and then every write fails `Unauthorized`. That is the step most likely to be missed on deploy, and the symptom does not name the cause.
+
+  `auditPlugin` now attaches to `WEB` as well as `INTERNAL`. It was INTERNAL-only, so a new namespace would have had no audit trail at all — and "who changed this published copy, and when" is the whole point of an editorial trail. The plugin's `sanitize()` already renders Buffers as `[Buffer N bytes]`, so this does not copy every photograph into the audit log.
+
+  **`WEB` is reported by `/healthz` but is not part of `ok`, and is excluded from `maintenanceService.dbState()`.** `mdb.connect()` awaits all four connections, so a misconfigured namespace fails loudly at boot; losing it later must not mark the container unhealthy or 503 CIS, payroll and attendance over marketing copy. The models are also not registered with the generic CRUD/list controllers, which iterate REST and INTERNAL — website content is edited only through `/website`, which owns the draft/publish gate.
+
+- **Draft/publish per record, with publishing on its own route.** `status` is not a form field: `webContentConfig.fields[]` is the write whitelist and the controller builds every update from it, so a record cannot be pushed onto the public internet by adding a hidden input. `publishedAt` is stamped once, on first publication — it is the date the site displays, not a "last touched" timestamp, so fixing a typo does not move an article back to the top of the blog.
+
+- **Images are stored in Mongo, resized on upload.** The storage volume at `~/docker/app/storage` is in **none** of the five nightly backup jobs while Mongo is dumped at 02:00, so bytes in Mongo are backed up, survive a `docker compose pull` redeploy, and need no sixth cron job.
+
+  `sharp` is a new dependency — the app had no image processing of any kind. Uploads are re-encoded to WebP down a ladder that steps **quality first, then dimensions**, because quality alone does not converge: pure noise at the old floor still came out at 634KB against the brief's 300KB ceiling, and foliage, gravel and brickwork — most of what this company photographs — compress much like noise. **EXIF is stripped**, which matters more than it sounds: these photographs are taken on phones on customers' estates, and EXIF carries GPS coordinates. **SVG is rejected**, unlike the letterhead upload it is otherwise modelled on: these bytes are mirrored and served by heroncs.co.uk, and an SVG is a script-bearing document.
+
+### Changed
+- **The Quill initialiser in `layout.ejs` now binds `closest('form')`** rather than the hardcoded `#policy-form`, so any page opting in with `quillEditor: true` works without registering its form id there. It is still **one editor per page** — the `#quill-editor`, `#quill-toolbar` and `#contentHtml-input` ids are hardcoded, and a second instance would silently write into the first one's hidden input, saving one of the two fields empty. `tests/webContentService.test.js` asserts no content type declares more than one `richtext` field.
+
+### Notes
+Three things worth knowing before touching this next.
+
+- **The API is the only route surface in this app that answers without a session.** `"/api/web/"` is in `PUBLIC_PREFIXES`, so everything under it skips `ensureAuthenticated` — the same shape as the `/resources/` prefix that once silently defeated that guard. It is GET-only, token-guarded and rate-limited, and `tests/websiteRoutesGuards.test.js` pins all three plus the prefix itself. A POST added there would inherit the bypass while carrying no CSRF protection.
+- **The token fails closed.** With `WEB_API_TOKEN` unset the endpoint answers 503 rather than serving: an unconfigured deployment that refuses is a problem someone notices, one that answers 200 to the whole internet is not.
+- **The path may not contain `db`, `backup` or `database`, or end `.zip`/`.gz`/`.sql`.** `requestBlocklistService` 403s those *and* counts them toward a one-hour autoban of the caller — which, here, would be the public website.
+
+`scripts/seed-web-content.js --from ~/code/hcs-web` imports the live site's content and its 7.3MB of photographs, idempotent by slug and by image hash, so the editor opens on the real site rather than an empty one. It takes a path rather than bundling a fixture, so the photographs are not carried in every image build for the sake of a script that runs once.
+
 ## [6.26.0] - 2026-08-18
 
 ### Added

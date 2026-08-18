@@ -55,6 +55,9 @@ function wantsJson(req) {
 function dbState() {
   // Connections are created on mdb.connect(); absent connections mean the
   // app is still in its startup phase rather than having lost the database.
+  // WEB is excluded on purpose: it carries the public website's content, and
+  // the business app must not 503 because the marketing copy is unreachable.
+  // Its state is still logged below, and mdb.connect() requires it at boot.
   const conns = [mdb.REST, mdb.INTERNAL, mdb.PAPERLESS];
   if (conns.some((c) => !c || !c.connection)) return "starting";
   const allReady = conns.every((c) => c.connection.readyState === 1);
@@ -136,6 +139,7 @@ function maintenanceService(req, res, next) {
           restReady: mdb.REST?.connection?.readyState === 1,
           internalReady: mdb.INTERNAL?.connection?.readyState === 1,
           paperlessReady: mdb.PAPERLESS?.connection?.readyState === 1,
+          webReady: mdb.WEB?.connection?.readyState === 1,
         });
       }
       return renderUnavailable(req, res, state);

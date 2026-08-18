@@ -298,6 +298,50 @@ export default {
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
 
+    // ── Website ───────────────────────────────────────────────────────
+    WebsiteCaseStudies: {
+        title: 'Case Studies',
+        description: 'Project stories published at heroncs.co.uk/studies.',
+        link: '/website/case-studies',
+        department: ['website'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    WebsitePosts: {
+        title: 'Blog Posts',
+        description: 'News and updates published at heroncs.co.uk/blog.',
+        link: '/website/posts',
+        department: ['website'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    WebsiteServices: {
+        title: 'Services',
+        description: 'The service cards on heroncs.co.uk/services.',
+        link: '/website/services',
+        department: ['website'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    WebsiteAccreditations: {
+        title: 'Accreditations',
+        description: 'Accreditation logos and registration details.',
+        link: '/website/accreditations',
+        department: ['website'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    WebsiteMedia: {
+        title: 'Media Library',
+        description: 'Photographs used across the public website.',
+        link: '/website/media',
+        department: ['website'],
+        buttonClass: 'bg-blue-700 hover:bg-blue-800'
+    },
+    WebsiteSettings: {
+        title: 'Site Settings',
+        description: 'Company details, contact information and SEO defaults.',
+        link: '/website/settings',
+        department: ['website'],
+        buttonClass: 'bg-gray-700 hover:bg-gray-800'
+    },
+
     // ── Management ────────────────────────────────────────────────────
     ExternalOneDrive: {
         title: 'Microsoft OneDrive',

@@ -86,6 +86,8 @@ import __gdprRoutes from './mongoose/routes/gdprRoutes.js';
 import __legalRoutes from './mongoose/routes/legalRoutes.js';
 import __companyDocsRoutes from './mongoose/routes/companyDocsRoutes.js';
 import __auditRoutes from './mongoose/routes/auditRoutes.js';
+import __webRoutes from './mongoose/routes/webRoutes.js';
+import __webApiRoutes from './mongoose/routes/webApiRoutes.js';
 import __errorHandlerService from './services/errorHandlerService.js';
 import __webSocketService from './mongoose/services/webSocketService.js';
 import __jobRegistry from './mongoose/services/jobRegistry.js';
@@ -197,11 +199,17 @@ const main = async () => {
       const restReady = mdb.REST?.connection?.readyState === 1;
       const internalReady = mdb.INTERNAL?.connection?.readyState === 1;
       const paperlessReady = mdb.PAPERLESS?.connection?.readyState === 1;
+      // WEB holds the public website's copy and is reported but deliberately
+      // NOT part of `ok`. mdb.connect() awaits all four, so a misconfigured WEB
+      // namespace fails loudly at boot; losing it later must not mark the
+      // container unhealthy and restart CIS, payroll and attendance over
+      // marketing content. Same reasoning in maintenanceService.dbState().
+      const webReady = mdb.WEB?.connection?.readyState === 1;
       const ok = restReady && internalReady && paperlessReady;
       res.status(ok ? 200 : 503).json({
         ok,
         uptime: process.uptime(),
-        db: { REST: restReady, INTERNAL: internalReady, PAPERLESS: paperlessReady },
+        db: { REST: restReady, INTERNAL: internalReady, PAPERLESS: paperlessReady, WEB: webReady },
       });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
@@ -548,6 +556,11 @@ const main = async () => {
     appRouter.use('/', __legalRoutes);
     appRouter.use('/', __companyDocsRoutes);
     appRouter.use('/', __auditRoutes);
+    appRouter.use('/', __webRoutes);
+    // Read-only content API for hcs-web. Inside appRouter so it gets body
+    // parsing, request logging and maintenance's JSON 503; exempted from the
+    // session guard by the "/api/web/" prefix in authService's PUBLIC_PREFIXES.
+    appRouter.use('/', __webApiRoutes);
 
     // Catch-all 404
     appRouter.use((req, res, next) => {

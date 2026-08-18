@@ -17,7 +17,7 @@ const __dirname = _esmDirname(__filename);
 const AUDIT_EXCLUDE_MODELS = (process.env.AUDIT_EXCLUDE_MODELS || 'auditLog,session')
   .split(',').map((s) => s.trim()).filter(Boolean);
 
-const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {} };
+const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {}, WEB: {} };
 let isConnected = false;
 let sshServer = null;
 
@@ -80,9 +80,11 @@ async function createNamespace(ns, connection) {
       logger.warn(`Skipping model in ${ns}: ${file} (missing modelName/schema)`);
       continue;
     }
-    // Attach the audit trail to INTERNAL models, skipping the audit log itself
-    // and high-frequency infrastructure collections (e.g. session writes).
-    if (ns === 'INTERNAL' && !AUDIT_EXCLUDE_MODELS.includes(modelName)) {
+    // Attach the audit trail to INTERNAL and WEB models, skipping the audit log
+    // itself and high-frequency infrastructure collections (e.g. session writes).
+    // WEB is included deliberately: it holds the published website copy, and
+    // "who changed this and when" is the whole point of an editorial trail.
+    if ((ns === 'INTERNAL' || ns === 'WEB') && !AUDIT_EXCLUDE_MODELS.includes(modelName)) {
       schema.plugin(auditPlugin, { modelName });
     }
     connection.model(modelName, schema);
@@ -94,7 +96,7 @@ async function createNamespace(ns, connection) {
 
 mdb.connect = async () => {
   try {
-    if (isConnected && mdb.REST.connection && mdb.INTERNAL.connection && mdb.PAPERLESS.connection) {
+    if (isConnected && mdb.REST.connection && mdb.INTERNAL.connection && mdb.PAPERLESS.connection && mdb.WEB.connection) {
       return mdb;
     }
     let localPort = null;
@@ -151,8 +153,11 @@ mdb.connect = async () => {
     const restDb = configService.get('MONGO_DBNAME_REST', configService.get('MONGO_DBNAME', 'rest'));
     const internalDb = configService.get('MONGO_DBNAME_INTERNAL', configService.get('MONGO_DBNAME', 'internal'));
     const paperlessDb = configService.get('MONGO_DBNAME_PAPERLESS', 'paperless');
+    // Website content authored in /website and pulled by hcs-web. Its own
+    // namespace so the public site's copy is never mixed into the business data.
+    const webDb = configService.get('MONGO_DBNAME_WEB', 'hcs-webdb');
 
-    let restUri, internalUri, paperlessUri;
+    let restUri, internalUri, paperlessUri, webUri;
 
     if (isTunnelEnabled) {
       const mongoUser = encodeURIComponent(configService.get('MONGO_USER', ''));
@@ -160,6 +165,7 @@ mdb.connect = async () => {
       restUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${restDb}?authSource=admin`;
       internalUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${internalDb}?authSource=admin`;
       paperlessUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${paperlessDb}?authSource=admin`;
+      webUri = `mongodb://${mongoUser}:${mongoPass}@127.0.0.1:${localPort}/${webDb}?authSource=admin`;
       if (configService.get('DEBUG')) logger.info('[mongooseDatabaseService] Connected to MongoDB via SSH tunnel');
     } else {
       // Prefer explicit MONGO_URI; otherwise build from parts
@@ -168,29 +174,34 @@ mdb.connect = async () => {
       restUri = getUriWithDb(baseUri, restDb);
       internalUri = getUriWithDb(baseUri, internalDb);
       paperlessUri = getUriWithDb(baseUri, paperlessDb);
+      webUri = getUriWithDb(baseUri, webDb);
       if (configService.get('DEBUG')) logger.info('[mongooseDatabaseService] Connecting to MongoDB via ' + (rawUri ? 'MONGO_URI' : 'MONGO_HOST/PORT/USER/PASS'));
     }
 
     const restConn = mongoose.createConnection(restUri);
     const internalConn = mongoose.createConnection(internalUri);
     const paperlessConn = mongoose.createConnection(paperlessUri);
+    const webConn = mongoose.createConnection(webUri);
 
     await Promise.all([
       new Promise((res, rej) => { restConn.once('open', res); restConn.on('error', rej); }),
       new Promise((res, rej) => { internalConn.once('open', res); internalConn.on('error', rej); }),
-      new Promise((res, rej) => { paperlessConn.once('open', res); paperlessConn.on('error', rej); })
+      new Promise((res, rej) => { paperlessConn.once('open', res); paperlessConn.on('error', rej); }),
+      new Promise((res, rej) => { webConn.once('open', res); webConn.on('error', rej); })
     ]);
 
     if (process.env.DEBUG) {
       logger.info('[mongooseDatabaseService] REST connection open');
       logger.info('[mongooseDatabaseService] INTERNAL connection open');
       logger.info('[mongooseDatabaseService] PAPERLESS connection open');
+      logger.info('[mongooseDatabaseService] WEB connection open');
     }
 
     // Load models into each namespace
     await createNamespace('REST', restConn);
     await createNamespace('INTERNAL', internalConn);
     await createNamespace('PAPERLESS', paperlessConn);
+    await createNamespace('WEB', webConn);
 
     isConnected = true;
     return mdb;
@@ -206,6 +217,7 @@ const cleanup = async () => {
     try { await mdb.REST?.connection?.close(); } catch {}
     try { await mdb.INTERNAL?.connection?.close(); } catch {}
     try { await mdb.PAPERLESS?.connection?.close(); } catch {}
+    try { await mdb.WEB?.connection?.close(); } catch {}
 
     if (sshServer && sshServer.close) {
       sshServer.close();

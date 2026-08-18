@@ -39,6 +39,15 @@ const PUBLIC_PREFIXES = [
   "/resources/vendor/",
   "/manifest/",
   "/legal/",
+  // Read-only website content API pulled by hcs-web. It has no browser session
+  // — it authenticates with a bearer token checked in webApiController — so it
+  // must bypass ensureAuthenticated. The prefix rather than exact paths is
+  // needed because /api/web/media/:uuid carries a uuid.
+  //
+  // Note the narrowing lesson above applies here too: this prefix must stay
+  // "/api/web/" and nothing broader. Everything under it is GET-only and
+  // token-guarded; a write route added there would inherit this bypass.
+  "/api/web/",
 ];
 
 // Paths accessible to authenticated-but-unverified users
