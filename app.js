@@ -46,7 +46,7 @@ import cisMappings from './mongoose/config/cisMappings.js';
 import __socketService from './services/socketService.js';
 import createSessionService from './mongoose/services/sessionService.js';
 import __csrfService from './services/csrfService.js';
-import __securityService from './services/securityService.js';
+import __securityService, { trustEdgeTls } from './services/securityService.js';
 import __flashService from './services/flashService.js';
 import __passwordResetDraft from './services/passwordResetDraft.js';
 import __auditContextService from './mongoose/services/auditContextService.js';
@@ -129,6 +129,13 @@ const main = async () => {
   const trustProxy = (process.env.TRUST_PROXY || 'loopback,172.16.0.0/12')
     .split(',').map((s) => s.trim()).filter(Boolean);
   app.set('trust proxy', trustProxy);
+
+  // TLS terminates at the edge, which forwards over plain HTTP and stamps
+  // X-Forwarded-Proto: http. With TRUST_EDGE_TLS=true this restores req.secure
+  // so the session and CSRF cookies are sent with the Secure attribute. It must
+  // run before the session middleware, which reads the scheme when it decides
+  // whether to set the cookie at all.
+  app.use(trustEdgeTls);
   app.set('view engine', 'ejs');
   app.set('views', [path.join(__dirname, 'mongoose/views')]);
   app.set('layout', path.join('tailwindcss', 'layout'));
