@@ -151,8 +151,76 @@ function generateNonce(_req, res, next) {
   next();
 }
 
+// Permissions-Policy — helmet stopped setting this header at v5, so it is stated
+// here. Everything this app never asks for is denied outright; a feature name a
+// browser does not know is ignored, so listing more costs nothing.
+//
+// Two entries are deliberately NOT `()`:
+//   - `clipboard-write` is absent, i.e. left at its default of `self`. The
+//     admin log viewer copies with `navigator.clipboard`, and denying it there
+//     would break a working control to satisfy a scanner.
+//   - `fullscreen=(self)` rather than `()`, because it is the one feature a
+//     bundled widget may reach for on a table or chart without us calling it.
+const PERMISSIONS_POLICY = [
+  "accelerometer=()",
+  "autoplay=()",
+  "browsing-topics=()",
+  "camera=()",
+  "display-capture=()",
+  "encrypted-media=()",
+  "gamepad=()",
+  "geolocation=()",
+  "gyroscope=()",
+  "idle-detection=()",
+  "local-fonts=()",
+  "magnetometer=()",
+  "microphone=()",
+  "midi=()",
+  "payment=()",
+  "publickey-credentials-get=()",
+  "screen-wake-lock=()",
+  "serial=()",
+  "usb=()",
+  "xr-spatial-tracking=()",
+  "fullscreen=(self)",
+].join(", ");
+
+function permissionsPolicy(_req, res, next) {
+  res.setHeader("Permissions-Policy", PERMISSIONS_POLICY);
+  next();
+}
+
+/**
+ * Marks the request as HTTPS when TLS is terminated by an upstream that does not
+ * say so, gated on TRUST_EDGE_TLS=true.
+ *
+ * This deployment is reached only through frp: edge Caddy terminates TLS, hands
+ * the request to frps, and frps forwards it to frpc over plain HTTP — stamping
+ * `X-Forwarded-Proto: http` on the way. Every request therefore arrives claiming
+ * to be insecure (1,516 of 1,516 in a two-hour sample), `req.secure` is false,
+ * and both cookies go out without `Secure`: express-session's `cookie.secure:
+ * 'auto'` resolves to false, and csrfService reads `!!req.secure` directly.
+ *
+ * Setting `cookie.secure: true` instead is NOT the fix — express-session then
+ * refuses to send the cookie at all on a connection it believes is plain HTTP
+ * ("not secured"), which locks everyone out rather than protecting them.
+ *
+ * The override is safe only where TLS genuinely terminates upstream, which is
+ * why it is opt-in: this container publishes no port and is reachable only
+ * through that tunnel. Express still ignores the header unless the peer is a
+ * trusted proxy, so a client that could reach the app directly cannot use this
+ * to forge a secure connection.
+ */
+function trustEdgeTls(req, _res, next) {
+  if (String(process.env.TRUST_EDGE_TLS || "").toLowerCase() === "true") {
+    req.headers["x-forwarded-proto"] = "https";
+  }
+  next();
+}
+
 const securityService = [
   generateNonce,
+  permissionsPolicy,
   helmet({
     contentSecurityPolicy: { directives: cspDirectives },
     referrerPolicy: { policy: "no-referrer" },
@@ -162,4 +230,5 @@ const securityService = [
   xssSanitize,
 ];
 
+export { trustEdgeTls, PERMISSIONS_POLICY };
 export default securityService;

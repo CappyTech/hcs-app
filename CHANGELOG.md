@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.29.0] - 2026-08-21
+
+### Security
+- **Added the `Permissions-Policy` header.** helmet stopped setting it at v5, so it was simply absent — the one finding in an otherwise clean securityheaders.com scan of `app.heroncs.co.uk`. Everything the app never asks for is denied outright (`camera`, `microphone`, `geolocation`, `payment`, `usb`, `display-capture`, `serial`, `midi`, `publickey-credentials-get`, and the rest); a feature name a browser does not know is ignored, so listing more costs nothing.
+
+  Two entries are deliberately not `()`. **`clipboard-write` is left at its default of `self`** because the admin log viewer copies with `navigator.clipboard`, and denying it would break a working control to satisfy a scanner. **`fullscreen=(self)`** rather than `()`, since it is the one feature a bundled table or chart widget may reach for without us calling it.
+
+- **Both cookies now carry `Secure` behind the TLS edge**, via `TRUST_EDGE_TLS` (default off, mounted in `app.js` before the session middleware).
+
+  The scan reported `hms.csrf` and `hms.sid` without the flag, and neither was a coding oversight: TLS terminates at the edge, which hands the request to frps, which forwards to frpc over plain HTTP **and stamps `X-Forwarded-Proto: http`**. So the header is not missing — it is present and wrong, on every request (1,516 of 1,516 in a two-hour sample of the deployment's logs). `req.secure` is therefore false, which resolves express-session's `cookie.secure: 'auto'` to false and makes csrfService's `secure: !!req.secure` false too. The same reading also governs the SSO cookie in `ssoController.getCookieSecure`.
+
+  **`COOKIE_SECURE=true` is not the fix.** With `cookie.secure: true`, express-session refuses to send the cookie *at all* on a connection it believes is plain HTTP (`debug('not secured')`, `index.js:235`) — that locks everyone out rather than protecting them. The scheme has to be corrected before the session middleware reads it, which is what `trustEdgeTls` does.
+
+  It is opt-in because it is only true of a deployment whose TLS really does terminate upstream. This container publishes no port and is reachable only through that tunnel. Express still ignores `X-Forwarded-Proto` unless the peer is a trusted proxy, so a client able to reach the app directly cannot use this to forge a secure connection.
+
+  `tests/securityHeaders.test.js` drives a real express app over a real socket for both halves: a header set on the wrong router, or the override mounted after the session middleware, would still read correctly in the source. The override is tested against an incoming `X-Forwarded-Proto: http` specifically — it has to beat a header that is present and wrong, not merely supply a missing one.
+
 ## [6.28.1] - 2026-08-21
 
 ### Fixed
