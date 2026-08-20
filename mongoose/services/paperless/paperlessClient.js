@@ -221,24 +221,31 @@ function makeClient() {
           `[paperlessClient] HTTP ${status} on ${error?.config?.method?.toUpperCase?.() || ""} ${error?.config?.url || ""}${dataSnippet}`,
         );
       }
+      // A versioned Accept header that the server will not serve is reported two
+      // different ways: some installs answer 400, and DRF's AcceptHeaderVersioning
+      // answers **406 Not Acceptable** ({"detail":"Invalid version in \"Accept\"
+      // header."}) once the requested version leaves ALLOWED_VERSIONS. Paperless-ngx
+      // 3.0.5 retired API versions 1-8, which turned this client's default
+      // `version=6` into a 406 on *every* call at once. Retry without the header so
+      // the server falls back to its own default version, and say so at warn level:
+      // the only symptom otherwise is that everything Paperless-shaped stops working.
       if (
-        status === 400 &&
+        (status === 400 || status === 406) &&
         error?.config &&
         !error.config.__acceptFallbackTried
       ) {
-        // Some Paperless installs reject versioned Accept header; retry once without version
         const retryCfg = {
           ...error.config,
           headers: { ...(error.config.headers || {}) },
         };
+        const requestedAccept =
+          retryCfg.headers.Accept || retryCfg.headers.accept || "";
         delete retryCfg.headers.Accept;
+        delete retryCfg.headers.accept;
         retryCfg.__acceptFallbackTried = true;
-        if (process.env.PAPERLESS_VERBOSE === "true" || process.env.DEBUG) {
-          logger.warn(
-            "[paperlessClient] 400 received; retrying without Accept header for %s",
-            retryCfg.url || retryCfg.baseURL,
-          );
-        }
+        logger.warn(
+          `[paperlessClient] HTTP ${status} with Accept "${requestedAccept}"; retrying without it for ${retryCfg.url || retryCfg.baseURL}. Set PAPERLESS_ACCEPT to a version this Paperless still serves.`,
+        );
         try {
           return await axios(retryCfg);
         } catch (e) {

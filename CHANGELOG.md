@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.28.1] - 2026-08-21
+
+### Fixed
+- **Every Paperless call was failing with HTTP 406, because the Accept header named an API version Paperless had retired.** `paperlessClient.js` asks for `application/json; version=6`; paperless-ngx 3.0.5 dropped API versions 1-8 and serves only 9 and 10, so DRF answered `406 {"detail":"Invalid version in \"Accept\" header."}` to everything at once — `GET /documents/`, `GET /custom_fields/`, `[bankStatementIngest] listing documents failed` on each 6-hourly run, and `Grab failed: Request failed with status code 406` from `/paperless/ingest`.
+
+  The client already had the fallback for this: it retries once **without** the Accept header, letting the server pick its own default version. It only fired on a **400**. Some installs do answer 400, but DRF's `AcceptHeaderVersioning` answers **406**, which is the case that actually occurs — so nothing self-healed and the integration simply stopped. The retry now covers 400 and 406 alike, drops both header spellings, and logs at **warn** naming the rejected value and `PAPERLESS_ACCEPT`; it was previously silent unless `PAPERLESS_VERBOSE` was on, and a silent version drift takes the whole Paperless integration down with no line in the log saying why.
+
+  `tests/paperlessClient.test.js` drives a real HTTP server for this rather than reading the source, because what matters is the retry *completing* — the interceptor is registered on an axios instance built inside `makeClient()`. It also pins that the fallback gives up after one attempt when the unversioned request is refused too, so a server that 406s everything cannot put the client in a loop.
+
+  **The header should still be pinned to a version the server serves** — the fallback is a net, not the fix. `PAPERLESS_ACCEPT=application/json; version=10` is set on the deployment, and `compose.env.example` now explains why the value goes stale. Version 9 differs from 10 only by an extra `all` array of every matching id in list responses, which nothing here reads; `custom_fields` entries are `{field:<int>, value}` in both, the shape `updateDocumentCustomFields` expects.
+
 ## [6.28.0] - 2026-08-19
 
 ### Changed
