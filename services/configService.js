@@ -2,12 +2,22 @@
  * configService — multi-company configuration layer
  *
  * Priority order (highest to lowest):
- *   1. Environment variables  (process.env)
- *   2. app-config.json        (written by the setup wizard or connections settings UI)
- *   3. Caller-supplied default
+ *   1. Managed store          (Mongo, via configStoreService — admin-editable)
+ *   2. Environment variables  (process.env)
+ *   3. app-config.json        (written by the setup wizard)
+ *   4. Caller-supplied default
  *
- * Existing single-tenant deployments are unaffected: their env vars
- * always take priority, so the file is never consulted.
+ * The managed store sits ABOVE the environment on purpose. With env first, a
+ * key set in compose.env could only ever be overridden for the lifetime of the
+ * process — which is what made the settings UI advisory rather than
+ * authoritative, and why every page had to show an "Env" lock badge. Putting
+ * the store first is what allows a deployment to migrate a key out of
+ * compose.env without a redeploy: adopt the value here, then drop the line.
+ *
+ * Only keys in configRegistry can be managed; everything else still resolves
+ * from the environment exactly as before. Bootstrap keys (Mongo credentials,
+ * SESSION_SECRET, ENCRYPTION_KEY) are excluded by construction — the store
+ * lives in the database those keys are needed to reach.
  */
 
 import fs from 'fs';
@@ -28,6 +38,14 @@ const _startupEnvKeys = new Set(
 const CONFIG_FILE = path.join(__dirname, '..', 'config', 'app-config.json');
 
 let _fileConfig = null;
+
+// Managed values from the store, injected by configStoreService once Mongo is
+// up. Kept as a plain Map so get() stays synchronous for its ~44 callers.
+let _managed = new Map();
+
+// The environment as it stood at startup, so a key can be reverted out of the
+// store and back to whatever compose.env supplies.
+const _startupEnvValues = Object.freeze({ ...process.env });
 
 function loadFileConfig() {
   if (_fileConfig !== null) return _fileConfig;
@@ -54,6 +72,10 @@ function loadFileConfig() {
  * @returns {*}
  */
 function get(key, defaultValue = undefined) {
+  if (_managed.has(key)) {
+    const managedVal = _managed.get(key);
+    if (managedVal !== undefined && managedVal !== '') return managedVal;
+  }
   const envVal = process.env[key];
   if (envVal !== undefined && envVal !== '') return envVal;
   const fc = loadFileConfig();
@@ -125,6 +147,37 @@ function bootstrap() {
 }
 
 /**
+ * Replace the managed snapshot. Called by configStoreService after it loads or
+ * writes, never by application code.
+ * @param {Map<string,string>|Record<string,string>} values
+ */
+function setManagedSnapshot(values) {
+  _managed = values instanceof Map ? new Map(values) : new Map(Object.entries(values || {}));
+}
+
+/** The value a key held in process.env at startup (before any store applied). */
+function startupEnvValue(key) {
+  return _startupEnvValues[key];
+}
+
+/**
+ * Where the effective value of a key comes from: 'store' | 'env' | 'file' |
+ * 'default'. The settings UI shows this, and it is the only way an admin can
+ * tell whether editing a field will actually change anything.
+ * @param {string} key
+ * @returns {'store'|'env'|'file'|'default'}
+ */
+function sourceOf(key) {
+  const managedVal = _managed.get(key);
+  if (managedVal !== undefined && managedVal !== '') return 'store';
+  const envVal = _startupEnvValues[key];
+  if (envVal !== undefined && envVal !== '') return 'env';
+  const fc = loadFileConfig();
+  if (fc[key] !== undefined && fc[key] !== '') return 'file';
+  return 'default';
+}
+
+/**
  * Returns true if the key was present in process.env at module load time
  * (i.e. set by docker-compose / OS, not by bootstrap or the UI).
  * Used by the connections settings UI to render an "Env" lock badge.
@@ -135,4 +188,15 @@ function isFromStartupEnv(key) {
   return _startupEnvKeys.has(key);
 }
 
-export default { get, isConfigured, save, remove, generateSecret, bootstrap, isFromStartupEnv };
+export default {
+  get,
+  isConfigured,
+  save,
+  remove,
+  generateSecret,
+  bootstrap,
+  isFromStartupEnv,
+  setManagedSnapshot,
+  startupEnvValue,
+  sourceOf,
+};

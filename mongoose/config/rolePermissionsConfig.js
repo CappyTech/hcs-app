@@ -277,6 +277,7 @@ const routeAccess = {
 
   // External connection settings
   '/admin/connections': ['admin'],
+  '/admin/config': ['admin'],
 
   // Email & notifications admin dashboard
   '/admin/emails': ['admin'],

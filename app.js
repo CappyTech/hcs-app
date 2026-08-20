@@ -308,6 +308,16 @@ const main = async () => {
     await mdb.connect();
     logger.info('[startup] MongoDB connected — mounting full application');
 
+    // Managed configuration lives in Mongo, so it can only be read now. It is
+    // applied to process.env here, before anything that reads configuration is
+    // mounted — the ~14 keys read at module import are already past, which is
+    // exactly what configRegistry marks `restart: true`.
+    {
+      const configStore = (await import('./services/configStoreService.js')).default;
+      await configStore.load();
+      configStore.logMigrationState();
+    }
+
     // One-time migration: mark existing users (without a verification token) as email-verified
     try {
       const result = await mdb.INTERNAL.user.updateMany(
