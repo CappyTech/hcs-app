@@ -1,0 +1,127 @@
+<%
+const csrf = typeof csrfToken !== 'undefined' ? csrfToken : '';
+function sourcePill(f) {
+  const map = {
+    store: ['bi-database-fill-check', 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300', 'Managed here'],
+    env:   ['bi-file-earmark-lock-fill', 'bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-100', 'compose.env'],
+    file:  ['bi-file-earmark-text', 'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300', 'app-config.json'],
+    default: ['bi-dash-circle', 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400', 'Not set'],
+  };
+  const [icon, cls, label] = map[f.source] || map.default;
+  return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ' + cls + '"><i class="bi ' + icon + '"></i> ' + label + '</span>';
+}
+%>
+
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+    <div class="p-6 sm:p-8">
+
+      <div class="flex justify-between items-start mb-6 gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <i class="bi <%= group.icon %> text-emerald-500"></i> <%= group.label %>
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"><%= group.description %></p>
+        </div>
+        <a href="/admin/config" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Configuration</a>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-5">
+        <% if (group.test) { %>
+          <form method="POST" action="/admin/connections/test/<%= group.test %>">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition">
+              <i class="bi bi-lightning-charge"></i> Test connection
+            </button>
+          </form>
+        <% } %>
+        <% if (group.counts.adoptable) { %>
+          <form method="POST" action="/admin/config/<%= group.id %>/adopt">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition">
+              <i class="bi bi-download"></i> Adopt <%= group.counts.adoptable %> from compose.env
+            </button>
+          </form>
+        <% } %>
+      </div>
+
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3">
+        <i class="bi bi-info-circle"></i>
+        Leave a field <strong>blank</strong> to keep its current value — clearing one is <em>Revert</em>, which is deliberate and separate.
+        Saving a setting stores it in the database, where it takes priority over <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">compose.env</code>.
+      </p>
+
+      <form method="POST" action="/admin/config/<%= group.id %>" class="space-y-5">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+        <% group.fields.forEach(function (f) { %>
+          <div class="border-b border-gray-100 dark:border-gray-800 pb-4">
+            <div class="flex items-center justify-between mb-1 gap-2">
+              <label for="field-<%= f.key %>" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <%= f.label %>
+                <code class="ml-1 text-xs text-gray-400 dark:text-gray-500"><%= f.key %></code>
+              </label>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <% if (f.restart) { %>
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" title="Read once at startup">
+                    <i class="bi bi-arrow-clockwise"></i> Restart
+                  </span>
+                <% } %>
+                <%- sourcePill(f) %>
+              </div>
+            </div>
+
+            <% if (f.type === 'boolean') { %>
+              <select id="field-<%= f.key %>" name="<%= f.key %>"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <option value="">No change (currently <%= f.display || 'unset' %>)</option>
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+            <% } else { %>
+              <input id="field-<%= f.key %>" name="<%= f.key %>"
+                type="<%= f.type === 'secret' ? 'password' : (f.type === 'number' ? 'number' : 'text') %>"
+                autocomplete="off"
+                placeholder="<%= f.display || 'not set' %>"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <% } %>
+
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= f.help %></p>
+            <% if (f.shadowsEnv) { %>
+              <p class="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                <i class="bi bi-exclamation-triangle"></i>
+                Also set in compose.env, where it no longer has any effect — that line can be deleted at the next deploy.
+              </p>
+            <% } %>
+          </div>
+        <% }); %>
+
+        <div class="flex justify-end pt-2">
+          <button type="submit" class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition">
+            <i class="bi bi-save"></i> Save changes
+          </button>
+        </div>
+      </form>
+
+      <% if (group.counts.store) { %>
+        <div class="mt-8">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Managed here</h2>
+          <div class="space-y-2">
+            <% group.fields.filter(function (f) { return f.stored; }).forEach(function (f) { %>
+              <form method="POST" action="/admin/config/<%= group.id %>/revert" class="flex items-center justify-between gap-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
+                <input type="hidden" name="_csrf" value="<%= csrf %>">
+                <input type="hidden" name="key" value="<%= f.key %>">
+                <code class="text-xs text-gray-700 dark:text-gray-300"><%= f.key %></code>
+                <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                  <i class="bi bi-arrow-counterclockwise"></i> Revert to environment
+                </button>
+              </form>
+            <% }); %>
+          </div>
+        </div>
+      <% } %>
+
+    </div>
+  </div>
+</div>

@@ -2,6 +2,33 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.30.0] - 2026-08-21
+
+### Added
+- **Configuration is now managed in the app, at `/admin/config`, and stored in Mongo.** Previously the settings UI covered **24 of the 122** environment variables the code actually reads, and it could not durably change any of them: `configService` resolved env before file, so a key set in `compose.env` could only ever be overridden for the lifetime of the process. Every field carried an "Env" lock badge saying so. Changing a setting meant editing `compose.env` on the host and recreating the container.
+
+  Three things had to change together for this to be real.
+
+  **Precedence is inverted.** The managed store now wins over the environment, which is what makes adopting a key out of `compose.env` possible. Everything unmanaged resolves from the environment exactly as before.
+
+  **The store moved to Mongo** (`INTERNAL.appconfigs`, `mongoose/models/mongoose/INTERNAL/appConfig.js`). The old `config/app-config.json` sits inside the image — the container mounts only `./storage` and `./logs`, and `pull_policy` is `always` — so it was destroyed by every deploy, the same fault the volume comment in `docker-compose.yml` describes. Mongo is dumped nightly, and being an INTERNAL model the collection picks up `auditPlugin`, so every change records who made it and what it replaced. Secrets are encrypted with `encryptionService` before storage, so the audit trail shows that a secret changed without recording it.
+
+  **The UI is generated from a registry.** `services/configRegistry.js` is the single list of what is configurable — 53 keys in 7 groups (Paperless, KashFlow, SMTP, SMS, Security, Sessions & SSO, Audit) — and the pages, the adoption flow and the tests all read from it. This replaces four hand-maintained `*_KEYS` arrays and four bespoke views (~530 lines of EJS) with one registry and two generic templates. Adding a key to the registry is now the whole of the work.
+
+  Details worth knowing:
+
+  - **Adoption never changes a value.** "Adopt from compose.env" copies what the environment currently supplies into the store, so the effective value is identical before and after; the `compose.env` line can then be deleted at the next deploy with nothing to co-ordinate. The page marks lines that have become redundant, and the startup log lists them — the migration has a finish line rather than being a thing someone remembers to do.
+  - **Reverting restores the startup environment value, and deletes rather than blanks a key the environment never set.** `''` reads as "set but empty" to plenty of callers — `parseInt('') || 20000` and `process.env.X ? … : …` disagree about it.
+  - **~14 keys are read at import time** (`BLOCKED_IPS`, the auto-block window, the `AUDIT_*` trio, `ENABLE_HSTS`, `COOKIE_SECURE`, `PAPERLESS_CF_CACHE_MS`, `SESSION_COOKIE_DOMAIN`). A save cannot reach them before the next restart, so the registry marks them `restart: true`, the field carries a badge, and saving one flashes a warning. A setting that silently does nothing is the failure this exists to prevent.
+  - **Saved values are written into `process.env`.** 122 places read `process.env` directly; rewriting them all would have been a far riskier change than applying the store to the environment once at startup and after each save.
+  - **Caches that hold a copy of a setting are dropped on save** — the Twilio client, and Paperless's custom-field definitions. That is the same class of silent no-op as the restart keys, without a badge to warn you.
+  - **Bootstrap keys cannot be managed, by construction**: `MONGO_*`, `SESSION_SECRET`, `ENCRYPTION_KEY`/`_SALT`, `NODE_ENV`, `HOST`, `PORT`, `FILE_STORAGE_DIR`, `TRUST_PROXY`. They are needed before there is a database to read settings from, and `ENCRYPTION_KEY` is what encrypts the store's own secrets. The registry throws at import if one is listed as manageable. They are shown read-only on the hub so the page describes the whole configuration rather than implying they are unset.
+  - Secrets are never sent to the browser, not even to the admin who set them; the field shows a mask, and saving the mask unchanged is ignored. Blank means "keep" — clearing a value is `Revert`, deliberately a separate action, or every save of a form with a masked field would wipe the secret.
+  - The old `/admin/connections/*` URLs redirect (`307` for the POSTs, preserving the body), because they are in bookmarks and in the admin menu, and a 404 on a settings page reads as the feature having been removed. The live connection tester stays exactly where it was.
+
+### Changed
+- `connectionSettingsController.js` is now only the connection tester — 340 lines to 96. The settings pages live in `appConfigController.js`.
+
 ## [6.29.0] - 2026-08-21
 
 ### Security

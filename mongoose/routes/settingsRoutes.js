@@ -3,18 +3,30 @@ const router = express.Router();
 import authService from '../../services/authService.js';
 import settings from '../controllers/settingsController.js';
 import connSettings from '../controllers/connectionSettingsController.js';
+import appConfig from '../controllers/appConfigController.js';
 
-// ── External connection settings (admin only) ─────────────────────────────────
-router.get('/admin/connections', authService.ensureRoles('admin'), connSettings.getConnectionsHub);
-router.get('/admin/connections/kashflow', authService.ensureRoles('admin'), connSettings.getKashflowSettings);
-router.post('/admin/connections/kashflow', authService.ensureRoles('admin'), connSettings.postKashflowSettings);
-router.get('/admin/connections/smtp', authService.ensureRoles('admin'), connSettings.getSmtpSettings);
-router.post('/admin/connections/smtp', authService.ensureRoles('admin'), connSettings.postSmtpSettings);
-router.get('/admin/connections/paperless', authService.ensureRoles('admin'), connSettings.getPaperlessSettings);
-router.post('/admin/connections/paperless', authService.ensureRoles('admin'), connSettings.postPaperlessSettings);
-router.get('/admin/connections/sms', authService.ensureRoles('admin'), connSettings.getSmsSettings);
-router.post('/admin/connections/sms', authService.ensureRoles('admin'), connSettings.postSmsSettings);
+// ── Configuration (admin only) ────────────────────────────────────────────────
+// Every page is generated from configRegistry; there is no per-group route to
+// add when a setting is introduced.
+router.get('/admin/config', authService.ensureRoles('admin'), appConfig.getHub);
+router.get('/admin/config/:group', authService.ensureRoles('admin'), appConfig.getGroup);
+router.post('/admin/config/:group', authService.ensureRoles('admin'), appConfig.postGroup);
+router.post('/admin/config/:group/adopt', authService.ensureRoles('admin'), appConfig.postAdopt);
+router.post('/admin/config/:group/revert', authService.ensureRoles('admin'), appConfig.postRevert);
+
+// The connection tester stays where it was — the settings pages POST to it.
 router.post('/admin/connections/test/:service', authService.ensureRoles('admin'), connSettings.testConnection);
+
+// Old per-service URLs, kept as redirects: they are in bookmarks and in the
+// admin menu, and a 404 on a settings page reads as "the feature is gone".
+const LEGACY_GROUPS = { kashflow: 'kashflow', smtp: 'smtp', paperless: 'paperless', sms: 'sms' };
+router.get('/admin/connections', authService.ensureRoles('admin'), (_req, res) => res.redirect('/admin/config'));
+for (const [legacy, group] of Object.entries(LEGACY_GROUPS)) {
+  router.get(`/admin/connections/${legacy}`, authService.ensureRoles('admin'), (_req, res) =>
+    res.redirect(`/admin/config/${group}`));
+  router.post(`/admin/connections/${legacy}`, authService.ensureRoles('admin'), (_req, res) =>
+    res.redirect(307, `/admin/config/${group}`));
+}
 
 // All authenticated users can access their own profile/account
 router.get(

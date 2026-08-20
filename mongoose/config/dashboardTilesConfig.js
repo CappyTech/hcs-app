@@ -53,9 +53,9 @@ export default {
     // password is a personal setting, and it is already one tile away under
     // User — putting it beside Maintenance Mode implied it was an admin tool.
     ConnectionSettings: {
-        title: 'External Connections',
-        description: 'Configure KashFlow API, SMTP email, and Paperless-ngx credentials.',
-        link: '/admin/connections',
+        title: 'Configuration',
+        description: 'Every managed setting — connections, security, sessions and audit — editable without a redeploy.',
+        link: '/admin/config',
         department: ['admin'],
         buttonClass: 'bg-indigo-700 hover:bg-indigo-800'
     },

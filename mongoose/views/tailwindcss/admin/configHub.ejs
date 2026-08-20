@@ -1,0 +1,79 @@
+<%
+function sourcePill(source) {
+  const map = {
+    store: ['bi-database-fill-check', 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300', 'Managed here'],
+    env:   ['bi-file-earmark-lock-fill', 'bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-100', 'compose.env'],
+    file:  ['bi-file-earmark-text', 'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300', 'app-config.json'],
+    default: ['bi-dash-circle', 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400', 'Not set'],
+  };
+  const [icon, cls, label] = map[source] || map.default;
+  return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ' + cls + '"><i class="bi ' + icon + '"></i> ' + label + '</span>';
+}
+%>
+
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <i class="bi bi-sliders text-indigo-500"></i> Configuration
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Settings stored in the database, editable here, applied without a redeploy.
+      </p>
+    </div>
+    <a href="/admin" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Admin</a>
+  </div>
+
+  <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 flex gap-3">
+    <i class="bi bi-info-circle-fill text-indigo-500 mt-0.5 flex-shrink-0"></i>
+    <div class="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+      <p><strong>Settings saved here win over <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">compose.env</code></strong> and survive a redeploy.</p>
+      <p><strong><%= pending.length %></strong> setting<%= pending.length === 1 ? '' : 's' %> still come from compose.env. Use <em>Adopt</em> on a group to take ownership without changing any value.</p>
+      <% if (shadowed.length) { %>
+        <p><strong><%= shadowed.length %></strong> compose.env line<%= shadowed.length === 1 ? ' is' : 's are' %> now redundant and can be deleted at the next deploy.</p>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <% groups.forEach(function (g) { %>
+      <a href="/admin/config/<%= g.id %>"
+         class="group bg-white dark:bg-gray-900 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 hover:border-indigo-400 dark:hover:border-indigo-500 transition">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+            <i class="bi <%= g.icon %> text-indigo-600 dark:text-indigo-400 text-lg"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900 dark:text-gray-100"><%= g.label %></div>
+            <div class="text-xs text-gray-500 dark:text-gray-400"><%= g.keys.length %> settings</div>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4"><%= g.description %></p>
+        <div class="flex flex-wrap gap-1.5">
+          <% if (g.counts.store) { %><%- sourcePill('store') %><% } %>
+          <% if (g.counts.env) { %><%- sourcePill('env') %><% } %>
+          <% if (g.counts.unset) { %><%- sourcePill('default') %><% } %>
+        </div>
+      </a>
+    <% }); %>
+  </div>
+
+  <div class="bg-white dark:bg-gray-900 shadow rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Bootstrap settings</h2>
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+      These cannot be managed here and are read only from the environment. They are needed before there is a database to
+      read settings from — and <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">ENCRYPTION_KEY</code> is what
+      encrypts the stored secrets, so it can never live in the store it protects.
+    </p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+      <% bootstrap.forEach(function (b) { %>
+        <div class="flex items-center justify-between text-sm border-b border-gray-100 dark:border-gray-800 py-1">
+          <code class="text-xs text-gray-700 dark:text-gray-300"><%= b.key %></code>
+          <span class="text-gray-500 dark:text-gray-400 text-xs truncate max-w-[50%]"><%= b.display %></span>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+</div>
