@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import logger from './loggerService.js';
-import { csrfCookieName } from './cookieNameService.js';
+import { allCsrfCookieNames } from './cookieNameService.js';
 const { sanitize } = logger;
 
 // Lightweight CSRF middleware (strict mode by default).
@@ -18,9 +18,11 @@ const { sanitize } = logger;
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-// Named through cookieNameService so it picks up the __Host- prefix wherever
-// the deployment can guarantee Secure.
-const CSRF_COOKIE_NAME = csrfCookieName();
+// No CSRF cookie is set. The token lives in the session and is published to the
+// page as `<meta name="csrf-token">`; the cookie that used to mirror it was read
+// by nothing and validated against nothing. These are the names it may still
+// have in a browser from an earlier release, cleared on the next request.
+const LEGACY_CSRF_COOKIE_NAMES = allCsrfCookieNames();
 
 // Optional comma separated path prefixes to exempt (e.g. "/user/login,/user/register")
 // Built-in exemptions cover machine-to-machine API endpoints that authenticate via
@@ -60,23 +62,25 @@ function csrfService(req, res, next) {
     // The session token is the single source of truth.
     res.locals.csrfToken = req.session.csrfToken;
 
-    // A cookie mirroring the session token. It is never accepted as the expected
-    // value during validation — only the session token is — so it carries no
-    // authority, and it is set httpOnly.
+    // No cookie is set. There used to be one mirroring the session token, "a
+    // read-only convenience copy for JS clients that echo it back in
+    // X-CSRF-Token" — but nothing reads it: every fetch in this app takes the
+    // token from the server-rendered `<meta name="csrf-token">` tag, and no
+    // other service in the estate reads it either. It was never accepted during
+    // validation, so it carried no authority and removing it changes no
+    // behaviour. What it did do was hand any XSS the token directly.
     //
-    // It was `httpOnly: false` for JS clients that echo it back in
-    // X-CSRF-Token. Nothing does: every fetch in this app reads the token from
-    // the server-rendered `<meta name="csrf-token">` tag, and no other service
-    // in the estate reads either cookie. So the readable copy bought nothing
-    // and handed any XSS the token directly.
-    try {
-      res.cookie(CSRF_COOKIE_NAME, req.session.csrfToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: !!req.secure,
-        path: "/",
-      });
-    } catch (_) {}
+    // Clear the copy a returning browser may still hold. It is a session cookie
+    // so it would go on its own when the browser closes, but a stale token
+    // sitting in a jar invites someone to start trusting it again.
+    if (req.cookies) {
+      for (const name of LEGACY_CSRF_COOKIE_NAMES) {
+        if (req.cookies[name] === undefined) continue;
+        try {
+          res.clearCookie(name, { path: "/", secure: !!req.secure, sameSite: "lax" });
+        } catch (_) {}
+      }
+    }
     // Ensure the session cookie is set on first interaction
     if (createdToken) {
       try {
