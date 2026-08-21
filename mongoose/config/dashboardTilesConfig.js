@@ -231,6 +231,14 @@ export default {
         department: ['finance'],
         buttonClass: 'bg-amber-600 hover:bg-amber-700'
     },
+    // ── Inbound mail ──────────────────────────────────────────────────
+    MailFilteringLog: {
+        title: 'Mail Filtering Log',
+        description: 'Why inbound mail was delivered or stopped. Search by sender or recipient to answer "did my email reach you?".',
+        link: '/mail',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     /*
     KF_Customers: {
         title: 'KF Customers',

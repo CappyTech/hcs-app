@@ -1,0 +1,102 @@
+<%
+  const fmtTime = (r) => String(r.event_time || r.received_at || '').replace('T', ' ').slice(0, 19) || '—';
+  const blocked = (s) => /reject|block|quarantin|defer|discard/i.test(String(s || ''));
+  // Fields shown in the detail block, in the order the syslog template emits
+  // them. Anything the template gains later still reaches the raw line below,
+  // so a new field is never invisible — just not yet given a label.
+  const DETAIL = [
+    ['filtering_host', 'Filtering host'],
+    ['sender_host', 'Sender host'],
+    ['helo', 'HELO'],
+    ['sender_ip', 'Sender IP'],
+    ['sender_location', 'Sender location'],
+    ['domain', 'Domain'],
+    ['message_id_header', 'Message-ID'],
+    ['incoming_size', 'Size (bytes)'],
+    ['forwarded', 'Forwarded'],
+    ['main_class', 'Main class'],
+    ['sub_class', 'Sub class'],
+    ['extra_class', 'Reason'],
+    ['product', 'Product'],
+    ['received_at', 'Recorded at'],
+  ];
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/mail" class="text-sm text-green-700 dark:text-green-400 hover:underline">&larr; Mail filtering log</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold font-mono"><%= id %></h1>
+  </div>
+
+  <% if (!mounted) { %>
+    <div class="p-4 rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">
+      <p class="text-sm text-amber-800 dark:text-amber-300">The filtering log is not available to this container.</p>
+    </div>
+  <% } else if (!rows.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No decision with this filtering id is in the log.
+      <div class="mt-1 text-xs">It may have passed the 90-day retention limit<%= status.oldest ? ` — the log starts at ${status.oldest}` : '' %>.</div>
+    </div>
+  <% } else { %>
+
+    <p class="text-sm text-gray-700 dark:text-gray-300 mb-6 max-w-3xl">
+      <% if (rows.length > 1) { %>
+        This message was addressed to <strong><%= rows.length %></strong> recipients, and the filter
+        recorded a decision for each one. They can differ: a message can be delivered to one
+        recipient and stopped for another.
+      <% } else { %>
+        One filtering decision was recorded for this message.
+      <% } %>
+    </p>
+
+    <% rows.forEach(r => { %>
+      <div class="mb-6 bg-white dark:bg-gray-900 border <%= blocked(r.status)
+        ? 'border-red-300 dark:border-red-700' : 'border-green-300 dark:border-green-700' %> rounded-2xl shadow-sm p-4">
+
+        <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
+          <div>
+            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Recipient</div>
+            <div class="text-lg font-bold text-gray-900 dark:text-white"><%= r.recipient || '—' %></div>
+            <div class="text-sm text-gray-700 dark:text-gray-300 mt-1">from <%= r.sender || 'unknown sender' %></div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs px-2 py-0.5 rounded-full <%= blocked(r.status)
+              ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+              : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' %>">
+              <%= r.status || 'unknown' %>
+            </span>
+            <div class="font-mono text-xs text-gray-500 dark:text-gray-400 mt-1"><%= fmtTime(r) %></div>
+          </div>
+        </div>
+
+        <% if (r.kv_partial) { %>
+          <div class="mb-4 p-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-sm text-amber-800 dark:text-amber-300">
+            A field value contained a comma and was truncated by the collector's parser.
+            The complete original line is shown at the bottom of this card.
+          </div>
+        <% } %>
+
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+          <% DETAIL.forEach(([key, label]) => { %>
+            <% if (r[key] !== undefined && r[key] !== null && r[key] !== '') { %>
+              <div class="flex gap-2 text-sm">
+                <dt class="font-medium text-gray-500 dark:text-gray-400 min-w-[8rem]"><%= label %></dt>
+                <dd class="text-gray-900 dark:text-white break-all"><%= r[key] %></dd>
+              </div>
+            <% } %>
+          <% }) %>
+        </dl>
+
+        <% if (r.raw) { %>
+          <!-- The collector keeps the original syslog line on every record, so a
+               parsing mistake is recoverable after the fact rather than lost. -->
+          <details class="mt-4">
+            <summary class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:underline">Original syslog line</summary>
+            <pre class="mt-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all"><%= r.raw %></pre>
+          </details>
+        <% } %>
+      </div>
+    <% }) %>
+  <% } %>
+</div>

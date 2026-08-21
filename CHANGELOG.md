@@ -2,6 +2,32 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.32.0] - 2026-08-21
+
+### Added
+- **The inbound mail filtering log is now readable in the app, at `/mail` (admin only).** Inbound mail to heroncs.co.uk was being silently rejected by the SpamExperts/StrikeMail filter — Quarantine response was set to *Rejected*, so legitimate senders got a 550 and we never saw it. There was no local record of any of it, which made "did my email reach you?" a support ticket rather than a question anyone here could answer. The `mailsiem` collector on the host now receives a syslog line per filtering decision and writes one NDJSON file per day; this release is hcs-app's read-only window onto those files.
+
+  The page shows how much mail was stopped, **why** — `extra_class` is the filter's own account of a classification, and a run of identical reasons across unrelated senders is what a misconfigured quarantine response looks like from the outside — and a search across sender, recipient, sending IP, message-id and filtering id. `/mail/message/:id` shows every decision recorded under one filtering id: a message to several recipients is several decisions, and they can differ, so one recipient's mail can be delivered while another's is stopped.
+
+  **The log is deliberately not in Mongo, and must not be moved there.** These records are third-party personal data — every line names a sender and a recipient, including people who appear nowhere else in this system and never chose to deal with us — held under a 90-day rule enforced by a deletion job on the collector host. Mongo is dumped nightly with its own 90-day archive retention, and those archives are browsable, so ingesting would leave copies alive for up to ~180 days against a 90-day policy and take the deletion job out of the critical path. Reading the files keeps the collector the sole owner: when a day file is deleted it is gone everywhere, including here. `mailFilterLogService.js` touches no database and there is no model, no namespace and no Mongo grant to add — a test strips comments and asserts the service and controller contain no database call at all, because both files *explain* this decision in prose and matching the explanation rather than the code would fail the moment someone documented it properly.
+
+  Consequences of that choice, all deliberate. There is no index, so every query is a bounded scan: the window is capped at the collector's 90-day retention, each entry point takes an explicit day count, and the summary on the landing page uses its own narrower 7-day window rather than being widened by the search. A bare page load scans nothing and lists nothing — returning "the most recent hundred" would invite reading it as a complete list. Lines are filtered as **raw text before `JSON.parse`**, which is what makes this fast enough to be a page: parsing every line of a wide window to discard almost all of it is the whole cost of the query. Measured at 12,000 decisions across three day files, the summary is ~65 ms and a search ~40 ms.
+
+  **The search term is a substring test and never a `RegExp`.** User input compiled into a pattern is a ReDoS vector, and none of these lookups need patterns; a test asserts `new RegExp` does not appear in the service.
+
+  **Read-only by absence.** The module registers `GET` routes and nothing else — the same enforcement style as the missing KashFlow wrappers in hcs-sync and the read-only content API in the website module. It is not that writes are disabled; there is no route to receive one, which is also why nothing here needs CSRF. A test fails if any other verb appears in `mailRoutes.js`, and the views are asserted to contain no `POST` form.
+
+  **Admin only, which is narrower than the finance department pattern used by `/bank`,** because the subject category here is anyone who writes to the business. Widening it is one entry in `rolePermissionsConfig.routeAccess` plus the route guard, and should be a decision rather than a drift; a test pins the entry to exactly `['admin']`.
+
+  **Sender-controlled values are escaped and asserted to be.** The sender chooses their own address and HELO string, so these records are attacker-influenced in a way most of this app's data is not.
+
+### Changed
+- **The Article 30 register records the mail filtering log (`ropaConfig` A8).** Its subject category is `any_inbound_correspondent` — wider than any other activity in the register, and the fact worth writing down: this is the one place the platform holds data about people it has no relationship with. Lawful basis is legitimate interests, retention is the 90-day host deletion job, and the cross-border position is recorded honestly as unassessed, since the filtering cluster's region is unconfirmed and the syslog transport it offers has no TLS option — which is why the template carries no message content and no subject lines. The filtering provider is listed as a processor. A test fails if the activity or the processor entry goes missing.
+
+### Deployment
+- **Needs a read-only bind mount; without it the page says so rather than breaking.** `docker-compose.yml` mounts `/mnt/data/mailsiem/events` (override with `MAILSIEM_HOST_DIR`) at `/app/mailsiem/events:ro`, and `MAILSIEM_EVENTS_DIR` overrides the path the app reads. The mount must stay read-only: hcs-app is a reader, and the host's retention job is what makes the 90-day policy true. Unmounted — which is the state this ships in, since the image deploys before the stack change — `/mail` renders a "collector not mounted" banner, which is deliberately a different message from an empty log.
+- No schema change: `requiredSchemasVersion` stays 3.0.0, so the three-step `hcs-schemas` deploy does not apply to this release.
+
 ## [6.31.0] - 2026-08-21
 
 ### Security

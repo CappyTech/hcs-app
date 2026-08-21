@@ -86,6 +86,7 @@ import __gdprRoutes from './mongoose/routes/gdprRoutes.js';
 import __legalRoutes from './mongoose/routes/legalRoutes.js';
 import __companyDocsRoutes from './mongoose/routes/companyDocsRoutes.js';
 import __auditRoutes from './mongoose/routes/auditRoutes.js';
+import __mailRoutes from './mongoose/routes/mailRoutes.js';
 import __webRoutes from './mongoose/routes/webRoutes.js';
 import __webApiRoutes from './mongoose/routes/webApiRoutes.js';
 import __errorHandlerService from './services/errorHandlerService.js';
@@ -581,6 +582,9 @@ const main = async () => {
     appRouter.use('/', __legalRoutes);
     appRouter.use('/', __companyDocsRoutes);
     appRouter.use('/', __auditRoutes);
+    // Inbound mail filtering log. Reads NDJSON from the mailsiem collector's
+    // read-only bind mount; no database, and no write path anywhere in it.
+    appRouter.use('/', __mailRoutes);
     appRouter.use('/', __webRoutes);
     // Read-only content API for hcs-web. Inside appRouter so it gets body
     // parsing, request logging and maintenance's JSON 503; exempted from the

@@ -29,6 +29,12 @@ services:
     volumes:
       - ./uploads:/uploads
       - ./logs:/logs
+      # Inbound mail filtering decisions, written by the mailsiem collector on
+      # the host. READ-ONLY on purpose: the collector owns these files and a
+      # host cron job deletes them at 90 days, which is the only thing that
+      # makes that retention true. hcs-app is a reader and nothing more.
+      # Absent, /mail renders and says the collector is not mounted.
+      - ${MAILSIEM_HOST_DIR:-/mnt/data/mailsiem/events}:/app/mailsiem/events:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:${PORT}/healthz || exit 1"]
       interval: 10s
