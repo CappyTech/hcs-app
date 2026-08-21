@@ -3,8 +3,9 @@
 import logger from './loggerService.js';
 const { sanitize } = logger;
 import { getClientIp } from './ipService.js';
+import { sessionCookieName } from './cookieNameService.js';
 
-const SESSION_COOKIE_NAME = "hms.sid";
+const SESSION_COOKIE_NAME = sessionCookieName();
 
 function hasCookie(req, cookieName) {
   try {

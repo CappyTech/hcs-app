@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import logger from './loggerService.js';
+import { csrfCookieName } from './cookieNameService.js';
 const { sanitize } = logger;
 
 // Lightweight CSRF middleware (strict mode by default).
@@ -17,7 +18,9 @@ const { sanitize } = logger;
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-const CSRF_COOKIE_NAME = "hms.csrf";
+// Named through cookieNameService so it picks up the __Host- prefix wherever
+// the deployment can guarantee Secure.
+const CSRF_COOKIE_NAME = csrfCookieName();
 
 // Optional comma separated path prefixes to exempt (e.g. "/user/login,/user/register")
 // Built-in exemptions cover machine-to-machine API endpoints that authenticate via
@@ -57,12 +60,18 @@ function csrfService(req, res, next) {
     // The session token is the single source of truth.
     res.locals.csrfToken = req.session.csrfToken;
 
-    // Set a readable cookie mirroring the session token so JS clients can echo
-    // it back in X-CSRF-Token. The cookie is never accepted as the expected
-    // value during validation — only the session token is.
+    // A cookie mirroring the session token. It is never accepted as the expected
+    // value during validation — only the session token is — so it carries no
+    // authority, and it is set httpOnly.
+    //
+    // It was `httpOnly: false` for JS clients that echo it back in
+    // X-CSRF-Token. Nothing does: every fetch in this app reads the token from
+    // the server-rendered `<meta name="csrf-token">` tag, and no other service
+    // in the estate reads either cookie. So the readable copy bought nothing
+    // and handed any XSS the token directly.
     try {
       res.cookie(CSRF_COOKIE_NAME, req.session.csrfToken, {
-        httpOnly: false,
+        httpOnly: true,
         sameSite: "lax",
         secure: !!req.secure,
         path: "/",
