@@ -1,16 +1,16 @@
 import express from 'express';
 const router = express.Router();
 import path from 'path';
-import { sessionCookieName, csrfCookieName } from '../../services/cookieNameService.js';
+import { sessionCookieName } from '../../services/cookieNameService.js';
 
 router.get('/legal/cookie-policy', (req, res) => {
-  // The names are rendered rather than written into the page: they carry a
+  // The name is rendered rather than written into the page: it carries a
   // __Host- prefix wherever the deployment can guarantee Secure, and a cookie
   // policy that does not match what the browser shows is worse than none.
+  // There is one cookie now — the CSRF token is no longer mirrored into one.
   res.render(path.join('tailwindcss', 'legal', 'cookie-policy'), {
     title: 'Cookie Policy',
     sessionCookieName: sessionCookieName(),
-    csrfCookieName: csrfCookieName(),
   });
 });
 
