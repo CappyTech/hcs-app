@@ -46,7 +46,7 @@ import cisMappings from './mongoose/config/cisMappings.js';
 import __socketService from './services/socketService.js';
 import createSessionService from './mongoose/services/sessionService.js';
 import __csrfService from './services/csrfService.js';
-import __securityService, { trustEdgeTls } from './services/securityService.js';
+import { trustEdgeTls, securityHeaders, xssSanitize } from './services/securityService.js';
 import __flashService from './services/flashService.js';
 import __passwordResetDraft from './services/passwordResetDraft.js';
 import __auditContextService from './mongoose/services/auditContextService.js';
@@ -136,6 +136,12 @@ const main = async () => {
   // run before the session middleware, which reads the scheme when it decides
   // whether to set the cookie at all.
   app.use(trustEdgeTls);
+
+  // Security response headers, mounted before anything that can answer a
+  // request — the blocklist's 403, /favicon.ico, /healthz and the maintenance
+  // 503 all reply without ever reaching appRouter, and used to carry no CSP,
+  // X-Frame-Options or X-Content-Type-Options at all.
+  app.use(securityHeaders);
   app.set('view engine', 'ejs');
   app.set('views', [path.join(__dirname, 'mongoose/views')]);
   app.set('layout', path.join('tailwindcss', 'layout'));
@@ -413,7 +419,9 @@ const main = async () => {
 
     // Core middleware
     appRouter.use(useragent.express());
-    appRouter.use(__securityService);
+    // Headers are mounted at the top of the stack (see above); this is the
+    // body sanitiser, which must run after the body parsers.
+    appRouter.use(xssSanitize);
     appRouter.use(__flashService);
     // Drop any carried-over reset password the moment the browser navigates
     // outside the password reset flow. Mounted after the /resources static
