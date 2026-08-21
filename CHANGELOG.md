@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.31.0] - 2026-08-21
+
+### Security
+- **The CSRF cookie is `httpOnly`, and both cookies take the `__Host-` prefix where the deployment can guarantee Secure.** A scan flagged `hms.csrf` as script-readable and unprefixed.
+
+  **`httpOnly`.** The cookie was deliberately readable, "a convenience copy for JS clients that echo it back in `X-CSRF-Token`". Nothing does: every `fetch` in this app reads the token from the server-rendered `<meta name="csrf-token">` tag, and no other service in the estate reads either cookie. The readable copy therefore bought nothing and handed any XSS the token directly. It is safe to hide because **the cookie carries no authority** — validation compares the supplied token against `req.session.csrfToken` only, and never against the cookie.
+
+  **The prefix.** `__Host-` is enforced by the browser: it requires Secure, `Path=/` and **no** `Domain`, which is what makes it worth having — a sibling subdomain cannot set it, closing cookie fixation across the several other names on this edge. Where a cookie domain is configured, `__Secure-` is used instead, since `__Host-` forbids one.
+
+  **The prefix is claimed only when this process knows every response is Secure** — `COOKIE_SECURE=true`, or `TRUST_EDGE_TLS=true` which makes every request read as HTTPS. Under the default `auto`, secure is decided per request and cannot be promised at the moment the cookie is named. This matters because **a browser rejects a mis-prefixed cookie silently**: no console message, no error, just no cookie — and on the session cookie that means nobody can log in. Local HTTP development keeps the bare names for the same reason.
+
+  **Names now come from one module.** `hms.sid` was hardcoded in five files including `res.clearCookie("hms.sid")` at logout, so renaming it would have quietly stopped logout clearing the cookie. `services/cookieNameService.js` owns both names; logout clears **every** name a cookie may carry — the prefixed one and the pre-prefix one — restating `Path` and `Secure`, since a `__Host-` cookie is only cleared by matching attributes.
+
+  The public cookie policy renders the live names rather than hardcoding them: a policy page that disagrees with what the browser shows is worse than none.
+
+  **Deploying this logs everyone out once.** The session cookie's name changes, so existing sessions are not recognised. There is no way round that short of not adopting the prefix.
+
 ## [6.30.1] - 2026-08-21
 
 ### Changed

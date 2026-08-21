@@ -45,7 +45,7 @@
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             <tr class="bg-white dark:bg-gray-900">
-              <td class="px-4 py-3 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap">hms.sid</td>
+              <td class="px-4 py-3 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap"><%= typeof sessionCookieName !== 'undefined' ? sessionCookieName : 'hms.sid' %></td>
               <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
                 Session identifier. Keeps you logged in as you navigate between pages.
                 Signed and the session data is encrypted at rest.
@@ -58,10 +58,11 @@
               </td>
             </tr>
             <tr class="bg-gray-50/50 dark:bg-gray-800/30">
-              <td class="px-4 py-3 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap">hms.csrf</td>
+              <td class="px-4 py-3 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-nowrap"><%= typeof csrfCookieName !== 'undefined' ? csrfCookieName : 'hms.csrf' %></td>
               <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
                 Cross-Site Request Forgery (CSRF) protection token. Validates that form
                 submissions originate from this site and not from a third party.
+                Not readable by scripts.
               </td>
               <td class="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">Session</td>
               <td class="px-4 py-3">

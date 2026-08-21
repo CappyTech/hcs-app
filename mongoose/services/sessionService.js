@@ -4,8 +4,12 @@ __dotenv.config({ path: '../.env' });
 import logger from '../../services/loggerService.js';
 import __dotenv from 'dotenv';
 import __crypto from 'crypto';
+import { sessionCookieName } from '../../services/cookieNameService.js';
 
-const COOKIE_NAME = 'hms.sid';
+// Prefixed where the deployment can guarantee Secure — see cookieNameService.
+// Renaming the cookie means existing sessions are not recognised, i.e. one
+// forced logout when a deployment first adopts the prefix.
+const COOKIE_NAME = sessionCookieName();
 
 export default function createSessionService(mongoClient) {
     if (!process.env.SESSION_SECRET) {
