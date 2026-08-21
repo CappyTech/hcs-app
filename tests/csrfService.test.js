@@ -29,8 +29,10 @@ function makeRes() {
     _status: null,
     _body: null,
     _cookies: {},
+    _cleared: [],
     locals: {},
     cookie: mock.fn((name, value, opts) => { res._cookies[name] = { value, opts }; }),
+    clearCookie: mock.fn((name) => { res._cleared.push(name); }),
     status: mock.fn((code) => { res._status = code; return res; }),
     send: mock.fn((body) => { res._body = body; }),
   };
@@ -76,18 +78,25 @@ describe('csrfService', () => {
       });
     });
 
-    it('sets CSRF cookie, and not readable by scripts', (_, done) => {
-      // This asserted httpOnly === false, for JS clients that echo the cookie
-      // back in X-CSRF-Token. Nothing does — every fetch reads the token from
-      // the server-rendered <meta name="csrf-token"> — so the readable copy
-      // bought nothing and handed any XSS the token directly. The cookie is
-      // never validated against either; only the session token is.
+    it('sets no CSRF cookie at all', (_, done) => {
+      // There used to be one mirroring the session token, for JS clients that
+      // echo it back in X-CSRF-Token. Nothing reads it — every fetch takes the
+      // token from the server-rendered <meta name="csrf-token"> — and it was
+      // never accepted during validation, so it carried no authority. All it
+      // did was hand any XSS the token.
       const req = makeReq();
       const res = makeRes();
       csrfService(req, res, () => {
-        assert.ok(res._cookies['hms.csrf']);
-        assert.equal(res._cookies['hms.csrf'].opts.sameSite, 'lax');
-        assert.equal(res._cookies['hms.csrf'].opts.httpOnly, true);
+        assert.deepEqual(Object.keys(res._cookies), []);
+        done();
+      });
+    });
+
+    it('clears a CSRF cookie left by an earlier release', (_, done) => {
+      const req = makeReq({ cookies: { 'hms.csrf': 'stale' } });
+      const res = makeRes();
+      csrfService(req, res, () => {
+        assert.ok(res._cleared.includes('hms.csrf'), 'stale cookie should be cleared');
         done();
       });
     });

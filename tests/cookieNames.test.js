@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import * as registryNames from '../services/cookieNameService.js';
 import {
   cookiePrefix,
   sessionCookieName,
@@ -56,6 +57,12 @@ describe('cookieNameService', () => {
     assert.equal(sessionCookieName(), '__Secure-hms.sid');
   });
 
+  it('offers every historical CSRF name so a stale cookie can be cleared', () => {
+    const { allCsrfCookieNames } = registryNames;
+    assert.ok(allCsrfCookieNames().includes('hms.csrf'));
+    assert.ok(allCsrfCookieNames().includes('__Host-hms.csrf'));
+  });
+
   it('offers every historical name so logout can clear the old one', () => {
     process.env.TRUST_EDGE_TLS = 'true';
     const names = allSessionCookieNames();
@@ -68,20 +75,23 @@ describe('cookieNameService', () => {
 describe('cookie flags', () => {
   const csrfSrc = fs.readFileSync(path.join(ROOT, 'services/csrfService.js'), 'utf8');
 
-  it('sets the CSRF cookie httpOnly', () => {
+  it('sets no CSRF cookie', () => {
     // Nothing reads it: every fetch in this app takes the token from the
-    // server-rendered <meta name="csrf-token">. A readable copy bought nothing
-    // and handed any XSS the token directly.
-    const call = csrfSrc.match(/res\.cookie\(CSRF_COOKIE_NAME[\s\S]*?\}\);/);
-    assert.ok(call, 'no CSRF cookie call found');
-    assert.match(call[0], /httpOnly:\s*true/);
-    assert.match(call[0], /path:\s*"\/"/, '__Host- requires Path=/');
+    // server-rendered <meta name="csrf-token">, which the layout emits on every
+    // page. A cookie nobody reads and nothing validates is only a way to hand
+    // an XSS the token.
+    assert.ok(!/res\.cookie\(/.test(csrfSrc), 'csrfService must not set a cookie');
+    assert.match(csrfSrc, /res\.clearCookie\(/, 'it should clear the one earlier releases set');
   });
 
-  it('never validates against the cookie', () => {
-    // The cookie carries no authority — only the session token is compared —
-    // which is what makes it safe to make it unreadable.
-    assert.ok(!/req\.cookies\s*\[/.test(csrfSrc), 'CSRF must not be validated from a cookie');
+  it('never validates against a cookie', () => {
+    // The only remaining read of req.cookies is the one that clears a stale
+    // copy. Validation compares the supplied token against the session token
+    // and nothing else — accepting a cookie would defeat the whole check,
+    // since an attacker who can set a cookie could then satisfy it.
+    const validation = csrfSrc.slice(csrfSrc.indexOf('function validateToken'));
+    assert.ok(!/req\.cookies/.test(validation), 'validation must not read a cookie');
+    assert.match(csrfSrc, /tokensMatch\(supplied, expected\)|expected\s*=\s*req\.session\.csrfToken/);
   });
 
   it('has no hardcoded cookie name left anywhere', () => {
