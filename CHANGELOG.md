@@ -29,6 +29,17 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ### Changed
 - `connectionSettingsController.js` is now only the connection tester — 340 lines to 96. The settings pages live in `appConfigController.js`.
 
+## [6.29.1] - 2026-08-21
+
+### Fixed
+- **Security headers were mounted too low in the stack, so anything answered before the router carried none of them.** `generateNonce`, `permissionsPolicy` and `helmet` sat on `appRouter` beside the body sanitiser. Plenty of responses never get that far: `requestBlocklistService` answers a bare `403` to anything that looks like a scanner, and `/favicon.ico`, `/healthz` and the maintenance `503` are all served earlier. Those replies went out with **no CSP, no `X-Frame-Options` and no `X-Content-Type-Options`**.
+
+  A vulnerability scan reported exactly that — missing CSP, missing clickjacking protection, content sniffing allowed — while a headers scan of the same URL minutes earlier graded it A with all three present. Both were right: **92% of the scanner's requests were 403s**, because it tripped the blocklist, and it graded the responses it actually received. It also detected no technologies, for the same reason.
+
+  Reproduced by hitting a blocklisted path fourteen times from a container on `hcs-net` and then requesting `/`: `403 Forbidden`, `Content-Type`, `ETag`, `Date` — and nothing else.
+
+  The headers are now mounted at the top of the stack, immediately after `trust proxy` and `trustEdgeTls`, so every response carries them. **The body sanitiser deliberately stays on `appRouter`**: it rewrites `req.body` and so has to run after the body parsers, whereas headers only get later and less useful the further down they are mounted. `securityService`'s default export is unchanged for existing importers; the new `securityHeaders` and `xssSanitize` named exports are what `app.js` mounts.
+
 ## [6.29.0] - 2026-08-21
 
 ### Security

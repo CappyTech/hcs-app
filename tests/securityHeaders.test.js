@@ -1,7 +1,7 @@
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import securityService, { trustEdgeTls, PERMISSIONS_POLICY } from '../services/securityService.js';
+import securityService, { trustEdgeTls, PERMISSIONS_POLICY, securityHeaders, xssSanitize } from '../services/securityService.js';
 
 /**
  * A securityheaders.com scan of https://app.heroncs.co.uk (2026-08-20) found the
@@ -22,6 +22,9 @@ describe('security headers', () => {
     app.use(trustEdgeTls);
     app.use(securityService);
     app.get('/probe', (req, res) => res.json({ secure: req.secure }));
+    // Stands in for requestBlocklistService, /favicon.ico, /healthz and the
+    // maintenance 503 — everything that answers before appRouter is reached.
+    app.use((_req, res) => res.status(403).type('text/plain').send('Forbidden'));
     server = app.listen(0, '127.0.0.1');
     await new Promise((resolve) => server.once('listening', resolve));
     origin = `http://127.0.0.1:${server.address().port}`;
@@ -71,5 +74,42 @@ describe('security headers', () => {
       const res = await fetch(`${origin}/probe`);
       assert.equal((await res.json()).secure, false);
     });
+  });
+});
+
+/**
+ * The headers have to be mounted above everything that can answer a request.
+ * Mounted on appRouter, as they were, a blocked scanner got bare 403s carrying
+ * no CSP, no X-Frame-Options and no X-Content-Type-Options — and reported the
+ * site as having none of them, off the back of 92% of its requests being 403s.
+ */
+describe('headers on responses that never reach the router', () => {
+  let server;
+  let origin;
+
+  before(async () => {
+    const app = express();
+    app.use(securityHeaders);
+    app.use((_req, res) => res.status(403).type('text/plain').send('Forbidden'));
+    server = app.listen(0, '127.0.0.1');
+    await new Promise((resolve) => server.once('listening', resolve));
+    origin = `http://127.0.0.1:${server.address().port}`;
+  });
+
+  after(() => new Promise((resolve) => server.close(resolve)));
+
+  it('sets them on a 403 from before the router', async () => {
+    const res = await fetch(`${origin}/anything`);
+    assert.equal(res.status, 403);
+    for (const header of ['content-security-policy', 'x-frame-options', 'x-content-type-options', 'permissions-policy']) {
+      assert.ok(res.headers.get(header), `${header} missing on a pre-router 403`);
+    }
+  });
+
+  it('keeps the body sanitiser separate from the headers', () => {
+    // It rewrites req.body, so it has to stay after the body parsers on
+    // appRouter — while headers only get less useful the later they mount.
+    assert.ok(!securityHeaders.includes(xssSanitize), 'xssSanitize must not be mounted with the headers');
+    assert.equal(securityService[securityService.length - 1], xssSanitize);
   });
 });

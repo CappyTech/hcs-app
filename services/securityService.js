@@ -218,7 +218,24 @@ function trustEdgeTls(req, _res, next) {
   next();
 }
 
-const securityService = [
+/**
+ * The response headers, as their own array so they can be mounted at the very
+ * top of the stack.
+ *
+ * They used to be mounted on appRouter, alongside the body sanitiser — which
+ * meant every response produced *before* that router carried none of them. That
+ * is not a rare path: `requestBlocklistService` answers a bare `403` to
+ * anything that looks like a scanner, and `/favicon.ico`, `/healthz` and the
+ * maintenance `503` are all served earlier too. A scanner that trips the
+ * blocklist therefore gets 403s with no CSP, no `X-Frame-Options` and no
+ * `X-Content-Type-Options` — and reports the site as having none of them, which
+ * is exactly what happened (92% of one scan's requests were 403s).
+ *
+ * The sanitiser stays on appRouter: it rewrites req.body and so has to run
+ * after the body parsers, whereas headers only get later and less useful the
+ * further down they are mounted.
+ */
+const securityHeaders = [
   generateNonce,
   permissionsPolicy,
   helmet({
@@ -227,8 +244,9 @@ const securityService = [
     crossOriginEmbedderPolicy: false, // adjust if you need COEP
     hsts: enableHsts ? { maxAge: 15552000, includeSubDomains: true } : false,
   }),
-  xssSanitize,
 ];
 
-export { trustEdgeTls, PERMISSIONS_POLICY };
+const securityService = [...securityHeaders, xssSanitize];
+
+export { trustEdgeTls, PERMISSIONS_POLICY, securityHeaders, xssSanitize };
 export default securityService;
