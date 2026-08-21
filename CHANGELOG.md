@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.30.1] - 2026-08-21
+
+### Changed
+- **Version corrected after a merge-order collision.** The 6.29.1 header fix was branched from master before 6.30.0 landed, so when it merged second its `package.json` bump took the version *backwards* — master read 6.29.1 while carrying every 6.30.0 change. Nothing shipped wrong: CI publishes only `:latest` and `:sha-<short>`, never a version tag. But `docker exec <c> node -e "…package.json…"` is how this estate answers "what is actually deployed", and that answer was lower than the code. The 6.29.1 entry below is left as written, since it describes the change accurately; this bump just puts the version ahead of 6.30.0 again.
+
 ## [6.30.0] - 2026-08-21
 
 ### Added
