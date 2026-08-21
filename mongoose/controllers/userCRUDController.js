@@ -12,6 +12,7 @@ import auditLog from '../../services/auditLogService.js';
 import hibpService from '../../services/hibpService.js';
 import totpService from '../../services/totpService.js';
 import passwordResetDraft from '../../services/passwordResetDraft.js';
+import { allSessionCookieNames, sessionCookieName } from '../../services/cookieNameService.js';
 
 function hasCookie(req, cookieName) {
   try {
@@ -188,7 +189,7 @@ export const loginUser = async (req, res) => {
 
     logger.info(
       `[login attempt] ident=${maskIdentifier(usernameOrEmail)} isEmail=${String(usernameOrEmail || "").includes("@") ? "Y" : "N"} ` +
-        `ip=${ip} sidCookie=${hasCookie(req, "hms.sid") ? "Y" : "N"} sess=${maskId(req.sessionID)} ` +
+        `ip=${ip} sidCookie=${hasCookie(req, sessionCookieName()) ? "Y" : "N"} sess=${maskId(req.sessionID)} ` +
         `secure=${req.secure ? "Y" : "N"} proto=${req.protocol} ua=${agent.browser || "Unknown"}/${agent.os || "Unknown"}`,
     );
 
@@ -419,7 +420,7 @@ export const loginUser = async (req, res) => {
 
     logger.info(
       `${user.username} successfully logged in. ` +
-        `sess=${maskId(req.sessionID)} sidCookieWas=${hasCookie(req, "hms.sid") ? "Y" : "N"} sessionUser=${req.session?.user ? "Y" : "N"}`,
+        `sess=${maskId(req.sessionID)} sidCookieWas=${hasCookie(req, sessionCookieName()) ? "Y" : "N"} sessionUser=${req.session?.user ? "Y" : "N"}`,
     );
     req.flash("success", `${user.username}, you're logged in.`);
     return res.redirect(next || "/");
@@ -444,7 +445,13 @@ export const logoutUser = (req, res) => {
       req.flash("error", "An error occurred while logging out.");
       return res.redirect("/");
     }
-    res.clearCookie("hms.sid");
+    // Clear every name the session cookie may carry — the prefixed one in the
+    // browser now, and the bare one from before the prefix was adopted. A
+    // __Host- cookie is only cleared by a matching Path and Secure, so the
+    // attributes are restated rather than left to the defaults.
+    for (const name of allSessionCookieNames()) {
+      res.clearCookie(name, { path: '/', secure: !!req.secure, sameSite: 'lax' });
+    }
     req.flash("success", "You have been logged out.");
     return res.redirect("/user/login");
   });

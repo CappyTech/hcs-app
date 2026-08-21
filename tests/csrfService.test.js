@@ -76,13 +76,18 @@ describe('csrfService', () => {
       });
     });
 
-    it('sets CSRF cookie', (_, done) => {
+    it('sets CSRF cookie, and not readable by scripts', (_, done) => {
+      // This asserted httpOnly === false, for JS clients that echo the cookie
+      // back in X-CSRF-Token. Nothing does — every fetch reads the token from
+      // the server-rendered <meta name="csrf-token"> — so the readable copy
+      // bought nothing and handed any XSS the token directly. The cookie is
+      // never validated against either; only the session token is.
       const req = makeReq();
       const res = makeRes();
       csrfService(req, res, () => {
         assert.ok(res._cookies['hms.csrf']);
         assert.equal(res._cookies['hms.csrf'].opts.sameSite, 'lax');
-        assert.equal(res._cookies['hms.csrf'].opts.httpOnly, false);
+        assert.equal(res._cookies['hms.csrf'].opts.httpOnly, true);
         done();
       });
     });
