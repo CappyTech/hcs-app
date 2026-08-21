@@ -7,8 +7,8 @@
  * beyond the normal deployment cycle.
  */
 const ropa = {
-  version: '2026-08-03',
-  lastUpdated: '2026-08-03',
+  version: '2026-08-21',
+  lastUpdated: '2026-08-21',
   controller: {
     name: 'Heron Constructive Solutions LTD',
     system: 'hcs-app',
@@ -111,6 +111,39 @@ const ropa = {
       recipients: ['internal_finance'],
       crossBorderTransfer: 'None',
     },
+    {
+      id: 'A8',
+      name: 'Inbound mail filtering decisions',
+      purpose:
+        'Keep an independent record of how the upstream spam filter treated mail addressed to us, '
+        + 'so wrongly rejected correspondence can be identified and answered for without relying on '
+        + "the provider's own support process",
+      // Legitimate interests, not consent: the senders are third parties who
+      // never had a relationship with us to consent through, and the interest
+      // being served is knowing whether our own mail service is losing genuine
+      // correspondence. Mail security is named in Recital 49 as a legitimate
+      // interest in its own right.
+      lawfulBasis: ['legitimate_interests'],
+      // Every record names a sender and a recipient. Subject lines and the
+      // other free-text headers are deliberately excluded from the syslog
+      // template, so no message content is held.
+      dataCategories: ['contact', 'communications metadata', 'network identifiers'],
+      // Wider than any other activity in this register: it covers anyone who
+      // emails the business, including people who appear nowhere else in the
+      // system and never chose to deal with us.
+      subjectCategories: ['any_inbound_correspondent', 'employees', 'suppliers', 'customers'],
+      // Not a database. NDJSON files written by the mailsiem collector on the
+      // host and read through a read-only mount; hcs-app never copies them into
+      // Mongo, which is what keeps the deletion job below the single thing that
+      // makes the retention true. See mailFilterLogService.js.
+      systems: ['mailsiem.events (host NDJSON, read-only mount)'],
+      retention: '90 days, enforced by a scheduled deletion job on the collector host',
+      recipients: ['internal_admins'],
+      // The filtering cluster is operated by the mail provider; its egress
+      // region has not been confirmed, and the syslog transport it offers has
+      // no TLS option. That is why the template carries no message content.
+      crossBorderTransfer: 'Not assessed — filtering cluster region unconfirmed',
+    },
   ],
 
   processors: [
@@ -135,6 +168,12 @@ const ropa = {
     {
       name: 'Paperless-ngx host',
       service: 'document_processing',
+      dpaStatus: 'pending_evidence',
+      transferAssessment: 'pending',
+    },
+    {
+      name: 'SpamExperts / StrikeMail (via mail provider)',
+      service: 'inbound_mail_filtering',
       dpaStatus: 'pending_evidence',
       transferAssessment: 'pending',
     },

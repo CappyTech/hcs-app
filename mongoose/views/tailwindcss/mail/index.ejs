@@ -1,0 +1,214 @@
+<%
+  // Formatting helpers, kept local: this module has no Mongo documents and so
+  // none of the model-shaped view helpers apply to it.
+  const fmtTime = (r) => String(r.event_time || r.received_at || '').replace('T', ' ').slice(0, 19) || '—';
+  const fmtBytes = (n) => {
+    if (!n) return '0 B';
+    const u = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(Math.floor(Math.log(n) / Math.log(1024)), u.length - 1);
+    return `${(n / (1024 ** i)).toFixed(i ? 1 : 0)} ${u[i]}`;
+  };
+  const blocked = (s) => /reject|block|quarantin|defer|discard/i.test(String(s || ''));
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+  <div class="flex items-center gap-3 mb-6">
+    <h1 class="text-xl font-bold">Mail Filtering Log</h1>
+    <span class="text-xs px-2 py-0.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400">
+      Read only
+    </span>
+  </div>
+
+  <p class="text-sm text-gray-700 dark:text-gray-300 mb-6 max-w-3xl">
+    Every filtering decision the SpamExperts cluster has made about mail addressed to us.
+    Search by sender, recipient, sending IP, message-id or filtering id to find out what
+    happened to a specific message.
+  </p>
+
+  <% if (!status.mounted) { %>
+    <!-- The collector is a separate service on the host. Until its output is
+         mounted this page has nothing to read, which is a different thing from
+         a quiet week and has to read as such. -->
+    <div class="mb-6 p-4 rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">
+      <h2 class="font-semibold text-sm text-amber-800 dark:text-amber-300 mb-1">Collector not mounted</h2>
+      <p class="text-sm text-amber-800 dark:text-amber-300">
+        No filtering log is available to this container. The mailsiem collector writes to
+        <span class="font-mono text-xs"><%= status.dir %></span>, which is not present —
+        the stack needs the read-only bind mount adding, or the collector is not running.
+      </p>
+    </div>
+  <% } else { %>
+
+    <!-- Headline counters -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Decisions, last <%= summary.days %> days</div>
+        <div class="text-2xl font-bold text-gray-900 dark:text-white"><%= summary.total.toLocaleString('en-GB') %></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border <%= summary.blocked ? 'border-red-300 dark:border-red-700' : 'border-gray-200 dark:border-gray-700' %> rounded-2xl shadow-sm p-4">
+        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Stopped before delivery</div>
+        <div class="text-2xl font-bold <%= summary.blocked ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-white' %>">
+          <%= summary.blocked.toLocaleString('en-GB') %>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Log held</div>
+        <div class="text-2xl font-bold text-gray-900 dark:text-white"><%= status.files %> <span class="text-sm font-normal text-gray-500">days</span></div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <%= status.oldest || '—' %> → <%= status.newest || '—' %> &middot; <%= fmtBytes(status.bytes) %>
+        </div>
+      </div>
+    </div>
+
+    <% if (summary.truncatedFields) { %>
+      <!-- kv_partial: the collector's parser found a comma inside a field value.
+           The template is supposed to make that impossible, so it means the
+           template changed and the parser needs quoting support. -->
+      <div class="mb-6 p-4 rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">
+        <p class="text-sm text-amber-800 dark:text-amber-300">
+          <strong><%= summary.truncatedFields %></strong> decision(s) in this window had a field value
+          containing a comma, so that value is truncated below. The syslog template is supposed to make
+          this impossible — it has probably changed, and the collector's parser needs quoting support.
+        </p>
+      </div>
+    <% } %>
+
+    <!-- Why mail was stopped. This is the reason the module exists: a run of
+         identical reasons across unrelated senders is what a misconfigured
+         quarantine response looks like from the outside. -->
+    <div class="mb-8">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+        Why mail was stopped &mdash; last <%= summary.days %> days
+      </h2>
+      <% if (!summary.reasons.length) { %>
+        <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+          Nothing was stopped in this window.
+        </div>
+      <% } else { %>
+        <div class="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Reason given by the filter</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Messages</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+              <% summary.reasons.forEach(r => { %>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                  <td class="px-4 py-3 text-gray-900 dark:text-white"><%= r.reason %></td>
+                  <td class="px-4 py-3 text-right font-mono text-xs text-gray-700 dark:text-gray-300"><%= r.count.toLocaleString('en-GB') %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Search -->
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
+      Find a message
+    </h2>
+    <form method="GET" action="/mail" class="flex gap-2 flex-wrap mb-6">
+      <input name="q" value="<%= q %>" placeholder="Sender, recipient, IP, message-id or filtering id&hellip;"
+        class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+               bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+               focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+      <select name="days"
+        class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+               bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+               focus:outline-none focus:ring-2 focus:ring-green-500">
+        <% [1, 7, 30, 90].filter(d => d <= maxDays).forEach(d => { %>
+          <option value="<%= d %>" <%= days === d ? 'selected' : '' %>>Last <%= d %> day<%= d === 1 ? '' : 's' %></option>
+        <% }) %>
+      </select>
+      <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 px-2">
+        <input type="checkbox" name="blocked" value="1" <%= blockedOnly ? 'checked' : '' %>
+          class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500" />
+        Stopped only
+      </label>
+      <button type="submit"
+        class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+        Search
+      </button>
+    </form>
+
+    <% if (results === null) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        Enter a search term above, or tick &ldquo;stopped only&rdquo;, to list decisions.
+      </div>
+    <% } else if (!results.rows.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        No filtering decisions matched in the last <%= results.days %> days.
+        <% if (status.oldest) { %>
+          <div class="mt-1 text-xs">The log starts at <%= status.oldest %>; anything older has passed the 90-day retention limit.</div>
+        <% } %>
+      </div>
+    <% } else { %>
+      <% if (results.truncated) { %>
+        <div class="mb-3 p-3 rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-sm text-blue-800 dark:text-blue-300">
+          Showing the first <%= results.rows.length %> matches only. Narrow the search or the window to see the rest.
+        </div>
+      <% } %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Time</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Outcome</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">From</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">To</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Why</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% results.rows.forEach(r => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3 whitespace-nowrap font-mono text-xs text-gray-700 dark:text-gray-300"><%= fmtTime(r) %></td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <span class="text-xs px-2 py-0.5 rounded-full <%= blocked(r.status)
+                    ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+                    : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' %>">
+                    <%= r.status || 'unknown' %>
+                  </span>
+                  <% if (r.main_class) { %>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <%= [r.main_class, r.sub_class].filter(Boolean).join(' / ') %>
+                    </div>
+                  <% } %>
+                </td>
+                <td class="px-4 py-3 text-gray-900 dark:text-white">
+                  <%= r.sender || '—' %>
+                  <% if (r.sender_ip) { %>
+                    <div class="font-mono text-xs text-gray-500 dark:text-gray-400"><%= r.sender_ip %></div>
+                  <% } %>
+                </td>
+                <td class="px-4 py-3 text-gray-900 dark:text-white"><%= r.recipient || '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                  <%= r.extra_class || '—' %>
+                  <% if (r.kv_partial) { %>
+                    <span class="text-xs text-amber-700 dark:text-amber-400" title="A comma in this value truncated it">[truncated]</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <% if (r.id) { %>
+                    <a href="/mail/message/<%= encodeURIComponent(r.id) %>"
+                      class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">
+                      Open
+                    </a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+        <%= results.rows.length.toLocaleString('en-GB') %> decision(s) from
+        <%= results.filesScanned %> day file(s).
+      </p>
+    <% } %>
+  <% } %>
+</div>

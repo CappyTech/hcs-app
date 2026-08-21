@@ -182,6 +182,15 @@ const routeAccess = {
   // are enforced by the adminGuard on those routes in bankRoutes.js.
   '/bank':                ['admin', 'accountant'],
 
+  // Inbound mail filtering log. Same longest-prefix rule as '/bank': the one
+  // '/mail' entry covers the whole module.
+  //
+  // Admin only, and narrower than the finance department on purpose: every
+  // record names a sender and a recipient, including people who appear nowhere
+  // else in this system and never chose to deal with us. Widening it is a
+  // decision about third-party personal data, not a convenience.
+  '/mail':                ['admin'],
+
   // Website content editor. Same longest-prefix rule as '/bank': one entry
   // covers the whole module.
   //
