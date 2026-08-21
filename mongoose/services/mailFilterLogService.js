@@ -82,6 +82,14 @@ export function normaliseDays(value, fallback = DEFAULT_SEARCH_DAYS) {
   return clampInt(value, fallback, 1, MAX_DAYS);
 }
 
+/** Page sizes offered in the UI. Capped by MAX_LIMIT regardless. */
+export const LIMIT_OPTIONS = [100, 200, 500];
+
+export function normaliseLimit(value) {
+  const n = Number.parseInt(value, 10);
+  return LIMIT_OPTIONS.includes(n) ? n : LIMIT_OPTIONS[0];
+}
+
 export function normaliseQuery(value) {
   return String(value || '').trim().slice(0, MAX_QUERY_LENGTH);
 }
@@ -204,28 +212,63 @@ export async function search({ q = '', days = DEFAULT_SEARCH_DAYS, blockedOnly =
   let filesScanned = 0;
 
   const rawFilter = needle ? (line) => line.toLowerCase().includes(needle) : null;
+  const files = dayFiles(window);
 
-  for (const { file } of dayFiles(window)) {
-    if (truncated) break;
+  for (let f = 0; f < files.length; f += 1) {
     filesScanned += 1;
+
+    /*
+     * Keep this file's NEWEST `cap` matches, not its first `cap`.
+     *
+     * Day files are read newest-first but each one is written in chronological
+     * order, so taking the first matches and stopping — which is what this did
+     * originally — returns the *oldest* rows of the newest day and labels them
+     * "the first N". Sorting afterwards cannot recover what was never read.
+     *
+     * A circular buffer keeps it O(1) per line and bounded by `cap`; an array
+     * with shift() would be O(n·cap) and is noticeably slow over a big window.
+     */
+    const buf = new Array(cap);
+    let seen = 0;
+
     // eslint-disable-next-line no-await-in-loop
-    scanned += await scanFile(file, rawFilter, (row) => {
+    scanned += await scanFile(file(files, f), rawFilter, (row) => {
       if (blockedOnly && !isBlocked(row.status)) return true;
-      rows.push(row);
-      if (rows.length >= cap) {
-        truncated = true;
-        return false;
-      }
+      buf[seen % cap] = row;
+      seen += 1;
       return true;
     });
-    if (scanned >= MAX_LINES_PER_REQUEST) truncated = true;
+
+    if (seen > cap) truncated = true;
+
+    // Newest first out of the ring.
+    const kept = Math.min(seen, cap);
+    for (let i = seen - 1; i >= seen - kept && rows.length < cap; i -= 1) {
+      rows.push(buf[i % cap]);
+    }
+
+    if (rows.length >= cap) {
+      // Every remaining file is older than this one, so nothing newer is being
+      // missed — but older matches may well exist beyond what is shown.
+      if (f < files.length - 1 || seen > cap) truncated = true;
+      break;
+    }
+    if (scanned >= MAX_LINES_PER_REQUEST) {
+      truncated = true;
+      break;
+    }
   }
 
-  // Newest first. event_time is the filter's own clock; received_at is ours and
-  // is always present, so it is the fallback rather than the primary.
+  // event_time is the filter's own clock; received_at is ours and is always
+  // present, so it is the fallback rather than the primary.
   rows.sort((a, b) => String(b.event_time || b.received_at || '').localeCompare(String(a.event_time || a.received_at || '')));
 
   return { rows, mounted: true, truncated, scanned, filesScanned, days: window };
+}
+
+/** Small indirection so the loop above reads cleanly. */
+function file(files, i) {
+  return files[i].file;
 }
 
 /**
@@ -299,4 +342,4 @@ export async function byId(id, { days = MAX_DAYS } = {}) {
   return { ...found, rows: found.rows.filter((r) => String(r.id) === wanted) };
 }
 
-export default { eventsDir, status, search, summary, byId, isBlocked, dayFiles, normaliseDays, normaliseQuery, MAX_DAYS, DEFAULT_SEARCH_DAYS, DEFAULT_SUMMARY_DAYS, MAX_LIMIT };
+export default { eventsDir, status, search, summary, byId, isBlocked, dayFiles, normaliseDays, normaliseQuery, normaliseLimit, LIMIT_OPTIONS, MAX_DAYS, DEFAULT_SEARCH_DAYS, DEFAULT_SUMMARY_DAYS, MAX_LIMIT };

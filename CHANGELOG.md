@@ -2,6 +2,20 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.33.0] - 2026-08-21
+
+### Changed
+- **`/mail` is a log again: it lists recent decisions with no search term and no filter.** It previously refused to list anything until you searched or ticked "stopped only", on the reasoning that a partial list invites being read as a complete one. That reasoning was right about the risk and wrong about the remedy — the fix is to label a partial list honestly, not to withhold it, and the page was useless for its most obvious purpose, which is reading what just happened. A "Clear filters" link appears once anything is narrowing the view, and a page-size control offers 100/200/500.
+
+  It stays cheap because of how the reader is now ordered: each day file contributes its newest rows and the scan stops once a page is filled, so **a browse reads one day file however wide the window is**. Measured over three files of 4,000 decisions, a 30-day and a 90-day browse both read a single file in ~45 ms.
+
+### Fixed
+- **A capped list was showing the oldest rows, while calling them the first.** Day files are read newest-first, but each file is written in chronological order, so taking the first N matches and stopping returned the *oldest* N of the newest day. Sorting afterwards could not recover rows that were never read, so "Showing the first 200 matches" was reliably the wrong end of the log — and on a busy day, the 200 shown could all be hours older than the ones being looked for.
+
+  The reader now keeps each file's newest N in a circular buffer and takes them newest-first. A circular buffer rather than an array with `shift()`: the latter is O(n·cap) and is noticeably slow over a wide window, while this is O(1) per line and bounded by the page size. The banner says "the most recent N … older ones exist", which is what it always should have said.
+
+  This was latent in search results from 6.32.0 and would have been much more visible as a browse view, since browsing is exactly the case where "most recent" is the whole point.
+
 ## [6.32.0] - 2026-08-21
 
 ### Added

@@ -82,21 +82,28 @@ const cases = {
         mounted: true, truncated: true, scanned: 900, filesScanned: 7, days: 30,
       },
       q: 'acme.co.uk', days: 30, blockedOnly: false, maxDays: 90,
+      limit: 200, limitOptions: [100, 200, 500], filtered: true,
     },
+    // No search term and no filter — the plain log view, which is the default.
     minimal: {
       title: 'Mail Filtering Log', status: mountedStatus, summary: emptySummary,
-      results: null, q: '', days: 30, blockedOnly: false, maxDays: 90,
+      results: { rows: [decision()], mounted: true, truncated: false, scanned: 1, filesScanned: 1, days: 30 },
+      q: '', days: 30, blockedOnly: false, maxDays: 90,
+      limit: 100, limitOptions: [100, 200, 500], filtered: false,
     },
     // The collector is not mounted — the state this ships in.
     unmounted: {
       title: 'Mail Filtering Log', status: absentStatus,
       summary: { mounted: false, days: 7, total: 0, blocked: 0, truncatedFields: 0, reasons: [], byDay: [] },
-      results: null, q: '', days: 30, blockedOnly: false, maxDays: 90,
+      results: { rows: [], mounted: false, truncated: false, scanned: 0, filesScanned: 0, days: 30 },
+      q: '', days: 30, blockedOnly: false, maxDays: 90,
+      limit: 100, limitOptions: [100, 200, 500], filtered: false,
     },
     noResults: {
       title: 'Mail Filtering Log', status: mountedStatus, summary: emptySummary,
       results: { rows: [], mounted: true, truncated: false, scanned: 10, filesScanned: 3, days: 30 },
       q: 'nobody@example.com', days: 30, blockedOnly: false, maxDays: 90,
+      limit: 100, limitOptions: [100, 200, 500], filtered: true,
     },
   },
   message: {
@@ -163,9 +170,21 @@ describe('mail view: index.ejs — states that must be distinguishable', () => {
     assert.ok(!/Nothing was stopped in this window/i.test(html));
   });
 
-  it('does not list decisions before a search term is given', async () => {
+  it('lists the log with no search term and no filter', async () => {
+    // This is a log first and a search second. It used to refuse to list
+    // anything until you filtered, which made the page useless for its most
+    // obvious use: reading what just happened.
     const html = await render('index', cases.index.minimal);
-    assert.match(html, /Enter a search term/i);
+    assert.ok(!/Enter a search term/i.test(html), 'still gating the list behind a filter');
+    assert.match(html, /Recent decisions/i);
+    assert.match(html, /invoices@heroncs\.co\.uk/);
+  });
+
+  it('offers a way back to the unfiltered log once filtered', async () => {
+    const filteredHtml = await render('index', cases.index.full);
+    assert.match(filteredHtml, /Clear filters/i);
+    const plainHtml = await render('index', cases.index.minimal);
+    assert.ok(!/Clear filters/i.test(plainHtml), 'nothing to clear on the plain log');
   });
 
   it('shows the reason a message was stopped', async () => {
@@ -179,9 +198,12 @@ describe('mail view: index.ejs — states that must be distinguishable', () => {
     assert.match(html, /needs quoting support/i);
   });
 
-  it('says when results were capped', async () => {
+  it('describes a capped list as the most recent, not the first', async () => {
+    // The reader keeps each file's newest rows, so a capped list is the newest
+    // end of the log. Calling it "the first N" described the opposite end.
     const html = await render('index', cases.index.full);
-    assert.match(html, /Showing the first/i);
+    assert.match(html, /most recent/i);
+    assert.ok(!/Showing the first/i.test(html), 'still claims to show the first N');
   });
 
   it('escapes values rather than interpolating them raw', async () => {

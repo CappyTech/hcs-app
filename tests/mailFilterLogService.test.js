@@ -148,6 +148,41 @@ describe('mailFilterLogService — search', () => {
     assert.equal(found.truncated, true);
   });
 
+  it('caps to the NEWEST matches, not the first ones read', async () => {
+    // Day files are written chronologically, so taking the first N matches and
+    // stopping returns the OLDEST N of the newest day. This is the regression
+    // that made "showing the first 200" show the wrong end of the log.
+    writeDay(0, Array.from({ length: 50 }, (_, i) => decision({
+      id: `ID${String(i).padStart(2, '0')}`,
+      event_time: `2026-08-21T${String(i % 24).padStart(2, '0')}:00:00Z`,
+    })));
+    const found = await log.search({ days: 1, limit: 5 });
+    assert.equal(found.rows.length, 5);
+    assert.equal(found.truncated, true);
+    // The last five written are ID45..ID49.
+    assert.deepEqual(
+      found.rows.map((r) => r.id).sort(),
+      ['ID45', 'ID46', 'ID47', 'ID48', 'ID49'],
+    );
+  });
+
+  it('does not let an older day file displace newer rows', async () => {
+    writeDay(0, [decision({ id: 'TODAY-A' }), decision({ id: 'TODAY-B' })]);
+    writeDay(1, [decision({ id: 'YESTERDAY' })]);
+    const found = await log.search({ days: 7, limit: 2 });
+    assert.deepEqual(found.rows.map((r) => r.id).sort(), ['TODAY-A', 'TODAY-B']);
+    assert.equal(found.truncated, true, 'older matches exist and that must be said');
+  });
+
+  it('returns the log with no search term and no filter at all', async () => {
+    // The page is a log first and a search second: asking for nothing must
+    // return recent decisions rather than an empty result.
+    writeDay(0, [decision({ id: 'A' }), decision({ id: 'B', status: 'accepted' })]);
+    const found = await log.search({});
+    assert.equal(found.rows.length, 2);
+    assert.equal(found.truncated, false);
+  });
+
   it('survives a torn final line without failing the request', async () => {
     // The collector may be mid-write. One unreadable line must not cost the
     // whole page.
