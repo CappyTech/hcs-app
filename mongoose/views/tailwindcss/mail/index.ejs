@@ -20,9 +20,9 @@
   </div>
 
   <p class="text-sm text-gray-700 dark:text-gray-300 mb-6 max-w-3xl">
-    Every filtering decision the SpamExperts cluster has made about mail addressed to us.
-    Search by sender, recipient, sending IP, message-id or filtering id to find out what
-    happened to a specific message.
+    Every filtering decision the SpamExperts cluster has made about mail addressed to us,
+    newest first. Search by sender, recipient, sending IP, message-id or filtering id to
+    find a specific message &mdash; or leave the box empty and just read the log.
   </p>
 
   <% if (!status.mounted) { %>
@@ -106,9 +106,9 @@
       <% } %>
     </div>
 
-    <!-- Search -->
+    <!-- The log itself. Filters narrow it; none are required. -->
     <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
-      Find a message
+      <%= filtered ? 'Matching decisions' : 'Recent decisions' %>
     </h2>
     <form method="GET" action="/mail" class="flex gap-2 flex-wrap mb-6">
       <input name="q" value="<%= q %>" placeholder="Sender, recipient, IP, message-id or filtering id&hellip;"
@@ -128,27 +128,48 @@
           class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500" />
         Stopped only
       </label>
+      <select name="limit"
+        class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
+               bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+               focus:outline-none focus:ring-2 focus:ring-green-500">
+        <% limitOptions.forEach(n => { %>
+          <option value="<%= n %>" <%= limit === n ? 'selected' : '' %>>Show <%= n %></option>
+        <% }) %>
+      </select>
       <button type="submit"
         class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
         Search
       </button>
+      <% if (filtered) { %>
+        <a href="/mail"
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600
+                 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300
+                 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">
+          Clear filters
+        </a>
+      <% } %>
     </form>
 
-    <% if (results === null) { %>
+    <% if (!results.rows.length) { %>
       <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
-        Enter a search term above, or tick &ldquo;stopped only&rdquo;, to list decisions.
-      </div>
-    <% } else if (!results.rows.length) { %>
-      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
-        No filtering decisions matched in the last <%= results.days %> days.
+        <% if (filtered) { %>
+          No filtering decisions matched in the last <%= results.days %> days.
+        <% } else { %>
+          No filtering decisions have been recorded in the last <%= results.days %> days.
+          <div class="mt-1 text-xs">If the SpamExperts template has not been switched Active yet, that is expected.</div>
+        <% } %>
         <% if (status.oldest) { %>
           <div class="mt-1 text-xs">The log starts at <%= status.oldest %>; anything older has passed the 90-day retention limit.</div>
         <% } %>
       </div>
     <% } else { %>
       <% if (results.truncated) { %>
+        <!-- "most recent", not "first": the reader keeps each file's newest rows,
+             so a capped list is the newest end of the log, not the oldest. -->
         <div class="mb-3 p-3 rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-sm text-blue-800 dark:text-blue-300">
-          Showing the first <%= results.rows.length %> matches only. Narrow the search or the window to see the rest.
+          Showing the <strong><%= results.rows.length %></strong> most recent
+          <%= filtered ? 'matches' : 'decisions' %> in this window &mdash; older ones exist.
+          Show more, narrow the window, or search to reach them.
         </div>
       <% } %>
       <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
@@ -206,8 +227,8 @@
         </table>
       </div>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
-        <%= results.rows.length.toLocaleString('en-GB') %> decision(s) from
-        <%= results.filesScanned %> day file(s).
+        <%= results.rows.length.toLocaleString('en-GB') %> decision(s) shown from
+        <%= results.filesScanned %> day file(s)<%= results.truncated ? ', newest first' : '' %>.
       </p>
     <% } %>
   <% } %>

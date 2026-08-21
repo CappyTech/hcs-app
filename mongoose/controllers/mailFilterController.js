@@ -28,12 +28,17 @@ export const getIndex = async (req, res, next) => {
     // deliberate act; recomputing 90 days of counters on every page view is not.
     const summary = await log.summary({});
 
-    // A bare page load must not scan anything: with no search term and no
-    // filter there is nothing to narrow by, and returning "the most recent
-    // hundred" would invite reading it as a complete list.
-    const results = (q || blockedOnly)
-      ? await log.search({ q, days, blockedOnly, limit: 200 })
-      : null;
+    // This is a log first and a search second, so a bare page load shows the
+    // most recent decisions rather than an empty page with a search box. The
+    // earlier design refused to list anything without a filter, on the grounds
+    // that a partial list invites being read as a complete one; the answer to
+    // that is to label it honestly, not to withhold it.
+    //
+    // It stays cheap because the reader takes each file's newest rows and stops
+    // once it has a page: every remaining day file is older, so a browse
+    // normally reads one file however wide the window is.
+    const limit = log.normaliseLimit(req.query.limit);
+    const results = await log.search({ q, days, blockedOnly, limit });
 
     res.render(VIEW('index'), {
       title: 'Mail Filtering Log',
@@ -43,6 +48,9 @@ export const getIndex = async (req, res, next) => {
       q,
       days,
       blockedOnly,
+      limit,
+      limitOptions: log.LIMIT_OPTIONS,
+      filtered: Boolean(q || blockedOnly),
       maxDays: log.MAX_DAYS,
     });
   } catch (err) { next(err); }
