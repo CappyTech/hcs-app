@@ -96,14 +96,67 @@
     </table>
   </div>
 
-  <div class="flex items-center justify-between mt-4 text-sm">
-    <div>Page <%= page %> of <%= pages %></div>
-    <div class="flex gap-2">
+  <%# Build a page/pageSize link that preserves the active filters, so we stop
+      repeating the querystring concatenation for every control below. %>
+  <%
+    const pagerLink = (p, ps) => {
+      const parts = [
+        'q=' + encodeURIComponent(q || ''),
+        'page=' + p,
+        'pageSize=' + (ps || pageSize),
+      ];
+      if (done) parts.push('done=1');
+      if (tag) parts.push('tag=' + encodeURIComponent(tag));
+      if (unlinked) parts.push('unlinked=1');
+      if (noKfNumber) parts.push('noKfNumber=1');
+      return '?' + parts.join('&');
+    };
+    const pagerBtn = 'px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition';
+    const pagerBtnMuted = 'px-3 py-1.5 rounded-lg border text-xs border-gray-100 dark:border-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed';
+  %>
+  <div class="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm">
+    <div class="flex items-center gap-3">
+      <span>Page <%= page %> of <%= pages %></span>
+      <span class="text-gray-400 dark:text-gray-500">·</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400">Show</span>
+      <% [25, 50, 100].forEach(function(ps) { %>
+        <% if (ps === pageSize) { %>
+          <span class="text-xs font-semibold text-green-700 dark:text-green-400"><%= ps %></span>
+        <% } else { %>
+          <a class="text-xs text-gray-500 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400 hover:underline" href="<%= pagerLink(1, ps) %>"><%= ps %></a>
+        <% } %>
+      <% }); %>
+    </div>
+    <div class="flex items-center gap-2">
       <% if (page > 1) { %>
-        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page-1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %><%= noKfNumber ? '&noKfNumber=1' : '' %>">Prev</a>
+        <a class="<%= pagerBtn %>" href="<%= pagerLink(1) %>" title="First page">&laquo;</a>
+        <a class="<%= pagerBtn %>" href="<%= pagerLink(page - 1) %>">Prev</a>
+      <% } else { %>
+        <span class="<%= pagerBtnMuted %>">&laquo;</span>
+        <span class="<%= pagerBtnMuted %>">Prev</span>
       <% } %>
+
+      <% if (pages > 1) { %>
+        <form method="get" class="flex items-center gap-1">
+          <input type="hidden" name="q" value="<%= q %>">
+          <input type="hidden" name="pageSize" value="<%= pageSize %>">
+          <% if (done) { %><input type="hidden" name="done" value="1"><% } %>
+          <% if (tag) { %><input type="hidden" name="tag" value="<%= tag %>"><% } %>
+          <% if (unlinked) { %><input type="hidden" name="unlinked" value="1"><% } %>
+          <% if (noKfNumber) { %><input type="hidden" name="noKfNumber" value="1"><% } %>
+          <input type="number" name="page" min="1" max="<%= pages %>" value="<%= page %>"
+                 class="w-16 px-2 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700"
+                 aria-label="Go to page">
+          <button type="submit" class="<%= pagerBtn %>">Go</button>
+        </form>
+      <% } %>
+
       <% if (page < pages) { %>
-        <a class="px-3 py-1.5 rounded-lg border text-xs bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 hover:bg-green-600 hover:text-white dark:hover:bg-green-700 shadow-sm transition" href="?q=<%= encodeURIComponent(q) %>&page=<%= page+1 %>&pageSize=<%= pageSize %><%= done ? '&done=1' : '' %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= unlinked ? '&unlinked=1' : '' %><%= noKfNumber ? '&noKfNumber=1' : '' %>">Next</a>
+        <a class="<%= pagerBtn %>" href="<%= pagerLink(page + 1) %>">Next</a>
+        <a class="<%= pagerBtn %>" href="<%= pagerLink(pages) %>" title="Last page">&raquo;</a>
+      <% } else { %>
+        <span class="<%= pagerBtnMuted %>">Next</span>
+        <span class="<%= pagerBtnMuted %>">&raquo;</span>
       <% } %>
     </div>
   </div>
