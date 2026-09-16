@@ -6,11 +6,11 @@
 </div>
 
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[600px]">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
   <!-- LEFT: TOTP Section -->
-  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden flex flex-col">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
     <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
-    <div class="p-6 sm:p-8 flex-1 flex flex-col justify-between">
+    <div class="p-6 sm:p-8">
     <div>
       <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-4">Two-Factor Authentication (TOTP)</h2>
 
@@ -98,26 +98,16 @@
       <div class="p-6 sm:p-8">
       <h1 class="text-xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">Account Details</h1>
 
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username:</label>
-        <input type="text" readonly class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value="<%= user.username %>">
-      </div>
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email:</label>
-        <input type="text" readonly class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value="<%= user.email %>">
-      </div>
-
-      <hr class="my-6 border-t-2 border-line">
-
       <form action="/user/account/settings" method="POST" class="space-y-4">
         <%- include('../partials/csrfHidden.ejs') %>
         <div>
-          <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Username:</label>
+          <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
           <input type="text" name="newUsername" id="username" value="<%= user.username %>" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
         <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Email:</label>
+          <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
           <input type="email" name="newEmail" id="email" value="<%= user.email %>" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Changing your email will require re-verification.</p>
         </div>
         <div class="flex justify-end gap-2 mt-2">
           <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition shadow-sm">
@@ -185,9 +175,6 @@
       <table class="min-w-full text-sm text-left">
         <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
-            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Username</th>
-            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Email</th>
-            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Role</th>
             <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">IP Address</th>
             <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Browser</th>
             <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Platform</th>
@@ -202,15 +189,12 @@
         <tbody class="bg-white dark:bg-gray-900">
           <% sessions.forEach(session => { %>
             <tr class="border-t border-gray-100 dark:border-gray-800 <%= session.isCurrent ? 'bg-green-50 dark:bg-green-900/20' : '' %>">
-              <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100">
-                <%= session.username %>
+              <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                <%= session.ip %>
                 <% if (session.isCurrent) { %>
                   <span class="ml-1 inline-flex items-center text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">Current</span>
                 <% } %>
               </td>
-              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.email %></td>
-              <td class="px-4 py-2.5 capitalize text-gray-700 dark:text-gray-300"><%= session.role %></td>
-              <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.ip %></td>
               <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.browser %></td>
               <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.platform.replace(/['"]+/g, '') || 'Unknown' %></td>
               <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300"><%= session.loginTime ? slimDateTime(session.loginTime, ['includeTime']) : (session.isCurrent ? 'Just now' : '—') %></td>

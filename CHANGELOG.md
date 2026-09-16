@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.41.1] - 2026-09-17
+
+### Changed
+- **Tidied the Account Settings page (`/user/account`).** Removed the duplicated Account Details block — it showed the current username and email read-only *and* again in pre-filled "New Username"/"New Email" fields (four inputs for two values); it's now a single set of editable fields labelled "Username" and "Email", with a note that changing the email re-verifies it. Removed the large empty gap in the Two-Factor column (the card no longer stretches to match the taller column and `justify-between` no longer pushes the backup-codes block to the bottom). Trimmed the Active Sessions table from 12 columns to 9 by dropping Username, Email and Role, which were the signed-in user's own identity repeated on every row and were what forced the table to scroll horizontally; the "Current" badge now sits with the IP address. No routes, form fields, or behaviour changed.
+
 ## [6.41.0] - 2026-09-16
 
 ### Added
