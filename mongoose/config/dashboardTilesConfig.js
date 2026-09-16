@@ -390,11 +390,8 @@ export default {
         department: ['human-resources', 'management'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
-    HolidayRequests: {
-        title: 'Holiday Requests',
-        description: 'Review, approve and reject employee holiday requests.',
-        link: '/holidayRequests',
-        department: ['human-resources', 'management'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    }
+    // HolidayRequests custom tile removed: it duplicated the model-driven tile for
+    // the `holidayRequest` list (same destination, same departments), so every HR
+    // and Management page showed "Holiday Requests" twice. The curated description
+    // now lives on listConfig.holidayRequest.description.manage.
 };

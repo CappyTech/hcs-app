@@ -1060,6 +1060,7 @@ export default {
   },
   holidayRequest: {
     title: 'Holiday Requests',
+    description: { manage: 'Review, approve and reject employee holiday requests.' },
     // Stated explicitly: `listPath` (tile) defaults to camelCase while the
     // route is lowercased, so these matched only because Express routing is
     // case-insensitive by default.

@@ -139,6 +139,13 @@
 
                   <%# Fields table %>
                   <% if (art.fields && art.fields.length) { %>
+                    <%# Some articles reuse this table for non-form rows (e.g. the
+                        roles list), where nothing is "required" and the column would
+                        read "Optional" for every row. Only show it when it means
+                        something. %>
+                    <% const showRequired = art.fields.some(function(f) {
+                         return f.required === true || (f.required && f.required !== false && f.required !== '');
+                       }); %>
                     <div>
                       <h4 class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Fields</h4>
                       <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
@@ -146,7 +153,9 @@
                           <thead>
                             <tr class="bg-gray-50 dark:bg-gray-800 text-left">
                               <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-40">Field</th>
-                              <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-28">Required</th>
+                              <% if (showRequired) { %>
+                                <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 w-28">Required</th>
+                              <% } %>
                               <th class="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300">Description</th>
                             </tr>
                           </thead>
@@ -154,15 +163,17 @@
                             <% art.fields.forEach(function(f) { %>
                               <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
                                 <td class="px-4 py-2.5 font-mono text-xs text-gray-800 dark:text-gray-200 font-medium"><%= f.name %></td>
-                                <td class="px-4 py-2.5">
-                                  <% if (f.required === true || f.required === 'Yes') { %>
-                                    <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium">Required</span>
-                                  <% } else if (f.required && f.required !== false && f.required !== '') { %>
-                                    <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium"><%= f.required %></span>
-                                  <% } else { %>
-                                    <span class="text-xs text-gray-400 dark:text-gray-600">Optional</span>
-                                  <% } %>
-                                </td>
+                                <% if (showRequired) { %>
+                                  <td class="px-4 py-2.5">
+                                    <% if (f.required === true || f.required === 'Yes') { %>
+                                      <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium">Required</span>
+                                    <% } else if (f.required && f.required !== false && f.required !== '') { %>
+                                      <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium"><%= f.required %></span>
+                                    <% } else { %>
+                                      <span class="text-xs text-gray-400 dark:text-gray-600">Optional</span>
+                                    <% } %>
+                                  </td>
+                                <% } %>
                                 <td class="px-4 py-2.5 text-gray-600 dark:text-gray-400 leading-relaxed"><%= f.description %></td>
                               </tr>
                             <% }); %>

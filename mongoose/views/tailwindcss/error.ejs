@@ -37,8 +37,11 @@
     <% } %>
 
     <!-- Return Button -->
+    <%# Returning home is a safe primary action, not a destructive one: keep amber
+        for 403 (matches its theme) and red only for genuine errors (500); a 404 uses
+        the primary green so red is reserved for danger. %>
     <a href="/" class="inline-flex items-center gap-1.5 mt-8 px-6 py-3 rounded-lg text-sm font-medium text-white shadow-sm transition
-      <%= is403 ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700' %>">
+      <%= is403 ? 'bg-amber-600 hover:bg-amber-700' : is404 ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700' %>">
       <i class="bi bi-house"></i> Return to Home
     </a>
     </div>

@@ -70,7 +70,21 @@ const getDashboardModels = (department, userRole) => {
     (tile) => tile.department?.includes(department) && canUseTile(tile, userRole),
   );
 
-  return [...standardModels, ...extraTiles];
+  // Dedupe by destination. A model-driven tile and a custom tile can point at the
+  // same route (e.g. holidayRequest's list at /holidayrequests and a curated
+  // /holidayRequests tile), which rendered the same entry twice on one page.
+  // Links are normalised (lowercased, trailing slash stripped) because those two
+  // differ only by case and Express routing is case-insensitive. Model tiles come
+  // first, so on a collision the generic CRUD tile wins and the custom copy drops.
+  const normaliseLink = (l) => String(l || "").replace(/\/+$/, "").toLowerCase();
+  const seen = new Set();
+  return [...standardModels, ...extraTiles].filter((tile) => {
+    const key = normaliseLink(tile.link);
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 // Helper: get all creatable models, filtered by role
