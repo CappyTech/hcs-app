@@ -93,9 +93,9 @@ export const GROUPS = [
     icon: 'bi-envelope-fill',
     description: 'Outbound mail for notifications, password resets and payroll documents.',
     test: 'smtp',
-    // Reset the cached nodemailer transporter after a save so new settings take
-    // effect immediately, without a restart.
-    afterSave: 'smtp',
+    // Reset the cached mail clients after a save so new settings take effect
+    // immediately, without a restart.
+    afterSave: 'mail',
     keys: [
       { key: 'SMTP_HOST', label: 'Host', type: 'text', help: 'SMTP server hostname (e.g. smtp.office365.com).' },
       { key: 'SMTP_PORT', label: 'Port', type: 'number', help: '587 for STARTTLS, 465 for implicit TLS.' },
@@ -104,6 +104,21 @@ export const GROUPS = [
       { key: 'SMTP_PASS', label: 'Password', type: 'secret', help: 'SMTP password or app password.' },
       { key: 'SMTP_FROM', label: 'From address', type: 'text', help: 'Envelope sender for all outbound mail (must be the authenticated mailbox or an allowed alias).' },
       { key: 'BASE_URL', label: 'Public base URL', type: 'text', help: 'Used to build absolute links in emails.' },
+    ],
+  },
+  {
+    id: 'graph',
+    label: 'Email (Microsoft Graph)',
+    icon: 'bi-microsoft',
+    description: 'App-only sending via Microsoft Graph — no password or SMTP AUTH, and it works with Microsoft 365 shared mailboxes (e.g. noreply@). Turn on "Use Microsoft Graph" to use this instead of SMTP. See Help → Administration → Sending Email via Microsoft Graph for setup.',
+    test: 'graph',
+    afterSave: 'mail',
+    keys: [
+      { key: 'USE_GRAPH', label: 'Use Microsoft Graph', type: 'boolean', help: 'When on, outbound mail is sent via Microsoft Graph instead of SMTP. Falls back to SMTP if Graph is not fully configured.' },
+      { key: 'GRAPH_TENANT_ID', label: 'Tenant ID', type: 'text', help: 'Entra directory (tenant) ID of the app registration.' },
+      { key: 'GRAPH_CLIENT_ID', label: 'Client ID', type: 'text', help: 'Application (client) ID of the Entra app registration.' },
+      { key: 'GRAPH_CLIENT_SECRET', label: 'Client secret', type: 'secret', help: 'A client secret value from the app registration.' },
+      { key: 'GRAPH_MAIL_SENDER', label: 'Sender mailbox', type: 'text', help: 'The mailbox to send as, e.g. noreply@heroncs.co.uk. The app needs Mail.Send scoped to this mailbox via an Application Access Policy.' },
     ],
   },
   {

@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import axios from 'axios';
 import logger from './loggerService.js';
 import emailLayout from './emailLayout.js';
 import configService from './configService.js';
@@ -6,13 +7,135 @@ import configService from './configService.js';
 // ── Transporter (lazy-initialised) ───────────────────────────────────
 let _transporter = null;
 
+// Cached Microsoft Graph app-only token (client-credentials flow).
+let _graphToken = { value: null, expiresAt: 0 };
+
 /**
- * Drop the cached transporter so the next send rebuilds it from current config.
- * Called by the config after-save hook (appConfigController) when any SMTP key
- * changes, so a settings edit takes effect without a restart.
+ * Drop cached mail clients so the next send rebuilds from current config.
+ * Called by the config after-save hook (appConfigController) when any SMTP or
+ * Graph key changes, so a settings edit takes effect without a restart.
  */
 function resetTransporter() {
   _transporter = null;
+  _graphToken = { value: null, expiresAt: 0 };
+}
+
+/**
+ * Which transport to use for outbound mail.
+ * - When the "Use Microsoft Graph" toggle (USE_GRAPH) is on AND Graph is fully
+ *   configured, send via Graph (app-only, no password/SMTP AUTH).
+ * - Otherwise fall back to SMTP when it is configured.
+ * - Otherwise null → log-only fallback.
+ * If Graph is toggled on but not fully configured, we warn and fall back to SMTP
+ * rather than dropping mail silently.
+ * @returns {'graph'|'smtp'|null}
+ */
+function selectTransport() {
+  const graphOn = String(configService.get("USE_GRAPH") || "").toLowerCase() === "true";
+  const graphReady = !!(
+    configService.get("GRAPH_TENANT_ID") &&
+    configService.get("GRAPH_CLIENT_ID") &&
+    configService.get("GRAPH_CLIENT_SECRET") &&
+    (configService.get("GRAPH_MAIL_SENDER") || configService.get("SMTP_FROM"))
+  );
+  const smtpReady = !!(
+    configService.get("SMTP_HOST") &&
+    configService.get("SMTP_USER") &&
+    configService.get("SMTP_PASS")
+  );
+
+  if (graphOn) {
+    if (graphReady) return "graph";
+    logger.warn(
+      "Email service: USE_GRAPH is on but GRAPH_TENANT_ID / GRAPH_CLIENT_ID / GRAPH_CLIENT_SECRET / sender are not all set — falling back to SMTP.",
+    );
+  }
+  if (smtpReady) return "smtp";
+  return null;
+}
+
+/**
+ * Acquire (and cache) a Microsoft Graph app-only access token via the
+ * client-credentials flow. Returns null when Graph is not configured.
+ */
+async function getGraphToken() {
+  const tenant = configService.get("GRAPH_TENANT_ID");
+  const clientId = configService.get("GRAPH_CLIENT_ID");
+  const clientSecret = configService.get("GRAPH_CLIENT_SECRET");
+  if (!tenant || !clientId || !clientSecret) return null;
+
+  // Reuse the cached token until a minute before it expires.
+  if (_graphToken.value && Date.now() < _graphToken.expiresAt - 60_000) {
+    return _graphToken.value;
+  }
+
+  const url = `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/token`;
+  const params = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    scope: "https://graph.microsoft.com/.default",
+    grant_type: "client_credentials",
+  });
+  try {
+    const { data } = await axios.post(url, params.toString(), {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      timeout: 15000,
+    });
+    _graphToken = {
+      value: data.access_token,
+      expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000,
+    };
+    return _graphToken.value;
+  } catch (err) {
+    const detail = err.response?.data?.error_description || err.response?.data?.error || err.message;
+    throw new Error(`Microsoft Graph token request failed: ${detail}`);
+  }
+}
+
+/**
+ * Verify Graph credentials by acquiring a token. Used by the connection-test
+ * button. Does not send anything — Mail.Send and the Application Access Policy
+ * are exercised at real send time.
+ */
+async function verifyGraphAuth() {
+  const token = await getGraphToken();
+  if (!token) throw new Error("Microsoft Graph is not configured (tenant / client ID / client secret).");
+  return true;
+}
+
+/**
+ * Send one message via Microsoft Graph app-only (POST /users/{sender}/sendMail).
+ * The sending mailbox is the sender in the URL; the app must hold Mail.Send
+ * scoped to it via an Application Access Policy.
+ */
+async function sendViaGraph({ from, to, subject, html, text }) {
+  const token = await getGraphToken();
+  if (!token) throw new Error("Microsoft Graph is not configured.");
+  const sender = configService.get("GRAPH_MAIL_SENDER") || from;
+  const recipients = String(to)
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((address) => ({ emailAddress: { address } }));
+
+  const body =
+    html != null
+      ? { contentType: "HTML", content: html }
+      : { contentType: "Text", content: text || "" };
+
+  const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(sender)}/sendMail`;
+  try {
+    await axios.post(
+      url,
+      { message: { subject, body, toRecipients: recipients }, saveToSentItems: false },
+      { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, timeout: 20000 },
+    );
+    logger.info(`[emailService] Email sent to ${to} via Microsoft Graph (as ${sender})`);
+    return { accepted: recipients.map((r) => r.emailAddress.address), graph: true };
+  } catch (err) {
+    const detail = err.response?.data?.error?.message || err.message;
+    throw new Error(`Microsoft Graph sendMail failed: ${detail}`);
+  }
 }
 
 function maskEmail(email) {
@@ -86,8 +209,10 @@ function getTransporter() {
  */
 async function sendMail({ to, subject, html, text, preheader }) {
   const from =
-    configService.get("SMTP_FROM") || configService.get("SMTP_USER") || "noreply@heroncs.co.uk";
-  const transporter = getTransporter();
+    configService.get("GRAPH_MAIL_SENDER") ||
+    configService.get("SMTP_FROM") ||
+    configService.get("SMTP_USER") ||
+    "noreply@heroncs.co.uk";
 
   if (html != null && !emailLayout.isDocument(html)) {
     html = emailLayout.renderDocument({
@@ -97,22 +222,37 @@ async function sendMail({ to, subject, html, text, preheader }) {
     });
   }
 
-  if (!transporter) {
-    // In fallback mode, avoid logging full email bodies which may contain sensitive tokens.
-    logger.info(
-      `[EMAIL-FALLBACK] To: ${maskEmail(to)} | Subject: ${subject} | bodyLength=${getBodyLength(text, html)}`,
-    );
-    return { accepted: [to], fallback: true };
+  const transport = selectTransport();
+
+  if (transport === "graph") {
+    try {
+      return await sendViaGraph({ from, to, subject, html, text });
+    } catch (err) {
+      logger.error(`[emailService] Failed to send email to ${to} via Microsoft Graph: ${err.message}`, { stack: err.stack });
+      throw err;
+    }
   }
 
-  try {
-    const info = await transporter.sendMail({ from, to, subject, html, text });
-    logger.info(`[emailService] Email sent to ${to} — messageId: ${info.messageId}`);
-    return info;
-  } catch (err) {
-    logger.error(`[emailService] Failed to send email to ${to} via ${configService.get("SMTP_HOST")}:${configService.get("SMTP_PORT") || 587}: ${err.message}`, { stack: err.stack });
-    throw err;
+  if (transport === "smtp") {
+    const transporter = getTransporter();
+    if (transporter) {
+      try {
+        const info = await transporter.sendMail({ from, to, subject, html, text });
+        logger.info(`[emailService] Email sent to ${to} — messageId: ${info.messageId}`);
+        return info;
+      } catch (err) {
+        logger.error(`[emailService] Failed to send email to ${to} via ${configService.get("SMTP_HOST")}:${configService.get("SMTP_PORT") || 587}: ${err.message}`, { stack: err.stack });
+        throw err;
+      }
+    }
   }
+
+  // No transport configured — log-only fallback. Avoid logging full email bodies
+  // which may contain sensitive tokens.
+  logger.info(
+    `[EMAIL-FALLBACK] To: ${maskEmail(to)} | Subject: ${subject} | bodyLength=${getBodyLength(text, html)}`,
+  );
+  return { accepted: [to], fallback: true };
 }
 
 /**
@@ -189,6 +329,7 @@ export default {
   sendPasswordResetEmail,
   buildActionEmail,
   resetTransporter,
+  verifyGraphAuth,
 };
 
-export { sendMail, sendVerificationEmail, sendPasswordResetEmail, buildActionEmail, resetTransporter };
+export { sendMail, sendVerificationEmail, sendPasswordResetEmail, buildActionEmail, resetTransporter, verifyGraphAuth };

@@ -16,6 +16,7 @@ import logger from '../../services/loggerService.js';
 import nodemailer from 'nodemailer';
 import kashflowSessionService from '../../services/kashflowSessionService.js';
 import smsService from '../../services/smsService.js';
+import emailService from '../../services/emailService.js';
 
 // ── Live connection tests ────────────────────────────────────────────────────
 
@@ -43,6 +44,14 @@ const TESTS = {
     });
     await transporter.verify();
     return `SMTP connection to ${host} verified (login accepted).`;
+  },
+
+  graph: async () => {
+    // Acquire an app-only token to prove tenant/client/secret are valid. Mail.Send
+    // and the Application Access Policy are only exercised on a real send.
+    await emailService.verifyGraphAuth();
+    const sender = configService.get('GRAPH_MAIL_SENDER') || configService.get('SMTP_FROM') || '(sender not set)';
+    return `Microsoft Graph authentication succeeded (token acquired). Sends will be attempted as ${sender}; Mail.Send permission and the Application Access Policy are verified at send time.`;
   },
 
   paperless: async () => {

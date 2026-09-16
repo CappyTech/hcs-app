@@ -36,7 +36,7 @@ async function runAfterSave(group) {
     } else if (group.afterSave === 'paperless') {
       const paperlessClient = (await import('../services/paperless/paperlessClient.js')).default;
       paperlessClient.invalidateCfCache?.();
-    } else if (group.afterSave === 'smtp') {
+    } else if (group.afterSave === 'mail') {
       const emailService = (await import('../../services/emailService.js')).default;
       emailService.resetTransporter?.();
     }

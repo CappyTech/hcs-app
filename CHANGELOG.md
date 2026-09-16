@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.40.0] - 2026-09-16
+
+### Added
+- **Send outbound email via Microsoft Graph (app-only), toggleable from the config page.** Microsoft 365 blocks Basic-auth SMTP for shared mailboxes (the classic `535 5.7.3` on `noreply@`), so the app can now send through Microsoft Graph instead — app-only OAuth (client-credentials), no mailbox password and no SMTP AUTH, and it sends as a shared mailbox natively. A new **Email (Microsoft Graph)** config group (`/admin/config/graph`) holds a **"Use Microsoft Graph" toggle** plus Tenant ID, Client ID, Client secret and Sender mailbox; when the toggle is on and Graph is configured, `emailService` sends via `POST /users/{sender}/sendMail`, otherwise it falls back to SMTP (and to log-only if neither is set). Graph settings honour the same store-over-env precedence and reset the mail client on save, so switching takes effect with no redeploy.
+- **"Test connection" for Graph** acquires an app-only token to verify tenant/client/secret without sending (Mail.Send and the Application Access Policy are exercised on the first real send).
+- **Help → Administration → "Sending Email via Microsoft Graph"** documents what Graph sending is and the full setup: register an Entra app, grant Mail.Send (application) + admin consent, create a client secret, scope it to the sending mailbox with an Application Access Policy, then fill in the fields and flip the toggle. The existing "Account & Application Settings" article was also corrected to describe the `/admin/config` page (store-over-env) rather than the old env-only wording.
+
 ## [6.39.0] - 2026-09-16
 
 ### Fixed
