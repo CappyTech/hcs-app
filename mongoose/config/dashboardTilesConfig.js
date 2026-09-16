@@ -350,7 +350,10 @@ export default {
         description: 'Photographs used across the public website.',
         link: '/website/media',
         department: ['website'],
-        buttonClass: 'bg-blue-700 hover:bg-blue-800'
+        // Green (in-app): blue is reserved for external links (which also carry the
+        // box-arrow icon). The Media Library is an internal editor, so it was the
+        // odd one out among the internal tiles.
+        buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     WebsiteSettings: {
         title: 'Site Settings',

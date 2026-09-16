@@ -2,6 +2,22 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.38.0] - 2026-09-16
+
+### Added
+- **Paperless OCR ingest now runs on a schedule instead of being triggered by opening a page.** A new `paperless-ocr-grab` background job (every 30 min) is the primary ingest path, matching how `bank-statement-grab` already works. Opening `/paperless/ocr` previously fired a full, unfiltered `grabPaperlessOCR()` as fire-and-forget work on *every* fresh view; that on-view trigger is now debounced — it only fires when the last grab finished more than `PAPERLESS_AUTOINGEST_DEBOUNCE_MS` ago (default 10 min) and none is running, so refreshing or re-opening the list no longer kicks off a sweep each time while a quiet-spell refresh still works.
+- **Bulk "retry all failed" on the email outbox.** The notification outbox had per-message resend but no way to re-queue every give-up at once, so the "Failed (gave up)" figure only accumulated. `POST /admin/emails/outbox/retry-failed` resets all `status:'failed'` notifications to pending (attempts 0, next attempt now, error cleared); a "Retry all failed (N)" button appears on the outbox page only when there are failures.
+
+### Changed
+- **Paperless OCR list pagination gained First/Last, a page jump, and 25/50/100 page-size links.** It previously offered only Prev/Next across ~40 pages. A single helper builds each link while preserving the active filters; the page jump is a GET form so it stays CSP-safe.
+
+### Fixed
+- **Dashboard hub tiles no longer render the same entry twice.** A model-driven tile and a custom tile could point at the same route (e.g. Holiday Requests at `/holidayrequests` and `/holidayRequests`), showing "Holiday Requests" twice on the HR and Management pages. Tiles are now deduped by normalised destination; the redundant custom tile was removed and its description moved onto the model config.
+- **The OCR list showed US-format dates** (`M/D/YYYY, h:mm AM/PM`) because it used locale-less `toLocaleString()`. It now uses the shared `slimDateTime` helper (`dd/MM/yyyy HH:mm`), matching the rest of the app.
+- **The 404 page's "Return to Home" button was red (the danger colour)** for a harmless navigation; it now uses the primary green (403 stays amber, 500 stays red).
+- **The Help role table showed a meaningless "Required: Optional" column** for every role, because it reused the form-field table. The Required column is now hidden when no row is actually required.
+- **The internal Media Library tile was blue**, the colour reserved for external links (which also carry the box-arrow icon); it is now green like the other in-app tiles.
+
 ## [6.37.1] - 2026-09-16
 
 ### Fixed
