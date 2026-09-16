@@ -1,9 +1,19 @@
 import nodemailer from 'nodemailer';
 import logger from './loggerService.js';
 import emailLayout from './emailLayout.js';
+import configService from './configService.js';
 
 // ── Transporter (lazy-initialised) ───────────────────────────────────
 let _transporter = null;
+
+/**
+ * Drop the cached transporter so the next send rebuilds it from current config.
+ * Called by the config after-save hook (appConfigController) when any SMTP key
+ * changes, so a settings edit takes effect without a restart.
+ */
+function resetTransporter() {
+  _transporter = null;
+}
 
 function maskEmail(email) {
   const value = String(email || "").trim();
@@ -23,10 +33,14 @@ function getBodyLength(text, html) {
 function getTransporter() {
   if (_transporter) return _transporter;
 
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  // Read through configService so the admin config page (managed store) is
+  // authoritative and can override compose.env without a redeploy — the same
+  // precedence every other setting uses. process.env still applies as the
+  // fallback for anything not set in the store.
+  const host = configService.get("SMTP_HOST");
+  const port = Number(configService.get("SMTP_PORT")) || 587;
+  const user = configService.get("SMTP_USER");
+  const pass = configService.get("SMTP_PASS");
 
   if (!host || !user || !pass) {
     logger.warn(
@@ -38,9 +52,10 @@ function getTransporter() {
   // `secure: true` means implicit TLS (port 465). For 587/25 use STARTTLS
   // (`secure: false`). Allow an explicit override for hosts that don't follow
   // the port convention.
+  const secureRaw = configService.get("SMTP_SECURE");
   const secure =
-    process.env.SMTP_SECURE !== undefined
-      ? String(process.env.SMTP_SECURE).toLowerCase() === "true"
+    secureRaw !== undefined && secureRaw !== ""
+      ? String(secureRaw).toLowerCase() === "true"
       : port === 465;
 
   logger.info(`[emailService] Creating SMTP transporter — host: ${host}, port: ${port}, secure: ${secure}`);
@@ -52,9 +67,9 @@ function getTransporter() {
     auth: { user, pass },
     // Fail fast with a clear error instead of hanging when the SMTP host is
     // unreachable or the port is wrong.
-    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS) || 15000,
-    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS) || 10000,
-    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS) || 20000,
+    connectionTimeout: Number(configService.get("SMTP_CONNECTION_TIMEOUT_MS")) || 15000,
+    greetingTimeout: Number(configService.get("SMTP_GREETING_TIMEOUT_MS")) || 10000,
+    socketTimeout: Number(configService.get("SMTP_SOCKET_TIMEOUT_MS")) || 20000,
   });
 
   return _transporter;
@@ -71,7 +86,7 @@ function getTransporter() {
  */
 async function sendMail({ to, subject, html, text, preheader }) {
   const from =
-    process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@heroncs.co.uk";
+    configService.get("SMTP_FROM") || configService.get("SMTP_USER") || "noreply@heroncs.co.uk";
   const transporter = getTransporter();
 
   if (html != null && !emailLayout.isDocument(html)) {
@@ -95,7 +110,7 @@ async function sendMail({ to, subject, html, text, preheader }) {
     logger.info(`[emailService] Email sent to ${to} — messageId: ${info.messageId}`);
     return info;
   } catch (err) {
-    logger.error(`[emailService] Failed to send email to ${to} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587}: ${err.message}`, { stack: err.stack });
+    logger.error(`[emailService] Failed to send email to ${to} via ${configService.get("SMTP_HOST")}:${configService.get("SMTP_PORT") || 587}: ${err.message}`, { stack: err.stack });
     throw err;
   }
 }
@@ -173,6 +188,7 @@ export default {
   sendVerificationEmail,
   sendPasswordResetEmail,
   buildActionEmail,
+  resetTransporter,
 };
 
-export { sendMail, sendVerificationEmail, sendPasswordResetEmail, buildActionEmail };
+export { sendMail, sendVerificationEmail, sendPasswordResetEmail, buildActionEmail, resetTransporter };

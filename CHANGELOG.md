@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.39.0] - 2026-09-16
+
+### Fixed
+- **SMTP settings saved in the admin config page now actually take effect.** `emailService` read `SMTP_HOST/PORT/USER/PASS/SECURE/FROM` straight from `process.env`, so the managed store (the `/admin/config` → Email (SMTP) page) was ignored by the actual sender — you could save new mail settings and nothing changed, and if the value was set in `compose.env` there was no way to override it without a redeploy. The sender now reads through `configService` like every other setting, so the managed store is authoritative (store → env → file → default) and can override `compose.env` without a redeploy. Environments that set SMTP only via env are unaffected — the store simply falls through to env.
+
+### Added
+- **SMTP changes apply without a restart.** Saving the Email (SMTP) group now runs an after-save hook that resets the cached nodemailer transporter, so the next email uses the new settings immediately (same pattern as the SMS client and Paperless cache).
+- **`SMTP_SECURE` is now a managed setting** on the Email (SMTP) config page (true / false / blank to auto-detect from the port), and the "Test connection" button uses the same secure logic as the sender so a passing test matches how mail is really sent.
+
 ## [6.38.0] - 2026-09-16
 
 ### Added

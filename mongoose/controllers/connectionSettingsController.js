@@ -25,11 +25,19 @@ const TESTS = {
     const user = configService.get('SMTP_USER');
     const pass = configService.get('SMTP_PASS');
     if (!host || !user || !pass) throw new Error('SMTP host/user/password not configured.');
-    // Fresh transporter (not the cached one) so the test reflects current settings
+    // Fresh transporter (not the cached one) so the test reflects current settings.
+    // Mirror emailService's secure logic so the test matches how mail is actually sent:
+    // honour SMTP_SECURE when set, otherwise implicit TLS only on 465.
+    const port = Number(configService.get('SMTP_PORT')) || 587;
+    const secureRaw = configService.get('SMTP_SECURE');
+    const secure =
+      secureRaw !== undefined && secureRaw !== ''
+        ? String(secureRaw).toLowerCase() === 'true'
+        : port === 465;
     const transporter = nodemailer.createTransport({
       host,
-      port: Number(configService.get('SMTP_PORT')) || 587,
-      secure: (Number(configService.get('SMTP_PORT')) || 587) === 465,
+      port,
+      secure,
       auth: { user, pass },
       connectionTimeout: 10_000,
     });

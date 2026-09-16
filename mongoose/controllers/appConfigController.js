@@ -36,6 +36,9 @@ async function runAfterSave(group) {
     } else if (group.afterSave === 'paperless') {
       const paperlessClient = (await import('../services/paperless/paperlessClient.js')).default;
       paperlessClient.invalidateCfCache?.();
+    } else if (group.afterSave === 'smtp') {
+      const emailService = (await import('../../services/emailService.js')).default;
+      emailService.resetTransporter?.();
     }
   } catch (err) {
     logger.warn(`[appConfig] after-save hook for ${group.id} failed: ${err.message}`);

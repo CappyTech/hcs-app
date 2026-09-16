@@ -93,12 +93,16 @@ export const GROUPS = [
     icon: 'bi-envelope-fill',
     description: 'Outbound mail for notifications, password resets and payroll documents.',
     test: 'smtp',
+    // Reset the cached nodemailer transporter after a save so new settings take
+    // effect immediately, without a restart.
+    afterSave: 'smtp',
     keys: [
-      { key: 'SMTP_HOST', label: 'Host', type: 'text', help: 'SMTP server hostname.' },
+      { key: 'SMTP_HOST', label: 'Host', type: 'text', help: 'SMTP server hostname (e.g. smtp.office365.com).' },
       { key: 'SMTP_PORT', label: 'Port', type: 'number', help: '587 for STARTTLS, 465 for implicit TLS.' },
-      { key: 'SMTP_USER', label: 'Username', type: 'text', help: 'SMTP login.' },
-      { key: 'SMTP_PASS', label: 'Password', type: 'secret', help: 'SMTP password.' },
-      { key: 'SMTP_FROM', label: 'From address', type: 'text', help: 'Envelope sender for all outbound mail.' },
+      { key: 'SMTP_SECURE', label: 'Implicit TLS', type: 'text', help: 'true / false, or blank to auto-detect (true only when port is 465). Use false for 587 STARTTLS.' },
+      { key: 'SMTP_USER', label: 'Username', type: 'text', help: 'SMTP login (the mailbox address).' },
+      { key: 'SMTP_PASS', label: 'Password', type: 'secret', help: 'SMTP password or app password.' },
+      { key: 'SMTP_FROM', label: 'From address', type: 'text', help: 'Envelope sender for all outbound mail (must be the authenticated mailbox or an allowed alias).' },
       { key: 'BASE_URL', label: 'Public base URL', type: 'text', help: 'Used to build absolute links in emails.' },
     ],
   },
