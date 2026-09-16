@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.41.4] - 2026-09-17
+
+### Fixed
+- **"My GDPR Requests" had no way back.** `/gdpr/requests` is reached from the User hub tile but offered no link back to it. Added a "← User" back link at the top of the page.
+
 ## [6.41.3] - 2026-09-17
 
 ### Fixed
