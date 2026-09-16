@@ -37,27 +37,34 @@ export const getProfilePage = async (req, res, next) => {
       departments,
       models: Object.entries(modelAccess).map(([model, perms]) => {
         const ops = perms.split(",").map((e) => e.trim());
+        const labels = { c: "Create", r: "Read", u: "Update", d: "Delete", l: "List" };
         return {
-          model: model.charAt(0).toUpperCase() + model.slice(1),
-          operations: ops.map((op) => {
+          // "_wildcard" / "*" is the admin catch-all — show it in plain English.
+          model:
+            model === "_wildcard" || model === "*"
+              ? "All data models"
+              : model.charAt(0).toUpperCase() + model.slice(1),
+          // A code can be a run of letters ("crudl"); expand each into its own
+          // chip so the panel reads Create/Read/Update/Delete/List, not "crudl".
+          operations: ops.flatMap((op) => {
             const [code, scope] = op.split(":");
-            const labels = {
-              c: "Create",
-              r: "Read",
-              u: "Update",
-              d: "Delete",
-              l: "List",
-            };
-            return { label: labels[code] || code, ownOnly: scope === "own" };
+            const chars =
+              code.length > 1 && [...code].every((c) => labels[c]) ? [...code] : [code];
+            return chars.map((c) => ({ label: labels[c] || c, ownOnly: scope === "own" }));
           }),
         };
       }),
+      // Only real, navigable pages: drop parameterised patterns like
+      // "/paperless/ocr/:paperlessId/draft" — they need an id, aren't standalone
+      // pages, and rendered as broken links. Sorted for a tidy, scannable list.
       customRoutes: Object.entries(rbac.routeAccess)
         .filter(
           ([, roles]) =>
             roles === "*" || (Array.isArray(roles) && roles.includes(role)),
         )
-        .map(([route]) => route),
+        .map(([route]) => route)
+        .filter((route) => !route.includes(":"))
+        .sort(),
     };
 
     // Fetch last login time from the most recent session

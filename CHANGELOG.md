@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.41.2] - 2026-09-17
+
+### Changed
+- **Tidied the Permissions section of the profile page (`/user/profile`).** Data Access showed raw internals — the admin catch-all as `_wildcard` and its operations as a single `crudl` chip; it now reads **"All data models"** with individual **Create / Read / Update / Delete / List** chips (any multi-letter code is expanded, and `:own`-scoped ops keep their "(own)" marker). Accessible Pages listed parameterised route patterns like `/paperless/ocr/:paperlessId/draft`, which need an id, aren't standalone pages, and rendered as broken links; those are now filtered out and the remaining pages are sorted. Presentational — no permissions or behaviour changed.
+
 ## [6.41.1] - 2026-09-17
 
 ### Changed
