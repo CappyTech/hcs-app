@@ -30,6 +30,25 @@ function readLogEntries(limit = 500) {
 }
 
 /**
+ * Parse a log timestamp for sorting. The JSON log writes "DD-MM-YYYY HH:mm:ss"
+ * (see loggerService), which `new Date()` cannot parse — it returns Invalid Date,
+ * so a `new Date(a) - new Date(b)` comparator yields NaN and the sort silently
+ * does nothing, leaving entries in file (oldest-first) order. Parse the real
+ * format here, and fall back to native parsing for any ISO lines.
+ * @param {string} ts
+ * @returns {number} epoch ms (0 when unparseable, so it sorts oldest)
+ */
+function logTsMs(ts) {
+  const m = /^(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2}):(\d{2})/.exec(String(ts || ""));
+  if (m) {
+    const [, dd, mo, yyyy, hh, mi, ss] = m;
+    return new Date(Number(yyyy), Number(mo) - 1, Number(dd), Number(hh), Number(mi), Number(ss)).getTime();
+  }
+  const t = new Date(ts).getTime();
+  return Number.isNaN(t) ? 0 : t;
+}
+
+/**
  * Bucket entries by level.
  */
 function bucketByLevel(entries) {
@@ -44,6 +63,8 @@ function bucketByLevel(entries) {
 /* ── GET /logs  (HTML page) ── */
 export const getLogs = async (req, res) => {
   const entries = readLogEntries(500);
+  // Newest-first, to match the live /logs/api pagination.
+  entries.sort((a, b) => logTsMs(b.timestamp) - logTsMs(a.timestamp));
   const logsByLevel = bucketByLevel(entries);
 
   res.render(path.join("tailwindcss", "admin", "logger"), {
@@ -63,8 +84,8 @@ export const getLogsApi = async (req, res) => {
       ? all.filter((e) => e.level?.toLowerCase() === levelFilter)
       : all;
 
-    // Sort newest-first
-    filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // Sort newest-first (parse the DD-MM-YYYY HH:mm:ss log format correctly)
+    filtered.sort((a, b) => logTsMs(b.timestamp) - logTsMs(a.timestamp));
 
     // Paginate
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);

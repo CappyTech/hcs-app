@@ -97,7 +97,10 @@
     <% ['info', 'debug', 'warn', 'error'].forEach((level, i) => { %>
       <div id="log-<%= level %>" class="tab-panel space-y-2 <%= i !== 0 ? 'hidden' : '' %>">
         <% if (logsByLevel[level].length > 0) { %>
-          <% logsByLevel[level].slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(entry => { %>
+          <%# Already newest-first from the controller. The old in-view sort used
+              new Date() on the DD-MM-YYYY timestamp, which is unparseable, so it
+              was a silent no-op anyway. %>
+          <% logsByLevel[level].forEach(entry => { %>
             <%- include('../partials/_logEntry', { entry, level }) %>
           <% }) %>
         <% } else { %>

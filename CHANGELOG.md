@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.40.1] - 2026-09-16
+
+### Fixed
+- **Application Logs now sort newest-first as intended.** The JSON log writes timestamps as `DD-MM-YYYY HH:mm:ss`, which `new Date()` cannot parse — so every `new Date(a) - new Date(b)` comparator (initial page render, the `/logs/api` "newest-first" pagination, and the in-view sort) returned `NaN` and silently did nothing, leaving entries in file order (oldest-first). Added a `logTsMs()` parser for the real format (with ISO fallback) and used it in both sort paths; removed the redundant, non-functional in-view sort.
+
 ## [6.40.0] - 2026-09-16
 
 ### Added
