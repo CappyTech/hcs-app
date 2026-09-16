@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.41.3] - 2026-09-17
+
+### Fixed
+- **Notification Settings was a navigation dead-end.** `/user/account/settings/notifications` linked back to Account, but the Account Settings page had no link to it — the only way in was the User hub tile. Added a "Notification Settings" link alongside "View Profile" at the top of `/user/account`, so the account pages link to each other both ways.
+
 ## [6.41.2] - 2026-09-17
 
 ### Changed
