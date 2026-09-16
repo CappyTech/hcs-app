@@ -15,6 +15,12 @@ const VERBOSE = process.env.PAPERLESS_VERBOSE === 'true' || process.env.DEBUG;
 let grabRunning = false;
 function isGrabRunning() { return grabRunning; }
 
+// When the last grab finished (epoch ms, 0 = never). Used to debounce the
+// on-view auto-ingest so opening the list doesn't fire a full sweep on every
+// visit; the scheduled job keeps the mirror fresh regardless.
+let lastGrabFinishedAt = 0;
+function getLastGrabFinishedAt() { return lastGrabFinishedAt; }
+
 // Serialize background CF write-backs to Paperless: docs on a page are processed in
 // parallel, and firing one PATCH /documents/:id/ per doc simultaneously makes
 // Paperless-ngx 500 every request under write contention. Chain them instead.
@@ -407,6 +413,7 @@ async function grabPaperlessOCR(options = {}) {
   return { processed, skipped, failed, flaggedDeleted, unflagged };
   } finally {
     grabRunning = false;
+    lastGrabFinishedAt = Date.now();
   }
 }
 
@@ -577,4 +584,4 @@ async function ingestOnePaperlessDoc(paperlessId) {
   return { paperlessId: doc.id, status: 'fetched' };
 }
 
-export default { grabPaperlessOCR, ingestOnePaperlessDoc, isGrabRunning };
+export default { grabPaperlessOCR, ingestOnePaperlessDoc, isGrabRunning, getLastGrabFinishedAt };

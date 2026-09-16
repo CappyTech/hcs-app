@@ -23,6 +23,7 @@ const {
   grabPaperlessOCR,
   ingestOnePaperlessDoc,
   isGrabRunning,
+  getLastGrabFinishedAt,
 } = __grabServicePaperless;
 const {
   buildPurchaseDraftFromOcr,
@@ -149,8 +150,18 @@ export const listOcr = async (req, res, next) => {
       .limit(pageSize)
       .lean();
 
-    // Auto-ingest: trigger only when explicitly requested via query to avoid reload loops
-    const autoIngest = String(req.query.autoIngest || "").trim() === "1";
+    // Auto-ingest: trigger only when explicitly requested via query to avoid reload loops.
+    // Debounced: the scheduled `paperless-ocr-grab` job keeps the mirror fresh, so the
+    // on-view grab only fires when the last one finished more than
+    // PAPERLESS_AUTOINGEST_DEBOUNCE_MS ago (default 10 min). This stops every fresh
+    // visit from kicking off a full unfiltered sweep, while still giving a manual
+    // "open the page to refresh" after a quiet spell. Skipped entirely while a grab
+    // is already running.
+    const autoIngestRequested = String(req.query.autoIngest || "").trim() === "1";
+    const debounceMs = parseInt(process.env.PAPERLESS_AUTOINGEST_DEBOUNCE_MS, 10) || 10 * 60 * 1000;
+    const lastGrab = typeof getLastGrabFinishedAt === "function" ? getLastGrabFinishedAt() : 0;
+    const grabIsStale = Date.now() - lastGrab > debounceMs;
+    const autoIngest = autoIngestRequested && grabIsStale && !isGrabRunning();
     let startedBgIngest = false;
     if (autoIngest) {
       startedBgIngest = true;

@@ -18,6 +18,7 @@ import __bankThreeWayService from './bankThreeWayService.js';
 import __bankStatementIngestService from './bankStatementIngestService.js';
 import __bankStrandedLineService from './bankStrandedLineService.js';
 import __supplierCorrespondentSyncService from './paperless/supplierCorrespondentSyncService.js';
+import __grabServicePaperless from './grabServicePaperless.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -112,6 +113,17 @@ function registerAll() {
     intervalMs: 6 * HOUR,
     initialDelayMs: 45_000,
     run: () => __bankThreeWayService.reconcileStatements(),
+  });
+
+  scheduler.register('paperless-ocr-grab', {
+    description:
+      'Pull OCR documents from Paperless-ngx into the local mirror (correspondent, '
+      + 'type, tags, custom fields) and backfill KashFlow linkage. Content-hashed, so '
+      + 'unchanged documents are skipped. This is the primary ingest path — the OCR '
+      + 'list page only triggers a grab as a debounced fallback, no longer on every view.',
+    intervalMs: 30 * MINUTE,
+    initialDelayMs: 45_000,
+    run: () => __grabServicePaperless.grabPaperlessOCR({ since: null }),
   });
 
   scheduler.register('paperless-correspondent-sync', {
