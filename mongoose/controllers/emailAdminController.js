@@ -269,10 +269,33 @@ export const postCompose = async (req, res) => {
 // ── Outbox ──────────────────────────────────────────────────────────────
 export const getOutbox = async (req, res, next) => {
   try {
-    const notifications = await mdb.INTERNAL.notification.find({})
-      .sort({ createdAt: -1 }).limit(100).lean();
-    res.render(VIEW('email-outbox'), { title: 'Email Outbox', notifications });
+    const [notifications, failedCount] = await Promise.all([
+      mdb.INTERNAL.notification.find({})
+        .sort({ createdAt: -1 }).limit(100).lean(),
+      mdb.INTERNAL.notification.countDocuments({ status: 'failed' }),
+    ]);
+    res.render(VIEW('email-outbox'), { title: 'Email Outbox', notifications, failedCount });
   } catch (err) { next(err); }
+};
+
+// Bulk re-queue every give-up (status: 'failed'). Same reset as a single resend,
+// but across all of them — the "Failed (gave up)" count on the jobs page and this
+// outbox otherwise only accumulates with no way to retry them together.
+export const postRetryAllFailed = async (req, res) => {
+  try {
+    const result = await mdb.INTERNAL.notification.updateMany(
+      { status: 'failed' },
+      { status: 'pending', attempts: 0, nextAttemptAt: new Date(), lastError: null },
+    );
+    const n = result.modifiedCount || 0;
+    req.flash(
+      n > 0 ? 'success' : 'info',
+      n > 0 ? `Re-queued ${n} failed notification${n === 1 ? '' : 's'} for delivery.` : 'No failed notifications to retry.',
+    );
+  } catch (err) {
+    req.flash('error', `Could not retry failed notifications: ${err.message}`);
+  }
+  res.redirect('/admin/emails/outbox');
 };
 
 export const postResend = async (req, res) => {
@@ -407,4 +430,4 @@ export const postUnsubscribe = async (req, res) => {
   }
 };
 
-export default { getHub, postRotationSettings, postRotateNow, getTypes, validateType, postCreateType, postUpdateType, postToggleType, postDeleteType, getTypePreview, getBranding, postBranding, getCompose, validateCompose, postCompose, getOutbox, postResend, postCancel, getUnsubscribe, postUnsubscribe };
+export default { getHub, postRotationSettings, postRotateNow, getTypes, validateType, postCreateType, postUpdateType, postToggleType, postDeleteType, getTypePreview, getBranding, postBranding, getCompose, validateCompose, postCompose, getOutbox, postResend, postRetryAllFailed, postCancel, getUnsubscribe, postUnsubscribe };

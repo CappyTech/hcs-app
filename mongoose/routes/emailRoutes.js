@@ -41,6 +41,7 @@ router.post("/admin/emails/compose", authService.ensureRole("admin"), ctrl.valid
 
 // Outbox
 router.get("/admin/emails/outbox", authService.ensureRole("admin"), ctrl.getOutbox);
+router.post("/admin/emails/outbox/retry-failed", authService.ensureRole("admin"), ctrl.postRetryAllFailed);
 router.post("/admin/emails/outbox/:uuid/resend", authService.ensureRole("admin"), ctrl.postResend);
 router.post("/admin/emails/outbox/:uuid/cancel", authService.ensureRole("admin"), ctrl.postCancel);
 

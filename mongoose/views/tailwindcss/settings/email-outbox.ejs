@@ -18,7 +18,17 @@ function statusBadge(s) {
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-inboxes text-blue-500"></i> Email Outbox</h1>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">The 100 most recent notifications. Delivery runs on the <code>notification-outbox</code> job.</p>
         </div>
-        <a href="/admin/emails" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Email hub</a>
+        <div class="flex items-center gap-3">
+          <% if (typeof failedCount !== 'undefined' && failedCount > 0) { %>
+            <form method="POST" action="/admin/emails/outbox/retry-failed">
+              <%- include('../partials/csrfHidden.ejs') %>
+              <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition" title="Re-queue every notification that gave up">
+                <i class="bi bi-arrow-clockwise"></i> Retry all failed (<%= failedCount %>)
+              </button>
+            </form>
+          <% } %>
+          <a href="/admin/emails" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Email hub</a>
+        </div>
       </div>
 
       <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
