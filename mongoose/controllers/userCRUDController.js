@@ -9,6 +9,7 @@ import { getClientIp } from '../../services/ipService.js';
 import emailService from '../../services/emailService.js';
 import smsService from '../../services/smsService.js';
 import auditLog from '../../services/auditLogService.js';
+import microsoftSsoService from '../../services/microsoftSsoService.js';
 import hibpService from '../../services/hibpService.js';
 import totpService from '../../services/totpService.js';
 import passwordResetDraft from '../../services/passwordResetDraft.js';
@@ -174,6 +175,7 @@ export const renderLoginForm = (req, res) => {
     title: "Log In",
     siteKey: process.env.TURNSTILE_SITE_KEY,
     skipTurnstile: process.env.SKIP_TURNSTILE === "true",
+    msSsoEnabled: microsoftSsoService.isEnabled(),
     next,
   });
 };

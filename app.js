@@ -81,6 +81,7 @@ import __paymentRoutes from './mongoose/routes/paymentRoutes.js';
 import __accountantRoutes from './mongoose/routes/accountantRoutes.js';
 import __overviewRoutes from './mongoose/routes/overviewRoutes.js';
 import __ssoRoutes from './mongoose/routes/ssoRoutes.js';
+import __microsoftSsoRoutes from './mongoose/routes/microsoftSsoRoutes.js';
 import __helpRoutes from './mongoose/routes/helpRoutes.js';
 import __payrollRoutes from './mongoose/routes/payrollRoutes.js';
 import __gdprRoutes from './mongoose/routes/gdprRoutes.js';
@@ -568,6 +569,7 @@ const main = async () => {
     const __listRoutes = (await import('./mongoose/routes/listRoutes.js')).default;
 
     appRouter.use('/', __userRoutes);
+    appRouter.use('/', __microsoftSsoRoutes);
     // Routes
     appRouter.use('/', __attendanceRoutes);
     appRouter.use('/', __cisRoutes);

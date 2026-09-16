@@ -156,6 +156,20 @@ export const GROUPS = [
     ],
   },
   {
+    id: 'microsoft-sso',
+    label: 'Microsoft Sign-in (SSO)',
+    icon: 'bi-microsoft',
+    description: 'Let existing users sign in with their Microsoft 365 account (OpenID Connect). Sign-in only — a Microsoft login is matched to an existing hcs-app account by email and refused if there is none; no accounts are created. See Help → Administration → Signing in with Microsoft. Needs a separate Entra app registration with a Redirect URI and delegated openid/profile/email scopes.',
+    test: 'microsoft-sso',
+    keys: [
+      { key: 'MS_SSO_ENABLED', label: 'Enable Microsoft sign-in', type: 'boolean', help: 'When on (and the fields below are set), a "Sign in with Microsoft" button appears on the login page.' },
+      { key: 'MS_SSO_TENANT_ID', label: 'Tenant ID', type: 'text', help: 'Entra directory (tenant) ID.' },
+      { key: 'MS_SSO_CLIENT_ID', label: 'Client ID', type: 'text', help: 'Application (client) ID of the sign-in app registration.' },
+      { key: 'MS_SSO_CLIENT_SECRET', label: 'Client secret', type: 'secret', help: 'A client secret value from the sign-in app registration.' },
+      { key: 'MS_SSO_REDIRECT_URI', label: 'Redirect URI', type: 'text', help: 'Must match a Redirect URI on the app registration. Blank = derive from the public base URL, i.e. <base>/auth/microsoft/callback.' },
+    ],
+  },
+  {
     id: 'sso',
     label: 'Sessions & SSO',
     icon: 'bi-box-arrow-in-right',

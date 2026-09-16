@@ -14,6 +14,7 @@
 import configService from '../../services/configService.js';
 import logger from '../../services/loggerService.js';
 import nodemailer from 'nodemailer';
+import axios from 'axios';
 import kashflowSessionService from '../../services/kashflowSessionService.js';
 import smsService from '../../services/smsService.js';
 import emailService from '../../services/emailService.js';
@@ -52,6 +53,20 @@ const TESTS = {
     await emailService.verifyGraphAuth();
     const sender = configService.get('GRAPH_MAIL_SENDER') || configService.get('SMTP_FROM') || '(sender not set)';
     return `Microsoft Graph authentication succeeded (token acquired). Sends will be attempted as ${sender}; Mail.Send permission and the Application Access Policy are verified at send time.`;
+  },
+
+  'microsoft-sso': async () => {
+    const tenant = configService.get('MS_SSO_TENANT_ID');
+    const clientId = configService.get('MS_SSO_CLIENT_ID');
+    const secret = configService.get('MS_SSO_CLIENT_SECRET');
+    if (!tenant || !clientId || !secret) throw new Error('Microsoft SSO tenant / client ID / client secret not configured.');
+    // Reachability + validity of the tenant's OpenID metadata. Proves the tenant
+    // exists and is usable; the full sign-in (redirect URI, consent) is verified
+    // by an actual login.
+    const url = `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/v2.0/.well-known/openid-configuration`;
+    const { data } = await axios.get(url, { timeout: 10000 });
+    if (!data || !data.authorization_endpoint) throw new Error('Could not read the tenant OpenID configuration.');
+    return `Tenant reachable — sign-in will use ${data.authorization_endpoint}. Ensure the app registration's Redirect URI matches this app's /auth/microsoft/callback.`;
   },
 
   paperless: async () => {

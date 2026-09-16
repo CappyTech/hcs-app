@@ -12,6 +12,11 @@ const PUBLIC_PATHS = new Set([
   "/user/verify-sms-otp",
   "/user/verify-totp-reset",
   "/user/2fa",
+  // Microsoft Entra sign-in (OIDC). Both are GET and protected by the OAuth
+  // `state` parameter; they must work while logged out. Sign-in only — the
+  // callback refuses any email without an existing hcs-app account.
+  "/auth/microsoft",
+  "/auth/microsoft/callback",
   "/health",
   // Token-scoped unsubscribe. Has no browser session — it is authorised solely
   // by the per-recipient notificationToken and only ever changes that one

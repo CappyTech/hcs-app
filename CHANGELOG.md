@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.41.0] - 2026-09-16
+
+### Added
+- **Sign in with Microsoft (Entra SSO) — sign-in only, no sign-up.** Users can log in with their Microsoft 365 account via OpenID Connect (Authorization Code flow with PKCE, state + nonce). It is deliberately sign-in only: the verified Microsoft email is matched to an existing hcs-app account and **refused if there is no match** — a Microsoft login never creates an account. Password login is unchanged and continues to work alongside it; a "Sign in with Microsoft" button appears on the login page only when the feature is enabled. The app's own 2FA still applies (a user with TOTP is asked for their code after the Microsoft step), and the SSO session is established identically to a password login (shared `authSessionService`, session regenerated, denormalised session record). New public routes `GET /auth/microsoft` and `/auth/microsoft/callback` (per-IP rate limited, state-protected). Configured at Admin → Configuration → **Microsoft Sign-in (SSO)** with an enable toggle plus Tenant ID / Client ID / Client secret / optional Redirect URI, all managed (store-over-env) with a "Test connection" that checks the tenant's OpenID metadata. Inert until the toggle is turned on. Full setup documented in Help → Administration → **Signing in with Microsoft (SSO)**.
+
 ## [6.40.1] - 2026-09-16
 
 ### Fixed

@@ -76,6 +76,21 @@
                                             </a>
                                         </div>
                     </form>
+
+                    <% if (typeof msSsoEnabled !== 'undefined' && msSsoEnabled) { %>
+                        <div class="flex items-center gap-3 my-6">
+                            <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+                            <span class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">or</span>
+                            <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+                        </div>
+                        <a href="/auth/microsoft<%= next ? ('?next=' + encodeURIComponent(next)) : '' %>"
+                           class="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                            <i class="bi bi-microsoft"></i> Sign in with Microsoft
+                        </a>
+                        <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-2">
+                            For existing accounts only — a Microsoft login won't create a new account.
+                        </p>
+                    <% } %>
         </div>
     </div>
 </div>
