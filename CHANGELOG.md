@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.37.1] - 2026-09-16
+
+### Fixed
+- **Department hub tiles no longer say "View X" on buttons that don't view anything.** Every tile on a department landing page was rendered by one partial that hardcoded its call-to-action as `View <title>` with a table icon. That is right for the list tiles it was built for, but wrong everywhere the same partial is reused for a different action: the **Create** hub showed "View Assignments / View Employees" on buttons that open a *create* form (`/{model}/create`), and the **User** hub showed "View Logout" on the sign-out tile. The partial now takes an optional per-tile `cta` label and `icon`, falling back to the old `View <title>` + `bi-table` so every existing tile is unchanged. The Create hub now reads "New <title>" with a plus icon, and the Logout tile reads "Log out" with a sign-out icon. No routes or destinations changed — labels only.
+
 ## [6.37.0] - 2026-09-16
 
 ### Added

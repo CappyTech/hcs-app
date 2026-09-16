@@ -84,12 +84,18 @@ const getCreateModels = (userRole) => {
         // would open the moment that department is opened up.
         (userRole === "admin" || rbac.canAccess(userRole, model, "c").allowed),
     )
-    .map(([model, config]) => ({
-      model,
-      title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
-      description: config.description?.create || `Create a new ${model}.`,
-      link: config.createPath || `/${model}/create`,
-    }));
+    .map(([model, config]) => {
+      const title = config.title || model.charAt(0).toUpperCase() + model.slice(1);
+      return {
+        model,
+        title,
+        description: config.description?.create || `Create a new ${model}.`,
+        link: config.createPath || `/${model}/create`,
+        // These tiles link to a create form, not a list — the CTA must say so.
+        cta: `New ${title}`,
+        icon: "bi-plus-circle",
+      };
+    });
 };
 
 // Home / Index Page

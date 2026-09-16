@@ -124,7 +124,10 @@ export default {
         description: 'Sign out of your account.',
         link: '/user/logout',
         department: ['user'],
-        buttonClass: 'bg-red-700 hover:bg-red-800'
+        buttonClass: 'bg-red-700 hover:bg-red-800',
+        // Action tile, not a list — "View Logout" reads wrong.
+        cta: 'Log out',
+        icon: 'bi-box-arrow-right'
     },
 
     // ── Attendance ────────────────────────────────────────────────────
