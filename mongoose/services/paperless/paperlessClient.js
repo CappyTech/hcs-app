@@ -320,6 +320,18 @@ function makeClient() {
       const api = await createApi();
       return (await api.get(`/correspondents/${id}/`)).data;
     },
+    async listCorrespondents({ page = 1, pageSize = 100, ordering = "name" } = {}) {
+      const api = await createApi();
+      const params = { page, page_size: pageSize, ordering };
+      const { data } = await api.get("/correspondents/", { params });
+      return data;
+    },
+    async createCorrespondent({ name } = {}) {
+      if (!name) throw new Error("createCorrespondent requires name");
+      const api = await createApi();
+      const { data } = await api.post("/correspondents/", { name });
+      return data;
+    },
     async getDocumentType(id) {
       if (!id) return null;
       const api = await createApi();

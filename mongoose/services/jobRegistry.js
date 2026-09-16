@@ -17,6 +17,7 @@ import __bankTransferService from './bankTransferService.js';
 import __bankThreeWayService from './bankThreeWayService.js';
 import __bankStatementIngestService from './bankStatementIngestService.js';
 import __bankStrandedLineService from './bankStrandedLineService.js';
+import __supplierCorrespondentSyncService from './paperless/supplierCorrespondentSyncService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -111,6 +112,17 @@ function registerAll() {
     intervalMs: 6 * HOUR,
     initialDelayMs: 45_000,
     run: () => __bankThreeWayService.reconcileStatements(),
+  });
+
+  scheduler.register('paperless-correspondent-sync', {
+    description:
+      'Mirror active KashFlow suppliers into Paperless as correspondents so every '
+      + 'supplier name is available to pick when filing an invoice, spelled exactly '
+      + 'as KashFlow holds it. Additive and idempotent — only creates missing '
+      + 'correspondents; never renames, deletes, or touches non-supplier ones.',
+    intervalMs: 12 * HOUR,
+    initialDelayMs: 60_000,
+    run: () => __supplierCorrespondentSyncService.syncSuppliersToCorrespondents(),
   });
 
   scheduler.register('vehicle-compliance', {

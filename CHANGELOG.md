@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.37.0] - 2026-09-16
+
+### Added
+- **KashFlow suppliers are mirrored into Paperless-ngx as correspondents.** The Purchase Invoice Capture Process needs each document's Paperless "Corresponder" to match the KashFlow Supplier Name exactly — otherwise the downstream match on send breaks — but new suppliers had to be hand-created as correspondents, and any typo was silent. A new background job, `paperless-correspondent-sync` (every 12 h, plus a **Run now** button on `/admin/jobs`), reads every active supplier from the synced `suppliers` mirror and creates a Paperless correspondent for each name that doesn't already have one, spelled exactly as KashFlow holds it.
+
+  **One-way, additive and idempotent by design.** It only ever *creates* missing correspondents — it never renames, never deletes, and never touches correspondents that have no matching supplier (Paperless also holds correspondents for customers, HMRC and banks, none of which are ours to prune). Matching is case- and whitespace-insensitive so it won't create near-duplicates, archived suppliers are skipped, and a Paperless unique-name rejection (`400`) is treated as already-present rather than a failure. The Paperless client gained `listCorrespondents` and `createCorrespondent` (it could previously only read a correspondent by id), and the pure matching helper (`computeMissingCorrespondents`) is unit-tested without a database in `tests/supplierCorrespondentSync.test.js`.
+
 ## [6.36.0] - 2026-09-08
 
 ### Added
