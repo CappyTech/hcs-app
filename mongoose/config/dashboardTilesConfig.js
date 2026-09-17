@@ -198,13 +198,8 @@ export default {
     },
 
     // ── Finance (incl. former KashFlow department) ────────────────────
-    PayrollOverview: {
-        title: 'Payroll Overview',
-        description: 'Tax year summary, monthly breakdown, and HMRC submissions.',
-        link: '/overview/payroll',
-        department: ['payroll', 'finance'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
+    // PayrollOverview tile removed: overviews live on the home dashboard (see
+    // index.ejs "Overviews"), not inside departments.
     InternalPayroll: {
         title: 'Payroll',
         description: 'Run payroll, view submissions, and manage PAYE settings.',
@@ -373,26 +368,12 @@ export default {
     },
 
     // ── Maintenance ───────────────────────────────────────────────────
-    FleetManagement: {
-        title: 'Fleet Overview',
-        description: 'Manage company vehicles, compliance and assignments.',
-        link: '/overview/fleet',
-        department: ['maintenance'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
+    // FleetManagement ("Fleet Overview") tile removed: overviews live on the
+    // home dashboard, not inside departments.
 
     // ── Human Resources ───────────────────────────────────────────────
-    HolidayManagement: {
-        title: 'Holiday Overview',
-        description: 'Manage holiday accrual, requests and approvals.',
-        link: '/overview/holiday',
-        // Listed in both on purpose: approving holiday is a management job and
-        // administering it is an HR job. A tile belongs wherever the work
-        // happens, so the same tool appearing in two departments is the system
-        // working, not duplication to be tidied away.
-        department: ['human-resources', 'management'],
-        buttonClass: 'bg-green-700 hover:bg-green-800'
-    },
+    // HolidayManagement ("Holiday Overview") tile removed: overviews live on the
+    // home dashboard, not inside departments.
     // HolidayRequests custom tile removed: it duplicated the model-driven tile for
     // the `holidayRequest` list (same destination, same departments), so every HR
     // and Management page showed "Holiday Requests" twice. The curated description

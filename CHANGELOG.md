@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.41.5] - 2026-09-17
+
+### Changed
+- **Overview dashboards now live only on the home page, not inside departments.** The home page already shows an "Overviews" section (role-gated, linking to each `/overview/*`), but the same overviews were also duplicated as department tiles — "Payroll Overview" (payroll/finance), "Fleet Overview" (maintenance) and "Holiday Overview" (HR/management). Those three department tiles were removed so overviews have a single home. The home page's Payroll overview gate was widened to `payroll` **or** `finance` so finance users don't lose the access the removed finance tile gave them.
+
 ## [6.41.4] - 2026-09-17
 
 ### Fixed
