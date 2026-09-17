@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.0] - 2026-09-17
+
+### Changed
+- **Department hub tiles redesigned: compact rows by default, promoted to cards only when something needs attention.** The hubs were a flat grid of identical cards ("View all X records in a table", same table icon, one green button). Now each tile is a compact row with a per-entity icon and, where available, an inline count; a tile is promoted to a highlighted card **only when a count crosses an attention threshold** (e.g. holiday requests pending, OCR documents unlinked), so the layout follows the data — a calm hub is a tidy list, and only the things needing action stand out. HR additionally groups its tiles (People / Holiday / Attendance); other hubs render one flat list. Everything degrades gracefully: a tile with no icon/group/count still renders as a plain row.
+  - New `dashboardTileMetaConfig.js` (per-entity icons; department-scoped groups) and `dashboardCountService.js` (best-effort counts — cached ~60s, each provider time-boxed to 2s and wrapped so a slow or failing query can never break or noticeably delay a hub load). Wired counts: holiday requests pending, OCR documents unlinked (attention), plus ambient employee/supplier/vehicle totals.
+  - `getDashboardModels` is now async and decorates tiles with `icon`, `group`, `external` and `count`; `renderDepartment` awaits it. Tunable via `DASHBOARD_COUNT_TTL_MS` / `DASHBOARD_COUNT_TIMEOUT_MS`.
+
 ## [6.41.5] - 2026-09-17
 
 ### Changed

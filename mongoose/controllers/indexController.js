@@ -6,6 +6,8 @@ import holidayService from '../services/holidayService.js';
 import { getFrequentPages } from '../services/sessionActivityService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import departments from '../config/departmentsConfig.js';
+import tileMeta from '../config/dashboardTileMetaConfig.js';
+import dashboardCountService from '../services/dashboardCountService.js';
 import { endOfToday, endOfWeek, endOfMonth } from 'date-fns';
 
 const denyGuard = (config, op) =>
@@ -37,8 +39,10 @@ const canUseTile = (tile, userRole) => {
   return rbac.canAccessRoute(userRole, pattern);
 };
 
-// Helper: get all visible listable models for a department, filtered by role
-const getDashboardModels = (department, userRole) => {
+// Helper: get all visible listable models for a department, filtered by role.
+// Async because tiles are decorated with best-effort counts (see
+// dashboardCountService — cached and time-boxed, so this stays fast).
+const getDashboardModels = async (department, userRole) => {
   const standardModels = Object.entries(listConfig)
     .filter(
       ([model, config]) =>
@@ -59,6 +63,7 @@ const getDashboardModels = (department, userRole) => {
             : null;
 
       return {
+        tileKey: model,
         model,
         title: config.title || model.charAt(0).toUpperCase() + model.slice(1),
         description: desc || `View all ${config.title || model} records in a table.`,
@@ -66,9 +71,9 @@ const getDashboardModels = (department, userRole) => {
       };
     });
 
-  const extraTiles = Object.values(customTiles).filter(
-    (tile) => tile.department?.includes(department) && canUseTile(tile, userRole),
-  );
+  const extraTiles = Object.entries(customTiles)
+    .filter(([, tile]) => tile.department?.includes(department) && canUseTile(tile, userRole))
+    .map(([key, tile]) => ({ tileKey: key, ...tile }));
 
   // Dedupe by destination. A model-driven tile and a custom tile can point at the
   // same route (e.g. holidayRequest's list at /holidayrequests and a curated
@@ -78,13 +83,24 @@ const getDashboardModels = (department, userRole) => {
   // first, so on a collision the generic CRUD tile wins and the custom copy drops.
   const normaliseLink = (l) => String(l || "").replace(/\/+$/, "").toLowerCase();
   const seen = new Set();
-  return [...standardModels, ...extraTiles].filter((tile) => {
+  const tiles = [...standardModels, ...extraTiles].filter((tile) => {
     const key = normaliseLink(tile.link);
     if (!key) return true;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  // Decorate: icon, group, external flag, and best-effort count.
+  const counts = await dashboardCountService.getCountsFor(tiles.map((t) => t.tileKey));
+  for (const tile of tiles) {
+    tile.icon = tile.icon || tileMeta.iconFor(tile.tileKey);
+    tile.group = tileMeta.groupFor(department, tile.tileKey);
+    tile.external = typeof tile.link === "string" && !tile.link.startsWith("/");
+    const c = counts.get(tile.tileKey);
+    if (c) tile.count = c;
+  }
+  return tiles;
 };
 
 // Helper: get all creatable models, filtered by role
@@ -225,16 +241,20 @@ export const completeTask = async (req, res, next) => {
 // entry is wired up in indexRoutes.js.
 export const renderDepartment = (slug) => {
   const dept = departments[slug];
-  return (req, res, next) => {
-    const userRole = req.user?.role || "subcontractor";
-    const models =
-      dept.special === "create"
-        ? getCreateModels(userRole)
-        : getDashboardModels(slug, userRole);
-    res.render(path.join("tailwindcss", "partials", "listModels"), {
-      title: dept.title,
-      models,
-    });
+  return async (req, res, next) => {
+    try {
+      const userRole = req.user?.role || "subcontractor";
+      const models =
+        dept.special === "create"
+          ? getCreateModels(userRole)
+          : await getDashboardModels(slug, userRole);
+      res.render(path.join("tailwindcss", "partials", "listModels"), {
+        title: dept.title,
+        models,
+      });
+    } catch (err) {
+      next(err);
+    }
   };
 };
 

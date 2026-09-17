@@ -2,27 +2,78 @@
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
     <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
     <div class="p-6 sm:p-8">
-    <h1 class="text-3xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">
+    <h1 class="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100">
       <%= title %>
     </h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-      <% models.forEach(model => { %>
-        <div class="flex flex-col bg-gray-50 dark:bg-gray-800 rounded-xl p-5 transition hover:shadow-md">
-          <div class="flex-grow">
-            <h5 class="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
-              <%= model.title %>
-            </h5>
-            <p class="text-sm text-gray-600 dark:text-gray-300">
-              <%= model.description %>
-            </p>
+    <%
+      // Group tiles, preserving first-seen order. A tile becomes a highlighted
+      // card only when it has an attention count > 0; otherwise it's a compact
+      // row. Group headings show only when there is more than one group.
+      const groupOrder = [];
+      const grouped = {};
+      (models || []).forEach((m) => {
+        const g = m.group || 'General';
+        if (!grouped[g]) { grouped[g] = []; groupOrder.push(g); }
+        grouped[g].push(m);
+      });
+      const showHeadings = groupOrder.length > 1;
+      const isAttention = (m) => m.count && Number(m.count.attention) > 0;
+      const hasValue = (m) => m.count && m.count.value !== undefined && m.count.value !== null;
+    %>
+
+    <% groupOrder.forEach(function(g) {
+         const items = grouped[g];
+         const cards = items.filter(isAttention).sort((a, b) => Number(b.count.attention) - Number(a.count.attention));
+         const rows = items.filter((m) => !isAttention(m));
+    %>
+      <div class="mb-8 last:mb-0">
+        <% if (showHeadings) { %>
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3"><%= g %></h2>
+        <% } %>
+
+        <% if (cards.length) { %>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <% cards.forEach(function(m) { %>
+              <a href="<%= m.link %>"<%= m.external ? ' target="_blank" rel="noopener"' : '' %>
+                 class="flex items-start gap-3 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700/60 rounded-xl p-4 hover:shadow-md transition">
+                <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 shrink-0">
+                  <i class="bi <%= m.icon || 'bi-table' %> text-lg"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="flex items-center gap-2 flex-wrap">
+                    <span class="font-semibold text-gray-900 dark:text-gray-100"><%= m.title %></span>
+                    <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"><%= m.count.attention %><%= m.count.label ? ' ' + m.count.label : '' %></span>
+                  </span>
+                  <span class="block text-sm text-gray-600 dark:text-gray-400 mt-0.5"><%= m.description %></span>
+                  <span class="block text-sm text-green-700 dark:text-green-400 mt-1.5 font-medium"><%= m.cta || 'Review' %> <i class="bi bi-arrow-right"></i></span>
+                </span>
+              </a>
+            <% }) %>
           </div>
-          <a href="<%= model.link %>" class="mt-4 inline-flex items-center justify-center gap-1.5 <%= model.buttonClass || 'bg-green-600 hover:bg-green-700' %> text-white text-sm px-5 py-2.5 rounded-lg transition shadow-sm font-medium">
-            <i class="bi <%= model.icon || 'bi-table' %>"></i> <%= model.cta || ('View ' + model.title) %>
-          </a>
-        </div>
-      <% }) %>
-    </div>
+        <% } %>
+
+        <% if (rows.length) { %>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <% rows.forEach(function(m) { %>
+              <a href="<%= m.link %>"<%= m.external ? ' target="_blank" rel="noopener"' : '' %>
+                 class="flex items-center gap-3 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <i class="bi <%= m.icon || 'bi-table' %> text-lg text-gray-500 dark:text-gray-400 shrink-0"></i>
+                <span class="flex-1 min-w-0 text-sm font-medium text-gray-800 dark:text-gray-200 truncate"><%= m.cta || m.title %></span>
+                <% if (m.external) { %><i class="bi bi-box-arrow-up-right text-xs text-gray-400 dark:text-gray-500 shrink-0"></i><% } %>
+                <% if (hasValue(m)) { %>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap"><%= m.count.value %><%= m.count.label ? ' ' + m.count.label : '' %></span>
+                <% } %>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+
+    <% if (!models || models.length === 0) { %>
+      <p class="text-center text-gray-500 dark:text-gray-400">Nothing available here for your role.</p>
+    <% } %>
     </div>
   </div>
 </div>
