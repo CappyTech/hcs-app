@@ -24,11 +24,36 @@ let syncRunning = false;
 function isSyncRunning() { return syncRunning; }
 
 // Normalise a name for case-insensitive, whitespace-tolerant matching.
-// Paperless enforces unique correspondent names, so this is only about avoiding
-// duplicates that differ by case or padding — we do NOT collapse punctuation, so
-// "A & B Ltd" and "A and B Ltd" remain distinct (as they are distinct suppliers).
+// This is the exact key: same name modulo case and padding.
 function normaliseName(name) {
   return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+// Canonical key for duplicate *avoidance*. Deliberately more aggressive than
+// normaliseName, and used ONLY to answer "does an equivalent correspondent
+// already exist?" — never to rename or delete anything.
+//
+// Why this exists: KashFlow stores supplier names with their legal suffix
+// ("Beers LTD", "Titan Land and Building Ltd"), while the correspondents already
+// in Paperless were typed by whoever filed the first invoice, usually without it
+// ("Beers", "Titan Land & Building"). Exact matching missed those, so every such
+// supplier spawned a twin correspondent with 0 documents. Folding the legal
+// suffix, a leading "The", & vs and, and punctuation/spacing makes the supplier
+// match its existing correspondent instead of creating a duplicate.
+//
+// Scope is kept tight on purpose: only unambiguous company forms
+// (ltd/limited/llp/plc/inc) and a leading article are stripped — NOT words like
+// "services", "group" or "co" — so two genuinely different suppliers are very
+// unlikely to collapse onto one key. The trade-off (a near-identical brand-new
+// supplier reuses an existing correspondent rather than getting its own) is the
+// safe direction: PICP needs a close name match anyway, and no data is lost.
+function canonicalName(name) {
+  let t = ' ' + String(name || '').toLowerCase().trim() + ' ';
+  t = t.replace(/&/g, ' and ');
+  t = t.replace(/[^a-z0-9 ]/g, ' ');            // punctuation -> space
+  t = t.replace(/\b(ltd|limited|llp|plc|inc)\b/g, ' '); // legal suffix
+  t = t.replace(/^\s*the\s+/, ' ');             // leading article
+  return t.replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -40,15 +65,28 @@ function normaliseName(name) {
  * @returns {string[]} names to create
  */
 function computeMissingCorrespondents(supplierNames, existingCorrespondentNames) {
-  const existing = new Set();
-  for (const n of existingCorrespondentNames || []) existing.add(normaliseName(n));
-  const toCreate = new Map(); // normalised -> original
+  const existing = new Set();       // exact normalised keys
+  const existingCanon = new Set();  // canonical (suffix/punctuation-folded) keys
+  for (const n of existingCorrespondentNames || []) {
+    existing.add(normaliseName(n));
+    const c = canonicalName(n);
+    if (c) existingCanon.add(c);
+  }
+  const toCreate = new Map(); // canonical (or exact) key -> original
   for (const raw of supplierNames || []) {
     const original = String(raw || '').trim();
     if (!original) continue;
     const key = normaliseName(original);
-    if (existing.has(key) || toCreate.has(key)) continue;
-    toCreate.set(key, original);
+    const canon = canonicalName(original);
+    // Skip if an equivalent correspondent already exists — exact first, then the
+    // canonical match that stops KashFlow's "… LTD" spelling from twinning an
+    // existing suffix-less correspondent — or if we've already queued an
+    // equivalent name this run.
+    if (existing.has(key)) continue;
+    if (canon && existingCanon.has(canon)) continue;
+    const dedupeKey = canon || key;
+    if (toCreate.has(dedupeKey)) continue;
+    toCreate.set(dedupeKey, original);
   }
   return [...toCreate.values()];
 }
@@ -154,4 +192,5 @@ export default {
   isSyncRunning,
   computeMissingCorrespondents,
   normaliseName,
+  canonicalName,
 };

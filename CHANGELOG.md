@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.2] - 2026-09-17
+
+### Fixed
+- **Supplier→correspondent sync no longer creates duplicate Paperless correspondents that differ only by a legal suffix.** KashFlow stores supplier names with their legal form ("Beers LTD", "Titan Land and Building Ltd"), while the correspondents already in Paperless were typed without it ("Beers", "Titan Land & Building"). The sync matched exact-normalised names only (case + whitespace), so each such supplier spawned a twin correspondent with 0 documents — 10+ found in production. The sync now also compares a **canonical key** that folds an unambiguous legal suffix (`ltd`/`limited`/`llp`/`plc`/`inc`), a leading "The", `&`↔`and`, and punctuation/spacing, so a supplier reuses its existing correspondent instead of duplicating it. Scope is deliberately tight (it does **not** strip words like "Services", "Group" or "Co") so genuinely distinct suppliers (e.g. B&M vs B&Q) stay separate. Still one-way, additive and idempotent — nothing is renamed or deleted, only creation is suppressed. Internal-initial spacing (e.g. "F H Brundle" vs "FH Brundle") is intentionally left for manual cleanup, as folding it risks merging distinct initials.
+
 ## [6.42.1] - 2026-09-17
 
 ### Changed
