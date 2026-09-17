@@ -20,6 +20,7 @@
       const showHeadings = groupOrder.length > 1;
       const isAttention = (m) => m.count && Number(m.count.attention) > 0;
       const hasValue = (m) => m.count && m.count.value !== undefined && m.count.value !== null;
+      const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-GB') : n);
     %>
 
     <% groupOrder.forEach(function(g) {
@@ -43,7 +44,7 @@
                 <span class="min-w-0 flex-1">
                   <span class="flex items-center gap-2 flex-wrap">
                     <span class="font-semibold text-gray-900 dark:text-gray-100"><%= m.title %></span>
-                    <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"><%= m.count.attention %><%= m.count.label ? ' ' + m.count.label : '' %></span>
+                    <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"><%= fmt(m.count.attention) %><%= m.count.label ? ' ' + m.count.label : '' %></span>
                   </span>
                   <span class="block text-sm text-gray-600 dark:text-gray-400 mt-0.5"><%= m.description %></span>
                   <span class="block text-sm text-green-700 dark:text-green-400 mt-1.5 font-medium"><%= m.cta || 'Review' %> <i class="bi bi-arrow-right"></i></span>
@@ -62,7 +63,7 @@
                 <span class="flex-1 min-w-0 text-sm font-medium text-gray-800 dark:text-gray-200 truncate"><%= m.cta || m.title %></span>
                 <% if (m.external) { %><i class="bi bi-box-arrow-up-right text-xs text-gray-400 dark:text-gray-500 shrink-0"></i><% } %>
                 <% if (hasValue(m)) { %>
-                  <span class="text-xs text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap"><%= m.count.value %><%= m.count.label ? ' ' + m.count.label : '' %></span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap"><%= fmt(m.count.value) %><%= m.count.label ? ' ' + m.count.label : '' %></span>
                 <% } %>
               </a>
             <% }) %>

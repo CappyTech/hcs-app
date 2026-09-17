@@ -92,7 +92,9 @@ const getDashboardModels = async (department, userRole) => {
   });
 
   // Decorate: icon, group, external flag, and best-effort count.
-  const counts = await dashboardCountService.getCountsFor(tiles.map((t) => t.tileKey));
+  const counts = await dashboardCountService.getCountsFor(
+    tiles.map((t) => ({ tileKey: t.tileKey, model: t.model })),
+  );
   for (const tile of tiles) {
     tile.icon = tile.icon || tileMeta.iconFor(tile.tileKey);
     tile.group = tileMeta.groupFor(department, tile.tileKey);

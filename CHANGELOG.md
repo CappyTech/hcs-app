@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.1] - 2026-09-17
+
+### Changed
+- **Every list-backed department tile now shows an ambient count, not just the few with bespoke providers.** After the tile redesign, only tiles with a hand-written count provider (e.g. Suppliers) showed a number, which looked inconsistent across a hub. Any model-backed tile now gets a total for free via `estimatedDocumentCount` (O(1) collection metadata, still cached and time-boxed), with thousands separators. The two bespoke *attention* counts (holiday requests pending, OCR documents unlinked) are unchanged. Action and external tiles (Payroll, Bank Reconciliation, KashFlow Payroll) have no record count, as before.
+
 ## [6.42.0] - 2026-09-17
 
 ### Changed
