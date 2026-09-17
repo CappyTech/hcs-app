@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.3] - 2026-09-17
+
+### Changed
+- **Supplier→correspondent sync now creates new correspondents with Auto matching.** Paperless's own default for a new correspondent is "Any" with an empty match string, which never auto-assigns to a document — so every synced supplier's correspondent sat inert until manually picked. New correspondents are now created with `matching_algorithm: 6` (Auto), so each learns from the invoices filed against it and is auto-assigned to future documents. `paperlessClient.createCorrespondent` takes an optional `matchingAlgorithm` (default Auto). Existing correspondents were flipped to Auto as a one-off data change. No effect on documents, and matching stays additive.
+
 ## [6.42.2] - 2026-09-17
 
 ### Fixed

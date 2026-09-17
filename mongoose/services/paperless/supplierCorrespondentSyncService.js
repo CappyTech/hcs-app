@@ -19,6 +19,12 @@ import __paperlessClient from './paperlessClient.js';
 const { makeClient } = __paperlessClient;
 import logger from '../../../services/loggerService.js';
 
+// Paperless MatchingModel algorithm for new correspondents: 6 = Auto, so each
+// synced supplier's correspondent learns from the invoices filed against it and
+// is auto-assigned to future documents (Paperless's own default is Any with an
+// empty match, which never auto-assigns).
+const MATCH_AUTO = 6;
+
 // Module-level guard: never overlap two sync runs (scheduled + manual, or two ticks)
 let syncRunning = false;
 function isSyncRunning() { return syncRunning; }
@@ -150,7 +156,7 @@ async function syncSuppliersToCorrespondents(options = {}) {
         continue;
       }
       try {
-        await api.createCorrespondent({ name });
+        await api.createCorrespondent({ name, matchingAlgorithm: MATCH_AUTO });
         existingByName.add(key); // guard against duplicates within this same run
         created += 1;
       } catch (err) {

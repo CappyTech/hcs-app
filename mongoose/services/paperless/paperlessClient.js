@@ -326,10 +326,17 @@ function makeClient() {
       const { data } = await api.get("/correspondents/", { params });
       return data;
     },
-    async createCorrespondent({ name } = {}) {
+    // matchingAlgorithm follows Paperless's MatchingModel constants:
+    // 0=None, 1=Any, 2=All, 3=Literal, 4=Regex, 5=Fuzzy, 6=Auto. Defaults to
+    // Auto so a synced supplier's correspondent starts learning from the
+    // documents filed against it, rather than Paperless's own default (Any with
+    // an empty match, which never auto-assigns).
+    async createCorrespondent({ name, matchingAlgorithm = 6 } = {}) {
       if (!name) throw new Error("createCorrespondent requires name");
       const api = await createApi();
-      const { data } = await api.post("/correspondents/", { name });
+      const payload = { name };
+      if (matchingAlgorithm != null) payload.matching_algorithm = matchingAlgorithm;
+      const { data } = await api.post("/correspondents/", payload);
       return data;
     },
     async getDocumentType(id) {
