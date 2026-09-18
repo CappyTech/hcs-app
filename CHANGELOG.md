@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.5] - 2026-09-18
+
+### Changed
+- **Tasks model and creation redesigned around the task's actual job.** The create form (`/task/create`) previously leaked a raw "Id" field (showing the ObjectId default function), was titled "Create Tasks" (plural), and buried the required assignee below optional fields. The form now hides internal fields, reads "Create Task", and orders fields around the workflow: **Title → Assignee → Due date → Priority → Recurrence → Description → Related contract** (with `strictOrder` so stray schema fields can't reappear). Labels clarified (User → Assignee, Contract → Related contract). The Tasks list gains Priority and Origin columns, sorts by due date (soonest first), and drops the noisy description column. The home-page task card now shows a High/Low priority badge, a "System" badge for auto-generated tasks, and renders overdue tasks in red.
+- **New `priority` field** on tasks (`low` / `normal` / `high`, default `normal`).
+- **System-generated tasks are now marked and prioritised.** A new `source` field (`manual` / `system`, default `manual`) distinguishes hand-assigned tasks from those auto-created by the HR and vehicle compliance services. Those services now tag their tasks `source: 'system'` and set priority by urgency (`high` when the item has already expired, `normal` when only expiring soon). Recurring spawns inherit the parent task's source. `source` is stripped from the manual-create POST body, so a manual task cannot spoof `system`.
+
+### Fixed
+- **`taskService.createTask` silently dropped the contract link.** It passed a `jobId` field that does not exist on the task schema (the field is `contractId`), so contract associations set through the service — and carried by recurring tasks — were lost. Corrected to `contractId` throughout (no caller passed `jobId`).
+
 ## [6.42.4] - 2026-09-18
 
 ### Fixed

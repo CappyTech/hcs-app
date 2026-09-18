@@ -915,10 +915,10 @@ export default {
     title: 'Tasks',
     layout: 'rows',
     linkField: 'title',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
-    fieldOrder: ['title', 'description', 'dueDate', 'recurrence', 'completed', 'userId', 'contractId'],
-    sortField: 'title',
-    sortOrder: -1,
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'description'],
+    fieldOrder: ['title', 'userId', 'dueDate', 'priority', 'source', 'recurrence', 'completed', 'contractId'],
+    sortField: 'dueDate',
+    sortOrder: 1,
     department: ['human-resources'],
     // completed is Boolean — controller casts 'true'/'false' strings to boolean for the query
     tabsby: 'completed',
@@ -928,9 +928,11 @@ export default {
       { value: 'true', label: 'Done' },
     ],
     labelOverrides: {
-      userId: 'User',
+      userId: 'Assignee',
       contractId: 'Contract',
-      dueDate: 'Due Date'
+      dueDate: 'Due Date',
+      priority: 'Priority',
+      source: 'Origin'
     },
     fieldTransforms: {
       userId: {

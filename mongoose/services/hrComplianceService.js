@@ -91,6 +91,8 @@ async function checkExpiriesAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } = 
             description,
             userId: admin._id,
             dueDate: date,
+            source: 'system',
+            priority: isExpired ? 'high' : 'normal',
           });
           stats.created++;
           createdForEmployee = true;

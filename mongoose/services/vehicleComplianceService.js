@@ -92,7 +92,9 @@ async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } 
             title,
             description,
             userId: admin._id,
-            dueDate: expiryDate
+            dueDate: expiryDate,
+            source: 'system',
+            priority: isExpired ? 'high' : 'normal'
           });
           stats.created++;
           createdForVehicle = true;

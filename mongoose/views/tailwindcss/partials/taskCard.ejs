@@ -15,12 +15,27 @@
             </button>
           </form>
           <div class="min-w-0 flex-grow">
-            <a href="/task/read/<%= t.uuid %>" class="font-semibold text-green-700 dark:text-green-400 hover:underline">
-              <%= t.title %>
-            </a>
-            <% if (showRecurrence && t.recurrence && t.recurrence !== 'none') { %> 🔁 <% } %>
+            <div class="flex items-center gap-2 flex-wrap">
+              <a href="/task/read/<%= t.uuid %>" class="font-semibold text-green-700 dark:text-green-400 hover:underline">
+                <%= t.title %>
+              </a>
+              <% if (t.priority === 'high') { %>
+                <span class="inline-flex items-center rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">High</span>
+              <% } else if (t.priority === 'low') { %>
+                <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">Low</span>
+              <% } %>
+              <% if (t.source === 'system') { %>
+                <span title="Automatically generated" class="inline-flex items-center gap-1 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide"><i class="bi bi-gear-fill text-[10px]"></i> System</span>
+              <% } %>
+              <% if (showRecurrence && t.recurrence && t.recurrence !== 'none') { %><span title="Recurring">🔁</span><% } %>
+            </div>
             <% if (t.dueDate) { %>
-              <div class="text-gray-500 dark:text-gray-400 text-sm mt-1">Due <%= slimDateTime(t.dueDate) %></div>
+              <% const _overdue = new Date(t.dueDate) < new Date(); %>
+              <% if (_overdue) { %>
+                <div class="text-red-600 dark:text-red-400 text-sm font-medium mt-1">Overdue &middot; <%= slimDateTime(t.dueDate) %></div>
+              <% } else { %>
+                <div class="text-gray-500 dark:text-gray-400 text-sm mt-1">Due <%= slimDateTime(t.dueDate) %></div>
+              <% } %>
             <% } %>
             <% if (t.description) { %>
               <div class="mt-1 text-gray-700 dark:text-gray-300 text-sm"><%= t.description %></div>

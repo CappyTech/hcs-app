@@ -49,9 +49,9 @@ function validateCreateInput({ title, userId, recurrence, dueDate }) {
   }
 }
 
-async function createTask({ title, description, userId, jobId = null, dueDate = null, recurrence = 'none' }) {
+async function createTask({ title, description, userId, contractId = null, dueDate = null, recurrence = 'none', priority = 'normal', source = 'manual' }) {
   validateCreateInput({ title, userId, recurrence, dueDate });
-  const task = new mdb.INTERNAL.task({ title, description, userId, jobId, dueDate, recurrence });
+  const task = new mdb.INTERNAL.task({ title, description, userId, contractId, dueDate, recurrence, priority, source });
   await task.save();
   const obj = task.toObject();
   await notifyTaskAssigned(obj);
@@ -93,7 +93,7 @@ async function processRecurringTasks({ limit = 200 } = {}) {
     dueDate: { $lte: now },
     completed: false
   })
-    .select('title description userId jobId recurrence dueDate')
+    .select('title description userId contractId recurrence dueDate priority source')
     .limit(limit)
     .lean();
 
@@ -115,9 +115,11 @@ async function processRecurringTasks({ limit = 200 } = {}) {
         title: task.title,
         description: task.description,
         userId: task.userId,
-        jobId: task.jobId,
+        contractId: task.contractId,
         dueDate: nextDate,
-        recurrence: task.recurrence
+        recurrence: task.recurrence,
+        priority: task.priority,
+        source: task.source
       });
       logger.debug(`[taskService] Spawned next recurring task`, { title: task.title, nextDate, userId: task.userId });
     }

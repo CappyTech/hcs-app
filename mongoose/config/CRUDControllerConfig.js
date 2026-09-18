@@ -329,19 +329,30 @@ export default {
     },
   },
   task: {
-    description: 'Create a new task and optionally link it to a contract.',
+    // Singular so the create/edit heading reads "Create Task", not "Create Tasks".
+    title: 'Task',
+    description: 'Assign an actionable task to a team member. Set who owns it, when it is due, and how important it is.',
     readOnly: ['uuid', 'createdAt'],
-    hideFields: ['uuid', 'completed'],
-    fieldOrder: ['title', 'description', 'dueDate', 'recurrence', 'userId', 'contractId'],
+    // Hide internal fields so the form only shows what a person actually fills in
+    // (_id/__v previously leaked as a raw "Id" field with the ObjectId default fn).
+    // source is set programmatically (manual vs system) — never via the form, so
+    // it is stripped from the POST body too (a manual create can't spoof 'system').
+    hideFields: ['_id', '__v', 'uuid', 'completed', 'source'],
+    // Lead with the task itself and its owner, then the scheduling/importance
+    // fields, then optional detail. strictOrder keeps stray schema fields out.
+    fieldOrder: ['title', 'userId', 'dueDate', 'priority', 'recurrence', 'description', 'contractId'],
+    strictOrder: true,
     labelOverrides: {
-      userId: 'User',
-      contractId: 'Contract',
-      dueDate: 'Due Date',
+      userId: 'Assignee',
+      contractId: 'Related contract',
+      dueDate: 'Due date',
+      priority: 'Priority',
     },
     validators: {
       title: value => typeof value === 'string' && value.length > 0,
       description: value => !value || typeof value === 'string',
       dueDate: value => !value || !isNaN(Date.parse(value)),
+      priority: value => !value || ['low', 'normal', 'high'].includes(value),
     },
     middleware: {
       read: ['ensureRole:admin'],
