@@ -68,7 +68,7 @@ function getSafeNext(raw) {
 }
 
 export const renderRegistrationForm = (req, res, next) => {
-  res.render(path.join("mongoose", "user", "register"), {
+  res.render(path.join("tailwindcss", "user", "register"), {
     title: "Register",
     siteKey: process.env.TURNSTILE_SITE_KEY,
   });

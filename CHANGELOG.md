@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.4] - 2026-09-18
+
+### Fixed
+- **Registration form returned a 500 ("Failed to lookup view").** `renderRegistrationForm` rendered `mongoose/user/register`, but the view file lives at `views/tailwindcss/user/register.ejs` and every other user view already uses the `tailwindcss/...` prefix — so `/user/register` threw a view-lookup error. Corrected the render path to `tailwindcss/user/register`.
+
+### Security
+- **Microsoft SSO sign-in no longer reveals whether an account exists for a given address.** When no hcs-app account was linked to the authenticated Microsoft email, the failure told the user exactly that ("No hcs-app account is linked to that Microsoft address..."), enabling account enumeration. It now shows a generic "Microsoft sign-in failed. Please contact your administrator." — the real reason stays in the logs and the `login_failed` audit entry. The callback catch-all also stopped interpolating the raw exception message into the user-facing flash (potential internal-detail leak); the full error is still logged.
+
+### Changed
+- Login page copy: "For existing accounts only. A Microsoft login will not create a new account." (removed em dash / contraction).
+
 ## [6.42.3] - 2026-09-17
 
 ### Changed

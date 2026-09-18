@@ -73,10 +73,9 @@ export const callback = async (req, res) => {
         meta: { method: 'microsoft-sso', reason: 'no-linked-account' },
       });
       logger.warn(`[msSso] refused sign-in for ${email} — no hcs-app account`);
-      req.flash(
-        'error',
-        'No hcs-app account is linked to that Microsoft address. Ask an administrator to create your account first.',
-      );
+      // Generic message — don't reveal whether an account exists for this
+      // address (account enumeration). The real reason is in the logs/audit.
+      req.flash('error', 'Microsoft sign-in failed. Please contact your administrator.');
       return res.redirect('/user/login');
     }
 
@@ -105,7 +104,8 @@ export const callback = async (req, res) => {
     return res.redirect(dest || '/');
   } catch (e) {
     logger.warn(`[msSso] callback failed: ${e.message}`);
-    req.flash('error', `Microsoft sign-in failed: ${e.message}.`);
+    // Don't surface the raw error to the user — it can leak internal detail.
+    req.flash('error', 'Microsoft sign-in failed. Please try again.');
     return res.redirect('/user/login');
   }
 };
