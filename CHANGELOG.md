@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.6] - 2026-09-19
+
+### Changed
+- **Compliance reminders now look 90 days ahead (was 30).** 30 days wasn't enough lead time to arrange MOT/insurance/road-tax or contract/right-to-work renewals. `DEFAULT_DAYS_AHEAD` is now 90 in both `vehicleComplianceService` and `hrComplianceService` (and their job descriptions updated to match).
+- **Tasks list (`/tasks`) redesigned as purpose-built cards that highlight what matters.** Instead of the generic row layout, tasks now render as cards with a coloured left accent (red = overdue, indigo = system-generated, green = normal, grey = done), inline **System** / **High** / **Low** / recurrence / **Done** badges, and a clear due-date line that turns red with an "Overdue" marker once past due. Assignee and related contract are shown as links. Added **Origin** (Manual / System) and **Priority** filters. Only the task list's row rendering changed; the shared table view, tabs, search, CSV export and pagination are untouched.
+
 ## [6.42.5] - 2026-09-18
 
 ### Changed

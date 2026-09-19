@@ -138,7 +138,7 @@ function registerAll() {
   });
 
   scheduler.register('vehicle-compliance', {
-    description: 'Create tasks and email alerts for vehicles with MOT/insurance/road tax expiring within 30 days.',
+    description: 'Create tasks and email alerts for vehicles with MOT/insurance/road tax expiring within 90 days.',
     intervalMs: DAY,
     run: () => __vehicleComplianceService.checkComplianceAndCreateTasks(),
   });
@@ -174,7 +174,7 @@ function registerAll() {
   });
 
   scheduler.register('hr-compliance', {
-    description: 'Create tasks and email alerts for employee contracts and right-to-work checks expiring within 30 days.',
+    description: 'Create tasks and email alerts for employee contracts and right-to-work checks expiring within 90 days.',
     intervalMs: DAY,
     run: () => __hrComplianceService.checkExpiriesAndCreateTasks(),
   });

@@ -927,6 +927,17 @@ export default {
       { value: 'false', label: 'Pending' },
       { value: 'true', label: 'Done' },
     ],
+    filters: [
+      { field: 'source', label: 'Origin', type: 'select', options: [
+        { label: 'Manual', value: 'manual' },
+        { label: 'System', value: 'system' },
+      ]},
+      { field: 'priority', label: 'Priority', type: 'select', options: [
+        { label: 'High', value: 'high' },
+        { label: 'Normal', value: 'normal' },
+        { label: 'Low', value: 'low' },
+      ]},
+    ],
     labelOverrides: {
       userId: 'Assignee',
       contractId: 'Contract',

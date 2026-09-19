@@ -3,7 +3,7 @@ import taskService from './taskService.js';
 import logger from '../../services/loggerService.js';
 import notificationService from '../../services/notificationService.js';
 
-const DEFAULT_DAYS_AHEAD = 30;
+const DEFAULT_DAYS_AHEAD = 90; // give enough lead time to arrange contract/right-to-work renewals
 
 /**
  * HR compliance reminders — mirrors vehicleComplianceService.

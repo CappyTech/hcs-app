@@ -3,7 +3,7 @@ import taskService from './taskService.js';
 import logger from '../../services/loggerService.js';
 import notificationService from '../../services/notificationService.js';
 
-const DEFAULT_DAYS_AHEAD = 30;
+const DEFAULT_DAYS_AHEAD = 90; // give enough lead time to arrange MOT/insurance/tax renewals
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
 
 let intervalHandle = null;
@@ -26,7 +26,7 @@ const COMPLIANCE_FIELDS = [
  * matching uncompleted task already exists (idempotent).
  *
  * @param {Object} [opts]
- * @param {number} [opts.daysAhead=30]
+ * @param {number} [opts.daysAhead=90]
  * @returns {Promise<{ created: number, skipped: number, errors: number }>}
  */
 async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } = {}) {
