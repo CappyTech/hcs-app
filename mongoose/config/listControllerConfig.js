@@ -1281,10 +1281,11 @@ export default {
   },
   OcrDocument: {
     title: 'OCR Documents',
-    // The route is `/paperless` (pathOverride above), so the tile must say so
-    // too. `listPath` defaults to `/OcrDocuments`, which is not a route on
-    // this app at all — the documents dashboard tile linked to a 404.
-    listPath: '/paperless',
+    // No `department`, so no model-generated tile: this list's route
+    // (`/paperless`, pathOverride below) is shadowed by the legacy redirect to
+    // `/documents` in indexRoutes, so its tile looped back to the page it sat
+    // on. The documents dashboard tile is the `OcrDocument` entry in
+    // dashboardTilesConfig.js, which links to the bespoke /paperless/ocr list.
     description: {
       manage: 'Manage OCR documents imported from Paperless-ngx.'
     },
@@ -1294,7 +1295,6 @@ export default {
     fieldOrder: ['title', 'documentType','modified', 'fetchedAt', 'error'],
     sortField: 'modified',
     sortOrder: -1,
-    department: ['documents'],
     deny: ['c', 'u', 'd'],
   },
   OcrDocumentIngest: {

@@ -289,6 +289,16 @@ export default {
     },
     */
     // ── Documents (Paperless OCR + company docs) ──────────────────────
+    // Keyed `OcrDocument` so it keeps that model's icon and "unlinked" count
+    // badge (dashboardCountService). It opens the list filtered to exactly the
+    // documents the badge counts, rather than the dead generic `/paperless` list.
+    OcrDocument: {
+        title: 'OCR Documents',
+        description: 'Manage OCR documents imported from Paperless-ngx.',
+        link: '/paperless/ocr?unlinked=1',
+        department: ['documents'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     Paperlessngx: {
         title: 'Document Management',
         description: 'Manage OCR documents imported from docs.heroncs.co.uk.',

@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.7] - 2026-09-23
+
+### Fixed
+- **Documents dashboard: the OCR Documents tile's "Review" link looped back to `/documents`.** It pointed at the generic `/paperless` list, which is shadowed by the legacy `/paperless` → `/documents` redirect. The tile is now a custom tile (still keyed `OcrDocument`, so it keeps its icon and "unlinked" badge) linking to `/paperless/ocr?unlinked=1`, the documents the badge counts.
+- **OCR Ingest Log showed a "New" button that 404'd** (`/OcrDocumentIngest/create`). The list template's `deny: ['c']` check read a `config` local that was never passed; `listController` now passes `canCreate`, so "New" is hidden on every list whose config denies create.
+- **Not-found and bad-request pages returned a 500.** Eleven handlers in `paperlessController`, `appConfigController` and `loggerController` rendered a non-existent `error` view, so e.g. `/paperless/ocr/<unknown id>` crashed instead of returning 404. They now render `tailwindcss/error` like the rest of the app, with the correct status.
+
 ## [6.42.6] - 2026-09-19
 
 ### Changed

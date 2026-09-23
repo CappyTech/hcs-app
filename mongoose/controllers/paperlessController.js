@@ -221,7 +221,7 @@ export const readOcr = async (req, res, next) => {
     if (!doc)
       return res
         .status(404)
-        .render("error", { message: "OCR document not found." });
+        .render(path.join("tailwindcss", "error"), { title: "404 - Not Found", error: { title: "404 - Not Found", message: "OCR document not found." } });
 
     // Cross-check: compare MongoDB kashflowPurchaseId against the Paperless-cached custom field
     const cfKfIdEntry = (doc.customFields || []).find(
@@ -355,7 +355,7 @@ export const getPurchaseDraft = async (req, res, next) => {
     if (!doc)
       return res
         .status(404)
-        .render("error", { message: "OCR document not found." });
+        .render(path.join("tailwindcss", "error"), { title: "404 - Not Found", error: { title: "404 - Not Found", message: "OCR document not found." } });
     const draft = await buildPurchaseDraftById(paperlessId);
 
     // Determine source field names for key draft values to aid debugging/visibility
@@ -1664,10 +1664,10 @@ export const getMatchPurchase = async (req, res, next) => {
     await mdb.connect();
     const { OcrDocument } = mdb.PAPERLESS;
     const paperlessId = parseInt(req.params.paperlessId, 10);
-    if (!Number.isFinite(paperlessId)) return res.status(400).render('error', { message: 'Invalid paperlessId' });
+    if (!Number.isFinite(paperlessId)) return res.status(400).render(path.join('tailwindcss', 'error'), { title: '400 - Bad Request', error: { title: '400 - Bad Request', message: 'Invalid paperlessId' } });
 
     const doc = await OcrDocument.findOne({ paperlessId }).lean();
-    if (!doc) return res.status(404).render('error', { message: 'OCR document not found.' });
+    if (!doc) return res.status(404).render(path.join('tailwindcss', 'error'), { title: '404 - Not Found', error: { title: '404 - Not Found', message: 'OCR document not found.' } });
 
     // Resolve existing linked purchase from REST (null if not found / deleted)
     let currentPurchase = null;
@@ -1728,7 +1728,7 @@ export const postMatchPurchase = async (req, res, next) => {
     await mdb.connect();
     const { OcrDocument } = mdb.PAPERLESS;
     const paperlessId = parseInt(req.params.paperlessId, 10);
-    if (!Number.isFinite(paperlessId)) return res.status(400).render('error', { message: 'Invalid paperlessId' });
+    if (!Number.isFinite(paperlessId)) return res.status(400).render(path.join('tailwindcss', 'error'), { title: '400 - Bad Request', error: { title: '400 - Bad Request', message: 'Invalid paperlessId' } });
 
     const purchaseNumber = parseInt(req.body.purchaseNumber, 10);
     const purchaseId     = parseInt(req.body.purchaseId, 10);
@@ -1849,7 +1849,7 @@ export const reassignPaperlessDocument = async (req, res, next) => {
     const newId = parseInt(req.body.newPaperlessId, 10);
 
     if (!Number.isFinite(oldId)) {
-      return res.status(400).render('error', { message: 'Invalid paperlessId' });
+      return res.status(400).render(path.join('tailwindcss', 'error'), { title: '400 - Bad Request', error: { title: '400 - Bad Request', message: 'Invalid paperlessId' } });
     }
     if (!Number.isFinite(newId)) {
       req.flash('error', 'Enter the replacement Paperless document ID.');

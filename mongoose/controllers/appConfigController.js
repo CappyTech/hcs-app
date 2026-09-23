@@ -104,7 +104,7 @@ export const getHub = (req, res, next) => {
 export const getGroup = (req, res, next) => {
   try {
     const group = registry.findGroup(req.params.group);
-    if (!group) return res.status(404).render('error', { message: 'No such settings group.' });
+    if (!group) return res.status(404).render(path.join('tailwindcss', 'error'), { title: '404 - Not Found', error: { title: '404 - Not Found', message: 'No such settings group.' } });
     res.render(path.join('tailwindcss', 'admin', 'configGroup'), {
       title: group.label,
       group: groupView(group),
@@ -118,7 +118,7 @@ export const getGroup = (req, res, next) => {
 export const postGroup = async (req, res, next) => {
   try {
     const group = registry.findGroup(req.params.group);
-    if (!group) return res.status(404).render('error', { message: 'No such settings group.' });
+    if (!group) return res.status(404).render(path.join('tailwindcss', 'error'), { title: '404 - Not Found', error: { title: '404 - Not Found', message: 'No such settings group.' } });
 
     let saved = 0;
     let restartNeeded = false;
@@ -163,7 +163,7 @@ export const postGroup = async (req, res, next) => {
 export const postAdopt = async (req, res, next) => {
   try {
     const group = registry.findGroup(req.params.group);
-    if (!group) return res.status(404).render('error', { message: 'No such settings group.' });
+    if (!group) return res.status(404).render(path.join('tailwindcss', 'error'), { title: '404 - Not Found', error: { title: '404 - Not Found', message: 'No such settings group.' } });
     const only = req.body.key ? [req.body.key] : group.keys.map((k) => k.key);
     const adopted = await configStore.adoptFromEnv(only, req.session?.user?.username || null);
     req.flash(
@@ -186,7 +186,7 @@ export const postRevert = async (req, res, next) => {
     const group = registry.findGroup(req.params.group);
     const key = req.body.key;
     if (!group || !registry.isManaged(key)) {
-      return res.status(404).render('error', { message: 'No such settings group.' });
+      return res.status(404).render(path.join('tailwindcss', 'error'), { title: '404 - Not Found', error: { title: '404 - Not Found', message: 'No such settings group.' } });
     }
     await configStore.unset(key);
     const now = configService.sourceOf(key);

@@ -181,7 +181,7 @@ async function getApiLogPage(res, { modelName, title, source }) {
     });
   } catch (err) {
     logger.error(`${title} logs page error: ${err.message}`);
-    res.status(500).render("error", { message: "Failed to load API logs." });
+    res.status(500).render(path.join("tailwindcss", "error"), { title: "500 - Error", error: { title: "500 - Error", message: "Failed to load API logs." } });
   }
 }
 
