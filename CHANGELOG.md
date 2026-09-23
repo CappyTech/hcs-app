@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.9] - 2026-09-23
+
+### Fixed
+- **Single-document Paperless ingest saved custom fields without names.** `ingestOnePaperlessDoc` (run after send-to-KashFlow, match, re-ingest, reassign and friends) relied on Paperless expanding `custom_fields__field`, which it doesn't — entries arrive as `{ field: <id>, value }`. Every field was stored nameless (shown as "-" on `/paperless/ocr/:id`), the "KashFlow Purchase Id" CF lookup missed, and the drift guard appended a duplicate "KashFlow Purchase Id" row and queued a write-back to Paperless — bumping `modified` a second after the send and raising a false "Document modified after last send" warning. The custom-field definitions map (id → name) is now a shared `fetchAllCustomFieldsMap(api)` used by both the grab and single-doc paths.
+
 ## [6.42.8] - 2026-09-23
 
 ### Fixed

@@ -55,6 +55,29 @@ function sha256(str) {
   return crypto.createHash('sha256').update(str || '', 'utf8').digest('hex');
 }
 
+// Prefetch all custom field definitions (id -> name) to ensure we can label values without per-doc expands
+async function fetchAllCustomFieldsMap(api) {
+  const map = new Map();
+  try {
+    let page = 1;
+    const pageSize = 100;
+    while (true) {
+      const data = await api.listCustomFields({ page, pageSize, ordering: 'name' });
+      const results = Array.isArray(data?.results) ? data.results : [];
+      for (const r of results) {
+        if (r && typeof r.id === 'number') {
+          map.set(r.id, { id: r.id, name: r.name, data_type: r.data_type });
+        }
+      }
+      if (!data?.next || results.length === 0) break;
+      page += 1;
+    }
+  } catch (e) {
+    logger.warn(`[paperless] Unable to prefetch custom fields: ${e.message}`);
+  }
+  return map;
+}
+
 // Options: { since, query, pageSize, concurrency }
 async function grabPaperlessOCR(options = {}) {
   if (grabRunning) {
@@ -103,30 +126,7 @@ async function grabPaperlessOCR(options = {}) {
     return val;
   };
 
-  // Prefetch all custom field definitions (id -> name) to ensure we can label values without per-doc expands
-  async function fetchAllCustomFieldsMap() {
-    const map = new Map();
-    try {
-      let page = 1;
-      const pageSize = 100;
-      while (true) {
-        const data = await api.listCustomFields({ page, pageSize, ordering: 'name' });
-        const results = Array.isArray(data?.results) ? data.results : [];
-        for (const r of results) {
-          if (r && typeof r.id === 'number') {
-            map.set(r.id, { id: r.id, name: r.name, data_type: r.data_type });
-          }
-        }
-        if (!data?.next || results.length === 0) break;
-        page += 1;
-      }
-    } catch (e) {
-      logger.warn(`[paperless] Unable to prefetch custom fields: ${e.message}`);
-    }
-    return map;
-  }
-
-  const customFieldMap = await fetchAllCustomFieldsMap();
+  const customFieldMap = await fetchAllCustomFieldsMap(api);
 
   const { OcrDocument, OcrDocumentIngest } = mdb.PAPERLESS;
   if (!OcrDocument || !OcrDocumentIngest) {
@@ -466,14 +466,24 @@ async function ingestOnePaperlessDoc(paperlessId) {
     Promise.all((doc.tags || []).map((id) => api.getTag(id).catch(() => null))).then((a) => a.filter(Boolean)),
   ]);
 
+  // Paperless does not expand custom_fields__field, so entries arrive as
+  // { field: <id>, value } with no name. Resolve names from the definitions list
+  // like the grab path does — a nameless save breaks the KashFlow CF lookups below
+  // and, via the drift guard, triggers a needless write-back to Paperless.
+  const customFieldsRaw = doc.custom_fields || doc.customFields || [];
+  const needsNameMap = Array.isArray(customFieldsRaw) && customFieldsRaw.some(
+    (entry) => !(entry && typeof entry.field === 'object' && entry.field?.name) && !(entry?.name || entry?.fieldName || entry?.field_name),
+  );
+  const customFieldMap = needsNameMap ? await fetchAllCustomFieldsMap(api) : new Map();
+
   const mapCF = (entry) => {
     const fieldObj = entry && typeof entry.field === 'object' ? entry.field : null;
     const fieldId = fieldObj ? Number(fieldObj.id) : (typeof entry.field === 'number' ? Number(entry.field) : Number(entry.fieldId || entry.field_id || entry.id));
-    const fieldName = fieldObj && fieldObj.name ? String(fieldObj.name) : String(entry.name || entry.fieldName || entry.field_name || '');
+    let fieldName = fieldObj && fieldObj.name ? String(fieldObj.name) : String(entry.name || entry.fieldName || entry.field_name || '');
+    if (!fieldName && Number.isFinite(fieldId)) fieldName = customFieldMap.get(fieldId)?.name || '';
     const value = typeof entry.value !== 'undefined' ? entry.value : entry.val ?? null;
     return { fieldId: Number.isFinite(fieldId) ? fieldId : undefined, fieldName: fieldName || undefined, value };
   };
-  const customFieldsRaw = doc.custom_fields || doc.customFields || [];
   const customFields = Array.isArray(customFieldsRaw) ? customFieldsRaw.map(mapCF).filter((x) => (x.fieldId || x.fieldName || typeof x.value !== 'undefined')) : [];
 
   const modified = doc.modified ? new Date(doc.modified) : null;
