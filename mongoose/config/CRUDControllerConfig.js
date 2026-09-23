@@ -8,6 +8,14 @@ import rbac from './rolePermissionsConfig.js';
 import mdb from '../services/mongooseDatabaseService.js';
 import __holidayRequestService from '../services/holidayRequestService.js';
 
+// Vehicles have no name/title field, so reference dropdowns fell back to the
+// raw ObjectId. Label them by registration, then make and model.
+const vehicleLabel = (vehicle) => {
+  const makeModel = [vehicle.make, vehicle.model].filter(Boolean).join(' ');
+  const reg = vehicle.registrationNumber || 'No registration';
+  return makeModel ? `${reg} – ${makeModel}` : reg;
+};
+
 export default {
   purchase: {
     middleware: {
@@ -669,6 +677,9 @@ export default {
       // OLD: subcontractorId: { IsSubcontractor: true }
       subcontractorId: { WithholdingTaxRate: { $gte: 0 } }
     },
+    referenceLabelFormat: {
+      vehicleId: vehicleLabel,
+    },
     middleware: {
       read: ['ensureRoles:admin,employee,subcontractor'],
       create: ['ensureRole:admin'],
@@ -697,6 +708,9 @@ export default {
       subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
       projectId: { Status: { $nin: ['Archived', 'Completed'] } }
     },
+    referenceLabelFormat: {
+      vehicleId: vehicleLabel,
+    },
     middleware: {
       read: ['ensureRoles:admin,employee,subcontractor'],
       create: ['ensureRole:admin'],
@@ -708,8 +722,16 @@ export default {
       subcontractor: 'subcontractorId',
     },
   },
+  vehicleDeployment: {
+    referenceLabelFormat: {
+      vehicleId: vehicleLabel,
+    },
+  },
   vehicleService: {
     readOnly: ['uuid', 'createdAt'],
+    referenceLabelFormat: {
+      vehicleId: vehicleLabel,
+    },
     validators: {
       date: value => !isNaN(Date.parse(value)),
       totalCost: value => value == null || (!isNaN(value) && Number(value) >= 0),

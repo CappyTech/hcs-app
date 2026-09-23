@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.8] - 2026-09-23
+
+### Fixed
+- **Vehicle dropdowns showed the raw ObjectId instead of the vehicle.** Vehicles have no name/title field, and the reference-data query only selected name-style fields, so the Vehicle select on `/vehicleService/create` (and the fuel log, mileage log and deployment forms) listed options like `69fddcf8…`. The query now also selects `registrationNumber make model`, and a shared `vehicleLabel` `referenceLabelFormat` on those four models labels vehicles as "AB12 CDE – Ford Transit" (registration only if make/model are empty).
+
 ## [6.42.7] - 2026-09-23
 
 ### Fixed

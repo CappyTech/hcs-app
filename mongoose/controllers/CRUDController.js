@@ -181,7 +181,7 @@ const fetchReferenceData = async (
     referenceData[key] = await refModel
       .find(filter)
       .select(
-        "uuid name Name InvoiceNumber Customer jobRef title username Number Status status Id address city postalCode",
+        "uuid name Name InvoiceNumber Customer jobRef title username Number Status status Id address city postalCode registrationNumber make model",
       )
       .lean();
   }
