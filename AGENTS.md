@@ -12,6 +12,8 @@ Where hcs-app does call an external API directly (e.g. `kashflowSessionService.j
 
 > **Before writing any EJS view or UI change, read [`docs/UI-GUIDELINES.md`](docs/UI-GUIDELINES.md).** It defines the card patterns, colour system, button classes, form conventions, CSRF usage, flash message rules, and the strict no-inline-script constraint.
 
+**Before working on document processing (Paperless ingest, queues, data entry, KashFlow sending, notifications), read [`PAPERLESS-MIGRATION.md`](PAPERLESS-MIGRATION.md)** and follow its section 0 task order.
+
 - Use Node.js 24.
 - Install dependencies with `npm install`.
 - Run the unit tests with `npm test` before committing.
