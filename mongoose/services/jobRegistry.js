@@ -19,6 +19,7 @@ import __bankStatementIngestService from './bankStatementIngestService.js';
 import __bankStrandedLineService from './bankStrandedLineService.js';
 import __supplierCorrespondentSyncService from './paperless/supplierCorrespondentSyncService.js';
 import __grabServicePaperless from './grabServicePaperless.js';
+import __documentIngestService from './paperless/documentIngestService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -124,6 +125,17 @@ function registerAll() {
     intervalMs: 30 * MINUTE,
     initialDelayMs: 45_000,
     run: () => __grabServicePaperless.grabPaperlessOCR({ since: null }),
+  });
+
+  scheduler.register('paperless-ingest-reconcile', {
+    description:
+      'Backstop for the Paperless "Document added" webhook: ingest any document '
+      + 'modified in the last PAPERLESS_RECONCILE_LOOKBACK_HOURS (default 48) that '
+      + 'hcs-app is missing or holds an older copy of, and give new invoices their '
+      + 'first processing state from their Paperless tags. Sends nothing.',
+    intervalMs: 15 * MINUTE,
+    initialDelayMs: 75_000,
+    run: () => __documentIngestService.reconcileRecentDocuments(),
   });
 
   scheduler.register('paperless-correspondent-sync', {

@@ -27,7 +27,7 @@ const LEGACY_CSRF_COOKIE_NAMES = allCsrfCookieNames();
 // Optional comma separated path prefixes to exempt (e.g. "/user/login,/user/register")
 // Built-in exemptions cover machine-to-machine API endpoints that authenticate via
 // their own headers (e.g. X-Sync-Api-Key) and never carry a browser CSRF token.
-const BUILTIN_EXEMPT = ["/api/sso/token"];
+const BUILTIN_EXEMPT = ["/api/sso/token", "/api/paperless/webhook"];
 const EXEMPT = BUILTIN_EXEMPT.concat(
   (process.env.CSRF_EXEMPT_PATHS || "")
     .split(",")

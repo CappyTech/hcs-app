@@ -49,6 +49,16 @@ export const PAPERLESS_TAGS = {
     id: envId('PAPERLESS_TAG_DATA_ENTRY_DONE_ID', 1),
     names: ['data entry done', 'data-entry-done', 'data_entry_done'],
   },
+  /** WF2 has emailed Bev the supplier statement (C2a). Read at ingest to classify. */
+  notifiedAdminStatement: {
+    id: envId('PAPERLESS_TAG_NOTIFIED_STATEMENT_ID', 21),
+    names: ['notified/admin-statement', 'admin-statement'],
+  },
+  /** WF5 has emailed Bev the credit note (E2). Read at ingest to classify. */
+  notifiedCreditNote: {
+    id: envId('PAPERLESS_TAG_NOTIFIED_CREDIT_NOTE_ID', 22),
+    names: ['notified/credit-note', 'credit-note'],
+  },
 
   // ── Bank reconciliation ────────────────────────────────────────────
   bankStatement: {
