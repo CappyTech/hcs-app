@@ -31,6 +31,17 @@ Read sections 1–6a before starting. **Work through H1 to H8 strictly in order.
 | **H7** Migration | H2 | Idempotent backfill script built from the table in H7 | Running it twice changes nothing the second time. **⏸ Jack runs it against live data** |
 | **H8** Shadow run, then cutover | H1–H7 | Daily comparison report of "would send" against what Paperless actually sent | **⏸ Jack decides cutover**: disables Paperless WF2, 3, 4, 5, 8 and 9, and sets `NOTIFY_MODE=live` |
 
+### 0a. Decisions made during the build
+
+Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
+
+- **Branches and PRs.** Each step is pushed and gets a PR. Branches are stacked (`h2-state-model` off `h1-tag-merge`, `h3-…` off `h2-…`, and so on), and nothing merges to `master` until Jack chooses to.
+- **States can move backwards.** Unlinking a KashFlow purchase, or the orphan clean-up, moves `sent` back to `entered`. An admin-only **Reopen entry** moves `entered` back to `awaiting_entry`. Every move is recorded in `processingHistory`.
+- **Credit notes can be unflagged by an admin**, which moves `manual_kashflow` back to `awaiting_entry`. Bev's one-shot E2 email is not sent again. An invoice already in KashFlow must be unlinked before it can be flagged.
+- **No state until classified.** Existing documents have `processingState: null` until H3 ingest or the H7 backfill sets one. Only Purchase and Subcontractor Invoices get a state. Supplier statements use `statementReviewed`. Bank statements and remittances get nothing.
+- **Storage.** `NotificationLog` lives in the PAPERLESS namespace. Each state or flag change stores who (user id and name) and when, plus a `processingHistory` entry. `excludedReason` is `original_multiple` (tag 4) or `manually_added` (tag 11).
+- **One-shot uniqueness** is a partial unique index on (paperlessId, kind) covering rows with `oneShot: true`, so `john_resend` rows can repeat.
+
 ## 1. Decision
 
 Paperless becomes **intake, OCR and archive only**. hcs-app owns **all process logic**: queues, data entry, state, notifications and the KashFlow send.
