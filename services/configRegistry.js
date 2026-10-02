@@ -52,25 +52,46 @@ export const GROUPS = [
     id: 'paperless',
     label: 'Paperless-ngx',
     icon: 'bi-file-earmark-text-fill',
-    description: 'OCR document ingestion, and the People’s Pension API key.',
+    description: 'OCR document ingestion, the Document added webhook, and the ingest reconciliation job.',
     test: 'paperless',
     // Saving new Paperless settings must drop the cached custom-field
     // definitions, or the next call resolves field ids against the old server.
     afterSave: 'paperless',
     keys: [
+      // Connection
       { key: 'PAPERLESS_BASE_URL', label: 'Base URL', type: 'text', help: 'Hostname or full URL. `/api` is appended when missing.' },
       { key: 'PAPERLESS_TOKEN', label: 'API token', type: 'secret', help: 'Paperless API token, sent as `Authorization: Token …`.' },
       { key: 'PAPERLESS_PORT', label: 'Port', type: 'number', help: 'Used only when the base URL is a bare host.' },
-      { key: 'PAPERLESS_ACCEPT', label: 'Accept header', type: 'text', help: 'API version to request. Paperless retires old versions — a version it no longer serves answers 406 on every call.' },
+      { key: 'PAPERLESS_ACCEPT', label: 'Accept header', type: 'text', help: 'API version to request. Default `application/json; version=6`. Paperless retires old versions — a version it no longer serves answers 406 on every call.' },
       { key: 'PAPERLESS_TIMEOUT_MS', label: 'Timeout (ms)', type: 'number', help: 'Per-request timeout. Default 60000.' },
-      { key: 'PAPERLESS_PAGE_SIZE', label: 'Page size', type: 'number', help: 'Documents fetched per page during a grab.' },
-      { key: 'PAPERLESS_CONCURRENCY', label: 'Concurrency', type: 'number', help: 'Documents processed in parallel during a grab.' },
-      { key: 'PAPERLESS_CF_CACHE_MS', label: 'Custom-field cache (ms)', type: 'number', restart: true, help: 'How long custom-field definitions are cached. Read once at import.' },
-      { key: 'PAPERLESS_SSH_TUNNEL_ENABLED', label: 'Use SSH tunnel', type: 'boolean', help: 'Reach Paperless through an SSH tunnel instead of directly.' },
-      { key: 'PAPERLESS_VERBOSE', label: 'Verbose logging', type: 'boolean', help: 'Log every Paperless request and response body snippet.' },
-      { key: 'PAPERLESS_WEBHOOK_SECRET', label: 'Webhook secret', type: 'secret', help: 'Shared secret the Paperless "Document added" workflow sends to POST /api/paperless/webhook, as `Authorization: Bearer …` or `X-Webhook-Secret`. Unset turns the webhook off (503).' },
+      { key: 'PAPERLESS_UI_URL', label: 'Web UI URL', type: 'text', help: 'Where "open in Paperless" links point, e.g. `https://docs.heroncs.co.uk`. Blank uses the base URL without `/api`, which is wrong when that is an internal address.' },
+      // SSH tunnel (only when the toggle is on). The tunnel stays open once made.
+      { key: 'PAPERLESS_SSH_TUNNEL_ENABLED', label: 'Use SSH tunnel', type: 'boolean', help: 'Reach Paperless through an SSH tunnel instead of directly. Needs the SSH fields below.' },
+      { key: 'PAPERLESS_SSH_HOST', label: 'SSH host', type: 'text', restart: true, help: 'Tunnel host. Falls back to `SSH_HOST`. An open tunnel keeps its settings until the app restarts.' },
+      { key: 'PAPERLESS_SSH_PORT', label: 'SSH port', type: 'number', restart: true, help: 'Default 22, or `SSH_PORT`.' },
+      { key: 'PAPERLESS_SSH_USER', label: 'SSH user', type: 'text', restart: true, help: 'Falls back to `SSH_USER`.' },
+      { key: 'PAPERLESS_SSH_KEY_PATH', label: 'SSH key path', type: 'text', restart: true, help: 'Private key file inside the container. Either this or the password is required.' },
+      { key: 'PAPERLESS_SSH_PASS', label: 'SSH password', type: 'secret', restart: true, help: 'Used when no key path is set.' },
+      { key: 'PAPERLESS_REMOTE_HOST', label: 'Paperless host (from SSH box)', type: 'text', restart: true, help: 'Where Paperless listens as seen from the SSH host. Default `127.0.0.1`.' },
+      { key: 'PAPERLESS_REMOTE_PORT', label: 'Paperless port (from SSH box)', type: 'number', restart: true, help: 'Default 8000.' },
+      // Ingest
+      { key: 'PAPERLESS_WEBHOOK_SECRET', label: 'Webhook secret', type: 'secret', help: 'Shared secret the Paperless "Document added" workflow sends to `POST /api/paperless/webhook`, as `Authorization: Bearer …` or `X-Webhook-Secret`. Unset turns the webhook off (503).' },
       { key: 'PAPERLESS_RECONCILE_LOOKBACK_HOURS', label: 'Reconcile lookback (hours)', type: 'number', help: 'How far back the ingest reconciliation job looks for documents a webhook may have missed. Default 48.' },
-      { key: 'PEOPLES_PENSION_API_KEY', label: 'People’s Pension API key', type: 'secret', help: 'Unrelated to Paperless; kept here as it has no page of its own.' },
+      { key: 'PAPERLESS_PAGE_SIZE', label: 'Page size', type: 'number', help: 'Documents fetched per page during a grab. Default 50.' },
+      { key: 'PAPERLESS_CONCURRENCY', label: 'Concurrency', type: 'number', help: 'Documents processed in parallel during a grab. Default 5.' },
+      { key: 'PAPERLESS_AUTOINGEST_DEBOUNCE_MS', label: 'List-page grab debounce (ms)', type: 'number', help: 'Opening the OCR list only triggers a grab if the last one finished longer ago than this. Default 600000 (10 minutes).' },
+      { key: 'PAPERLESS_CF_CACHE_MS', label: 'Custom-field cache (ms)', type: 'number', restart: true, help: 'How long custom-field definitions are cached. Read once at import.' },
+      // Diagnostics
+      { key: 'PAPERLESS_VERBOSE', label: 'Verbose logging', type: 'boolean', help: 'Log every Paperless request and response body snippet.' },
+    ],
+  },
+  {
+    id: 'pensions',
+    label: 'Pensions',
+    icon: 'bi-piggy-bank-fill',
+    description: 'The workplace pension provider’s API. Provider name and employer reference are on the payroll settings page.',
+    keys: [
+      { key: 'PEOPLES_PENSION_API_KEY', label: 'People’s Pension API key', type: 'secret', help: 'For submitting contributions straight to People’s Pension. The API upload isn’t built yet, so payroll uses the CSV download whether or not this is set.' },
     ],
   },
   {

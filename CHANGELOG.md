@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.44.0] - 2026-10-02
+
+### Added
+- **Configuration → Pensions page** (`/admin/config/pensions`) for the People's Pension API key, which used to sit on the Paperless page with nothing to do with it. Its help text now says the API upload isn't built yet, so payroll uses the CSV download either way. A value that's already saved carries over unchanged.
+- **More Paperless settings on the Paperless page.** These were read by the code but couldn't be set from the UI:
+  - Web UI URL (`PAPERLESS_UI_URL`), used for "open in Paperless" links.
+  - The SSH tunnel settings. The "Use SSH tunnel" toggle was there before without any of them.
+  - The list-page grab debounce.
+
+### Changed
+- **The Paperless page is grouped:** connection, then SSH, then ingest (webhook secret first), then diagnostics. The help text now gives the defaults for page size, concurrency and the Accept header.
+- **Settings help text shows `code` properly.** Backticks in help text were displayed literally; they're now styled the same as the other code on the page. The text is still escaped first.
+
 ## [6.43.0] - 2026-10-02
 
 ### Added
