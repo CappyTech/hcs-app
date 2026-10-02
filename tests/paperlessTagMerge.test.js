@@ -195,11 +195,46 @@ describe('KashFlow custom-field write-back (mock Paperless)', () => {
     assert.deepEqual(calls, ['GET /documents/9002/', 'PATCH /documents/9002/']);
   });
 
+  // Orphaned purchase: KashFlow fields set, Credit Note ticked since last ingest
+  const linkFirst = () => {
+    const doc = mock.mockPaperlessState().documents.find((d) => d.id === 9002);
+    doc.custom_fields.push({ field: 34, value: '555' }, { field: 35, value: '1200' }, { field: 36, value: 'x' }, { field: 37, value: '201' });
+  };
+  const assertCleared = () => {
+    const f = fieldsOf(9002);
+    assert.equal(f[58], true, 'Credit Note must not be reverted');
+    assert.equal(f[1], 'NPH-778', 'other invoice fields must survive');
+    for (const fid of [34, 35, 36, 37]) assert.ok(!(fid in f), `field ${fid} should be removed`);
+  };
+
+  it('clears only the KashFlow fields via bulk_edit modify_custom_fields', async () => {
+    linkFirst();
+    const { default: { clearPaperlessKashFlowFields } } = await import('../mongoose/services/paperless/paperlessUpdateService.js');
+    await clearPaperlessKashFlowFields(9002);
+    assertCleared();
+    const calls = mock.mockPaperlessState().calls;
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].body.parameters, { add_custom_fields: [], remove_custom_fields: [34, 35, 36, 37] });
+  });
+
+  it('clear falls back to a fresh read-then-write if bulk_edit fails', async () => {
+    linkFirst();
+    mock.mockPaperlessState().failNext.add('removeDocumentCustomFields');
+    const { default: { clearPaperlessKashFlowFields } } = await import('../mongoose/services/paperless/paperlessUpdateService.js');
+    await clearPaperlessKashFlowFields(9002);
+    assertCleared();
+    const calls = mock.mockPaperlessState().calls.map((c) => `${c.method} ${c.path}`);
+    assert.deepEqual(calls, ['GET /documents/9002/', 'PATCH /documents/9002/']);
+  });
+
   it('no caller passes the cached MongoDB fields any more', () => {
     for (const file of ['mongoose/controllers/paperlessController.js', 'mongoose/services/grabServicePaperless.js']) {
       const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
       assert.ok(!/existingCf/.test(src), `${file} still passes existingCf`);
+      assert.ok(!/clearPaperlessKashFlowFields\([^)]*,/.test(src), `${file} still passes cached fields to the clear`);
     }
+    const client = fs.readFileSync(path.join(ROOT, 'mongoose/services/paperless/paperlessClient.js'), 'utf8');
+    assert.ok(!/updateDocumentCustomFieldsDirect/.test(client), 'the cached-array writer must stay gone');
   });
 });
 
@@ -247,6 +282,25 @@ describe('real client modify_custom_fields request', () => {
       documents: [42],
       method: 'modify_custom_fields',
       parameters: { add_custom_fields: { 34: '555', 37: '201' }, remove_custom_fields: [] },
+    });
+    assert.ok(!received.some((r) => r.method === 'PATCH'), 'must not PATCH custom_fields');
+  });
+
+  it('removes by id, skipping names with no definition (Paperless rejects unknown ids)', async () => {
+    received = [];
+    const { default: client } = await import('../mongoose/services/paperless/paperlessClient.js');
+    client.invalidateCfCache();
+    await client.makeClient().removeDocumentCustomFields(42, [
+      'KashFlow Purchase Id',
+      'KashFlow Last Send Status',
+      'KashFlow Purchase Number', // not defined on this server
+    ]);
+    const post = received.find((r) => r.method === 'POST');
+    assert.equal(post.url, '/api/documents/bulk_edit/');
+    assert.deepEqual(post.body, {
+      documents: [42],
+      method: 'modify_custom_fields',
+      parameters: { add_custom_fields: [], remove_custom_fields: [34, 37] },
     });
     assert.ok(!received.some((r) => r.method === 'PATCH'), 'must not PATCH custom_fields');
   });

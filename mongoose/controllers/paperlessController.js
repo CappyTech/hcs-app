@@ -1938,7 +1938,7 @@ export const reassignPaperlessDocument = async (req, res, next) => {
         { $set: { kashflowPurchaseId: null, kashflowPurchaseNumber: null, kashflowPermalink: null } },
       );
       try {
-        await clearPaperlessKashFlowFields(oldId, oldDoc.customFields || []);
+        await clearPaperlessKashFlowFields(oldId);
       } catch (clearErr) {
         logger.warn(`[reassign] Could not clear KashFlow fields on old doc ${oldId}: ${clearErr.message}`);
       }
@@ -2314,7 +2314,7 @@ export const repairDrift = async (req, res) => {
               // Best-effort Paperless cleanup — log failure but don't block ok count
               // Awaited so PATCHes run sequentially — parallel PATCHes 500 under write contention.
               try {
-                await clearPaperlessKashFlowFields(doc.paperlessId, doc.customFields || []);
+                await clearPaperlessKashFlowFields(doc.paperlessId);
               } catch (e) {
                 logger.warn(`[repairDrift] Case2 Paperless clear failed for paperlessId=${doc.paperlessId}: ${e.message}`);
               }
