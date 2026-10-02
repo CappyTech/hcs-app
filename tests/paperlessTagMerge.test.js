@@ -137,3 +137,117 @@ describe('already-sent lock', () => {
     assert.ok(!/onlyAddedTag/.test(src), 'the tag-only lock must be gone');
   });
 });
+
+/**
+ * 5.3: writing the KashFlow reference fields back used to PATCH the whole
+ * custom_fields array rebuilt from MongoDB's cached copy, reverting anything
+ * changed in Paperless since the last ingest. It now sets only the four
+ * KashFlow fields via bulk_edit, falling back to a fresh read-then-write.
+ */
+describe('KashFlow custom-field write-back (mock Paperless)', () => {
+  let mock;
+  let updatePaperlessWithKashFlowInfo;
+  const purchase = { Id: 555, Number: 1200, Permalink: 'https://kf.example/p/555' };
+
+  before(async () => {
+    process.env.PAPERLESS_URL = 'mock';
+    mock = await import('../mongoose/services/paperless/mock/paperlessMockClient.js');
+    ({ default: { updatePaperlessWithKashFlowInfo } } = await import('../mongoose/services/paperless/paperlessUpdateService.js'));
+  });
+  after(() => { delete process.env.PAPERLESS_URL; });
+  beforeEach(() => {
+    mock.resetMockPaperless();
+    // Credit Note ticked in Paperless after hcs-app last ingested the document
+    const doc = mock.mockPaperlessState().documents.find((d) => d.id === 9002);
+    doc.custom_fields.find((e) => e.field === 58).value = true;
+  });
+
+  const fieldsOf = (id) =>
+    Object.fromEntries(mock.mockPaperlessState().documents.find((d) => d.id === id).custom_fields.map((e) => [e.field, e.value]));
+
+  const assertWritten = () => {
+    const f = fieldsOf(9002);
+    assert.equal(f[58], true, 'Credit Note must not be reverted');
+    assert.equal(f[1], 'NPH-778', 'other invoice fields must survive');
+    assert.equal(f[34], '555');
+    assert.equal(f[35], '1200');
+    assert.equal(f[36], 'https://kf.example/p/555');
+    assert.equal(f[37], '201');
+  };
+
+  it('sets only the KashFlow fields via bulk_edit modify_custom_fields', async () => {
+    await updatePaperlessWithKashFlowInfo(9002, purchase, 201);
+    assertWritten();
+    const calls = mock.mockPaperlessState().calls;
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].path, '/documents/bulk_edit/');
+    assert.deepEqual(calls[0].body.parameters, {
+      add_custom_fields: { 34: '555', 35: '1200', 36: 'https://kf.example/p/555', 37: '201' },
+      remove_custom_fields: [],
+    });
+  });
+
+  it('falls back to a fresh read-then-write if bulk_edit fails', async () => {
+    mock.mockPaperlessState().failNext.add('setDocumentCustomFields');
+    await updatePaperlessWithKashFlowInfo(9002, purchase, 201);
+    assertWritten();
+    const calls = mock.mockPaperlessState().calls.map((c) => `${c.method} ${c.path}`);
+    assert.deepEqual(calls, ['GET /documents/9002/', 'PATCH /documents/9002/']);
+  });
+
+  it('no caller passes the cached MongoDB fields any more', () => {
+    for (const file of ['mongoose/controllers/paperlessController.js', 'mongoose/services/grabServicePaperless.js']) {
+      const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+      assert.ok(!/existingCf/.test(src), `${file} still passes existingCf`);
+    }
+  });
+});
+
+describe('real client modify_custom_fields request', () => {
+  let server;
+  let received = [];
+
+  before(async () => {
+    server = http.createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => { body += c; });
+      req.on('end', () => {
+        received.push({ method: req.method, url: req.url, body: body ? JSON.parse(body) : null });
+        res.writeHead(200, { 'content-type': 'application/json' });
+        if (req.url.startsWith('/api/custom_fields/')) {
+          res.end(JSON.stringify({ count: 2, next: null, results: [
+            { id: 34, name: 'KashFlow Purchase Id' },
+            { id: 37, name: 'KashFlow Last Send Status' },
+          ] }));
+        } else {
+          res.end(JSON.stringify({ result: 'OK' }));
+        }
+      });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    delete process.env.PAPERLESS_URL;
+    process.env.PAPERLESS_TOKEN = 'test-token';
+    process.env.PAPERLESS_BASE_URL = `http://127.0.0.1:${server.address().port}/api`;
+    process.env.PAPERLESS_SSH_TUNNEL_ENABLED = 'false';
+  });
+  after(() => new Promise((resolve) => server.close(resolve)));
+
+  it('posts a {fieldId: value} dict and touches no other field', async () => {
+    received = [];
+    const { default: client } = await import('../mongoose/services/paperless/paperlessClient.js');
+    client.invalidateCfCache();
+    await client.makeClient().setDocumentCustomFields(42, {
+      'KashFlow Purchase Id': 555,
+      'KashFlow Last Send Status': 201,
+      'KashFlow Purchase Permalink': null,
+    });
+    const post = received.find((r) => r.method === 'POST');
+    assert.equal(post.url, '/api/documents/bulk_edit/');
+    assert.deepEqual(post.body, {
+      documents: [42],
+      method: 'modify_custom_fields',
+      parameters: { add_custom_fields: { 34: '555', 37: '201' }, remove_custom_fields: [] },
+    });
+    assert.ok(!received.some((r) => r.method === 'PATCH'), 'must not PATCH custom_fields');
+  });
+});
