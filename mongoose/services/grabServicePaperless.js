@@ -326,7 +326,6 @@ async function grabPaperlessOCR(options = {}) {
               doc.id,
               { Id: _ex.kashflowPurchaseId, Number: _ex.kashflowPurchaseNumber, Permalink: _ex.kashflowPermalink },
               _ex.lastSendStatus,
-              { existingCf: _ex.customFields || [] },
             ));
           }
         }
@@ -565,7 +564,6 @@ async function ingestOnePaperlessDoc(paperlessId) {
       doc.id,
       { Id: finalKfId, Number: kfBackfill.kashflowPurchaseNumber ?? _ingestExistingLink?.kashflowPurchaseNumber ?? null, Permalink: kfBackfill.kashflowPermalink ?? _ingestExistingLink?.kashflowPermalink ?? null },
       _ingestExistingLink?.lastSendStatus ?? null,
-      { existingCf: customFields },
     ));
   }
 

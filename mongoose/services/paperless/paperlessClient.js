@@ -598,6 +598,68 @@ function makeClient() {
       return data;
     },
     /**
+     * Set named custom fields atomically via POST /documents/bulk_edit/
+     * (modify_custom_fields). Paperless update_or_creates each named field and
+     * leaves every other field on the document untouched — unlike PATCHing
+     * custom_fields, which replaces the whole array. Missing field definitions
+     * are created (string type), as updateDocumentCustomFields does.
+     *
+     * @param {number|number[]} documentIds
+     * @param {object} nameValuePairs - { [fieldName]: value } (nulls are skipped)
+     */
+    async setDocumentCustomFields(documentIds, nameValuePairs) {
+      const ids = (Array.isArray(documentIds) ? documentIds : [documentIds])
+        .map(Number)
+        .filter(Number.isFinite);
+      if (ids.length === 0) throw new Error("setDocumentCustomFields requires documentIds");
+
+      let idByName;
+      if (_isCfCacheValid()) {
+        idByName = _cfCacheMap;
+      } else {
+        const defs = [];
+        let cfPage = 1;
+        while (true) {
+          const chunk = await this.listCustomFields({ page: cfPage, pageSize: 100, ordering: "name" });
+          const results = Array.isArray(chunk?.results) ? chunk.results : [];
+          defs.push(...results);
+          if (!chunk?.next || results.length === 0) break;
+          cfPage++;
+        }
+        idByName = new Map();
+        for (const d of defs) {
+          if (d?.name && typeof d.id === "number")
+            idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
+        }
+        _cfCacheMap = idByName;
+        _cfCacheAt = Date.now();
+      }
+
+      const addCustomFields = {};
+      for (const [name, value] of Object.entries(nameValuePairs || {})) {
+        if (value == null) continue;
+        const key = String(name).trim().toLowerCase();
+        let fid = idByName.get(key);
+        if (fid == null) {
+          logger.warn(`[paperlessClient] Custom field "${name}" not found — creating it.`);
+          const created = await this.createCustomField({ name, data_type: "string" });
+          if (!created || typeof created.id !== "number") continue;
+          fid = Number(created.id);
+          idByName.set(key, fid);
+        }
+        addCustomFields[fid] = String(value);
+      }
+      if (Object.keys(addCustomFields).length === 0) return null;
+
+      const api = await createApi();
+      const { data } = await api.post("/documents/bulk_edit/", {
+        documents: ids,
+        method: "modify_custom_fields",
+        parameters: { add_custom_fields: addCustomFields, remove_custom_fields: [] },
+      });
+      return data;
+    },
+    /**
      * Add/remove tags atomically via POST /documents/bulk_edit/ (modify_tags).
      * Tags not named are left untouched.
      */

@@ -25,11 +25,8 @@ function describeAxiosError(err) {
  * @param {number} paperlessId - The Paperless document ID
  * @param {object} purchase - The KashFlow create response body
  * @param {number} status - HTTP status from the KashFlow call
- * @param {object} [opts]
- * @param {Array} [opts.existingCf] - OcrDocument.customFields array from MongoDB.
- *   When provided, skips the GET /documents/:id/ round-trip (avoids timeouts on large docs).
  */
-async function updatePaperlessWithKashFlowInfo(paperlessId, purchase, status, opts = {}) {
+async function updatePaperlessWithKashFlowInfo(paperlessId, purchase, status) {
   const api = makeClient();
   const id = Number(paperlessId);
   if (!Number.isFinite(id)) throw new Error("paperlessId must be a number");
@@ -63,16 +60,28 @@ async function updatePaperlessWithKashFlowInfo(paperlessId, purchase, status, op
     return { updated: false };
   }
 
+  // Never rebuild the document's custom_fields from MongoDB's cached copy: a
+  // PATCH replaces the whole array, so any field changed in Paperless since the
+  // last ingest (e.g. Credit Note ticked) would be silently reverted.
+  // Primary: bulk_edit modify_custom_fields touches only these four fields.
   try {
-    let res;
-    if (Array.isArray(opts.existingCf)) {
-      // Fast path: use cached MongoDB fields — no GET /documents/:id/ round-trip
-      res = await api.updateDocumentCustomFieldsDirect(id, updates, opts.existingCf);
-    } else {
-      res = await api.updateDocumentCustomFields(id, updates);
-    }
+    const res = await api.setDocumentCustomFields(id, updates);
     logger.info(
-      `[paperlessUpdate] Updated custom fields for doc ${id}: ${Object.keys(updates).join(", ")}`,
+      `[paperlessUpdate] Updated custom fields for doc ${id} (bulk_edit): ${Object.keys(updates).join(", ")}`,
+    );
+    return { updated: true, data: res };
+  } catch (bulkErr) {
+    logger.warn(
+      `[paperlessUpdate] bulk_edit custom fields failed for doc ${id}, falling back to read-then-write: ${describeAxiosError(bulkErr)}`,
+    );
+  }
+
+  // Fallback: re-read the document's current fields from Paperless, then PATCH.
+  // Not atomic, but the window is milliseconds rather than "since last ingest".
+  try {
+    const res = await api.updateDocumentCustomFields(id, updates);
+    logger.info(
+      `[paperlessUpdate] Updated custom fields for doc ${id} (fresh read): ${Object.keys(updates).join(", ")}`,
     );
     return { updated: true, data: res };
   } catch (err) {

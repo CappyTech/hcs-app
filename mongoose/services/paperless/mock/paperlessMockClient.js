@@ -33,6 +33,9 @@ export function resetMockPaperless() {
     customFields: clone(fixtures.CUSTOM_FIELDS),
     documents: clone(fixtures.DOCUMENTS),
     calls: [],
+    // Client method names whose next call should throw, e.g. to exercise a
+    // fallback: state.failNext.add('setDocumentCustomFields'). Cleared once used.
+    failNext: new Set(),
   };
 }
 
@@ -78,6 +81,13 @@ export function makeMockClient() {
   }
 
   const record = (method, path, body) => state.calls.push({ method, path, body: clone(body) });
+  const maybeFail = (name) => {
+    if (!state.failNext.has(name)) return;
+    state.failNext.delete(name);
+    const err = new Error('Request failed with status code 400');
+    err.response = { status: 400, data: { detail: `mock: forced failure of ${name}` } };
+    throw err;
+  };
 
   const findDoc = (id) => {
     const doc = state.documents.find((d) => d.id === Number(id));
@@ -192,9 +202,11 @@ export function makeMockClient() {
     },
     async updateDocumentCustomFields(documentId, nameValuePairs) {
       if (!documentId) throw new Error('updateDocumentCustomFields requires documentId');
+      // Read current fields first, as the real client does
+      const current = await this.getDocument(documentId, { fields: 'id,custom_fields' });
       const doc = findDoc(documentId);
       record('PATCH', `/documents/${documentId}/`, { custom_fields: nameValuePairs });
-      const existing = new Map(doc.custom_fields.map((e) => [e.field, e.value]));
+      const existing = new Map(current.custom_fields.map((e) => [e.field, e.value]));
       return applyCustomFields(doc, existing, nameValuePairs);
     },
     async updateDocumentCustomFieldsDirect(documentId, nameValuePairs, existingCfArray) {
@@ -207,6 +219,39 @@ export function makeMockClient() {
         if (typeof e?.fieldId === 'number') existing.set(e.fieldId, e.value ?? null);
       }
       return applyCustomFields(doc, existing, nameValuePairs);
+    },
+    async setDocumentCustomFields(documentIds, nameValuePairs) {
+      const ids = (Array.isArray(documentIds) ? documentIds : [documentIds]).map(Number).filter(Number.isFinite);
+      if (ids.length === 0) throw new Error('setDocumentCustomFields requires documentIds');
+      maybeFail('setDocumentCustomFields');
+      const idByName = new Map(state.customFields.map((f) => [f.name.trim().toLowerCase(), f.id]));
+      const add = {};
+      for (const [name, value] of Object.entries(nameValuePairs || {})) {
+        if (value == null) continue;
+        const key = String(name).trim().toLowerCase();
+        let fid = idByName.get(key);
+        if (fid == null) {
+          fid = nextId(state.customFields);
+          state.customFields.push({ id: fid, name, data_type: 'string' });
+        }
+        add[fid] = String(value);
+      }
+      if (Object.keys(add).length === 0) return null;
+      record('POST', '/documents/bulk_edit/', {
+        documents: ids,
+        method: 'modify_custom_fields',
+        parameters: { add_custom_fields: add, remove_custom_fields: [] },
+      });
+      // update_or_create per field; every other field is left alone
+      for (const doc of state.documents.filter((d) => ids.includes(d.id))) {
+        for (const [fid, value] of Object.entries(add)) {
+          const entry = doc.custom_fields.find((e) => e.field === Number(fid));
+          if (entry) entry.value = value;
+          else doc.custom_fields.push({ field: Number(fid), value });
+        }
+        touch(doc);
+      }
+      return { result: 'OK' };
     },
     async updateDocumentTags(documentId, tagIds) {
       if (!documentId) throw new Error('updateDocumentTags requires documentId');

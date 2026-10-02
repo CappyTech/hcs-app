@@ -1203,7 +1203,6 @@ export const sendDraftToKashflow = async (req, res, next) => {
             paperlessId,
             resp.data,
             resp.status,
-            { existingCf: sendDoc?.customFields || [] },
           );
         } catch (e) {
           logger.warn(
@@ -1338,7 +1337,6 @@ export const sendDraftToKashflow = async (req, res, next) => {
             paperlessId,
             resp.data,
             resp.status,
-            { existingCf: sendDoc?.customFields || [] },
           );
         } catch (e) {
           logger.warn(
@@ -1766,7 +1764,6 @@ export const postMatchPurchase = async (req, res, next) => {
         paperlessId,
         restPurchase,
         200,
-        { existingCf: docForCf?.customFields || [] },
       );
     } catch (cfErr) {
       logger.warn(`[matchPurchase] CF write-back failed for paperlessId=${paperlessId}: ${cfErr.message}`);
@@ -1915,7 +1912,6 @@ export const reassignPaperlessDocument = async (req, res, next) => {
             Permalink: linkage.kashflowPermalink,
           },
           linkage.lastSendStatus ?? 200,
-          { existingCf: newDoc.customFields || [] },
         );
       } catch (cfErr) {
         logger.warn(`[reassign] CF write-back failed for paperlessId=${newId}: ${cfErr.message}`);
@@ -2063,7 +2059,6 @@ export const resolveNumbers = async (req, res) => {
               doc.paperlessId,
               { Id: purchase.Id, Number: purchase.Number, Permalink: purchase.Permalink },
               doc.lastSendStatus,
-              { existingCf: doc.customFields || [] },
             );
           } catch (e) {
             logger.warn(`[resolveNumbers] Paperless CF update failed for paperlessId=${doc.paperlessId}: ${e.message}`);
@@ -2200,7 +2195,6 @@ export const matchReferences = async (req, res) => {
               doc.paperlessId,
               { Id: purchase.Id, Number: purchase.Number, Permalink: purchase.Permalink },
               doc.lastSendStatus,
-              { existingCf: doc.customFields || [] },
             );
           } catch (e) {
             logger.warn(`[matchReferences] Paperless CF update failed for paperlessId=${doc.paperlessId}: ${e.message}`);
@@ -2338,7 +2332,6 @@ export const repairDrift = async (req, res) => {
             doc.paperlessId,
             { Id: doc.kashflowPurchaseId, Number: doc.kashflowPurchaseNumber, Permalink: doc.kashflowPermalink },
             doc.lastSendStatus,
-            { existingCf: doc.customFields || [] },
           );
           // Mirror the written values into MongoDB's customFields so the drift check
           // reflects the fix immediately without waiting for the next grab run
@@ -2402,7 +2395,6 @@ export const syncPaperlessFields = async (req, res, next) => {
       paperlessId,
       { Id: doc.kashflowPurchaseId, Number: doc.kashflowPurchaseNumber, Permalink: doc.kashflowPermalink },
       doc.lastSendStatus,
-      { existingCf: doc.customFields || [] },
     );
     await ingestOnePaperlessDoc(paperlessId);
     req.flash('success', `Paperless custom fields synced for document #${paperlessId}.`);
