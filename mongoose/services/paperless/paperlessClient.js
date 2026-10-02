@@ -489,103 +489,6 @@ function makeClient() {
       return data;
     },
 
-    /**
-     * Like updateDocumentCustomFields but uses an already-known customFields array
-     * (e.g. from MongoDB OcrDocument) instead of fetching the document first.
-     * Eliminates the GET /documents/:id/ round-trip that causes timeouts on large docs.
-     *
-     * @param {number} documentId
-     * @param {object} nameValuePairs - { [fieldName]: value|null }
-     * @param {Array<{fieldId?: number, fieldName?: string, value?: any}>} existingCfArray
-     */
-    async updateDocumentCustomFieldsDirect(documentId, nameValuePairs, existingCfArray) {
-      if (!documentId)
-        throw new Error("updateDocumentCustomFieldsDirect requires documentId");
-      const api = await createApi();
-
-      // Build existing map from the MongoDB-cached array — no GET needed
-      const existing = new Map(); // fieldId -> value
-      const existingByName = new Map(); // lower(name) -> fieldId
-      // Entries without a stored fieldId are deferred until idByName is available
-      const pendingByName = new Map(); // lower(name) -> value
-      for (const entry of (existingCfArray || [])) {
-        const fid = typeof entry?.fieldId === 'number' ? entry.fieldId : null;
-        const fname = entry?.fieldName ? String(entry.fieldName) : null;
-        if (fid != null) {
-          existing.set(fid, entry?.value ?? null);
-          if (fname) existingByName.set(fname.trim().toLowerCase(), fid);
-        } else if (fname) {
-          // No fieldId stored — resolve after cache is built to avoid dropping the field
-          pendingByName.set(fname.trim().toLowerCase(), entry?.value ?? null);
-        }
-      }
-
-      // Resolve field definitions from cache (no additional GET)
-      let idByName;
-      if (_isCfCacheValid()) {
-        idByName = _cfCacheMap;
-      } else {
-        const defs = [];
-        let cfPage = 1;
-        while (true) {
-          const chunk = await this.listCustomFields({ page: cfPage, pageSize: 100, ordering: 'name' });
-          const results = Array.isArray(chunk?.results) ? chunk.results : [];
-          defs.push(...results);
-          if (!chunk?.next || results.length === 0) break;
-          cfPage++;
-        }
-        idByName = new Map();
-        for (const d of defs) {
-          if (d?.name && typeof d.id === 'number')
-            idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
-        }
-        _cfCacheMap = idByName;
-        _cfCacheAt  = Date.now();
-      }
-
-      // Resolve deferred entries (stored without fieldId) using the now-populated idByName
-      for (const [key, value] of pendingByName) {
-        const fid = idByName.get(key);
-        if (fid != null && !existing.has(fid)) {
-          existing.set(fid, value);
-          existingByName.set(key, fid);
-        }
-      }
-
-      const resolveFieldId = async (name) => {
-        const key = String(name).trim().toLowerCase();
-        if (idByName.has(key)) return idByName.get(key);
-        if (existingByName.has(key)) return existingByName.get(key);
-        logger.warn(`[paperlessClient] Custom field "${name}" not found — creating it.`);
-        try {
-          const created = await this.createCustomField({ name, data_type: 'string' });
-          if (created && typeof created.id === 'number') {
-            idByName.set(key, Number(created.id));
-            if (_cfCacheMap) _cfCacheMap.set(key, Number(created.id));
-            return Number(created.id);
-          }
-        } catch (_) { /* skip */ }
-        return null;
-      };
-
-      for (const [name, value] of Object.entries(nameValuePairs || {})) {
-        const key = String(name).trim().toLowerCase();
-        let fid = idByName.get(key) || existingByName.get(key) || null;
-        if (fid == null && value != null) fid = await resolveFieldId(name);
-        if (fid == null) continue;
-        if (value == null) {
-          existing.delete(Number(fid));
-        } else {
-          existing.set(Number(fid), String(value));
-        }
-      }
-
-      const custom_fields = Array.from(existing.entries()).map(
-        ([fid, val]) => ({ field: Number(fid), value: val }),
-      );
-      const { data } = await api.patch(`/documents/${documentId}/`, { custom_fields });
-      return data;
-    },
     async updateDocumentTags(documentId, tagIds) {
       if (!documentId)
         throw new Error("updateDocumentTags requires documentId");
@@ -595,6 +498,57 @@ function makeClient() {
         .filter((n) => Number.isFinite(n));
       const payload = { tags: ids };
       const { data } = await api.patch(`/documents/${documentId}/`, payload);
+      return data;
+    },
+    /** lower(name) -> field id, from the module-level cache or a full listing. */
+    async customFieldIdsByName() {
+      if (_isCfCacheValid()) return _cfCacheMap;
+      const defs = [];
+      let cfPage = 1;
+      while (true) {
+        const chunk = await this.listCustomFields({ page: cfPage, pageSize: 100, ordering: "name" });
+        const results = Array.isArray(chunk?.results) ? chunk.results : [];
+        defs.push(...results);
+        if (!chunk?.next || results.length === 0) break;
+        cfPage++;
+      }
+      const idByName = new Map();
+      for (const d of defs) {
+        if (d?.name && typeof d.id === "number")
+          idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
+      }
+      _cfCacheMap = idByName;
+      _cfCacheAt = Date.now();
+      return idByName;
+    },
+    /**
+     * Remove named custom fields atomically via POST /documents/bulk_edit/
+     * (modify_custom_fields), leaving every other field untouched. Names with
+     * no field definition are skipped — Paperless rejects unknown ids.
+     *
+     * @param {number|number[]} documentIds
+     * @param {string[]} names
+     */
+    async removeDocumentCustomFields(documentIds, names) {
+      const ids = (Array.isArray(documentIds) ? documentIds : [documentIds])
+        .map(Number)
+        .filter(Number.isFinite);
+      if (ids.length === 0) throw new Error("removeDocumentCustomFields requires documentIds");
+
+      const idByName = await this.customFieldIdsByName();
+      const removeIds = Array.from(new Set(
+        (names || [])
+          .map((n) => idByName.get(String(n).trim().toLowerCase()))
+          .filter((fid) => fid != null),
+      ));
+      if (removeIds.length === 0) return null;
+
+      const api = await createApi();
+      const { data } = await api.post("/documents/bulk_edit/", {
+        documents: ids,
+        method: "modify_custom_fields",
+        parameters: { add_custom_fields: [], remove_custom_fields: removeIds },
+      });
       return data;
     },
     /**
@@ -613,28 +567,7 @@ function makeClient() {
         .filter(Number.isFinite);
       if (ids.length === 0) throw new Error("setDocumentCustomFields requires documentIds");
 
-      let idByName;
-      if (_isCfCacheValid()) {
-        idByName = _cfCacheMap;
-      } else {
-        const defs = [];
-        let cfPage = 1;
-        while (true) {
-          const chunk = await this.listCustomFields({ page: cfPage, pageSize: 100, ordering: "name" });
-          const results = Array.isArray(chunk?.results) ? chunk.results : [];
-          defs.push(...results);
-          if (!chunk?.next || results.length === 0) break;
-          cfPage++;
-        }
-        idByName = new Map();
-        for (const d of defs) {
-          if (d?.name && typeof d.id === "number")
-            idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
-        }
-        _cfCacheMap = idByName;
-        _cfCacheAt = Date.now();
-      }
-
+      const idByName = await this.customFieldIdsByName();
       const addCustomFields = {};
       for (const [name, value] of Object.entries(nameValuePairs || {})) {
         if (value == null) continue;

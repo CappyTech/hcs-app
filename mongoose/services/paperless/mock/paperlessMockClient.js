@@ -209,17 +209,6 @@ export function makeMockClient() {
       const existing = new Map(current.custom_fields.map((e) => [e.field, e.value]));
       return applyCustomFields(doc, existing, nameValuePairs);
     },
-    async updateDocumentCustomFieldsDirect(documentId, nameValuePairs, existingCfArray) {
-      if (!documentId) throw new Error('updateDocumentCustomFieldsDirect requires documentId');
-      const doc = findDoc(documentId);
-      record('PATCH', `/documents/${documentId}/`, { custom_fields: nameValuePairs });
-      // Built from the caller's cached copy, not the document — as the real client does
-      const existing = new Map();
-      for (const e of existingCfArray || []) {
-        if (typeof e?.fieldId === 'number') existing.set(e.fieldId, e.value ?? null);
-      }
-      return applyCustomFields(doc, existing, nameValuePairs);
-    },
     async setDocumentCustomFields(documentIds, nameValuePairs) {
       const ids = (Array.isArray(documentIds) ? documentIds : [documentIds]).map(Number).filter(Number.isFinite);
       if (ids.length === 0) throw new Error('setDocumentCustomFields requires documentIds');
@@ -249,6 +238,26 @@ export function makeMockClient() {
           if (entry) entry.value = value;
           else doc.custom_fields.push({ field: Number(fid), value });
         }
+        touch(doc);
+      }
+      return { result: 'OK' };
+    },
+    async removeDocumentCustomFields(documentIds, names) {
+      const ids = (Array.isArray(documentIds) ? documentIds : [documentIds]).map(Number).filter(Number.isFinite);
+      if (ids.length === 0) throw new Error('removeDocumentCustomFields requires documentIds');
+      maybeFail('removeDocumentCustomFields');
+      const idByName = new Map(state.customFields.map((f) => [f.name.trim().toLowerCase(), f.id]));
+      const removeIds = [...new Set((names || [])
+        .map((n) => idByName.get(String(n).trim().toLowerCase()))
+        .filter((fid) => fid != null))];
+      if (removeIds.length === 0) return null;
+      record('POST', '/documents/bulk_edit/', {
+        documents: ids,
+        method: 'modify_custom_fields',
+        parameters: { add_custom_fields: [], remove_custom_fields: removeIds },
+      });
+      for (const doc of state.documents.filter((d) => ids.includes(d.id))) {
+        doc.custom_fields = doc.custom_fields.filter((e) => !removeIds.includes(e.field));
         touch(doc);
       }
       return { result: 'OK' };

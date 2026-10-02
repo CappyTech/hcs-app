@@ -97,24 +97,38 @@ async function updatePaperlessWithKashFlowInfo(paperlessId, purchase, status) {
  * Used when a KashFlow purchase is deleted (orphaned doc) and we need to
  * remove the stale reference from Paperless to eliminate CF drift.
  *
+ * Same approach as updatePaperlessWithKashFlowInfo: remove only these four
+ * fields via bulk_edit, falling back to a fresh read-then-write — never a PATCH
+ * rebuilt from MongoDB's cached copy, which reverted newer Paperless edits.
+ *
  * @param {number} paperlessId - The Paperless document ID
- * @param {Array} existingCf - OcrDocument.customFields array from MongoDB (fast path, no GET)
  */
-async function clearPaperlessKashFlowFields(paperlessId, existingCf) {
+async function clearPaperlessKashFlowFields(paperlessId) {
   const api = makeClient();
   const id = Number(paperlessId);
   if (!Number.isFinite(id)) throw new Error("paperlessId must be a number");
 
-  const clears = {
-    "KashFlow Purchase Id": null,
-    "KashFlow Purchase Number": null,
-    "KashFlow Purchase Permalink": null,
-    "KashFlow Last Send Status": null,
-  };
+  const names = [
+    "KashFlow Purchase Id",
+    "KashFlow Purchase Number",
+    "KashFlow Purchase Permalink",
+    "KashFlow Last Send Status",
+  ];
 
   try {
-    const res = await api.updateDocumentCustomFieldsDirect(id, clears, existingCf || []);
-    logger.info(`[paperlessUpdate] Cleared KashFlow custom fields for doc ${id} (orphaned purchase)`);
+    const res = await api.removeDocumentCustomFields(id, names);
+    logger.info(`[paperlessUpdate] Cleared KashFlow custom fields for doc ${id} (bulk_edit, orphaned purchase)`);
+    return { cleared: true, data: res };
+  } catch (bulkErr) {
+    logger.warn(
+      `[paperlessUpdate] bulk_edit clear failed for doc ${id}, falling back to read-then-write: ${describeAxiosError(bulkErr)}`,
+    );
+  }
+
+  try {
+    const clears = Object.fromEntries(names.map((n) => [n, null]));
+    const res = await api.updateDocumentCustomFields(id, clears);
+    logger.info(`[paperlessUpdate] Cleared KashFlow custom fields for doc ${id} (fresh read, orphaned purchase)`);
     return { cleared: true, data: res };
   } catch (err) {
     logger.warn(`[paperlessUpdate] Failed to clear KashFlow fields for doc ${id}: ${describeAxiosError(err)}`);
