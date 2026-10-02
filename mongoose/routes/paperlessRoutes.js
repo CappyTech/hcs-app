@@ -4,6 +4,18 @@ import { getClientIp } from '../../services/ipService.js';
 const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/paperlessController.js';
+import webhookCtrl from '../controllers/paperlessWebhookController.js';
+
+// Machine-to-machine: Paperless's "Document added" webhook. No session or CSRF
+// token (both exempted for this path); it authenticates with the shared secret.
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getClientIp(req),
+  message: { ok: false, error: 'Too many requests.' },
+});
 
 // Stricter rate limiter for the grab trigger (fires background API calls)
 const grabLimiter = rateLimit({
@@ -21,6 +33,8 @@ const paperlessGuard = [
   authService.ensureRole(),
   authService.ensureDepartment("documents"),
 ];
+
+router.post("/api/paperless/webhook", webhookLimiter, webhookCtrl.documentAdded);
 
 router.get("/paperless/ocr", ...paperlessGuard, ctrl.listOcr);
 router.get("/paperless/ocr/:paperlessId", ...paperlessGuard, ctrl.readOcr);

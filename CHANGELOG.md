@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.43.0] - 2026-10-02
+
+### Added
+- **Paperless migration H3: ingest trigger.** `POST /api/paperless/webhook` takes Paperless's "Document added" webhook and ingests the document straight away. It authenticates with `PAPERLESS_WEBHOOK_SECRET` (as `Authorization: Bearer …` or `X-Webhook-Secret`), is exempt from the session guard and CSRF, and stays off (503) until the secret is set. The body needs `doc_url` or `doc_id`.
+- **`paperless-ingest-reconcile` job** (every 15 minutes) is the backstop for a lost webhook. It ingests any document modified in the last `PAPERLESS_RECONCILE_LOOKBACK_HOURS` (default 48) that hcs-app is missing or holds an older copy of.
+- **First processing state from Paperless tags.** After ingest, an invoice gets its starting state from the H7 table: `added` → sent, credit note (tag 22 or the Credit Note field) → manual_kashflow, `data entry done` → entered, otherwise awaiting_entry. Tags 4 and 11 set `excludedReason`, and tag 21 marks a supplier statement reviewed. This only fills an empty state, so it never overrides a person, and repeat deliveries change nothing. Documents outside the lookback window are left to the H7 backfill. Nothing is sent and nothing reads the state yet.
+
 ## [6.42.13] - 2026-10-02
 
 ### Fixed

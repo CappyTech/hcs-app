@@ -68,6 +68,8 @@ export const GROUPS = [
       { key: 'PAPERLESS_CF_CACHE_MS', label: 'Custom-field cache (ms)', type: 'number', restart: true, help: 'How long custom-field definitions are cached. Read once at import.' },
       { key: 'PAPERLESS_SSH_TUNNEL_ENABLED', label: 'Use SSH tunnel', type: 'boolean', help: 'Reach Paperless through an SSH tunnel instead of directly.' },
       { key: 'PAPERLESS_VERBOSE', label: 'Verbose logging', type: 'boolean', help: 'Log every Paperless request and response body snippet.' },
+      { key: 'PAPERLESS_WEBHOOK_SECRET', label: 'Webhook secret', type: 'secret', help: 'Shared secret the Paperless "Document added" workflow sends to POST /api/paperless/webhook, as `Authorization: Bearer …` or `X-Webhook-Secret`. Unset turns the webhook off (503).' },
+      { key: 'PAPERLESS_RECONCILE_LOOKBACK_HOURS', label: 'Reconcile lookback (hours)', type: 'number', help: 'How far back the ingest reconciliation job looks for documents a webhook may have missed. Default 48.' },
       { key: 'PEOPLES_PENSION_API_KEY', label: 'People’s Pension API key', type: 'secret', help: 'Unrelated to Paperless; kept here as it has no page of its own.' },
     ],
   },

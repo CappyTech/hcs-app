@@ -26,6 +26,9 @@ const PUBLIC_PATHS = new Set([
   // it authenticates itself via the X-Sync-Api-Key header + credential check,
   // so it must bypass the session-based ensureAuthenticated guard.
   "/api/sso/token",
+  // Paperless "Document added" webhook (migration H3). No browser session; it
+  // authenticates with PAPERLESS_WEBHOOK_SECRET in paperlessWebhookController.
+  "/api/paperless/webhook",
 ]);
 // Only the static asset subtrees are public — NOT all of /resources/.
 //

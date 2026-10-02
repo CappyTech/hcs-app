@@ -41,6 +41,16 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
 - **No state until classified.** Existing documents have `processingState: null` until H3 ingest or the H7 backfill sets one. Only Purchase and Subcontractor Invoices get a state. Supplier statements use `statementReviewed`. Bank statements and remittances get nothing.
 - **Storage.** `NotificationLog` lives in the PAPERLESS namespace. Each state or flag change stores who (user id and name) and when, plus a `processingHistory` entry. `excludedReason` is `original_multiple` (tag 4) or `manually_added` (tag 11).
 - **One-shot uniqueness** is a partial unique index on (paperlessId, kind) covering rows with `oneShot: true`, so `john_resend` rows can repeat.
+- **H3 derives the first state from Paperless tags** using the H7 table (`added` → `sent`, tag 22 or field 58 → `manual_kashflow`, `data entry done` → `entered`, otherwise `awaiting_entry`; tags 4/11 → `excludedReason`; tag 21 → `statementReviewed`). This means an invoice already entered or sent in Paperless is never put back into Needs Data Entry, even if H3 sees it before H7 has run. It only fills an empty state, never overrides one, and writes no `NotificationLog` rows. H7 reuses the same function (`initialStateFromPaperless` in `documentIngestService.js`) and adds the log rows. The reconciliation job only classifies documents modified inside its lookback window, so the historical backlog is still left to H7 (⏸).
+
+### 0b. H3 setup in Paperless (⏸ Jack, at deploy)
+
+1. Set `PAPERLESS_WEBHOOK_SECRET` in hcs-app to a long random value. The endpoint answers 503 until you do.
+2. In Paperless, add a workflow named **hcs-app: Document added**. Trigger: *Document added*, all documents. Action: *Webhook*.
+   - URL: `https://app.heroncs.co.uk/api/paperless/webhook`
+   - Use parameters, send as JSON, with one parameter: `doc_url` = `{{doc_url}}`
+   - Header: `Authorization` = `Bearer <the secret>`
+3. Check it: upload a test document and confirm it appears in hcs-app with a state, or that the request shows in the hcs-app log. The `paperless-ingest-reconcile` job (every 15 minutes, on `/admin/jobs`) picks up anything the webhook misses.
 
 ## 1. Decision
 
