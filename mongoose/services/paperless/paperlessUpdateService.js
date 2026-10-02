@@ -2,6 +2,7 @@
 import __paperlessClient from './paperlessClient.js';
 const { makeClient } = __paperlessClient;
 import logger from '../../../services/loggerService.js';
+import { PAPERLESS_TAGS } from '../../config/paperlessTagsConfig.js';
 
 // Axios errors hide the response body ("Request failed with status code 500") —
 // append what Paperless actually returned so failures are diagnosable from logs.
@@ -112,7 +113,52 @@ async function clearPaperlessKashFlowFields(paperlessId, existingCf) {
   }
 }
 
-export default { updatePaperlessWithKashFlowInfo, clearPaperlessKashFlowFields, updatePaperlessDocumentTags };
+export default {
+  updatePaperlessWithKashFlowInfo,
+  clearPaperlessKashFlowFields,
+  updatePaperlessDocumentTags,
+  modifyPaperlessDocumentTags,
+};
+
+/**
+ * Add and remove specific tags on a Paperless-ngx document, leaving every other
+ * tag alone. Uses `bulk_edit` `modify_tags`, which Paperless applies in one
+ * transaction — unlike the read-then-write merge in updatePaperlessDocumentTags,
+ * nothing changed in between can be lost. Paperless still fires its "Document
+ * updated" workflows afterwards (bulk_update_documents sends document_updated).
+ *
+ * @param {number} paperlessId
+ * @param {{ add?: Array<string|number>, remove?: Array<string|number> }} changes
+ *   Keys of PAPERLESS_TAGS (e.g. 'added', 'dataEntryDone') or raw tag ids.
+ */
+async function modifyPaperlessDocumentTags(paperlessId, { add = [], remove = [] } = {}) {
+  const id = Number(paperlessId);
+  if (!Number.isFinite(id)) throw new Error("paperlessId must be a number");
+
+  const toId = (t) => {
+    if (typeof t === "number" && Number.isFinite(t)) return t;
+    const tag = PAPERLESS_TAGS[t];
+    if (!tag) throw new Error(`Unknown Paperless tag "${t}"`);
+    return tag.id;
+  };
+  const addIds = add.map(toId);
+  const removeIds = remove.map(toId);
+  if (addIds.length === 0 && removeIds.length === 0) return { updated: false };
+
+  const api = makeClient();
+  try {
+    const res = await api.modifyDocumentTags([id], { add: addIds, remove: removeIds });
+    logger.info(
+      `[paperlessUpdate] Modified tags for doc ${id}: +[${addIds.join(", ")}] -[${removeIds.join(", ")}]`,
+    );
+    return { updated: true, data: res };
+  } catch (err) {
+    logger.warn(
+      `[paperlessUpdate] Failed to modify tags for doc ${id}: ${describeAxiosError(err)}`,
+    );
+    throw err;
+  }
+}
 
 /**
  * Set or merge tags on a Paperless-ngx document.
@@ -216,4 +262,4 @@ async function updatePaperlessDocumentTags(paperlessId, tags, options = {}) {
   }
 }
 
-export { updatePaperlessDocumentTags };
+export { updatePaperlessDocumentTags, modifyPaperlessDocumentTags };

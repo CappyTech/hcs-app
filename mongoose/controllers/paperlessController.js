@@ -14,7 +14,7 @@
 import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
 import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
-import { hasTag, lacksAllTagsQuery } from '../config/paperlessTagsConfig.js';
+import { lacksAllTagsQuery } from '../config/paperlessTagsConfig.js';
 import logger from '../../services/loggerService.js';
 import kfSession from '../../services/kashflowSessionService.js';
 const kfAxios = kfSession.kfAxios;
@@ -33,7 +33,7 @@ const {
 } = __purchaseDraftService;
 const {
   updatePaperlessWithKashFlowInfo,
-  updatePaperlessDocumentTags,
+  modifyPaperlessDocumentTags,
   clearPaperlessKashFlowFields,
 } = __paperlessUpdateService;
 import __paperlessClient from '../services/paperless/paperlessClient.js';
@@ -607,20 +607,10 @@ export const getPurchaseDraft = async (req, res, next) => {
         const toNum = (v) => { if (v == null || v === '') return null; const n = (typeof v === 'number') ? v : parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
         const _n = toNum(draft.NetAmount), _v = toNum(draft.VATAmount), _g = toNum(draft.GrossAmount);
         const totalsConsistent = (_n != null && _v != null && _g != null) ? Math.abs((_n + _v) - _g) < 0.01 : true;
-        const tags = Array.isArray(doc?.tags) ? doc.tags : [];
-        // "the only tag present is 'added'" — resolved via paperlessTagsConfig
-        // so renaming the tag does not quietly disable the duplicate-send lock.
-        const onlyAddedTag = tags.length > 0 && tags.every((t) => hasTag([t], 'added'));
-        const hasKfNumber = !!(doc && (typeof doc.kashflowPurchaseNumber === 'number' || (typeof doc.kashflowPurchaseNumber === 'string' && doc.kashflowPurchaseNumber.trim() !== '')));
-        const alreadySentLock = hasKfNumber && onlyAddedTag && Number(doc?.lastSendStatus) === 201;
-        return hasSupplier && lineItems.length > 0 && hasNominalPerLine && !!draft.Currency && totalsConsistent && !alreadySentLock;
+        // Same test claimSend refuses on, so the UI lock matches the server guard
+        return hasSupplier && lineItems.length > 0 && hasNominalPerLine && !!draft.Currency && totalsConsistent && !kfSendClaim.isAlreadyLinked(doc);
       })(),
-      alreadySentLock: (() => {
-        const tags = Array.isArray(doc?.tags) ? doc.tags : [];
-        const onlyAddedTag = tags.length > 0 && tags.every((t) => hasTag([t], 'added'));
-        const hasKfNumber = !!(doc && (typeof doc.kashflowPurchaseNumber === 'number' || (typeof doc.kashflowPurchaseNumber === 'string' && doc.kashflowPurchaseNumber.trim() !== '')));
-        return hasKfNumber && onlyAddedTag && Number(doc?.lastSendStatus) === 201;
-      })(),
+      alreadySentLock: kfSendClaim.isAlreadyLinked(doc),
     });
   } catch (err) {
     logger.error("getPurchaseDraft error:", err);
@@ -1221,9 +1211,15 @@ export const sendDraftToKashflow = async (req, res, next) => {
           );
         }
 
-        await updatePaperlessDocumentTags(paperlessId, ["added"]).catch((e) => {
+        // Add `added` and remove `data entry done` in one atomic bulk_edit.
+        // Never replace the tag set: that wiped notified/*, credit/refund,
+        // inbox, the type tags and the queue-exclusion tags on every send.
+        await modifyPaperlessDocumentTags(paperlessId, {
+          add: ["added"],
+          remove: ["dataEntryDone"],
+        }).catch((e) => {
           logger.warn(
-            `Async updatePaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,
+            `modifyPaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,
           );
         });
 

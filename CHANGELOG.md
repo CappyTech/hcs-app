@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.11] - 2026-10-02
+
+### Fixed
+- **Sending to KashFlow wiped every other Paperless tag** (Paperless migration H1). After a successful direct send the document's tags were *replaced* with just `added`, stripping `notified/*`, `credit/refund`, `inbox`, the type tags, `original/multiple invoice one pdf` and `manually added to kashflow`. It now uses Paperless `bulk_edit` `modify_tags` to add `added` and remove `data entry done` in one atomic call, leaving everything else alone. Paperless still fires its "Document updated" workflows for bulk edits, so WF4 ("added to KashFlow" Discord post) keeps working, and because `notified/kashflow` is no longer wiped it can't fire twice.
+- **The draft screen stopped showing an invoice as sent once any other tag was added.** `alreadySentLock` required `added` to be the *only* tag. It now uses the same test as the server-side `claimSend` guard (KashFlow purchase id present and last send status 201), shared as `kashflowSendClaimService.isAlreadyLinked`.
+
+### Added
+- **Mock Paperless client for development** (`PAPERLESS_URL=mock`). An in-memory fake of `paperlessClient` seeded with invented fixtures that use the live tag, document type and custom field ids. Its write semantics copy Paperless's, including whole-array custom-field PATCHes and tag ancestor/descendant expansion on `modify_tags`.
+
 ## [6.42.10] - 2026-10-02
 
 ### Security
