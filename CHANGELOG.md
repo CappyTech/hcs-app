@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.12] - 2026-10-02
+
+### Added
+- **Document processing state** (Paperless migration H2). `OcrDocument` gains `processingState` (`awaiting_entry` → `entered` → `sent`, plus `manual_kashflow` for credit notes), `statementReviewed`, `creditNote` and `excludedReason`, each with who and when it last changed, plus a `processingHistory` trail. Existing documents start with no state; nothing reads these fields yet, so there is no visible change. Transition rules, admin-only steps and compare-and-set writes live in `documentStateService`.
+- **`NotificationLog`** (PAPERLESS namespace): a ledger of document notifications with a partial unique index on (paperlessId, kind) for one-shot kinds, replacing the `notified/*` tags as the exactly-once guarantee. `notificationLogService.claimOneShot` claims a notification before it is sent; re-sends to John are recorded every time.
+
 ## [6.42.11] - 2026-10-02
 
 ### Fixed
