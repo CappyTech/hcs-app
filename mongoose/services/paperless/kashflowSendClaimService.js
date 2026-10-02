@@ -23,6 +23,17 @@ import logger from '../../../services/loggerService.js';
 const SEND_CLAIM_STALE_MS = 5 * 60 * 1000;
 
 /**
+ * True when the document is already successfully linked to a KashFlow
+ * purchase — the same condition claimSend's filter refuses on. The draft
+ * screen's "already sent" lock uses this too, so the UI and the server guard
+ * cannot disagree (the UI used to require `added` to be the only Paperless
+ * tag, which broke as soon as a workflow added another one).
+ */
+function isAlreadyLinked(doc) {
+  return doc != null && doc.kashflowPurchaseId != null && Number(doc.lastSendStatus) === 201;
+}
+
+/**
  * Atomically claim the document for sending.
  *
  * @param {mongoose.Model} OcrDocument — the PAPERLESS.OcrDocument model
@@ -64,7 +75,7 @@ async function claimSend(OcrDocument, paperlessId, { staleMs = SEND_CLAIM_STALE_
       message: `No OCR document found for Paperless id ${paperlessId}.`
     };
   }
-  if (doc.kashflowPurchaseId != null && doc.lastSendStatus === 201) {
+  if (isAlreadyLinked(doc)) {
     return {
       ok: false,
       reason: 'already-linked',
@@ -93,4 +104,4 @@ async function releaseSend(OcrDocument, paperlessId) {
   }
 }
 
-export default { claimSend, releaseSend, SEND_CLAIM_STALE_MS };
+export default { claimSend, releaseSend, isAlreadyLinked, SEND_CLAIM_STALE_MS };

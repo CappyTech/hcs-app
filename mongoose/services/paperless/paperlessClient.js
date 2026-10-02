@@ -4,6 +4,7 @@ import tunnel from 'tunnel-ssh';
 import logger from '../../../services/loggerService.js';
 import paperlessApiLog from '../../../services/paperlessApiLogService.js';
 import fs from 'fs';
+import { isMockPaperless, makeMockClient } from './mock/paperlessMockClient.js';
 
 let sshServer = null;
 let localPort = null;
@@ -24,6 +25,9 @@ function _invalidateCfCache() {
 }
 
 function makeClient() {
+  // PAPERLESS_URL=mock swaps in the in-memory fake (development and tests only)
+  if (isMockPaperless()) return makeMockClient();
+
   const useSsh = process.env.PAPERLESS_SSH_TUNNEL_ENABLED === "true";
   // Build a robust baseURL that accepts either a hostname/IP (with optional port)
   // OR a full http(s) URL (with or without trailing /api)
@@ -591,6 +595,26 @@ function makeClient() {
         .filter((n) => Number.isFinite(n));
       const payload = { tags: ids };
       const { data } = await api.patch(`/documents/${documentId}/`, payload);
+      return data;
+    },
+    /**
+     * Add/remove tags atomically via POST /documents/bulk_edit/ (modify_tags).
+     * Tags not named are left untouched.
+     */
+    async modifyDocumentTags(documentIds, { add = [], remove = [] } = {}) {
+      const ids = (Array.isArray(documentIds) ? documentIds : [documentIds])
+        .map(Number)
+        .filter(Number.isFinite);
+      if (ids.length === 0) throw new Error("modifyDocumentTags requires documentIds");
+      const api = await createApi();
+      const { data } = await api.post("/documents/bulk_edit/", {
+        documents: ids,
+        method: "modify_tags",
+        parameters: {
+          add_tags: add.map(Number).filter(Number.isFinite),
+          remove_tags: remove.map(Number).filter(Number.isFinite),
+        },
+      });
       return data;
     },
   };
