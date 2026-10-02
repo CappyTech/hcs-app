@@ -87,7 +87,8 @@ function sourcePill(f) {
                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <% } %>
 
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= f.help %></p>
+            <%# Help text is plain text from configRegistry; `backticks` mark code. Escape first, then style the code spans. %>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%- String(f.help || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]).replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">$1</code>') %></p>
             <% if (f.shadowsEnv) { %>
               <p class="text-xs text-amber-700 dark:text-amber-300 mt-1">
                 <i class="bi bi-exclamation-triangle"></i>
