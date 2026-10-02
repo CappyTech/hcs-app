@@ -305,3 +305,11 @@ describe('real client modify_custom_fields request', () => {
     assert.ok(!received.some((r) => r.method === 'PATCH'), 'must not PATCH custom_fields');
   });
 });
+
+describe('already-sent lock message', () => {
+  it('no longer tells users the lock depends on the added tag', () => {
+    const view = fs.readFileSync(path.join(ROOT, 'mongoose/views/tailwindcss/paperless/draft.ejs'), 'utf8');
+    assert.ok(!/only the 'added' tag/.test(view), 'stale "only the added tag" wording');
+    assert.ok(!/remove the 'added' tag/.test(view), 'removing the tag no longer unlocks sending');
+  });
+});

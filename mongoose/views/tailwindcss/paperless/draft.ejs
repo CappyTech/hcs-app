@@ -323,10 +323,10 @@
 						<% if (!canSend) { %>
 							<% if (alreadySentLock) { %>
 								<div class="text-xs text-slate-700 dark:text-slate-300 mt-1">
-									Sending is disabled because this document appears already sent to KashFlow (Purchase Number: <%= (doc && doc.kashflowPurchaseNumber != null) ? doc.kashflowPurchaseNumber : '-' %>, status 201) and only the 'added' tag is present. This prevents duplicate purchases.
+									Sending is disabled because this document appears already sent to KashFlow (Purchase Number: <%= (doc && doc.kashflowPurchaseNumber != null) ? doc.kashflowPurchaseNumber : '-' %>, status 201). This prevents duplicate purchases.
 								</div>
 								<div class="text-xs text-slate-500 mt-1">
-									If this is incorrect, remove the 'added' tag or clear the existing KashFlow linkage on the document, then refresh this page.
+									If this is incorrect, clear the existing KashFlow linkage on the document, then refresh this page. Paperless tags don't affect this lock.
 								</div>
 							<% } else { %>
 								<div class="text-xs text-red-600 mt-1">Complete the items on the right to enable sending.</div>

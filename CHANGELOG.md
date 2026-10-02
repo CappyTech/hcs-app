@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.42.13] - 2026-10-02
+
+### Fixed
+- **The draft screen's "already sent" message still described the old tag-based lock.** Since 6.42.11 the lock depends only on the KashFlow linkage (purchase id and a 201 send status), but the message said "only the 'added' tag is present" and suggested removing the `added` tag, which no longer unlocks sending. It now says to clear the KashFlow linkage and that Paperless tags don't affect the lock.
+
 ## [6.42.12] - 2026-10-02
 
 ### Added
