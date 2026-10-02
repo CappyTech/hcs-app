@@ -2,7 +2,7 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [6.42.10] - 2026-10-02
 
 ### Security
 - **nodemailer 9.1.1 → 10.0.13** (`npm audit`: 1 high). Fixes GHSA-6vj9-mwq6-2f5v (process-global DNS cache reused the TLS `servername` across transports, risking SMTP credential disclosure), GHSA-8vvx-rff5-p5rq, GHSA-g57g-f23g-4646, GHSA-v53p-9fqp-m79j and GHSA-prgh-xp8r-p3m5 (recipient/addressparser DoS and malformed envelopes). v10's only breaking change is requiring Node 20+; hcs-app already requires Node ≥20 and builds on `node:24-alpine`. `npm audit fix --force` reported a fix but didn't apply it, because it's a major-version bump of a direct dependency.
