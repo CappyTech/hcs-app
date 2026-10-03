@@ -41,7 +41,7 @@ describe('configRegistry', () => {
       const entry = registry.findKey(key);
       assert.ok(entry.label, `${key} has no label`);
       assert.ok(entry.help, `${key} has no help text`);
-      assert.match(entry.type, /^(text|number|boolean|secret|textarea|select)$/, `${key} has an unknown type`);
+      assert.match(entry.type, /^(text|number|boolean|secret|textarea|select|email)$/, `${key} has an unknown type`);
       if (entry.type === 'select') {
         assert.ok(Array.isArray(entry.options) && entry.options.length > 1, `${key} needs options`);
         assert.ok(entry.options.every((o) => o.value && o.label), `${key} options need a value and label`);

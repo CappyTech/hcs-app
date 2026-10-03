@@ -49,6 +49,30 @@ document.addEventListener('alpine:init', function () {
   });
 
   /**
+   * emailPicker – settings field of type 'email' (configGroup.ejs): a dropdown
+   * of user emails plus "Other…", which reveals and requires a typed address.
+   * Usage:  <div x-data="emailPicker">
+   *           <select x-bind="picker">…<option value="__other__">Other…</option></select>
+   *           <div x-bind="otherBox"><input type="email"></div>
+   *         </div>
+   */
+  Alpine.data('emailPicker', function () {
+    return {
+      other: false,
+      picker: {
+        ['@change']: function (e) { this.other = e.target.value === '__other__'; }
+      },
+      otherBox: {
+        ['x-show']: function () { return this.other; },
+        ['x-effect']: function () {
+          var input = this.$el.querySelector('input');
+          if (input) input.required = this.other;
+        }
+      }
+    };
+  });
+
+  /**
    * helpDocs â€“ search + active-link highlighting for /help
    */
   Alpine.data('helpDocs', function () {
