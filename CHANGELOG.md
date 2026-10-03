@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.48.0] - 2026-10-03
+
+### Added
+- **Paperless migration H7: `scripts/paperless-backfill.js`.** It gives every document hcs-app already holds the state its Paperless tags say it's in, and records the notifications Paperless has already sent, so nothing historical fires once hcs-app takes over sending:
+  - `added` → sent, plus a `kashflow` record
+  - tag 21 → statement reviewed, plus a `statement` record
+  - tag 22 or field 58 → credit note, plus a `credit_note` record
+  - tag 19 → a `john` record
+  - tags 4 and 11 → kept out of the queues
+
+  Every invoice and supplier statement is stamped `classifiedAt`, so they join the queues.
+- **Dry run by default:** nothing is written without `--apply`. `--grab` refreshes everything from Paperless first.
+- **Safe to repeat:** a second run changes nothing. Documents that already have a state are left alone, apart from stamping a missing `classifiedAt`. Notification records are added as `recorded` from the `backfill`, and never duplicate one already there.
+- **Read-only towards Paperless:** it never writes to Paperless and never emails or posts anything.
+
 ## [6.47.1] - 2026-10-03
 
 ### Changed
