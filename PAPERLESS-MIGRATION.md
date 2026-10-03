@@ -93,6 +93,7 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - **Pending, not mismatches:** anything under 30 minutes old, to allow for the 15-minute follow.
   - **Not compared:** H7 backfill rows are history and are left out. Re-sends have no Paperless evidence, so they're counted only.
   - **Wording:** the report can't compare text, so the date format and the "None" correspondent (see H6) are checked by eye against Discord, using hcs-app's post shown for each mismatch.
+- **H8 compares only from when shadow recording began** (6.49.1): the first non-backfill NotificationLog row. Documents that arrived before then were only ever sent by Paperless, and listing them as "missing" was a false alarm (27 on the first day).
 - **H8 daily reports** are saved per UTC day by `paperless-shadow-report` (every 6 hours, upserting yesterday). The cutover checklist is on `/paperless/shadow-report` and in §0d.
 
 ### 0b. H3 setup in Paperless (⏸ Jack, at deploy)
