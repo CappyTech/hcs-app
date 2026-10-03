@@ -7,6 +7,7 @@ import ctrl from '../controllers/paperlessController.js';
 import webhookCtrl from '../controllers/paperlessWebhookController.js';
 import queueCtrl from '../controllers/documentQueueController.js';
 import entryCtrl from '../controllers/documentEntryController.js';
+import shadowCtrl from '../controllers/shadowReportController.js';
 
 // Machine-to-machine: Paperless's "Document added" webhook. No session or CSRF
 // token (both exempted for this path); it authenticates with the shared secret.
@@ -38,6 +39,7 @@ const paperlessGuard = [
 
 router.post("/api/paperless/webhook", webhookLimiter, webhookCtrl.documentAdded);
 
+router.get("/paperless/shadow-report", ...paperlessGuard, shadowCtrl.getShadowReport);
 router.get("/paperless/queues", ...paperlessGuard, queueCtrl.getQueueHub);
 router.get("/paperless/queues/:queue", ...paperlessGuard, queueCtrl.getQueue);
 

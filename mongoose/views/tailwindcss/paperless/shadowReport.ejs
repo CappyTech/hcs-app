@@ -1,0 +1,135 @@
+<%
+const fmtDay = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+const plUrl = (id) => paperlessUiBase ? `${paperlessUiBase}/documents/${id}/details` : null;
+const isShadow = live.mode === 'shadow';
+const BUCKETS = [
+  ['missing', 'Paperless sent, hcs-app recorded nothing', 'text-red-700 dark:text-red-400'],
+  ['extra', 'hcs-app would send, Paperless didn\'t', 'text-red-700 dark:text-red-400'],
+  ['pending', 'Too recent to judge (hcs-app follows every 15 minutes)', 'text-amber-700 dark:text-amber-400'],
+];
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-wrap items-center gap-3">
+    <a href="/paperless/queues" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Queues</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Shadow report</h1>
+  </div>
+  <p class="text-sm text-gray-500 dark:text-gray-400 -mt-4">What hcs-app would have sent, against what Paperless actually sent, read from Paperless's <em>notified/*</em> tags. Run in shadow mode for about a week; cut over once the daily reports are clean.</p>
+
+  <%# Current settings %>
+  <div class="grid sm:grid-cols-3 gap-4">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Notification mode</p>
+      <p class="text-lg font-bold <%= isShadow ? 'text-slate-700 dark:text-slate-300' : 'text-green-700 dark:text-green-400' %>"><%= isShadow ? 'Shadow' : 'Live' %></p>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Following Paperless tags</p>
+      <p class="text-lg font-bold"><%= followTags ? 'On' : 'Off' %></p>
+    </div>
+    <div class="rounded-2xl shadow-sm p-4 border <%= live.clean ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' : 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20' %>">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Last <%= days === 1 ? '24 hours' : `${days} days` %></p>
+      <p class="text-lg font-bold <%= live.clean ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400' %>">
+        <%= live.clean ? 'Clean' : `${live.totals.missing + live.totals.extra} mismatch${live.totals.missing + live.totals.extra === 1 ? '' : 'es'}` %>
+      </p>
+      <p class="text-xs text-gray-500 dark:text-gray-400"><%= live.totals.matched %> matched · <%= live.totals.pending %> pending · <%= live.resends %> re-send<%= live.resends === 1 ? '' : 's' %> (not comparable)</p>
+    </div>
+  </div>
+
+  <% if (!isShadow) { %>
+    <div class="border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-info-circle text-blue-600"></i> Mode is live, so hcs-app does the sending. Once Paperless's workflows are switched off they leave no tags, and this comparison stops applying.
+    </div>
+  <% } %>
+
+  <%# Window %>
+  <form method="GET" action="/paperless/shadow-report" class="flex flex-wrap items-center gap-2 text-sm">
+    <label for="days" class="text-gray-500 dark:text-gray-400">Compare the last</label>
+    <select id="days" name="days" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+      <% [1, 2, 3, 7, 14].forEach(n => { %><option value="<%= n %>" <%= n === days ? 'selected' : '' %>><%= n === 1 ? '24 hours' : `${n} days` %></option><% }) %>
+    </select>
+    <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Compare</button>
+  </form>
+
+  <%# Per kind %>
+  <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-800">
+        <tr>
+          <% ['Notification', 'Paperless', 'Matched', 'Missing', 'Extra', 'Pending'].forEach(h => { %>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= h %></th>
+          <% }) %>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+        <% Object.entries(live.kinds).forEach(([kind, k]) => { %>
+          <tr>
+            <td class="px-4 py-3 text-gray-900 dark:text-white"><%= k.label %></td>
+            <td class="px-4 py-3 text-gray-500 dark:text-gray-400"><%= k.workflow %></td>
+            <td class="px-4 py-3 text-green-700 dark:text-green-400"><%= k.matched.length %></td>
+            <td class="px-4 py-3 <%= k.missing.length ? 'text-red-700 dark:text-red-400 font-semibold' : 'text-gray-400' %>"><%= k.missing.length %></td>
+            <td class="px-4 py-3 <%= k.extra.length ? 'text-red-700 dark:text-red-400 font-semibold' : 'text-gray-400' %>"><%= k.extra.length %></td>
+            <td class="px-4 py-3 <%= k.pending.length ? 'text-amber-700 dark:text-amber-400' : 'text-gray-400' %>"><%= k.pending.length %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <%# Mismatches %>
+  <% const anyIssues = Object.values(live.kinds).some(k => k.missing.length || k.extra.length || k.pending.length); %>
+  <% if (anyIssues) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">To look at</h2>
+      <% Object.entries(live.kinds).forEach(([kind, k]) => { %>
+        <% BUCKETS.forEach(([bucket, label, cls]) => { if (!k[bucket].length) return; %>
+          <div>
+            <p class="text-sm font-medium <%= cls %>"><%= k.label %>: <%= label %></p>
+            <ul class="mt-1 divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+              <% k[bucket].forEach(i => { %>
+                <li class="py-2 flex flex-wrap items-center gap-2">
+                  <a href="/paperless/ocr/<%= i.paperlessId %>/entry" class="text-green-700 dark:text-green-400 hover:underline"><%= i.title || `#${i.paperlessId}` %></a>
+                  <span class="font-mono text-xs text-gray-400">#<%= i.paperlessId %></span>
+                  <% if (i.supplier) { %><span class="text-gray-500 dark:text-gray-400"><%= i.supplier %></span><% } %>
+                  <% if (i.at) { %><span class="text-xs text-gray-400"><%= fmtDay(i.at) %></span><% } %>
+                  <% if (plUrl(i.paperlessId)) { %><a href="<%= plUrl(i.paperlessId) %>" target="_blank" rel="noopener" class="ml-auto text-xs text-gray-500 hover:underline">Paperless <i class="bi bi-box-arrow-up-right"></i></a><% } %>
+                  <% if (i.wouldSend) { %><div class="w-full text-xs text-gray-500 dark:text-gray-400">hcs-app's post: <span class="font-mono"><%= i.wouldSend %></span></div><% } %>
+                </li>
+              <% }) %>
+            </ul>
+          </div>
+        <% }) %>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <%# Saved daily reports %>
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Daily reports</h2>
+    <% if (!saved.length) { %>
+      <p class="text-sm text-gray-400">None yet. The first is saved for yesterday within six hours of deploying.</p>
+    <% } else { %>
+      <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+        <% saved.forEach(r => { %>
+          <li class="py-2 flex flex-wrap items-center gap-3">
+            <span class="font-mono"><%= r.day %></span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full border <%= r.clean ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700' : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700' %>"><%= r.clean ? 'clean' : 'mismatch' %></span>
+            <span class="text-gray-500 dark:text-gray-400"><%= r.totals?.matched ?? 0 %> matched · <%= r.totals?.missing ?? 0 %> missing · <%= r.totals?.extra ?? 0 %> extra</span>
+            <span class="ml-auto text-xs text-gray-400"><%= r.mode || '' %></span>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+
+  <%# Cutover %>
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm text-gray-700 dark:text-gray-300">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Cutover (Jack decides)</h2>
+    <ol class="list-decimal ml-5 space-y-1">
+      <li>About a week of clean daily reports, and a few of hcs-app's posts above compared by eye with Discord (date format and wording).</li>
+      <li>The recipient emails and Discord webhook URL are set on <a href="/admin/config/document-notifications" class="text-green-700 dark:text-green-400 hover:underline">Document notifications</a>.</li>
+      <li>In Paperless, disable workflows 2, 3, 4, 5, 8 and 9 (statement, John, KashFlow, credit note, new document and re-send emails/posts).</li>
+      <li>In the same hour, set Mode to <strong>Live</strong> and turn <strong>Follow Paperless tags</strong> off on the <a href="/admin/config/paperless" class="text-green-700 dark:text-green-400 hover:underline">Paperless</a> page.</li>
+      <li>Later, once entry has fully moved to hcs-app, retire workflows 6 and 7. Keep workflow 1 and the mail rules.</li>
+    </ol>
+  </div>
+</div>

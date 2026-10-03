@@ -21,6 +21,8 @@ import __supplierCorrespondentSyncService from './paperless/supplierCorresponden
 import __grabServicePaperless from './grabServicePaperless.js';
 import __documentIngestService from './paperless/documentIngestService.js';
 import __documentNotifyService from './paperless/documentNotifyService.js';
+import __shadowReportService from './paperless/shadowReportService.js';
+import __mdbForJobs from './mongooseDatabaseService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -147,6 +149,20 @@ function registerAll() {
     intervalMs: 15 * MINUTE,
     initialDelayMs: 90_000,
     run: () => __documentNotifyService.retryFailed(),
+  });
+
+  scheduler.register('paperless-shadow-report', {
+    description:
+      'Save the comparison for yesterday of what hcs-app would have sent against what '
+      + 'Paperless actually sent (Paperless migration H8), for the shadow-run week '
+      + 'before cutover. Replaces the saved report for that day if run again.',
+    intervalMs: 6 * HOUR,
+    initialDelayMs: 120_000,
+    run: async () => {
+      await __mdbForJobs.connect();
+      const { OcrDocument, NotificationLog, ShadowReport } = __mdbForJobs.PAPERLESS;
+      return __shadowReportService.saveDailyReport({ OcrDocument, NotificationLog, ShadowReport });
+    },
   });
 
   scheduler.register('paperless-correspondent-sync', {

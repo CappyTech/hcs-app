@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.0] - 2026-10-03
+
+### Added
+- **Paperless migration H8: shadow report** at `/paperless/shadow-report`, linked from the queues. It compares what hcs-app recorded it would send with what Paperless actually sent, using Paperless's `notified/*` tags as the evidence for the email to John, the added-to-KashFlow post, the statement and credit note emails, and new-document posts.
+  - **For each notification**, it lists what matched, what Paperless sent that hcs-app missed, what hcs-app would send that Paperless didn't, and what's too recent to judge.
+  - **Each mismatch** links to the document and shows hcs-app's post, so it can be compared by eye with Discord.
+  - **What's left out:** backfill history isn't counted. Re-sends to John are counted but can't be compared, because Paperless leaves no trace of them.
+- **`paperless-shadow-report` job:** saves each day's report, so the shadow-run week can be read back as it was. The page lists the last 14 days and has the cutover checklist.
+
 ## [6.48.2] - 2026-10-03
 
 ### Changed
