@@ -49,6 +49,11 @@ export const PAPERLESS_TAGS = {
     id: envId('PAPERLESS_TAG_DATA_ENTRY_DONE_ID', 1),
     names: ['data entry done', 'data-entry-done', 'data_entry_done'],
   },
+  /** Manual re-send to John (WF9). Added by hcs-app's Resend button until cutover. */
+  notify: {
+    id: envId('PAPERLESS_TAG_NOTIFY_ID', 10),
+    names: ['notify'],
+  },
   /** WF2 has emailed Bev the supplier statement (C2a). Read at ingest to classify. */
   notifiedAdminStatement: {
     id: envId('PAPERLESS_TAG_NOTIFIED_STATEMENT_ID', 21),

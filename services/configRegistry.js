@@ -76,6 +76,7 @@ export const GROUPS = [
       { key: 'PAPERLESS_REMOTE_PORT', label: 'Paperless port (from SSH box)', type: 'number', restart: true, help: 'Default 8000.' },
       // Ingest
       { key: 'PAPERLESS_WEBHOOK_SECRET', label: 'Webhook secret', type: 'secret', help: 'Shared secret the Paperless "Document added" workflow sends to `POST /api/paperless/webhook`, as `Authorization: Bearer …` or `X-Webhook-Secret`. Unset turns the webhook off (503).' },
+      { key: 'PAPERLESS_FOLLOW_TAGS', label: 'Follow Paperless tags', type: 'boolean', help: 'Until cutover, move a document forward when its Paperless tags say it has progressed (data entry done, added, credit note, statement emailed). Default on. Turn off at cutover (H8).' },
       { key: 'PAPERLESS_RECONCILE_LOOKBACK_HOURS', label: 'Reconcile lookback (hours)', type: 'number', help: 'How far back the ingest reconciliation job looks for documents a webhook may have missed. Default 48.' },
       { key: 'PAPERLESS_PAGE_SIZE', label: 'Page size', type: 'number', help: 'Documents fetched per page during a grab. Default 50.' },
       { key: 'PAPERLESS_CONCURRENCY', label: 'Concurrency', type: 'number', help: 'Documents processed in parallel during a grab. Default 5.' },
@@ -83,6 +84,18 @@ export const GROUPS = [
       { key: 'PAPERLESS_CF_CACHE_MS', label: 'Custom-field cache (ms)', type: 'number', restart: true, help: 'How long custom-field definitions are cached. Read once at import.' },
       // Diagnostics
       { key: 'PAPERLESS_VERBOSE', label: 'Verbose logging', type: 'boolean', help: 'Log every Paperless request and response body snippet.' },
+    ],
+  },
+  {
+    id: 'document-notifications',
+    label: 'Document notifications',
+    icon: 'bi-bell-fill',
+    description: 'The emails and Discord posts for Paperless documents (migration H6). Shadow mode records what would be sent without sending.',
+    keys: [
+      { key: 'NOTIFY_MODE', label: 'Mode', type: 'text', help: '`shadow` (default) records what would be sent and sends nothing, while Paperless keeps sending. `live` sends. Switch at cutover (H8), the same hour Paperless WF2, 3, 4, 5, 8 and 9 are disabled.' },
+      { key: 'NOTIFY_JOHN_EMAIL', label: 'John’s email', type: 'text', help: 'Gets each purchase invoice once entry is complete, and re-sends.' },
+      { key: 'NOTIFY_ADMIN_EMAIL', label: 'Admin (Bev) email', type: 'text', help: 'Gets supplier statements once reviewed, and credit notes once flagged.' },
+      { key: 'DISCORD_WEBHOOK_URL', label: 'Discord webhook URL', type: 'secret', help: 'Where document posts go. Unset: posts are skipped and logged.' },
     ],
   },
   {

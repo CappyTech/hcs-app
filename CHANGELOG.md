@@ -2,6 +2,33 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.47.0] - 2026-10-03
+
+### Added
+- **Paperless migration H6: document notifications.** hcs-app now has its own versions of the six Paperless notification workflows (WF2, 3, 4, 5, 8, 9), using their exact email and Discord text. Each email has the PDF attached, and they're sent as "Heron CS | Documents".
+  - **Exactly once:** a one-shot notification is claimed in NotificationLog before it's sent, so it can't fire twice. A re-send to John is logged on every click.
+  - **Shadow mode by default:** `NOTIFY_MODE=shadow` records what would be sent and sends nothing, while Paperless keeps sending. Switch to `live` at cutover.
+  - **Retries:** in live mode, failed sends are retried by the new `paperless-notification-retry` job. It resends only the email or post that failed, with backoff, up to 5 attempts.
+- **Triggers:**
+
+  | Notification | Sent when |
+  |---|---|
+  | New document post | A document arrives |
+  | Email to John | Complete entry |
+  | Re-send to John | The new Resend to John button |
+  | Added-to-KashFlow post | A successful KashFlow send |
+  | Credit note email to Bev | Marked as a credit note |
+  | Statement email to Bev | The new Mark reviewed button on supplier statements |
+
+- **Following Paperless until cutover:** when a document's tags show progress made in Paperless, hcs-app moves it forward and records the notification it would have sent. That covers `data entry done`, `added`, a credit note, and a statement already emailed. It never moves a document backwards, and `PAPERLESS_FOLLOW_TAGS=false` turns it off.
+- **The entry screen lists each document's notifications.**
+- **Email attachments:** `emailService.sendMail` now takes attachments and a sender display name, over both SMTP and Microsoft Graph. Graph is limited to 3 MB per attachment.
+- **New settings:** a Document notifications settings page with `NOTIFY_MODE`, `NOTIFY_JOHN_EMAIL`, `NOTIFY_ADMIN_EMAIL` and `DISCORD_WEBHOOK_URL`, plus `PAPERLESS_FOLLOW_TAGS` on the Paperless page.
+
+### Changed
+- **A successful KashFlow send now moves the invoice to `sent`.** If it was sent straight from the draft screen, it goes through `entered` first.
+- **Unlinking from KashFlow moves the invoice back to `entered` and removes the `added` tag in Paperless.** `notified/kashflow` is kept, so a later re-send isn't announced twice.
+
 ## [6.46.0] - 2026-10-03
 
 ### Added

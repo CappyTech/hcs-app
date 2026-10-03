@@ -44,9 +44,9 @@ export async function claimOneShot(NotificationLog, paperlessId, kind, { actor =
 }
 
 /** Record a repeatable notification (e.g. a re-send to John). Always inserts. */
-export async function recordRepeatable(NotificationLog, paperlessId, kind, { actor = null, mode = null } = {}) {
+export async function recordRepeatable(NotificationLog, paperlessId, kind, { actor = null, mode = null, source = 'app' } = {}) {
   if (!REPEATABLE_KINDS.includes(kind)) throw new Error(`"${kind}" is not a repeatable notification kind`);
-  return NotificationLog.create({ paperlessId, kind, mode, triggeredBy: storedActor(actor) });
+  return NotificationLog.create({ paperlessId, kind, mode, source, triggeredBy: storedActor(actor) });
 }
 
 /** Record how a claimed/recorded notification went. */

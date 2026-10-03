@@ -33,10 +33,15 @@ const NotificationLogSchema = new mongoose.Schema({
   // claimed → sent | shadow | failed; `recorded` = historical entry from the H7 backfill
   status: { type: String, enum: ['claimed', 'sent', 'shadow', 'failed', 'recorded'], default: 'claimed', index: true },
   mode: { type: String, enum: ['shadow', 'live', null], default: null },
-  source: { type: String, enum: ['app', 'backfill'], default: 'app' },
+  // app = an hcs-app action; paperless = hcs-app following a Paperless tag
+  // change before cutover (H6); backfill = the H7 migration
+  source: { type: String, enum: ['app', 'paperless', 'backfill'], default: 'app' },
   channels: { type: [ChannelResultSchema], default: [] },
   triggeredBy: { type: ActorSchema, default: null },
   error: { type: String, default: null },
+  // Live sends that failed are retried by the paperless-notification-retry job
+  attempts: { type: Number, default: 0 },
+  lastAttemptAt: { type: Date, default: null },
 }, { timestamps: true });
 
 NotificationLogSchema.pre('validate', function setOneShot(next) {

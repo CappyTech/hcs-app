@@ -20,6 +20,7 @@ import __bankStrandedLineService from './bankStrandedLineService.js';
 import __supplierCorrespondentSyncService from './paperless/supplierCorrespondentSyncService.js';
 import __grabServicePaperless from './grabServicePaperless.js';
 import __documentIngestService from './paperless/documentIngestService.js';
+import __documentNotifyService from './paperless/documentNotifyService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -136,6 +137,16 @@ function registerAll() {
     intervalMs: 15 * MINUTE,
     initialDelayMs: 75_000,
     run: () => __documentIngestService.reconcileRecentDocuments(),
+  });
+
+  scheduler.register('paperless-notification-retry', {
+    description:
+      'Resend document emails and Discord posts that failed in live mode '
+      + '(NOTIFY_MODE=live), only the channels that failed, with backoff, up to '
+      + '5 attempts. Does nothing in shadow mode.',
+    intervalMs: 15 * MINUTE,
+    initialDelayMs: 90_000,
+    run: () => __documentNotifyService.retryFailed(),
   });
 
   scheduler.register('paperless-correspondent-sync', {

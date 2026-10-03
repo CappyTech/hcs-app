@@ -46,6 +46,8 @@ import __kashflowSessionService from '../../services/kashflowSessionService.js';
 import kfVat from '../../services/kashflowVatService.js';
 import __paperlessClient_ from '../services/paperless/paperlessClient.js';
 import __ocrOrphanService from '../services/ocrOrphanService.js';
+import documentEntry from '../services/paperless/documentEntryService.js';
+import { actorFromUser } from '../services/paperless/documentStateService.js';
 import hcsSync from '../services/hcsSyncService.js';
 
 // Helpers
@@ -1230,6 +1232,9 @@ export const sendDraftToKashflow = async (req, res, next) => {
             `Post-send ingest failed for paperlessId=${paperlessId}: ${e.message}`,
           );
         }
+
+        // H6: state → sent and the "added to kashflow" post (shadow until cutover)
+        await documentEntry.recordSentToKashflow(OcrDocument, paperlessId, actorFromUser(req.user));
       } catch (sendErr) {
         const status = sendErr?.response?.status;
         const data = sendErr?.response?.data;
@@ -1351,6 +1356,12 @@ export const sendDraftToKashflow = async (req, res, next) => {
           logger.warn(
             `Post-webhook ingest failed for paperlessId=${paperlessId}: ${e.message}`,
           );
+        }
+
+        // H6: only when the creator actually returned a purchase
+        const _linked = await OcrDocument.findOne({ paperlessId }).select('kashflowPurchaseId kashflowPurchaseNumber').lean().catch(() => null);
+        if (_linked?.kashflowPurchaseId != null || _linked?.kashflowPurchaseNumber != null) {
+          await documentEntry.recordSentToKashflow(OcrDocument, paperlessId, actorFromUser(req.user));
         }
       } catch (sendErr) {
         const status = sendErr?.response?.status;
@@ -1814,6 +1825,13 @@ export const unlinkKashflow = async (req, res, next) => {
     } catch (updateErr) {
       logger.warn(`[paperless] Could not clear Paperless custom fields for doc ${paperlessId}: ${updateErr.message}`);
     }
+    // H6: no longer in KashFlow, so back to Ready for KashFlow. Remove `added`
+    // too, or following Paperless's tags would move it straight back to sent.
+    // notified/kashflow stays, so a later re-send isn't announced twice.
+    await modifyPaperlessDocumentTags(paperlessId, { remove: ['added'] }).catch((e) => {
+      logger.warn(`[paperless] Could not remove "added" from doc ${paperlessId}: ${e.message}`);
+    });
+    await documentEntry.recordUnlinked(OcrDocument, paperlessId, actorFromUser(req.user), { note: 'KashFlow link removed' });
     logger.info(`[paperless] Unlinked KashFlow linkage for paperlessId=${paperlessId}`);
     req.flash('success', `KashFlow link removed from document #${paperlessId}.`);
     res.redirect(`/paperless/ocr/${paperlessId}`);
