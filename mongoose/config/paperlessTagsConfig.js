@@ -54,6 +54,11 @@ export const PAPERLESS_TAGS = {
     id: envId('PAPERLESS_TAG_NOTIFY_ID', 10),
     names: ['notify'],
   },
+  /** WF3 has emailed John the invoice (E1). Read by the H7 backfill. */
+  notifiedJohn: {
+    id: envId('PAPERLESS_TAG_NOTIFIED_JOHN_ID', 19),
+    names: ['notified/john', 'john'],
+  },
   /** WF2 has emailed Bev the supplier statement (C2a). Read at ingest to classify. */
   notifiedAdminStatement: {
     id: envId('PAPERLESS_TAG_NOTIFIED_STATEMENT_ID', 21),

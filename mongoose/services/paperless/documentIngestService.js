@@ -95,10 +95,10 @@ export function initialStateFromPaperless(doc) {
  * The compare-and-set filter and update that classify `doc`, or null when
  * there is nothing to set. Pure.
  */
-export function buildClassifyUpdate(doc, { now = new Date() } = {}) {
+export function buildClassifyUpdate(doc, { now = new Date(), action = 'classify', note = CLASSIFY_NOTE } = {}) {
   const plan = initialStateFromPaperless(doc);
   const stamp = { at: now, by: storedSystem };
-  const entry = (field, from, to) => ({ field, from, to, action: 'classify', at: now, by: storedSystem, note: CLASSIFY_NOTE });
+  const entry = (field, from, to) => ({ field, from, to, action, at: now, by: storedSystem, note });
 
   if (plan.processingState) {
     const $set = { processingState: plan.processingState, processingStateChanged: stamp, classifiedAt: now };

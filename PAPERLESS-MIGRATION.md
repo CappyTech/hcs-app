@@ -80,6 +80,22 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - `{{created}}` is rendered as `YYYY-MM-DD`.
   - A missing correspondent is rendered as `None`.
 
+- **H7 backfill rules:**
+  - The state comes from `initialStateFromPaperless()`, the same function as H3.
+  - A document that already has a state is never changed, apart from stamping a missing `classifiedAt`. hcs-app's own state wins, and following Paperless handles any later progress.
+  - The legacy `credit/refund` tag (8) alone does **not** make a credit note. Only tag 22 or field 58 does, as in the H7 table.
+  - Paperless's "new document" post isn't recorded for old documents, because WF8 only existed from 29 Sep. Old documents never trigger `new_doc` anyway; that only fires on arrival.
+  - Documents deleted in Paperless are skipped.
+
+### 0c. Running the H7 backfill (⏸ Jack)
+
+Inside the hcs-app container on server2:
+
+1. `docker exec -it hcs-app node scripts/paperless-backfill.js --grab` runs a dry run after refreshing every document from Paperless. Read the report: invoices by state, exclusions, statements, and notification records.
+2. `docker exec -it hcs-app node scripts/paperless-backfill.js --apply` writes.
+3. Run step 2 again. Every count should be 0 and "Documents with nothing to do" should equal the documents read.
+4. Check `/paperless/queues`. Needs Data Entry, Ready for KashFlow and Statements to Review should match Paperless views 12, 4 and 13, and the "not classified yet" note should be gone.
+
 ### 0b. H3 setup in Paperless (⏸ Jack, at deploy)
 
 1. Set `PAPERLESS_WEBHOOK_SECRET` in hcs-app to a long random value. The endpoint answers 503 until you do.
