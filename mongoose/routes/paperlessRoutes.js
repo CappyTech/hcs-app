@@ -45,6 +45,8 @@ router.get("/paperless/ocr/:paperlessId/entry", ...paperlessGuard, entryCtrl.get
 router.post("/paperless/ocr/:paperlessId/entry", ...paperlessGuard, entryCtrl.postEntry);
 router.post("/paperless/ocr/:paperlessId/credit-note", ...paperlessGuard, entryCtrl.postCreditNote);
 router.post("/paperless/ocr/:paperlessId/reopen", ...paperlessGuard, entryCtrl.postReopen);
+router.post("/paperless/ocr/:paperlessId/resend-john", ...paperlessGuard, entryCtrl.postResendJohn);
+router.post("/paperless/ocr/:paperlessId/reviewed", ...paperlessGuard, entryCtrl.postReviewed);
 router.get("/paperless/ocr/:paperlessId/file", ...paperlessGuard, entryCtrl.getFile);
 
 router.get("/paperless/ocr", ...paperlessGuard, ctrl.listOcr);

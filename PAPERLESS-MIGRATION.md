@@ -60,6 +60,26 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
 - **H5 Complete entry needs** an invoice number, invoice date, invoice total and at least one line with a description and a total. Totals that don't add up are warnings, not blockers; the KashFlow send validates again. Unit prices keep 4 decimal places.
 - **H5 file route** is `GET /paperless/ocr/:paperlessId/file` rather than `/documents/:paperlessId/file`, to sit under the existing Paperless guard and route prefix.
 
+- **H6: hcs-app follows Paperless tag changes until cutover** (agreed 3 Oct 2026). When an ingest sees that a document has progressed in Paperless, the state moves forward as the system user, and the matching notification is recorded with `source: 'paperless'`:
+  - `data entry done` → entered
+  - `added` → sent
+  - tag 22 or field 58 → manual_kashflow
+  - tag 21 → reviewed
+
+  It never moves backwards. Without this, the shadow run would only see documents handled in hcs-app. `PAPERLESS_FOLLOW_TAGS=false` turns it off at cutover.
+- **H6 triggers:**
+  - **new_doc:** fired by the webhook, or by reconciliation for a document *added* inside its lookback window.
+  - **john:** Complete entry. Purchase Invoices only, as WF3.
+  - **john_resend:** the Resend button. Until cutover it also adds the `notify` tag, so Paperless (WF9) sends.
+  - **kashflow:** a successful send.
+  - **credit_note:** flagging. Purchase Invoices only, as WF5. One-shot, so flagging again after an admin unflags doesn't re-email Bev.
+  - **statement:** Mark reviewed. This doesn't tag Paperless, because adding tag 21 would stop WF2 emailing Bev before cutover.
+- **H6 unlink** removes `added` in Paperless as well as moving `sent` → `entered`. Otherwise following the tags would move it straight back. `notified/kashflow` stays.
+- **H6 failures:** a live send that fails stays `failed`, with per-channel results. The `paperless-notification-retry` job resends only the failed channels, with backoff from 10 minutes doubling, up to 5 attempts.
+- **Check in the H8 shadow comparison** two template details that weren't confirmed against live Paperless:
+  - `{{created}}` is rendered as `YYYY-MM-DD`.
+  - A missing correspondent is rendered as `None`.
+
 ### 0b. H3 setup in Paperless (⏸ Jack, at deploy)
 
 1. Set `PAPERLESS_WEBHOOK_SECRET` in hcs-app to a long random value. The endpoint answers 503 until you do.

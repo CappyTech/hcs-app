@@ -199,6 +199,14 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
             <p class="text-gray-500 dark:text-gray-400">Already in KashFlow as a purchase. Unlink it before marking it as a credit note.</p>
           <% } %>
 
+          <% if (/purchase/i.test(doc.documentType?.name || '') && (state === 'entered' || state === 'sent')) { %>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/resend-john" class="pt-3 border-t border-gray-100 dark:border-gray-700">
+              <%- include('../partials/csrfHidden') %>
+              <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-envelope"></i> Resend to John</button>
+              <p class="text-xs text-gray-400 mt-1">Emails John the invoice again, every time it's clicked.</p>
+            </form>
+          <% } %>
+
           <% if (isAdmin && state === 'entered') { %>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reopen" class="pt-3 border-t border-gray-100 dark:border-gray-700">
               <%- include('../partials/csrfHidden') %>
@@ -241,14 +249,60 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
         </form>
 
       <% } else if (kind === 'statement') { %>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm text-gray-700 dark:text-gray-300">
-          Supplier statements have no fields to enter. Marking one reviewed arrives with the notification step (H6); until then Bev is still emailed by Paperless.
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm text-gray-700 dark:text-gray-300 space-y-3">
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Supplier statement</h2>
+          <% if (doc.statementReviewed) { %>
+            <p><i class="bi bi-check-circle-fill text-green-600"></i> Reviewed<%= doc.statementReviewedChanged?.at ? ` on ${new Date(doc.statementReviewedChanged.at).toLocaleDateString('en-GB')}` : '' %><%= doc.statementReviewedChanged?.by?.name ? ` by ${doc.statementReviewedChanged.by.name}` : '' %>.</p>
+          <% } else { %>
+            <p>Statements have no fields to enter. Marking it reviewed takes it out of Statements to Review and emails Bev.</p>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reviewed">
+              <%- include('../partials/csrfHidden') %>
+              <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition"><i class="bi bi-check2"></i> Mark reviewed</button>
+            </form>
+          <% } %>
         </div>
       <% } else { %>
         <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
           This type of document has no fields to enter.
         </div>
       <% } %>
+
+      <%# Notifications (H6) %>
+      <%
+        const KIND_LABELS = { new_doc: 'New document (Discord)', john: 'Emailed to John', john_resend: 'Re-sent to John', kashflow: 'Added to KashFlow (Discord)', statement: 'Statement emailed to Bev', credit_note: 'Credit note emailed to Bev' };
+        const STATUS_BADGE = {
+          sent:     'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
+          shadow:   'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
+          failed:   'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
+          claimed:  'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
+          recorded: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
+        };
+        const STATUS_LABEL = { shadow: 'would send', recorded: 'from Paperless' };
+        const notifyList = locals.notifications || [];
+      %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm">
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Notifications</h2>
+        <% if ((locals.notifyMode || 'shadow') === 'shadow') { %>
+          <p class="text-xs text-gray-400 mb-2">Shadow mode: hcs-app records what it would send, and Paperless still does the sending.</p>
+        <% } %>
+        <% if (!notifyList.length) { %>
+          <p class="text-gray-400">None yet.</p>
+        <% } else { %>
+          <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% notifyList.forEach(n => { %>
+              <li class="py-2 flex flex-wrap items-center gap-2">
+                <span class="text-gray-700 dark:text-gray-300"><%= KIND_LABELS[n.kind] || n.kind %></span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full border <%= STATUS_BADGE[n.status] || STATUS_BADGE.shadow %>"><%= STATUS_LABEL[n.status] || n.status %></span>
+                <% if (n.source === 'paperless') { %><span class="text-[11px] text-gray-400">after a Paperless change</span><% } %>
+                <span class="ml-auto text-xs text-gray-400"><%= n.createdAt ? new Date(n.createdAt).toLocaleString('en-GB') : '' %></span>
+                <% (n.channels || []).filter(c => c.status === 'failed').forEach(c => { %>
+                  <div class="w-full text-xs text-red-700 dark:text-red-400"><%= c.channel %>: <%= c.error %></div>
+                <% }) %>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
     </div>
   </div>
 </div>

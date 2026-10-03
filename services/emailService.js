@@ -108,10 +108,19 @@ async function verifyGraphAuth() {
  * The sending mailbox is the sender in the URL; the app must hold Mail.Send
  * scoped to it via an Application Access Policy.
  */
-async function sendViaGraph({ from, to, subject, html, text }) {
+// Graph's sendMail takes attachments inline up to about 3 MB each; anything
+// larger needs an upload session, which this sender doesn't do.
+const GRAPH_INLINE_ATTACHMENT_MAX = 3 * 1024 * 1024;
+
+async function sendViaGraph({ from, fromName = null, to, subject, html, text, attachments = [] }) {
   const token = await getGraphToken();
   if (!token) throw new Error("Microsoft Graph is not configured.");
   const sender = configService.get("GRAPH_MAIL_SENDER") || from;
+  for (const a of attachments) {
+    if (a.content && a.content.length > GRAPH_INLINE_ATTACHMENT_MAX) {
+      throw new Error(`Attachment "${a.filename}" is ${Math.round(a.content.length / 1024)} KB, over Microsoft Graph's 3 MB inline limit.`);
+    }
+  }
   const recipients = String(to)
     .split(/[,;]/)
     .map((s) => s.trim())
@@ -127,7 +136,24 @@ async function sendViaGraph({ from, to, subject, html, text }) {
   try {
     await axios.post(
       url,
-      { message: { subject, body, toRecipients: recipients }, saveToSentItems: false },
+      {
+        message: {
+          subject,
+          body,
+          toRecipients: recipients,
+          // The display name is honoured where the mailbox allows it; the address is always the sender's
+          ...(fromName ? { from: { emailAddress: { address: sender, name: fromName } } } : {}),
+          ...(attachments.length ? {
+            attachments: attachments.map((a) => ({
+              "@odata.type": "#microsoft.graph.fileAttachment",
+              name: a.filename,
+              contentType: a.contentType || "application/octet-stream",
+              contentBytes: Buffer.from(a.content).toString("base64"),
+            })),
+          } : {}),
+        },
+        saveToSentItems: false,
+      },
       { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, timeout: 20000 },
     );
     logger.info(`[emailService] Email sent to ${to} via Microsoft Graph (as ${sender})`);
@@ -207,12 +233,14 @@ function getTransporter() {
  * (or a message replayed out of the outbox after being wrapped once) is not
  * double-wrapped.
  */
-async function sendMail({ to, subject, html, text, preheader }) {
+async function sendMail({ to, subject, html, text, preheader, attachments = [], fromName = null }) {
   const from =
     configService.get("GRAPH_MAIL_SENDER") ||
     configService.get("SMTP_FROM") ||
     configService.get("SMTP_USER") ||
     "noreply@heroncs.co.uk";
+  // `fromName` sets the display name only, e.g. "Heron CS | Documents"
+  const fromHeader = fromName ? { name: fromName, address: String(from).replace(/^.*<([^>]+)>.*$/, "$1") } : from;
 
   if (html != null && !emailLayout.isDocument(html)) {
     html = emailLayout.renderDocument({
@@ -226,7 +254,7 @@ async function sendMail({ to, subject, html, text, preheader }) {
 
   if (transport === "graph") {
     try {
-      return await sendViaGraph({ from, to, subject, html, text });
+      return await sendViaGraph({ from, fromName, to, subject, html, text, attachments });
     } catch (err) {
       logger.error(`[emailService] Failed to send email to ${to} via Microsoft Graph: ${err.message}`, { stack: err.stack });
       throw err;
@@ -237,7 +265,10 @@ async function sendMail({ to, subject, html, text, preheader }) {
     const transporter = getTransporter();
     if (transporter) {
       try {
-        const info = await transporter.sendMail({ from, to, subject, html, text });
+        const info = await transporter.sendMail({
+          from: fromHeader, to, subject, html, text,
+          ...(attachments.length ? { attachments: attachments.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType })) } : {}),
+        });
         logger.info(`[emailService] Email sent to ${to} — messageId: ${info.messageId}`);
         return info;
       } catch (err) {

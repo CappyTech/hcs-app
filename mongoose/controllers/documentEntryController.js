@@ -7,6 +7,8 @@
  *   POST /paperless/ocr/:paperlessId/entry        save | addLine | complete
  *   POST /paperless/ocr/:paperlessId/credit-note  flag=on|off
  *   POST /paperless/ocr/:paperlessId/reopen       admin: back to Needs Data Entry
+ *   POST /paperless/ocr/:paperlessId/resend-john  re-send the invoice to John (H6)
+ *   POST /paperless/ocr/:paperlessId/reviewed     mark a supplier statement reviewed (H6)
  *   GET  /paperless/ocr/:paperlessId/file         the PDF, streamed from Paperless
  */
 
@@ -16,6 +18,7 @@ import mdb from '../services/mongooseDatabaseService.js';
 import entry from '../services/paperless/documentEntryService.js';
 import { actorFromUser } from '../services/paperless/documentStateService.js';
 import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
+import notifySvc from '../services/paperless/documentNotifyService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import logger from '../../services/loggerService.js';
 
@@ -37,7 +40,7 @@ async function loadDoc(paperlessId) {
   return { OcrDocument, doc: await OcrDocument.findOne({ paperlessId }).lean() };
 }
 
-function render(req, res, doc, { values = null, errors = {}, status = 200, extraLines = 0 } = {}) {
+async function render(req, res, doc, { values = null, errors = {}, status = 200, extraLines = 0 } = {}) {
   const kind = entry.entryKind(doc);
   const v = values || entry.formValues(doc);
   const lineCount = Math.max((v.lines || []).length, 1) + extraLines;
@@ -52,6 +55,8 @@ function render(req, res, doc, { values = null, errors = {}, status = 200, extra
     isAdmin: req.user?.role === 'admin',
     locked: doc.processingState === 'sent',
     paperlessUiBase: paperlessUiBase(),
+    notifications: await notifySvc.historyFor(mdb.PAPERLESS?.NotificationLog, doc.paperlessId).catch(() => []),
+    notifyMode: notifySvc.notifyMode(),
   });
 }
 
@@ -66,7 +71,7 @@ export const getEntry = async (req, res, next) => {
       const c = await entry.ensureClassified(OcrDocument, id);
       if (c.classified) doc = await OcrDocument.findOne({ paperlessId: id }).lean();
     }
-    render(req, res, doc, { extraLines: req.query.extraLines === '1' ? 1 : 0 });
+    await render(req, res, doc, { extraLines: req.query.extraLines === '1' ? 1 : 0 });
   } catch (err) {
     logger.error(`[documentEntry] GET ${req.params.paperlessId}: ${err.message}`);
     next(err);
@@ -89,7 +94,7 @@ export const postEntry = async (req, res, next) => {
       const values = kind === 'bank'
         ? { source: 'form', bank: req.body.bank || {} }
         : { source: 'form', ...req.body, lines: Array.isArray(req.body.lines) ? req.body.lines : Object.values(req.body.lines || {}) };
-      return render(req, res, doc, { values, errors, status: 422 });
+      return await render(req, res, doc, { values, errors, status: 422 });
     }
 
     const saved = await entry.saveEntry(OcrDocument, id, parsed, actor);
@@ -104,7 +109,7 @@ export const postEntry = async (req, res, next) => {
       const done = await entry.completeEntry(OcrDocument, id, actor);
       if (!done.ok) {
         if (done.reason === 'incomplete') {
-          return render(req, res, saved.doc, { errors: done.errors, status: 422 });
+          return await render(req, res, saved.doc, { errors: done.errors, status: 422 });
         }
         req.flash('error', done.message);
         return res.redirect(entryUrl(id));
@@ -163,6 +168,42 @@ export const postReopen = async (req, res, next) => {
   }
 };
 
+export const postResendJohn = async (req, res, next) => {
+  try {
+    const id = idParam(req);
+    if (!id) return notFound(res);
+    await mdb.connect();
+    const r = await entry.resendToJohn(mdb.PAPERLESS.OcrDocument, id, actorFromUser(req.user));
+    if (!r.ok) {
+      req.flash('error', r.message);
+    } else {
+      req.flash('success', r.notification?.status === 'sent'
+        ? 'Re-sent to John.'
+        : 'Re-send requested. Paperless emails John until cutover.');
+      if (r.paperlessWarning) req.flash('error', r.paperlessWarning);
+    }
+    return res.redirect(entryUrl(id));
+  } catch (err) {
+    logger.error(`[documentEntry] resend-john ${req.params.paperlessId}: ${err.message}`);
+    next(err);
+  }
+};
+
+export const postReviewed = async (req, res, next) => {
+  try {
+    const id = idParam(req);
+    if (!id) return notFound(res);
+    await mdb.connect();
+    const r = await entry.markReviewed(mdb.PAPERLESS.OcrDocument, id, actorFromUser(req.user));
+    if (!r.ok) req.flash('error', r.message);
+    else req.flash('success', r.firstTime ? 'Marked reviewed.' : 'It was already marked reviewed.');
+    return res.redirect('/paperless/queues/statements');
+  } catch (err) {
+    logger.error(`[documentEntry] reviewed ${req.params.paperlessId}: ${err.message}`);
+    next(err);
+  }
+};
+
 /**
  * Stream the PDF from Paperless. Paperless stays the only file store: nothing
  * is written to disk, and the browser never sees the Paperless token.
@@ -199,4 +240,4 @@ export function makeGetFile(deps = {}) {
 
 export const getFile = makeGetFile();
 
-export default { getEntry, postEntry, postCreditNote, postReopen, getFile, makeGetFile };
+export default { getEntry, postEntry, postCreditNote, postReopen, postResendJohn, postReviewed, getFile, makeGetFile };

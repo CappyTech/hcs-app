@@ -20,7 +20,8 @@
  * saying what to do by hand.
  */
 
-import { transition, isInvoiceDocument } from './documentStateService.js';
+import { transition, isInvoiceDocument, markStatementReviewed } from './documentStateService.js';
+import { notifySafely } from './documentNotifyService.js';
 import { classifyDocument } from './documentIngestService.js';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
 import __paperlessUpdateService from './paperlessUpdateService.js';
@@ -275,6 +276,8 @@ const storedActor = (actor) => (actor ? { userId: actor.userId ?? null, name: ac
 const defaultDeps = () => ({
   modifyTags: (id, changes) => modifyPaperlessDocumentTags(id, changes),
   setFields: (id, pairs) => __paperlessClient.makeClient().setDocumentCustomFields([id], pairs),
+  // H6: in shadow mode this only records what would be sent
+  notify: (kind, id, opts) => notifySafely(kind, id, opts),
 });
 
 /**
@@ -330,7 +333,8 @@ export async function completeEntry(OcrDocument, paperlessId, actor, deps = {}) 
     () => d.modifyTags(paperlessId, { add: ['dataEntryDone'] }),
     'Add the "data entry done" tag in Paperless so John is emailed.',
   );
-  return { ...res, paperlessWarning };
+  const notification = await d.notify('john', paperlessId, { actor });
+  return { ...res, paperlessWarning, notification };
 }
 
 /** Credit Note checkbox (PB-9, PB-12). Unticking is admin-only. */
@@ -343,7 +347,9 @@ export async function setCreditNote(OcrDocument, paperlessId, flag, actor, deps 
     () => d.setFields(paperlessId, { 'Credit Note': flag ? 'true' : 'false' }),
     flag ? 'Tick Credit Note in Paperless so Bev is emailed.' : 'Untick Credit Note in Paperless.',
   );
-  return { ...res, paperlessWarning };
+  // One-shot: unflagging and flagging again does not email Bev a second time
+  const notification = flag ? await d.notify('credit_note', paperlessId, { actor }) : null;
+  return { ...res, paperlessWarning, notification };
 }
 
 /** Reopen entry (admin): back to Needs Data Entry, and untag Paperless. */
@@ -357,6 +363,73 @@ export async function reopenEntry(OcrDocument, paperlessId, actor, deps = {}) {
     'Remove the "data entry done" tag in Paperless.',
   );
   return { ...res, paperlessWarning };
+}
+
+/**
+ * Resend to John (PB-6): always sends and is logged every time. Until
+ * cutover it also adds the `notify` tag, so Paperless (WF9) does the sending.
+ */
+export async function resendToJohn(OcrDocument, paperlessId, actor, deps = {}) {
+  const d = { ...defaultDeps(), ...deps };
+  const doc = await OcrDocument.findOne({ paperlessId }).select('documentType').lean();
+  if (!doc) return { ok: false, reason: 'not-found', message: 'Document not found.' };
+  if (!isDocumentType(doc.documentType, 'purchaseInvoice')) {
+    return { ok: false, reason: 'not-applicable', message: 'Only purchase invoices are emailed to John.' };
+  }
+  const paperlessWarning = await tellPaperless(
+    `Adding "notify" to ${paperlessId}`,
+    () => d.modifyTags(paperlessId, { add: ['notify'] }),
+    'Add the "notify" tag in Paperless to re-send it.',
+  );
+  const notification = await d.notify('john_resend', paperlessId, { actor });
+  return { ok: true, paperlessWarning, notification };
+}
+
+/**
+ * Mark a supplier statement reviewed (PB-10). The first time emails Bev.
+ * Paperless isn't told: its WF2 already emails Bev on the first save there,
+ * and adding tag 21 from here would stop that email before cutover.
+ */
+export async function markReviewed(OcrDocument, paperlessId, actor, deps = {}) {
+  const d = { ...defaultDeps(), ...deps };
+  const res = await markStatementReviewed(OcrDocument, paperlessId, actor);
+  if (!res.ok) return res;
+  const notification = res.firstTime ? await d.notify('statement', paperlessId, { actor }) : null;
+  return { ...res, notification };
+}
+
+/**
+ * After a successful KashFlow send (D2): move the invoice to `sent`, via
+ * `entered` if it was sent straight from the draft screen, and fire the
+ * "added to kashflow" post (PB-8). Never throws: the purchase already exists.
+ */
+export async function recordSentToKashflow(OcrDocument, paperlessId, actor, deps = {}) {
+  const d = { ...defaultDeps(), ...deps };
+  try {
+    const doc = await OcrDocument.findOne({ paperlessId }).select('documentType processingState').lean();
+    if (doc?.processingState === 'awaiting_entry') {
+      await transition(OcrDocument, paperlessId, 'complete_entry', actor, { note: 'Sent to KashFlow from the draft screen' });
+    }
+    const after = await OcrDocument.findOne({ paperlessId }).select('processingState').lean();
+    if (after?.processingState === 'entered') {
+      await transition(OcrDocument, paperlessId, 'mark_sent', actor);
+    }
+  } catch (err) {
+    logger.warn(`[documentEntry] Recording the KashFlow send for ${paperlessId} failed: ${err.message}`);
+  }
+  return d.notify('kashflow', paperlessId, { actor });
+}
+
+/** After a KashFlow link is cleared (unlink or orphan clean-up): sent → entered. */
+export async function recordUnlinked(OcrDocument, paperlessId, actor, { note = null } = {}) {
+  try {
+    const doc = await OcrDocument.findOne({ paperlessId }).select('processingState').lean();
+    if (doc?.processingState !== 'sent') return { ok: false, reason: 'not-sent' };
+    return await transition(OcrDocument, paperlessId, 'unlink', actor, { note });
+  } catch (err) {
+    logger.warn(`[documentEntry] Recording the unlink for ${paperlessId} failed: ${err.message}`);
+    return { ok: false, reason: 'error' };
+  }
 }
 
 export default {
@@ -373,4 +446,8 @@ export default {
   completeEntry,
   setCreditNote,
   reopenEntry,
+  resendToJohn,
+  markReviewed,
+  recordSentToKashflow,
+  recordUnlinked,
 };

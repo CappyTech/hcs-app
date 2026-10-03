@@ -316,6 +316,8 @@ const routeAccess = {
   '/paperless/ocr/:paperlessId/entry':       ['admin'],
   '/paperless/ocr/:paperlessId/credit-note': ['admin'],
   '/paperless/ocr/:paperlessId/reopen':      ['admin'],
+  '/paperless/ocr/:paperlessId/resend-john': ['admin'],
+  '/paperless/ocr/:paperlessId/reviewed':    ['admin'],
   '/paperless/ocr/:paperlessId/file':        ['admin'],
   '/paperless/queues':                 ['admin'],
   '/paperless/queues/:queue':          ['admin'],
