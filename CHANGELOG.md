@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.45.1] - 2026-10-03
+
+### Fixed
+- **Statements to Review listed all 41 historical supplier statements.** `statementReviewed` defaults to false, so a statement nobody had classified yet looked unreviewed, even though Paperless shows every one was emailed to Bev (tag 21).
+  - Classification now stamps a new `classifiedAt` field on invoices and on every supplier statement, reviewed or not.
+  - The statements queue only holds statements that have been classified.
+  - The page's note now counts unclassified statements as well as invoices.
+  - Older statements join the queue only once the H7 backfill classifies them.
+
 ## [6.45.0] - 2026-10-03
 
 ### Added

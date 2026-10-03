@@ -41,7 +41,8 @@ export const QUEUES = {
     icon: 'bi-file-earmark-text',
     description: 'Supplier statements nobody has reviewed yet.',
     empty: 'No supplier statements are waiting for review.',
-    filter: () => ({ ...documentTypeQuery('supplierStatement'), statementReviewed: { $ne: true }, ...NOT_DELETED }),
+    // classifiedAt: a statement nobody has classified yet is not 'unreviewed'
+    filter: () => ({ ...documentTypeQuery('supplierStatement'), classifiedAt: { $ne: null }, statementReviewed: { $ne: true }, ...NOT_DELETED }),
   },
 };
 
@@ -58,11 +59,15 @@ export function queueFilter(key) {
 export const QUEUE_SORT = { added: 1, paperlessId: 1 };
 
 /**
- * Invoices with no state yet. Until the H7 backfill runs, older invoices sit
- * here rather than in a queue, and the page says so instead of looking empty.
+ * Documents not classified yet. Until the H7 backfill runs, older invoices and
+ * statements sit here rather than in a queue, and the page says so instead of
+ * looking empty.
  */
-export function unclassifiedFilter() {
-  return { ...invoiceTypes(), processingState: null, ...NOT_DELETED };
+export function unclassifiedFilters() {
+  return {
+    invoices: { ...invoiceTypes(), processingState: null, ...NOT_DELETED },
+    statements: { ...documentTypeQuery('supplierStatement'), classifiedAt: null, ...NOT_DELETED },
+  };
 }
 
 const LIST_FIELDS = 'paperlessId title correspondent documentType added created processingState excludedReason creditNote statementReviewed kashflowPurchaseNumber';
@@ -76,7 +81,7 @@ export function daysWaiting(from, now = new Date()) {
 
 /**
  * One page of a queue plus the counts for every queue.
- * @returns {Promise<{key, queue, docs, total, page, pages, counts, unclassified}>}
+ * @returns {Promise<{key, queue, docs, total, page, pages, counts, unclassified: {invoices, statements}}>}
  */
 export async function loadQueue(OcrDocument, key, { page = 1, pageSize = 50, now = new Date() } = {}) {
   const filter = queueFilter(key);
@@ -88,9 +93,10 @@ export async function loadQueue(OcrDocument, key, { page = 1, pageSize = 50, now
       .select(LIST_FIELDS)
       .lean(),
     Promise.all(QUEUE_KEYS.map(async (k) => [k, await OcrDocument.countDocuments(queueFilter(k))])),
-    OcrDocument.countDocuments(unclassifiedFilter()),
+    Promise.all(Object.entries(unclassifiedFilters()).map(async ([k, f]) => [k, await OcrDocument.countDocuments(f)])),
   ]);
   const counts = Object.fromEntries(countEntries);
+  const unclassifiedCounts = Object.fromEntries(unclassified);
   const total = counts[key];
   return {
     key,
@@ -100,7 +106,7 @@ export async function loadQueue(OcrDocument, key, { page = 1, pageSize = 50, now
     page,
     pages: Math.max(1, Math.ceil(total / pageSize)),
     counts,
-    unclassified,
+    unclassified: unclassifiedCounts,
   };
 }
 
@@ -110,4 +116,4 @@ export function paperlessUiBase() {
     || (process.env.PAPERLESS_BASE_URL || '').replace(/\/api\/?$/i, '')).replace(/\/+$/, '');
 }
 
-export default { QUEUES, QUEUE_KEYS, QUEUE_SORT, queueFilter, unclassifiedFilter, daysWaiting, loadQueue, paperlessUiBase };
+export default { QUEUES, QUEUE_KEYS, QUEUE_SORT, queueFilter, unclassifiedFilters, daysWaiting, loadQueue, paperlessUiBase };

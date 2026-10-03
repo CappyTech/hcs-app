@@ -21,6 +21,9 @@
  *   tag 4 / tag 11                    → excludedReason original_multiple / manually_added
  *   tag 21 (supplier statement)       → statementReviewed
  *
+ * Invoices and supplier statements also get classifiedAt, which is how a
+ * statement that isn't reviewed is told apart from one not classified yet.
+ *
  * Classification only ever fills an empty state (compare-and-set on
  * processingState: null), so a repeated webhook or a reconciliation pass over
  * a document already classified changes nothing. It writes no NotificationLog
@@ -86,7 +89,7 @@ export function buildClassifyUpdate(doc, { now = new Date() } = {}) {
   const entry = (field, from, to) => ({ field, from, to, action: 'classify', at: now, by: storedSystem, note: CLASSIFY_NOTE });
 
   if (plan.processingState) {
-    const $set = { processingState: plan.processingState, processingStateChanged: stamp };
+    const $set = { processingState: plan.processingState, processingStateChanged: stamp, classifiedAt: now };
     const history = [entry('processingState', null, plan.processingState)];
     if (plan.creditNote) {
       Object.assign($set, { creditNote: true, creditNoteChanged: stamp });
@@ -103,15 +106,16 @@ export function buildClassifyUpdate(doc, { now = new Date() } = {}) {
     };
   }
 
-  if (plan.statementReviewed) {
-    return {
-      filter: { paperlessId: doc.paperlessId, statementReviewed: { $ne: true } },
-      update: {
-        $set: { statementReviewed: true, statementReviewedChanged: stamp },
-        $push: { processingHistory: { $each: [entry('statementReviewed', false, true)] } },
-      },
-      result: plan,
-    };
+  // Supplier statements are always stamped, reviewed or not, so the
+  // Statements to Review queue only holds statements that were classified.
+  if (isDocumentType(doc?.documentType, 'supplierStatement')) {
+    const $set = { classifiedAt: now };
+    const update = { $set };
+    if (plan.statementReviewed && doc.statementReviewed !== true) {
+      Object.assign($set, { statementReviewed: true, statementReviewedChanged: stamp });
+      update.$push = { processingHistory: { $each: [entry('statementReviewed', false, true)] } };
+    }
+    return { filter: { paperlessId: doc.paperlessId, classifiedAt: null }, update, result: plan };
   }
 
   return null;
@@ -125,11 +129,11 @@ export function buildClassifyUpdate(doc, { now = new Date() } = {}) {
  */
 export async function classifyDocument(OcrDocument, paperlessId, { now = new Date() } = {}) {
   const doc = await OcrDocument.findOne({ paperlessId })
-    .select('paperlessId documentType tags customFields processingState statementReviewed deletedInPaperlessAt')
+    .select('paperlessId documentType tags customFields processingState statementReviewed classifiedAt deletedInPaperlessAt')
     .lean();
   if (!doc) return { classified: false, reason: 'not-found' };
   if (doc.deletedInPaperlessAt) return { classified: false, reason: 'deleted' };
-  if (doc.processingState) return { classified: false, reason: 'already-classified' };
+  if (doc.processingState || doc.classifiedAt) return { classified: false, reason: 'already-classified' };
 
   const built = buildClassifyUpdate(doc, { now });
   if (!built) return { classified: false, reason: 'nothing-to-set' };

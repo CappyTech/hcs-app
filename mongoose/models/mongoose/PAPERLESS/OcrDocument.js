@@ -97,6 +97,10 @@ const OcrDocumentSchema = new mongoose.Schema({
   excludedReason:           { type: String, enum: [...EXCLUDED_REASONS, null], default: null },
   excludedReasonChanged:    { type: ChangeStampSchema, default: null },
   processingHistory:        { type: [ProcessingHistorySchema], default: undefined },
+  // When H3 ingest or the H7 backfill first classified the document. A supplier
+  // statement has no processingState, so this is what tells "not reviewed"
+  // apart from "not classified yet" (statementReviewed defaults to false).
+  classifiedAt:             { type: Date, default: null },
 }, { timestamps: true });
 
 export default {

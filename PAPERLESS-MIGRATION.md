@@ -48,6 +48,7 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - **All queues:** leave out documents with `deletedInPaperlessAt` set. A trashed test document showed up during the H3 live test.
   - **Unclassified invoices** (no state yet, before H7) are counted in a note on the page rather than shown in a queue.
   - **Read-only:** the queue pages have no actions. Actions arrive with H5 and H6.
+- **`classifiedAt` (6.45.1).** Classification stamps it on invoices and supplier statements. A statement has no `processingState`, and `statementReviewed` defaults to false, so without the stamp all 41 historical statements showed as "to review". Statements to Review now requires `classifiedAt`, and **H7 must set it** on every invoice and statement it backfills.
 
 ### 0b. H3 setup in Paperless (⏸ Jack, at deploy)
 
