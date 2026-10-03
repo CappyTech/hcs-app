@@ -178,8 +178,8 @@ export const postResendJohn = async (req, res, next) => {
       req.flash('error', r.message);
     } else {
       req.flash('success', r.notification?.status === 'sent'
-        ? 'Re-sent to John.'
-        : 'Re-send requested. Paperless emails John until cutover.');
+        ? 'Invoice email re-sent.'
+        : 'Re-send requested. Paperless sends the invoice email until cutover.');
       if (r.paperlessWarning) req.flash('error', r.paperlessWarning);
     }
     return res.redirect(entryUrl(id));

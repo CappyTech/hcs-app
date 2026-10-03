@@ -170,7 +170,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
               <% } %>
             </div>
             <% if (state === 'awaiting_entry') { %>
-              <p class="text-xs text-gray-400">Complete entry saves, moves the invoice to Ready for KashFlow and tags it <em>data entry done</em> in Paperless, which emails John.</p>
+              <p class="text-xs text-gray-400">Complete entry saves, moves the invoice to Ready for KashFlow and tags it <em>data entry done</em> in Paperless, which sends the invoice email.</p>
             <% } %>
           <% } %>
         </form>
@@ -186,7 +186,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
                 <input type="hidden" name="flag" value="off">
                 <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition">Not a credit note (admin)</button>
               </form>
-              <p class="text-xs text-gray-400">Sends it back to Needs Data Entry. Bev isn't emailed again.</p>
+              <p class="text-xs text-gray-400">Sends it back to Needs Data Entry. The credit note email isn't sent again.</p>
             <% } %>
           <% } else if (state === 'awaiting_entry' || state === 'entered') { %>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note" class="flex items-center gap-3">
@@ -194,7 +194,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
               <input type="hidden" name="flag" value="on">
               <button type="submit" class="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-square"></i> Mark as credit note</button>
             </form>
-            <p class="text-xs text-gray-400">Takes it out of both invoice queues and sets Credit Note in Paperless, which emails Bev.</p>
+            <p class="text-xs text-gray-400">Takes it out of both invoice queues and sets Credit Note in Paperless, which sends the credit note email.</p>
           <% } else if (state === 'sent') { %>
             <p class="text-gray-500 dark:text-gray-400">Already in KashFlow as a purchase. Unlink it before marking it as a credit note.</p>
           <% } %>
@@ -202,8 +202,8 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
           <% if (/purchase/i.test(doc.documentType?.name || '') && (state === 'entered' || state === 'sent')) { %>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/resend-john" class="pt-3 border-t border-gray-100 dark:border-gray-700">
               <%- include('../partials/csrfHidden') %>
-              <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-envelope"></i> Resend to John</button>
-              <p class="text-xs text-gray-400 mt-1">Emails John the invoice again, every time it's clicked.</p>
+              <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-envelope"></i> Resend invoice email</button>
+              <p class="text-xs text-gray-400 mt-1">Sends the invoice email again, every time it's clicked.</p>
             </form>
           <% } %>
 
@@ -254,7 +254,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
           <% if (doc.statementReviewed) { %>
             <p><i class="bi bi-check-circle-fill text-green-600"></i> Reviewed<%= doc.statementReviewedChanged?.at ? ` on ${new Date(doc.statementReviewedChanged.at).toLocaleDateString('en-GB')}` : '' %><%= doc.statementReviewedChanged?.by?.name ? ` by ${doc.statementReviewedChanged.by.name}` : '' %>.</p>
           <% } else { %>
-            <p>Statements have no fields to enter. Marking it reviewed takes it out of Statements to Review and emails Bev.</p>
+            <p>Statements have no fields to enter. Marking it reviewed takes it out of Statements to Review and sends the statement email.</p>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reviewed">
               <%- include('../partials/csrfHidden') %>
               <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition"><i class="bi bi-check2"></i> Mark reviewed</button>
@@ -269,7 +269,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
 
       <%# Notifications (H6) %>
       <%
-        const KIND_LABELS = { new_doc: 'New document (Discord)', john: 'Emailed to John', john_resend: 'Re-sent to John', kashflow: 'Added to KashFlow (Discord)', statement: 'Statement emailed to Bev', credit_note: 'Credit note emailed to Bev' };
+        const KIND_LABELS = { new_doc: 'New document (Discord)', john: 'Invoice emailed', john_resend: 'Invoice email re-sent', kashflow: 'Added to KashFlow (Discord)', statement: 'Statement emailed', credit_note: 'Credit note emailed' };
         const STATUS_BADGE = {
           sent:     'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
           shadow:   'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',

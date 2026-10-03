@@ -33,10 +33,10 @@ import { notifyMode, buildMessages } from './documentNotifyService.js';
 import logger from '../../../services/loggerService.js';
 
 export const COMPARED_KINDS = {
-  john: { tag: 'notifiedJohn', workflow: 'WF3', label: 'Invoice emailed (John)' },
+  john: { tag: 'notifiedJohn', workflow: 'WF3', label: 'Invoice emailed' },
   kashflow: { tag: 'notifiedKashflow', workflow: 'WF4', label: 'Added to KashFlow (Discord)' },
-  statement: { tag: 'notifiedAdminStatement', workflow: 'WF2', label: 'Statement emailed (Bev)' },
-  credit_note: { tag: 'notifiedCreditNote', workflow: 'WF5', label: 'Credit note emailed (Bev)' },
+  statement: { tag: 'notifiedAdminStatement', workflow: 'WF2', label: 'Statement emailed' },
+  credit_note: { tag: 'notifiedCreditNote', workflow: 'WF5', label: 'Credit note emailed' },
   new_doc: { tag: null, workflow: 'WF8', label: 'New document (Discord)' },
 };
 
