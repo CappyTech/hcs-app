@@ -28,6 +28,16 @@ const ASSETS = [
   // bootstrap-icons.css references ./fonts/* relatively, so the subdirectory must survive.
   ['bootstrap-icons/font/fonts/bootstrap-icons.woff2', 'fonts/bootstrap-icons.woff2'],
   ['bootstrap-icons/font/fonts/bootstrap-icons.woff', 'fonts/bootstrap-icons.woff'],
+  // PDF.js for the document entry screen (Paperless migration H5). The viewer is
+  // set up by public/js/document-viewer.js; pdf.js fetches the worker, CMaps,
+  // standard fonts and colour profiles from these paths at runtime.
+  ['pdfjs-dist/build/pdf.min.mjs', 'pdfjs/pdf.min.mjs'],
+  ['pdfjs-dist/build/pdf.worker.min.mjs', 'pdfjs/pdf.worker.min.mjs'],
+  // Text layer styles (native CSS nesting, so it can't go through Tailwind's build)
+  ['pdfjs-dist/web/pdf_viewer.css', 'pdfjs/pdf_viewer.css'],
+  ['pdfjs-dist/cmaps', 'pdfjs/cmaps'],
+  ['pdfjs-dist/standard_fonts', 'pdfjs/standard_fonts'],
+  ['pdfjs-dist/iccs', 'pdfjs/iccs'],
 ];
 
 fs.rmSync(OUT, { recursive: true, force: true });
@@ -41,8 +51,13 @@ for (const [from, to] of ASSETS) {
   }
   const dest = path.join(OUT, to);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(src, dest);
-  copied += 1;
+  if (fs.statSync(src).isDirectory()) {
+    fs.cpSync(src, dest, { recursive: true });
+    copied += fs.readdirSync(dest).length;
+  } else {
+    fs.copyFileSync(src, dest);
+    copied += 1;
+  }
 }
 
 console.log(`vendor-assets: copied ${copied} files into public/vendor/`);

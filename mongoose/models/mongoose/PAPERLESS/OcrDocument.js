@@ -51,6 +51,42 @@ const ProcessingHistorySchema = new mongoose.Schema({
   note: { type: String, default: null },
 }, { _id: false });
 
+// ── Data entry (H5) ──
+// What was keyed in on the hcs-app entry screen. Held here only, never written
+// to the Paperless custom fields (decision 3 Oct 2026); the KashFlow draft
+// reads it first and falls back to the Paperless fields for anything blank.
+const EntryLineSchema = new mongoose.Schema({
+  description: { type: String, default: null },
+  quantity:    { type: Number, default: null },
+  price:       { type: Number, default: null },
+  total:       { type: Number, default: null }, // net line total, as Total_LineN
+  vatRate:     { type: Number, default: null }, // percent, as VAT_LineN
+}, { _id: false });
+
+const EntrySchema = new mongoose.Schema({
+  // Invoice header (Paperless fields 1–6)
+  invoiceNumber: { type: String, default: null },
+  invoiceDate:   { type: Date, default: null },
+  dueDate:       { type: Date, default: null },
+  totalGoods:    { type: Number, default: null },
+  totalVat:      { type: Number, default: null },
+  invoiceTotal:  { type: Number, default: null },
+  lines:         { type: [EntryLineSchema], default: undefined },
+  // Bank statement (Paperless fields 53–57)
+  bank: {
+    type: new mongoose.Schema({
+      accountId:      { type: Number, default: null },
+      periodStart:    { type: Date, default: null },
+      periodEnd:      { type: Date, default: null },
+      openingBalance: { type: Number, default: null },
+      closingBalance: { type: Number, default: null },
+    }, { _id: false }),
+    default: undefined,
+  },
+  savedAt: Date,
+  savedBy: { type: ActorSchema, default: null },
+}, { _id: false });
+
 const OcrDocumentSchema = new mongoose.Schema({
   paperlessId: { type: Number, index: true, unique: true },
   title: String,
@@ -101,6 +137,7 @@ const OcrDocumentSchema = new mongoose.Schema({
   // statement has no processingState, so this is what tells "not reviewed"
   // apart from "not classified yet" (statementReviewed defaults to false).
   classifiedAt:             { type: Date, default: null },
+  entry:                    { type: EntrySchema, default: undefined },
 }, { timestamps: true });
 
 export default {

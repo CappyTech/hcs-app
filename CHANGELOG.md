@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.46.0] - 2026-10-03
+
+### Added
+- **Paperless migration H5: document entry screen** at `/paperless/ocr/:id/entry`, reached from the queues and the document page.
+  - **Viewer:** the PDF is shown beside a form chosen by document type. It's rendered with PDF.js and has a text layer, so text can be selected and copied straight out of the invoice. The OCR text is in a collapsible panel.
+  - **Invoice form:** the header fields plus any number of lines. A missing line total is worked out from quantity × price, and totals that don't add up are flagged.
+  - **Other forms:** bank statements get the five statement fields. Supplier statements and remittances have no form.
+  - **Pre-filling:** the form starts from what's already in the Paperless custom fields, so nothing is typed twice.
+- **Where entered values go:** they're saved in hcs-app only and aren't written back to Paperless. The KashFlow draft now reads them first and falls back to the Paperless fields for anything left blank.
+- **Complete entry:** requires the invoice number, date, total and one line. It moves the invoice to Ready for KashFlow and adds `data entry done` in Paperless, so Paperless still emails John until cutover.
+- **Mark as credit note:** takes the invoice out of both invoice queues and sets Credit Note in Paperless, which emails Bev. Undoing it is admin-only.
+- **Reopen entry (admin):** moves the invoice back to Needs Data Entry and removes the Paperless tag.
+- In each of these actions, the change in hcs-app counts even if Paperless can't be updated. The screen then says what to do in Paperless by hand.
+- **The PDF is streamed through hcs-app** (`/paperless/ocr/:id/file`), so the browser never needs Paperless access and no file is stored twice. PDF.js is served from our own vendor assets, not a CDN.
+
 ## [6.45.1] - 2026-10-03
 
 ### Fixed

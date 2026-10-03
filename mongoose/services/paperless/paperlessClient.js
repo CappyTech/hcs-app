@@ -319,6 +319,25 @@ function makeClient() {
       const { data } = await api.get(`/documents/${id}/`, { params });
       return data;
     },
+    /**
+     * Stream a document's PDF: /preview/ serves the archived (OCR'd) version
+     * when there is one, otherwise the original (PAPERLESS-MIGRATION.md H5).
+     * @returns {Promise<{stream: import('stream').Readable, contentType: string, contentLength: number|null}>}
+     */
+    async getDocumentFile(id) {
+      if (!id) throw new Error("getDocumentFile requires id");
+      const api = await createApi();
+      const res = await api.get(`/documents/${id}/preview/`, {
+        responseType: "stream",
+        headers: { Accept: "application/pdf,*/*" },
+      });
+      const len = Number(res.headers?.["content-length"]);
+      return {
+        stream: res.data,
+        contentType: String(res.headers?.["content-type"] || "application/pdf"),
+        contentLength: Number.isFinite(len) ? len : null,
+      };
+    },
     async getCorrespondent(id) {
       if (!id) return null;
       const api = await createApi();

@@ -10,3 +10,17 @@
     --brand-dark: #065f46;
   }
 }
+
+/* Document entry screen (Paperless migration H5): one rendered PDF page, with
+   PDF.js's text layer absolutely positioned over the canvas. */
+@layer components {
+  .hcs-pdf-page {
+    position: relative;
+    margin: 0 auto 1rem;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  }
+  .hcs-pdf-page > canvas {
+    display: block;
+  }
+}

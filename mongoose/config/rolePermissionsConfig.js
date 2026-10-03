@@ -313,6 +313,10 @@ const routeAccess = {
   '/paperless/suppliers':              ['admin'],
   '/paperless/ingest':                 ['admin'],
   '/paperless/ingest/trigger':         ['admin'],
+  '/paperless/ocr/:paperlessId/entry':       ['admin'],
+  '/paperless/ocr/:paperlessId/credit-note': ['admin'],
+  '/paperless/ocr/:paperlessId/reopen':      ['admin'],
+  '/paperless/ocr/:paperlessId/file':        ['admin'],
   '/paperless/queues':                 ['admin'],
   '/paperless/queues/:queue':          ['admin'],
 

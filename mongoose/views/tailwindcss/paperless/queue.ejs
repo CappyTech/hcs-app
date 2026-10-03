@@ -80,9 +80,17 @@ const waitClass = (days) => days == null ? 'text-gray-400'
                 <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= d.correspondent?.name || '—' %></td>
                 <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= d.documentType?.name || '—' %></td>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
-                  <% if (key === 'ready') { %>
+                  <% if (key === 'needs-entry') { %>
+                    <a href="/paperless/ocr/<%= d.paperlessId %>/entry"
+                       class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Enter</a>
+                  <% } else if (key === 'ready') { %>
                     <a href="/paperless/ocr/<%= d.paperlessId %>/draft"
                        class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">KashFlow draft</a>
+                    <a href="/paperless/ocr/<%= d.paperlessId %>/entry"
+                       class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition shadow-sm">Entry</a>
+                  <% } else { %>
+                    <a href="/paperless/ocr/<%= d.paperlessId %>/entry"
+                       class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">View</a>
                   <% } %>
                   <% if (plUrl(d.paperlessId)) { %>
                     <a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener"
