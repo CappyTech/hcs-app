@@ -331,7 +331,7 @@ export async function completeEntry(OcrDocument, paperlessId, actor, deps = {}) 
   const paperlessWarning = await tellPaperless(
     `Adding "data entry done" to ${paperlessId}`,
     () => d.modifyTags(paperlessId, { add: ['dataEntryDone'] }),
-    'Add the "data entry done" tag in Paperless so John is emailed.',
+    'Add the "data entry done" tag in Paperless so the invoice email is sent.',
   );
   const notification = await d.notify('john', paperlessId, { actor });
   return { ...res, paperlessWarning, notification };
@@ -345,9 +345,9 @@ export async function setCreditNote(OcrDocument, paperlessId, flag, actor, deps 
   const paperlessWarning = await tellPaperless(
     `Setting Credit Note=${flag} on ${paperlessId}`,
     () => d.setFields(paperlessId, { 'Credit Note': flag ? 'true' : 'false' }),
-    flag ? 'Tick Credit Note in Paperless so Bev is emailed.' : 'Untick Credit Note in Paperless.',
+    flag ? 'Tick Credit Note in Paperless so the credit note email is sent.' : 'Untick Credit Note in Paperless.',
   );
-  // One-shot: unflagging and flagging again does not email Bev a second time
+  // One-shot: unflagging and flagging again does not send the credit note email twice
   const notification = flag ? await d.notify('credit_note', paperlessId, { actor }) : null;
   return { ...res, paperlessWarning, notification };
 }
@@ -374,7 +374,7 @@ export async function resendToJohn(OcrDocument, paperlessId, actor, deps = {}) {
   const doc = await OcrDocument.findOne({ paperlessId }).select('documentType').lean();
   if (!doc) return { ok: false, reason: 'not-found', message: 'Document not found.' };
   if (!isDocumentType(doc.documentType, 'purchaseInvoice')) {
-    return { ok: false, reason: 'not-applicable', message: 'Only purchase invoices are emailed to John.' };
+    return { ok: false, reason: 'not-applicable', message: 'Only purchase invoices have an invoice email.' };
   }
   const paperlessWarning = await tellPaperless(
     `Adding "notify" to ${paperlessId}`,

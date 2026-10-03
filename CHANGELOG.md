@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.2] - 2026-10-03
+
+### Changed
+- **The entry screen and shadow report name recipients by role, not by person.** For example, "Resend to John" is now "Resend invoice email", and "which emails Bev" is now "which sends the credit note email". This matches the role-based recipient settings. The email and Discord text that copies Paperless word for word is unchanged.
+
+### Fixed
+- **Security events could be kept forever instead of expiring after 400 days.** `createdAt` was declared as a plain index as well as the TTL index. Both are named `createdAt_1`, so whichever MongoDB created first won. This also removes the "Duplicate schema index on createdAt" warning at startup. A database whose existing index has no expiry needs a one-off fix; see the PR.
+
 ## [6.49.1] - 2026-10-03
 
 ### Fixed

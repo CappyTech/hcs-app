@@ -44,7 +44,10 @@ const securityEventSchema = new mongoose.Schema(
     // Event-specific details (old/new role, lockout count, …) — never secrets
     meta: { type: Object, default: {} },
 
-    createdAt: { type: Date, default: () => new Date(), index: true },
+    // Indexed only by the TTL index below. A plain `index: true` here declared
+    // the same createdAt_1 index without the expiry; whichever was created
+    // first won, so the 400-day expiry could silently never apply.
+    createdAt: { type: Date, default: () => new Date() },
   },
   { timestamps: false },
 );

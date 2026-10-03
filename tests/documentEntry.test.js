@@ -289,7 +289,7 @@ describe('actions against the mock Paperless', () => {
     const r = await completeEntry(M, 9001, user, { modifyTags: async () => { throw new Error('down'); } });
     assert.equal(r.ok, true);
     assert.equal(M.rows[0].processingState, 'entered');
-    assert.match(r.paperlessWarning, /Add the "data entry done" tag in Paperless so John is emailed/);
+    assert.match(r.paperlessWarning, /Add the "data entry done" tag in Paperless so the invoice email is sent/);
   });
 
   it('Credit note sets manual_kashflow and Credit Note in Paperless; only an admin can undo it (PB-9, PB-12)', async () => {
@@ -433,6 +433,15 @@ describe('entry view', () => {
     const src = fs.readFileSync(view, 'utf8');
     assert.equal((src.match(/<script/g) || []).length, 1, 'only the module src tag');
     assert.ok(!/<script[^>]*>[^<]/.test(src), 'no inline script body');
+  });
+});
+
+describe('wording', () => {
+  it('names recipients by role, not by person, in the hcs-app screens', () => {
+    for (const f of ['mongoose/views/tailwindcss/paperless/entry.ejs', 'mongoose/views/tailwindcss/paperless/shadowReport.ejs']) {
+      const src = fs.readFileSync(path.resolve(f), 'utf8');
+      assert.ok(!/\b(John|Bev)\b/.test(src), `${f} mentions a person`);
+    }
   });
 });
 
