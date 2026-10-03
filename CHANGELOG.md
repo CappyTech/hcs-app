@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.1] - 2026-10-03
+
+### Fixed
+- **The shadow report flagged 27 new-document posts as missing.** They were for documents that arrived on 29–30 September, before hcs-app started recording. Comparisons now start from hcs-app's first shadow notification record, and the page says when that was. With nothing recorded yet, it says so instead of listing every document.
+
 ## [6.49.0] - 2026-10-03
 
 ### Added

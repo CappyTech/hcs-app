@@ -41,6 +41,14 @@ const BUCKETS = [
     </div>
   <% } %>
 
+  <% if (!live.shadowStart) { %>
+    <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-exclamation-triangle-fill text-amber-600"></i> hcs-app hasn't recorded any notifications yet, so there's nothing to compare.
+    </div>
+  <% } else if (new Date(live.from) > new Date(live.requestedFrom)) { %>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Comparing from <%= fmtDay(live.from) %>, when hcs-app started recording. Anything earlier was only ever sent by Paperless.</p>
+  <% } %>
+
   <%# Window %>
   <form method="GET" action="/paperless/shadow-report" class="flex flex-wrap items-center gap-2 text-sm">
     <label for="days" class="text-gray-500 dark:text-gray-400">Compare the last</label>

@@ -19,6 +19,9 @@
  *   pending  too recent to judge: hcs-app follows Paperless every 15 minutes
  *
  * Rows from the H7 backfill are history, not shadow sends, and are left out.
+ * So is everything before shadow recording began (the first non-backfill
+ * NotificationLog row): hcs-app can't have recorded a document that arrived
+ * before it started looking.
  * Re-sends to John leave no trace in Paperless (WF9 removes `notify` again),
  * so they are counted but not compared.
  *
@@ -61,9 +64,18 @@ const item = (doc, kind, extra = {}) => {
  * Compare one window. Pure apart from the reads.
  * @returns {Promise<{from, to, mode, clean, kinds, totals, resends}>}
  */
-export async function compareWindow({ OcrDocument, NotificationLog, from, to, now = new Date() }) {
+/** When hcs-app started recording: its first non-backfill notification, or null. */
+export async function shadowStartedAt(NotificationLog) {
+  const [first] = await NotificationLog.find({ source: { $in: ['app', 'paperless'] } }).sort({ createdAt: 1 }).limit(1).lean();
+  return first?.createdAt ? new Date(first.createdAt) : null;
+}
+
+export async function compareWindow({ OcrDocument, NotificationLog, from: requestedFrom, to, now = new Date(), shadowStart }) {
   const kinds = {};
   const totals = { matched: 0, missing: 0, extra: 0, pending: 0 };
+  const started = shadowStart === undefined ? await shadowStartedAt(NotificationLog) : shadowStart;
+  // Nothing recorded yet: an empty window rather than everything "missing"
+  const from = started ? new Date(Math.max(requestedFrom.getTime(), started.getTime())) : to;
 
   for (const [kind, spec] of Object.entries(COMPARED_KINDS)) {
     const result = { label: spec.label, workflow: spec.workflow, matched: [], missing: [], extra: [], pending: [] };
@@ -121,6 +133,8 @@ export async function compareWindow({ OcrDocument, NotificationLog, from, to, no
   return {
     from,
     to,
+    requestedFrom,
+    shadowStart: started,
     mode: notifyMode(),
     clean: totals.missing === 0 && totals.extra === 0,
     kinds,
