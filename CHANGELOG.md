@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.47.1] - 2026-10-03
+
+### Changed
+- **Document notification recipients are named by what they receive, not who.** `NOTIFY_JOHN_EMAIL` and `NOTIFY_ADMIN_EMAIL` are replaced by three settings, so statements and credit notes can go to different people:
+  - `NOTIFY_INVOICE_EMAIL` for purchase invoices and re-sends
+  - `NOTIFY_STATEMENT_EMAIL` for supplier statements
+  - `NOTIFY_CREDIT_NOTE_EMAIL` for credit notes
+
+  Neither old setting had been set, so there's nothing to move across.
+
 ## [6.47.0] - 2026-10-03
 
 ### Added

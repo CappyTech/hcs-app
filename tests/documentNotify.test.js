@@ -26,11 +26,11 @@ const tag = (id, name) => ({ id, name });
 const T = { dataEntryDone: tag(1, 'data entry done'), added: tag(2, 'added'), notifiedStatement: tag(21, 'notified/admin-statement'), notifiedCredit: tag(22, 'notified/credit-note') };
 const user = { userId: new mongoose.Types.ObjectId(), name: 'bev', isAdmin: false };
 
-const ENV_KEYS = ['NOTIFY_MODE', 'NOTIFY_JOHN_EMAIL', 'NOTIFY_ADMIN_EMAIL', 'DISCORD_WEBHOOK_URL', 'PAPERLESS_UI_URL', 'PAPERLESS_BASE_URL', 'PAPERLESS_FOLLOW_TAGS'];
+const ENV_KEYS = ['NOTIFY_MODE', 'NOTIFY_INVOICE_EMAIL', 'NOTIFY_STATEMENT_EMAIL', 'NOTIFY_CREDIT_NOTE_EMAIL', 'DISCORD_WEBHOOK_URL', 'PAPERLESS_UI_URL', 'PAPERLESS_BASE_URL', 'PAPERLESS_FOLLOW_TAGS'];
 let savedEnv;
 beforeEach(() => {
   savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
-  Object.assign(process.env, { NOTIFY_JOHN_EMAIL: 'john@example.test', NOTIFY_ADMIN_EMAIL: 'bev@example.test', PAPERLESS_UI_URL: 'https://docs.heroncs.co.uk' });
+  Object.assign(process.env, { NOTIFY_INVOICE_EMAIL: 'john@example.test', NOTIFY_STATEMENT_EMAIL: 'bev@example.test', NOTIFY_CREDIT_NOTE_EMAIL: 'credits@example.test', PAPERLESS_UI_URL: 'https://docs.heroncs.co.uk' });
   delete process.env.NOTIFY_MODE;
   delete process.env.DISCORD_WEBHOOK_URL;
   delete process.env.PAPERLESS_FOLLOW_TAGS;
@@ -179,6 +179,7 @@ describe('templates (section 3a, exact)', () => {
     assert.equal(s.subject, 'New statement: Heron 260832 from Duttons Builders Merchants Ltd');
     assert.equal(s.text, 'A new statement has been added to https://docs.heroncs.co.uk/\n\nTitle: Heron 260832\nType: Supplier Statement\nDate: 2026-10-01\n\nStatement: https://docs.heroncs.co.uk/documents/1131/details');
     const c = buildMessages('credit_note', doc).email;
+    assert.equal(c.to, 'credits@example.test', 'credit notes have their own recipient');
     assert.equal(c.subject, 'New credit note: Heron 260832 from Duttons Builders Merchants Ltd');
     assert.match(c.text, /^A new credit note has been added to https:\/\/docs\.heroncs\.co\.uk\/\n\n[\s\S]*\nCredit note: https:\/\/docs\.heroncs\.co\.uk\/documents\/1131\/details$/);
   });
@@ -268,14 +269,13 @@ describe('notify', () => {
   });
 
   it('records a missing recipient or Discord URL as skipped, and a missing mail transport as failed', async () => {
-    delete process.env.NOTIFY_JOHN_EMAIL;
+    delete process.env.NOTIFY_INVOICE_EMAIL;
     const h = harness([invoice()], { live: true });
     h.deps.postDiscord = async () => ({ skipped: true });
     const r = await h.run('john', 1131);
     assert.deepEqual(r.channels.map((c) => [c.channel, c.status]), [['email', 'skipped'], ['discord', 'skipped']]);
     assert.equal(r.status, 'sent', 'nothing failed');
 
-    process.env.NOTIFY_ADMIN_EMAIL = 'bev@example.test';
     const h2 = harness([invoice()], { live: true });
     h2.deps.sendMail = async () => ({ fallback: true });
     const r2 = await h2.run('credit_note', 1131);
@@ -481,7 +481,7 @@ describe('H6 wiring', () => {
     assert.match(rbac, /'\/paperless\/ocr\/:paperlessId\/reviewed':\s+\['admin'\]/);
     assert.match(read('mongoose/services/jobRegistry.js'), /scheduler\.register\('paperless-notification-retry'/);
     const reg = read('services/configRegistry.js');
-    for (const k of ['NOTIFY_MODE', 'NOTIFY_JOHN_EMAIL', 'NOTIFY_ADMIN_EMAIL', 'DISCORD_WEBHOOK_URL', 'PAPERLESS_FOLLOW_TAGS']) assert.ok(reg.includes(`key: '${k}'`), k);
+    for (const k of ['NOTIFY_MODE', 'NOTIFY_INVOICE_EMAIL', 'NOTIFY_STATEMENT_EMAIL', 'NOTIFY_CREDIT_NOTE_EMAIL', 'DISCORD_WEBHOOK_URL', 'PAPERLESS_FOLLOW_TAGS']) assert.ok(reg.includes(`key: '${k}'`), k);
   });
 
   it('the KashFlow send and unlink record the state change', () => {
