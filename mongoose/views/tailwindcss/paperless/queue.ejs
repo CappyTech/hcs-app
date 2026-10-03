@@ -1,0 +1,107 @@
+<%
+const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const plUrl = (id) => paperlessUiBase ? `${paperlessUiBase}/documents/${id}/details` : null;
+const waitClass = (days) => days == null ? 'text-gray-400'
+  : days >= 14 ? 'text-red-700 dark:text-red-400'
+  : days >= 7 ? 'text-amber-700 dark:text-amber-400'
+  : 'text-gray-500 dark:text-gray-400';
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="flex items-center gap-3 mb-2">
+    <a href="/overview/documents" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Documents</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Document queues</h1>
+  </div>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Driven by each document's state in hcs-app, oldest first. Opening and saving a document doesn't move it; only completing the step does.</p>
+
+  <%# Queue tabs %>
+  <div class="flex flex-wrap gap-2 mb-6">
+    <% Object.entries(queues).forEach(([k, q]) => { const active = k === key; %>
+      <a href="/paperless/queues/<%= k %>"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition shadow-sm <%= active
+           ? 'bg-green-600 border-green-600 text-white'
+           : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' %>">
+        <i class="bi <%= q.icon %>"></i> <%= q.label %>
+        <span class="text-[11px] px-2 py-0.5 rounded-full <%= active ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300' %>"><%= counts[k] %></span>
+      </a>
+    <% }) %>
+  </div>
+
+  <% if (unclassified > 0) { %>
+    <div class="border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-info-circle text-blue-600"></i>
+      <strong><%= unclassified %></strong> invoice<%= unclassified === 1 ? ' has' : 's have' %> no processing state yet, so <%= unclassified === 1 ? 'it isn\'t' : 'they aren\'t' %> in any queue.
+      New documents get a state when they arrive; older ones get one from the migration backfill (H7). Until then, Paperless's own saved views remain the complete list.
+    </div>
+  <% } %>
+
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+    <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= queue.label %> <span class="normal-case font-normal">(<%= total %>)</span></h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"><%= queue.description %></p>
+    </div>
+
+    <% if (docs.length === 0) { %>
+      <div class="m-4 text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        <%= queue.empty %>
+      </div>
+    <% } else { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Received</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Waiting</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Document</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Supplier</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Open</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% docs.forEach(d => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="px-4 py-3 text-gray-900 dark:text-white whitespace-nowrap"><%= fmt(d.added) %></td>
+                <td class="px-4 py-3 whitespace-nowrap <%= waitClass(d.daysWaiting) %>">
+                  <%= d.daysWaiting == null ? '—' : d.daysWaiting === 0 ? 'today' : `${d.daysWaiting} day${d.daysWaiting === 1 ? '' : 's'}` %>
+                </td>
+                <td class="px-4 py-3">
+                  <a href="/paperless/ocr/<%= d.paperlessId %>" class="text-green-700 dark:text-green-400 hover:underline"><%= d.title || '(untitled)' %></a>
+                  <div class="font-mono text-xs text-gray-400">#<%= d.paperlessId %></div>
+                </td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= d.correspondent?.name || '—' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= d.documentType?.name || '—' %></td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                  <% if (key === 'ready') { %>
+                    <a href="/paperless/ocr/<%= d.paperlessId %>/draft"
+                       class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">KashFlow draft</a>
+                  <% } %>
+                  <% if (plUrl(d.paperlessId)) { %>
+                    <a href="<%= plUrl(d.paperlessId) %>" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition shadow-sm">
+                      Paperless <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <% if (pages > 1) { %>
+        <div class="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+          <% if (page > 1) { %>
+            <a href="?page=<%= page - 1 %>"
+               class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">← Prev</a>
+          <% } else { %><span></span><% } %>
+          <span class="text-xs text-gray-500">Page <%= page %> of <%= pages %></span>
+          <% if (page < pages) { %>
+            <a href="?page=<%= page + 1 %>"
+               class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">Next →</a>
+          <% } else { %><span></span><% } %>
+        </div>
+      <% } %>
+    <% } %>
+  </div>
+</div>

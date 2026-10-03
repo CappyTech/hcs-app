@@ -43,6 +43,12 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
 - **One-shot uniqueness** is a partial unique index on (paperlessId, kind) covering rows with `oneShot: true`, so `john_resend` rows can repeat.
 - **H3 derives the first state from Paperless tags** using the H7 table (`added` → `sent`, tag 22 or field 58 → `manual_kashflow`, `data entry done` → `entered`, otherwise `awaiting_entry`; tags 4/11 → `excludedReason`; tag 21 → `statementReviewed`). This means an invoice already entered or sent in Paperless is never put back into Needs Data Entry, even if H3 sees it before H7 has run. It only fills an empty state, never overrides one, and writes no `NotificationLog` rows. H7 reuses the same function (`initialStateFromPaperless` in `documentIngestService.js`) and adds the log rows. The reconciliation job only classifies documents modified inside its lookback window, so the historical backlog is still left to H7 (⏸).
 
+- **H4 queue rules.**
+  - **Ready for KashFlow:** state `entered` only, with no `excludedReason` filter. This matches view 4, which is just "has tag 1".
+  - **All queues:** leave out documents with `deletedInPaperlessAt` set. A trashed test document showed up during the H3 live test.
+  - **Unclassified invoices** (no state yet, before H7) are counted in a note on the page rather than shown in a queue.
+  - **Read-only:** the queue pages have no actions. Actions arrive with H5 and H6.
+
 ### 0b. H3 setup in Paperless (⏸ Jack, at deploy)
 
 1. Set `PAPERLESS_WEBHOOK_SECRET` in hcs-app to a long random value. The endpoint answers 503 until you do.
