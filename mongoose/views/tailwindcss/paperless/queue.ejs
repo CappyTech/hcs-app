@@ -27,11 +27,19 @@ const waitClass = (days) => days == null ? 'text-gray-400'
     <% }) %>
   </div>
 
-  <% if (unclassified > 0) { %>
+  <%
+    const plural = (n, one, many) => `<strong>${n}</strong> ${n === 1 ? one : many}`;
+    const waiting = [
+      unclassified.invoices > 0 ? plural(unclassified.invoices, 'invoice', 'invoices') : null,
+      unclassified.statements > 0 ? plural(unclassified.statements, 'supplier statement', 'supplier statements') : null,
+    ].filter(Boolean);
+    const single = waiting.length === 1 && (unclassified.invoices + unclassified.statements) === 1;
+  %>
+  <% if (waiting.length) { %>
     <div class="border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6 text-sm text-gray-700 dark:text-gray-300">
       <i class="bi bi-info-circle text-blue-600"></i>
-      <strong><%= unclassified %></strong> invoice<%= unclassified === 1 ? ' has' : 's have' %> no processing state yet, so <%= unclassified === 1 ? 'it isn\'t' : 'they aren\'t' %> in any queue.
-      New documents get a state when they arrive; older ones get one from the migration backfill (H7). Until then, Paperless's own saved views remain the complete list.
+      <%- waiting.join(' and ') %> <%= single ? "hasn't been classified yet, so it isn't" : "haven't been classified yet, so they aren't" %> in any queue.
+      New documents are classified when they arrive; older ones by the migration backfill (H7). Until then, Paperless's own saved views remain the complete list.
     </div>
   <% } %>
 

@@ -12,7 +12,7 @@ import fixtures from '../mongoose/services/paperless/mock/fixtures.js';
 const require = createRequire(import.meta.url);
 const ejs = require('ejs');
 
-const { QUEUES, QUEUE_KEYS, queueFilter, unclassifiedFilter, daysWaiting, loadQueue } = queues;
+const { QUEUES, QUEUE_KEYS, queueFilter, unclassifiedFilters, daysWaiting, loadQueue } = queues;
 
 /** H4: document queues (PAPERLESS-MIGRATION.md H4; PB-3, PB-7, PB-10, PB-11, PB-12). */
 
@@ -36,15 +36,17 @@ function fixtureRecords() {
       added: new Date(d.added),
       deletedInPaperlessAt: null,
     };
-    const s = ingest.initialStateFromPaperless(record);
-    return { ...record, processingState: s.processingState, creditNote: s.creditNote, excludedReason: s.excludedReason, statementReviewed: s.statementReviewed };
+    const base = { ...record, processingState: null, creditNote: false, excludedReason: null, statementReviewed: false, classifiedAt: null };
+    const built = ingest.buildClassifyUpdate(base, { now: new Date('2026-10-01T12:00:00Z') });
+    return built ? { ...base, ...built.update.$set } : base;
   });
 }
 
 const doc = (paperlessId, documentType, extra = {}) => ({
   paperlessId, title: `doc ${paperlessId}`, documentType, added: new Date(`2026-09-${String(paperlessId % 28 + 1).padStart(2, '0')}`),
-  processingState: null, excludedReason: null, statementReviewed: false, creditNote: false, deletedInPaperlessAt: null, ...extra,
+  processingState: null, excludedReason: null, statementReviewed: false, creditNote: false, classifiedAt: null, deletedInPaperlessAt: null, ...extra,
 });
+const CLASSIFIED = { classifiedAt: new Date('2026-10-01') };
 
 const idsIn = (key, rows) => rows.filter(sift(queueFilter(key))).map((r) => r.paperlessId).sort((a, b) => a - b);
 
@@ -111,16 +113,26 @@ describe('queue rules', () => {
     assert.deepEqual(idsIn('ready', rows), [1, 2]);
   });
 
-  it('Statements to Review: unreviewed supplier statements only', () => {
+  it('Statements to Review: classified, unreviewed supplier statements only', () => {
     const rows = [
-      doc(1, STATEMENT, { statementReviewed: false }),
-      doc(2, STATEMENT, { statementReviewed: true }),
-      doc(3, { id: 2, name: 'statement' }),
-      doc(4, BANK),
-      doc(5, REMITTANCE),
+      doc(1, STATEMENT, { statementReviewed: false, ...CLASSIFIED }),
+      doc(2, STATEMENT, { statementReviewed: true, ...CLASSIFIED }),
+      doc(3, { id: 2, name: 'statement' }, CLASSIFIED),
+      doc(4, BANK, CLASSIFIED),
+      doc(5, REMITTANCE, CLASSIFIED),
     ];
     delete rows[2].statementReviewed; // a record from before H2 has no field at all
     assert.deepEqual(idsIn('statements', rows), [1, 3]);
+  });
+
+  it('a statement not classified yet is not "unreviewed" (the 41-statement bug)', () => {
+    // Every historical statement has statementReviewed: false by default, even
+    // though Paperless tag 21 says Bev was emailed. Until H7 classifies them
+    // they must stay out of the queue.
+    const rows = [doc(1, STATEMENT), doc(2, STATEMENT, { classifiedAt: undefined })];
+    delete rows[1].classifiedAt;
+    assert.deepEqual(idsIn('statements', rows), []);
+    assert.deepEqual(rows.filter(sift(unclassifiedFilters().statements)).map((r) => r.paperlessId), [1, 2]);
   });
 
   it('a document deleted in Paperless is in no queue', () => {
@@ -142,9 +154,15 @@ describe('queue rules', () => {
     assert.deepEqual(idsIn('needs-entry', [after]), [1]);
   });
 
-  it('counts unclassified invoices separately so the page can explain them', () => {
-    const rows = [doc(1, PI), doc(2, SI), doc(3, PI, { processingState: 'sent' }), doc(4, STATEMENT), doc(5, PI, { deletedInPaperlessAt: new Date() })];
-    assert.deepEqual(rows.filter(sift(unclassifiedFilter())).map((r) => r.paperlessId), [1, 2]);
+  it('counts unclassified invoices and statements so the page can explain them', () => {
+    const rows = [
+      doc(1, PI), doc(2, SI), doc(3, PI, { processingState: 'sent' }),
+      doc(4, STATEMENT), doc(5, STATEMENT, CLASSIFIED), doc(6, BANK),
+      doc(7, PI, { deletedInPaperlessAt: new Date() }), doc(8, STATEMENT, { deletedInPaperlessAt: new Date() }),
+    ];
+    const f = unclassifiedFilters();
+    assert.deepEqual(rows.filter(sift(f.invoices)).map((r) => r.paperlessId), [1, 2]);
+    assert.deepEqual(rows.filter(sift(f.statements)).map((r) => r.paperlessId), [4]);
   });
 
   it('rejects an unknown queue', () => {
@@ -197,13 +215,14 @@ describe('loadQueue', () => {
       doc(1, PI, { processingState: 'awaiting_entry', added: new Date('2026-09-01') }),
       doc(2, SI, { processingState: 'awaiting_entry', added: new Date('2026-09-01') }),
       doc(4, PI, { processingState: 'entered' }),
-      doc(5, STATEMENT),
+      doc(5, STATEMENT, CLASSIFIED),
       doc(6, PI),
+      doc(7, STATEMENT),
     ];
     const res = await loadQueue(siftModel(rows), 'needs-entry', { now: new Date('2026-09-21T00:00:00Z') });
     assert.deepEqual(res.docs.map((d) => d.paperlessId), [1, 2, 3], 'oldest first, id breaks ties');
     assert.deepEqual(res.counts, { 'needs-entry': 3, ready: 1, statements: 1 });
-    assert.equal(res.unclassified, 1);
+    assert.deepEqual(res.unclassified, { invoices: 1, statements: 1 });
     assert.equal(res.docs[0].daysWaiting, 20);
     assert.deepEqual([res.total, res.page, res.pages], [3, 1, 1]);
   });
@@ -220,7 +239,7 @@ describe('queue view', () => {
   const view = path.resolve('mongoose/views/tailwindcss/paperless/queue.ejs');
   const render = (locals) => ejs.renderFile(view, {
     key: 'ready', queue: QUEUES.ready, queues: QUEUES, docs: [], total: 0, page: 1, pages: 1,
-    counts: { 'needs-entry': 2, ready: 1, statements: 0 }, unclassified: 0, paperlessUiBase: 'https://docs.example.test', ...locals,
+    counts: { 'needs-entry': 2, ready: 1, statements: 0 }, unclassified: { invoices: 0, statements: 0 }, paperlessUiBase: 'https://docs.example.test', ...locals,
   });
 
   it('renders rows with the document, Paperless and draft links', async () => {
@@ -237,9 +256,12 @@ describe('queue view', () => {
   });
 
   it('shows an empty state, the counts on each tab, and the unclassified note', async () => {
-    const html = await render({ unclassified: 12 });
+    const html = await render({ unclassified: { invoices: 989, statements: 41 } });
     assert.match(html, /Nothing is waiting to be sent to KashFlow/);
-    assert.match(html, /<strong>12<\/strong> invoices have no processing state yet/);
+    assert.match(html, /<strong>989<\/strong> invoices and <strong>41<\/strong> supplier statements haven(?:&#39;|')t been classified yet/);
+    const one = await render({ unclassified: { invoices: 1, statements: 0 } });
+    assert.match(one, /<strong>1<\/strong> invoice hasn(?:&#39;|')t been classified yet, so it isn(?:&#39;|')t in any queue/);
+    assert.ok(!(await render()).includes('classified yet'), 'no note when everything is classified');
     for (const k of QUEUE_KEYS) assert.match(html, new RegExp(`href="/paperless/queues/${k}"`));
   });
 

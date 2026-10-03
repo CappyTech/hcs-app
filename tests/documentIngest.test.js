@@ -169,7 +169,20 @@ describe('buildClassifyUpdate', () => {
 
   it('returns null when nothing applies', () => {
     assert.equal(buildClassifyUpdate({ paperlessId: 1, documentType: BANK, tags: [] }), null);
-    assert.equal(buildClassifyUpdate({ paperlessId: 1, documentType: STATEMENT, tags: [] }), null);
+    assert.equal(buildClassifyUpdate({ paperlessId: 1, documentType: REMITTANCE, tags: [] }), null);
+    assert.equal(buildClassifyUpdate({ paperlessId: 1, tags: [T.added] }), null, 'untyped');
+  });
+
+  it('stamps classifiedAt on invoices and on every supplier statement, reviewed or not', () => {
+    assert.equal(buildClassifyUpdate({ paperlessId: 1, documentType: PI, tags: [] }, { now }).update.$set.classifiedAt, now);
+    const unreviewed = buildClassifyUpdate({ paperlessId: 2, documentType: STATEMENT, tags: [] }, { now });
+    assert.deepEqual(unreviewed.filter, { paperlessId: 2, classifiedAt: null });
+    assert.deepEqual(unreviewed.update, { $set: { classifiedAt: now } }, 'no review recorded');
+  });
+
+  it('does not record a second review for a statement already marked reviewed', () => {
+    const b = buildClassifyUpdate({ paperlessId: 3, documentType: STATEMENT, tags: [T.notifiedStatement], statementReviewed: true }, { now });
+    assert.deepEqual(b.update, { $set: { classifiedAt: now } });
   });
 });
 
@@ -193,6 +206,15 @@ describe('classifyDocument', () => {
     const M = fakeOcrDocument([{ paperlessId: 1, documentType: PI, tags: [], processingState: null, deletedInPaperlessAt: new Date() }]);
     assert.equal((await classifyDocument(M, 1)).reason, 'deleted');
     assert.equal((await classifyDocument(M, 2)).reason, 'not-found');
+  });
+
+  it('classifies an unreviewed statement once, so it can join the review queue', async () => {
+    const M = fakeOcrDocument([{ paperlessId: 6, documentType: STATEMENT, tags: [], processingState: null, statementReviewed: false, classifiedAt: null }]);
+    assert.equal((await classifyDocument(M, 6)).classified, true);
+    assert.ok(M.rows[0].classifiedAt instanceof Date);
+    assert.equal(M.rows[0].statementReviewed, false);
+    assert.equal(M.rows[0].processingHistory, undefined, 'nothing reviewed, so no history');
+    assert.equal((await classifyDocument(M, 6)).reason, 'already-classified');
   });
 
   it('marks an already-emailed statement reviewed once', async () => {
