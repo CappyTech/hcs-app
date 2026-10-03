@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.3] - 2026-10-03
+
+### Added
+- **Sitemap generator.** `npm run sitemap` writes `docs/SITEMAP.md` and `docs/sitemap.json`. They list every route the app serves: method, path, which roles can open it, and the route file it comes from. It reads Express's own route tables, so the generated list and record routes are included, and it needs no database. `npm run sitemap -- --check` fails if the committed files are out of date, and `tests/sitemap.test.js` runs that check.
+
+### Changed
+- The role guards in `authService` (`ensureRoles`, `ensureRole`, `ensureAnyRole`, `ensureModelAccess`, `ensureDepartment`) now carry an `__access` label that says what they check. This is for the sitemap only; what they allow is unchanged.
+
 ## [6.49.2] - 2026-10-03
 
 ### Changed

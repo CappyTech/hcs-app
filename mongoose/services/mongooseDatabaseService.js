@@ -235,3 +235,8 @@ process.on('SIGTERM', cleanup);
 process.on('exit', cleanup);
 
 export default mdb;
+
+// Loads one namespace's model files onto a connection without touching the
+// database: scripts/generate-sitemap.mjs registers models on unconnected
+// connections so the generated CRUD and list routes exist offline.
+export { createNamespace as loadNamespaceModels };
