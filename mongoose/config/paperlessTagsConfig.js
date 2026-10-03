@@ -59,6 +59,11 @@ export const PAPERLESS_TAGS = {
     id: envId('PAPERLESS_TAG_NOTIFIED_JOHN_ID', 19),
     names: ['notified/john', 'john'],
   },
+  /** WF4 has posted "added to kashflow" (D3). Read by the H8 shadow report. */
+  notifiedKashflow: {
+    id: envId('PAPERLESS_TAG_NOTIFIED_KASHFLOW_ID', 20),
+    names: ['notified/kashflow', 'kashflow'],
+  },
   /** WF2 has emailed Bev the supplier statement (C2a). Read at ingest to classify. */
   notifiedAdminStatement: {
     id: envId('PAPERLESS_TAG_NOTIFIED_STATEMENT_ID', 21),

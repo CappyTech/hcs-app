@@ -87,6 +87,14 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - Paperless's "new document" post isn't recorded for old documents, because WF8 only existed from 29 Sep. Old documents never trigger `new_doc` anyway; that only fires on arrival.
   - Documents deleted in Paperless are skipped.
 
+- **H8: how the shadow report finds Paperless's sends.**
+  - **Emails and the KashFlow post** are read from Paperless's own tags: john = tag 19 (also set by WF9 re-sends), kashflow = tag 20, statement = tag 21, credit_note = tag 22. A document counts in a window when it was modified in that window.
+  - **The new-document post** counts against every document added in the window.
+  - **Pending, not mismatches:** anything under 30 minutes old, to allow for the 15-minute follow.
+  - **Not compared:** H7 backfill rows are history and are left out. Re-sends have no Paperless evidence, so they're counted only.
+  - **Wording:** the report can't compare text, so the date format and the "None" correspondent (see H6) are checked by eye against Discord, using hcs-app's post shown for each mismatch.
+- **H8 daily reports** are saved per UTC day by `paperless-shadow-report` (every 6 hours, upserting yesterday). The cutover checklist is on `/paperless/shadow-report` and in §0d.
+
 ### 0b. H3 setup in Paperless (⏸ Jack, at deploy)
 
 1. Set `PAPERLESS_WEBHOOK_SECRET` in hcs-app to a long random value. The endpoint answers 503 until you do.
@@ -104,6 +112,14 @@ Inside the hcs-app container on server2:
 2. `docker exec -it hcs-app node scripts/paperless-backfill.js --apply` writes.
 3. Run step 2 again. Every count should be 0 and "Documents with nothing to do" should equal the documents read.
 4. Check `/paperless/queues`. Needs Data Entry, Ready for KashFlow and Statements to Review should match Paperless views 12, 4 and 13, and the "not classified yet" note should be gone.
+
+### 0d. Cutover (⏸ Jack decides, H8)
+
+1. About a week of clean daily reports on `/paperless/shadow-report`. Also compare a few of hcs-app's posts by eye with Discord, for the date format and wording.
+2. Set the recipient emails and the Discord webhook URL on Configuration → Document notifications.
+3. In Paperless, disable WF2, 3, 4, 5, 8 and 9.
+4. In the same hour, set Mode to **Live**, and turn **Follow Paperless tags** off on the Paperless settings page.
+5. Later, once entry has fully moved to hcs-app, retire WF6 and WF7. Keep WF1 and the mail rules. H9 clean-up comes after about a month of stable running.
 
 ## 1. Decision
 

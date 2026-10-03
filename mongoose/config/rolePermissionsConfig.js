@@ -319,6 +319,7 @@ const routeAccess = {
   '/paperless/ocr/:paperlessId/resend-john': ['admin'],
   '/paperless/ocr/:paperlessId/reviewed':    ['admin'],
   '/paperless/ocr/:paperlessId/file':        ['admin'],
+  '/paperless/shadow-report':          ['admin'],
   '/paperless/queues':                 ['admin'],
   '/paperless/queues/:queue':          ['admin'],
 
