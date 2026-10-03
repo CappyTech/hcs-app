@@ -313,6 +313,8 @@ const routeAccess = {
   '/paperless/suppliers':              ['admin'],
   '/paperless/ingest':                 ['admin'],
   '/paperless/ingest/trigger':         ['admin'],
+  '/paperless/queues':                 ['admin'],
+  '/paperless/queues/:queue':          ['admin'],
 
   // Company Documents (letterhead + policies)
   '/company-docs':                                  ['admin'],

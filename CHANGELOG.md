@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.45.0] - 2026-10-03
+
+### Added
+- **Paperless migration H4: document queues** at `/paperless/queues`. There are three tabs, oldest first, each with a count and the number of days each document has waited:
+  - **Needs Data Entry:** purchase and subcontractor invoices awaiting entry, leaving out "original/multiple" and "manually added".
+  - **Ready for KashFlow:** entered invoices, each with a link to its KashFlow draft.
+  - **Statements to Review:** unreviewed supplier statements.
+
+  They mirror the Paperless saved views 12, 4 and 13, but are driven by each document's state in hcs-app, so opening and saving a document doesn't move it. Credit notes are in neither invoice queue, and documents deleted in Paperless are in no queue.
+
+  Invoices with no state yet are counted in a note rather than silently missing; the H7 backfill gives them a state. The pages are read-only, and the Documents overview links to them.
+
 ## [6.44.0] - 2026-10-02
 
 ### Added
