@@ -79,6 +79,24 @@ function sourcePill(f) {
                 <option value="true">true</option>
                 <option value="false">false</option>
               </select>
+            <% } else if (f.type === 'email') { %>
+              <%# A user's email, or "Other…" with a typed address. Without JS the typed box is always shown. %>
+              <div x-data="emailPicker" class="space-y-2">
+                <select id="field-<%= f.key %>" name="<%= f.key %>" x-bind="picker"
+                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                  <option value="">No change (currently <%= f.display || 'unset' %>)</option>
+                  <% (locals.userEmails || []).forEach(u => { %>
+                    <option value="<%= u.value %>"><%= u.label %></option>
+                  <% }) %>
+                  <option value="__other__">Other…</option>
+                </select>
+                <div x-bind="otherBox">
+                  <label for="field-<%= f.key %>-other" class="sr-only"><%= f.label %>: other address</label>
+                  <input id="field-<%= f.key %>-other" name="<%= f.key %>__other" type="email" autocomplete="off"
+                    placeholder="Other address, e.g. accounts@example.com"
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                </div>
+              </div>
             <% } else if (f.type === 'select') { %>
               <select id="field-<%= f.key %>" name="<%= f.key %>"
                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">

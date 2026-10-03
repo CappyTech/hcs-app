@@ -18,6 +18,7 @@ import path from 'path';
 import configService from '../../services/configService.js';
 import configStore from '../../services/configStoreService.js';
 import registry from '../../services/configRegistry.js';
+import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 
 const MASK = '••••••••';
@@ -101,13 +102,30 @@ export const getHub = (req, res, next) => {
   }
 };
 
-export const getGroup = (req, res, next) => {
+/** A valid single email address. Deliberately plain: one @, a dot in the domain, no spaces. */
+export const EMAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
+export const OTHER_EMAIL = '__other__';
+
+/** Every user with an email, for the 'email' setting dropdowns. */
+async function userEmailOptions() {
+  const User = mdb.INTERNAL?.user;
+  if (!User) return [];
+  const users = await User.find({ email: { $nin: [null, ''] } }).select('username email').sort({ username: 1 }).lean();
+  const seen = new Set();
+  return users
+    .filter((u) => EMAIL_RE.test(String(u.email).trim()) && !seen.has(String(u.email).trim().toLowerCase()) && seen.add(String(u.email).trim().toLowerCase()))
+    .map((u) => ({ value: String(u.email).trim(), label: u.username ? `${u.username} (${String(u.email).trim()})` : String(u.email).trim() }));
+}
+
+export const getGroup = async (req, res, next) => {
   try {
     const group = registry.findGroup(req.params.group);
     if (!group) return res.status(404).render(path.join('tailwindcss', 'error'), { title: '404 - Not Found', error: { title: '404 - Not Found', message: 'No such settings group.' } });
+    const needsUsers = group.keys.some((k) => k.type === 'email');
     res.render(path.join('tailwindcss', 'admin', 'configGroup'), {
       title: group.label,
       group: groupView(group),
+      userEmails: needsUsers ? await userEmailOptions().catch(() => []) : [],
     });
   } catch (err) {
     logger.error(`[appConfig] group error: ${err.message}`);
@@ -125,12 +143,24 @@ export const postGroup = async (req, res, next) => {
     for (const entry of group.keys) {
       const raw = req.body[entry.key];
       if (raw === undefined) continue;
-      const value = String(raw).trim();
+      let value = String(raw).trim();
+      // "Other…" carries the typed address in a second field
+      if (entry.type === 'email' && value === OTHER_EMAIL) {
+        value = String(req.body[`${entry.key}__other`] ?? '').trim();
+        if (!value) {
+          req.flash('error', `${entry.label}: "Other" was chosen but no address was typed, so it wasn't saved.`);
+          continue;
+        }
+      }
       // Blank means "leave as it is". Clearing a value is `Revert`, which is a
       // separate, explicit action — otherwise every save of a form with a
       // masked secret field would wipe the secret.
       if (value === '') continue;
       if (registry.isSecret(entry.key) && value === MASK) continue;
+      if (entry.type === 'email' && !EMAIL_RE.test(value)) {
+        req.flash('error', `${entry.label}: "${value}" isn't a valid email address, so it wasn't saved.`);
+        continue;
+      }
       if (entry.type === 'select' && !(entry.options || []).some((o) => o.value === value)) {
         req.flash('error', `${entry.label}: "${value}" isn't one of the choices, so it wasn't saved.`);
         continue;

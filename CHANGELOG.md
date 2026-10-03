@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.48.2] - 2026-10-03
+
+### Changed
+- **Document notification recipients are now chosen from a list.** The purchase invoice, supplier statement and credit note fields offer every user with an email, plus **Other…**, which shows a box for any other address.
+- **Only valid addresses are saved.** The browser checks a typed address, and saving refuses anything that isn't one valid address, including an empty "Other" box or several addresses in one field.
+- **Settings now support an `email` type** that works this way.
+
 ## [6.48.1] - 2026-10-03
 
 ### Changed
