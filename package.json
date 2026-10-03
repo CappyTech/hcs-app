@@ -1,6 +1,6 @@
 {
   "name": "hcs-app",
-  "version": "6.49.2",
+  "version": "6.49.3",
   "requiredSchemasVersion": "3.0.0",
   "type": "module",
   "description": "Internal business platform for Heron Constructive Solutions LTD: CIS compliance, HR, attendance, fleet, holidays, document management and finance dashboards. (Payroll and direct HMRC integration are in development, not production-ready.)",
@@ -17,6 +17,7 @@
     "dev:css": "tailwindcss -c ./tailwind.config.js -i ./assets/tailwind.css -o ./public/css/tailwind.css --watch",
     "gen:tailwind-safelist": "node scripts/generate-tailwind-safelist.js",
     "build:vendor": "node scripts/vendor-assets.js",
+    "sitemap": "node scripts/generate-sitemap.mjs",
     "build": "npm run build:vendor && npm run build:css"
   },
   "keywords": [

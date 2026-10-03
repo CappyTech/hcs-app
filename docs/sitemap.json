@@ -1,0 +1,8085 @@
+{
+  "roles": [
+    "none",
+    "admin",
+    "accountant",
+    "employee",
+    "subcontractor",
+    "client",
+    "hmrc",
+    "auditor"
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/",
+      "access": "public",
+      "roles": [],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/:model/:uuid/view/:filename",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "fileRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/:model/delete/:uuid/:filename",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "fileRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/:model/download/:uuid/:filename",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "fileRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/:model/upload/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "fileRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/:model/upload/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "fileRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountant",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "auditor"
+      ],
+      "source": "accountantRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountant/accounts/:accountId",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "auditor"
+      ],
+      "source": "accountantRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountant/lines/:bankAccountId/:bankTransactionId",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "auditor"
+      ],
+      "source": "accountantRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountant/queries",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "auditor"
+      ],
+      "source": "accountantRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountant/signoff",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "auditor"
+      ],
+      "source": "accountantRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountant/statements",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "auditor"
+      ],
+      "source": "accountantRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountant/statements/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "auditor"
+      ],
+      "source": "accountantRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountingperiod/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/accountingperiods",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/config",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/config/:group",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/config/:group",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/config/:group/adopt",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/config/:group/revert",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/connections",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/connections/kashflow",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/connections/kashflow",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/connections/paperless",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/connections/paperless",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/connections/sms",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/connections/sms",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/connections/smtp",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/connections/smtp",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/connections/test/:service",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/db",
+      "access": "public",
+      "roles": [],
+      "source": "devDbRoutes.js",
+      "condition": "Development only (DEV_DB_ADMIN=true, loopback)"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/db/:ns/:model",
+      "access": "public",
+      "roles": [],
+      "source": "devDbRoutes.js",
+      "condition": "Development only (DEV_DB_ADMIN=true, loopback)"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/db/:ns/:model/aggregate",
+      "access": "public",
+      "roles": [],
+      "source": "devDbRoutes.js",
+      "condition": "Development only (DEV_DB_ADMIN=true, loopback)"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/db/:ns/:model/delete",
+      "access": "public",
+      "roles": [],
+      "source": "devDbRoutes.js",
+      "condition": "Development only (DEV_DB_ADMIN=true, loopback)"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/db/:ns/:model/query",
+      "access": "public",
+      "roles": [],
+      "source": "devDbRoutes.js",
+      "condition": "Development only (DEV_DB_ADMIN=true, loopback)"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/db/:ns/:model/update",
+      "access": "public",
+      "roles": [],
+      "source": "devDbRoutes.js",
+      "condition": "Development only (DEV_DB_ADMIN=true, loopback)"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/deleted-items",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/emails",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/emails/branding",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/branding",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/emails/compose",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/compose",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/emails/outbox",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/outbox/:uuid/cancel",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/outbox/:uuid/resend",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/outbox/retry-failed",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/rotate-now",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/rotation",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/emails/types",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/types",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/types/:key",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/types/:key/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/emails/types/:key/preview",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/emails/types/:key/toggle",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gdpr",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gdpr/dpia-template",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gdpr/incident-response",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gdpr/requests",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "gdprRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/gdpr/requests/:uuid/review",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "gdprRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gdpr/ropa",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/jobs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/jobs/:name/run",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/maintenance",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/maintenance",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/security-events",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/ui-guidelines",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "adminRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/paperless/webhook",
+      "access": "public",
+      "roles": [],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sso/token",
+      "access": "public",
+      "roles": [],
+      "source": "ssoRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/web/content",
+      "access": "public",
+      "roles": [],
+      "source": "webApiRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/web/media/:uuid",
+      "access": "public",
+      "roles": [],
+      "source": "webApiRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/appconfig",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/appconfig/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/appconfig/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/appconfig/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/appconfig/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/appconfig/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/appconfig/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/appconfigs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/assignment",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/assignment/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "PATCH",
+      "path": "/assignment/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/assignment/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assignment/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assignment/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/assignment/inline",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assignment/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assignment/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assignments",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/attendance",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/attendance",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/attendance/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "PATCH",
+      "path": "/attendance/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/attendance/:uuid/approve",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/attendance/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/attendance/:uuid/reject",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/attendance/bulk-approve",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/attendance/create",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/attendance/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/attendance/inline",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/attendance/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/attendance/submit",
+      "access": "roles",
+      "roles": [
+        "employee",
+        "subcontractor"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/attendance/submit",
+      "access": "roles",
+      "roles": [
+        "employee",
+        "subcontractor"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/attendance/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/attendances",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/audit",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "auditRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/auditlog",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/auditlog/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/auditlog/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auditlog/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auditlog/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auditlog/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auditlog/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auditlogs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/microsoft",
+      "access": "public",
+      "roles": [],
+      "source": "microsoftSsoRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/microsoft/callback",
+      "access": "public",
+      "roles": [],
+      "source": "microsoftSsoRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bank",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bank/accounts/:accountId",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/accounts/:accountId/bulk-confirm",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bank/exceptions",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/generate",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bank/lines/:bankAccountId/:bankTransactionId",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/matches/:uuid/confirm",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/matches/:uuid/reject",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/matches/:uuid/unconfirm",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bank/rules",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/rules",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/rules/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/rules/:uuid/test",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/rules/:uuid/update",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/rules/seed",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bank/signoff",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/signoff",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/signoff/:uuid/reopen",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bank/statements",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bank/statements/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/statements/grab",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bank/statements/upload",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "bankRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankaccount",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankaccount/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankaccount/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankaccount/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankaccount/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankaccount/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankaccount/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankaccounts",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankmatch",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankmatch/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankmatch/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankmatch/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankmatch/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankmatch/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankmatch/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankmatchs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankreconciliation",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankreconciliation/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankreconciliation/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankreconciliation/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankreconciliation/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankreconciliation/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankreconciliation/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankreconciliations",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankrule",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankrule/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/bankrule/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankrule/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankrule/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankrule/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankrule/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankrules",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/banksignoff",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/banksignoff/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/banksignoff/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banksignoff/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banksignoff/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banksignoff/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banksignoff/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banksignoffs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/bankstatementdocuments",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/banktransaction",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/banktransaction/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/banktransaction/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banktransaction/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banktransaction/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banktransaction/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banktransaction/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/banktransactions",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/CIS/Dashboard/",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "hmrc"
+      ],
+      "source": "cisRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/CIS/Dashboard/:year/:month",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "hmrc"
+      ],
+      "source": "cisRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/CIS/returns/:uuid/:year/:month",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "subcontractor",
+        "hmrc"
+      ],
+      "source": "returnsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/CIS/returns/:uuid/yearly/:year",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "subcontractor",
+        "hmrc"
+      ],
+      "source": "returnsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/CIS/returns/all/:year",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "hmrc"
+      ],
+      "source": "returnsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/CIS/returns/all/:year/:month",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "hmrc"
+      ],
+      "source": "returnsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/CIS/returns/form",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "hmrc"
+      ],
+      "source": "returnsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/company-docs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/company-docs/letterhead",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/company-docs/letterhead",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/company-docs/letterhead/logo",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/company-docs/policies",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/company-docs/policies",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/company-docs/policies/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/company-docs/policies/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/company-docs/policies/:uuid/edit",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/company-docs/policies/:uuid/print",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/company-docs/policies/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "companyDocsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/construction-industry-scheme",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "subcontractor",
+        "hmrc"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/contract",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/contract/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/contract/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/contract/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/contract/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/contract/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/contract/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/contracts",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/countries",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/country/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/currencies",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/currency/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/customer/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "client"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/customers",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "client"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/daily/:date?",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/documents",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailbranding",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailbranding/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailbranding/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailbranding/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailbranding/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailbranding/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailbranding/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailbrandings",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailpreference",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailpreference/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailpreference/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailpreference/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailpreference/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailpreference/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailpreference/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailpreferences",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailtype",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailtype/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/emailtype/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailtype/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailtype/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailtype/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailtype/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/emailtypes",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/employee",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/employee/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/employee/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employee/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employee/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employee/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employee/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/employeeholiday",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/employeeholiday/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/employeeholiday/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employeeholiday/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employeeholiday/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employeeholiday/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employeeholiday/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employeeholidays",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/employees",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/finance",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/gdpr/requests",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "gdprRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/gdpr/requests",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "gdprRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/gdpr/requests/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "gdprRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/gdpr/requests/:uuid/withdraw",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "gdprRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/gdpr/requests/new",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "gdprRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/gdprrequest",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/gdprrequest/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/gdprrequest/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/gdprrequest/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/gdprrequest/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/gdprrequest/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/gdprrequest/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/gdprrequests",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/help",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "helpRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/help/api",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "helpRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/holiday/dismiss",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "holidayRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holiday/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/holidaycustom",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/holidaycustom/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/holidaycustom/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidaycustom/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidaycustom/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidaycustom/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidaycustom/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidaycustoms",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/holidaydismissal/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidaydismissal/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidaydismissal/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidaydismissals",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/holidayrequest",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/holidayrequest/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/holidayrequest/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidayrequest/create",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidayrequest/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidayrequest/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidayrequest/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidayrequests",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/holidays",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/human-resources",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/invoice/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "client"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "client"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/jobstate",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/jobstate/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/jobstate/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/jobstate/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/jobstate/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/jobstate/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/jobstate/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/jobstates",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/journal/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/journals",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/kashflow",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/kashflowapilog",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/kashflowapilog/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/kashflowapilog/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/kashflowapilog/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/kashflowapilog/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/kashflowapilog/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/kashflowapilog/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/kashflowapilogs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/legal/cookie-policy",
+      "access": "public",
+      "roles": [],
+      "source": "legalRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/legal/privacy-policy",
+      "access": "public",
+      "roles": [],
+      "source": "legalRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/legal/terms",
+      "access": "public",
+      "roles": [],
+      "source": "legalRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/letterhead",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/letterhead/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/letterhead/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/letterhead/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/letterhead/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/letterhead/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/letterhead/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/letterheads",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/location",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/location/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/location/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/location/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/location/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/location/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/location/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/locations",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/logs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "loggerRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/logs/api",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "loggerRoutes.js"
+    },
+    {
+      "method": "DELETE",
+      "path": "/logs/clear",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "loggerRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/logs/download",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "loggerRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/logs/kashflow",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "loggerRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/logs/kashflow/data",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "loggerRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/logs/paperless",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "loggerRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/logs/paperless/data",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "loggerRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/mail",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "mailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/mail/message/:id",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "mailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/maintenance",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/management",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/nominal/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/nominals",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/note/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notes",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/notification",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/notification/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/notification/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notification/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notification/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notification/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notification/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notificationlogs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/unsubscribe",
+      "access": "public",
+      "roles": [],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/unsubscribe",
+      "access": "public",
+      "roles": [],
+      "source": "emailRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/ocrdocumentingests",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/ocrdocuments",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/admin",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/documents",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/finance",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/fleet",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/holiday",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/human",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/payroll",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/policies",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/projects",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/overview/projects/:number/complete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/overview/projects/check",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/overview/subcontractors",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "hmrc"
+      ],
+      "source": "overviewRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/clear-orphans",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/ingest",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ingest/trigger",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/match-references",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/ocr",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/ocr/:paperlessId",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "DELETE",
+      "path": "/paperless/ocr/:paperlessId",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/credit-note",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/ocr/:paperlessId/draft",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/draft/extra-lines",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/ocr/:paperlessId/entry",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/entry",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/ocr/:paperlessId/file",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/ingest",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/ocr/:paperlessId/match",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/match",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/reassign",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/remove",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/reopen",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/resend-john",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/reviewed",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/send",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/sync-fields",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/ocr/:paperlessId/unlink",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/queues",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/queues/:queue",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/repair-drift",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/resolve-numbers",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/shadow-report",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperless/suppliers",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperless/suppliers",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "paperlessRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperlessapilog",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperlessapilog/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/paperlessapilog/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperlessapilog/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperlessapilog/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperlessapilog/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperlessapilog/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/paperlessapilogs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payments/bulk",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "paymentRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payments/bulk/confirm",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "paymentRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payments/bulk/preview",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "paymentRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll/dashboard",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll/employee/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/employee/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll/hmrc/eps/:year/:month/download",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/hmrc/eps/:year/:month/submit",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll/run/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/run/:uuid/calculate",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "PATCH",
+      "path": "/payroll/run/:uuid/entry/:entryUuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll/run/:uuid/fps/download",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/run/:uuid/fps/submit",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/run/:uuid/lock",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll/run/:uuid/pension/csv",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/run/:uuid/pension/submit",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/run/:uuid/post-journal",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/run/:uuid/unlock",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll/runs",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll/runs/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll/submissions",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollconfig",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollconfig/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollconfig/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollconfig/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollconfig/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollconfig/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollconfig/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollconfigs",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollentry",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollentry/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollentry/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollentry/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollentry/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollentry/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollentry/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollentrys",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollrun",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollrun/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollrun/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollrun/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollrun/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollrun/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollrun/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollruns",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollsubmission",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollsubmission/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrollsubmission/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollsubmission/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollsubmission/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollsubmission/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollsubmission/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrollsubmissions",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrolltaxrates",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrolltaxrates/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/payrolltaxrates/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrolltaxrates/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrolltaxrates/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrolltaxrates/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrolltaxrates/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/payrolltaxratess",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/policydocument",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/policydocument/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/policydocument/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/policydocument/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/policydocument/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/policydocument/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/policydocument/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/policydocuments",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/product",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/product/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/product/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/product/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/product/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/product/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/product/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/products",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/project/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "client"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/projects",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "client"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/purchase/change",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "submissionRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchase/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "subcontractor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/purchaseorder",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/purchaseorder/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/purchaseorder/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchaseorder/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchaseorder/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchaseorder/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchaseorder/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchaseordercategories",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchaseordercategory/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchaseorders",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/purchases",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "subcontractor"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/quick-task",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/quote/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "client"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/quotecategories",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/quotecategory/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/quotes",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "client"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/receipts/change-submission",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "submissionRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/securityevent",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/securityevent/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/securityevent/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/securityevent/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/securityevent/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/securityevent/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/securityevent/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/securityevents",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/settings/payroll",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/settings/payroll",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/settings/payroll/tax-rates",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/settings/payroll/tax-rates/:year",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/settings/payroll/tax-rates/:year",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "payrollRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/setup",
+      "access": "public",
+      "roles": [],
+      "source": "setupRoutes.js",
+      "condition": "First run only, before the app is configured"
+    },
+    {
+      "method": "POST",
+      "path": "/setup/clear-draft",
+      "access": "public",
+      "roles": [],
+      "source": "setupRoutes.js",
+      "condition": "First run only, before the app is configured"
+    },
+    {
+      "method": "POST",
+      "path": "/setup/complete",
+      "access": "public",
+      "roles": [],
+      "source": "setupRoutes.js",
+      "condition": "First run only, before the app is configured"
+    },
+    {
+      "method": "POST",
+      "path": "/setup/step1",
+      "access": "public",
+      "roles": [],
+      "source": "setupRoutes.js",
+      "condition": "First run only, before the app is configured"
+    },
+    {
+      "method": "GET",
+      "path": "/setup/step2",
+      "access": "public",
+      "roles": [],
+      "source": "setupRoutes.js",
+      "condition": "First run only, before the app is configured"
+    },
+    {
+      "method": "POST",
+      "path": "/setup/step2",
+      "access": "public",
+      "roles": [],
+      "source": "setupRoutes.js",
+      "condition": "First run only, before the app is configured"
+    },
+    {
+      "method": "GET",
+      "path": "/setup/step3",
+      "access": "public",
+      "roles": [],
+      "source": "setupRoutes.js",
+      "condition": "First run only, before the app is configured"
+    },
+    {
+      "method": "POST",
+      "path": "/setup/test-db",
+      "access": "public",
+      "roles": [],
+      "source": "setupRoutes.js",
+      "condition": "First run only, before the app is configured"
+    },
+    {
+      "method": "GET",
+      "path": "/shadowreports",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/sso/hcs-sync",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "ssoRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/statement/:paperlessId/add-purchase",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/statement/:paperlessId/remove-purchase",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/statementimport",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/statementimport/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/statementimport/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementimport/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementimport/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementimport/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementimport/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementimports",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/statementline",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/statementline/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/statementline/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementline/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementline/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementline/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementline/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/statementlines",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/subcontractor/assign",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "subcontractorRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/subcontractor/assign",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "subcontractorRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/subcontractors",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/supplier/change/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "subcontractorRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/supplier/change/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "subcontractorRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/supplier/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "subcontractor",
+        "hmrc"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/suppliers",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "subcontractor",
+        "hmrc"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/task",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/task/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/task/:uuid/complete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/task/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/task/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/task/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/task/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/task/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/tasks",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/2fa",
+      "access": "public",
+      "roles": [],
+      "source": "twoFARoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/2fa",
+      "access": "public",
+      "roles": [],
+      "source": "twoFARoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/account",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/change-password",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/disable-totp",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/logout-all-sessions",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/logout-session",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/regenerate-backup-codes",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/settings",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/account/settings/notifications",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/settings/notifications/allow-admin",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/account/settings/notifications/preview/:key",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/settings/notifications/rotate-token",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/settings/notifications/send-test",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/settings/notifications/toggle",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/account/verify-totp",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/forgot-password",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/forgot-password",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/forgot-password/choose",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/forgot-password/choose",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/login",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/login",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/logout",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/profile",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "settingsRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/register",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/register",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/resend-verification",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/reset-password",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/reset-password",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/verify-email",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/verify-pending",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/verify-sms-otp",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/verify-sms-otp",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user/verify-totp-reset",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/user/verify-totp-reset",
+      "access": "public",
+      "roles": [],
+      "source": "userRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vatrate/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vatrates",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vatreturn/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vatreturns",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicle",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "PATCH",
+      "path": "/vehicle-deployment/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicle-deployment/inline",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicle/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicle/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicle/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicle/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicle/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicle/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicledeployment",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicledeployment/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicledeployment/:uuid/delete",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicledeployment/create",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicledeployment/delete/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicledeployment/read/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicledeployment/update/:uuid",
+      "access": "signed-in",
+      "roles": [
+        "none",
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor",
+        "client",
+        "hmrc",
+        "auditor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicledeployments",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehiclefuellog",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehiclefuellog/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehiclefuellog/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclefuellog/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclefuellog/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclefuellog/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclefuellog/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclefuellogs",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehiclemileagelog",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehiclemileagelog/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehiclemileagelog/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclemileagelog/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclemileagelog/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclemileagelog/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclemileagelog/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehiclemileagelogs",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicles",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicleservice",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicleservice/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/vehicleservice/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicleservice/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicleservice/delete/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicleservice/read/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicleservice/update/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "CRUDRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/vehicleservices",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "listRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/website",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "indexRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/website/:type",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/:type",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/:type/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/:type/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/website/:type/:uuid/edit",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/:type/:uuid/publish",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/:type/:uuid/unpublish",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/website/:type/create",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/website/media",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/media",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/media/:uuid",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/media/:uuid/delete",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/website/media/:uuid/file",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/media/:uuid/replace",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/website/settings",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/website/settings",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "webRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/weekly-management/:year?/:week?",
+      "access": "roles",
+      "roles": [
+        "admin"
+      ],
+      "source": "attendanceRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/weekly/:year?/:week?",
+      "access": "roles",
+      "roles": [
+        "admin",
+        "accountant",
+        "employee",
+        "subcontractor"
+      ],
+      "source": "attendanceRoutes.js"
+    }
+  ],
+  "warnings": []
+}

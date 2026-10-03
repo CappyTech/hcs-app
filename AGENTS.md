@@ -20,6 +20,7 @@ Where hcs-app does call an external API directly (e.g. `kashflowSessionService.j
 - If you modify files in the `e2e/` folder, run the end-to-end tests with `npx playwright test`.
 - Ensure `git status` reports a clean working tree before you finish.
 - Use Git Bash as the terminal.
+- After adding, removing or re-guarding a route, run `npm run sitemap` and commit `docs/SITEMAP.md` and `docs/sitemap.json` (`npm test` fails until you do).
 - Trace from `app.js` that any new file is included at some point, or is a child of another file that is included in `app.js`.
 - Do **not** use `mongoose/views/mongoose/` — always use `mongoose/views/tailwindcss/`.
 - The `kashflowAPI/` folder is unused. Data sync is handled by [hcs-sync](https://github.com/cappytech/hcs-sync).

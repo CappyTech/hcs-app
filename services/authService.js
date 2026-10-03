@@ -169,9 +169,19 @@ async function ensureAuthenticated(req, res, next) {
   next();
 }
 
+// ── Access labels for tooling ─────────────────────────────────────────
+// Guards are anonymous closures, so nothing outside them can tell what a route
+// requires. Each factory labels the middleware it returns with `__access`;
+// scripts/generate-sitemap.mjs reads the label to list who can open each
+// route. The label is description only — the closure still does the check.
+function labelAccess(fn, access) {
+  fn.__access = access;
+  return fn;
+}
+
 // ── Block unless user has one of the required role(s) ────────────────
 function ensureRoles(...roles) {
-  return (req, res, next) => {
+  return labelAccess((req, res, next) => {
     if (!req.user) {
       return next({
         statusCode: 401,
@@ -195,18 +205,18 @@ function ensureRoles(...roles) {
       name: "ForbiddenError",
       message: "You do not have permission to access this page.",
     });
-  };
+  }, { roles });
 }
 
 // ── Shortcut — defaults to 'admin'. 'public' = passthrough. ────────
 function ensureRole(role = "admin") {
-  if (role === "public") return (req, res, next) => next();
+  if (role === "public") return labelAccess((req, res, next) => next(), { public: true });
   return ensureRoles(role);
 }
 
 // ── Allow any authenticated user (any role) ──────────────────────────
 function ensureAnyRole() {
-  return (req, res, next) => {
+  return labelAccess((req, res, next) => {
     if (!req.user) {
       return next({
         statusCode: 401,
@@ -215,13 +225,13 @@ function ensureAnyRole() {
       });
     }
     next();
-  };
+  }, { anyRole: true });
 }
 
 // ── RBAC-aware middleware: check role + model + operation ─────────────
 // Usage: ensureModelAccess('invoice', 'r')
 function ensureModelAccess(model, operation) {
-  return (req, res, next) => {
+  return labelAccess((req, res, next) => {
     if (!req.user) {
       return next({
         statusCode: 401,
@@ -246,7 +256,7 @@ function ensureModelAccess(model, operation) {
     // Stash for downstream controllers to enforce ownership
     req.rbac = { ownOnly, model, operation };
     next();
-  };
+  }, { model, operation });
 }
 
 // ── Ownership check middleware ────────────────────────────────────────
@@ -319,7 +329,7 @@ function ensureRouteAccess(req, res, next) {
 
 // ── Department access middleware ──────────────────────────────────────
 function ensureDepartment(department) {
-  return (req, res, next) => {
+  return labelAccess((req, res, next) => {
     if (!req.user) {
       return next({
         statusCode: 401,
@@ -336,7 +346,7 @@ function ensureDepartment(department) {
       });
     }
     next();
-  };
+  }, { department });
 }
 
 export default {
@@ -356,3 +366,7 @@ export { ensureAuthenticated, ensureRouteAccess, rolesRequiring2FA, ensureRoles,
 // Exposed for tests only — a blanket "/resources/" entry here silently disables the
 // auth guard on the static mount, so it is worth asserting against.
 export const PUBLIC_PREFIXES_FOR_TEST = PUBLIC_PREFIXES;
+
+// Exposed for scripts/generate-sitemap.mjs, so the sitemap marks public routes
+// with the same rule ensureAuthenticated applies rather than a copy of it.
+export { isPublicPath };
