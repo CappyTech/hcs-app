@@ -92,6 +92,9 @@
         <% } %>
       </div>
       <div class="mt-4">
+        <a href="/paperless/ocr/<%= doc.paperlessId %>/entry" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition shadow-sm mr-2">
+          <i class="bi bi-pencil-square"></i> Data entry
+        </a>
         <a href="/paperless/ocr/<%= doc.paperlessId %>/draft" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm">
           <%= /subcontract/i.test(doc.documentType?.name || '') ? 'Open Subcontractor Invoice Draft' : 'Open Purchase Draft' %>
         </a>

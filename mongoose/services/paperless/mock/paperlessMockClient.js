@@ -14,6 +14,8 @@
 
 import logger from '../../../../services/loggerService.js';
 import fixtures from './fixtures.js';
+import { Readable } from 'node:stream';
+import { buildFixturePdf } from './fixturePdf.js';
 
 export function isMockPaperless() {
   return process.env.PAPERLESS_URL === 'mock' || process.env.PAPERLESS_BASE_URL === 'mock';
@@ -151,6 +153,14 @@ export function makeMockClient() {
       if (!id) throw new Error('getDocument requires id');
       record('GET', `/documents/${id}/`);
       return pickFields(clone(findDoc(id)), fields);
+    },
+    async getDocumentFile(id) {
+      if (!id) throw new Error('getDocumentFile requires id');
+      record('GET', `/documents/${id}/preview/`);
+      maybeFail('getDocumentFile');
+      const doc = findDoc(id);
+      const buf = buildFixturePdf(`${doc.title}\n\n${doc.content || ''}`);
+      return { stream: Readable.from(buf), contentType: 'application/pdf', contentLength: buf.length };
     },
     async getCorrespondent(id) {
       if (!id) return null;

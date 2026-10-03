@@ -3,6 +3,7 @@
 // This is consumed by an external creator; we only produce the draft here.
 
 import mdb from '../mongooseDatabaseService.js';
+import { customFieldsWithEntry } from './entryOverlay.js';
 
 // Default name-based mapping from custom field names to target purchase fields
 const defaultMap = {
@@ -119,7 +120,9 @@ function coalesce(...vals) {
 function buildPurchaseDraftFromOcr(ocr, opts = {}) {
   if (!ocr || typeof ocr !== "object") throw new Error("ocr document required");
   const mapping = { ...defaultMap, ...(opts.mapping || {}) };
-  const cf = Array.isArray(ocr.customFields) ? ocr.customFields : [];
+  // What was keyed in on the hcs-app entry screen (H5) comes first; the
+  // Paperless custom fields fill in anything it left blank.
+  const cf = customFieldsWithEntry(ocr);
 
   const supplierName = coalesce(
     findCustomField(cf, mapping.SupplierName),

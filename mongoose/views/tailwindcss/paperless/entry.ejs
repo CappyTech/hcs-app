@@ -1,0 +1,255 @@
+<%
+const state = doc.processingState || null;
+const STATES = {
+  awaiting_entry:  ['Needs data entry', 'amber'],
+  entered:         ['Ready for KashFlow', 'blue'],
+  sent:            ['In KashFlow', 'green'],
+  manual_kashflow: ['Credit note: keyed into KashFlow by hand', 'slate'],
+};
+const [stateLabel, stateColour] = STATES[state] || [kind === 'statement' ? (doc.statementReviewed ? 'Reviewed' : 'Not reviewed yet') : 'No state yet', 'slate'];
+// Written out in full so Tailwind's build can see every class
+const BADGES = {
+  amber: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
+  blue:  'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
+  green: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
+  slate: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
+};
+const badge = (colour) => `text-[11px] px-2 py-0.5 rounded-full border ${BADGES[colour] || BADGES.slate}`;
+const plUrl = paperlessUiBase ? `${paperlessUiBase}/documents/${doc.paperlessId}/details` : null;
+const err = (name) => errors && errors[name];
+const val = (v) => (v == null ? '' : v);
+const inputCls = (name) => `w-full text-sm border ${err(name) ? 'border-red-400 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-60`;
+const labelCls = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1';
+const disabled = locked ? 'disabled' : '';
+const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statements' : 'needs-entry';
+%>
+<link rel="stylesheet" href="/resources/vendor/pdfjs/pdf_viewer.css">
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="flex flex-wrap items-center gap-3 mb-6">
+    <a href="/paperless/queues/<%= queueBack %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Queues</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold break-all"><%= title %></h1>
+    <span class="<%= badge(stateColour) %>"><%= stateLabel %></span>
+    <span class="font-mono text-xs text-gray-400">#<%= doc.paperlessId %></span>
+    <div class="ml-auto flex gap-2">
+      <a href="/paperless/ocr/<%= doc.paperlessId %>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">Details</a>
+      <% if (state === 'entered') { %>
+        <a href="/paperless/ocr/<%= doc.paperlessId %>/draft" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm"><i class="bi bi-send"></i> KashFlow draft</a>
+      <% } %>
+      <% if (plUrl) { %>
+        <a href="<%= plUrl %>" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">Open in Paperless <i class="bi bi-box-arrow-up-right"></i></a>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-5 gap-6">
+    <%# ── Document ── %>
+    <div class="lg:col-span-3 space-y-4">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto">Document</h2>
+          <button type="button" id="pdf-zoom-out" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800" aria-label="Zoom out"><i class="bi bi-zoom-out"></i></button>
+          <span id="pdf-zoom-label" class="text-xs text-gray-500 w-10 text-center">100%</span>
+          <button type="button" id="pdf-zoom-in" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800" aria-label="Zoom in"><i class="bi bi-zoom-in"></i></button>
+          <button type="button" id="pdf-zoom-fit" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">Fit</button>
+        </div>
+        <div id="pdf-viewer" data-src="/paperless/ocr/<%= doc.paperlessId %>/file" class="bg-gray-100 dark:bg-gray-800 rounded-b-2xl p-3 h-screen overflow-auto">
+          <p id="pdf-status" class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">Loading document…</p>
+          <div id="pdf-pages"></div>
+        </div>
+      </div>
+
+      <details class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <summary class="cursor-pointer px-4 py-3 font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">OCR text</summary>
+        <div class="px-4 pb-4">
+          <% if (doc.ocrText) { %>
+            <pre class="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-300 max-h-96 overflow-auto"><%= doc.ocrText %></pre>
+          <% } else { %>
+            <p class="text-sm text-gray-400">Paperless has no OCR text for this document.</p>
+          <% } %>
+        </div>
+      </details>
+    </div>
+
+    <%# ── Entry ── %>
+    <div class="lg:col-span-2 space-y-4">
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm text-gray-700 dark:text-gray-300 space-y-1">
+        <div><span class="text-gray-500 dark:text-gray-400">Supplier:</span> <%= doc.correspondent?.name || '—' %></div>
+        <div><span class="text-gray-500 dark:text-gray-400">Type:</span> <%= doc.documentType?.name || '—' %></div>
+        <% if (doc.excludedReason) { %>
+          <div class="text-amber-700 dark:text-amber-400"><i class="bi bi-exclamation-triangle-fill"></i>
+            Kept out of the queues: <%= doc.excludedReason === 'original_multiple' ? 'source PDF holding several invoices' : 'already entered in KashFlow by hand' %>.
+          </div>
+        <% } %>
+        <% if (doc.entry?.savedAt) { %>
+          <div class="text-xs text-gray-400">Last saved <%= new Date(doc.entry.savedAt).toLocaleString('en-GB') %><%= doc.entry.savedBy?.name ? ` by ${doc.entry.savedBy.name}` : '' %></div>
+        <% } %>
+      </div>
+
+      <% if (Object.keys(errors || {}).length) { %>
+        <div class="border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-sm text-red-700 dark:text-red-400">
+          <p class="font-medium mb-1">Please fix the following:</p>
+          <ul class="list-disc ml-5"><% Object.values(errors).forEach(m => { %><li><%= m %></li><% }) %></ul>
+        </div>
+      <% } %>
+
+      <% if (warnings && warnings.length) { %>
+        <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-400">
+          <p class="font-medium mb-1"><i class="bi bi-exclamation-triangle-fill"></i> Totals don't add up</p>
+          <ul class="list-disc ml-5"><% warnings.forEach(w => { %><li><%= w %></li><% }) %></ul>
+        </div>
+      <% } %>
+
+      <% if (locked) { %>
+        <div class="border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300">
+          This invoice is in KashFlow, so what was entered can't be changed. Unlink it from KashFlow first if it needs correcting.
+        </div>
+      <% } %>
+
+      <% if (kind === 'invoice') { %>
+        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
+          <%- include('../partials/csrfHidden') %>
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Invoice</h2>
+          <% if (values.source === 'paperless' && (values.invoiceNumber || (values.lines || []).length)) { %>
+            <p class="text-xs text-blue-700 dark:text-blue-400"><i class="bi bi-info-circle"></i> Filled in from the Paperless custom fields. Saving keeps it in hcs-app.</p>
+          <% } %>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2">
+              <label class="<%= labelCls %>" for="invoiceNumber">Invoice number</label>
+              <input id="invoiceNumber" name="invoiceNumber" value="<%= val(values.invoiceNumber) %>" class="<%= inputCls('invoiceNumber') %>" <%= disabled %>>
+            </div>
+            <div>
+              <label class="<%= labelCls %>" for="invoiceDate">Invoice date</label>
+              <input id="invoiceDate" name="invoiceDate" type="date" value="<%= val(values.invoiceDate) %>" class="<%= inputCls('invoiceDate') %>" <%= disabled %>>
+            </div>
+            <div>
+              <label class="<%= labelCls %>" for="dueDate">Due date</label>
+              <input id="dueDate" name="dueDate" type="date" value="<%= val(values.dueDate) %>" class="<%= inputCls('dueDate') %>" <%= disabled %>>
+            </div>
+            <div>
+              <label class="<%= labelCls %>" for="totalGoods">Total goods £</label>
+              <input id="totalGoods" name="totalGoods" inputmode="decimal" value="<%= val(values.totalGoods) %>" class="<%= inputCls('totalGoods') %>" <%= disabled %>>
+            </div>
+            <div>
+              <label class="<%= labelCls %>" for="totalVat">Total VAT £</label>
+              <input id="totalVat" name="totalVat" inputmode="decimal" value="<%= val(values.totalVat) %>" class="<%= inputCls('totalVat') %>" <%= disabled %>>
+            </div>
+            <div class="col-span-2">
+              <label class="<%= labelCls %>" for="invoiceTotal">Invoice total £</label>
+              <input id="invoiceTotal" name="invoiceTotal" inputmode="decimal" value="<%= val(values.invoiceTotal) %>" class="<%= inputCls('invoiceTotal') %>" <%= disabled %>>
+            </div>
+          </div>
+
+          <div id="lines">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Lines</h3>
+            <% if (err('lines')) { %><p class="text-xs text-red-700 dark:text-red-400 mb-1"><%= err('lines') %></p><% } %>
+            <p class="text-xs text-gray-400 mb-2">Clear every box on a line to remove it. Total is worked out from quantity × price if left blank.</p>
+            <div class="space-y-3">
+              <% for (let i = 0; i < lineCount; i++) { const l = (values.lines || [])[i] || {}; %>
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+                  <div class="text-xs text-gray-400">Line <%= i + 1 %></div>
+                  <input name="lines[<%= i %>][description]" value="<%= val(l.description) %>" placeholder="Description" aria-label="Line <%= i + 1 %> description" class="<%= inputCls(`lines.${i}.description`) %>" <%= disabled %>>
+                  <div class="grid grid-cols-4 gap-2">
+                    <input name="lines[<%= i %>][quantity]" value="<%= val(l.quantity) %>" placeholder="Qty" inputmode="decimal" aria-label="Line <%= i + 1 %> quantity" class="<%= inputCls(`lines.${i}.quantity`) %>" <%= disabled %>>
+                    <input name="lines[<%= i %>][price]" value="<%= val(l.price) %>" placeholder="Price £" inputmode="decimal" aria-label="Line <%= i + 1 %> price" class="<%= inputCls(`lines.${i}.price`) %>" <%= disabled %>>
+                    <input name="lines[<%= i %>][total]" value="<%= val(l.total) %>" placeholder="Total £" inputmode="decimal" aria-label="Line <%= i + 1 %> total" class="<%= inputCls(`lines.${i}.total`) %>" <%= disabled %>>
+                    <input name="lines[<%= i %>][vatRate]" value="<%= val(l.vatRate) %>" placeholder="VAT %" inputmode="numeric" aria-label="Line <%= i + 1 %> VAT %" class="<%= inputCls(`lines.${i}.vatRate`) %>" <%= disabled %>>
+                  </div>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <% if (!locked) { %>
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <button type="submit" name="action" value="save" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
+              <button type="submit" name="action" value="addLine" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm"><i class="bi bi-plus-lg"></i> Add line</button>
+              <% if (state === 'awaiting_entry') { %>
+                <button type="submit" name="action" value="complete" class="ml-auto text-sm bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition"><i class="bi bi-check2"></i> Complete entry</button>
+              <% } %>
+            </div>
+            <% if (state === 'awaiting_entry') { %>
+              <p class="text-xs text-gray-400">Complete entry saves, moves the invoice to Ready for KashFlow and tags it <em>data entry done</em> in Paperless, which emails John.</p>
+            <% } %>
+          <% } %>
+        </form>
+
+        <%# Credit note (PB-9, PB-12) and reopen %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-3 text-sm">
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Credit note</h2>
+          <% if (doc.creditNote || state === 'manual_kashflow') { %>
+            <p class="text-gray-700 dark:text-gray-300"><i class="bi bi-check-square-fill text-green-600"></i> This is a credit note. It's in neither invoice queue and is keyed into KashFlow by hand.</p>
+            <% if (isAdmin && state === 'manual_kashflow') { %>
+              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note">
+                <%- include('../partials/csrfHidden') %>
+                <input type="hidden" name="flag" value="off">
+                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition">Not a credit note (admin)</button>
+              </form>
+              <p class="text-xs text-gray-400">Sends it back to Needs Data Entry. Bev isn't emailed again.</p>
+            <% } %>
+          <% } else if (state === 'awaiting_entry' || state === 'entered') { %>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note" class="flex items-center gap-3">
+              <%- include('../partials/csrfHidden') %>
+              <input type="hidden" name="flag" value="on">
+              <button type="submit" class="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-square"></i> Mark as credit note</button>
+            </form>
+            <p class="text-xs text-gray-400">Takes it out of both invoice queues and sets Credit Note in Paperless, which emails Bev.</p>
+          <% } else if (state === 'sent') { %>
+            <p class="text-gray-500 dark:text-gray-400">Already in KashFlow as a purchase. Unlink it before marking it as a credit note.</p>
+          <% } %>
+
+          <% if (isAdmin && state === 'entered') { %>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reopen" class="pt-3 border-t border-gray-100 dark:border-gray-700">
+              <%- include('../partials/csrfHidden') %>
+              <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 bg-white dark:bg-gray-900 hover:bg-amber-50 dark:hover:bg-gray-800 font-medium transition">Reopen entry (admin)</button>
+              <p class="text-xs text-gray-400 mt-1">Back to Needs Data Entry, and removes <em>data entry done</em> in Paperless.</p>
+            </form>
+          <% } %>
+        </div>
+
+      <% } else if (kind === 'bank') { const b = values.bank || {}; %>
+        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
+          <%- include('../partials/csrfHidden') %>
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Bank statement</h2>
+          <% if (values.source === 'paperless' && (b.accountId || b.periodStart)) { %>
+            <p class="text-xs text-blue-700 dark:text-blue-400"><i class="bi bi-info-circle"></i> Filled in from the Paperless custom fields. Saving keeps it in hcs-app.</p>
+          <% } %>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2">
+              <label class="<%= labelCls %>" for="bankAccountId">Bank account ID</label>
+              <input id="bankAccountId" name="bank[accountId]" inputmode="numeric" value="<%= val(b.accountId) %>" class="<%= inputCls('bank.accountId') %>">
+            </div>
+            <div>
+              <label class="<%= labelCls %>" for="bankPeriodStart">Period start</label>
+              <input id="bankPeriodStart" name="bank[periodStart]" type="date" value="<%= val(b.periodStart) %>" class="<%= inputCls('bank.periodStart') %>">
+            </div>
+            <div>
+              <label class="<%= labelCls %>" for="bankPeriodEnd">Period end</label>
+              <input id="bankPeriodEnd" name="bank[periodEnd]" type="date" value="<%= val(b.periodEnd) %>" class="<%= inputCls('bank.periodEnd') %>">
+            </div>
+            <div>
+              <label class="<%= labelCls %>" for="bankOpening">Opening balance £</label>
+              <input id="bankOpening" name="bank[openingBalance]" inputmode="decimal" value="<%= val(b.openingBalance) %>" class="<%= inputCls('bank.openingBalance') %>">
+            </div>
+            <div>
+              <label class="<%= labelCls %>" for="bankClosing">Closing balance £</label>
+              <input id="bankClosing" name="bank[closingBalance]" inputmode="decimal" value="<%= val(b.closingBalance) %>" class="<%= inputCls('bank.closingBalance') %>">
+            </div>
+          </div>
+          <button type="submit" name="action" value="save" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
+        </form>
+
+      <% } else if (kind === 'statement') { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm text-gray-700 dark:text-gray-300">
+          Supplier statements have no fields to enter. Marking one reviewed arrives with the notification step (H6); until then Bev is still emailed by Paperless.
+        </div>
+      <% } else { %>
+        <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+          This type of document has no fields to enter.
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+<script type="module" src="/resources/js/document-viewer.js"></script>

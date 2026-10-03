@@ -50,6 +50,16 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - **Read-only:** the queue pages have no actions. Actions arrive with H5 and H6.
 - **`classifiedAt` (6.45.1).** Classification stamps it on invoices and supplier statements. A statement has no `processingState`, and `statementReviewed` defaults to false, so without the stamp all 41 historical statements showed as "to review". Statements to Review now requires `classifiedAt`, and **H7 must set it** on every invoice and statement it backfills.
 
+- **H5: entered values are stored in MongoDB only** (`OcrDocument.entry`) and are not mirrored to the Paperless custom fields. The KashFlow draft reads the entry first and falls back to the Paperless fields for anything blank. When the entry has its own lines, they replace Paperless's lines entirely. The form pre-fills from the Paperless fields until something is saved in hcs-app.
+- **H5 actions also update Paperless until cutover**, so its workflows keep sending the emails:
+  - Complete entry adds `data entry done` (WF3 emails John).
+  - Credit note sets field 58 (WF5 emails Bev).
+  - Reopen removes `data entry done`.
+
+  The hcs-app state change is made first and counts. If Paperless can't be updated, the screen says what to do by hand. H6/H8 replace the Paperless sends.
+- **H5 Complete entry needs** an invoice number, invoice date, invoice total and at least one line with a description and a total. Totals that don't add up are warnings, not blockers; the KashFlow send validates again. Unit prices keep 4 decimal places.
+- **H5 file route** is `GET /paperless/ocr/:paperlessId/file` rather than `/documents/:paperlessId/file`, to sit under the existing Paperless guard and route prefix.
+
 ### 0b. H3 setup in Paperless (⏸ Jack, at deploy)
 
 1. Set `PAPERLESS_WEBHOOK_SECRET` in hcs-app to a long random value. The endpoint answers 503 until you do.
