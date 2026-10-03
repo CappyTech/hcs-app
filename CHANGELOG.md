@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.48.1] - 2026-10-03
+
+### Changed
+- **Document notification Mode is a dropdown:** Shadow (record only) or Live (send). Before, it was free text, so a typo like "Live " or "lve" was quietly treated as shadow.
+- **Settings now support a `select` type** with a fixed list of options. Saving a value that isn't on the list is refused, with a message saying so.
+
 ## [6.48.0] - 2026-10-03
 
 ### Added

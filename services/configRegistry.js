@@ -12,7 +12,8 @@
  *   key      env var name, which is also the store key
  *   label    human name
  *   help     one line on what it does — this is what an admin reads
- *   type     'text' | 'number' | 'boolean' | 'secret' | 'textarea'
+ *   type     'text' | 'number' | 'boolean' | 'secret' | 'textarea' | 'select'
+ *   options  (select only) [{ value, label }]; saving any other value is refused
  *   restart  true when the value is read at import time, so a save cannot take
  *            effect until the container restarts. Silently doing nothing is the
  *            failure this flag exists to prevent.
@@ -92,7 +93,14 @@ export const GROUPS = [
     icon: 'bi-bell-fill',
     description: 'The emails and Discord posts for Paperless documents (migration H6). Shadow mode records what would be sent without sending.',
     keys: [
-      { key: 'NOTIFY_MODE', label: 'Mode', type: 'text', help: '`shadow` (default) records what would be sent and sends nothing, while Paperless keeps sending. `live` sends. Switch at cutover (H8), the same hour Paperless WF2, 3, 4, 5, 8 and 9 are disabled.' },
+      {
+        key: 'NOTIFY_MODE', label: 'Mode', type: 'select',
+        options: [
+          { value: 'shadow', label: 'Shadow: record only, send nothing' },
+          { value: 'live', label: 'Live: send emails and Discord posts' },
+        ],
+        help: 'Shadow (the default when unset) records what would be sent while Paperless keeps sending. Switch to Live at cutover (H8), the same hour Paperless WF2, 3, 4, 5, 8 and 9 are disabled.',
+      },
       { key: 'NOTIFY_INVOICE_EMAIL', label: 'Purchase invoice email', type: 'text', help: 'Gets each purchase invoice, PDF attached, once its data entry is complete, and again on every Resend.' },
       { key: 'NOTIFY_STATEMENT_EMAIL', label: 'Supplier statement email', type: 'text', help: 'Gets each supplier statement, PDF attached, the first time it is marked reviewed.' },
       { key: 'NOTIFY_CREDIT_NOTE_EMAIL', label: 'Credit note email', type: 'text', help: 'Gets each credit note, PDF attached, the first time an invoice is marked as a credit note.' },
