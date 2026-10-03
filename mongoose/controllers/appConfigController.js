@@ -131,6 +131,10 @@ export const postGroup = async (req, res, next) => {
       // masked secret field would wipe the secret.
       if (value === '') continue;
       if (registry.isSecret(entry.key) && value === MASK) continue;
+      if (entry.type === 'select' && !(entry.options || []).some((o) => o.value === value)) {
+        req.flash('error', `${entry.label}: "${value}" isn't one of the choices, so it wasn't saved.`);
+        continue;
+      }
       await configStore.set(entry.key, value, req.session?.user?.username || null);
       saved++;
       if (entry.restart) restartNeeded = true;
