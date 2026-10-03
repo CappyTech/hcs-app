@@ -232,7 +232,7 @@ Payload: `{"username": "Heron CS | Documents", "content": "<text>"}`, sent as a 
 | D3 in KashFlow (WF4) | `Document added to kashflow: {{filename}} - {{doc_url}}` |
 | E2 credit note emailed (WF5) | `Emailed credit note to Admin: {{filename}} - {{doc_url}}` |
 
-Recipients should be environment variables (`NOTIFY_JOHN_EMAIL`, `NOTIFY_ADMIN_EMAIL`), not hard-coded.
+Recipients are settings, not hard-coded: `NOTIFY_INVOICE_EMAIL` (E1, John today), `NOTIFY_STATEMENT_EMAIL` (C2a, Bev today) and `NOTIFY_CREDIT_NOTE_EMAIL` (E2, Bev today).
 
 ### Mail rules
 There are five rules on one M365 account, INBOX folder. They are split by To address:
@@ -458,7 +458,7 @@ Everything needed to build is in this document: IDs, field names, templates and 
   PAPERLESS_DOCTYPE_{PURCHASE_INVOICE=1, SUPPLIER_STATEMENT=2, SUBCONTRACTOR_INVOICE=3, BANK_STATEMENT=4, REMITTANCE=5}
   PAPERLESS_WEBHOOK_SECRET          (H3)
   DISCORD_WEBHOOK_URL
-  NOTIFY_JOHN_EMAIL, NOTIFY_ADMIN_EMAIL
+  NOTIFY_INVOICE_EMAIL, NOTIFY_STATEMENT_EMAIL, NOTIFY_CREDIT_NOTE_EMAIL
   NOTIFY_MODE=shadow|live           (H8; defaults to shadow)
   ```
 

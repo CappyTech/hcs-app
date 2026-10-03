@@ -41,7 +41,7 @@ const isStatement = (doc) => isDocumentType(doc?.documentType, 'supplierStatemen
 const anyDocument = () => true;
 
 const JOHN_EMAIL = {
-  to: () => process.env.NOTIFY_JOHN_EMAIL,
+  to: () => process.env.NOTIFY_INVOICE_EMAIL,
   subject: 'New purchase invoice: {{filename}} from {{correspondent}}',
   body: [
     'A new purchase invoice has been added to Heron CS | Documents.',
@@ -83,7 +83,7 @@ export const KINDS = {
   statement: {
     workflow: 'WF2', appliesTo: isStatement,
     email: {
-      to: () => process.env.NOTIFY_ADMIN_EMAIL,
+      to: () => process.env.NOTIFY_STATEMENT_EMAIL,
       subject: 'New statement: {{filename}} from {{correspondent}}',
       body: [
         'A new statement has been added to https://docs.heroncs.co.uk/',
@@ -100,7 +100,7 @@ export const KINDS = {
   credit_note: {
     workflow: 'WF5', appliesTo: isPurchaseInvoice,
     email: {
-      to: () => process.env.NOTIFY_ADMIN_EMAIL,
+      to: () => process.env.NOTIFY_CREDIT_NOTE_EMAIL,
       subject: 'New credit note: {{filename}} from {{correspondent}}',
       body: [
         'A new credit note has been added to https://docs.heroncs.co.uk/',

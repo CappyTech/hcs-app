@@ -93,8 +93,9 @@ export const GROUPS = [
     description: 'The emails and Discord posts for Paperless documents (migration H6). Shadow mode records what would be sent without sending.',
     keys: [
       { key: 'NOTIFY_MODE', label: 'Mode', type: 'text', help: '`shadow` (default) records what would be sent and sends nothing, while Paperless keeps sending. `live` sends. Switch at cutover (H8), the same hour Paperless WF2, 3, 4, 5, 8 and 9 are disabled.' },
-      { key: 'NOTIFY_JOHN_EMAIL', label: 'John’s email', type: 'text', help: 'Gets each purchase invoice once entry is complete, and re-sends.' },
-      { key: 'NOTIFY_ADMIN_EMAIL', label: 'Admin (Bev) email', type: 'text', help: 'Gets supplier statements once reviewed, and credit notes once flagged.' },
+      { key: 'NOTIFY_INVOICE_EMAIL', label: 'Purchase invoice email', type: 'text', help: 'Gets each purchase invoice, PDF attached, once its data entry is complete, and again on every Resend.' },
+      { key: 'NOTIFY_STATEMENT_EMAIL', label: 'Supplier statement email', type: 'text', help: 'Gets each supplier statement, PDF attached, the first time it is marked reviewed.' },
+      { key: 'NOTIFY_CREDIT_NOTE_EMAIL', label: 'Credit note email', type: 'text', help: 'Gets each credit note, PDF attached, the first time an invoice is marked as a credit note.' },
       { key: 'DISCORD_WEBHOOK_URL', label: 'Discord webhook URL', type: 'secret', help: 'Where document posts go. Unset: posts are skipped and logged.' },
     ],
   },
