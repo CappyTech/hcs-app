@@ -51,6 +51,8 @@ const tileIcons = {
   // Documents
   OcrDocument: 'bi-file-earmark-text',
   OcrDocumentIngest: 'bi-arrow-repeat',
+  DocumentQueues: 'bi-list-check',
+  ShadowReport: 'bi-clipboard-check',
   // Custom tiles (dashboardTilesConfig keys)
   DeletedItems: 'bi-trash',
   LogViewer: 'bi-terminal',

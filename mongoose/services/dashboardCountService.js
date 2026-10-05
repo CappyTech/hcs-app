@@ -16,6 +16,7 @@
 // time-boxed, and any failure yields no count (the tile just renders plain) so a
 // slow or broken query can never break or noticeably delay a hub load.
 
+import { queueFilter } from './paperless/documentQueueService.js';
 import mdb from './mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 
@@ -69,6 +70,13 @@ const providers = {
     if (!M) return null;
     const unlinked = await M.countDocuments({ kashflowPurchaseId: null, deletedInPaperlessAt: null });
     return { value: unlinked, attention: unlinked, label: 'unlinked' };
+  },
+  // Documents — invoices in the Needs Data Entry queue (H4).
+  DocumentQueues: async () => {
+    const M = mdb.PAPERLESS?.OcrDocument;
+    if (!M) return null;
+    const waiting = await M.countDocuments(queueFilter('needs-entry'));
+    return { value: waiting, attention: waiting, label: 'to enter' };
   },
 };
 

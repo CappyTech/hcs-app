@@ -299,6 +299,21 @@ export default {
         department: ['documents'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    // Paperless migration: the work queues (H4) and the pre-cutover shadow report (H8)
+    DocumentQueues: {
+        title: 'Document Queues',
+        description: 'Invoices waiting for data entry or to go to KashFlow, and supplier statements to review.',
+        link: '/paperless/queues',
+        department: ['documents'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
+    ShadowReport: {
+        title: 'Shadow Report',
+        description: 'What hcs-app would send against what Paperless sent, before the notification cutover.',
+        link: '/paperless/shadow-report',
+        department: ['documents'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     Paperlessngx: {
         title: 'Document Management',
         description: 'Manage OCR documents imported from docs.heroncs.co.uk.',

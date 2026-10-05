@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.3] - 2026-10-05
+
+### Added
+- **Document Queues and Shadow Report tiles on the Documents dashboard** (top menu → Documents). Before, the queues were only reachable from the Documents overview, and the shadow report only from the queues. The queues tile shows how many invoices are waiting for data entry and is highlighted when there are any.
+- **Shadow report button on the Documents overview**, beside Queues.
+
+### Changed
+- **The queues page's "← Documents" link now goes to the Documents dashboard,** where its tile is, rather than the overview.
+
 ## [6.49.2] - 2026-10-03
 
 ### Changed
