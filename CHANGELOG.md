@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.4] - 2026-10-06
+
+### Added
+- **Automatic deploys to server2.** After a master build passes its tests and pushes the image, a new `deploy` job in CI joins the tailnet, SSHes to `server2-host`, pulls and recreates the hcs-app container, then waits until the live footer shows the new commit. It fails if the new commit isn't live within 5 minutes, or if the compose service isn't using the GHCR image. Deploys run in a GitHub `production` environment, so each one can be made to wait for approval. One-time setup is in `docs/DEPLOYMENT.md`.
+
 ## [6.49.3] - 2026-10-05
 
 ### Added

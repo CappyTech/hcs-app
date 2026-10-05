@@ -89,3 +89,75 @@ jobs:
       - name: Summary
         run: |
           echo "Published: ${{ env.IMAGE }}:${{ env.EXTRA_TAG }}, sha-${{ env.SHORT_SHA }}" >> $GITHUB_STEP_SUMMARY
+
+  # ------------------------------------------------------------- deploy ---
+  # After a master build has passed its tests and pushed :latest, roll the
+  # container on server2, as cairn's release.yml does for its edge server.
+  # server2 is behind the FRP tunnel, so the runner joins the tailnet and SSHes
+  # to it as server2-host. Deploys run in the `production` environment: with
+  # no required reviewers it is automatic; add reviewers in Settings →
+  # Environments to make each deploy wait for an Approve click.
+  #
+  # Setup (once): docs/DEPLOYMENT.md.
+  deploy:
+    name: Deploy to server2
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://app.heroncs.co.uk
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false   # never interrupt a deploy half way
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST || 'server2-host' }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '~/docker/app' }}
+      DEPLOY_SERVICE: ${{ vars.DEPLOY_SERVICE || 'hcs-app' }}
+      APP_URL: ${{ vars.APP_URL || 'https://app.heroncs.co.uk' }}
+    steps:
+      - name: Derive commit
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-client-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:dev-ci
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+          DEPLOY_SERVICE: ${{ env.DEPLOY_SERVICE }}
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: DEPLOY_PATH,DEPLOY_SERVICE
+          script: |
+            set -e
+            cd "${DEPLOY_PATH/#\~/$HOME}"
+            # Fail loudly if this compose doesn't pull from GHCR: a local-only
+            # image name makes `pull` a no-op and the deploy would ship nothing.
+            docker compose config --images "$DEPLOY_SERVICE" | grep -q '^ghcr.io/' \
+              || { echo "::error::$DEPLOY_SERVICE in $(pwd) does not use a ghcr.io image"; exit 1; }
+            docker compose pull "$DEPLOY_SERVICE"
+            # --force-recreate so a new :latest digest always rolls the container
+            docker compose up -d --force-recreate "$DEPLOY_SERVICE"
+            docker image prune -f
+
+      # The footer shows the running commit, so wait until it's this one.
+      # Catches a deploy that "succeeded" but is still serving the old image.
+      - name: Verify the new version is live
+        run: |
+          for i in $(seq 1 30); do
+            live=$(curl -fsS -m 10 "$APP_URL/user/login" | grep -oE 'commit/[0-9a-f]{7,40}' | head -1 || true)
+            echo "attempt $i: ${live:-unreachable} (want $SHORT_SHA)"
+            case "$live" in *"$SHORT_SHA"*) echo "Live: $SHORT_SHA" >> $GITHUB_STEP_SUMMARY; exit 0;; esac
+            sleep 10
+          done
+          echo "::error::$APP_URL is not serving $SHORT_SHA after 5 minutes"
+          exit 1
