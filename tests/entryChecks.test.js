@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { liveChecks, pickValue } from '../public/js/entry-checks.js';
+import { liveChecks, pickValue, parseVatRate, VAT_RATES } from '../public/js/entry-checks.js';
 
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
@@ -29,6 +29,24 @@ describe('live checks on the entry form', () => {
     const lines = [{ description: 'x', quantity: '3', price: '4.28', total: '', vatRate: '' }];
     assert.deepEqual(liveChecks({ totalGoods: '12.84', totalVat: '9.99' }, lines), []);
   });
+
+  it('VAT % is a percentage: a VAT amount typed into it is flagged, not counted as a rate', () => {
+    const lines = [
+      { ...stark[0], vatRate: '4.49' }, // the VAT on 22.44, not the rate
+      { ...stark[1], vatRate: '20%' },
+    ];
+    assert.deepEqual(liveChecks({ totalGoods: '38.18', totalVat: '7.64', invoiceTotal: '45.82' }, lines), [
+      'Line 1 VAT % is "4.49". VAT % is a percentage (0, 5, 20), not an amount.',
+    ]);
+  });
+});
+
+describe('VAT % on a line', () => {
+  it('is one of the UK rates, with or without "%"', () => {
+    assert.deepEqual(['20', '20%', ' 5 ', '0', '20.00', ''].map(parseVatRate), [20, 20, 5, 0, 20, null]);
+    for (const v of ['4.49', '3', '17.5', '100', '-20', 'S', '£20']) assert.ok(Number.isNaN(parseVatRate(v)), v);
+    assert.deepEqual(VAT_RATES, [0, 5, 20]);
+  });
 });
 
 describe('picking a value off the PDF', () => {
@@ -45,6 +63,9 @@ describe('picking a value off the PDF', () => {
   it('refuses text that does not fit the field', () => {
     assert.equal(pickValue('invoiceTotal', 'Total Due'), null);
     assert.equal(pickValue('invoiceDate', 'WARREN'), null);
+    // Clicking the VAT amount column, not the rate
+    assert.equal(pickValue('line.vatRate', '4.49'), null);
+    assert.equal(pickValue('line.vatRate', '£3.00'), null);
   });
 });
 

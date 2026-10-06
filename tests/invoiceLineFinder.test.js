@@ -25,6 +25,39 @@ describe('line items', () => {
     assert.ok(lines[0].box.x <= 36 && lines[0].box.x + lines[0].box.w >= 558);
   });
 
+  it('Jewson: bricks priced per thousand ("TH") are priced per brick', () => {
+    const head = [['ITEM No.', 43.2, 554, 29.9, 7], ['DESCRIPTION', 97.2, 554, 47.8, 7], ['QUANTITY', 237.8, 554, 35.7, 7], ['PRICE', 338.6, 554, 21.4, 7], ['UNIT', 418.4, 554, 16.3, 7], ['VALUE', 470.5, 554, 23.7, 7], ['VAT', 527.6, 554, 14, 7]];
+    const lines = findLines(page([
+      ...head,
+      ['INSTUS04', 43, 532, 38, 8], ['INSTARMAC Flowpoint Smooth Natural Grey', 94, 532, 161, 8],
+      ['1.00 EA', 245, 523, 28, 8], ['23.37', 340, 523, 20, 8], ['EA', 421, 523, 11, 8], ['23.37', 491, 523, 20, 8], ['S', 542, 523, 5, 8],
+      ['BRENG041', 43, 505, 42, 8], ['WIENERBERGER TERCA 65mm Class B (SANDOWN) Engineering Red Perforated', 94, 505, 300, 8],
+      ['1.00 EA', 245, 496, 28, 8], ['794.51', 336, 496, 25, 8], ['TH', 421, 496, 11, 8], ['0.79', 496, 496, 16, 8], ['S', 542, 496, 5, 8],
+      ['BRENG041', 43, 478, 42, 8], ['WIENERBERGER TERCA 65mm Class B', 94, 478, 200, 8],
+      ['400.00 EA', 245, 469, 28, 8], ['794.51', 336, 469, 25, 8], ['TH', 421, 469, 11, 8], ['317.80', 491, 469, 20, 8], ['S', 542, 469, 5, 8],
+    ]));
+    assert.deepEqual(brief(lines), [
+      ['INSTARMAC Flowpoint Smooth Natural Grey', 1, 23.37, 23.37, 20],
+      ['WIENERBERGER TERCA 65mm Class B (SANDOWN) Engineering Red Perforated', 1, 0.7945, 0.79, 20],
+      ['WIENERBERGER TERCA 65mm Class B', 400, 0.7945, 317.8, 20],
+    ]);
+    assert.equal(lines[0].pricePer, undefined);
+    assert.deepEqual([lines[1].pricePer, lines[1].quotedPrice], [1000, 794.51]);
+  });
+
+  it('a per-hundred price with no unit column is worked out from the figures, and only then', () => {
+    const head = [['Description', 40, 600, 50, 10], ['Qty', 300, 600, 15, 10], ['Price', 360, 600, 23, 10], ['Amount', 460, 600, 30, 10]];
+    const lines = findLines(page([
+      ...head,
+      ['Screws 4x40', 40, 580, 60, 10], ['250', 300, 580, 15, 10], ['6.20', 360, 580, 20, 10], ['15.50', 460, 580, 25, 10],
+      ['Discounted fixings', 40, 560, 90, 10], ['2', 300, 560, 6, 10], ['10.00', 360, 560, 25, 10], ['18.00', 460, 560, 25, 10],
+    ]));
+    assert.deepEqual(brief(lines), [
+      ['Screws 4x40', 250, 0.062, 15.5, null],
+      ['Discounted fixings', 2, 10, 18, null], // a discount, not a unit: left as printed
+    ]);
+  });
+
   it('Stark: description on one row, figures on the row below, VAT code "S"', () => {
     const lines = findLines(page([
       ['ITEM No.', 43.2, 554, 29.9, 7], ['DESCRIPTION', 97.2, 554, 47.8, 7], ['QUANTITY', 237.8, 554, 35.7, 7], ['PRICE', 338.6, 554, 21.4, 7], ['UNIT', 418.4, 554, 16.3, 7], ['VALUE', 470.5, 554, 23.7, 7], ['VAT', 527.6, 554, 14, 7],

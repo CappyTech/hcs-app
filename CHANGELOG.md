@@ -2,6 +2,26 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.54.1] - 2026-10-06
+
+### Fixed
+- **Two fixes meant for 6.54.0 missed it.** They were pushed after #126 had already been merged:
+  - **Lines priced per thousand or per hundred were read at the printed price.** Jewson prices bricks per thousand: "1.00 EA, 794.51 TH, 0.79". The reader took 794.51 as the price of one brick, so the entry screen warned "1 × 794.51 is 794.51, not 0.79".
+    - **The fix:** the reader now divides the price by 1,000 or 100 when the unit column says so (`TH`, `M`, `per 1000`; `C`, `H`, `per 100`). With no unit column, it does so only when quantity × price ÷ 100 or 1,000 is the line total and quantity × price isn't. The price is kept to 4 places (0.7945).
+    - **Totals check:** it now allows for that rounding on large quantities, a few pence on 5,000 bricks.
+    - **Stored readings:** they are marked out of date (reader version 2), so the background job reads them again.
+  - **A line's VAT % accepted a VAT amount.** VAT % allowed any whole number from 0 to 100. So £3.00 of VAT typed into it saved as 3%, while "20%" and 4.49 were refused with a bare "isn't valid".
+    - **On save:** VAT % must now be 0, 5 or 20, with or without "%". Anything else is refused with "Line N VAT % is "4.49". VAT % is a percentage (0, 5, 20), not an amount."
+    - **While typing:** the entry screen's live checks say the same, and a bad rate isn't counted in the VAT total check.
+    - **Click-to-fill:** clicking a VAT amount on the PDF no longer fills VAT %.
+    - **Earlier entries:** ones saved with an odd rate are warned about.
+
+- **The KashFlow draft let a purchase be sent when its lines didn't add up to the invoice.** On #1120 the lines came to £1,038.32 against an £85.86 invoice. "Before sending" was all green and Send was enabled. KashFlow totals a purchase from its lines, so it would have been created for the wrong amount.
+  - **The send:** it now refuses when the lines, including any added on the draft page, don't add up to the Net and VAT. VAT allows a penny of rounding a line. The message says what the lines come to.
+  - **The checklist:** "Before sending" has a new item, **Lines add up to Net and VAT**, which links to Edit entry when they don't.
+- **The draft page showed dates the American way** (9/24/2026). They're now 24/09/2026.
+- **The draft page said the lines came from "Custom fields"** when they came from the entry screen. It now says "Entry".
+
 ## [6.54.0] - 2026-10-06
 
 ### Added

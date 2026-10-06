@@ -57,6 +57,31 @@ export function notDraftableMessage(doc) {
   return `Only purchase and subcontractor invoices are sent to KashFlow as a purchase. This is ${type ? `a ${type}` : 'a document with no type'}.`;
 }
 
+/**
+ * Why the draft's lines can't be sent: they don't add up to its Net and VAT.
+ * KashFlow totals a purchase from its lines, so lines that don't match the
+ * invoice would create a purchase for the wrong amount. Null when they agree.
+ * VAT allows a penny a line, since suppliers round VAT per line or on the total.
+ */
+export function lineTotalsProblem(draft) {
+  const lines = Array.isArray(draft?.LineItems) ? draft.LineItems : [];
+  const num = (v) => {
+    if (v == null || v === '') return null;
+    const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
+    return Number.isFinite(n) ? n : null;
+  };
+  const net = num(draft?.NetAmount);
+  const vat = num(draft?.VATAmount);
+  if (!lines.length || (net == null && vat == null)) return null;
+  const sumNet = lines.reduce((s, li) => s + (num(li.NetAmount) ?? 0), 0);
+  const sumVat = lines.reduce((s, li) => s + (num(li.VATAmount) ?? 0), 0);
+  const out = [];
+  if (net != null && Math.abs(sumNet - net) > 0.01 + 1e-9) out.push(`net ${sumNet.toFixed(2)} (invoice ${net.toFixed(2)})`);
+  if (vat != null && Math.abs(sumVat - vat) > Math.max(0.02, 0.01 * lines.length) + 1e-9) out.push(`VAT ${sumVat.toFixed(2)} (invoice ${vat.toFixed(2)})`);
+  if (!out.length) return null;
+  return `The lines don't add up to the invoice: they come to ${out.join(' and ')}. Correct the lines in Edit entry, or add the missing ones, before sending.`;
+}
+
 /** Why `doc` can't be drafted or sent to KashFlow, or null when it can. */
 export function sendBlockedMessage(doc) {
   if (!isInvoiceDocument(doc)) return notDraftableMessage(doc);
@@ -1017,6 +1042,15 @@ export const sendDraftToKashflow = async (req, res, next) => {
         return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
       }
       draft.LineItems.push(...parsedExtras.lines);
+    }
+
+    // The lines, including any added on the draft page, must add up to the invoice
+    const linesProblem = lineTotalsProblem(draft);
+    if (linesProblem) {
+      logger.warn(`[paperless] send refused for ${paperlessId}: ${linesProblem}`);
+      req.flash("error", linesProblem);
+      await releaseSendClaim();
+      return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
     }
 
     // Subcontractor-only: attach payment lines posted from the draft view.

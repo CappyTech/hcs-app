@@ -8,6 +8,28 @@ import { parseNumber } from './invoice-line-finder.js';
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));
 const money = (v) => `£${Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(/[£,\s]/g, '')));
+/** The VAT rates a line can have, in percent (UK: zero, reduced, standard). */
+export const VAT_RATES = [0, 5, 20];
+
+/**
+ * A line's VAT % as typed: the rate, null when blank, or NaN when it isn't
+ * one of VAT_RATES. "20" and "20%" are both 20. Amounts are refused: VAT % is
+ * a percentage, and £4.67 of VAT typed into it would otherwise be 4.67%.
+ */
+export function parseVatRate(v) {
+  const s = String(v ?? '').trim();
+  if (!s) return null;
+  const m = /^(\d+(?:\.0+)?)\s*%?$/.exec(s);
+  const n = m ? Number(m[1]) : NaN;
+  return VAT_RATES.includes(n) ? n : NaN;
+}
+
+/** Why a line's VAT % won't do, or null when it's blank or a rate. */
+export function vatRateProblem(v, lineNo) {
+  if (!Number.isNaN(parseVatRate(v))) return null;
+  return `Line ${lineNo} VAT % is "${String(v).trim()}". VAT % is a percentage (${VAT_RATES.join(', ')}), not an amount.`;
+}
+
 const isBlank = (l) => ['description', 'quantity', 'price', 'total', 'vatRate'].every((f) => !l[f] && l[f] !== 0);
 
 /**
@@ -20,11 +42,16 @@ export function liveChecks(header, lines) {
   const goods = num(header.totalGoods);
   const vat = num(header.totalVat);
   const total = num(header.invoiceTotal);
+  lines.forEach((l, i) => {
+    const problem = isBlank(l) ? null : vatRateProblem(l.vatRate, i + 1);
+    if (problem) out.push(problem);
+  });
   const ls = lines.filter((l) => !isBlank(l)).map((l) => {
     const q = num(l.quantity);
     const p = num(l.price);
     const t = num(l.total) ?? (q != null && p != null ? Math.round(q * p * 100) / 100 : null);
-    return { t, rate: num(l.vatRate) };
+    const rate = parseVatRate(l.vatRate);
+    return { t, rate: Number.isNaN(rate) ? null : rate };
   });
   const off = (a, b, tol = 0.01) => Math.abs(a - b) > tol + 1e-9;
   const withTotals = ls.filter((l) => l.t != null && Number.isFinite(l.t));
@@ -60,7 +87,11 @@ export function pickValue(field, text, word) {
     } else if (type === 'date') {
       const d = parseDate(t);
       if (d) return d;
-    } else if (type === 'quantity' || type === 'vatRate') {
+    } else if (type === 'vatRate') {
+      // Only a rate: clicking the VAT amount column must not fill "4.67"
+      const n = parseVatRate(t);
+      if (n != null && !Number.isNaN(n)) return String(n);
+    } else if (type === 'quantity') {
       const n = parseNumber(t);
       if (n != null) return String(n);
     } else if (type === 'reference') {
@@ -73,4 +104,4 @@ export function pickValue(field, text, word) {
   return null;
 }
 
-export default { liveChecks, pickValue };
+export default { liveChecks, pickValue, parseVatRate, vatRateProblem, VAT_RATES };

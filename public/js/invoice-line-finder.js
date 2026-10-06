@@ -177,7 +177,9 @@ function readTable(rows, start, head) {
     if (p.amount != null) {
       const net = Number(p.amount);
       const quantity = p.cells.qty != null ? parseNumber(p.cells.qty) : null;
-      const price = p.cells.price != null ? parseNumber(p.cells.price) : null;
+      const quoted = p.cells.price != null ? parseNumber(p.cells.price) : null;
+      const per = pricedPer(quantity, quoted, net, p.cells.uom);
+      const price = per > 1 ? Math.round((quoted / per) * 10000) / 10000 : quoted;
       const before = pending;
       pending = null;
       const description = p.text || before?.text || p.code || before?.code || '';
@@ -186,6 +188,7 @@ function readTable(rows, start, head) {
         code: p.code || before?.code || null,
         quantity,
         price,
+        ...(per > 1 ? { pricePer: per, quotedPrice: quoted } : {}),
         total: net,
         vatRate: vatRateOf(p.cells, net),
         page: p.row.page,
@@ -208,6 +211,27 @@ function readTable(rows, start, head) {
     }
   });
   return { lines: lines.filter((l) => l.description || l.quantity != null), end: r };
+}
+
+// Units that mean the price is per hundred or per thousand ("TH": bricks, blocks)
+const PER_UNIT = [[1000, /^(th|thou|m|mil|1000|per\s*1000|\/1000)$/i], [100, /^(c|h|hun|100|per\s*100|\/100)$/i]];
+
+/**
+ * 1, 100 or 1000: what the printed price is per. Bricks are priced per
+ * thousand (Jewson: 1.00 EA at 794.51 TH = 0.79), so quantity × price is the
+ * total only after dividing. Taken from the unit column when it says so, else
+ * only when the figures leave no doubt (quantity × price ÷ 100 or 1000 is the
+ * total, and quantity × price isn't).
+ */
+function pricedPer(quantity, price, total, unit) {
+  if (!(quantity > 0) || !(price > 0) || !Number.isFinite(total)) return 1;
+  const near = (a, b) => Math.abs(a - b) <= Math.max(0.011, Math.abs(b) * 0.005);
+  if (near(quantity * price, total)) return 1;
+  const hinted = PER_UNIT.find(([, re]) => re.test(String(unit || '').trim()))?.[0];
+  for (const per of hinted ? [hinted] : [1000, 100]) {
+    if (near((quantity * price) / per, total)) return per;
+  }
+  return 1;
 }
 
 /**
