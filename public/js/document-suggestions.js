@@ -13,7 +13,7 @@
  * Hooks into document-viewer.js through its hcs:pdf-loaded / hcs:pdf-page
  * events, so it never touches rendering or text selection.
  */
-import { findFields, locateValue, normalise, toItems, FIELDS } from '/resources/js/invoice-field-finder.js';
+import { findFields, locateValue, normalise, toItems, fitBox, FIELDS } from '/resources/js/invoice-field-finder.js';
 
 const MAX_PAGES = 5; // invoices put these on the first page or two
 const PREF_KEY = 'hcs.entry.highlights';
@@ -61,6 +61,40 @@ function markFor(field) {
 
 // ── PDF boxes ────────────────────────────────────────────────────────
 
+/**
+ * A box around part of a text item, placed by real character widths. The
+ * text layer draws each item as a span stretched over the printed text, so a
+ * Range over the first n characters of that span measures them. (Font names
+ * can't be used for this: PDF.js substitutes fonts under other names.)
+ */
+function exactBox(box, p) {
+  const src = box?.src;
+  if (!src || (src.from === 0 && src.to === src.str.length)) return box;
+  // The span for this item: same text, nearest to where the item is
+  const [ax, ay] = p.viewport.convertToViewportPoint(src.x, box.y + box.h);
+  const pageRect = p.pageEl.getBoundingClientRect();
+  let span = null;
+  let best = Infinity;
+  for (const s of p.pageEl.querySelectorAll('.textLayer span')) {
+    if (s.textContent !== src.str) continue;
+    const r = s.getBoundingClientRect();
+    const d = Math.hypot(r.left - pageRect.left - ax, r.top - pageRect.top - ay);
+    if (d < best) { best = d; span = s; }
+  }
+  const text = span?.firstChild;
+  if (!text || text.nodeType !== Node.TEXT_NODE || best > 40) return box;
+  const range = document.createRange();
+  const left = span.getBoundingClientRect().left;
+  // Width of the span's first n characters: fitBox only ever measures prefixes
+  const measure = (t) => {
+    if (t.length === 0) return 0;
+    range.setStart(text, 0);
+    range.setEnd(text, Math.min(t.length, text.length));
+    return range.getBoundingClientRect().right - left;
+  };
+  return fitBox(box, measure);
+}
+
 function drawPage(pageNumber) {
   const p = pages.get(pageNumber);
   if (!p) return;
@@ -72,7 +106,7 @@ function drawPage(pageNumber) {
   for (const field of Object.keys(inputs)) {
     const m = markFor(field);
     if (!m || m.page !== pageNumber) continue;
-    const { box } = m;
+    const box = exactBox(m.box, p);
     // PDF.js 6 has no convertToViewportRectangle; two corners do the same
     const [x1, y1] = p.viewport.convertToViewportPoint(box.x, box.y);
     const [x2, y2] = p.viewport.convertToViewportPoint(box.x + box.w, box.y + box.h);

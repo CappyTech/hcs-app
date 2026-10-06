@@ -256,3 +256,31 @@ describe('entry screen wiring', () => {
     for (const m of sugg.matchAll(/innerHTML = ([^;]+);/g)) assert.match(m[1], /^'<i class="bi bi-[a-z0-9-]+"><\/i> '$/, m[0]);
   });
 });
+
+describe('exact boxes', () => {
+  const { fitBox } = finder;
+  // "Invoice No. A26825510698" in a font where capitals and digits are wide and spaces narrow
+  const str = 'Invoice No. A26825510698';
+  const widths = { ' ': 3, '.': 3, i: 3, o: 6, c: 6, e: 6, v: 6, n: 6, I: 4, N: 10, A: 10 };
+  const measure = (t) => [...t].reduce((s, ch) => s + (widths[ch] ?? 8), 0);
+  const item = toItems([{ str, transform: [24, 0, 0, 24, 300, 700], width: measure(str) * 2, height: 24 }], 1)[0];
+
+  it('places a box around part of an item by the real character widths', () => {
+    const f = findFields([item]);
+    const naive = f.invoiceNumber.box;
+    assert.equal(f.invoiceNumber.value, 'A26825510698');
+    const exact = fitBox(naive, measure);
+    // 'Invoice No. ' is 62 units of 160, drawn 320 wide → x = 300 + 320 × 62/160 = 424
+    assert.equal(Math.round(exact.x), 424);
+    assert.equal(Math.round(exact.x + exact.w), 300 + 320);
+    assert.ok(naive.x > exact.x + 5, 'the equal-width guess starts too far right and cuts off the "A"');
+  });
+
+  it('leaves a whole-item box, and a box with no way to measure, as it was', () => {
+    const whole = finder.charBox(item);
+    assert.equal(fitBox(whole, measure), whole);
+    const part = finder.charBox(item, 12);
+    assert.equal(fitBox(part, null), part);
+    assert.equal(fitBox(part, () => 0), part);
+  });
+});
