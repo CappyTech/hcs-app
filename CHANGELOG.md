@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.5] - 2026-10-06
+
+### Fixed
+- **The deploy job could not join Tailscale.** The workflow passed the OAuth secret as `oauth-client-secret`, but `tailscale/github-action` expects `oauth-secret`, so the action saw no credentials ("OAuth identity empty"). The optional Tailscale step in CI had the same typo and had never worked. Both are fixed. The Tailscale notes in `docs/DEPLOYMENT.md` now explain that the default allow-all policy needs nothing, and how to handle a stricter policy or Tailscale SSH.
+
 ## [6.49.4] - 2026-10-06
 
 ### Added
