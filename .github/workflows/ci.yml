@@ -150,27 +150,28 @@ jobs:
           echo "Found $DEPLOY_HOST at $ip"
           echo "DEPLOY_IP=$ip" >> $GITHUB_ENV
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1
+      # server2 runs Tailscale SSH, which answers port 22 for tailnet connections
+      # and authorises them by the tailnet policy (tag:dev-ci → tag:server), not
+      # by keys. So this is a plain ssh to its tailnet address with no key.
+      - name: Deploy over Tailscale SSH
         env:
-          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
-          DEPLOY_SERVICE: ${{ env.DEPLOY_SERVICE }}
-        with:
-          host: ${{ env.DEPLOY_IP }}
-          username: ${{ secrets.DEPLOY_SSH_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: DEPLOY_PATH,DEPLOY_SERVICE
-          script: |
-            set -e
-            cd "${DEPLOY_PATH/#\~/$HOME}"
-            # Fail loudly if this compose doesn't pull from GHCR: a local-only
-            # image name makes `pull` a no-op and the deploy would ship nothing.
-            docker compose config --images "$DEPLOY_SERVICE" | grep -q '^ghcr.io/' \
-              || { echo "::error::$DEPLOY_SERVICE in $(pwd) does not use a ghcr.io image"; exit 1; }
-            docker compose pull "$DEPLOY_SERVICE"
-            # --force-recreate so a new :latest digest always rolls the container
-            docker compose up -d --force-recreate "$DEPLOY_SERVICE"
-            docker image prune -f
+          DEPLOY_USER: ${{ vars.DEPLOY_USER || secrets.DEPLOY_SSH_USER || 'jack' }}
+        run: |
+          # DEPLOY_PATH goes over unquoted so the remote shell expands a leading ~
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 "$DEPLOY_USER@$DEPLOY_IP" "DEPLOY_PATH=$DEPLOY_PATH DEPLOY_SERVICE=$DEPLOY_SERVICE bash -s" <<'REMOTE'
+          set -e
+          cd "$DEPLOY_PATH"
+          # Fail loudly if this compose doesn't pull from GHCR: a local-only
+          # image name makes `pull` a no-op and the deploy would ship nothing.
+          if ! docker compose config --images "$DEPLOY_SERVICE" | grep -q '^ghcr.io/'; then
+            echo "::error::$DEPLOY_SERVICE in $(pwd) does not use a ghcr.io image"
+            exit 1
+          fi
+          docker compose pull "$DEPLOY_SERVICE"
+          # --force-recreate so a new :latest digest always rolls the container
+          docker compose up -d --force-recreate "$DEPLOY_SERVICE"
+          docker image prune -f
+          REMOTE
 
       # The footer shows the running commit, so wait until it's this one.
       # Catches a deploy that "succeeded" but is still serving the old image.
