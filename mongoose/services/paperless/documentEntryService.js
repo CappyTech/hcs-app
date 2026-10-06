@@ -179,7 +179,10 @@ export function consistencyWarnings(entry) {
   const out = [];
   const lines = entry.lines || [];
   lines.forEach((l, i) => {
-    if (l.quantity != null && l.price != null && l.total != null && off(l.quantity * l.price, l.total)) {
+    // A price kept to 4 places (bricks per thousand: 0.7945) can be out by half a
+    // ten-thousandth a unit, so 5,000 bricks may be a few pence out
+    const slack = Math.max(0.01, Math.abs(l.quantity ?? 0) * 0.00005);
+    if (l.quantity != null && l.price != null && l.total != null && Math.abs(l.quantity * l.price - l.total) > slack + 1e-9) {
       out.push(`Line ${i + 1}: ${l.quantity} × ${money(l.price)} is ${money(l.quantity * l.price)}, not ${money(l.total)}.`);
     }
   });

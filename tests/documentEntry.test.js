@@ -173,6 +173,15 @@ describe('completion rules and totals', () => {
     assert.match(w[2], /not the invoice total 80\.00/);
   });
 
+  it('allows for a per-thousand price kept to 4 places', () => {
+    // 794.51 per thousand → 0.7945 a brick; 5,000 × 0.7945 = 3972.50 against 3972.55
+    const bricks = (quantity, total) => consistencyWarnings({ lines: [{ quantity, price: 0.7945, total }] });
+    assert.deepEqual(bricks(1, 0.79), []);
+    assert.deepEqual(bricks(5000, 3972.55), []);
+    assert.equal(bricks(1, 794.51).length, 1);
+    assert.equal(bricks(5000, 3980).length, 1);
+  });
+
   it('warns when VAT at the line rates is not the total VAT, allowing a penny a line', () => {
     const lines = [{ total: 22.44, vatRate: 20 }, { total: 15.74, vatRate: 20 }];
     const base = { totalGoods: 38.18, invoiceTotal: 45.82, lines };

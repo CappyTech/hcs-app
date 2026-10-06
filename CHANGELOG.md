@@ -15,6 +15,10 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - **Removing a tag:** the invoice goes back to its queue, unless the exclusion was set by a person.
   - **Always followed:** this works whatever `PAPERLESS_FOLLOW_TAGS` is set to, since Paperless is still where these are marked.
   - **What an excluded invoice does now:** it is left out of Ready for KashFlow as well as Needs Data Entry. Its entry screen is read-only and says why. Saving and completing are refused, and the KashFlow draft and send refuse it. The background PDF reading skips it.
+- **Lines priced per thousand or per hundred were read at the printed price.** Jewson prices bricks per thousand: "1.00 EA, 794.51 TH, 0.79". The reader took 794.51 as the price of one brick, so the entry screen warned "1 × 794.51 is 794.51, not 0.79".
+  - **The fix:** the reader now divides the price by 1,000 or 100 when the unit column says so (`TH`, `M`, `per 1000`; `C`, `H`, `per 100`). With no unit column, it does so only when quantity × price ÷ 100 or 1,000 is the line total and quantity × price isn't. The price is kept to 4 places (0.7945).
+  - **Totals check:** it now allows for that rounding on large quantities, a few pence on 5,000 bricks.
+  - **Stored readings:** they are marked out of date (reader version 2), so the background job reads them again.
 - **The KashFlow draft and send didn't refuse a flagged credit note.** A credit note is keyed into KashFlow by hand (PB-12), so they now refuse it.
 
 ## [6.53.2] - 2026-10-06
