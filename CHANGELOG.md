@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.54.3] - 2026-10-06
+
+### Changed
+- **Noted that the line reader doesn't handle discounts yet.** A `TODO(discounts)` in `invoice-line-finder.js` describes what happens today and how to build it. Today a discounted line keeps its printed price and the entry screen warns. Totals stay right, and the send refuses lines that don't add up. It is to be built against the first real discounted invoice. No change in behaviour.
+
 ## [6.54.2] - 2026-10-06
 
 ### Fixed
