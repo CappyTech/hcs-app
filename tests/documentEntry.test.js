@@ -431,7 +431,11 @@ describe('entry view', () => {
     const html = await render({ paperlessId: 5, documentType: PI, processingState: 'awaiting_entry', ocrText: '<script>alert(1)</script>', customFields: [] });
     assert.ok(!html.includes('<script>alert(1)'));
     const src = fs.readFileSync(view, 'utf8');
-    assert.equal((src.match(/<script/g) || []).length, 1, 'only the module src tag');
+    const tags = src.match(/<script[^>]*>/g) || [];
+    assert.deepEqual(tags, [
+      '<script type="module" src="/resources/js/document-suggestions.js">',
+      '<script type="module" src="/resources/js/document-viewer.js">',
+    ], 'only the module src tags');
     assert.ok(!/<script[^>]*>[^<]/.test(src), 'no inline script body');
   });
 });

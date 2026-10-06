@@ -9,6 +9,11 @@
  * the selection, so in practice nothing could be selected. The file comes
  * from hcs-app's own proxy route, so the browser never talks to Paperless.
  * Loaded as a module from the view; the page's CSP forbids inline scripts.
+ *
+ * Other scripts hook in through two events on #pdf-viewer:
+ *   hcs:pdf-loaded  { pdf }                          once the document is open
+ *   hcs:pdf-page    { pageNumber, pageEl, viewport } after each page is drawn
+ * (document-suggestions.js draws its boxes from these.)
  */
 import * as pdfjsLib from '/resources/vendor/pdfjs/pdf.min.mjs';
 // Must come after pdf.min.mjs: pdf_viewer.mjs reads globalThis.pdfjsLib when it loads.
@@ -82,6 +87,8 @@ async function renderAll() {
     await textLayer.render({ viewport }).catch((err) => {
       if (token === renderToken) throw err; // otherwise cancelled by a newer render
     });
+    if (token !== renderToken) return;
+    root.dispatchEvent(new CustomEvent('hcs:pdf-page', { detail: { pageNumber: n, pageEl, viewport } }));
   }
   if (zoomLabel) zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
 }
@@ -100,6 +107,7 @@ async function load() {
       iccUrl: `${VENDOR}/iccs/`,
     }).promise;
     setStatus('');
+    root.dispatchEvent(new CustomEvent('hcs:pdf-loaded', { detail: { pdf } }));
     await renderAll();
   } catch (err) {
     console.error('[document-viewer]', err);

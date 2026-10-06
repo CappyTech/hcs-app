@@ -48,6 +48,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
       <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
         <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-700">
           <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto">Document</h2>
+          <button type="button" id="pdf-highlights-toggle" hidden aria-pressed="true" title="Boxes around what hcs-app read off the document" class="hcs-highlights-toggle text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 mr-2"><i class="bi bi-bounding-box"></i> Highlights</button>
           <button type="button" id="pdf-zoom-out" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800" aria-label="Zoom out"><i class="bi bi-zoom-out"></i></button>
           <span id="pdf-zoom-label" class="text-xs text-gray-500 w-10 text-center">100%</span>
           <button type="button" id="pdf-zoom-in" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800" aria-label="Zoom in"><i class="bi bi-zoom-in"></i></button>
@@ -107,9 +108,14 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
       <% } %>
 
       <% if (kind === 'invoice') { %>
-        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
+        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" data-suggest-form class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
           <%- include('../partials/csrfHidden') %>
-          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Invoice</h2>
+          <div class="flex items-center gap-2">
+            <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto">Invoice</h2>
+            <% if (!locked) { %>
+              <button type="button" id="suggest-fill-all" hidden class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-xs font-medium transition"><i class="bi bi-stars"></i> Fill <span data-count></span> empty fields from the document</button>
+            <% } %>
+          </div>
           <% if (values.source === 'paperless' && (values.invoiceNumber || (values.lines || []).length)) { %>
             <p class="text-xs text-blue-700 dark:text-blue-400"><i class="bi bi-info-circle"></i> Filled in from the Paperless custom fields. Saving keeps it in hcs-app.</p>
           <% } %>
@@ -117,27 +123,33 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
           <div class="grid grid-cols-2 gap-3">
             <div class="col-span-2">
               <label class="<%= labelCls %>" for="invoiceNumber">Invoice number</label>
-              <input id="invoiceNumber" name="invoiceNumber" value="<%= val(values.invoiceNumber) %>" class="<%= inputCls('invoiceNumber') %>" <%= disabled %>>
+              <input id="invoiceNumber" name="invoiceNumber" value="<%= val(values.invoiceNumber) %>" class="<%= inputCls('invoiceNumber') %>" data-suggest-field="invoiceNumber" <%= disabled %>>
+              <p data-suggest-for="invoiceNumber" hidden></p>
             </div>
             <div>
               <label class="<%= labelCls %>" for="invoiceDate">Invoice date</label>
-              <input id="invoiceDate" name="invoiceDate" type="date" value="<%= val(values.invoiceDate) %>" class="<%= inputCls('invoiceDate') %>" <%= disabled %>>
+              <input id="invoiceDate" name="invoiceDate" type="date" value="<%= val(values.invoiceDate) %>" class="<%= inputCls('invoiceDate') %>" data-suggest-field="invoiceDate" <%= disabled %>>
+              <p data-suggest-for="invoiceDate" hidden></p>
             </div>
             <div>
               <label class="<%= labelCls %>" for="dueDate">Due date</label>
-              <input id="dueDate" name="dueDate" type="date" value="<%= val(values.dueDate) %>" class="<%= inputCls('dueDate') %>" <%= disabled %>>
+              <input id="dueDate" name="dueDate" type="date" value="<%= val(values.dueDate) %>" class="<%= inputCls('dueDate') %>" data-suggest-field="dueDate" <%= disabled %>>
+              <p data-suggest-for="dueDate" hidden></p>
             </div>
             <div>
               <label class="<%= labelCls %>" for="totalGoods">Total goods £</label>
-              <input id="totalGoods" name="totalGoods" inputmode="decimal" value="<%= val(values.totalGoods) %>" class="<%= inputCls('totalGoods') %>" <%= disabled %>>
+              <input id="totalGoods" name="totalGoods" inputmode="decimal" value="<%= val(values.totalGoods) %>" class="<%= inputCls('totalGoods') %>" data-suggest-field="totalGoods" <%= disabled %>>
+              <p data-suggest-for="totalGoods" hidden></p>
             </div>
             <div>
               <label class="<%= labelCls %>" for="totalVat">Total VAT £</label>
-              <input id="totalVat" name="totalVat" inputmode="decimal" value="<%= val(values.totalVat) %>" class="<%= inputCls('totalVat') %>" <%= disabled %>>
+              <input id="totalVat" name="totalVat" inputmode="decimal" value="<%= val(values.totalVat) %>" class="<%= inputCls('totalVat') %>" data-suggest-field="totalVat" <%= disabled %>>
+              <p data-suggest-for="totalVat" hidden></p>
             </div>
             <div class="col-span-2">
               <label class="<%= labelCls %>" for="invoiceTotal">Invoice total £</label>
-              <input id="invoiceTotal" name="invoiceTotal" inputmode="decimal" value="<%= val(values.invoiceTotal) %>" class="<%= inputCls('invoiceTotal') %>" <%= disabled %>>
+              <input id="invoiceTotal" name="invoiceTotal" inputmode="decimal" value="<%= val(values.invoiceTotal) %>" class="<%= inputCls('invoiceTotal') %>" data-suggest-field="invoiceTotal" <%= disabled %>>
+              <p data-suggest-for="invoiceTotal" hidden></p>
             </div>
           </div>
 
@@ -306,4 +318,5 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
     </div>
   </div>
 </div>
+<script type="module" src="/resources/js/document-suggestions.js"></script>
 <script type="module" src="/resources/js/document-viewer.js"></script>
