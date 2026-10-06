@@ -147,9 +147,31 @@ export function groupRows(items) {
 }
 
 /** Box around chars [from, to) of one item, sized by share of its width. */
-function charBox(it, from = 0, to = it.str.length) {
+export function charBox(it, from = 0, to = it.str.length) {
   const per = it.str.length ? it.w / it.str.length : 0;
-  return { page: it.page, x: it.x + per * from, y: it.y - it.h * 0.25, w: per * (to - from), h: it.h * 1.25 };
+  return {
+    page: it.page, x: it.x + per * from, y: it.y - it.h * 0.25, w: per * (to - from), h: it.h * 1.25,
+    // The text it was cut from, for fitBox: characters aren't all the same width
+    src: { str: it.str, from, to, x: it.x, w: it.w },
+  };
+}
+
+/**
+ * charBox assumes every character is the same width, so a box around part of
+ * a line in a proportional font ("Invoice No. A26825510698") drifts. Given a
+ * way to measure the item's text as drawn, place it exactly.
+ * @param {object} box       from charBox (has .src)
+ * @param {(prefix: string) => number|null} measure  width of a prefix of the item's text, any scale
+ */
+export function fitBox(box, measure) {
+  const src = box?.src;
+  if (!src || !measure || (src.from === 0 && src.to === src.str.length)) return box;
+  const all = measure(src.str);
+  if (!(all > 0)) return box;
+  const a = measure(src.str.slice(0, src.from));
+  const b = measure(src.str.slice(0, src.to));
+  if (a == null || b == null) return box;
+  return { ...box, x: src.x + (src.w * a) / all, w: (src.w * (b - a)) / all };
 }
 
 export function unionBox(boxes) {
@@ -427,4 +449,4 @@ export function locateValue(items, field, value) {
   return null;
 }
 
-export default { FIELDS, toItems, groupRows, findCandidates, findFields, locateValue, normalise, parseDate, parseMoney, parseReference, unionBox };
+export default { FIELDS, fitBox, charBox, toItems, groupRows, findCandidates, findFields, locateValue, normalise, parseDate, parseMoney, parseReference, unionBox };

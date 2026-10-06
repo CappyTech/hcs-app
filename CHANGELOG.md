@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.50.2] - 2026-10-06
+
+### Fixed
+- **Boxes on the document sit exactly on the text they mark.** A value that shares a line of text with its label, such as "Invoice No. A26825510698", was boxed by assuming every character is the same width. In a proportional font the box drifted right and cut off the start of the value (the "A"). The box is now measured from the PDF text layer, which draws each line of text over the printed one, so it fits the real characters. Without a text layer it falls back to the old estimate.
+
 ## [6.50.1] - 2026-10-06
 
 ### Fixed
