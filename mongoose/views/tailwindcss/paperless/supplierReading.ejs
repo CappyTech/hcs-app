@@ -1,0 +1,130 @@
+<%
+const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const btn = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition';
+const btnGrey = `${btn} border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800`;
+const btnBlue = `${btn} border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30`;
+const spotText = (list) => {
+  if (!list || !list.length) return null;
+  const s = list[0];
+  if (s.taught) return `Pointed out by hand, ${fmt(s.lastAt)}`;
+  return `Seen in this place on ${s.seen} saved invoice${s.seen === 1 ? '' : 's'}, last ${fmt(s.lastAt)}`;
+};
+%>
+<link rel="stylesheet" href="/resources/vendor/pdfjs/pdf_viewer.css">
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-wrap items-center gap-3">
+    <a href="/paperless/reading" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Reading accuracy</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold"><%= detail.name %></h1>
+  </div>
+  <p class="text-sm text-gray-500 dark:text-gray-400 -mt-4">
+    What hcs-app has learned about where <%= detail.name %> puts things on its invoices.
+    It learns from every invoice you save. You can also point a field out by hand, give it extra label words to look for, or make it forget.
+    <% if (detail.invoicesLearned) { %>Learned from <%= detail.invoicesLearned %> saved invoice<%= detail.invoicesLearned === 1 ? '' : 's' %>.<% } %>
+  </p>
+
+  <div class="grid lg:grid-cols-5 gap-6"
+       data-supplier-teach
+       data-correspondent-id="<%= detail.correspondentId %>"
+       data-name="<%= detail.name %>"
+       data-spots="<%= JSON.stringify(detail.spots || {}) %>"
+       data-labels="<%= JSON.stringify(detail.labels || {}) %>">
+    <%# ── An invoice from this supplier ── %>
+    <div class="lg:col-span-3 space-y-3">
+      <% if (!shown) { %>
+        <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+          None of this supplier's invoices has been read yet. Open one on the entry screen and it will be.
+        </div>
+      <% } else { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+          <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+            <h2 class="font-semibold text-sm text-gray-700 dark:text-gray-300 mr-auto truncate">
+              <a href="/paperless/ocr/<%= shown.paperlessId %>/entry" class="hover:underline"><%= shown.title || `#${shown.paperlessId}` %></a>
+            </h2>
+            <button type="button" id="pdf-zoom-out" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800" aria-label="Zoom out"><i class="bi bi-zoom-out"></i></button>
+            <span id="pdf-zoom-label" class="text-xs text-gray-500 w-10 text-center">100%</span>
+            <button type="button" id="pdf-zoom-in" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800" aria-label="Zoom in"><i class="bi bi-zoom-in"></i></button>
+            <button type="button" id="pdf-zoom-fit" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">Fit</button>
+          </div>
+          <div class="relative">
+            <div id="pdf-pick-status" hidden role="status" class="absolute inset-x-0 top-0 z-10 shadow-sm flex items-center gap-2 px-4 py-1.5 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-b border-blue-100 dark:border-blue-800"></div>
+            <div id="pdf-viewer" data-src="/paperless/ocr/<%= shown.paperlessId %>/file" class="bg-gray-100 dark:bg-gray-800 rounded-b-2xl p-3 h-screen overflow-auto">
+              <p id="pdf-status" class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">Loading document…</p>
+              <div id="pdf-pages"></div>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (detail.documents.length > 1) { %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Their invoices</h2>
+          <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+            <% detail.documents.forEach((d) => { const f = d.readingOutcome?.fields || {}; const changed = Object.entries(f).filter(([, o]) => o === 'corrected' || o === 'filled').length; %>
+              <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5">
+                <% if (d.hasText) { %>
+                  <a href="?doc=<%= d.paperlessId %>" class="<%= shown && shown.paperlessId === d.paperlessId ? 'font-semibold text-gray-900 dark:text-white' : 'text-green-700 dark:text-green-400 hover:underline' %>"><%= d.title || `#${d.paperlessId}` %></a>
+                <% } else { %>
+                  <span class="text-gray-500" title="Not read yet"><%= d.title || `#${d.paperlessId}` %></span>
+                <% } %>
+                <span class="text-xs text-gray-400"><%= fmt(d.added) %></span>
+                <% if (d.readingOutcome) { %>
+                  <span class="text-xs <%= changed ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400' %>"><%= changed ? `${changed} field${changed === 1 ? '' : 's'} corrected when saved` : 'all kept when saved' %></span>
+                <% } %>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      <% } %>
+    </div>
+
+    <%# ── What it knows, per field ── %>
+    <div class="lg:col-span-2 space-y-3" id="labels">
+      <% fields.forEach((f) => { const list = detail.spots?.[f]; const words = detail.labels?.[f] || []; %>
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-2" data-field-card="<%= f %>">
+          <div class="flex items-center gap-2">
+            <h2 class="font-semibold text-sm text-gray-800 dark:text-gray-200 mr-auto"><%= fieldLabels[f] %></h2>
+            <% if (shown) { %>
+              <button type="button" class="<%= btnBlue %>" data-teach-field="<%= f %>"><i class="bi bi-cursor"></i> Point it out</button>
+            <% } %>
+            <% if (list && list.length) { %>
+              <form method="POST" action="/paperless/reading/supplier/<%= detail.correspondentId %>/forget">
+                <%- include('../partials/csrfHidden') %>
+                <input type="hidden" name="field" value="<%= f %>">
+                <button type="submit" class="<%= btnGrey %>">Forget</button>
+              </form>
+            <% } %>
+          </div>
+          <p class="text-xs <%= list && list.length ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400' %>" data-spot-text>
+            <% if (list && list.length) { %><i class="bi bi-geo-alt"></i> <%= spotText(list) %>. Shown on the invoice when you hover this card.<% } else { %>Not learned yet: found by its label, if it has one the reader knows.<% } %>
+          </p>
+          <form method="POST" action="/paperless/reading/supplier/<%= detail.correspondentId %>/labels" class="space-y-1">
+            <%- include('../partials/csrfHidden') %>
+            <input type="hidden" name="field" value="<%= f %>">
+            <input type="hidden" name="name" value="<%= detail.name %>">
+            <label class="block text-xs text-gray-500 dark:text-gray-400" for="labels-<%= f %>">Also look for these label words (one per line), e.g. <em><%= { invoiceNumber: 'Our Reference', invoiceDate: 'Order Date', dueDate: 'Pay By', totalGoods: 'Goods Value', totalVat: 'VAT Applied', invoiceTotal: 'Charged to Account' }[f] %></em></label>
+            <div class="flex gap-2 items-start">
+              <textarea id="labels-<%= f %>" name="labels" rows="<%= Math.max(1, words.length) %>" class="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"><%= words.join('\n') %></textarea>
+              <button type="submit" class="<%= btnGrey %>">Save</button>
+            </div>
+          </form>
+        </div>
+      <% }) %>
+
+      <% if (Object.keys(detail.spots || {}).length || Object.keys(detail.labels || {}).length) { %>
+        <details class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm">
+          <summary class="cursor-pointer text-gray-500 dark:text-gray-400">Start again for this supplier</summary>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Forgets every learned place and every label word for <%= detail.name %>. It starts learning again from the next invoice you save.</p>
+          <form method="POST" action="/paperless/reading/supplier/<%= detail.correspondentId %>/forget" class="mt-2">
+            <%- include('../partials/csrfHidden') %>
+            <button type="submit" class="<%= btn %> border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">Forget everything</button>
+          </form>
+        </details>
+      <% } %>
+    </div>
+  </div>
+</div>
+<% if (shown) { %>
+<script type="module" src="/resources/js/supplier-teach.js"></script>
+<script type="module" src="/resources/js/document-viewer.js"></script>
+<% } %>

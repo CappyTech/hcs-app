@@ -9,6 +9,9 @@ const SupplierLayoutSchema = new mongoose.Schema({
   correspondentId:   { type: Number, required: true, unique: true, index: true },
   correspondentName: { type: String, default: null },
   spots:             { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
+  // Label words someone added per field ("Charged to Account" for the invoice
+  // total), used by the reader for this supplier ahead of the built-in labels
+  labels:            { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   invoicesLearned:   { type: Number, default: 0 },
 }, { timestamps: true, minimize: false });
 

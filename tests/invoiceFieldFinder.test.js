@@ -315,3 +315,31 @@ describe('learned supplier layouts', () => {
     assert.equal(f.invoiceNumber, null);
   });
 });
+
+describe('custom label words', () => {
+  // Screwfix/Electricfix: "Charged to Account: £45.42" and "Our Reference" that the reader doesn't know
+  const items = toItems([
+    item([32, 84, 131, 'Charged to Account: £45.42']),
+    item([394, 689, 60, 'Our Reference:']), item([460, 689, 70, '0726A26825510698']),
+    item([300, 300, 40, 'Total']), item([450, 300, 40, '120.00']),
+  ], 1);
+
+  it('without them, neither is found and the bare Total wins', () => {
+    const f = findFields(items);
+    assert.equal(f.invoiceNumber, null);
+    assert.equal(f.invoiceTotal.value, '120.00');
+  });
+
+  it('a phrase added for a field is used, before the built-in labels, spacing matched loosely', () => {
+    const f = findFields(items, { labels: { invoiceTotal: ['charged to   account'], invoiceNumber: ['Our Reference'] } });
+    assert.equal(f.invoiceTotal.value, '45.42');
+    assert.equal(f.invoiceTotal.customLabel, 'charged to   account');
+    assert.equal(f.invoiceNumber.value, '0726A26825510698');
+  });
+
+  it('regex characters in a phrase are taken literally, and junk is ignored', () => {
+    const odd = toItems([item([40, 700, 80, 'Inv (No.)']), item([130, 700, 40, 'X-1']), item([40, 680, 30, 'a.b']), item([80, 680, 30, 'Y-2'])], 1);
+    assert.equal(findFields(odd, { labels: { invoiceNumber: ['Inv (No.)'] } }).invoiceNumber.value, 'X-1');
+    assert.equal(finder.customLabels(['', 'x', null, 'a'.repeat(61)]).length, 0);
+  });
+});
