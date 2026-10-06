@@ -1254,8 +1254,9 @@ export const sendDraftToKashflow = async (req, res, next) => {
           );
         }
 
-        // H6: state → sent and the "added to kashflow" post (shadow until cutover)
-        await documentEntry.recordSentToKashflow(OcrDocument, paperlessId, actorFromUser(req.user));
+        // H6: state → sent and the "added to kashflow" post (shadow until cutover).
+        // The model comes from mdb here: the OcrDocument above is scoped to its try block.
+        await documentEntry.recordSentToKashflow(mdb.PAPERLESS.OcrDocument, paperlessId, actorFromUser(req.user));
       } catch (sendErr) {
         const status = sendErr?.response?.status;
         const data = sendErr?.response?.data;
@@ -1380,9 +1381,9 @@ export const sendDraftToKashflow = async (req, res, next) => {
         }
 
         // H6: only when the creator actually returned a purchase
-        const _linked = await OcrDocument.findOne({ paperlessId }).select('kashflowPurchaseId kashflowPurchaseNumber').lean().catch(() => null);
+        const _linked = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).select('kashflowPurchaseId kashflowPurchaseNumber').lean().catch(() => null);
         if (_linked?.kashflowPurchaseId != null || _linked?.kashflowPurchaseNumber != null) {
-          await documentEntry.recordSentToKashflow(OcrDocument, paperlessId, actorFromUser(req.user));
+          await documentEntry.recordSentToKashflow(mdb.PAPERLESS.OcrDocument, paperlessId, actorFromUser(req.user));
         }
       } catch (sendErr) {
         const status = sendErr?.response?.status;

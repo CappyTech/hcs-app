@@ -411,6 +411,38 @@ export async function markReviewed(OcrDocument, paperlessId, actor, deps = {}) {
  * `entered` if it was sent straight from the draft screen, and fire the
  * "added to kashflow" post (PB-8). Never throws: the purchase already exists.
  */
+/**
+ * Documents that were sent to KashFlow but never marked as sent. From 6.47.0
+ * until 6.53.1 the send created the purchase and linked it, then failed before
+ * moving the document on, so it stayed in Needs Data Entry or Ready for
+ * KashFlow. Moves each one to In KashFlow. Idempotent; sends no
+ * notifications, since the purchase went in long ago.
+ * @returns {Promise<{repaired: number[]}>}
+ */
+export async function repairUnmarkedSends(OcrDocument) {
+  const docs = await OcrDocument.find({
+    kashflowPurchaseId: { $ne: null },
+    lastSendStatus: 201,
+    processingState: { $in: ['awaiting_entry', 'entered'] },
+    deletedInPaperlessAt: null,
+  }).select('paperlessId processingState kashflowPurchaseId').lean();
+  const repaired = [];
+  const note = 'Repair: already in KashFlow, but the send had not been recorded';
+  for (const doc of docs) {
+    try {
+      if (doc.processingState === 'awaiting_entry') {
+        await transition(OcrDocument, doc.paperlessId, 'complete_entry', null, { note });
+      }
+      const r = await transition(OcrDocument, doc.paperlessId, 'mark_sent', null, { note });
+      if (r.ok) repaired.push(doc.paperlessId);
+    } catch (err) {
+      logger.warn(`[documentEntry] Repairing the KashFlow send for ${doc.paperlessId} failed: ${err.message}`);
+    }
+  }
+  if (repaired.length) logger.info(`[documentEntry] Marked ${repaired.length} document(s) as in KashFlow that had been sent but not recorded: ${repaired.join(', ')}`);
+  return { repaired };
+}
+
 export async function recordSentToKashflow(OcrDocument, paperlessId, actor, deps = {}) {
   const d = { ...defaultDeps(), ...deps };
   try {
@@ -457,5 +489,6 @@ export default {
   resendToJohn,
   markReviewed,
   recordSentToKashflow,
+  repairUnmarkedSends,
   recordUnlinked,
 };

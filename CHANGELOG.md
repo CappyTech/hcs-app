@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.53.1] - 2026-10-06
+
+### Fixed
+- **Sending to KashFlow said "Direct send failed: OcrDocument is not defined" even though the purchase was created.** From 6.47.0 until this release, a successful send created the purchase in KashFlow, linked it to the document and updated Paperless, then failed when recording the send. So the result page said it had failed, and the document stayed in Ready for KashFlow instead of moving to In KashFlow. The webhook send had the same fault. The record step now uses the right model.
+  - Nothing was sent twice. The purchase link was saved before the failure, and a linked document can't be sent again.
+  - A new `paperless-repair-unmarked-sends` job, which runs at start-up and every 6 hours, moves any invoice that is linked to a KashFlow purchase but still waiting for entry or ready for KashFlow to In KashFlow. It doesn't send notifications.
+  - A test checks the send handler never uses `OcrDocument` outside the block that declares it. Run against 6.53.0, it reports all three faulty lines.
+
 ## [6.53.0] - 2026-10-06
 
 ### Added
