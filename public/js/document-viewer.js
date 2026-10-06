@@ -3,11 +3,16 @@
  *
  * Renders every page of the PDF at #pdf-viewer[data-src] with PDF.js, with a
  * text layer over each page so text can be selected and copied straight out
- * of the invoice. The file comes from hcs-app's own proxy route, so the
- * browser never talks to Paperless. Loaded as a module from the view; the
- * page's CSP forbids inline scripts.
+ * of the invoice. The text layer comes from PDF.js's TextLayerBuilder, not the
+ * bare TextLayer: the builder adds the end-of-content element and selection
+ * listeners without which a drag that strays onto blank page area collapses
+ * the selection, so in practice nothing could be selected. The file comes
+ * from hcs-app's own proxy route, so the browser never talks to Paperless.
+ * Loaded as a module from the view; the page's CSP forbids inline scripts.
  */
 import * as pdfjsLib from '/resources/vendor/pdfjs/pdf.min.mjs';
+// Must come after pdf.min.mjs: pdf_viewer.mjs reads globalThis.pdfjsLib when it loads.
+import { TextLayerBuilder } from '/resources/vendor/pdfjs/pdf_viewer.mjs';
 
 const VENDOR = '/resources/vendor/pdfjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${VENDOR}/pdf.worker.min.mjs`;
@@ -20,6 +25,7 @@ const zoomLabel = document.getElementById('pdf-zoom-label');
 let pdf = null;
 let zoom = 1; // relative to fit-to-width
 let renderToken = 0;
+let textLayers = []; // TextLayerBuilders on screen, cancelled before re-rendering
 
 const setStatus = (text) => {
   if (!statusEl) return;
@@ -30,6 +36,9 @@ const setStatus = (text) => {
 async function renderAll() {
   if (!pdf) return;
   const token = ++renderToken;
+  // Cancelling unregisters each layer from TextLayerBuilder's global selection listeners.
+  textLayers.forEach((t) => t.cancel());
+  textLayers = [];
   pagesEl.replaceChildren();
   const width = Math.max(pagesEl.clientWidth - 2, 200);
 
@@ -58,10 +67,10 @@ async function renderAll() {
     canvas.style.height = `${Math.floor(viewport.height)}px`;
     canvas.setAttribute('aria-label', `Page ${n} of ${pdf.numPages}`);
 
-    const textLayerEl = document.createElement('div');
-    textLayerEl.className = 'textLayer';
+    const textLayer = new TextLayerBuilder({ pdfPage: page });
+    textLayers.push(textLayer);
 
-    pageEl.append(canvas, textLayerEl);
+    pageEl.append(canvas, textLayer.div);
     pagesEl.append(pageEl);
 
     await page.render({
@@ -70,12 +79,9 @@ async function renderAll() {
       viewport,
       transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : null,
     }).promise;
-    const textLayer = new pdfjsLib.TextLayer({
-      textContentSource: page.streamTextContent(),
-      container: textLayerEl,
-      viewport,
+    await textLayer.render({ viewport }).catch((err) => {
+      if (token === renderToken) throw err; // otherwise cancelled by a newer render
     });
-    await textLayer.render();
   }
   if (zoomLabel) zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
 }

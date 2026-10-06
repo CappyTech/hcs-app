@@ -18,6 +18,9 @@ COPY assets ./assets
 COPY tailwind.config.js tailwind.safelist.js postcss.config.js ./
 COPY mongoose/views ./mongoose/views
 COPY mongoose/config ./mongoose/config
+# tailwind.config.js scans public/js too; without it, classes used only from
+# scripts (e.g. .hcs-pdf-page in document-viewer.js) are purged from the build.
+COPY public/js ./public/js
 COPY scripts ./scripts
 RUN npm run build:vendor && npm run build:css
 
