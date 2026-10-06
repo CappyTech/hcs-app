@@ -127,13 +127,26 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
           tags: tag:dev-ci
 
+      # The runner's DNS doesn't resolve MagicDNS short names (server2-host), so
+      # ask Tailscale for the address from its own peer list instead.
+      - name: Find server2 on the tailnet
+        run: |
+          ip=$(sudo tailscale ip -4 "$DEPLOY_HOST" 2>/dev/null | head -1 || true)
+          if [ -z "$ip" ]; then
+            echo "::error::$DEPLOY_HOST is not on the tailnet as seen by this runner"
+            sudo tailscale status || true
+            exit 1
+          fi
+          echo "Found $DEPLOY_HOST at $ip"
+          echo "DEPLOY_IP=$ip" >> $GITHUB_ENV
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1
         env:
           DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
           DEPLOY_SERVICE: ${{ env.DEPLOY_SERVICE }}
         with:
-          host: ${{ env.DEPLOY_HOST }}
+          host: ${{ env.DEPLOY_IP }}
           username: ${{ secrets.DEPLOY_SSH_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: DEPLOY_PATH,DEPLOY_SERVICE

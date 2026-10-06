@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.6] - 2026-10-06
+
+### Fixed
+- **The deploy job could not find server2.** The runner joins the tailnet, but its DNS can't resolve the MagicDNS short name `server2-host` ("lookup server2-host … server misbehaving"). The job now asks Tailscale for server2's address (`tailscale ip -4`) and connects to that, failing with the tailnet status if server2 isn't visible.
+
+### Security
+- **`proxy-addr` 2.0.7 → 2.0.8** (CVE-2026-90711, merged from Dependabot #112). An address given in IPv4-mapped-IPv6 form (`::ffff:…`) could be wrongly trusted. Express uses this when `trust proxy` is set (loopback,172.16.0.0/12) to decide the client IP that rate limiting, login lockout and logging rely on.
+- **`source-map-js` 1.2.1 → 1.2.2** (CVE-2026-93749, denial of service from malicious source maps). This is only used in the CSS build.
+
 ## [6.49.5] - 2026-10-06
 
 ### Fixed
