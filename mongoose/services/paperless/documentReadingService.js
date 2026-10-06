@@ -33,7 +33,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Bump when the reader changes enough that stored readings should be redone
-export const READER_VERSION = 1;
+export const READER_VERSION = 2; // 2: per-hundred and per-thousand prices
 export const MAX_PAGES = 5;
 export const HEADER_FIELDS = FIELDS.map((f) => f.field);
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));

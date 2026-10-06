@@ -28,6 +28,7 @@ import __paperlessUpdateService from './paperlessUpdateService.js';
 import __paperlessClient from './paperlessClient.js';
 import logger from '../../../services/loggerService.js';
 import { entryAsCustomFields } from './entryOverlay.js';
+import { parseVatRate, vatRateProblem } from '../../../public/js/entry-checks.js';
 
 export { entryAsCustomFields };
 
@@ -143,8 +144,11 @@ export function parseEntryForm(body = {}, kind) {
       quantity: take(`lines.${i}.quantity`, parseNumberInput(raw?.quantity), `Line ${n} quantity`),
       price: take(`lines.${i}.price`, parseMoneyInput(raw?.price, { dp: 4 }), `Line ${n} price`),
       total: take(`lines.${i}.total`, parseMoneyInput(raw?.total), `Line ${n} total`),
-      vatRate: take(`lines.${i}.vatRate`, parseNumberInput(raw?.vatRate, { integer: true, min: 0, max: 100 }), `Line ${n} VAT %`),
+      vatRate: null,
     };
+    const rate = parseVatRate(raw?.vatRate);
+    if (Number.isNaN(rate)) errors[`lines.${i}.vatRate`] = vatRateProblem(raw.vatRate, n);
+    else line.vatRate = rate;
     // A completely blank row is how a line is removed
     if (Object.values(line).every((v) => v == null)) return;
     if (line.total == null && line.quantity != null && line.price != null) {
@@ -179,7 +183,13 @@ export function consistencyWarnings(entry) {
   const out = [];
   const lines = entry.lines || [];
   lines.forEach((l, i) => {
-    if (l.quantity != null && l.price != null && l.total != null && off(l.quantity * l.price, l.total)) {
+    // Saved before VAT % was limited to the rates
+    const badRate = l.vatRate != null ? vatRateProblem(l.vatRate, i + 1) : null;
+    if (badRate) out.push(badRate);
+    // A price kept to 4 places (bricks per thousand: 0.7945) can be out by half a
+    // ten-thousandth a unit, so 5,000 bricks may be a few pence out
+    const slack = Math.max(0.01, Math.abs(l.quantity ?? 0) * 0.00005);
+    if (l.quantity != null && l.price != null && l.total != null && Math.abs(l.quantity * l.price - l.total) > slack + 1e-9) {
       out.push(`Line ${i + 1}: ${l.quantity} × ${money(l.price)} is ${money(l.quantity * l.price)}, not ${money(l.total)}.`);
     }
   });
@@ -188,7 +198,7 @@ export function consistencyWarnings(entry) {
     out.push(`Line totals add up to ${money(lineSum)}, but total goods is ${money(entry.totalGoods)}.`);
   }
   const priced = lines.filter((l) => l.total != null);
-  if (entry.totalVat != null && priced.length && priced.every((l) => l.vatRate != null)) {
+  if (entry.totalVat != null && priced.length && priced.every((l) => l.vatRate != null && !Number.isNaN(parseVatRate(l.vatRate)))) {
     const lineVat = priced.reduce((s, l) => s + (l.total * l.vatRate) / 100, 0);
     // Suppliers round VAT per line or on the total, so allow a penny a line
     if (Math.abs(lineVat - entry.totalVat) > Math.max(0.02, 0.01 * priced.length) + 1e-9) {

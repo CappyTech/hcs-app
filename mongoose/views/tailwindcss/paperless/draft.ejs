@@ -36,7 +36,8 @@
 	<% const sumGross = +lineItems.reduce((a,li)=>{ const n = toNum(li.GrossAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
 	<% const sumGrossDerived = +((sumNet + sumVAT)).toFixed(2); %>
 	<% const headerVsLinesNetOk = (_netH == null) || Math.abs(_netH - sumNet) < 0.01; %>
-	<% const headerVsLinesVatOk = (_vatH == null) || Math.abs(_vatH - sumVAT) < 0.01; %>
+	<% /* VAT: a penny a line, as suppliers round per line or on the total (matches the send guard) */ %>
+	<% const headerVsLinesVatOk = (_vatH == null) || Math.abs(_vatH - sumVAT) <= Math.max(0.02, 0.01 * lineItems.length) + 1e-9; %>
 	<% const headerVsLinesGrossOk = (_grossH == null) || Math.abs(_grossH - sumGrossDerived) < 0.01; %>
 
 	<%
@@ -77,12 +78,12 @@
 							<span class="text-xs text-slate-500">(from <%= sources.SupplierReferenceSource %>)</span>
 						<% } %>
 					</div>
-					<div><span class="font-medium">Issued Date:</span> <%= draft.IssuedDate ? new Date(draft.IssuedDate).toLocaleDateString() : '-' %>
+					<div><span class="font-medium">Issued Date:</span> <%= draft.IssuedDate ? new Date(draft.IssuedDate).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }) : '-' %>
 						<% if (sources && sources.IssuedDateSource) { %>
 							<span class="text-xs text-slate-500">(from <%= sources.IssuedDateSource %>)</span>
 						<% } %>
 					</div>
-					<div><span class="font-medium">Due Date:</span> <%= draft.DueDate ? new Date(draft.DueDate).toLocaleDateString() : '-' %>
+					<div><span class="font-medium">Due Date:</span> <%= draft.DueDate ? new Date(draft.DueDate).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }) : '-' %>
 						<% if (sources && sources.DueDateSource) { %>
 							<span class="text-xs text-slate-500">(from <%= sources.DueDateSource %>)</span>
 						<% } %>
@@ -122,7 +123,7 @@
 			<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
 				<h2 class="font-semibold mb-2 flex items-center gap-2">Line Items
 					<% if (usedCustomFieldLines) { %>
-						<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">Source: Custom fields</span>
+						<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">Source: <%= (doc && doc.entry && doc.entry.savedAt) ? 'Entry' : 'Custom fields' %></span>
 					<% } else { %>
 						<span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300">Source: Amounts</span>
 					<% } %>
@@ -374,6 +375,10 @@
 					<li class="flex items-start gap-2">
 						<i class="bi <%= totalsConsistent ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
 						<span>Net + VAT equals Gross</span>
+					</li>
+					<li class="flex items-start gap-2">
+						<i class="bi <%= (headerVsLinesNetOk && headerVsLinesVatOk) ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span>Lines add up to Net and VAT<% if (!(headerVsLinesNetOk && headerVsLinesVatOk)) { %> (they don't: correct them in <a href="/paperless/ocr/<%= paperlessId %>/entry" class="underline">Edit entry</a>, or add the missing lines. Sending is refused until they do.)<% } %></span>
 					</li>
 					<li class="flex items-start gap-2">
 						<i class="bi <%= hasSupplierRef ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-yellow-500' %>"></i>
