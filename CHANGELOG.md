@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.50.0] - 2026-10-06
+
+### Added
+- **The document entry screen now reads the invoice for you and shows where it looked.** Once the PDF loads, hcs-app picks out the invoice number, invoice date, due date, total goods, total VAT and invoice total from the PDF's text layer, and draws a box on the document around the text each came from. Under each field it says what the document says, with a **Use** button. A "Fill N empty fields from the document" button does them all at once. When a field already has a value, the hint turns green if the document agrees, or amber with the document's figure if it doesn't. Focusing a field or hovering its hint lights up its box and scrolls the document to it. A **Highlights** button in the document toolbar hides the boxes, and the browser remembers that choice. Nothing is saved until you press Save.
+- The reader finds labels like "Document No.", "Invoice Number", "INV TOTAL £", "Tax Amount" and "Total (including Tax)" and takes the value beside them or just below them. It also handles labels that wrap over two lines (Cemex's "Sales Invoice / No:"), totals set out under Gross / Net / VAT column headings (Screwfix), and invoice numbers the PDF splits into pieces, including a hyphen drawn from a font's private-use slot (Xero's "INV-22121"). When several figures could be the totals, it prefers the set where goods + VAT = total. On the 37 invoices in the queues when this was built, every invoice got an invoice number and date, and 36 of 37 got totals that add up. The odd one out is a supplier statement, not an invoice.
+- `public/js/invoice-field-finder.js` holds the reading logic, has no DOM, and is unit-tested against real supplier layouts. `public/js/document-suggestions.js` is the screen part. The PDF viewer now fires `hcs:pdf-loaded` and `hcs:pdf-page` events for scripts like this to hook into, so its rendering and text selection are unchanged.
+
 ## [6.49.9] - 2026-10-06
 
 ### Fixed

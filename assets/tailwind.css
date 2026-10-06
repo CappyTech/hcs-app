@@ -23,4 +23,60 @@
   .hcs-pdf-page > canvas {
     display: block;
   }
+
+  /* Boxes around what document-suggestions.js read off the page. They sit
+     over the text layer but take no clicks, so text selection still works. */
+  .hcs-pdf-marks {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .hcs-pdf-marks[hidden] {
+    display: none;
+  }
+  .hcs-pdf-mark {
+    position: absolute;
+    border: 2px solid rgb(245 158 11);
+    background: rgb(245 158 11 / 0.12);
+    border-radius: 3px;
+    transition: opacity 120ms, box-shadow 120ms, border-color 120ms, background-color 120ms;
+  }
+  /* Only the active box shows its name: on a dense invoice the tags would
+     otherwise sit on top of the neighbouring values. */
+  .hcs-pdf-mark-tag {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: -2px;
+    padding: 0 4px;
+    border-radius: 3px 3px 0 0;
+    background: rgb(245 158 11);
+    color: #fff;
+    font: 600 10px/14px ui-sans-serif, system-ui, sans-serif;
+    white-space: nowrap;
+  }
+  .hcs-pdf-marks.is-dimmed .hcs-pdf-mark:not(.is-active) {
+    opacity: 0.3;
+  }
+  .hcs-pdf-mark.is-active {
+    z-index: 1;
+    border-color: rgb(37 99 235);
+    background: rgb(37 99 235 / 0.14);
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.3);
+  }
+  .hcs-pdf-mark.is-active .hcs-pdf-mark-tag {
+    display: block;
+    background: rgb(37 99 235);
+  }
+  .hcs-highlights-toggle.is-on {
+    border-color: rgb(245 158 11);
+    color: rgb(180 83 9);
+  }
+  /* The hidden attribute must win over display utilities (flex, inline-flex) */
+  #suggest-fill-all[hidden],
+  [data-suggest-for][hidden],
+  #pdf-highlights-toggle[hidden] {
+    display: none;
+  }
 }
