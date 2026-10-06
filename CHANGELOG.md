@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.7] - 2026-10-06
+
+### Fixed
+- **The deploy job blamed the wrong step when Tailscale failed.** `tailscale/github-action` reports success even when every `tailscale up` attempt fails. The real cause, Tailscale rejecting the OAuth client (`404 not found`), then surfaced one step later as "server2-host is not on the tailnet". A new step checks the runner is actually connected and fails clearly if not. `docs/DEPLOYMENT.md` now covers creating the OAuth client and the `tag:dev-ci` tag owner.
+
+### Security
+- **`postcss-selector-parser` forced to 7.1.6** (Dependabot alert #40, CPU exhaustion from crafted selectors). This uses an npm override, because Tailwind 3 and `@tailwindcss/typography` still ask for the 6.x line, which has no fixed release. It's a build-time dependency only, and the built CSS is byte-for-byte unchanged.
+
 ## [6.49.6] - 2026-10-06
 
 ### Fixed

@@ -31,6 +31,8 @@ Deploys never overlap (`concurrency: deploy-production`), and one in progress is
    `TS_OAUTH_CLIENT_ID` and `TS_OAUTH_CLIENT_SECRET` are already set.
 
 3. **Tailscale access.** The runner joins the tailnet as `tag:dev-ci`, using the OAuth client in `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET`.
+   - **The tag must exist.** In Access controls, `tagOwners` must include `"tag:dev-ci": ["autogroup:admin"]`.
+   - **The OAuth client:** in Settings → OAuth clients → Generate OAuth client, give it the scope **Keys → Auth Keys: Write** with tag `tag:dev-ci`. Put its client ID and secret in the two GitHub secrets. A deleted or mismatched client makes `tailscale up` fail with `Status: 404, Message: "not found"`, and the deploy stops at "Check the runner is on the tailnet".
    - With the default **allow all** policy (`src *`, `dst *`, `ip *`), nothing more is needed. This is the case today.
    - With a stricter policy, first name server2 in `hosts` (`"server2-host": "100.x.y.z"`, from `tailscale ip -4`), then allow the tag to reach it:
      `{ "src": ["tag:dev-ci"], "dst": ["server2-host"], "ip": ["tcp:22"] }` (grants), or

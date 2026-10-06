@@ -127,6 +127,16 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
           tags: tag:dev-ci
 
+      # tailscale/github-action reports success even when every `tailscale up`
+      # attempt failed, so check the runner really is connected.
+      - name: Check the runner is on the tailnet
+        run: |
+          state=$(sudo tailscale status --json 2>/dev/null | jq -r '.BackendState // "unknown"')
+          if [ "$state" != "Running" ]; then
+            echo "::error::Not connected to Tailscale (state: $state). Tailscale rejected the OAuth client in TS_OAUTH_CLIENT_ID / TS_OAUTH_CLIENT_SECRET; the 'Connect to Tailscale' log shows why. See docs/DEPLOYMENT.md."
+            exit 1
+          fi
+
       # The runner's DNS doesn't resolve MagicDNS short names (server2-host), so
       # ask Tailscale for the address from its own peer list instead.
       - name: Find server2 on the tailnet
