@@ -22,6 +22,7 @@ import __grabServicePaperless from './grabServicePaperless.js';
 import __documentIngestService from './paperless/documentIngestService.js';
 import __documentNotifyService from './paperless/documentNotifyService.js';
 import __shadowReportService from './paperless/shadowReportService.js';
+import __documentReadingService from './paperless/documentReadingService.js';
 import __mdbForJobs from './mongooseDatabaseService.js';
 
 /**
@@ -139,6 +140,16 @@ function registerAll() {
     intervalMs: 15 * MINUTE,
     initialDelayMs: 75_000,
     run: () => __documentIngestService.reconcileRecentDocuments(),
+  });
+
+  scheduler.register('paperless-read-documents', {
+    description:
+      'Read the PDF of invoices waiting for entry (invoice number, dates, totals, lines) '
+      + 'so the queue can show what was found. 20 at a time, newest first; also redoes '
+      + 'readings from an older version of the reader. Only suggests, never fills an entry.',
+    intervalMs: 15 * MINUTE,
+    initialDelayMs: 2 * MINUTE,
+    run: () => __documentReadingService.readMissing({ limit: 20 }),
   });
 
   scheduler.register('paperless-notification-retry', {

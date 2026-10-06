@@ -7,6 +7,7 @@ import ctrl from '../controllers/paperlessController.js';
 import webhookCtrl from '../controllers/paperlessWebhookController.js';
 import queueCtrl from '../controllers/documentQueueController.js';
 import entryCtrl from '../controllers/documentEntryController.js';
+import readingCtrl from '../controllers/documentReadingController.js';
 import shadowCtrl from '../controllers/shadowReportController.js';
 
 // Machine-to-machine: Paperless's "Document added" webhook. No session or CSRF
@@ -50,6 +51,11 @@ router.post("/paperless/ocr/:paperlessId/reopen", ...paperlessGuard, entryCtrl.p
 router.post("/paperless/ocr/:paperlessId/resend-john", ...paperlessGuard, entryCtrl.postResendJohn);
 router.post("/paperless/ocr/:paperlessId/reviewed", ...paperlessGuard, entryCtrl.postReviewed);
 router.get("/paperless/ocr/:paperlessId/file", ...paperlessGuard, entryCtrl.getFile);
+router.get("/paperless/ocr/:paperlessId/insights", ...paperlessGuard, readingCtrl.getInsights);
+router.post("/paperless/ocr/:paperlessId/read", ...paperlessGuard, readingCtrl.postRead);
+router.post("/paperless/ocr/:paperlessId/reprocess", ...paperlessGuard, readingCtrl.postReprocess);
+router.get("/paperless/ocr/:paperlessId/reading-fixture", ...paperlessGuard, readingCtrl.getFixture);
+router.get("/paperless/reading", ...paperlessGuard, readingCtrl.getReport);
 
 router.get("/paperless/ocr", ...paperlessGuard, ctrl.listOcr);
 router.get("/paperless/ocr/:paperlessId", ...paperlessGuard, ctrl.readOcr);

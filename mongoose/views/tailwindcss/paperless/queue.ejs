@@ -1,6 +1,10 @@
 <%
 const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const plUrl = (id) => paperlessUiBase ? `${paperlessUiBase}/documents/${id}/details` : null;
+const money = (v) => v == null ? null : `£${Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const order = locals.sort === 'read' ? 'read' : 'oldest';
+const sortQs = order === 'read' ? '&sort=read' : '';
+const showRead = key === 'needs-entry' || key === 'ready';
 const waitClass = (days) => days == null ? 'text-gray-400'
   : days >= 14 ? 'text-red-700 dark:text-red-400'
   : days >= 7 ? 'text-amber-700 dark:text-amber-400'
@@ -11,7 +15,8 @@ const waitClass = (days) => days == null ? 'text-gray-400'
     <a href="/documents" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Documents</a>
     <span class="text-gray-400">/</span>
     <h1 class="text-xl font-bold">Document queues</h1>
-    <a href="/paperless/shadow-report" class="ml-auto text-sm text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-clipboard-check"></i> Shadow report</a>
+    <a href="/paperless/reading" class="ml-auto text-sm text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-bullseye"></i> Reading accuracy</a>
+    <a href="/paperless/shadow-report" class="text-sm text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-clipboard-check"></i> Shadow report</a>
   </div>
   <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Driven by each document's state in hcs-app, oldest first. Opening and saving a document doesn't move it; only completing the step does.</p>
 
@@ -48,6 +53,14 @@ const waitClass = (days) => days == null ? 'text-gray-400'
     <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
       <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= queue.label %> <span class="normal-case font-normal">(<%= total %>)</span></h2>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"><%= queue.description %></p>
+      <% if (showRead) { %>
+        <div class="flex items-center gap-2 mt-2 text-xs">
+          <span class="text-gray-500 dark:text-gray-400">Order:</span>
+          <a href="?sort=oldest" class="<%= order === 'read' ? 'text-green-700 dark:text-green-400 hover:underline' : 'font-semibold text-gray-700 dark:text-gray-200' %>">Oldest first</a>
+          <span class="text-gray-300">·</span>
+          <a href="?sort=read" class="<%= order === 'read' ? 'font-semibold text-gray-700 dark:text-gray-200' : 'text-green-700 dark:text-green-400 hover:underline' %>">Best read first</a>
+        </div>
+      <% } %>
     </div>
 
     <% if (docs.length === 0) { %>
@@ -64,6 +77,7 @@ const waitClass = (days) => days == null ? 'text-gray-400'
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Document</th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Supplier</th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
+              <% if (showRead) { %><th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400" title="What hcs-app read off the PDF. Only a suggestion until someone enters it.">Read from PDF</th><% } %>
               <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Open</th>
             </tr>
           </thead>
@@ -80,6 +94,22 @@ const waitClass = (days) => days == null ? 'text-gray-400'
                 </td>
                 <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= d.correspondent?.name || '—' %></td>
                 <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= d.documentType?.name || '—' %></td>
+                <% if (showRead) { const r = d.reading; %>
+                  <td class="px-4 py-3 text-xs whitespace-nowrap">
+                    <% if (!r) { %>
+                      <span class="text-gray-400">Not read yet</span>
+                    <% } else if (r.error) { %>
+                      <span class="text-gray-400" title="<%= r.error %>">Couldn't read</span>
+                    <% } else if (!r.hasText) { %>
+                      <span class="text-[11px] px-2 py-0.5 rounded-full border bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700" title="The PDF has no text layer. Open it to ask Paperless to OCR it again.">No text</span>
+                    <% } else { %>
+                      <div class="font-mono text-gray-700 dark:text-gray-300"><%= r.fields?.invoiceNumber?.value || '—' %></div>
+                      <div class="text-gray-500 dark:text-gray-400">
+                        <%= money(r.fields?.invoiceTotal?.value) || 'no total' %><% if (r.lineCount) { %> · <%= r.lineCount %> line<%= r.lineCount === 1 ? '' : 's' %><% if (r.linesAddUp) { %> <i class="bi bi-check2 text-green-600" title="Lines add up to total goods"></i><% } %><% } %>
+                      </div>
+                    <% } %>
+                  </td>
+                <% } %>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
                   <% if (key === 'needs-entry') { %>
                     <a href="/paperless/ocr/<%= d.paperlessId %>/entry"
@@ -109,12 +139,12 @@ const waitClass = (days) => days == null ? 'text-gray-400'
       <% if (pages > 1) { %>
         <div class="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-gray-700">
           <% if (page > 1) { %>
-            <a href="?page=<%= page - 1 %>"
+            <a href="?page=<%= page - 1 %><%= sortQs %>"
                class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">← Prev</a>
           <% } else { %><span></span><% } %>
           <span class="text-xs text-gray-500">Page <%= page %> of <%= pages %></span>
           <% if (page < pages) { %>
-            <a href="?page=<%= page + 1 %>"
+            <a href="?page=<%= page + 1 %><%= sortQs %>"
                class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">Next →</a>
           <% } else { %><span></span><% } %>
         </div>
