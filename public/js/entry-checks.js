@@ -73,6 +73,24 @@ export function liveChecks(header, lines) {
 }
 
 /**
+ * True when the lines in the form are the document's lines: same quantity,
+ * price, total and VAT %. Totals alone aren't enough: bricks entered at
+ * 794.51 (per thousand) instead of 0.7945 still total 0.79.
+ * @param {Array} typed  non-blank form lines, as typed
+ * @param {Array} found  lines read from the document
+ */
+export function sameLines(typed, found) {
+  const close = (a, b, tol) => (b == null ? true : a != null && Math.abs(a - b) < tol);
+  return typed.length === found.length && typed.every((l, i) => {
+    const d = found[i];
+    return close(num(l.total), d.total, 0.005)
+      && close(num(l.quantity), d.quantity, 1e-6)
+      && close(num(l.price), d.price, 0.00005)
+      && close(num(l.vatRate), d.vatRate, 1e-6);
+  });
+}
+
+/**
  * The value for a field from text clicked on the PDF: the whole text, or else
  * the word under the pointer. Null when neither fits the field.
  * @param {string} field  a header field ("invoiceTotal") or "line.<name>"
@@ -104,4 +122,4 @@ export function pickValue(field, text, word) {
   return null;
 }
 
-export default { liveChecks, pickValue, parseVatRate, vatRateProblem, VAT_RATES };
+export default { liveChecks, pickValue, parseVatRate, vatRateProblem, sameLines, VAT_RATES };

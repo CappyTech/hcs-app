@@ -22,7 +22,7 @@
  */
 import { findFields, locateValue, normalise, toItems, FIELDS } from '/resources/js/invoice-field-finder.js';
 import { findLines, fillMissingRates, findPaymentTerms, findVatNumbers } from '/resources/js/invoice-line-finder.js';
-import { liveChecks, pickValue } from '/resources/js/entry-checks.js';
+import { liveChecks, pickValue, sameLines } from '/resources/js/entry-checks.js';
 import { exactBox, placeBox, clickTarget } from '/resources/js/pdf-marks.js';
 
 const MAX_PAGES = 5; // invoices put these on the first page or two
@@ -290,8 +290,7 @@ function fillLines() {
 function renderLinesButton() {
   if (!fillLinesBtn) return;
   const typed = formLines().filter((l) => !lineIsBlank(l));
-  const same = typed.length === docLines.length
-    && typed.every((l, i) => Math.abs(Number(l.total) - docLines[i].total) < 0.005);
+  const same = sameLines(typed, docLines);
   fillLinesBtn.hidden = !docLines.length || same;
   const n = docLines.length;
   fillLinesBtn.querySelector('[data-label]').textContent = typed.length
