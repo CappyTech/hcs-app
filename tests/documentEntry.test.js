@@ -143,6 +143,22 @@ describe('parseEntryForm (every field in section 3)', () => {
     assert.deepEqual(Object.keys(errors).sort(), ['invoiceDate', 'lines.0.quantity', 'lines.0.vatRate', 'totalGoods']);
   });
 
+  it('refuses a VAT amount in VAT %, and says why', () => {
+    const { entry, errors } = parseEntryForm({
+      invoiceNumber: 'A1', lines: [
+        { description: 'Cement', quantity: '1', price: '28.09', total: '28.09', vatRate: '5.62' },
+        { description: 'Sand', quantity: '1', price: '10', total: '10', vatRate: '3' },
+        { description: 'Bricks', quantity: '1', price: '10', total: '10', vatRate: '20%' },
+      ],
+    }, 'invoice');
+    assert.equal(errors['lines.0.vatRate'], 'Line 1 VAT % is "5.62". VAT % is a percentage (0, 5, 20), not an amount.');
+    assert.match(errors['lines.1.vatRate'], /Line 2 VAT % is "3"/);
+    assert.equal(errors['lines.2.vatRate'], undefined);
+    assert.equal(entry.lines[2].vatRate, 20);
+    // One saved before the guard is still warned about
+    assert.match(consistencyWarnings({ lines: [{ total: 10, vatRate: 3 }] })[0], /Line 1 VAT % is "3"/);
+  });
+
   it('takes the bank statement fields (53–57)', () => {
     const { entry, errors } = parseEntryForm({ bank: {
       accountId: '12', periodStart: '2026-09-01', periodEnd: '2026-09-30', openingBalance: '1,000.00', closingBalance: '1250',

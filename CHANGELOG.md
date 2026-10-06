@@ -19,6 +19,11 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - **The fix:** the reader now divides the price by 1,000 or 100 when the unit column says so (`TH`, `M`, `per 1000`; `C`, `H`, `per 100`). With no unit column, it does so only when quantity × price ÷ 100 or 1,000 is the line total and quantity × price isn't. The price is kept to 4 places (0.7945).
   - **Totals check:** it now allows for that rounding on large quantities, a few pence on 5,000 bricks.
   - **Stored readings:** they are marked out of date (reader version 2), so the background job reads them again.
+- **A line's VAT % accepted a VAT amount.** VAT % allowed any whole number from 0 to 100. So £3.00 of VAT typed into it saved as 3%, while "20%" and 4.49 were refused with a bare "isn't valid".
+  - **On save:** VAT % must now be 0, 5 or 20, with or without "%". Anything else is refused with "Line N VAT % is "4.49". VAT % is a percentage (0, 5, 20), not an amount."
+  - **While typing:** the entry screen's live checks say the same, and a bad rate isn't counted in the VAT total check.
+  - **Click-to-fill:** clicking a VAT amount on the PDF no longer fills VAT %.
+  - **Earlier entries:** ones saved with an odd rate are warned about.
 - **The KashFlow draft and send didn't refuse a flagged credit note.** A credit note is keyed into KashFlow by hand (PB-12), so they now refuse it.
 
 ## [6.53.2] - 2026-10-06

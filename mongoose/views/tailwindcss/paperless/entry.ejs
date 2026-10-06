@@ -203,7 +203,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
                     <input name="lines[<%= i %>][quantity]" value="<%= val(l.quantity) %>" placeholder="Qty" inputmode="decimal" aria-label="Line <%= i + 1 %> quantity" class="<%= inputCls(`lines.${i}.quantity`) %>" <%= disabled %>>
                     <input name="lines[<%= i %>][price]" value="<%= val(l.price) %>" placeholder="Price £" inputmode="decimal" aria-label="Line <%= i + 1 %> price" class="<%= inputCls(`lines.${i}.price`) %>" <%= disabled %>>
                     <input name="lines[<%= i %>][total]" value="<%= val(l.total) %>" placeholder="Total £" inputmode="decimal" aria-label="Line <%= i + 1 %> total" class="<%= inputCls(`lines.${i}.total`) %>" <%= disabled %>>
-                    <input name="lines[<%= i %>][vatRate]" value="<%= val(l.vatRate) %>" placeholder="VAT %" inputmode="numeric" aria-label="Line <%= i + 1 %> VAT %" class="<%= inputCls(`lines.${i}.vatRate`) %>" <%= disabled %>>
+                    <input name="lines[<%= i %>][vatRate]" value="<%= val(l.vatRate) %>" placeholder="VAT %" inputmode="numeric" title="VAT rate in percent: 0, 5 or 20 (not the VAT amount)" aria-label="Line <%= i + 1 %> VAT %" class="<%= inputCls(`lines.${i}.vatRate`) %>" <%= disabled %>>
                   </div>
                 </div>
               <% } %>
