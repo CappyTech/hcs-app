@@ -2,6 +2,20 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.51.0] - 2026-10-06
+
+### Added
+- **The entry screen reads the line items too.** **Fill N lines from the document** fills description, quantity, price, net total and VAT % for every line, and adds line rows as needed. When lines are already filled in, the button offers to replace them. Each line gets a dashed box on the PDF, and focusing a line's inputs lights it up. The reader names the table's columns from its headings, including headings split over two or three rows or set one word per item. It handles:
+  - descriptions printed above their figures (Stark) or running onto extra rows (Travis Perkins);
+  - VAT given as a rate, a code (`S`) or an amount;
+  - several tables on one invoice (labour, then parts).
+  
+  Lines with no VAT column take the invoice's rate when VAT ÷ goods is a standard rate. On the 37 queued documents, the lines add up to total goods on 36. The 37th is a supplier statement.
+- **A due date worked out from the payment terms.** When an invoice prints no due date but does print terms ("STRICTLY 30 DAYS", "net 14", "30 days end of month", "end of month following"), the due date hint gives the date those terms produce from the invoice date. It says which terms it used and follows the invoice date as you change it. Returns and queries wording ("within 28 days to arrange collection") is ignored.
+- **Click the PDF to fill a field.** With any invoice or line field focused, clicking a value on the document fills it in, reading what that field needs (an amount, a date, a quantity…). The field then gets the focus back, so you can Tab on and click again. A bar over the top of the document shows which field is waiting (it floats, so the page never moves under the pointer), and Esc stops it. Dragging to select text still selects text.
+- **Live checks while you type.** Under the lines, a panel says when the lines don't add up to total goods, when VAT at the line rates isn't the total VAT (allowing a penny a line for rounding), or when goods + VAT isn't the invoice total. The warnings shown after saving now include the line-VAT check as well.
+- **Where Paperless and the document disagree.** When the form was filled from the Paperless custom fields, a list at the top shows each field where the document says something different, with a **Use** button for each and one for all of them.
+
 ## [6.50.2] - 2026-10-06
 
 ### Fixed
