@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.8] - 2026-10-06
+
+### Changed
+- **The deploy connects to server2 over Tailscale SSH instead of with an SSH key.** server2 keeps Tailscale SSH switched on, and that answers port 22 for tailnet connections and ignores keys, so the key-based login was dropped mid-handshake ("ssh: handshake failed: EOF"). The deploy now runs plain `ssh` to server2's tailnet address and Tailscale authorises it (`tag:dev-ci` → `tag:server`). `docs/DEPLOYMENT.md` has the policy rules and how to tag server2 without losing your own access. The `DEPLOY_SSH_KEY` secret and the deploy key on server2 are no longer used.
+
 ## [6.49.7] - 2026-10-06
 
 ### Fixed
