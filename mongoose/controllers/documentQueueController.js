@@ -22,7 +22,8 @@ export const getQueue = async (req, res, next) => {
     }
     await mdb.connect();
     const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
-    const data = await queues.loadQueue(mdb.PAPERLESS.OcrDocument, key, { page });
+    const sort = req.query.sort === 'read' ? 'read' : 'oldest';
+    const data = await queues.loadQueue(mdb.PAPERLESS.OcrDocument, key, { page, sort });
     res.render(path.join('tailwindcss', 'paperless', 'queue'), {
       title: data.queue.label,
       ...data,

@@ -19,6 +19,7 @@ import entry from '../services/paperless/documentEntryService.js';
 import { actorFromUser } from '../services/paperless/documentStateService.js';
 import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
 import notifySvc from '../services/paperless/documentNotifyService.js';
+import readingSvc from '../services/paperless/documentReadingService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import logger from '../../services/loggerService.js';
 
@@ -44,8 +45,11 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
   const kind = entry.entryKind(doc);
   const v = values || entry.formValues(doc);
   const lineCount = Math.max((v.lines || []).length, 1) + extraLines;
+  const layout = kind === 'invoice' ? await readingSvc.layoutFor(doc).catch(() => null) : null;
   res.status(status).render(path.join('tailwindcss', 'paperless', 'entry'), {
     title: doc.title || `Document #${doc.paperlessId}`,
+    reading: doc.reading || null,
+    layout,
     doc,
     kind,
     values: v,
@@ -70,6 +74,10 @@ export const getEntry = async (req, res, next) => {
     if (!doc.processingState && !doc.classifiedAt && !doc.deletedInPaperlessAt) {
       const c = await entry.ensureClassified(OcrDocument, id);
       if (c.classified) doc = await OcrDocument.findOne({ paperlessId: id }).lean();
+    }
+    // Read it on the server too, once, for the queue and for learning the supplier's layout
+    if (entry.entryKind(doc) === 'invoice' && (!doc.reading || doc.reading.version < readingSvc.READER_VERSION)) {
+      readingSvc.readSoon(id).catch(() => {});
     }
     await render(req, res, doc, { extraLines: req.query.extraLines === '1' ? 1 : 0 });
   } catch (err) {
@@ -102,6 +110,9 @@ export const postEntry = async (req, res, next) => {
       req.flash('error', saved.message);
       return res.redirect(entryUrl(id));
     }
+
+    // Learn where this supplier puts each value, after the response has gone
+    if (kind === 'invoice') setImmediate(() => { readingSvc.learnFromSave(id).catch(() => {}); });
 
     if (action === 'addLine') return res.redirect(`${entryUrl(id)}?extraLines=1#lines`);
 

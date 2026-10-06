@@ -101,6 +101,7 @@
   [data-suggest-for][hidden],
   [data-suggest-checks][hidden],
   [data-suggest-disagree][hidden],
+  [data-suggest-insights][hidden],
   #pdf-highlights-toggle[hidden] {
     display: none;
   }

@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.52.0] - 2026-10-06
+
+### Added
+- **Invoices are read on the server as well, once each.** A new invoice is read as soon as it arrives. A new `paperless-read-documents` job works through the rest, 20 every 15 minutes, newest first, and also redoes readings made by an older version of the reader. Opening an unread invoice reads it too. The reader is the same code the entry screen runs, so both agree. The PDF's positioned text is kept (`DocumentText`), so reading again doesn't fetch the PDF from Paperless each time.
+- **The queues show what was read.** Needs Data Entry and Ready for KashFlow have a *Read from PDF* column: the invoice number, the total, and how many lines there are, ticked when they add up to total goods. A PDF with no text is marked *No text*. **Best read first** puts the invoices with the most found at the top.
+- **The reader learns each supplier's layout.** Whenever an invoice is saved, hcs-app notes where on the page each saved value was (`SupplierLayout`, one per correspondent). The next invoice from that supplier prefers a value in the same place. That fixes layouts with no recognisable label, and invoices with two "Total" lines.
+- **Supplier VAT number check.** The entry screen compares the VAT number printed on the invoice with the KashFlow supplier matching its correspondent. When they differ, it says whose number it is ("It's Stark's"), so an invoice filed against the wrong supplier is caught. Your own VAT number is left out of the comparison: set `COMPANY_VAT_NUMBER`.
+- **Duplicate invoice warning.** When the invoice number is already in KashFlow for that supplier (a purchase with that supplier reference, however it's spaced or punctuated), a red warning names the purchase. An amber one links to any other Paperless document with the same number. It checks again as you type the number.
+- **Reading accuracy report** at `/paperless/reading`, linked from the queues. For each supplier and field, it shows how often what was read was saved unchanged, and it lists the invoices where something was corrected or typed in. **Fixture** on each of those downloads the invoice's text and saved values as a test case for `tests/fixtures/invoices/`. Every change to the reader is then checked against those cases (`tests/invoiceFixtures.test.js`).
+- **PDFs with no text layer.** The entry screen says when a PDF has no text and offers **Ask Paperless to OCR it again**, which sends Paperless's reprocess request. **Read again** reads the PDF afresh at any time.
+
 ## [6.51.0] - 2026-10-06
 
 ### Added
