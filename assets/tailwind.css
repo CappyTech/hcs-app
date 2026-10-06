@@ -69,13 +69,38 @@
     display: block;
     background: rgb(37 99 235);
   }
+  /* Line items: dashed, so they read as rows rather than single values */
+  .hcs-pdf-mark.is-line {
+    border-style: dashed;
+    border-width: 1px;
+    background: rgb(245 158 11 / 0.05);
+  }
+  .hcs-pdf-mark.is-line.is-active {
+    border-style: solid;
+    border-width: 2px;
+  }
   .hcs-highlights-toggle.is-on {
     border-color: rgb(245 158 11);
     color: rgb(180 83 9);
   }
+  /* A field is waiting for a click on the document */
+  .is-picking .textLayer span {
+    cursor: copy;
+  }
+  .is-picking .textLayer span:hover {
+    background: rgb(37 99 235 / 0.18);
+  }
+  .hcs-just-filled {
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.45);
+    transition: box-shadow 200ms;
+  }
   /* The hidden attribute must win over display utilities (flex, inline-flex) */
   #suggest-fill-all[hidden],
+  #suggest-fill-lines[hidden],
+  #pdf-pick-status[hidden],
   [data-suggest-for][hidden],
+  [data-suggest-checks][hidden],
+  [data-suggest-disagree][hidden],
   #pdf-highlights-toggle[hidden] {
     display: none;
   }

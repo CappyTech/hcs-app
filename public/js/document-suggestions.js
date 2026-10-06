@@ -1,37 +1,56 @@
 /**
  * "Here's what I think the invoice number is" on the document entry screen.
  *
- * When the viewer has the PDF open, this reads its text (with positions),
- * guesses the invoice number, dates and totals (invoice-field-finder.js),
- * and then:
- *   - draws a labelled box on the PDF around the text each guess came from;
- *   - under each form field, says what the document seems to say, with a
- *     "Use" button, or that the typed value matches it;
- *   - focusing or hovering a field lights its box up and scrolls to it.
+ * When the viewer has the PDF open, this reads its text (with positions) and
+ * guesses the invoice number, dates, totals and line items
+ * (invoice-field-finder.js, invoice-line-finder.js). Then:
+ *   - draws a box on the PDF around the text each guess came from;
+ *   - under each field, says what the document says, with a "Use" button, or
+ *     that the typed value matches it; a due date the invoice doesn't print is
+ *     worked out from its payment terms ("STRICTLY 30 DAYS");
+ *   - offers to fill the line items, and checks lines, VAT and totals add up
+ *     as you type;
+ *   - lists where the Paperless custom fields and the document disagree;
+ *   - with a field focused, clicking a value on the PDF fills it in.
  *
- * Nothing is saved: Use only fills the input, and the person still saves.
+ * Nothing is saved: everything only fills inputs, and the person still saves.
  * Hooks into document-viewer.js through its hcs:pdf-loaded / hcs:pdf-page
  * events, so it never touches rendering or text selection.
  */
-import { findFields, locateValue, normalise, toItems, fitBox, FIELDS } from '/resources/js/invoice-field-finder.js';
+import { findFields, locateValue, normalise, toItems, charBox, fitBox, FIELDS } from '/resources/js/invoice-field-finder.js';
+import { findLines, fillMissingRates, findPaymentTerms } from '/resources/js/invoice-line-finder.js';
+import { liveChecks, pickValue } from '/resources/js/entry-checks.js';
 
 const MAX_PAGES = 5; // invoices put these on the first page or two
 const PREF_KEY = 'hcs.entry.highlights';
+const LINE_FIELDS = ['description', 'quantity', 'price', 'total', 'vatRate'];
+const LINE_LABEL = { description: 'description', quantity: 'quantity', price: 'price', total: 'total', vatRate: 'VAT %' };
 
 const root = document.getElementById('pdf-viewer');
 const form = document.querySelector('[data-suggest-form]');
 const toggle = document.getElementById('pdf-highlights-toggle');
 const fillAllBtn = document.getElementById('suggest-fill-all');
+const fillLinesBtn = document.getElementById('suggest-fill-lines');
+const linesBox = form?.querySelector('[data-lines]');
+const checksBox = form?.querySelector('[data-suggest-checks]');
+const disagreeBox = form?.querySelector('[data-suggest-disagree]');
+const pickStatus = document.getElementById('pdf-pick-status');
 const inputs = Object.fromEntries(
   [...document.querySelectorAll('[data-suggest-field]')].map((el) => [el.dataset.suggestField, el]),
 );
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));
 const LABEL = Object.fromEntries(FIELDS.map((f) => [f.field, f.label]));
+// What Paperless had put in the form, before anyone typed
+const fromPaperless = form?.dataset.valuesSource === 'paperless'
+  ? Object.fromEntries(Object.entries(inputs).map(([f, el]) => [f, el.value.trim()]))
+  : null;
 
 let items = [];
 let guesses = {}; // field → guess from the finder
+let terms = null; // payment terms, for a due date the invoice doesn't print
+let docLines = []; // line items read off the document
 const pages = new Map(); // pageNumber → { pageEl, viewport, layer }
-let active = null;
+let active = null; // key of the lit-up box: a field name or "line:N"
 
 const readPref = () => { try { return localStorage.getItem(PREF_KEY) !== 'off'; } catch { return true; } };
 const writePref = (on) => { try { localStorage.setItem(PREF_KEY, on ? 'on' : 'off'); } catch { /* private mode */ } };
@@ -46,20 +65,49 @@ const shown = (field, value) => {
   }
   return value;
 };
+const el = (tag, props = {}, ...kids) => {
+  const e = Object.assign(document.createElement(tag), props);
+  e.append(...kids.filter((k) => k != null));
+  return e;
+};
+const icon = (name) => el('i', { className: `bi bi-${name}` });
+const setValue = (input, value) => {
+  input.value = value ?? '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+};
 
-/** What box to show for a field: the guess, or where the typed value is on the page. */
-function markFor(field) {
-  const input = inputs[field];
-  const typed = input?.value?.trim();
-  const g = guesses[field];
-  if (typed && (!g || normalise(TYPE[field], typed) !== normalise(TYPE[field], g.value))) {
-    const at = locateValue(items, field, typed);
-    if (at) return { ...at, kind: 'typed' };
+/** The guess for a field, including a due date worked out from the payment terms. */
+function guessFor(field) {
+  if (field === 'dueDate' && !guesses.dueDate && terms) {
+    const invoiceDate = inputs.invoiceDate?.value || guesses.invoiceDate?.value;
+    const t = findPaymentTerms(items, invoiceDate);
+    if (t?.dueDate) return { value: t.dueDate, page: t.page, box: t.box, derived: t.text };
   }
-  return g ? { ...g, kind: 'guess' } : null;
+  return guesses[field] || null;
 }
 
-// ── PDF boxes ────────────────────────────────────────────────────────
+// ── Boxes on the PDF ─────────────────────────────────────────────────
+
+/** Where to draw a field's box: its guess, or where the typed value is on the page. */
+function markFor(field) {
+  const typed = inputs[field]?.value?.trim();
+  const g = guessFor(field);
+  if (typed && (!g || normalise(TYPE[field], typed) !== normalise(TYPE[field], g.value))) {
+    const at = locateValue(items, field, typed);
+    if (at) return at;
+  }
+  return g;
+}
+
+function allMarks() {
+  const out = [];
+  for (const field of Object.keys(inputs)) {
+    const m = markFor(field);
+    if (m) out.push({ key: field, label: m.derived ? `${LABEL[field]} (from terms)` : LABEL[field], page: m.page, box: m.box });
+  }
+  docLines.forEach((l, i) => out.push({ key: `line:${i}`, label: `Line ${i + 1}`, page: l.page, box: l.box, line: true }));
+  return out;
+}
 
 /**
  * A box around part of a text item, placed by real character widths. The
@@ -99,30 +147,22 @@ function drawPage(pageNumber) {
   const p = pages.get(pageNumber);
   if (!p) return;
   p.layer?.remove();
-  const layer = document.createElement('div');
-  layer.className = 'hcs-pdf-marks';
-  layer.hidden = !showMarks;
+  const layer = el('div', { className: 'hcs-pdf-marks', hidden: !showMarks });
   p.layer = layer;
-  for (const field of Object.keys(inputs)) {
-    const m = markFor(field);
-    if (!m || m.page !== pageNumber) continue;
+  for (const m of allMarks()) {
+    if (m.page !== pageNumber) continue;
     const box = exactBox(m.box, p);
     // PDF.js 6 has no convertToViewportRectangle; two corners do the same
     const [x1, y1] = p.viewport.convertToViewportPoint(box.x, box.y);
     const [x2, y2] = p.viewport.convertToViewportPoint(box.x + box.w, box.y + box.h);
     const pad = 2;
-    const el = document.createElement('div');
-    el.className = 'hcs-pdf-mark';
-    el.dataset.field = field;
-    el.style.left = `${Math.min(x1, x2) - pad}px`;
-    el.style.top = `${Math.min(y1, y2) - pad}px`;
-    el.style.width = `${Math.abs(x2 - x1) + pad * 2}px`;
-    el.style.height = `${Math.abs(y2 - y1) + pad * 2}px`;
-    const tag = document.createElement('span');
-    tag.className = 'hcs-pdf-mark-tag';
-    tag.textContent = LABEL[field];
-    el.append(tag);
-    layer.append(el);
+    const mark = el('div', { className: `hcs-pdf-mark${m.line ? ' is-line' : ''}` }, el('span', { className: 'hcs-pdf-mark-tag', textContent: m.label }));
+    mark.dataset.key = m.key;
+    mark.style.left = `${Math.min(x1, x2) - pad}px`;
+    mark.style.top = `${Math.min(y1, y2) - pad}px`;
+    mark.style.width = `${Math.abs(x2 - x1) + pad * 2}px`;
+    mark.style.height = `${Math.abs(y2 - y1) + pad * 2}px`;
+    layer.append(mark);
   }
   p.pageEl.append(layer);
   setActive(active, { scroll: false });
@@ -130,14 +170,14 @@ function drawPage(pageNumber) {
 
 const drawAll = () => { for (const n of pages.keys()) drawPage(n); };
 
-function setActive(field, { scroll = true } = {}) {
-  active = field;
-  for (const layer of root.querySelectorAll('.hcs-pdf-marks')) layer.classList.toggle('is-dimmed', !!field);
+function setActive(key, { scroll = true } = {}) {
+  active = key;
+  for (const layer of root.querySelectorAll('.hcs-pdf-marks')) layer.classList.toggle('is-dimmed', !!key);
   let target = null;
-  for (const el of root.querySelectorAll('.hcs-pdf-mark')) {
-    const on = el.dataset.field === field;
-    el.classList.toggle('is-active', on);
-    if (on) target = el;
+  for (const m of root.querySelectorAll('.hcs-pdf-mark')) {
+    const on = m.dataset.key === key;
+    m.classList.toggle('is-active', on);
+    if (on) target = m;
   }
   if (scroll && target && showMarks) {
     // Scroll the viewer only, not the whole page
@@ -149,85 +189,248 @@ function setActive(field, { scroll = true } = {}) {
   }
 }
 
-// ── Hints under the fields ───────────────────────────────────────────
+// ── Hints under the header fields ────────────────────────────────────
 
 const HINT_BASE = 'mt-1 text-xs flex flex-wrap items-center gap-x-2 gap-y-1';
 
-function useButton(field, value) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'px-2 py-0.5 rounded-md border border-current font-medium hover:bg-white/60 dark:hover:bg-black/20';
-  b.textContent = 'Use';
-  b.setAttribute('aria-label', `Use ${shown(field, value)} for ${LABEL[field].toLowerCase()}`);
-  b.addEventListener('click', () => {
-    const input = inputs[field];
-    input.value = value;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.focus();
+function useButton(label, onUse, text = 'Use') {
+  const b = el('button', {
+    type: 'button',
+    className: 'px-2 py-0.5 rounded-md border border-current font-medium hover:bg-white/60 dark:hover:bg-black/20',
+    textContent: text,
   });
+  b.setAttribute('aria-label', label);
+  b.addEventListener('click', onUse);
   return b;
 }
+
+const useField = (field, value) => useButton(`Use ${shown(field, value)} for ${LABEL[field].toLowerCase()}`, () => {
+  setValue(inputs[field], value);
+  inputs[field].focus();
+});
 
 function renderHint(field) {
   const hint = form?.querySelector(`[data-suggest-for="${field}"]`);
   const input = inputs[field];
   if (!hint || !input) return;
-  const g = guesses[field];
+  const g = guessFor(field);
   const typed = input.value.trim();
   hint.replaceChildren();
   hint.hidden = true;
   if (!g) {
     if (typed && locateValue(items, field, typed)) {
       hint.className = `${HINT_BASE} text-gray-500 dark:text-gray-400`;
-      hint.append(Object.assign(document.createElement('span'), { textContent: 'Found on the document.' }));
+      hint.append(el('span', { textContent: 'Found on the document.' }));
       hint.hidden = false;
     }
     return;
   }
   const same = typed && normalise(TYPE[field], typed) === normalise(TYPE[field], g.value);
-  const text = document.createElement('span');
-  const pageNote = g.page > 1 ? ` (page ${g.page})` : '';
+  const note = g.derived ? ` (worked out from “${g.derived}”)` : g.page > 1 ? ` (page ${g.page})` : '';
   if (same) {
     hint.className = `${HINT_BASE} text-green-700 dark:text-green-400`;
-    text.innerHTML = '<i class="bi bi-check2"></i> ';
-    text.append(`Matches the document${pageNote}`);
-    hint.append(text);
-  } else if (!typed) {
-    hint.className = `${HINT_BASE} text-blue-700 dark:text-blue-400`;
-    text.innerHTML = '<i class="bi bi-stars"></i> ';
-    text.append('Document says ');
-    text.append(Object.assign(document.createElement('strong'), { textContent: shown(field, g.value) }));
-    text.append(pageNote);
-    hint.append(text);
-    if (!input.disabled) hint.append(useButton(field, g.value));
+    hint.append(el('span', {}, icon('check2'), ` Matches the document${note}`));
   } else {
-    hint.className = `${HINT_BASE} text-amber-700 dark:text-amber-400`;
-    text.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ';
-    text.append('Document says ');
-    text.append(Object.assign(document.createElement('strong'), { textContent: shown(field, g.value) }));
-    text.append(pageNote);
-    hint.append(text);
-    if (!input.disabled) hint.append(useButton(field, g.value));
+    const colour = typed ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400';
+    hint.className = `${HINT_BASE} ${colour}`;
+    hint.append(el('span', {}, icon(typed ? 'exclamation-triangle' : 'stars'), ' Document says ', el('strong', { textContent: shown(field, g.value) }), note));
+    if (!input.disabled) hint.append(useField(field, g.value));
   }
   hint.hidden = false;
 }
 
 function renderFillAll() {
   if (!fillAllBtn) return;
-  const empty = Object.keys(inputs).filter((f) => guesses[f] && !inputs[f].value.trim() && !inputs[f].disabled);
+  const empty = Object.keys(inputs).filter((f) => guessFor(f) && !inputs[f].value.trim() && !inputs[f].disabled);
   fillAllBtn.hidden = empty.length < 2;
   fillAllBtn.querySelector('[data-count]')?.replaceChildren(String(empty.length));
-  fillAllBtn.onclick = () => {
-    for (const f of empty) {
-      inputs[f].value = guesses[f].value;
-      inputs[f].dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  };
+  fillAllBtn.onclick = () => { for (const f of empty) setValue(inputs[f], guessFor(f).value); };
 }
 
-const renderHints = () => { Object.keys(inputs).forEach(renderHint); renderFillAll(); };
+/** Where the Paperless custom fields and the document disagree (PB: fields keyed before hcs-app). */
+function renderDisagreements() {
+  if (!disagreeBox || !fromPaperless) return;
+  const rows = Object.keys(inputs).filter((f) => {
+    const g = guessFor(f);
+    const now = inputs[f].value.trim();
+    return g && fromPaperless[f] && now === fromPaperless[f] && normalise(TYPE[f], now) !== normalise(TYPE[f], g.value);
+  });
+  disagreeBox.replaceChildren();
+  disagreeBox.hidden = !rows.length;
+  if (!rows.length) return;
+  disagreeBox.className = 'border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1';
+  disagreeBox.append(el('p', { className: 'font-medium' }, icon('exclamation-triangle-fill'), ' The Paperless fields and the document disagree'));
+  const list = el('ul', { className: 'space-y-1' });
+  for (const f of rows) {
+    const g = guessFor(f);
+    list.append(el('li', { className: 'flex flex-wrap items-center gap-x-2' },
+      el('span', {}, `${LABEL[f]}: Paperless `, el('strong', { textContent: shown(f, normalise(TYPE[f], fromPaperless[f]) ?? fromPaperless[f]) }), ', document ', el('strong', { textContent: shown(f, g.value) })),
+      inputs[f].disabled ? null : useField(f, g.value)));
+  }
+  disagreeBox.append(list);
+  if (rows.length > 1 && !inputs[rows[0]].disabled) {
+    disagreeBox.append(useButton('Use the document for all of these', () => { for (const f of rows) setValue(inputs[f], guessFor(f).value); }, 'Use the document for all'));
+  }
+}
+
+// ── Line items ───────────────────────────────────────────────────────
+
+const lineBlocks = () => [...(linesBox?.querySelectorAll('[data-line]') || [])];
+const lineInput = (block, f) => block.querySelector(`[name$="[${f}]"]`);
+const formLines = () => lineBlocks().map((b) => Object.fromEntries(LINE_FIELDS.map((f) => [f, lineInput(b, f)?.value.trim() ?? ''])));
+const lineIsBlank = (l) => LINE_FIELDS.every((f) => !l[f]);
+
+/** Another line block, copied from the last and renumbered. */
+function addLineBlock() {
+  const blocks = lineBlocks();
+  const last = blocks.at(-1);
+  const i = blocks.length;
+  const copy = last.cloneNode(true);
+  copy.dataset.line = String(i);
+  copy.querySelector('[data-line-label]').textContent = `Line ${i + 1}`;
+  for (const input of copy.querySelectorAll('input')) {
+    input.name = input.name.replace(/^lines\[\d+\]/, `lines[${i}]`);
+    input.setAttribute('aria-label', (input.getAttribute('aria-label') || '').replace(/^Line \d+/, `Line ${i + 1}`));
+    input.value = '';
+    // A copied error highlight would point at the wrong line
+    input.className = input.className.replace('border-red-400 dark:border-red-600', 'border-gray-300 dark:border-gray-600');
+  }
+  last.after(copy);
+  wireLineBlock(copy);
+  return copy;
+}
+
+const cell = (v, dp) => (v == null ? '' : dp == null ? String(v) : Number(v).toFixed(dp));
+
+function fillLines() {
+  while (lineBlocks().length < docLines.length) addLineBlock();
+  lineBlocks().forEach((b, i) => {
+    const l = docLines[i];
+    // Blank leftover rows: a blank row is how a line is removed on save
+    setValue(lineInput(b, 'description'), l ? l.description : '');
+    setValue(lineInput(b, 'quantity'), l ? cell(l.quantity) : '');
+    setValue(lineInput(b, 'price'), l ? cell(l.price) : '');
+    setValue(lineInput(b, 'total'), l ? cell(l.total, 2) : '');
+    setValue(lineInput(b, 'vatRate'), l ? cell(l.vatRate) : '');
+  });
+  renderLinesButton();
+}
+
+function renderLinesButton() {
+  if (!fillLinesBtn) return;
+  const typed = formLines().filter((l) => !lineIsBlank(l));
+  const same = typed.length === docLines.length
+    && typed.every((l, i) => Math.abs(Number(l.total) - docLines[i].total) < 0.005);
+  fillLinesBtn.hidden = !docLines.length || same;
+  const n = docLines.length;
+  fillLinesBtn.querySelector('[data-label]').textContent = typed.length
+    ? `Replace with the ${n} line${n === 1 ? '' : 's'} on the document`
+    : `Fill ${n} line${n === 1 ? '' : 's'} from the document`;
+}
+
+function renderChecks() {
+  if (!checksBox) return;
+  const header = Object.fromEntries(Object.entries(inputs).map(([f, i]) => [f, i.value.trim()]));
+  const problems = liveChecks(header, formLines());
+  checksBox.replaceChildren();
+  checksBox.hidden = !problems.length;
+  if (!problems.length) return;
+  checksBox.append(el('p', { className: 'font-medium mb-1' }, icon('exclamation-triangle-fill'), ' These don’t add up yet'));
+  checksBox.append(el('ul', { className: 'list-disc ml-5 space-y-0.5' }, ...problems.map((p) => el('li', { textContent: p }))));
+}
+
+function wireLineBlock(block) {
+  block.addEventListener('focusin', () => {
+    const i = lineBlocks().indexOf(block);
+    if (docLines[i]) setActive(`line:${i}`);
+  });
+  block.addEventListener('focusout', () => setActive(null, { scroll: false }));
+}
+
+// ── Click a value on the PDF to fill the focused field ───────────────
+
+let armed = null; // { input, field, label } waiting for a click on the PDF
+let refocusing = false;
+
+function describeInput(input) {
+  if (input.dataset.suggestField) return { field: input.dataset.suggestField, label: LABEL[input.dataset.suggestField] };
+  const m = input.name.match(/^lines\[(\d+)\]\[(\w+)\]$/);
+  if (m) return { field: `line.${m[2]}`, label: `line ${Number(m[1]) + 1} ${LINE_LABEL[m[2]] || m[2]}` };
+  return null;
+}
+
+function arm(input) {
+  const d = describeInput(input);
+  if (!d || input.disabled || !items.length) return;
+  armed = { input, ...d };
+  root.classList.add('is-picking');
+  if (pickStatus) {
+    pickStatus.replaceChildren(icon('cursor'), el('span', {}, 'Click a value on the document to fill ', el('strong', { textContent: d.label }), '.'),
+      el('span', { className: 'ml-auto opacity-70', textContent: 'Esc to stop' }));
+    pickStatus.hidden = false;
+  }
+}
+
+function disarm() {
+  armed = null;
+  root.classList.remove('is-picking');
+  if (pickStatus) pickStatus.hidden = true;
+}
+
+function itemAt(pageNumber, x, y) {
+  let best = null;
+  for (const it of items) {
+    if (it.page !== pageNumber) continue;
+    const b = charBox(it);
+    if (x < b.x - 1 || x > b.x + b.w + 1 || y < b.y || y > b.y + b.h) continue;
+    if (!best || b.w * b.h < best.w * best.h) best = { it, w: b.w, h: b.h };
+  }
+  return best?.it || null;
+}
+
+function onPdfClick(e) {
+  if (!armed) return;
+  if (String(window.getSelection?.() || '').trim()) return; // they're selecting text, not picking
+  const pageEl = e.target.closest('.hcs-pdf-page');
+  const entry = [...pages.entries()].find(([, p]) => p.pageEl === pageEl);
+  if (!entry) return;
+  const [pageNumber, p] = entry;
+  const rect = pageEl.getBoundingClientRect();
+  const [x, y] = p.viewport.convertToPdfPoint(e.clientX - rect.left, e.clientY - rect.top);
+  const it = itemAt(pageNumber, x, y);
+  if (!it) return;
+  // The character under the pointer: exactly, from the text layer span that was
+  // clicked, or else by its share of the item's width
+  const caret = e.target.closest?.('.textLayer span')?.textContent === it.str
+    ? (document.caretPositionFromPoint?.(e.clientX, e.clientY)?.offset ?? document.caretRangeFromPoint?.(e.clientX, e.clientY)?.startOffset)
+    : null;
+  const guess = Math.floor(((x - it.x) / (it.w || 1)) * it.str.length);
+  const at = Math.max(0, Math.min(it.str.length - 1, caret ?? guess));
+  const start = it.str.lastIndexOf(' ', at) + 1;
+  const end = it.str.indexOf(' ', at);
+  const word = it.str.slice(start, end < 0 ? undefined : end);
+  const value = pickValue(armed.field, it.str, word);
+  if (value == null) {
+    pickStatus?.replaceChildren(icon('x-circle'), el('span', { textContent: `That isn't a ${armed.label.replace(/^line \d+ /, '')}. Try another value, or Esc to stop.` }));
+    return;
+  }
+  const { input } = armed;
+  setValue(input, value);
+  disarm();
+  refocusing = true;
+  input.focus(); // Tab on to the next field, click the document again
+  refocusing = false;
+  input.classList.add('hcs-just-filled');
+  setTimeout(() => input.classList.remove('hcs-just-filled'), 900);
+}
 
 // ── Wiring ───────────────────────────────────────────────────────────
+
+const renderHints = () => {
+  Object.keys(inputs).forEach(renderHint);
+  renderFillAll();
+  renderDisagreements();
+};
 
 async function readDocument(pdf) {
   const n = Math.min(pdf.numPages, MAX_PAGES);
@@ -248,9 +451,14 @@ if (root && form && Object.keys(inputs).length) {
       const { all, width } = await readDocument(e.detail.pdf);
       items = all;
       guesses = Object.fromEntries(Object.entries(findFields(items, { pageWidth: width })).filter(([f, g]) => g && inputs[f]));
+      terms = findPaymentTerms(items);
+      docLines = fillMissingRates(findLines(items), guesses.totalGoods?.value, guesses.totalVat?.value);
       renderHints();
+      renderLinesButton();
+      renderChecks();
       drawAll();
-      if (toggle) toggle.hidden = !Object.keys(inputs).some((f) => markFor(f));
+      if (toggle) toggle.hidden = !allMarks().length;
+      root.dispatchEvent(new CustomEvent('hcs:document-read', { detail: { items, guesses, lines: docLines, terms } }));
     } catch (err) {
       console.error('[document-suggestions]', err);
     }
@@ -262,21 +470,40 @@ if (root && form && Object.keys(inputs).length) {
     if (items.length) drawPage(pageNumber);
   });
 
+  root.addEventListener('click', onPdfClick);
+
   for (const [field, input] of Object.entries(inputs)) {
     input.addEventListener('focus', () => setActive(field));
     input.addEventListener('blur', () => setActive(null, { scroll: false }));
     input.addEventListener('input', () => {
       renderHint(field);
+      if (field === 'invoiceDate') renderHint('dueDate'); // due date from terms follows it
       renderFillAll();
-      const m = markFor(field);
-      // The typed value may now point at a different spot on the page
-      for (const n of pages.keys()) drawPage(n);
-      if (m) setActive(field);
+      renderDisagreements();
+      drawAll();
+      if (markFor(field) && document.activeElement === input) setActive(field);
     });
     const hint = form.querySelector(`[data-suggest-for="${field}"]`);
     hint?.addEventListener('mouseenter', () => setActive(field));
     hint?.addEventListener('mouseleave', () => { if (document.activeElement !== input) setActive(null, { scroll: false }); });
   }
+  lineBlocks().forEach(wireLineBlock);
+
+  // Arm click-to-fill on whichever field has focus; keep it armed when the
+  // click on the PDF takes the focus away
+  form.addEventListener('focusin', (e) => {
+    if (refocusing || !(e.target instanceof HTMLInputElement)) return;
+    if (describeInput(e.target)) arm(e.target);
+    else disarm();
+  });
+  form.addEventListener('input', () => { renderLinesButton(); renderChecks(); });
+  form.addEventListener('submit', disarm);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && armed) disarm(); });
+  document.addEventListener('mousedown', (e) => {
+    if (armed && !root.contains(e.target) && !form.contains(e.target)) disarm();
+  });
+
+  fillLinesBtn?.addEventListener('click', fillLines);
 
   if (toggle) {
     const sync = () => {

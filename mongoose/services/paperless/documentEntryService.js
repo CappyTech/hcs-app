@@ -187,6 +187,14 @@ export function consistencyWarnings(entry) {
   if (entry.totalGoods != null && lines.some((l) => l.total != null) && off(lineSum, entry.totalGoods)) {
     out.push(`Line totals add up to ${money(lineSum)}, but total goods is ${money(entry.totalGoods)}.`);
   }
+  const priced = lines.filter((l) => l.total != null);
+  if (entry.totalVat != null && priced.length && priced.every((l) => l.vatRate != null)) {
+    const lineVat = priced.reduce((s, l) => s + (l.total * l.vatRate) / 100, 0);
+    // Suppliers round VAT per line or on the total, so allow a penny a line
+    if (Math.abs(lineVat - entry.totalVat) > Math.max(0.02, 0.01 * priced.length) + 1e-9) {
+      out.push(`VAT at the line rates comes to ${money(lineVat)}, but total VAT is ${money(entry.totalVat)}.`);
+    }
+  }
   if (entry.totalGoods != null && entry.totalVat != null && entry.invoiceTotal != null
       && off(entry.totalGoods + entry.totalVat, entry.invoiceTotal)) {
     out.push(`Goods ${money(entry.totalGoods)} + VAT ${money(entry.totalVat)} is ${money(entry.totalGoods + entry.totalVat)}, not the invoice total ${money(entry.invoiceTotal)}.`);
