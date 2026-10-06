@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.49.9] - 2026-10-06
+
+### Fixed
+- **Text on the PDF in the document entry screen can now be selected and copied.** The Docker CSS build never copied `public/js` into the builder stage, so Tailwind purged classes used only from scripts, including `.hcs-pdf-page` from the PDF viewer. Without its `position: relative`, the invisible PDF.js text layer was placed against the wrong container and sat away from the rendered invoice, so dragging over the visible text selected nothing. The builder now copies `public/js`, and a test fails if any Tailwind `content` path is missing from it.
+- **Selecting across blank parts of a page no longer jumps or collapses.** The viewer now builds its text layer with PDF.js's `TextLayerBuilder` (vendored as `pdf_viewer.mjs`) instead of the bare `TextLayer`, which adds the end-of-content element and selection listeners the PDF.js viewer relies on.
+
 ## [6.49.8] - 2026-10-06
 
 ### Changed

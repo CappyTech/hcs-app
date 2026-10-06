@@ -460,9 +460,30 @@ describe('H5 wiring', () => {
 
   it('PDF.js is served from our own vendor assets, not a CDN', () => {
     const vendor = read('scripts/vendor-assets.js');
-    for (const f of ['pdf.min.mjs', 'pdf.worker.min.mjs', 'pdf_viewer.css']) assert.ok(vendor.includes(`pdfjs/${f}`), f);
+    for (const f of ['pdf.min.mjs', 'pdf.worker.min.mjs', 'pdf_viewer.css', 'pdf_viewer.mjs']) assert.ok(vendor.includes(`pdfjs/${f}`), f);
     const viewer = read('public/js/document-viewer.js');
     assert.match(viewer, /from '\/resources\/vendor\/pdfjs\/pdf\.min\.mjs'/);
     assert.match(viewer, /isEvalSupported: false/);
+  });
+
+  it('text layer uses TextLayerBuilder, imported after pdf.min.mjs', () => {
+    const viewer = read('public/js/document-viewer.js');
+    const lib = viewer.indexOf("from '/resources/vendor/pdfjs/pdf.min.mjs'");
+    const builder = viewer.indexOf("import { TextLayerBuilder } from '/resources/vendor/pdfjs/pdf_viewer.mjs'");
+    assert.ok(lib >= 0 && builder > lib, 'pdf_viewer.mjs needs globalThis.pdfjsLib set first');
+    assert.match(viewer, /new TextLayerBuilder\(/);
+  });
+
+  it('the Docker CSS build sees every Tailwind content path', () => {
+    // A path missing from the builder stage gets its classes purged in production
+    // only; .hcs-pdf-page went missing that way and broke PDF text selection.
+    const dockerfile = read('Dockerfile');
+    const builder = dockerfile.slice(0, dockerfile.indexOf('npm run build:css'));
+    const content = read('tailwind.config.js').match(/content:\s*\[([^\]]*)\]/)[1];
+    for (const [, glob] of content.matchAll(/'\.\/([^'*]+?)\/?\*/g)) {
+      const dir = glob.replace(/\/$/, '');
+      const covered = [...builder.matchAll(/^COPY\s+(\S+)/gm)].some(([, src]) => dir === src || dir.startsWith(`${src}/`));
+      assert.ok(covered, `Dockerfile builder stage must COPY ${dir}`);
+    }
   });
 });

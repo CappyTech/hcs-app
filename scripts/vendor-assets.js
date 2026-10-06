@@ -33,6 +33,9 @@ const ASSETS = [
   // standard fonts and colour profiles from these paths at runtime.
   ['pdfjs-dist/build/pdf.min.mjs', 'pdfjs/pdf.min.mjs'],
   ['pdfjs-dist/build/pdf.worker.min.mjs', 'pdfjs/pdf.worker.min.mjs'],
+  // TextLayerBuilder: the text layer plus the selection handling that stops a drag
+  // across blank parts of the page from collapsing the selection.
+  ['pdfjs-dist/web/pdf_viewer.mjs', 'pdfjs/pdf_viewer.mjs'],
   // Text layer styles (native CSS nesting, so it can't go through Tailwind's build)
   ['pdfjs-dist/web/pdf_viewer.css', 'pdfjs/pdf_viewer.css'],
   ['pdfjs-dist/cmaps', 'pdfjs/cmaps'],
