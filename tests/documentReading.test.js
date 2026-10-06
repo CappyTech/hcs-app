@@ -244,11 +244,20 @@ describe('routes, permissions and views', async () => {
     assert.match(html, /href="\?page=2&amp;sort=read"|href="\?page=2&sort=read"/);
   });
 
+  it('the entry page never passes `layout` to its template (express-ejs-layouts reads it as the layout file)', () => {
+    // 6.53.1 passed the learned supplier layout as `layout`: once a supplier had
+    // one (after the first save), every entry page for it failed with
+    // 'The "path" argument must be of type string. Received an instance of Object'
+    const ctrl = read('mongoose/controllers/documentEntryController.js');
+    assert.ok(!/^\s+layout\s*:/m.test(ctrl), 'no `layout:` local');
+    assert.match(ctrl, /readerLayout: hints\?\.layout/);
+  });
+
   it('the entry page offers to OCR a PDF with no text again', async () => {
     const view = read('mongoose/views/tailwindcss/paperless/entry.ejs');
     assert.match(view, /action="\/paperless\/ocr\/<%= doc\.paperlessId %>\/reprocess"/);
     assert.match(view, /action="\/paperless\/ocr\/<%= doc\.paperlessId %>\/read"/);
-    assert.match(view, /data-layout="<%= JSON\.stringify\(locals\.layout \|\| \{\}\) %>"/);
+    assert.match(view, /data-layout="<%= JSON\.stringify\(locals\.readerLayout \|\| \{\}\) %>"/);
     assert.ok(view.includes('<div data-suggest-insights hidden></div>'));
   });
 

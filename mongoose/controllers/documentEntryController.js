@@ -49,7 +49,8 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
   res.status(status).render(path.join('tailwindcss', 'paperless', 'entry'), {
     title: doc.title || `Document #${doc.paperlessId}`,
     reading: doc.reading || null,
-    layout: hints?.layout || null,
+    // Not `layout`: express-ejs-layouts reads that as the layout file to render
+    readerLayout: hints?.layout || null,
     labels: hints?.labels || null,
     doc,
     kind,

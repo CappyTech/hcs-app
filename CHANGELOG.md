@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.53.2] - 2026-10-06
+
+### Fixed
+- **Saving an invoice on the entry screen gave "500 - TypeError: The "path" argument must be of type string. Received an instance of Object".** 6.52.0 passed the supplier's learned layout to the entry template as `layout`. The page layout library (`express-ejs-layouts`) treats that name as the layout file to render. While a supplier had nothing learned the value was empty and the page rendered normally. The first save teaches it a layout, so the page shown after saving, and every later entry page for that supplier, failed. It is now passed as `readerLayout`. Nothing that was saved or learned was lost, and those invoices open again with the learned layout in use. A test stops the entry controller passing `layout` again.
+
 ## [6.53.1] - 2026-10-06
 
 ### Fixed
