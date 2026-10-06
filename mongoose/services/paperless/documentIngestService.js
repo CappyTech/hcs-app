@@ -37,6 +37,12 @@
  * what H8 compares against what Paperless actually sent. A state is never
  * moved backwards this way. PAPERLESS_FOLLOW_TAGS=false turns it off.
  *
+ * Tags that keep an invoice out of entry (4 original/multiple, 11 manually
+ * added to kashflow) are followed for as long as the invoice is waiting for
+ * entry or to be sent, whatever PAPERLESS_FOLLOW_TAGS says: Paperless is still
+ * where people mark them. Adding one excludes the invoice; removing it lets
+ * the invoice back in, unless the exclusion was set by a person.
+ *
  * A document new to hcs-app (webhook, or reconciliation finding one with no
  * copy) fires the new-document notification (PB-1).
  */
@@ -44,9 +50,9 @@
 import mdb from '../mongooseDatabaseService.js';
 import __paperlessClient from './paperlessClient.js';
 import __grabServicePaperless from '../grabServicePaperless.js';
-import { hasTag } from '../../config/paperlessTagsConfig.js';
+import { hasTag, PAPERLESS_TAGS, tagNamePatterns } from '../../config/paperlessTagsConfig.js';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
-import { isInvoiceDocument, actorFromUser, transition, markStatementReviewed } from './documentStateService.js';
+import { isInvoiceDocument, actorFromUser, transition, markStatementReviewed, setExcludedReason } from './documentStateService.js';
 import { notifySafely } from './documentNotifyService.js';
 import { readSoon } from './documentReadingService.js';
 import logger from '../../../services/loggerService.js';
@@ -63,6 +69,11 @@ function isCreditNoteField(cf) {
   const byName = /^\s*credit\s*note\s*$/i.test(String(cf.fieldName ?? cf.name ?? ''));
   return byId || byName;
 }
+
+/** Documents carrying any of the given tags, by id or known name. */
+const hasAnyTagQuery = (keys) => ({
+  tags: { $elemMatch: { $or: keys.flatMap((k) => [{ id: PAPERLESS_TAGS[k].id }, { name: { $in: tagNamePatterns(k) } }]) } },
+});
 
 const truthy = (v) => v === true || (typeof v === 'string' && v.trim().toLowerCase() === 'true');
 
@@ -220,6 +231,67 @@ export async function followPaperlessTags(OcrDocument, paperlessId, { now = new 
   return applied;
 }
 
+// ── Tags that keep an invoice out of entry ───────────────────────────
+
+const EXCLUDABLE_STATES = ['awaiting_entry', 'entered'];
+const EXCLUSION_NOTE = 'Followed a Paperless tag change';
+
+/**
+ * The exclusion `doc` should have now, from its tags. Pure.
+ * @returns {{from, to}|null} null when nothing should change
+ */
+export function exclusionChange(doc) {
+  if (!isInvoiceDocument(doc) || !EXCLUDABLE_STATES.includes(doc.processingState) || doc.deletedInPaperlessAt) return null;
+  const from = doc.excludedReason ?? null;
+  const to = initialStateFromPaperless(doc).excludedReason;
+  if (to === from) return null;
+  if (to) return { from, to };
+  // Tag gone: only undo an exclusion that came from a tag in the first place
+  const by = doc.excludedReasonChanged?.by;
+  const bySystem = !by || (by.userId == null && (by.name == null || by.name === SYSTEM.name));
+  return bySystem ? { from, to: null } : null;
+}
+
+/** Bring one invoice's exclusion level with its Paperless tags. */
+export async function followExclusionTags(OcrDocument, paperlessId, { now = new Date() } = {}) {
+  const doc = await OcrDocument.findOne({ paperlessId })
+    .select('paperlessId documentType tags customFields processingState excludedReason excludedReasonChanged deletedInPaperlessAt')
+    .lean();
+  const change = exclusionChange(doc);
+  if (!change) return null;
+  const res = await setExcludedReason(OcrDocument, paperlessId, change.to, SYSTEM, { now, note: EXCLUSION_NOTE });
+  if (!res.ok || !res.changed) return null;
+  logger.info(`[paperless-ingest] paperlessId=${paperlessId} ${change.to ? `excluded (${change.to})` : 'no longer excluded'}: followed its Paperless tags`);
+  return change;
+}
+
+/**
+ * Every invoice waiting for entry or sending whose exclusion doesn't match
+ * its cached tags, put right. Catches tags added in Paperless after the
+ * invoice arrived and outside the reconciliation window. Idempotent.
+ */
+export async function applyExclusionTags(OcrDocument, { now = new Date() } = {}) {
+  const docs = await OcrDocument.find({
+    processingState: { $in: EXCLUDABLE_STATES },
+    deletedInPaperlessAt: null,
+    $or: [
+      { excludedReason: null, ...hasAnyTagQuery(['originalMultiInvoice', 'manuallyAddedToKashflow']) },
+      { excludedReason: { $ne: null } },
+    ],
+  }).select('paperlessId').lean();
+  const excluded = [];
+  const cleared = [];
+  for (const { paperlessId } of docs) {
+    try {
+      const change = await followExclusionTags(OcrDocument, paperlessId, { now });
+      if (change) (change.to ? excluded : cleared).push(paperlessId);
+    } catch (err) {
+      logger.warn(`[paperless-ingest] Following the exclusion tags on ${paperlessId} failed: ${err.message}`);
+    }
+  }
+  return { excluded, cleared };
+}
+
 /**
  * After an ingest: classify if new to hcs-app, otherwise follow Paperless,
  * then fire the notifications those changes call for.
@@ -227,9 +299,10 @@ export async function followPaperlessTags(OcrDocument, paperlessId, { now = new 
 export async function syncDocument(OcrDocument, paperlessId, { now = new Date(), isNew = false, notify = notifySafely } = {}) {
   const classification = await classifyDocument(OcrDocument, paperlessId, { now });
   const followed = classification.classified ? [] : await followPaperlessTags(OcrDocument, paperlessId, { now });
+  const exclusion = classification.classified ? null : await followExclusionTags(OcrDocument, paperlessId, { now });
   if (isNew) await notify('new_doc', paperlessId, { source: 'app' });
   for (const step of followed) await notify(STEP_NOTIFICATION[step], paperlessId, { source: 'paperless' });
-  return { ...classification, followed };
+  return { ...classification, followed, exclusion };
 }
 
 /**
@@ -356,6 +429,9 @@ export default {
   followEnabled,
   followSteps,
   followPaperlessTags,
+  exclusionChange,
+  followExclusionTags,
+  applyExclusionTags,
   syncDocument,
   parseWebhookDocumentId,
   handleDocumentAdded,

@@ -421,6 +421,15 @@ describe('entry view', () => {
     assert.match(html, /name="invoiceNumber"[^>]*disabled/);
   });
 
+  it('makes an invoice tagged not-for-entry in Paperless read-only, with no KashFlow draft', async () => {
+    const doc = { paperlessId: 1, documentType: PI, processingState: 'entered', excludedReason: 'manually_added', customFields: [] };
+    const html = await render(doc, { locked: true, excluded: 'This was keyed into KashFlow by hand.' });
+    assert.match(html, /Kept out of the queues\. This was keyed into KashFlow by hand\. Remove the tag in Paperless/);
+    assert.ok(!html.includes('This invoice is in KashFlow'));
+    assert.ok(!html.includes('value="save"'));
+    assert.ok(!html.includes('/paperless/ocr/1/draft'));
+  });
+
   it('shows admin-only actions only to admins', async () => {
     const doc = { paperlessId: 1, documentType: PI, processingState: 'entered', customFields: [] };
     assert.ok(!(await render(doc)).includes('Reopen entry'));

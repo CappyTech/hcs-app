@@ -150,6 +150,19 @@ export async function markStatementReviewed(OcrDocument, paperlessId, actor, { n
   return { ok: true, firstTime: !!updated };
 }
 
+/** Why an excluded document isn't entered or sent, for the person looking at it. */
+export const EXCLUDED_MESSAGES = {
+  original_multiple: 'This PDF holds several invoices (tagged "original/multiple invoice one pdf" in Paperless). '
+    + "Each invoice is entered from its own document, so this one isn't entered or sent to KashFlow.",
+  manually_added: 'This was keyed into KashFlow by hand (tagged "manually added to kashflow" in Paperless), '
+    + "so it isn't entered or sent from here.",
+};
+
+/** The reason `doc` is kept out of entry and sending, or null when it isn't. */
+export function notForEntryMessage(doc) {
+  return EXCLUDED_MESSAGES[doc?.excludedReason] || null;
+}
+
 /**
  * Set or clear why a document is kept out of the invoice queues.
  * @param {'original_multiple'|'manually_added'|null} reason
@@ -187,4 +200,6 @@ export default {
   transition,
   markStatementReviewed,
   setExcludedReason,
+  notForEntryMessage,
+  EXCLUDED_MESSAGES,
 };

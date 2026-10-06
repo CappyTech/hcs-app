@@ -165,6 +165,19 @@ function registerAll() {
     },
   });
 
+  scheduler.register('paperless-exclusion-tags', {
+    description:
+      'Keep invoices tagged "original/multiple invoice one pdf" or "manually added to kashflow" in Paperless '
+      + 'out of Needs Data Entry and Ready for KashFlow, including ones tagged after they arrived, and let '
+      + 'them back in when the tag is removed. Idempotent; sends no notifications.',
+    intervalMs: HOUR,
+    initialDelayMs: 3 * MINUTE,
+    run: async () => {
+      await __mdbForJobs.connect();
+      return __documentIngestService.applyExclusionTags(__mdbForJobs.PAPERLESS.OcrDocument);
+    },
+  });
+
   scheduler.register('paperless-notification-retry', {
     description:
       'Resend document emails and Discord posts that failed in live mode '

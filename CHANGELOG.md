@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.54.0] - 2026-10-06
+
+### Added
+- **The KashFlow draft page links back.** It now has links to its queue (Ready for KashFlow, or Needs Data Entry if entry isn't complete) and to **Edit entry**, as well as to Details. Before, the only link was back to the document details.
+- **Job `paperless-exclusion-tags` (hourly).** It finds invoices waiting for entry or sending whose exclusion doesn't match their Paperless tags and corrects them. Idempotent; sends no notifications.
+
+### Fixed
+- **Invoices tagged in Paperless as not for entry were still entered and sent.** The tags are `original/multiple invoice one pdf` (a PDF holding several invoices, each entered from its own document) and `manually added to kashflow`.
+  - **When the tags count:** they only counted when the document first arrived. A tag added afterwards left the invoice in Needs Data Entry, and nothing stopped it being completed or sent.
+  - **Tags added later:** they are now followed whenever hcs-app re-reads the document from Paperless, and by the new job.
+  - **Removing a tag:** the invoice goes back to its queue, unless the exclusion was set by a person.
+  - **Always followed:** this works whatever `PAPERLESS_FOLLOW_TAGS` is set to, since Paperless is still where these are marked.
+  - **What an excluded invoice does now:** it is left out of Ready for KashFlow as well as Needs Data Entry. Its entry screen is read-only and says why. Saving and completing are refused, and the KashFlow draft and send refuse it. The background PDF reading skips it.
+- **The KashFlow draft and send didn't refuse a flagged credit note.** A credit note is keyed into KashFlow by hand (PB-12), so they now refuse it.
+
 ## [6.53.2] - 2026-10-06
 
 ### Fixed

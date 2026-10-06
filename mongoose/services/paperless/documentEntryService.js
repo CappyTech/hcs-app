@@ -20,7 +20,7 @@
  * saying what to do by hand.
  */
 
-import { transition, isInvoiceDocument, markStatementReviewed } from './documentStateService.js';
+import { transition, isInvoiceDocument, markStatementReviewed, notForEntryMessage } from './documentStateService.js';
 import { notifySafely } from './documentNotifyService.js';
 import { classifyDocument } from './documentIngestService.js';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
@@ -328,8 +328,10 @@ async function tellPaperless(label, fn, manual) {
 /** Complete entry (PB-5): requires the core fields, then tags Paperless. */
 export async function completeEntry(OcrDocument, paperlessId, actor, deps = {}) {
   const d = { ...defaultDeps(), ...deps };
-  const doc = await OcrDocument.findOne({ paperlessId }).select('documentType processingState entry').lean();
+  const doc = await OcrDocument.findOne({ paperlessId }).select('documentType processingState excludedReason entry').lean();
   if (!doc) return { ok: false, reason: 'not-found', message: 'Document not found.' };
+  const excluded = notForEntryMessage(doc);
+  if (excluded) return { ok: false, reason: 'excluded', message: excluded };
   const errors = completionErrors(doc.entry?.savedAt ? doc.entry : null);
   if (Object.keys(errors).length) {
     return { ok: false, reason: 'incomplete', errors, message: Object.values(errors).join(' ') };

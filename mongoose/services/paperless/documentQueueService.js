@@ -6,7 +6,7 @@
  * (PB-11). Each mirrors a Paperless saved view:
  *
  *   needs-entry  view 12  PI/SI, state awaiting_entry, no exclusion reason  (PB-3)
- *   ready        view 4   state entered                                     (PB-7)
+ *   ready        view 4   state entered, no exclusion reason                (PB-7)
  *   statements   view 13  Supplier Statement, not yet reviewed              (PB-10)
  *
  * A credit note (manual_kashflow) is in neither invoice queue (PB-12), and a
@@ -34,7 +34,7 @@ export const QUEUES = {
     icon: 'bi-send',
     description: 'Invoices with data entry complete, waiting to be sent to KashFlow.',
     empty: 'Nothing is waiting to be sent to KashFlow.',
-    filter: () => ({ processingState: 'entered', ...NOT_DELETED }),
+    filter: () => ({ processingState: 'entered', excludedReason: null, ...NOT_DELETED }),
   },
   statements: {
     label: 'Statements to Review',
