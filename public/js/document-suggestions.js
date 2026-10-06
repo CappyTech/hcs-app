@@ -20,9 +20,10 @@
  * Hooks into document-viewer.js through its hcs:pdf-loaded / hcs:pdf-page
  * events, so it never touches rendering or text selection.
  */
-import { findFields, locateValue, normalise, toItems, charBox, fitBox, FIELDS } from '/resources/js/invoice-field-finder.js';
+import { findFields, locateValue, normalise, toItems, FIELDS } from '/resources/js/invoice-field-finder.js';
 import { findLines, fillMissingRates, findPaymentTerms, findVatNumbers } from '/resources/js/invoice-line-finder.js';
 import { liveChecks, pickValue } from '/resources/js/entry-checks.js';
+import { exactBox, placeBox, clickTarget } from '/resources/js/pdf-marks.js';
 
 const MAX_PAGES = 5; // invoices put these on the first page or two
 const PREF_KEY = 'hcs.entry.highlights';
@@ -41,6 +42,8 @@ const insightsBox = form?.querySelector('[data-suggest-insights]');
 const paperlessId = form?.dataset.paperlessId;
 // Where this supplier's earlier invoices had each field (learned on save)
 const layout = (() => { try { return JSON.parse(form?.dataset.layout || '{}'); } catch { return {}; } })();
+// Label words added for this supplier on its reading page
+const labels = (() => { try { return JSON.parse(form?.dataset.labels || '{}'); } catch { return {}; } })();
 const pickStatus = document.getElementById('pdf-pick-status');
 const inputs = Object.fromEntries(
   [...document.querySelectorAll('[data-suggest-field]')].map((el) => [el.dataset.suggestField, el]),
@@ -116,40 +119,6 @@ function allMarks() {
   return out;
 }
 
-/**
- * A box around part of a text item, placed by real character widths. The
- * text layer draws each item as a span stretched over the printed text, so a
- * Range over the first n characters of that span measures them. (Font names
- * can't be used for this: PDF.js substitutes fonts under other names.)
- */
-function exactBox(box, p) {
-  const src = box?.src;
-  if (!src || (src.from === 0 && src.to === src.str.length)) return box;
-  // The span for this item: same text, nearest to where the item is
-  const [ax, ay] = p.viewport.convertToViewportPoint(src.x, box.y + box.h);
-  const pageRect = p.pageEl.getBoundingClientRect();
-  let span = null;
-  let best = Infinity;
-  for (const s of p.pageEl.querySelectorAll('.textLayer span')) {
-    if (s.textContent !== src.str) continue;
-    const r = s.getBoundingClientRect();
-    const d = Math.hypot(r.left - pageRect.left - ax, r.top - pageRect.top - ay);
-    if (d < best) { best = d; span = s; }
-  }
-  const text = span?.firstChild;
-  if (!text || text.nodeType !== Node.TEXT_NODE || best > 40) return box;
-  const range = document.createRange();
-  const left = span.getBoundingClientRect().left;
-  // Width of the span's first n characters: fitBox only ever measures prefixes
-  const measure = (t) => {
-    if (t.length === 0) return 0;
-    range.setStart(text, 0);
-    range.setEnd(text, Math.min(t.length, text.length));
-    return range.getBoundingClientRect().right - left;
-  };
-  return fitBox(box, measure);
-}
-
 function drawPage(pageNumber) {
   const p = pages.get(pageNumber);
   if (!p) return;
@@ -159,16 +128,9 @@ function drawPage(pageNumber) {
   for (const m of allMarks()) {
     if (m.page !== pageNumber) continue;
     const box = exactBox(m.box, p);
-    // PDF.js 6 has no convertToViewportRectangle; two corners do the same
-    const [x1, y1] = p.viewport.convertToViewportPoint(box.x, box.y);
-    const [x2, y2] = p.viewport.convertToViewportPoint(box.x + box.w, box.y + box.h);
-    const pad = 2;
     const mark = el('div', { className: `hcs-pdf-mark${m.line ? ' is-line' : ''}` }, el('span', { className: 'hcs-pdf-mark-tag', textContent: m.label }));
     mark.dataset.key = m.key;
-    mark.style.left = `${Math.min(x1, x2) - pad}px`;
-    mark.style.top = `${Math.min(y1, y2) - pad}px`;
-    mark.style.width = `${Math.abs(x2 - x1) + pad * 2}px`;
-    mark.style.height = `${Math.abs(y2 - y1) + pad * 2}px`;
+    Object.assign(mark.style, placeBox(box, p));
     layer.append(mark);
   }
   p.pageEl.append(layer);
@@ -233,7 +195,9 @@ function renderHint(field) {
     return;
   }
   const same = typed && normalise(TYPE[field], typed) === normalise(TYPE[field], g.value);
-  const note = g.derived ? ` (worked out from “${g.derived}”)` : g.page > 1 ? ` (page ${g.page})` : '';
+  const note = g.derived ? ` (worked out from “${g.derived}”)`
+    : g.customLabel ? ` (by your label “${g.customLabel}”)`
+    : g.page > 1 ? ` (page ${g.page})` : '';
   if (same) {
     hint.className = `${HINT_BASE} text-green-700 dark:text-green-400`;
     hint.append(el('span', {}, icon('check2'), ` Matches the document${note}`));
@@ -384,38 +348,12 @@ function disarm() {
   if (pickStatus) pickStatus.hidden = true;
 }
 
-function itemAt(pageNumber, x, y) {
-  let best = null;
-  for (const it of items) {
-    if (it.page !== pageNumber) continue;
-    const b = charBox(it);
-    if (x < b.x - 1 || x > b.x + b.w + 1 || y < b.y || y > b.y + b.h) continue;
-    if (!best || b.w * b.h < best.w * best.h) best = { it, w: b.w, h: b.h };
-  }
-  return best?.it || null;
-}
-
 function onPdfClick(e) {
   if (!armed) return;
   if (String(window.getSelection?.() || '').trim()) return; // they're selecting text, not picking
-  const pageEl = e.target.closest('.hcs-pdf-page');
-  const entry = [...pages.entries()].find(([, p]) => p.pageEl === pageEl);
-  if (!entry) return;
-  const [pageNumber, p] = entry;
-  const rect = pageEl.getBoundingClientRect();
-  const [x, y] = p.viewport.convertToPdfPoint(e.clientX - rect.left, e.clientY - rect.top);
-  const it = itemAt(pageNumber, x, y);
-  if (!it) return;
-  // The character under the pointer: exactly, from the text layer span that was
-  // clicked, or else by its share of the item's width
-  const caret = e.target.closest?.('.textLayer span')?.textContent === it.str
-    ? (document.caretPositionFromPoint?.(e.clientX, e.clientY)?.offset ?? document.caretRangeFromPoint?.(e.clientX, e.clientY)?.startOffset)
-    : null;
-  const guess = Math.floor(((x - it.x) / (it.w || 1)) * it.str.length);
-  const at = Math.max(0, Math.min(it.str.length - 1, caret ?? guess));
-  const start = it.str.lastIndexOf(' ', at) + 1;
-  const end = it.str.indexOf(' ', at);
-  const word = it.str.slice(start, end < 0 ? undefined : end);
+  const hit = clickTarget(e, items, pages);
+  if (!hit) return;
+  const { item: it, word } = hit;
   const value = pickValue(armed.field, it.str, word);
   if (value == null) {
     pickStatus?.replaceChildren(icon('x-circle'), el('span', { textContent: `That isn't a ${armed.label.replace(/^line \d+ /, '')}. Try another value, or Esc to stop.` }));
@@ -521,7 +459,7 @@ if (root && form && Object.keys(inputs).length) {
     try {
       const { all, width } = await readDocument(e.detail.pdf);
       items = all;
-      guesses = Object.fromEntries(Object.entries(findFields(items, { pageWidth: width, layout })).filter(([f, g]) => g && inputs[f]));
+      guesses = Object.fromEntries(Object.entries(findFields(items, { pageWidth: width, layout, labels })).filter(([f, g]) => g && inputs[f]));
       vatNumbers = findVatNumbers(items).map((v) => v.number);
       terms = findPaymentTerms(items);
       docLines = fillMissingRates(findLines(items), guesses.totalGoods?.value, guesses.totalVat?.value);

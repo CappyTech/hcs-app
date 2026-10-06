@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.53.0] - 2026-10-06
+
+### Added
+- **A reading page for each supplier** at `/paperless/reading/supplier/:id`. It's linked from each supplier on the accuracy report, and from "How it's read" beside the supplier on the entry screen. It shows one of the supplier's invoices with a box wherever hcs-app has learned each field sits, and hovering a field's card lights its box up. For each field you can:
+  - **Point it out**: press it, then click the value on the invoice. That spot is saved for the supplier and ranked above anything learned from saves, so the next invoice is read from there.
+  - **Forget**: clears what was learned for that field. **Start again for this supplier** forgets every learned place and every label word.
+  - **Add label words**: phrases the supplier uses that the reader doesn't know, such as "Charged to Account" for the invoice total or "Our Reference" for the invoice number. For that supplier, both on the entry screen and on the server, the reader looks for these before its built-in labels, and the hint says when one of your words found the value.
+- The supplier page also lists the supplier's recent invoices, saying for each whether what was read was kept or corrected when saved. Choosing one shows it.
+
+### Changed
+- The code that fits boxes to the text and works out what was clicked on the PDF (`public/js/pdf-marks.js`) is now shared by the entry screen and the supplier page.
+
 ## [6.52.0] - 2026-10-06
 
 ### Added
