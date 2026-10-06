@@ -10,6 +10,9 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - A new `paperless-repair-unmarked-sends` job, which runs at start-up and every 6 hours, moves any invoice that is linked to a KashFlow purchase but still waiting for entry or ready for KashFlow to In KashFlow. It doesn't send notifications.
   - A test checks the send handler never uses `OcrDocument` outside the block that declares it. Run against 6.53.0, it reports all three faulty lines.
 
+### Security
+- **`sharp` 0.35.4 → 0.35.5** (CVE-2026-96889, high, in its bundled librsvg; GHSA-wq5f-xc86-pv6w). The advisory came out after the last `master` build and failed CI's production audit. Only sharp and its prebuilt platform binaries changed.
+
 ## [6.53.0] - 2026-10-06
 
 ### Added

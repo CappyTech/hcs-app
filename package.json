@@ -58,7 +58,7 @@
     "promise-limit": "^2.7.0",
     "qrcode": "^1.5.4",
     "sanitize-filename": "^1.6.3",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.5",
     "socket.io": "^4.8.1",
     "tunnel-ssh": "^4.1.6",
     "twilio": "^6.0.0",
