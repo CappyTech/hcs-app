@@ -70,7 +70,15 @@ export function unclassifiedFilters() {
   };
 }
 
-const LIST_FIELDS = 'paperlessId title correspondent documentType added created processingState excludedReason creditNote statementReviewed kashflowPurchaseNumber';
+const LIST_FIELDS = 'paperlessId title correspondent documentType added created processingState excludedReason creditNote statementReviewed kashflowPurchaseNumber'
+  // What the invoice reader found on the PDF (documentReadingService)
+  + ' reading.fields.invoiceNumber.value reading.fields.invoiceTotal.value reading.hasText reading.score reading.lineCount reading.linesAddUp reading.error';
+
+/** Queue orders: oldest first, or best read first (most found on the PDF) and oldest within that. */
+export const QUEUE_SORTS = {
+  oldest: QUEUE_SORT,
+  read: { 'reading.score': -1, ...QUEUE_SORT },
+};
 
 /** Whole days between `from` and `now`, or null. */
 export function daysWaiting(from, now = new Date()) {
@@ -83,11 +91,12 @@ export function daysWaiting(from, now = new Date()) {
  * One page of a queue plus the counts for every queue.
  * @returns {Promise<{key, queue, docs, total, page, pages, counts, unclassified: {invoices, statements}}>}
  */
-export async function loadQueue(OcrDocument, key, { page = 1, pageSize = 50, now = new Date() } = {}) {
+export async function loadQueue(OcrDocument, key, { page = 1, pageSize = 50, now = new Date(), sort = 'oldest' } = {}) {
   const filter = queueFilter(key);
+  const order = QUEUE_SORTS[sort] ? sort : 'oldest';
   const [docs, countEntries, unclassified] = await Promise.all([
     OcrDocument.find(filter)
-      .sort(QUEUE_SORT)
+      .sort(QUEUE_SORTS[order])
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .select(LIST_FIELDS)
@@ -107,6 +116,7 @@ export async function loadQueue(OcrDocument, key, { page = 1, pageSize = 50, now
     pages: Math.max(1, Math.ceil(total / pageSize)),
     counts,
     unclassified: unclassifiedCounts,
+    sort: order,
   };
 }
 
@@ -116,4 +126,4 @@ export function paperlessUiBase() {
     || (process.env.PAPERLESS_BASE_URL || '').replace(/\/api\/?$/i, '')).replace(/\/+$/, '');
 }
 
-export default { QUEUES, QUEUE_KEYS, QUEUE_SORT, queueFilter, unclassifiedFilters, daysWaiting, loadQueue, paperlessUiBase };
+export default { QUEUES, QUEUE_KEYS, QUEUE_SORT, QUEUE_SORTS, queueFilter, unclassifiedFilters, daysWaiting, loadQueue, paperlessUiBase };

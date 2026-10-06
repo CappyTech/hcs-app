@@ -89,6 +89,28 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
         <% if (doc.entry?.savedAt) { %>
           <div class="text-xs text-gray-400">Last saved <%= new Date(doc.entry.savedAt).toLocaleString('en-GB') %><%= doc.entry.savedBy?.name ? ` by ${doc.entry.savedBy.name}` : '' %></div>
         <% } %>
+        <% if (kind === 'invoice') { const rd = locals.reading; %>
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400 pt-1">
+            <span><i class="bi bi-file-earmark-text"></i>
+              <% if (!rd) { %>Not read on the server yet.
+              <% } else if (rd.error) { %>Couldn't read the PDF last time.
+              <% } else { %>Read from the PDF <%= new Date(rd.at).toLocaleString('en-GB') %><%= rd.usedLayout ? ", using this supplier's layout" : '' %>.<% } %>
+            </span>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/read" class="inline">
+              <%- include('../partials/csrfHidden') %>
+              <button type="submit" class="text-green-700 dark:text-green-400 hover:underline">Read again</button>
+            </form>
+          </div>
+          <% if (rd && !rd.error && rd.hasText === false) { %>
+            <div class="mt-2 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 space-y-2">
+              <p><i class="bi bi-exclamation-triangle-fill"></i> This PDF has no text in it, so nothing can be read from it or selected. It was probably scanned without OCR.</p>
+              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reprocess">
+                <%- include('../partials/csrfHidden') %>
+                <button type="submit" class="px-2.5 py-1 rounded-lg border border-current font-medium hover:bg-white/60 dark:hover:bg-black/20">Ask Paperless to OCR it again</button>
+              </form>
+            </div>
+          <% } %>
+        <% } %>
       </div>
 
       <% if (Object.keys(errors || {}).length) { %>
@@ -112,7 +134,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
       <% } %>
 
       <% if (kind === 'invoice') { %>
-        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" data-suggest-form data-values-source="<%= values.source || '' %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
+        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" data-suggest-form data-values-source="<%= values.source || '' %>" data-paperless-id="<%= doc.paperlessId %>" data-layout="<%= JSON.stringify(locals.layout || {}) %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
           <%- include('../partials/csrfHidden') %>
           <div class="flex items-center gap-2">
             <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto">Invoice</h2>
@@ -123,6 +145,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
           <% if (values.source === 'paperless' && (values.invoiceNumber || (values.lines || []).length)) { %>
             <p class="text-xs text-blue-700 dark:text-blue-400"><i class="bi bi-info-circle"></i> Filled in from the Paperless custom fields. Saving keeps it in hcs-app.</p>
           <% } %>
+          <div data-suggest-insights hidden></div>
           <div data-suggest-disagree hidden></div>
 
           <div class="grid grid-cols-2 gap-3">

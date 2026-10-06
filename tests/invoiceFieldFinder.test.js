@@ -284,3 +284,34 @@ describe('exact boxes', () => {
     assert.equal(fitBox(part, () => 0), part);
   });
 });
+
+describe('learned supplier layouts', () => {
+  // Two "Total"-ish figures and no label the finder knows for the invoice number
+  const items = toItems([
+    item([40, 700, 60, 'Our ref']), item([120, 700, 40, 'X-77812']),
+    item([300, 300, 40, 'Total']), item([450, 300, 40, '120.00']),
+    item([300, 280, 40, 'Total']), item([450, 280, 40, '99.00']),
+  ], 1);
+
+  it('without a layout, an unlabelled number is not guessed and the first Total wins', () => {
+    const f = findFields(items);
+    assert.equal(f.invoiceNumber, null);
+    assert.equal(f.invoiceTotal.value, '120.00');
+  });
+
+  it('a learned spot picks the value printed there, and promotes the candidate there', () => {
+    const layout = {
+      invoiceNumber: { page: 1, x: 120, y: 697.5, w: 40, h: 12.5 },
+      invoiceTotal: { page: 1, x: 450, y: 277.5, w: 40, h: 12.5 },
+    };
+    const f = findFields(items, { layout });
+    assert.equal(f.invoiceNumber.value, 'X-77812');
+    assert.equal(f.invoiceNumber.learned, true);
+    assert.equal(f.invoiceTotal.value, '99.00');
+  });
+
+  it('a spot on another page counts for nothing', () => {
+    const f = findFields(items, { layout: { invoiceNumber: { page: 2, x: 120, y: 697.5, w: 40, h: 12.5 } } });
+    assert.equal(f.invoiceNumber, null);
+  });
+});

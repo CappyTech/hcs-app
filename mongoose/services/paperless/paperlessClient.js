@@ -615,6 +615,23 @@ function makeClient() {
      * Add/remove tags atomically via POST /documents/bulk_edit/ (modify_tags).
      * Tags not named are left untouched.
      */
+    /**
+     * Run documents through Paperless's consumer again (OCR included) via
+     * POST /documents/bulk_edit/ (reprocess). For PDFs with no text layer.
+     */
+    async reprocessDocuments(documentIds) {
+      const ids = (Array.isArray(documentIds) ? documentIds : [documentIds])
+        .map(Number)
+        .filter(Number.isFinite);
+      if (ids.length === 0) throw new Error("reprocessDocuments requires documentIds");
+      const api = await createApi();
+      const { data } = await api.post("/documents/bulk_edit/", {
+        documents: ids,
+        method: "reprocess",
+        parameters: {},
+      });
+      return data;
+    },
     async modifyDocumentTags(documentIds, { add = [], remove = [] } = {}) {
       const ids = (Array.isArray(documentIds) ? documentIds : [documentIds])
         .map(Number)
