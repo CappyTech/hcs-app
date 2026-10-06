@@ -30,13 +30,12 @@ Deploys never overlap (`concurrency: deploy-production`), and one in progress is
 
    `TS_OAUTH_CLIENT_ID` and `TS_OAUTH_CLIENT_SECRET` are already set.
 
-3. **Tailscale access.** The runner joins as `tag:dev-ci`. The tailnet policy must let that tag reach server2 on port 22, for example:
-
-   ```json
-   { "action": "accept", "src": ["tag:dev-ci"], "dst": ["server2-host:22"] }
-   ```
-
-   The OAuth client must also be allowed to create devices with `tag:dev-ci`; it already is if the CI Tailscale option works.
+3. **Tailscale access.** The runner joins the tailnet as `tag:dev-ci`, using the OAuth client in `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET`.
+   - With the default **allow all** policy (`src *`, `dst *`, `ip *`), nothing more is needed. This is the case today.
+   - With a stricter policy, first name server2 in `hosts` (`"server2-host": "100.x.y.z"`, from `tailscale ip -4`), then allow the tag to reach it:
+     `{ "src": ["tag:dev-ci"], "dst": ["server2-host"], "ip": ["tcp:22"] }` (grants), or
+     `{ "action": "accept", "src": ["tag:dev-ci"], "dst": ["server2-host:22"] }` (acls).
+   - If Tailscale SSH is on for server2 (`tailscale debug prefs` shows `"RunSSH": true`), it takes over port 22 and ignores the deploy key. Either turn it off with `tailscale set --ssh=false`, or tag server2 and add an `ssh` rule that lets `tag:dev-ci` in as the deploy user.
 
 4. **The compose file on server2** must reference the GHCR image, `image: ghcr.io/cappytech/hcs-app:latest`, and server2 must be able to pull it. That's already the case if a manual `docker compose pull` gets new builds.
 
