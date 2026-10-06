@@ -208,7 +208,7 @@ function matchLabelAt(row, i, re) {
   return { lastItem: i + k, charEnd: end - starts[k], labelBox: unionBox(row.items.slice(i, i + k + 1).map((it) => charBox(it))) };
 }
 
-const startsLabel = (str) => ANY_LABEL.some((re) => { re.lastIndex = 0; return re.test(str.trimStart()); });
+export const startsLabel = (str) => ANY_LABEL.some((re) => { re.lastIndex = 0; return re.test(str.trimStart()); });
 
 /**
  * Items touching items[k] on its right: one value the PDF split up
@@ -449,4 +449,4 @@ export function locateValue(items, field, value) {
   return null;
 }
 
-export default { FIELDS, fitBox, charBox, toItems, groupRows, findCandidates, findFields, locateValue, normalise, parseDate, parseMoney, parseReference, unionBox };
+export default { FIELDS, fitBox, toItems, groupRows, findCandidates, findFields, locateValue, normalise, parseDate, parseMoney, parseReference, unionBox, charBox, startsLabel };
