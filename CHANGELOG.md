@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.54.4] - 2026-10-06
+
+### Fixed
+- **The document details page (`/paperless/ocr/:id`) had no way back to its queue,** only "← Back to list". It now links to the queue the document is waiting in: Needs Data Entry, Ready for KashFlow or Statements to Review. It also links to All documents, which is the only back link when the document is in no queue (sent, excluded or deleted).
+- **The details page showed dates in the server's format.** Created, Modified, Last sent and the ingest times are now UK dates in London time.
+
 ## [6.54.3] - 2026-10-06
 
 ### Changed

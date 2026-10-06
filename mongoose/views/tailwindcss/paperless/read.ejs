@@ -1,5 +1,19 @@
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <a href="/paperless/ocr" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Back to list</a>
+  <%
+    // The queue this document is waiting in, if any
+    const _isStatement = /supplier\s*statement/i.test(doc.documentType?.name || '');
+    const _queue = doc.deletedInPaperlessAt ? null
+      : doc.processingState === 'awaiting_entry' && !doc.excludedReason ? { key: 'needs-entry', label: 'Needs Data Entry' }
+      : doc.processingState === 'entered' && !doc.excludedReason ? { key: 'ready', label: 'Ready for KashFlow' }
+      : _isStatement && doc.classifiedAt && doc.statementReviewed !== true ? { key: 'statements', label: 'Statements to Review' }
+      : null;
+  %>
+  <nav class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+    <% if (_queue) { %>
+      <a href="/paperless/queues/<%= _queue.key %>" class="text-green-700 dark:text-green-400 hover:underline">← <%= _queue.label %></a>
+    <% } %>
+    <a href="/paperless/ocr" class="text-green-700 dark:text-green-400 hover:underline"><%= _queue ? 'All documents' : '← All documents' %></a>
+  </nav>
   <h1 class="text-2xl font-bold mt-2 mb-4"><%= title %></h1>
 
   <% if (doc.deletedInPaperlessAt) { %>
@@ -25,8 +39,8 @@
         <div><span class="font-medium">Paperless ID:</span> #<%= doc.paperlessId %></div>
         <div><span class="font-medium">Correspondent:</span> <%= doc.correspondent?.name || '-' %></div>
         <div><span class="font-medium">Type:</span> <%= doc.documentType?.name || '-' %></div>
-        <div><span class="font-medium">Created:</span> <%= doc.created ? new Date(doc.created).toLocaleString() : '-' %></div>
-        <div><span class="font-medium">Modified:</span> <%= doc.modified ? new Date(doc.modified).toLocaleString() : '-' %></div>
+        <div><span class="font-medium">Created:</span> <%= doc.created ? new Date(doc.created).toLocaleString('en-GB', { timeZone: 'Europe/London' }) : '-' %></div>
+        <div><span class="font-medium">Modified:</span> <%= doc.modified ? new Date(doc.modified).toLocaleString('en-GB', { timeZone: 'Europe/London' }) : '-' %></div>
         <div><span class="font-medium">Files:</span> <%= doc.originalFileName || doc.archivedFileName || '-' %></div>
         <div><span class="font-medium">Tags:</span> <%= (doc.tags||[]).map(t=>t.name).join(', ') || '-' %></div>
         <%# Resolved by tag id or known name, so a Paperless rename does not
@@ -56,7 +70,7 @@
             </div>
             <% if (doc.lastSentAt) { %>
               <% const _modifiedAfterSent = doc.modified && doc.modifiedAtLastSend && new Date(doc.modified) > new Date(doc.modifiedAtLastSend); %>
-              <div class="text-xs text-green-700 mt-1">Last sent: <%= new Date(doc.lastSentAt).toLocaleString() %> via <%= doc.lastSendMode || '-' %> (status <%= doc.lastSendStatus ?? '-' %>)</div>
+              <div class="text-xs text-green-700 mt-1">Last sent: <%= new Date(doc.lastSentAt).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %> via <%= doc.lastSendMode || '-' %> (status <%= doc.lastSendStatus ?? '-' %>)</div>
               <% if (_modifiedAfterSent) { %>
                 <div class="mt-1 flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                   <i class="bi bi-exclamation-triangle-fill"></i>
@@ -115,8 +129,8 @@
       <% if (ingest) { %>
         <div class="text-sm space-y-1">
           <div><span class="font-medium">Status:</span> <%= ingest.status %></div>
-          <div><span class="font-medium">Last Modified:</span> <%= ingest.lastModified ? new Date(ingest.lastModified).toLocaleString() : '-' %></div>
-          <div><span class="font-medium">Last Fetched At:</span> <%= ingest.lastFetchedAt ? new Date(ingest.lastFetchedAt).toLocaleString() : '-' %></div>
+          <div><span class="font-medium">Last Modified:</span> <%= ingest.lastModified ? new Date(ingest.lastModified).toLocaleString('en-GB', { timeZone: 'Europe/London' }) : '-' %></div>
+          <div><span class="font-medium">Last Fetched At:</span> <%= ingest.lastFetchedAt ? new Date(ingest.lastFetchedAt).toLocaleString('en-GB', { timeZone: 'Europe/London' }) : '-' %></div>
           <div><span class="font-medium">Hash:</span> <code class="break-all"><%= ingest.lastContentHash %></code></div>
           <% if (ingest.error) { %>
             <div class="text-red-600">Error: <%= ingest.error %></div>
