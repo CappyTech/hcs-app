@@ -56,6 +56,10 @@ router.post("/paperless/ocr/:paperlessId/read", ...paperlessGuard, readingCtrl.p
 router.post("/paperless/ocr/:paperlessId/reprocess", ...paperlessGuard, readingCtrl.postReprocess);
 router.get("/paperless/ocr/:paperlessId/reading-fixture", ...paperlessGuard, readingCtrl.getFixture);
 router.get("/paperless/reading", ...paperlessGuard, readingCtrl.getReport);
+router.get("/paperless/reading/supplier/:correspondentId", ...paperlessGuard, readingCtrl.getSupplier);
+router.post("/paperless/reading/supplier/:correspondentId/teach", ...paperlessGuard, readingCtrl.postTeach);
+router.post("/paperless/reading/supplier/:correspondentId/forget", ...paperlessGuard, readingCtrl.postForget);
+router.post("/paperless/reading/supplier/:correspondentId/labels", ...paperlessGuard, readingCtrl.postLabels);
 
 router.get("/paperless/ocr", ...paperlessGuard, ctrl.listOcr);
 router.get("/paperless/ocr/:paperlessId", ...paperlessGuard, ctrl.readOcr);

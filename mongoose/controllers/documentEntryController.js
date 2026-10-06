@@ -45,11 +45,12 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
   const kind = entry.entryKind(doc);
   const v = values || entry.formValues(doc);
   const lineCount = Math.max((v.lines || []).length, 1) + extraLines;
-  const layout = kind === 'invoice' ? await readingSvc.layoutFor(doc).catch(() => null) : null;
+  const hints = kind === 'invoice' ? await readingSvc.hintsFor(doc).catch(() => null) : null;
   res.status(status).render(path.join('tailwindcss', 'paperless', 'entry'), {
     title: doc.title || `Document #${doc.paperlessId}`,
     reading: doc.reading || null,
-    layout,
+    layout: hints?.layout || null,
+    labels: hints?.labels || null,
     doc,
     kind,
     values: v,

@@ -44,7 +44,9 @@ const cellTitle = (c) => `${c.matched} kept, ${c.corrected} corrected, ${c.fille
           </tr>
           <% report.suppliers.forEach((s) => { %>
             <tr>
-              <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= s.name %></td>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                <% if (s.correspondentId != null) { %><a href="/paperless/reading/supplier/<%= s.correspondentId %>" class="text-green-700 dark:text-green-400 hover:underline"><%= s.name %></a><% } else { %><%= s.name %><% } %>
+              </td>
               <td class="px-4 py-3 text-right text-gray-500"><%= s.documents %></td>
               <% fields.forEach((f) => { const c = s.fields[f]; %>
                 <td class="px-4 py-3 text-right <%= rateClass(c.rate) %>" title="<%= cellTitle(c) %>"><%= c.rate == null ? '—' : `${c.rate}%` %></td>

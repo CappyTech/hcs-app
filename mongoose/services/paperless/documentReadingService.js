@@ -95,8 +95,8 @@ const roundBox = (b) => (b ? { page: b.page, x: r1(b.x), y: r1(b.y), w: r1(b.w),
  * @param {Array} items
  * @param {object} [opts] { pageWidth, pages, layout }
  */
-export function summarise(items, { pageWidth = 595, pages = null, layout = null, now = new Date() } = {}) {
-  const found = findFields(items, { pageWidth, layout: layout || undefined });
+export function summarise(items, { pageWidth = 595, pages = null, layout = null, labels = null, now = new Date() } = {}) {
+  const found = findFields(items, { pageWidth, layout: layout || undefined, labels: labels || undefined });
   const fields = Object.fromEntries(HEADER_FIELDS.map((f) => [f, slim(found[f])]));
   const terms = findPaymentTerms(items, fields.invoiceDate?.value);
   if (!fields.dueDate && terms?.dueDate) {
@@ -122,6 +122,7 @@ export function summarise(items, { pageWidth = 595, pages = null, layout = null,
     vatNumbers: findVatNumbers(items).map((v) => ({ number: v.number, page: v.page, box: roundBox(v.box) })),
     terms: terms ? { text: terms.text, days: terms.days, eom: terms.eom, eomFollowing: terms.eomFollowing } : null,
     usedLayout: !!(layout && Object.keys(layout).length),
+    usedLabels: !!(labels && Object.values(labels).some((l) => l?.length)),
   };
 }
 
@@ -290,16 +291,23 @@ const withDeps = (deps) => {
   return { ...d, m: { ...defaultDeps().models(), ...(deps.models ? deps.models() : {}) } };
 };
 
-async function layoutForDoc(SupplierLayout, doc) {
-  if (!SupplierLayout || doc?.correspondent?.id == null) return null;
+// What a supplier's layout gives the reader: learned spots and label words
+async function hintsForDoc(SupplierLayout, doc) {
+  if (!SupplierLayout || doc?.correspondent?.id == null) return { layout: null, labels: null };
   const l = await SupplierLayout.findOne({ correspondentId: doc.correspondent.id }).lean();
-  return l ? layoutFromSpots(l.spots) : null;
+  return { layout: l ? layoutFromSpots(l.spots) : null, labels: l?.labels || null };
+}
+async function layoutForDoc(SupplierLayout, doc) {
+  return (await hintsForDoc(SupplierLayout, doc)).layout;
 }
 
-/** The learned layout for a document's supplier, for the entry screen's reader. */
-export async function layoutFor(doc, deps = {}) {
+/** The learned layout and label words for a document's supplier, for the entry screen's reader. */
+export async function hintsFor(doc, deps = {}) {
   const d = withDeps(deps);
-  return layoutForDoc(d.m.SupplierLayout, doc);
+  return hintsForDoc(d.m.SupplierLayout, doc);
+}
+export async function layoutFor(doc, deps = {}) {
+  return (await hintsFor(doc, deps)).layout;
 }
 
 /**
@@ -327,8 +335,8 @@ export async function readDocument(paperlessId, deps = {}) {
       );
     }
     const items = stored.items.map(unpackItem);
-    const layout = await layoutForDoc(SupplierLayout, doc);
-    reading = summarise(items, { pageWidth: stored.pageWidth, pages: stored.pages, layout, now });
+    const { layout, labels } = await hintsForDoc(SupplierLayout, doc);
+    reading = summarise(items, { pageWidth: stored.pageWidth, pages: stored.pages, layout, labels, now });
   } catch (err) {
     logger.warn(`[documentReading] ${paperlessId}: ${err.message}`);
     reading = { version: READER_VERSION, at: now, error: err.message, score: -1 };
@@ -462,7 +470,7 @@ export async function accuracyReport(deps = {}) {
   const corrected = [];
   for (const doc of docs) {
     const key = doc.correspondent?.name || '(no supplier)';
-    if (!bySupplier.has(key)) bySupplier.set(key, { name: key, documents: 0, fields: blank() });
+    if (!bySupplier.has(key)) bySupplier.set(key, { name: key, correspondentId: doc.correspondent?.id ?? null, documents: 0, fields: blank() });
     const s = bySupplier.get(key);
     s.documents += 1;
     const fields = doc.readingOutcome?.fields || {};
@@ -517,6 +525,115 @@ export async function fixtureFor(paperlessId, deps = {}) {
   };
 }
 
+// ── Teaching the reader about a supplier ─────────────────────────────
+
+const MAX_LABELS = 10;
+
+/** Label words as typed: one per line or comma, trimmed, de-duplicated, sane length. */
+export function cleanLabels(input) {
+  const list = Array.isArray(input) ? input : String(input ?? '').split(/[\n,]/);
+  const seen = new Set();
+  return list.map((p) => String(p).trim().replace(/\s+/g, ' '))
+    .filter((p) => p.length >= 2 && p.length <= 60)
+    .filter((p) => (seen.has(p.toLowerCase()) ? false : seen.add(p.toLowerCase())))
+    .slice(0, MAX_LABELS);
+}
+
+/** A spot someone pointed at: it goes first, ahead of anything learned from saves. */
+export function teachSpots(spots = {}, field, box, now = new Date()) {
+  const list = (spots[field] || []).filter((s) => !(s.page === box.page && Math.hypot(s.x + s.w - (box.x + box.w), s.y - box.y) <= SAME_SPOT));
+  const top = Math.max(0, ...list.map((s) => s.seen || 0));
+  const taught = { page: box.page, x: r1(box.x), y: r1(box.y), w: r1(box.w), h: r1(box.h), seen: top + 5, lastAt: now, taught: true };
+  return { ...spots, [field]: [taught, ...list].slice(0, SPOTS_KEPT) };
+}
+
+const validBox = (b) => !!b && [b.x, b.y, b.w, b.h].every((n) => Number.isFinite(Number(n)))
+  && Number.isInteger(Number(b.page)) && Number(b.page) >= 1 && Number(b.w) > 0 && Number(b.h) > 0;
+
+/** Everything the supplier page shows: what's learned, label words, recent invoices. */
+export async function supplierDetail(correspondentId, deps = {}) {
+  const d = withDeps(deps);
+  if (d.connect) await d.connect();
+  const { OcrDocument, SupplierLayout, DocumentText } = d.m;
+  const id = Number(correspondentId);
+  const [layout, docs] = await Promise.all([
+    SupplierLayout.findOne({ correspondentId: id }).lean(),
+    OcrDocument.find({ 'correspondent.id': id, processingState: { $ne: null }, deletedInPaperlessAt: null })
+      .select('paperlessId title correspondent added processingState readingOutcome reading.fields reading.hasText')
+      .sort({ added: -1 }).limit(15).lean(),
+  ]);
+  if (!layout && !docs.length) return null;
+  const withText = [];
+  for (const doc of docs) {
+    if (await DocumentText?.findOne({ paperlessId: doc.paperlessId }).select('paperlessId').lean()) withText.push(doc.paperlessId);
+  }
+  return {
+    correspondentId: id,
+    name: layout?.correspondentName || docs[0]?.correspondent?.name || `Supplier ${id}`,
+    invoicesLearned: layout?.invoicesLearned || 0,
+    spots: layout?.spots || {},
+    labels: layout?.labels || {},
+    updatedAt: layout?.updatedAt || null,
+    documents: docs.map((doc) => ({ ...doc, hasText: withText.includes(doc.paperlessId) })),
+  };
+}
+
+async function updateLayout(d, id, name, change) {
+  const { SupplierLayout } = d.m;
+  const existing = await SupplierLayout.findOne({ correspondentId: id }).lean();
+  const next = change(existing || { spots: {}, labels: {} });
+  await SupplierLayout.updateOne(
+    { correspondentId: id },
+    { $set: { correspondentName: name || existing?.correspondentName || null, spots: next.spots || {}, labels: next.labels || {} } },
+    { upsert: true },
+  );
+  return next;
+}
+
+/** "This is where the invoice total is": point at a value on one of the supplier's invoices. */
+export async function teach(correspondentId, field, box, { name = null } = {}, deps = {}) {
+  if (!HEADER_FIELDS.includes(field)) return { ok: false, message: 'Unknown field.' };
+  if (!validBox(box)) return { ok: false, message: 'That spot is not on the page.' };
+  const d = withDeps(deps);
+  if (d.connect) await d.connect();
+  const clean = { page: Number(box.page), x: Number(box.x), y: Number(box.y), w: Number(box.w), h: Number(box.h) };
+  const next = await updateLayout(d, Number(correspondentId), name, (l) => ({ ...l, spots: teachSpots(l.spots || {}, field, clean, d.now()) }));
+  return { ok: true, spots: next.spots[field] };
+}
+
+/** Forget what was learned for one field, or for everything (spots and label words). */
+export async function forget(correspondentId, field = null, deps = {}) {
+  if (field && !HEADER_FIELDS.includes(field)) return { ok: false, message: 'Unknown field.' };
+  const d = withDeps(deps);
+  if (d.connect) await d.connect();
+  const id = Number(correspondentId);
+  if (!field) {
+    await d.m.SupplierLayout.updateOne({ correspondentId: id }, { $set: { spots: {}, labels: {}, invoicesLearned: 0 } });
+    return { ok: true };
+  }
+  await updateLayout(d, id, null, (l) => {
+    const spots = { ...(l.spots || {}) };
+    delete spots[field];
+    return { ...l, spots };
+  });
+  return { ok: true };
+}
+
+/** Set the label words for one field of a supplier. Empty clears them. */
+export async function setLabels(correspondentId, field, input, { name = null } = {}, deps = {}) {
+  if (!HEADER_FIELDS.includes(field)) return { ok: false, message: 'Unknown field.' };
+  const d = withDeps(deps);
+  if (d.connect) await d.connect();
+  const phrases = cleanLabels(input);
+  await updateLayout(d, Number(correspondentId), name, (l) => {
+    const labels = { ...(l.labels || {}) };
+    if (phrases.length) labels[field] = phrases;
+    else delete labels[field];
+    return { ...l, labels };
+  });
+  return { ok: true, labels: phrases };
+}
+
 /** Ask Paperless to OCR a document again (for PDFs with no text layer). */
 export async function reprocess(paperlessId, deps = {}) {
   const client = deps.client || __paperlessClient.makeClient();
@@ -533,5 +650,6 @@ export default {
   READER_VERSION, HEADER_FIELDS, extractItems, summarise, packItem, unpackItem,
   layoutFromSpots, mergeSpots, savedValues, compareReading,
   supplierFor, vatCheck, duplicatesOf,
-  readDocument, readSoon, readMissing, learnFromSave, layoutFor, insights, accuracyReport, fixtureFor, reprocess,
+  readDocument, readSoon, readMissing, learnFromSave, layoutFor, hintsFor, insights, accuracyReport, fixtureFor, reprocess,
+  cleanLabels, teachSpots, supplierDetail, teach, forget, setLabels,
 };
