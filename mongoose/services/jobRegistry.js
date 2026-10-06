@@ -24,6 +24,7 @@ import __documentNotifyService from './paperless/documentNotifyService.js';
 import __shadowReportService from './paperless/shadowReportService.js';
 import __documentReadingService from './paperless/documentReadingService.js';
 import __mdbForJobs from './mongooseDatabaseService.js';
+import __documentEntryService from './paperless/documentEntryService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -150,6 +151,18 @@ function registerAll() {
     intervalMs: 15 * MINUTE,
     initialDelayMs: 2 * MINUTE,
     run: () => __documentReadingService.readMissing({ limit: 20 }),
+  });
+
+  scheduler.register('paperless-repair-unmarked-sends', {
+    description:
+      'Move invoices that are already in KashFlow (linked to a purchase) but still in Needs Data Entry '
+      + 'or Ready for KashFlow to In KashFlow. From 6.47.0 until 6.53.1 a send created the purchase but '
+      + 'failed before recording it. Idempotent; sends no notifications.',
+    intervalMs: 6 * HOUR,
+    run: async () => {
+      await __mdbForJobs.connect();
+      return __documentEntryService.repairUnmarkedSends(__mdbForJobs.PAPERLESS.OcrDocument);
+    },
   });
 
   scheduler.register('paperless-notification-retry', {
