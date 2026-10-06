@@ -178,6 +178,16 @@ function readTable(rows, start, head) {
       const net = Number(p.amount);
       const quantity = p.cells.qty != null ? parseNumber(p.cells.qty) : null;
       const quoted = p.cells.price != null ? parseNumber(p.cells.price) : null;
+      // TODO(discounts): p.cells.discount is read but not used, so a discounted
+      // line ("2 × 10.00, 10%, 18.00") keeps the printed price and the entry
+      // screen warns "2 × 10.00 is 20.00, not 18.00". The total is still right,
+      // and the send refuses lines that don't add up. Build this against the
+      // first real discounted invoice, not before:
+      //   1. save it as a fixture (/paperless/reading → tests/fixtures/invoices/)
+      //   2. percent → price × (1 − d/100); amount → price − d ÷ quantity
+      //   3. agree how it shows: net price per unit, or the discount kept apart
+      //      (entry form, KashFlow payload)
+      //   4. make consistencyWarnings (documentEntryService) and liveChecks accept it
       const per = pricedPer(quantity, quoted, net, p.cells.uom);
       const price = per > 1 ? Math.round((quoted / per) * 10000) / 10000 : quoted;
       const before = pending;
