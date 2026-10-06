@@ -173,6 +173,17 @@ describe('completion rules and totals', () => {
     assert.match(w[2], /not the invoice total 80\.00/);
   });
 
+  it('warns when VAT at the line rates is not the total VAT, allowing a penny a line', () => {
+    const lines = [{ total: 22.44, vatRate: 20 }, { total: 15.74, vatRate: 20 }];
+    const base = { totalGoods: 38.18, invoiceTotal: 45.82, lines };
+    assert.deepEqual(consistencyWarnings({ ...base, totalVat: 7.64 }), []); // 7.636, rounded on the total
+    assert.deepEqual(consistencyWarnings({ ...base, totalVat: 7.65, invoiceTotal: 45.83 }), []); // rounded per line
+    const w = consistencyWarnings({ ...base, totalVat: 6.36, invoiceTotal: 44.54 });
+    assert.deepEqual(w, ['VAT at the line rates comes to 7.64, but total VAT is 6.36.']);
+    // A line with no rate: nothing to compare
+    assert.deepEqual(consistencyWarnings({ ...base, totalVat: 6.36, invoiceTotal: 44.54, lines: [lines[0], { total: 15.74 }] }), []);
+  });
+
   it('accepts a credit note with negative totals', () => {
     const cn = { ...fullEntry(), totalGoods: -10, totalVat: -2, invoiceTotal: -12, lines: [{ description: 'Returned goods', total: -10 }] };
     assert.deepEqual(completionErrors(cn), {});
