@@ -349,7 +349,24 @@ function columnTotals(rows) {
   return out;
 }
 
-export function findCandidates(items, { pageWidth = 595 } = {}) {
+/**
+ * Label words someone added for a supplier ("Charged to Account" for the
+ * invoice total), as labels the finder can use. Ranked ahead of the built-in
+ * ones; spacing in the phrase is matched loosely.
+ */
+export function customLabels(phrases = []) {
+  return (phrases || [])
+    .map((p) => String(p || '').trim())
+    .filter((p) => p.length >= 2 && p.length <= 60)
+    .map((p) => ({
+      re: new RegExp(p.split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*'), 'iy'),
+      below: true,
+      rank: -1,
+      custom: p,
+    }));
+}
+
+export function findCandidates(items, { pageWidth = 595, labels = {} } = {}) {
   const rows = groupRows(items);
   const wrapped = [...wrappedRows(rows)];
   const fromColumns = columnTotals(rows);
@@ -371,13 +388,15 @@ export function findCandidates(items, { pageWidth = 595 } = {}) {
           page: row.page,
           box: piece.box,
           labelBox: hit.labelBox,
-          generic: lbl.rank != null,
+          generic: lbl.rank === 3,
+          ...(lbl.custom ? { customLabel: lbl.custom } : {}),
           score: (lbl.rank ?? li) * 10 + (piece.sameRow ? 0 : 3) + penalty + row.page,
         });
         return;
       }
     };
-    def.labels.forEach((lbl, li) => {
+    // Built-in labels keep their own rank, so custom ones don't push them down
+    [...customLabels(labels?.[def.field]), ...def.labels.map((l, i) => (l.rank != null ? l : { ...l, rank: i }))].forEach((lbl, li) => {
       rows.forEach((row, ri) => {
         for (let i = 0; i < row.items.length; i++) take(rows, ri, row, i, lbl, li, 0);
       });
@@ -491,4 +510,4 @@ export function locateValue(items, field, value) {
   return null;
 }
 
-export default { FIELDS, fitBox, toItems, groupRows, findCandidates, findFields, locateValue, normalise, parseDate, parseMoney, parseReference, unionBox, charBox, startsLabel };
+export default { FIELDS, customLabels, fitBox, toItems, groupRows, findCandidates, findFields, locateValue, normalise, parseDate, parseMoney, parseReference, unionBox, charBox, startsLabel };
