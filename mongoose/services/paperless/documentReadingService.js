@@ -371,6 +371,7 @@ export async function readMissing({ limit = 20 } = {}, deps = {}) {
   const { OcrDocument } = d.m;
   const docs = await OcrDocument.find({
     processingState: { $in: ['awaiting_entry', 'entered'] },
+    excludedReason: null,
     deletedInPaperlessAt: null,
     $or: [{ reading: { $exists: false } }, { 'reading.version': { $lt: READER_VERSION } }],
   }).select('paperlessId').sort({ added: -1 }).limit(limit).lean();

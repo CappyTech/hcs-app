@@ -47,7 +47,7 @@ import kfVat from '../../services/kashflowVatService.js';
 import __paperlessClient_ from '../services/paperless/paperlessClient.js';
 import __ocrOrphanService from '../services/ocrOrphanService.js';
 import documentEntry from '../services/paperless/documentEntryService.js';
-import { actorFromUser, isInvoiceDocument } from '../services/paperless/documentStateService.js';
+import { actorFromUser, isInvoiceDocument, notForEntryMessage } from '../services/paperless/documentStateService.js';
 
 // Only purchase and subcontractor invoices become a KashFlow purchase. A
 // supplier statement (or any other document) is reviewed, never drafted or sent.
@@ -55,6 +55,15 @@ export function notDraftableMessage(doc) {
   const type = doc?.documentType?.name;
   if (/supplier\s*statement/i.test(type || '')) return 'Supplier statements are reviewed, not sent to KashFlow as a purchase.';
   return `Only purchase and subcontractor invoices are sent to KashFlow as a purchase. This is ${type ? `a ${type}` : 'a document with no type'}.`;
+}
+
+/** Why `doc` can't be drafted or sent to KashFlow, or null when it can. */
+export function sendBlockedMessage(doc) {
+  if (!isInvoiceDocument(doc)) return notDraftableMessage(doc);
+  const excluded = notForEntryMessage(doc);
+  if (excluded) return excluded;
+  if (doc.processingState === 'manual_kashflow') return 'This is a credit note. Credit notes are keyed into KashFlow by hand, not sent from here.';
+  return null;
 }
 import hcsSync from '../services/hcsSyncService.js';
 
@@ -366,10 +375,11 @@ export const getPurchaseDraft = async (req, res, next) => {
       return res
         .status(404)
         .render(path.join("tailwindcss", "error"), { title: "404 - Not Found", error: { title: "404 - Not Found", message: "OCR document not found." } });
-    if (!isInvoiceDocument(doc))
+    const blocked = sendBlockedMessage(doc);
+    if (blocked)
       return res
         .status(409)
-        .render(path.join("tailwindcss", "error"), { title: "Not an invoice", error: { title: "Not an invoice", message: notDraftableMessage(doc) } });
+        .render(path.join("tailwindcss", "error"), { title: "Not sent to KashFlow", error: { title: "Not sent to KashFlow", message: blocked } });
     const draft = await buildPurchaseDraftById(paperlessId);
 
     // Determine source field names for key draft values to aid debugging/visibility
@@ -780,10 +790,11 @@ export const sendDraftToKashflow = async (req, res, next) => {
 
     // Before claiming anything: only invoices go to KashFlow
     await mdb.connect();
-    const typed = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).select('documentType').lean();
-    if (typed && !isInvoiceDocument(typed)) {
-      logger.warn(`[paperless] send refused for ${paperlessId}: ${typed.documentType?.name || 'no type'} is not an invoice`);
-      req.flash('error', notDraftableMessage(typed));
+    const typed = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).select('documentType processingState excludedReason').lean();
+    const blocked = typed && sendBlockedMessage(typed);
+    if (blocked) {
+      logger.warn(`[paperless] send refused for ${paperlessId}: ${blocked}`);
+      req.flash('error', blocked);
       return res.redirect(`/paperless/ocr/${paperlessId}/entry`);
     }
 

@@ -16,7 +16,7 @@ import path from 'path';
 import { pipeline } from 'node:stream/promises';
 import mdb from '../services/mongooseDatabaseService.js';
 import entry from '../services/paperless/documentEntryService.js';
-import { actorFromUser } from '../services/paperless/documentStateService.js';
+import { actorFromUser, notForEntryMessage } from '../services/paperless/documentStateService.js';
 import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
 import notifySvc from '../services/paperless/documentNotifyService.js';
 import readingSvc from '../services/paperless/documentReadingService.js';
@@ -59,7 +59,9 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     errors,
     warnings: kind === 'invoice' ? entry.consistencyWarnings(doc.entry) : [],
     isAdmin: req.user?.role === 'admin',
-    locked: doc.processingState === 'sent',
+    // Tagged in Paperless as not for entry: shown, but nothing to enter
+    excluded: notForEntryMessage(doc),
+    locked: doc.processingState === 'sent' || !!notForEntryMessage(doc),
     paperlessUiBase: paperlessUiBase(),
     notifications: await notifySvc.historyFor(mdb.PAPERLESS?.NotificationLog, doc.paperlessId).catch(() => []),
     notifyMode: notifySvc.notifyMode(),
@@ -95,6 +97,11 @@ export const postEntry = async (req, res, next) => {
     const { OcrDocument, doc } = await loadDoc(id);
     if (!doc) return notFound(res);
     const kind = entry.entryKind(doc);
+    const excluded = notForEntryMessage(doc);
+    if (excluded) {
+      req.flash('error', excluded);
+      return res.redirect(entryUrl(id));
+    }
     const action = ['save', 'addLine', 'complete'].includes(req.body.action) ? req.body.action : 'save';
     const actor = actorFromUser(req.user);
 

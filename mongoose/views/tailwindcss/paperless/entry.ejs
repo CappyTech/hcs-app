@@ -33,7 +33,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
     <span class="font-mono text-xs text-gray-400">#<%= doc.paperlessId %></span>
     <div class="ml-auto flex gap-2">
       <a href="/paperless/ocr/<%= doc.paperlessId %>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">Details</a>
-      <% if (state === 'entered') { %>
+      <% if (state === 'entered' && !locals.excluded) { %>
         <a href="/paperless/ocr/<%= doc.paperlessId %>/draft" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm"><i class="bi bi-send"></i> KashFlow draft</a>
       <% } %>
       <% if (plUrl) { %>
@@ -85,9 +85,9 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
           <% } %>
         </div>
         <div><span class="text-gray-500 dark:text-gray-400">Type:</span> <%= doc.documentType?.name || '—' %></div>
-        <% if (doc.excludedReason) { %>
+        <% if (locals.excluded) { %>
           <div class="text-amber-700 dark:text-amber-400"><i class="bi bi-exclamation-triangle-fill"></i>
-            Kept out of the queues: <%= doc.excludedReason === 'original_multiple' ? 'source PDF holding several invoices' : 'already entered in KashFlow by hand' %>.
+            Kept out of the queues. <%= excluded %> Remove the tag in Paperless if that's wrong.
           </div>
         <% } %>
         <% if (doc.entry?.savedAt) { %>
@@ -131,7 +131,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
         </div>
       <% } %>
 
-      <% if (locked) { %>
+      <% if (locked && !locals.excluded) { %>
         <div class="border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300">
           This invoice is in KashFlow, so what was entered can't be changed. Unlink it from KashFlow first if it needs correcting.
         </div>
