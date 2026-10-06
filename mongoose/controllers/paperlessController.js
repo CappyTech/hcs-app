@@ -47,7 +47,15 @@ import kfVat from '../../services/kashflowVatService.js';
 import __paperlessClient_ from '../services/paperless/paperlessClient.js';
 import __ocrOrphanService from '../services/ocrOrphanService.js';
 import documentEntry from '../services/paperless/documentEntryService.js';
-import { actorFromUser } from '../services/paperless/documentStateService.js';
+import { actorFromUser, isInvoiceDocument } from '../services/paperless/documentStateService.js';
+
+// Only purchase and subcontractor invoices become a KashFlow purchase. A
+// supplier statement (or any other document) is reviewed, never drafted or sent.
+export function notDraftableMessage(doc) {
+  const type = doc?.documentType?.name;
+  if (/supplier\s*statement/i.test(type || '')) return 'Supplier statements are reviewed, not sent to KashFlow as a purchase.';
+  return `Only purchase and subcontractor invoices are sent to KashFlow as a purchase. This is ${type ? `a ${type}` : 'a document with no type'}.`;
+}
 import hcsSync from '../services/hcsSyncService.js';
 
 // Helpers
@@ -358,6 +366,10 @@ export const getPurchaseDraft = async (req, res, next) => {
       return res
         .status(404)
         .render(path.join("tailwindcss", "error"), { title: "404 - Not Found", error: { title: "404 - Not Found", message: "OCR document not found." } });
+    if (!isInvoiceDocument(doc))
+      return res
+        .status(409)
+        .render(path.join("tailwindcss", "error"), { title: "Not an invoice", error: { title: "Not an invoice", message: notDraftableMessage(doc) } });
     const draft = await buildPurchaseDraftById(paperlessId);
 
     // Determine source field names for key draft values to aid debugging/visibility
@@ -765,6 +777,15 @@ export const sendDraftToKashflow = async (req, res, next) => {
     const dryRun = ["true", "on", "1", "yes"].includes(
       String(req.body?.dryRun || "").toLowerCase(),
     );
+
+    // Before claiming anything: only invoices go to KashFlow
+    await mdb.connect();
+    const typed = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).select('documentType').lean();
+    if (typed && !isInvoiceDocument(typed)) {
+      logger.warn(`[paperless] send refused for ${paperlessId}: ${typed.documentType?.name || 'no type'} is not an invoice`);
+      req.flash('error', notDraftableMessage(typed));
+      return res.redirect(`/paperless/ocr/${paperlessId}/entry`);
+    }
 
     // Server-side double-submit guard — atomically claim the document.
     // The old check-then-act read raced across the 20s KashFlow call: two
