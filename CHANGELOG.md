@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.54.2] - 2026-10-06
+
+### Fixed
+- **"Replace with the lines on the document" was hidden whenever the line totals matched,** even if the quantities, prices or VAT % didn't. On #1120 the bricks line was saved at 794.51 (the per-thousand price) with the right total, 0.79. So the button never offered the corrected price of 0.7945, and the warning "1 × 794.51 is 794.51, not 0.79" couldn't be cleared from the page. It is now hidden only when every figure on every line matches what the document says.
+
 ## [6.54.1] - 2026-10-06
 
 ### Fixed

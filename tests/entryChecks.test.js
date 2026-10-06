@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { liveChecks, pickValue, parseVatRate, VAT_RATES } from '../public/js/entry-checks.js';
+import { liveChecks, pickValue, parseVatRate, sameLines, VAT_RATES } from '../public/js/entry-checks.js';
 
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
@@ -38,6 +38,25 @@ describe('live checks on the entry form', () => {
     assert.deepEqual(liveChecks({ totalGoods: '38.18', totalVat: '7.64', invoiceTotal: '45.82' }, lines), [
       'Line 1 VAT % is "4.49". VAT % is a percentage (0, 5, 20), not an amount.',
     ]);
+  });
+});
+
+describe('are the form lines the document lines?', () => {
+  const doc = [{ quantity: 1, price: 23.37, total: 23.37, vatRate: 20 }, { quantity: 1, price: 0.7945, total: 0.79, vatRate: 20 }];
+  const row = (quantity, price, total, vatRate = '20') => ({ description: 'x', quantity, price, total, vatRate });
+
+  it('yes when every figure matches', () => {
+    assert.equal(sameLines([row('1', '23.37', '23.37'), row('1', '0.7945', '0.79')], doc), true);
+  });
+
+  it('no when only the totals match (#1120: bricks at the per-thousand price)', () => {
+    assert.equal(sameLines([row('1', '23.37', '23.37'), row('1', '794.51', '0.79')], doc), false);
+    assert.equal(sameLines([row('1', '23.37', '23.37'), row('1', '0.7945', '0.79', '5')], doc), false);
+    assert.equal(sameLines([row('1', '23.37', '23.37')], doc), false);
+  });
+
+  it('ignores what the document has no figure for', () => {
+    assert.equal(sameLines([row('', '', '23.37', '')], [{ quantity: null, price: null, total: 23.37, vatRate: null }]), true);
   });
 });
 
