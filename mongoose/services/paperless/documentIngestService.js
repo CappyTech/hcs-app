@@ -48,6 +48,7 @@ import { hasTag } from '../../config/paperlessTagsConfig.js';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
 import { isInvoiceDocument, actorFromUser, transition, markStatementReviewed } from './documentStateService.js';
 import { notifySafely } from './documentNotifyService.js';
+import { readSoon } from './documentReadingService.js';
 import logger from '../../../services/loggerService.js';
 
 const SYSTEM = actorFromUser(null);
@@ -274,6 +275,8 @@ export async function handleDocumentAdded(paperlessId, deps = {}) {
   // stops a repeated delivery announcing it twice
   const classification = await syncDocument(OcrDocument, paperlessId, { now: d.now, isNew: true, notify: d.notify });
   logger.info(`[paperless-ingest] Document added: paperlessId=${paperlessId} classified=${classification.classified}${classification.state?.processingState ? ` state=${classification.state.processingState}` : ''}`);
+  // Read the invoice's PDF in the background, so the queue shows what's on it
+  if (classification.state?.processingState === 'awaiting_entry') (d.readSoon ?? readSoon)(paperlessId).catch(() => {});
   return { paperlessId, ...classification };
 }
 

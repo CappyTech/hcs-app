@@ -399,12 +399,54 @@ export function findCandidates(items, { pageWidth = 595 } = {}) {
 
 const near = (a, b) => a != null && b != null && Math.abs(Number(a) - Number(b)) < 0.005;
 
+const LEARNED_NEAR = 18; // PDF units: about two lines of text
+
+/** How far a candidate's box is from where this supplier's invoices put the field. */
+const distance = (box, spot) => (box.page !== spot.page ? Infinity : Math.hypot(box.x + box.w - (spot.x + spot.w), box.y - spot.y));
+
+/**
+ * A value printed at a learned spot, for when no label points at it.
+ * Right edges line up better than left ones: amounts and numbers are right-aligned.
+ */
+function valueAtSpot(items, def, spot) {
+  const parse = PARSERS[def.type];
+  let best = null;
+  for (const it of items) {
+    const box = charBox(it);
+    const d = distance(box, spot);
+    if (d > LEARNED_NEAR) continue;
+    for (const t of [it.str.trim(), ...it.str.trim().split(/\s+/)]) {
+      const value = parse(t);
+      if (value == null) continue;
+      const at = it.str.indexOf(t);
+      if (!best || d < best.d) best = { d, value, text: t, box: charBox(it, at, at + t.length) };
+      break;
+    }
+  }
+  return best && { field: def.field, label: def.label, value: best.value, text: best.text, page: spot.page, box: best.box, labelBox: null, generic: false, learned: true, score: 15 + spot.page };
+}
+
 /**
  * The best guess per field. Totals that add up (goods + VAT = total) win over
  * a higher-ranked label that doesn't fit.
+ * @param {object} [opts] { pageWidth, layout: { field: {page, x, y, w, h} } } —
+ *   layout is where this supplier's earlier invoices had each field
  */
-export function findFields(items, opts) {
+export function findFields(items, opts = {}) {
   const cands = findCandidates(items, opts);
+  const layout = opts.layout || {};
+  for (const def of FIELDS) {
+    const spot = layout[def.field];
+    if (!spot) continue;
+    const list = cands[def.field];
+    // A candidate where this supplier always prints the field goes first
+    for (const c of list) if (distance(c.box, spot) <= LEARNED_NEAR) { c.score -= 25; c.learned = true; }
+    if (!list.some((c) => c.learned)) {
+      const at = valueAtSpot(items, def, spot);
+      if (at && !list.some((c) => c.value === at.value)) list.push(at);
+    }
+    list.sort((p, q) => p.score - q.score);
+  }
   const pick = Object.fromEntries(Object.entries(cands).map(([k, v]) => [k, v[0] || null]));
   const fits = (g, v, t) => g && v && t && g !== t && near(Number(g.value) + Number(v.value), t.value);
   if (fits(pick.totalGoods, pick.totalVat, pick.invoiceTotal)) return pick;

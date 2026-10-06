@@ -11,14 +11,17 @@
  *   - offers to fill the line items, and checks lines, VAT and totals add up
  *     as you type;
  *   - lists where the Paperless custom fields and the document disagree;
- *   - with a field focused, clicking a value on the PDF fills it in.
+ *   - with a field focused, clicking a value on the PDF fills it in;
+ *   - asks the server whether the VAT number is the supplier's and whether
+ *     the invoice number is already in KashFlow or on another document, and
+ *     reads with the layout learned from this supplier's earlier invoices.
  *
  * Nothing is saved: everything only fills inputs, and the person still saves.
  * Hooks into document-viewer.js through its hcs:pdf-loaded / hcs:pdf-page
  * events, so it never touches rendering or text selection.
  */
 import { findFields, locateValue, normalise, toItems, charBox, fitBox, FIELDS } from '/resources/js/invoice-field-finder.js';
-import { findLines, fillMissingRates, findPaymentTerms } from '/resources/js/invoice-line-finder.js';
+import { findLines, fillMissingRates, findPaymentTerms, findVatNumbers } from '/resources/js/invoice-line-finder.js';
 import { liveChecks, pickValue } from '/resources/js/entry-checks.js';
 
 const MAX_PAGES = 5; // invoices put these on the first page or two
@@ -34,6 +37,10 @@ const fillLinesBtn = document.getElementById('suggest-fill-lines');
 const linesBox = form?.querySelector('[data-lines]');
 const checksBox = form?.querySelector('[data-suggest-checks]');
 const disagreeBox = form?.querySelector('[data-suggest-disagree]');
+const insightsBox = form?.querySelector('[data-suggest-insights]');
+const paperlessId = form?.dataset.paperlessId;
+// Where this supplier's earlier invoices had each field (learned on save)
+const layout = (() => { try { return JSON.parse(form?.dataset.layout || '{}'); } catch { return {}; } })();
 const pickStatus = document.getElementById('pdf-pick-status');
 const inputs = Object.fromEntries(
   [...document.querySelectorAll('[data-suggest-field]')].map((el) => [el.dataset.suggestField, el]),
@@ -424,6 +431,70 @@ function onPdfClick(e) {
   setTimeout(() => input.classList.remove('hcs-just-filled'), 900);
 }
 
+// ── Supplier VAT number and duplicates (server) ──────────────────────
+
+let vatNumbers = [];
+let insightsTimer = null;
+let insightsAsked = 0;
+
+const fmtVat = (n) => (n ? `GB ${n.slice(0, 3)} ${n.slice(3, 7)} ${n.slice(7, 9)}${n.length > 9 ? ` ${n.slice(9)}` : ''}` : '');
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB') : null);
+
+async function fetchInsights() {
+  if (!insightsBox || !paperlessId) return;
+  const ask = ++insightsAsked;
+  const q = new URLSearchParams();
+  const number = inputs.invoiceNumber?.value.trim() || guesses.invoiceNumber?.value || '';
+  if (number) q.set('invoiceNumber', number);
+  if (vatNumbers.length) q.set('vat', vatNumbers.join(','));
+  try {
+    const res = await fetch(`/paperless/ocr/${encodeURIComponent(paperlessId)}/insights?${q}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    if (!res.ok || ask !== insightsAsked) return; // a newer question is on its way
+    renderInsights(await res.json());
+  } catch {
+    /* the checks are extras; the form works without them */
+  }
+}
+
+function renderInsights(ins) {
+  const notes = [];
+  const supplier = ins.supplier?.name;
+  if (ins.vat?.status === 'mismatch') {
+    const owners = ins.vat.belongsTo?.length ? ` It's ${ins.vat.belongsTo.map((b) => b.name).join(' or ')}'s.` : '';
+    notes.push(['warn', `The VAT number on the invoice (${ins.vat.found.map(fmtVat).join(', ')}) isn't ${supplier}'s (${fmtVat(ins.vat.supplierVat)}).${owners} Check the supplier is right.`]);
+  } else if (ins.vat?.status === 'no_supplier' && ins.vat.found?.length) {
+    notes.push(['info', "No KashFlow supplier has exactly this correspondent's name, so the VAT number can't be checked."]);
+  } else if (ins.vat?.status === 'supplier_has_none' && ins.vat.found?.length) {
+    notes.push(['info', `KashFlow has no VAT number for ${supplier}. The invoice shows ${ins.vat.found.map(fmtVat).join(', ')}.`]);
+  }
+  for (const p of ins.duplicates?.kashflow || []) {
+    notes.push(['danger', `Invoice ${p.reference} from ${p.supplier || supplier || 'this supplier'} is already in KashFlow as purchase ${p.number}${p.date ? ` (${fmtDate(p.date)})` : ''}${p.gross != null ? `, ${money(p.gross)}` : ''}.`]);
+  }
+  for (const d of ins.duplicates?.documents || []) {
+    notes.push(['warn', el('span', {}, 'The same invoice number is on another document: ',
+      el('a', { href: `/paperless/ocr/${d.paperlessId}/entry`, className: 'underline', textContent: d.title || `#${d.paperlessId}` }),
+      d.state === 'sent' ? ' (in KashFlow).' : '.')]);
+  }
+  insightsBox.replaceChildren();
+  insightsBox.hidden = !notes.length;
+  if (!notes.length) return;
+  const STYLE = {
+    danger: 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300',
+    warn: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300',
+    info: 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300',
+  };
+  const ICON = { danger: 'exclamation-octagon-fill', warn: 'exclamation-triangle-fill', info: 'info-circle' };
+  insightsBox.className = 'space-y-2';
+  for (const [kind, text] of notes) {
+    insightsBox.append(el('div', { className: `border rounded-xl p-3 text-xs ${STYLE[kind]}` }, icon(ICON[kind]), ' ', typeof text === 'string' ? el('span', { textContent: text }) : text));
+  }
+}
+
+const insightsSoon = () => {
+  clearTimeout(insightsTimer);
+  insightsTimer = setTimeout(fetchInsights, 500);
+};
+
 // ── Wiring ───────────────────────────────────────────────────────────
 
 const renderHints = () => {
@@ -450,7 +521,8 @@ if (root && form && Object.keys(inputs).length) {
     try {
       const { all, width } = await readDocument(e.detail.pdf);
       items = all;
-      guesses = Object.fromEntries(Object.entries(findFields(items, { pageWidth: width })).filter(([f, g]) => g && inputs[f]));
+      guesses = Object.fromEntries(Object.entries(findFields(items, { pageWidth: width, layout })).filter(([f, g]) => g && inputs[f]));
+      vatNumbers = findVatNumbers(items).map((v) => v.number);
       terms = findPaymentTerms(items);
       docLines = fillMissingRates(findLines(items), guesses.totalGoods?.value, guesses.totalVat?.value);
       renderHints();
@@ -459,6 +531,7 @@ if (root && form && Object.keys(inputs).length) {
       drawAll();
       if (toggle) toggle.hidden = !allMarks().length;
       root.dispatchEvent(new CustomEvent('hcs:document-read', { detail: { items, guesses, lines: docLines, terms } }));
+      fetchInsights();
     } catch (err) {
       console.error('[document-suggestions]', err);
     }
@@ -478,6 +551,7 @@ if (root && form && Object.keys(inputs).length) {
     input.addEventListener('input', () => {
       renderHint(field);
       if (field === 'invoiceDate') renderHint('dueDate'); // due date from terms follows it
+      if (field === 'invoiceNumber') insightsSoon(); // is the new number a duplicate?
       renderFillAll();
       renderDisagreements();
       drawAll();

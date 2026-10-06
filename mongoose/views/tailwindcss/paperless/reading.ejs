@@ -1,0 +1,82 @@
+<%
+const LABELS = { invoiceNumber: 'Invoice no.', invoiceDate: 'Invoice date', dueDate: 'Due date', totalGoods: 'Total goods', totalVat: 'Total VAT', invoiceTotal: 'Invoice total' };
+// Written out in full so Tailwind's build can see every class
+const rateClass = (r) => r == null ? 'text-gray-400'
+  : r >= 90 ? 'text-green-700 dark:text-green-400'
+  : r >= 70 ? 'text-amber-700 dark:text-amber-400'
+  : 'text-red-700 dark:text-red-400';
+const cellTitle = (c) => `${c.matched} kept, ${c.corrected} corrected, ${c.filled} typed in (nothing read), ${c.missed} read but left blank`;
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-wrap items-center gap-3">
+    <a href="/paperless/queues" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Queues</a>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Invoice reading accuracy</h1>
+  </div>
+  <p class="text-sm text-gray-500 dark:text-gray-400 -mt-4">
+    How often what hcs-app read off a PDF was saved unchanged on the entry screen. Each save counts once per document (its latest).
+    A low figure for one supplier usually means a layout the reader doesn't know yet. Saving a few of that supplier's invoices teaches it where the fields are.
+  </p>
+
+  <% if (!report.documents) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      Nothing to report yet. Figures appear once invoices that were read are saved on the entry screen.
+    </div>
+  <% } else { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Supplier</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Invoices</th>
+            <% fields.forEach((f) => { %>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= LABELS[f] || f %></th>
+            <% }) %>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <tr class="bg-gray-50/50 dark:bg-gray-800/50 font-semibold">
+            <td class="px-4 py-3">All suppliers</td>
+            <td class="px-4 py-3 text-right"><%= report.documents %></td>
+            <% fields.forEach((f) => { const c = report.overall[f]; %>
+              <td class="px-4 py-3 text-right <%= rateClass(c.rate) %>" title="<%= cellTitle(c) %>"><%= c.rate == null ? '—' : `${c.rate}%` %></td>
+            <% }) %>
+          </tr>
+          <% report.suppliers.forEach((s) => { %>
+            <tr>
+              <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= s.name %></td>
+              <td class="px-4 py-3 text-right text-gray-500"><%= s.documents %></td>
+              <% fields.forEach((f) => { const c = s.fields[f]; %>
+                <td class="px-4 py-3 text-right <%= rateClass(c.rate) %>" title="<%= cellTitle(c) %>"><%= c.rate == null ? '—' : `${c.rate}%` %></td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Corrected or missed (<%= report.corrected.length %>)</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          The latest invoices where something read was changed, or had to be typed in. <strong>Fixture</strong> downloads the invoice's text and saved values as a test case. Saved into <code class="text-xs">tests/fixtures/invoices/</code>, every reader change is then checked against it.
+          It holds the supplier's invoice text, so keep it out of public places.
+        </p>
+      </div>
+      <% if (!report.corrected.length) { %>
+        <p class="p-4 text-sm text-gray-400">None. Everything read was kept.</p>
+      <% } else { %>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+          <% report.corrected.forEach((c) => { %>
+            <li class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
+              <a href="/paperless/ocr/<%= c.paperlessId %>/entry" class="text-green-700 dark:text-green-400 hover:underline"><%= c.title || `#${c.paperlessId}` %></a>
+              <span class="text-gray-500 dark:text-gray-400"><%= c.supplier %></span>
+              <span class="text-xs text-amber-700 dark:text-amber-400"><%= c.fields.map((f) => LABELS[f] || f).join(', ') %></span>
+              <a href="/paperless/ocr/<%= c.paperlessId %>/reading-fixture" class="ml-auto text-xs px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"><i class="bi bi-download"></i> Fixture</a>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+  <% } %>
+</div>

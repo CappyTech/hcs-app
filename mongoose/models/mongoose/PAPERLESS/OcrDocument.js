@@ -138,7 +138,19 @@ const OcrDocumentSchema = new mongoose.Schema({
   // apart from "not classified yet" (statementReviewed defaults to false).
   classifiedAt:             { type: Date, default: null },
   entry:                    { type: EntrySchema, default: undefined },
+
+  // ── Read off the PDF (documentReadingService) ──
+  // What the invoice reader found: { version, at, hasText, pages, score,
+  // fields: { invoiceNumber: {value, page, box}, … }, lines: […], lineCount,
+  // vatNumbers: [{number, page, box}], terms: {text, days, …}, error }.
+  // `score` (0–3: number, date, total found) orders the queue.
+  reading:                  { type: mongoose.Schema.Types.Mixed, default: undefined },
+  // How the reading compared with what was saved, per field: matched,
+  // corrected, filled (nothing read, typed by hand), missed (read, left blank)
+  readingOutcome:           { type: mongoose.Schema.Types.Mixed, default: undefined },
 }, { timestamps: true });
+
+OcrDocumentSchema.index({ 'reading.score': -1 });
 
 export default {
   modelName: 'OcrDocument',
