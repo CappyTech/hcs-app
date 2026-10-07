@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.55.0] - 2026-10-08
+
+### Added
+- **Change a document's type from hcs-app.** The entry and details pages now have a type picker. It sets the type in Paperless, refreshes hcs-app's copy, and moves the document to the right queue, so docs.heroncs.co.uk isn't needed to fix a mistyped document.
+  - **Statement typed as an invoice:** it leaves Needs Data Entry for Statements to Review.
+  - **Upload with no type:** typed as an invoice, it joins Needs Data Entry and is read.
+  - **Purchase ↔ Subcontractor Invoice:** the state and what was entered are kept.
+  - **Invoice already in KashFlow:** its type can't change until it's unlinked.
+  - **History:** every change is recorded in the document's history with who made it.
+- **The "Check the type" queue.** It lists documents still being worked on that have no type, or whose text doesn't look like their type:
+  - an invoice that reads like a statement, a remittance or a credit note;
+  - an invoice the reader found no number or total on;
+  - a statement that reads like an invoice.
+
+  The check uses the Paperless OCR text and the invoice reader, runs on every ingest and reading, and runs hourly as job `paperless-type-check`. Each document shows why it was flagged. Fix the type, or press **The type is right** to dismiss that concern; a different concern shows again. Untyped documents more than 90 days old aren't listed. The check only suggests: it never changes a type itself.
+- **Paperless client:** `listDocumentTypes()` and `updateDocumentType()`, in the real client and the mock.
+
 ## [6.54.4] - 2026-10-06
 
 ### Fixed

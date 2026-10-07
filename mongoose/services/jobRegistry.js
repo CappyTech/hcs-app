@@ -20,6 +20,7 @@ import __bankStrandedLineService from './bankStrandedLineService.js';
 import __supplierCorrespondentSyncService from './paperless/supplierCorrespondentSyncService.js';
 import __grabServicePaperless from './grabServicePaperless.js';
 import __documentIngestService from './paperless/documentIngestService.js';
+import __documentTypeCheck from './paperless/documentTypeCheck.js';
 import __documentNotifyService from './paperless/documentNotifyService.js';
 import __shadowReportService from './paperless/shadowReportService.js';
 import __documentReadingService from './paperless/documentReadingService.js';
@@ -175,6 +176,19 @@ function registerAll() {
     run: async () => {
       await __mdbForJobs.connect();
       return __documentIngestService.applyExclusionTags(__mdbForJobs.PAPERLESS.OcrDocument);
+    },
+  });
+
+  scheduler.register('paperless-type-check', {
+    description:
+      'Check that each document still being worked on looks like its type (a statement typed as an '
+      + 'invoice, an upload with no type, an invoice with nothing readable on it) and list the ones that '
+      + "don't in the Check the type queue. Only suggests; never changes a type.",
+    intervalMs: HOUR,
+    initialDelayMs: 4 * MINUTE,
+    run: async () => {
+      await __mdbForJobs.connect();
+      return __documentTypeCheck.sweepTypeChecks(__mdbForJobs.PAPERLESS.OcrDocument);
     },
   });
 

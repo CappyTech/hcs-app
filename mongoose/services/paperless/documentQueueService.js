@@ -8,6 +8,7 @@
  *   needs-entry  view 12  PI/SI, state awaiting_entry, no exclusion reason  (PB-3)
  *   ready        view 4   state entered, no exclusion reason                (PB-7)
  *   statements   view 13  Supplier Statement, not yet reviewed              (PB-10)
+ *   check-type   —        no type, or doesn't look like its type (documentTypeCheck)
  *
  * A credit note (manual_kashflow) is in neither invoice queue (PB-12), and a
  * document deleted in Paperless is in no queue. All queues are oldest first.
@@ -44,6 +45,13 @@ export const QUEUES = {
     // classifiedAt: a statement nobody has classified yet is not 'unreviewed'
     filter: () => ({ ...documentTypeQuery('supplierStatement'), classifiedAt: { $ne: null }, statementReviewed: { $ne: true }, ...NOT_DELETED }),
   },
+  'check-type': {
+    label: 'Check the type',
+    icon: 'bi-question-diamond',
+    description: "Documents with no type, or whose text doesn't look like their type. Correct the type, or mark it as right. They stay in their own queue meanwhile.",
+    empty: 'Every document looks like its type.',
+    filter: () => ({ 'typeCheck.open': true, ...NOT_DELETED }),
+  },
 };
 
 export const QUEUE_KEYS = Object.keys(QUEUES);
@@ -72,7 +80,8 @@ export function unclassifiedFilters() {
 
 const LIST_FIELDS = 'paperlessId title correspondent documentType added created processingState excludedReason creditNote statementReviewed kashflowPurchaseNumber'
   // What the invoice reader found on the PDF (documentReadingService)
-  + ' reading.fields.invoiceNumber.value reading.fields.invoiceTotal.value reading.hasText reading.score reading.lineCount reading.linesAddUp reading.error';
+  + ' reading.fields.invoiceNumber.value reading.fields.invoiceTotal.value reading.hasText reading.score reading.lineCount reading.linesAddUp reading.error'
+  + ' typeCheck.concern typeCheck.open';
 
 /** Queue orders: oldest first, or best read first (most found on the PDF) and oldest within that. */
 export const QUEUE_SORTS = {

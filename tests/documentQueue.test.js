@@ -221,7 +221,7 @@ describe('loadQueue', () => {
     ];
     const res = await loadQueue(siftModel(rows), 'needs-entry', { now: new Date('2026-09-21T00:00:00Z') });
     assert.deepEqual(res.docs.map((d) => d.paperlessId), [1, 2, 3], 'oldest first, id breaks ties');
-    assert.deepEqual(res.counts, { 'needs-entry': 3, ready: 1, statements: 1 });
+    assert.deepEqual(res.counts, { 'needs-entry': 3, ready: 1, statements: 1, 'check-type': 0 });
     assert.deepEqual(res.unclassified, { invoices: 1, statements: 1 });
     assert.equal(res.docs[0].daysWaiting, 20);
     assert.deepEqual([res.total, res.page, res.pages], [3, 1, 1]);
@@ -239,7 +239,7 @@ describe('queue view', () => {
   const view = path.resolve('mongoose/views/tailwindcss/paperless/queue.ejs');
   const render = (locals) => ejs.renderFile(view, {
     key: 'ready', queue: QUEUES.ready, queues: QUEUES, docs: [], total: 0, page: 1, pages: 1,
-    counts: { 'needs-entry': 2, ready: 1, statements: 0 }, unclassified: { invoices: 0, statements: 0 }, paperlessUiBase: 'https://docs.example.test', ...locals,
+    counts: { 'needs-entry': 2, ready: 1, statements: 0, 'check-type': 0 }, unclassified: { invoices: 0, statements: 0 }, paperlessUiBase: 'https://docs.example.test', ...locals,
   });
 
   it('renders rows with the document, Paperless and draft links', async () => {

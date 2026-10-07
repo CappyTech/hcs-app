@@ -42,7 +42,7 @@ const ChangeStampSchema = new mongoose.Schema({
 }, { _id: false });
 
 const ProcessingHistorySchema = new mongoose.Schema({
-  field: { type: String, enum: ['processingState', 'statementReviewed', 'creditNote', 'excludedReason'] },
+  field: { type: String, enum: ['processingState', 'statementReviewed', 'creditNote', 'excludedReason', 'documentType'] },
   from: mongoose.Schema.Types.Mixed,
   to: mongoose.Schema.Types.Mixed,
   action: String, // e.g. complete_entry, unlink, reopen_entry, backfill
@@ -148,9 +148,15 @@ const OcrDocumentSchema = new mongoose.Schema({
   // How the reading compared with what was saved, per field: matched,
   // corrected, filled (nothing read, typed by hand), missed (read, left blank)
   readingOutcome:           { type: mongoose.Schema.Types.Mixed, default: undefined },
+
+  // ── Does it look like its type? (documentTypeCheck) ──
+  // { version, at, concern: {code, message} | null, open, confirmed: {code, at, by} | null }.
+  // `open` puts it in the Check the type queue.
+  typeCheck:                { type: mongoose.Schema.Types.Mixed, default: undefined },
 }, { timestamps: true });
 
 OcrDocumentSchema.index({ 'reading.score': -1 });
+OcrDocumentSchema.index({ 'typeCheck.open': 1 });
 
 export default {
   modelName: 'OcrDocument',

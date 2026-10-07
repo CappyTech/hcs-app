@@ -229,7 +229,8 @@ describe('runBackfill', () => {
       // View 13: Supplier Statement lacking tag 21
       statements: (d) => isDocumentType(d.documentType, 'supplierStatement') && !hasTag(d.tags, 'notifiedAdminStatement'),
     };
-    for (const key of queues.QUEUE_KEYS) {
+    // Check the type has no Paperless view: it's hcs-app's own
+    for (const key of queues.QUEUE_KEYS.filter((k) => paperlessView[k])) {
       const ours = M.rows.filter(sift(queues.queueFilter(key))).map((r) => r.paperlessId).sort((a, b) => a - b);
       const theirs = live.filter(paperlessView[key]).map((r) => r.paperlessId).sort((a, b) => a - b);
       assert.deepEqual(ours, theirs, key);

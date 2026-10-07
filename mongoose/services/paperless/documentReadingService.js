@@ -23,6 +23,7 @@ import mdb from '../mongooseDatabaseService.js';
 import __paperlessClient from './paperlessClient.js';
 import configService from '../../../services/configService.js';
 import logger from '../../../services/loggerService.js';
+import { refreshTypeCheck } from './documentTypeCheck.js';
 import {
   findFields, locateValue, normalise, toItems, FIELDS,
 } from '../../../public/js/invoice-field-finder.js';
@@ -342,6 +343,7 @@ export async function readDocument(paperlessId, deps = {}) {
     reading = { version: READER_VERSION, at: now, error: err.message, score: -1 };
   }
   await OcrDocument.updateOne({ paperlessId }, { $set: { reading } });
+  await refreshTypeCheck(OcrDocument, paperlessId).catch(() => {});
   return reading;
 }
 

@@ -1,0 +1,45 @@
+<%#
+  The document's type, a picker to change it (set in Paperless), and the
+  "Check the type" concern when there is one. Locals: doc, documentTypes, back.
+%>
+<%
+  const _types = locals.documentTypes || [];
+  const _inKashflow = doc.processingState === 'sent' || !!doc.kashflowPurchaseId;
+  const _canChange = _types.length > 0 && !_inKashflow && !doc.deletedInPaperlessAt;
+  const _concern = doc.typeCheck && doc.typeCheck.open ? doc.typeCheck.concern : null;
+  const _hasType = !!(doc.documentType && (doc.documentType.id != null || doc.documentType.name));
+%>
+<div data-document-type>
+  <% if (_canChange) { %>
+    <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/type" class="inline-flex flex-wrap items-center gap-2">
+      <%- include('csrfHidden') %>
+      <input type="hidden" name="back" value="<%= back %>">
+      <label class="text-gray-500 dark:text-gray-400" for="document-type-<%= doc.paperlessId %>">Type:</label>
+      <select id="document-type-<%= doc.paperlessId %>" name="documentType" required
+              class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+        <% if (!_hasType) { %><option value="" selected disabled>Choose a type…</option><% } %>
+        <% _types.forEach((t) => { %>
+          <option value="<%= t.id %>" <%= doc.documentType && doc.documentType.id === t.id ? 'selected' : '' %>><%= t.name %></option>
+        <% }) %>
+      </select>
+      <button type="submit" class="text-xs px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition">Change type</button>
+    </form>
+    <p class="text-xs text-gray-400 mt-0.5">Changes it in Paperless too, and moves it to the right queue.</p>
+  <% } else { %>
+    <span class="text-gray-500 dark:text-gray-400">Type:</span> <%= (doc.documentType && doc.documentType.name) || '—' %>
+    <% if (_inKashflow) { %><span class="text-xs text-gray-400">(in KashFlow, so the type can't change until it's unlinked)</span><% } %>
+  <% } %>
+
+  <% if (_concern) { %>
+    <div class="mt-2 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-sm text-amber-800 dark:text-amber-300" data-type-concern="<%= _concern.code %>">
+      <p><i class="bi bi-question-diamond-fill"></i> <strong>Check the type.</strong> <%= _concern.message %></p>
+      <% if (_hasType) { %>
+        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/type-confirmed" class="mt-2">
+          <%- include('csrfHidden') %>
+          <input type="hidden" name="back" value="<%= back %>">
+          <button type="submit" class="text-xs px-2.5 py-1 rounded-lg border border-amber-400 dark:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 font-medium transition">The type is right</button>
+        </form>
+      <% } %>
+    </div>
+  <% } %>
+</div>

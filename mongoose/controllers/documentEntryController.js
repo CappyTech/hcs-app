@@ -20,6 +20,7 @@ import { actorFromUser, notForEntryMessage } from '../services/paperless/documen
 import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
 import notifySvc from '../services/paperless/documentNotifyService.js';
 import readingSvc from '../services/paperless/documentReadingService.js';
+import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import logger from '../../services/loggerService.js';
 
@@ -65,6 +66,7 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     paperlessUiBase: paperlessUiBase(),
     notifications: await notifySvc.historyFor(mdb.PAPERLESS?.NotificationLog, doc.paperlessId).catch(() => []),
     notifyMode: notifySvc.notifyMode(),
+    documentTypes: await documentTypeOptions().catch(() => []),
   });
 }
 
