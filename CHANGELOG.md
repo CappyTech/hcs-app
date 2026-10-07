@@ -5,9 +5,11 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ## [6.54.5] - 2026-10-07
 
 ### Fixed
-- **Invoices entered in hcs-app stayed in the Paperless inbox for good.** Paperless only removes `inbox` when a document is saved in its own web interface, and that no longer happens now that entry is done in hcs-app. Before H1, the send to KashFlow removed it by accident, because it replaced every tag. Now:
+- **Documents handled in hcs-app stayed in the Paperless inbox for good.** Paperless only removes `inbox` when a document is saved in its own web interface, and that no longer happens now that entry is done in hcs-app. Before H1, the send to KashFlow removed it by accident, because it replaced every tag. Now:
   - **Complete entry** removes `inbox` in the same tag change that adds `data entry done`.
-  - **Reopen entry** adds it back.
+  - **Ticking Credit Note** removes it before setting the Credit Note field in Paperless, so WF5 checks a ticked field only once.
+  - **The first Mark reviewed** on a supplier statement removes it. Until cutover, that update is what makes Paperless's WF2 email Bev, as a save in Paperless did before. Tag 21 is still left for WF2 to add.
+  - **Reopen entry** adds it back. Unticking Credit Note doesn't.
   - Documents already stuck with `inbox` are left as they are.
   - Tag 3 can be overridden with `PAPERLESS_TAG_INBOX_ID`.
 

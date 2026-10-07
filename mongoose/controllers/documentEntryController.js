@@ -216,7 +216,10 @@ export const postReviewed = async (req, res, next) => {
     await mdb.connect();
     const r = await entry.markReviewed(mdb.PAPERLESS.OcrDocument, id, actorFromUser(req.user));
     if (!r.ok) req.flash('error', r.message);
-    else req.flash('success', r.firstTime ? 'Marked reviewed.' : 'It was already marked reviewed.');
+    else {
+      req.flash('success', r.firstTime ? 'Marked reviewed.' : 'It was already marked reviewed.');
+      if (r.paperlessWarning) req.flash('error', r.paperlessWarning);
+    }
     return res.redirect('/paperless/queues/statements');
   } catch (err) {
     logger.error(`[documentEntry] reviewed ${req.params.paperlessId}: ${err.message}`);

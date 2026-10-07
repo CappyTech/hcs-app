@@ -73,7 +73,13 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - **john_resend:** the Resend button. Until cutover it also adds the `notify` tag, so Paperless (WF9) sends.
   - **kashflow:** a successful send.
   - **credit_note:** flagging. Purchase Invoices only, as WF5. One-shot, so flagging again after an admin unflags doesn't re-email Bev.
-  - **statement:** Mark reviewed. This doesn't tag Paperless, because adding tag 21 would stop WF2 emailing Bev before cutover.
+  - **statement:** Mark reviewed. This doesn't add tag 21 in Paperless, because that would stop WF2 emailing Bev before cutover. Since 6.54.5 it does remove `inbox` (see the next bullet), and that update is what makes WF2 email Bev until cutover.
+- **`inbox` tag (agreed 7 Oct 2026).** Paperless only drops `inbox` when someone saves the document in its web interface, which no longer happens. Before H1, the tag wipe at D2 removed it by accident. Now hcs-app manages it:
+  - Complete entry removes it, in the same call that adds `data entry done`.
+  - Flagging a credit note removes it, before field 58 is set.
+  - The first Mark reviewed removes it.
+  - Reopen entry adds it back. Unflagging a credit note doesn't.
+  - Documents already stuck with `inbox` were left as they are.
 - **H6 unlink** removes `added` in Paperless as well as moving `sent` → `entered`. Otherwise following the tags would move it straight back. `notified/kashflow` stays.
 - **H6 failures:** a live send that fails stays `failed`, with per-channel results. The `paperless-notification-retry` job resends only the failed channels, with backoff from 10 minutes doubling, up to 5 attempts.
 - **Check in the H8 shadow comparison** two template details that weren't confirmed against live Paperless:

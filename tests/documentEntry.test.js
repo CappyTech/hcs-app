@@ -20,7 +20,7 @@ const ejs = require('ejs');
 
 const {
   parseMoneyInput, parseDateInput, entryKind, parseEntryForm, completionErrors, consistencyWarnings,
-  formValues, saveEntry, completeEntry, setCreditNote, reopenEntry,
+  formValues, saveEntry, completeEntry, setCreditNote, reopenEntry, markReviewed,
 } = entrySvc;
 const { makeMockClient, resetMockPaperless, mockPaperlessState } = mockPaperless;
 
@@ -336,12 +336,34 @@ describe('actions against the mock Paperless', () => {
     assert.equal(M.rows[0].processingState, 'manual_kashflow');
     assert.equal(M.rows[0].creditNote, true);
     assert.equal(cfOf(9003, 58), 'true');
+    assert.deepEqual(tagsOf(9003), [16], 'flagging takes it out of the Paperless inbox');
+    const calls = mockPaperlessState().calls.filter((c) => c.method === 'POST').map((c) => c.body?.method);
+    assert.deepEqual(calls, ['modify_tags', 'modify_custom_fields'], 'untag before setting Credit Note, so WF5 checks a true field once');
 
     assert.equal((await setCreditNote(M, 9003, false, user)).reason, 'forbidden');
     const off = await setCreditNote(M, 9003, false, admin);
     assert.equal(off.ok, true);
     assert.equal(M.rows[0].processingState, 'awaiting_entry');
     assert.equal(cfOf(9003, 58), 'false');
+  });
+
+  it('Mark reviewed takes a statement out of the Paperless inbox the first time only (PB-10)', async () => {
+    const M = fakeOcrDocument([{ paperlessId: 9005, documentType: STATEMENT, statementReviewed: false }]);
+    const r = await markReviewed(M, 9005, user);
+    assert.equal(r.ok, true);
+    assert.equal(r.firstTime, true);
+    assert.equal(r.paperlessWarning, null);
+    assert.deepEqual(tagsOf(9005), [5]);
+    const before = mockPaperlessState().calls.length;
+    assert.equal((await markReviewed(M, 9005, user)).firstTime, false);
+    assert.equal(mockPaperlessState().calls.length, before, 'reviewing again leaves Paperless alone');
+  });
+
+  it('warns when the statement cannot be untagged', async () => {
+    const M = fakeOcrDocument([{ paperlessId: 9005, documentType: STATEMENT, statementReviewed: false }]);
+    const r = await markReviewed(M, 9005, user, { modifyTags: async () => { throw new Error('down'); }, notify: async () => null });
+    assert.equal(r.ok, true);
+    assert.match(r.paperlessWarning, /Remove the "inbox" tag in Paperless so the statement email is sent/);
   });
 
   it('will not flag an invoice already in KashFlow', async () => {

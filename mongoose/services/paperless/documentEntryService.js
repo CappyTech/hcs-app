@@ -363,11 +363,22 @@ export async function setCreditNote(OcrDocument, paperlessId, flag, actor, deps 
   const d = { ...defaultDeps(), ...deps };
   const res = await transition(OcrDocument, paperlessId, flag ? 'flag_credit_note' : 'unflag_credit_note', actor);
   if (!res.ok) return res;
-  const paperlessWarning = await tellPaperless(
+  // A flagged credit note is never entered here, so it leaves the inbox now.
+  // Untag before setting field 58: each call fires WF5's "updated" check, and
+  // this way the untag's check normally runs while Credit Note is still false.
+  const inboxWarning = flag
+    ? await tellPaperless(
+      `Removing "inbox" from ${paperlessId}`,
+      () => d.modifyTags(paperlessId, { remove: ['inbox'] }),
+      'Remove the "inbox" tag in Paperless.',
+    )
+    : null;
+  const fieldWarning = await tellPaperless(
     `Setting Credit Note=${flag} on ${paperlessId}`,
     () => d.setFields(paperlessId, { 'Credit Note': flag ? 'true' : 'false' }),
     flag ? 'Tick Credit Note in Paperless so the credit note email is sent.' : 'Untick Credit Note in Paperless.',
   );
+  const paperlessWarning = fieldWarning || inboxWarning;
   // One-shot: unflagging and flagging again does not send the credit note email twice
   const notification = flag ? await d.notify('credit_note', paperlessId, { actor }) : null;
   return { ...res, paperlessWarning, notification };
@@ -407,16 +418,23 @@ export async function resendToJohn(OcrDocument, paperlessId, actor, deps = {}) {
 }
 
 /**
- * Mark a supplier statement reviewed (PB-10). The first time emails Bev.
- * Paperless isn't told: its WF2 already emails Bev on the first save there,
- * and adding tag 21 from here would stop that email before cutover.
+ * Mark a supplier statement reviewed (PB-10). The first time emails Bev and
+ * takes the statement out of the Paperless inbox. Until cutover that tag
+ * change is also what makes Paperless's WF2 email Bev, as a save there did.
+ * Tag 21 is left for WF2 to add: adding it from here would stop that email.
  */
 export async function markReviewed(OcrDocument, paperlessId, actor, deps = {}) {
   const d = { ...defaultDeps(), ...deps };
   const res = await markStatementReviewed(OcrDocument, paperlessId, actor);
   if (!res.ok) return res;
-  const notification = res.firstTime ? await d.notify('statement', paperlessId, { actor }) : null;
-  return { ...res, notification };
+  if (!res.firstTime) return { ...res, paperlessWarning: null, notification: null };
+  const paperlessWarning = await tellPaperless(
+    `Removing "inbox" from ${paperlessId}`,
+    () => d.modifyTags(paperlessId, { remove: ['inbox'] }),
+    'Remove the "inbox" tag in Paperless so the statement email is sent.',
+  );
+  const notification = await d.notify('statement', paperlessId, { actor });
+  return { ...res, paperlessWarning, notification };
 }
 
 /**
