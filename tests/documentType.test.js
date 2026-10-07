@@ -65,6 +65,11 @@ describe('does it look like its type?', () => {
   it('an "invoice" that reads like a statement, remittance or credit note', () => {
     assert.equal(inv('STARK Building Materials  STATEMENT OF ACCOUNT  Account HERO713').code, 'looks-statement');
     assert.equal(inv('REMITTANCE ADVICE  Payment of £1,200.00').code, 'looks-remittance');
+    // #1156: a Travis Perkins invoice asks for the remittance to be emailed
+    assert.equal(inv('Invoice / Tax Date: 05/10/2026 Account: 40638731 Please email your remittance to: accounts@example.test'), null);
+    assert.equal(inv('REMITTANCE ADVICE for invoice 123'), null);
+    // #1158: a Joseph Parr credit note in Needs Data Entry
+    assert.equal(inv('Telephone: (0151) 525 4181 Credit Note Credit Number 1601/02004137 Credit for:-').code, 'looks-credit-note');
     assert.equal(inv('CREDIT NOTE  Credit No: CN-0042  Original invoice 0767/08027611').code, 'looks-credit-note');
     assert.equal(inv('CREDIT NOTE', { creditNote: true }), null, 'already flagged');
   });
@@ -130,7 +135,7 @@ describe('the Check the type queue', () => {
 
   it('builds the stored check', () => {
     const c = buildTypeCheck({ documentType: null, added: NOW }, NOW);
-    assert.deepEqual({ ...c, at: undefined }, { version: 1, at: undefined, concern: { code: 'untyped', message: "It has no document type, so it isn't in any queue." }, open: true, confirmed: null });
+    assert.deepEqual({ ...c, at: undefined }, { version: 2, at: undefined, concern: { code: 'untyped', message: "It has no document type, so it isn't in any queue." }, open: true, confirmed: null });
   });
 });
 

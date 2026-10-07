@@ -18,7 +18,7 @@ import { isInvoiceDocument } from './documentStateService.js';
 import { isDocumentType, documentTypeQuery } from '../../config/paperlessTypesConfig.js';
 
 // Bump when the rules change, so the sweep checks every document again
-export const TYPE_CHECK_VERSION = 1;
+export const TYPE_CHECK_VERSION = 2; // 2: remittance needs "remittance advice" and no "invoice"
 
 // Untyped documents older than this are history, not work waiting
 const UNTYPED_DAYS = 90;
@@ -42,8 +42,9 @@ export function typeConcern(doc) {
 
   if (isInvoiceDocument(doc)) {
     if (!['awaiting_entry', 'entered'].includes(doc.processingState)) return null;
-    if (top && /\bremittance\b/i.test(top)) {
-      return { code: 'looks-remittance', message: 'It reads like a remittance advice ("remittance" near the top), not an invoice.' };
+    // Not just "remittance": invoices say "please email your remittance to" (Travis Perkins)
+    if (top && /\bremittance\s+advice\b/i.test(top) && !/\binvoice\b/i.test(top)) {
+      return { code: 'looks-remittance', message: 'It reads like a remittance advice ("remittance advice" near the top, no "invoice"), not an invoice.' };
     }
     if (top && /\bstatement\b/i.test(top) && !/\binvoice\b/i.test(top)) {
       return { code: 'looks-statement', message: 'It reads like a supplier statement ("statement" near the top, no "invoice"), not an invoice.' };

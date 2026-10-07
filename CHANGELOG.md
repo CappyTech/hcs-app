@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.55.1] - 2026-10-08
+
+### Fixed
+- **Check the type flagged Travis Perkins invoices as remittance advices.** Their invoices say "Please email your remittance to:" (#1156). The remittance check now needs "remittance advice" near the top and no "invoice". The check version is now 2, so every document is checked again on the next run.
+
 ## [6.55.0] - 2026-10-08
 
 ### Added
