@@ -345,6 +345,9 @@ describe('actions against the mock Paperless', () => {
     assert.equal(off.ok, true);
     assert.equal(M.rows[0].processingState, 'awaiting_entry');
     assert.equal(cfOf(9003, 58), 'false');
+    assert.deepEqual(tagsOf(9003).sort((a, b) => a - b), [3, 16], 'unflagging puts it back in the Paperless inbox');
+    const after = mockPaperlessState().calls.filter((c) => c.method === 'POST').map((c) => c.body?.method).slice(2);
+    assert.deepEqual(after, ['modify_custom_fields', 'modify_tags'], 'untick Credit Note before re-tagging');
   });
 
   it('Mark reviewed takes a statement out of the Paperless inbox the first time only (PB-10)', async () => {

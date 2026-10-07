@@ -363,21 +363,29 @@ export async function setCreditNote(OcrDocument, paperlessId, flag, actor, deps 
   const d = { ...defaultDeps(), ...deps };
   const res = await transition(OcrDocument, paperlessId, flag ? 'flag_credit_note' : 'unflag_credit_note', actor);
   if (!res.ok) return res;
-  // A flagged credit note is never entered here, so it leaves the inbox now.
-  // Untag before setting field 58: each call fires WF5's "updated" check, and
-  // this way the untag's check normally runs while Credit Note is still false.
-  const inboxWarning = flag
-    ? await tellPaperless(
-      `Removing "inbox" from ${paperlessId}`,
-      () => d.modifyTags(paperlessId, { remove: ['inbox'] }),
-      'Remove the "inbox" tag in Paperless.',
-    )
-    : null;
-  const fieldWarning = await tellPaperless(
+  // A flagged credit note is never entered here, so it leaves the inbox;
+  // unflagging puts it back, as Reopen does. Each call fires WF5's "updated"
+  // check, so the tag change goes on the side where Credit Note is false:
+  // before ticking it, after unticking it.
+  const setInbox = () => tellPaperless(
+    `${flag ? 'Removing "inbox" from' : 'Adding "inbox" to'} ${paperlessId}`,
+    () => d.modifyTags(paperlessId, flag ? { remove: ['inbox'] } : { add: ['inbox'] }),
+    flag ? 'Remove the "inbox" tag in Paperless.' : 'Add the "inbox" tag back in Paperless.',
+  );
+  const setField = () => tellPaperless(
     `Setting Credit Note=${flag} on ${paperlessId}`,
     () => d.setFields(paperlessId, { 'Credit Note': flag ? 'true' : 'false' }),
     flag ? 'Tick Credit Note in Paperless so the credit note email is sent.' : 'Untick Credit Note in Paperless.',
   );
+  let fieldWarning;
+  let inboxWarning;
+  if (flag) {
+    inboxWarning = await setInbox();
+    fieldWarning = await setField();
+  } else {
+    fieldWarning = await setField();
+    inboxWarning = await setInbox();
+  }
   const paperlessWarning = fieldWarning || inboxWarning;
   // One-shot: unflagging and flagging again does not send the credit note email twice
   const notification = flag ? await d.notify('credit_note', paperlessId, { actor }) : null;

@@ -9,7 +9,8 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - **Complete entry** removes `inbox` in the same tag change that adds `data entry done`.
   - **Ticking Credit Note** removes it before setting the Credit Note field in Paperless, so WF5 checks a ticked field only once.
   - **The first Mark reviewed** on a supplier statement removes it. Until cutover, that update is what makes Paperless's WF2 email Bev, as a save in Paperless did before. Tag 21 is still left for WF2 to add.
-  - **Reopen entry** adds it back. Unticking Credit Note doesn't.
+  - **Reopen entry** adds it back.
+  - **Unticking Credit Note** adds it back, after the Credit Note field is cleared.
   - Documents already stuck with `inbox` are left as they are.
   - Tag 3 can be overridden with `PAPERLESS_TAG_INBOX_ID`.
 

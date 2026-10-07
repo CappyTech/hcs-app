@@ -78,7 +78,8 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - Complete entry removes it, in the same call that adds `data entry done`.
   - Flagging a credit note removes it, before field 58 is set.
   - The first Mark reviewed removes it.
-  - Reopen entry adds it back. Unflagging a credit note doesn't.
+  - Reopen entry adds it back.
+  - Unflagging a credit note adds it back, after field 58 is cleared.
   - Documents already stuck with `inbox` were left as they are.
 - **H6 unlink** removes `added` in Paperless as well as moving `sent` → `entered`. Otherwise following the tags would move it straight back. `notified/kashflow` stays.
 - **H6 failures:** a live send that fails stays `failed`, with per-channel results. The `paperless-notification-retry` job resends only the failed channels, with backoff from 10 minutes doubling, up to 5 attempts.
