@@ -5,6 +5,8 @@ const money = (v) => v == null ? null : `£${Number(v).toLocaleString('en-GB', {
 const order = locals.sort === 'read' ? 'read' : 'oldest';
 const sortQs = order === 'read' ? '&sort=read' : '';
 const showRead = key === 'needs-entry' || key === 'ready';
+const showConcern = key === 'check-type';
+const isInvoiceType = (t) => /invoice|^purchase$|^subcontractor$/i.test((t && t.name) || '');
 const waitClass = (days) => days == null ? 'text-gray-400'
   : days >= 14 ? 'text-red-700 dark:text-red-400'
   : days >= 7 ? 'text-amber-700 dark:text-amber-400'
@@ -78,6 +80,7 @@ const waitClass = (days) => days == null ? 'text-gray-400'
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Supplier</th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
               <% if (showRead) { %><th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400" title="What hcs-app read off the PDF. Only a suggestion until someone enters it.">Read from PDF</th><% } %>
+              <% if (showConcern) { %><th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Why</th><% } %>
               <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Open</th>
             </tr>
           </thead>
@@ -110,8 +113,14 @@ const waitClass = (days) => days == null ? 'text-gray-400'
                     <% } %>
                   </td>
                 <% } %>
+                <% if (showConcern) { %>
+                  <td class="px-4 py-3 text-xs text-amber-800 dark:text-amber-300 max-w-md" data-type-concern="<%= d.typeCheck?.concern?.code || '' %>"><%= d.typeCheck?.concern?.message || '—' %></td>
+                <% } %>
                 <td class="px-4 py-3 text-right whitespace-nowrap">
-                  <% if (key === 'needs-entry') { %>
+                  <% if (key === 'check-type') { %>
+                    <a href="/paperless/ocr/<%= d.paperlessId %><%= isInvoiceType(d.documentType) ? '/entry' : '' %>"
+                       class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Check</a>
+                  <% } else if (key === 'needs-entry') { %>
                     <a href="/paperless/ocr/<%= d.paperlessId %>/entry"
                        class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Enter</a>
                   <% } else if (key === 'ready') { %>

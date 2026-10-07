@@ -318,6 +318,8 @@ const routeAccess = {
   '/paperless/ocr/:paperlessId/reopen':      ['admin'],
   '/paperless/ocr/:paperlessId/resend-john': ['admin'],
   '/paperless/ocr/:paperlessId/reviewed':    ['admin'],
+  '/paperless/ocr/:paperlessId/type':        ['admin'],
+  '/paperless/ocr/:paperlessId/type-confirmed': ['admin'],
   '/paperless/ocr/:paperlessId/file':        ['admin'],
   '/paperless/ocr/:paperlessId/insights':        ['admin'],
   '/paperless/ocr/:paperlessId/read':            ['admin'],

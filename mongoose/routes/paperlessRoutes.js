@@ -6,6 +6,7 @@ import authService from '../../services/authService.js';
 import ctrl from '../controllers/paperlessController.js';
 import webhookCtrl from '../controllers/paperlessWebhookController.js';
 import queueCtrl from '../controllers/documentQueueController.js';
+import typeCtrl from '../controllers/documentTypeController.js';
 import entryCtrl from '../controllers/documentEntryController.js';
 import readingCtrl from '../controllers/documentReadingController.js';
 import shadowCtrl from '../controllers/shadowReportController.js';
@@ -50,6 +51,8 @@ router.post("/paperless/ocr/:paperlessId/credit-note", ...paperlessGuard, entryC
 router.post("/paperless/ocr/:paperlessId/reopen", ...paperlessGuard, entryCtrl.postReopen);
 router.post("/paperless/ocr/:paperlessId/resend-john", ...paperlessGuard, entryCtrl.postResendJohn);
 router.post("/paperless/ocr/:paperlessId/reviewed", ...paperlessGuard, entryCtrl.postReviewed);
+router.post("/paperless/ocr/:paperlessId/type", ...paperlessGuard, typeCtrl.postType);
+router.post("/paperless/ocr/:paperlessId/type-confirmed", ...paperlessGuard, typeCtrl.postTypeConfirmed);
 router.get("/paperless/ocr/:paperlessId/file", ...paperlessGuard, entryCtrl.getFile);
 router.get("/paperless/ocr/:paperlessId/insights", ...paperlessGuard, readingCtrl.getInsights);
 router.post("/paperless/ocr/:paperlessId/read", ...paperlessGuard, readingCtrl.postRead);

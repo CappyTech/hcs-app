@@ -367,6 +367,24 @@ function makeClient() {
       const api = await createApi();
       return (await api.get(`/document_types/${id}/`)).data;
     },
+    /** Every document type, by name. */
+    async listDocumentTypes() {
+      const api = await createApi();
+      const out = [];
+      for (let page = 1; page <= 20; page++) {
+        const { data } = await api.get('/document_types/', { params: { page, page_size: 100, ordering: 'name' } });
+        out.push(...(data.results || []));
+        if (!data.next) break;
+      }
+      return out;
+    },
+    /** Set a document's type. */
+    async updateDocumentType(documentId, documentTypeId) {
+      if (!documentId) throw new Error('updateDocumentType requires documentId');
+      const api = await createApi();
+      const { data } = await api.patch(`/documents/${documentId}/`, { document_type: documentTypeId == null ? null : Number(documentTypeId) });
+      return data;
+    },
     async getTag(id) {
       if (!id) return null;
       const api = await createApi();

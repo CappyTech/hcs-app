@@ -184,6 +184,19 @@ export function makeMockClient() {
       if (!t) throw notFound(`/document_types/${id}/`);
       return clone(t);
     },
+    async listDocumentTypes() {
+      return clone([...state.documentTypes].sort((a, b) => a.name.localeCompare(b.name)));
+    },
+    async updateDocumentType(documentId, documentTypeId) {
+      if (!documentId) throw new Error('updateDocumentType requires documentId');
+      const doc = findDoc(documentId);
+      const id = documentTypeId == null ? null : Number(documentTypeId);
+      if (id != null && !state.documentTypes.some((t) => t.id === id)) throw notFound(`/document_types/${id}/`);
+      record('PATCH', `/documents/${documentId}/`, { document_type: id });
+      doc.document_type = id;
+      touch(doc);
+      return clone(doc);
+    },
     async getTag(id) {
       if (!id) return null;
       const t = state.tags.find((x) => x.id === Number(id));

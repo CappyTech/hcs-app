@@ -48,6 +48,7 @@ import __paperlessClient_ from '../services/paperless/paperlessClient.js';
 import __ocrOrphanService from '../services/ocrOrphanService.js';
 import documentEntry from '../services/paperless/documentEntryService.js';
 import { actorFromUser, isInvoiceDocument, notForEntryMessage } from '../services/paperless/documentStateService.js';
+import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
 
 // Only purchase and subcontractor invoices become a KashFlow purchase. A
 // supplier statement (or any other document) is reviewed, never drafted or sent.
@@ -296,6 +297,7 @@ export const readOcr = async (req, res, next) => {
       hasDrift,
       cfKashflowPurchaseId,
       hashDuplicate,
+      documentTypes: await documentTypeOptions().catch(() => []),
     });
   } catch (err) {
     next(err);

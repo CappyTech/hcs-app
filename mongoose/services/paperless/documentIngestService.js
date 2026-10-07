@@ -55,6 +55,7 @@ import { isDocumentType } from '../../config/paperlessTypesConfig.js';
 import { isInvoiceDocument, actorFromUser, transition, markStatementReviewed, setExcludedReason } from './documentStateService.js';
 import { notifySafely } from './documentNotifyService.js';
 import { readSoon } from './documentReadingService.js';
+import { refreshTypeCheck } from './documentTypeCheck.js';
 import logger from '../../../services/loggerService.js';
 
 const SYSTEM = actorFromUser(null);
@@ -300,6 +301,9 @@ export async function syncDocument(OcrDocument, paperlessId, { now = new Date(),
   const classification = await classifyDocument(OcrDocument, paperlessId, { now });
   const followed = classification.classified ? [] : await followPaperlessTags(OcrDocument, paperlessId, { now });
   const exclusion = classification.classified ? null : await followExclusionTags(OcrDocument, paperlessId, { now });
+  await refreshTypeCheck(OcrDocument, paperlessId, { now }).catch((err) => {
+    logger.warn(`[paperless-ingest] Type check for ${paperlessId} failed: ${err.message}`);
+  });
   if (isNew) await notify('new_doc', paperlessId, { source: 'app' });
   for (const step of followed) await notify(STEP_NOTIFICATION[step], paperlessId, { source: 'paperless' });
   return { ...classification, followed, exclusion };

@@ -84,7 +84,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
             <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>" class="ml-2 text-xs text-green-700 dark:text-green-400 hover:underline" title="What hcs-app has learned about this supplier's invoices, and teaching it">How it's read</a>
           <% } %>
         </div>
-        <div><span class="text-gray-500 dark:text-gray-400">Type:</span> <%= doc.documentType?.name || '—' %></div>
+        <%- include('../partials/_documentType', { doc, documentTypes: locals.documentTypes, back: 'entry' }) %>
         <% if (locals.excluded) { %>
           <div class="text-amber-700 dark:text-amber-400"><i class="bi bi-exclamation-triangle-fill"></i>
             Kept out of the queues. <%= excluded %> Remove the tag in Paperless if that's wrong.
