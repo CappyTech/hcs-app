@@ -24,7 +24,7 @@ const PI = { id: 1, name: 'Purchase Invoice' };
 const STATEMENT = { id: 2, name: 'Supplier Statement' };
 const SI = { id: 3, name: 'Subcontractor Invoice' };
 const NOW = new Date('2026-10-08T12:00:00Z');
-const JACK = { userId: null, name: 'jack.oldfield', isAdmin: true };
+const JACK = { userId: null, name: 'test.admin', isAdmin: true };
 
 const setPath = (o, p, v) => {
   const keys = p.split('.');
@@ -63,13 +63,13 @@ describe('does it look like its type?', () => {
   });
 
   it('an "invoice" that reads like a statement, remittance or credit note', () => {
-    assert.equal(inv('STARK Building Materials  STATEMENT OF ACCOUNT  Account HERO713').code, 'looks-statement');
+    assert.equal(inv('STARK Building Materials  STATEMENT OF ACCOUNT  Account ACME001').code, 'looks-statement');
     assert.equal(inv('REMITTANCE ADVICE  Payment of £1,200.00').code, 'looks-remittance');
     // #1156: a Travis Perkins invoice asks for the remittance to be emailed
-    assert.equal(inv('Invoice / Tax Date: 05/10/2026 Account: 40638731 Please email your remittance to: accounts@example.test'), null);
+    assert.equal(inv('Invoice / Tax Date: 05/10/2026 Account: 12345678 Please email your remittance to: accounts@example.test'), null);
     assert.equal(inv('REMITTANCE ADVICE for invoice 123'), null);
     // #1158: a Joseph Parr credit note in Needs Data Entry
-    assert.equal(inv('Telephone: (0151) 525 4181 Credit Note Credit Number 1601/02004137 Credit for:-').code, 'looks-credit-note');
+    assert.equal(inv('Telephone: (0151) 000 0000 Credit Note Credit Number 1601/02004137 Credit for:-').code, 'looks-credit-note');
     assert.equal(inv('CREDIT NOTE  Credit No: CN-0042  Original invoice 0767/08027611').code, 'looks-credit-note');
     assert.equal(inv('CREDIT NOTE', { creditNote: true }), null, 'already flagged');
   });
@@ -114,7 +114,7 @@ describe('the Check the type queue', () => {
 
     assert.deepEqual(await confirmType(M, 1, JACK, { now: NOW }), { ok: true, changed: true });
     assert.deepEqual(listed(), [3]);
-    assert.equal(M.docs[0].typeCheck.confirmed.by.name, 'jack.oldfield');
+    assert.equal(M.docs[0].typeCheck.confirmed.by.name, 'test.admin');
     await sweepTypeChecks(M, { now: NOW });
     assert.deepEqual(listed(), [3], 'stays dismissed');
 
@@ -162,8 +162,8 @@ describe('changing the type', () => {
     assert.deepEqual(M.docs.filter(sift(queues.queueFilter('statements'))).map((x) => x.paperlessId), [9001]);
     assert.deepEqual(M.docs.filter(sift(queues.queueFilter('needs-entry'))), []);
     assert.deepEqual(d.processingHistory.map((h) => [h.field, h.from, h.to, h.action, h.by?.name]), [
-      ['documentType', 'Purchase Invoice', 'Supplier Statement', 'change_type', 'jack.oldfield'],
-      ['processingState', 'awaiting_entry', null, 'change_type', 'jack.oldfield'],
+      ['documentType', 'Purchase Invoice', 'Supplier Statement', 'change_type', 'test.admin'],
+      ['processingState', 'awaiting_entry', null, 'change_type', 'test.admin'],
     ]);
     assert.deepEqual(patches().map((c) => c.body), [{ document_type: 2 }]);
     assert.equal(mockPaperlessState().documents.find((x) => x.id === 9001).document_type, 2);

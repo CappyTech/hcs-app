@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.55.2] - 2026-10-08
+
+### Security
+- **Real identifiers removed from tests.** The repository is public, and some test data had been copied from live documents: Heron's trade account numbers with three suppliers, a staff login name and a supplier's phone number. They are replaced with made-up values of the same shape. No behaviour changes. Supplier VAT numbers, and Heron's VAT and company numbers, are left as they are: they are printed on public documents and in the app's footer.
+
 ## [6.55.1] - 2026-10-08
 
 ### Fixed
