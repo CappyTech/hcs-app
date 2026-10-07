@@ -39,10 +39,10 @@ function capture(fn) {
 describe('loggerService printf-style interpolation', () => {
   it('interpolates a single %s argument', () => {
     const [message] = capture(() => {
-      logger.info('[sso] /api/sso/token: invalid credentials for "%s"', 'jack.oldfield');
+      logger.info('[sso] /api/sso/token: invalid credentials for "%s"', 'test.user');
     });
 
-    assert.equal(message, '[sso] /api/sso/token: invalid credentials for "jack.oldfield"');
+    assert.equal(message, '[sso] /api/sso/token: invalid credentials for "test.user"');
     assert.ok(!message.includes('%s'), 'placeholder must not survive into the message');
   });
 
