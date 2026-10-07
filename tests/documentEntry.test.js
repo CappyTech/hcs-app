@@ -301,13 +301,14 @@ describe('actions against the mock Paperless', () => {
   const tagsOf = (id) => mockPaperlessState().documents.find((d) => d.id === id).tags;
   const cfOf = (id, fid) => mockPaperlessState().documents.find((d) => d.id === id).custom_fields.find((e) => e.field === fid)?.value;
 
-  it('Complete entry moves to entered and adds "data entry done" without touching other tags (PB-5)', async () => {
+  it('Complete entry moves to entered, adds "data entry done" and removes "inbox", without touching other tags (PB-5)', async () => {
     const M = fakeOcrDocument([{ paperlessId: 9001, documentType: PI, processingState: 'awaiting_entry', entry: fullEntry() }]);
+    assert.ok(tagsOf(9001).includes(3), 'fixture starts in the inbox');
     const r = await completeEntry(M, 9001, user);
     assert.equal(r.ok, true);
     assert.equal(r.paperlessWarning, null);
     assert.equal(M.rows[0].processingState, 'entered');
-    assert.deepEqual(tagsOf(9001).sort((a, b) => a - b), [1, 3, 16]);
+    assert.deepEqual(tagsOf(9001).sort((a, b) => a - b), [1, 16]);
     assert.equal((await completeEntry(M, 9001, user)).reason, 'invalid-state', 'completing twice does nothing');
   });
 
@@ -325,7 +326,7 @@ describe('actions against the mock Paperless', () => {
     const r = await completeEntry(M, 9001, user, { modifyTags: async () => { throw new Error('down'); } });
     assert.equal(r.ok, true);
     assert.equal(M.rows[0].processingState, 'entered');
-    assert.match(r.paperlessWarning, /Add the "data entry done" tag in Paperless so the invoice email is sent/);
+    assert.match(r.paperlessWarning, /Add the "data entry done" tag in Paperless so the invoice email is sent, and remove "inbox"/);
   });
 
   it('Credit note sets manual_kashflow and Credit Note in Paperless; only an admin can undo it (PB-9, PB-12)', async () => {
@@ -348,13 +349,14 @@ describe('actions against the mock Paperless', () => {
     assert.equal((await setCreditNote(M, 9003, true, user)).reason, 'invalid-state');
   });
 
-  it('Reopen (admin) sends it back and removes "data entry done"', async () => {
+  it('Reopen (admin) sends it back, removes "data entry done" and adds "inbox" back', async () => {
     const M = fakeOcrDocument([{ paperlessId: 9002, documentType: PI, processingState: 'entered' }]);
     assert.equal((await reopenEntry(M, 9002, user)).reason, 'forbidden');
     const r = await reopenEntry(M, 9002, admin);
     assert.equal(r.ok, true);
     assert.equal(M.rows[0].processingState, 'awaiting_entry');
     assert.ok(!tagsOf(9002).includes(1));
+    assert.ok(tagsOf(9002).includes(3), 'back in the Paperless inbox');
     assert.ok(tagsOf(9002).includes(19), 'notified/john kept, so John is not emailed twice');
   });
 });

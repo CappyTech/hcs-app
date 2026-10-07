@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.54.5] - 2026-10-07
+
+### Fixed
+- **Invoices entered in hcs-app stayed in the Paperless inbox for good.** Paperless only removes `inbox` when a document is saved in its own web interface, and that no longer happens now that entry is done in hcs-app. Before H1, the send to KashFlow removed it by accident, because it replaced every tag. Now:
+  - **Complete entry** removes `inbox` in the same tag change that adds `data entry done`.
+  - **Reopen entry** adds it back.
+  - Documents already stuck with `inbox` are left as they are.
+  - Tag 3 can be overridden with `PAPERLESS_TAG_INBOX_ID`.
+
 ## [6.54.4] - 2026-10-06
 
 ### Fixed

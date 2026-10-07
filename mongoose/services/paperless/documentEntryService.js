@@ -350,8 +350,9 @@ export async function completeEntry(OcrDocument, paperlessId, actor, deps = {}) 
   if (!res.ok) return res;
   const paperlessWarning = await tellPaperless(
     `Adding "data entry done" to ${paperlessId}`,
-    () => d.modifyTags(paperlessId, { add: ['dataEntryDone'] }),
-    'Add the "data entry done" tag in Paperless so the invoice email is sent.',
+    // inbox goes in the same call: Paperless only drops it on a save in its own UI
+    () => d.modifyTags(paperlessId, { add: ['dataEntryDone'], remove: ['inbox'] }),
+    'Add the "data entry done" tag in Paperless so the invoice email is sent, and remove "inbox".',
   );
   const notification = await d.notify('john', paperlessId, { actor });
   return { ...res, paperlessWarning, notification };
@@ -372,15 +373,15 @@ export async function setCreditNote(OcrDocument, paperlessId, flag, actor, deps 
   return { ...res, paperlessWarning, notification };
 }
 
-/** Reopen entry (admin): back to Needs Data Entry, and untag Paperless. */
+/** Reopen entry (admin): back to Needs Data Entry, and back in the Paperless inbox. */
 export async function reopenEntry(OcrDocument, paperlessId, actor, deps = {}) {
   const d = { ...defaultDeps(), ...deps };
   const res = await transition(OcrDocument, paperlessId, 'reopen_entry', actor);
   if (!res.ok) return res;
   const paperlessWarning = await tellPaperless(
     `Removing "data entry done" from ${paperlessId}`,
-    () => d.modifyTags(paperlessId, { remove: ['dataEntryDone'] }),
-    'Remove the "data entry done" tag in Paperless.',
+    () => d.modifyTags(paperlessId, { add: ['inbox'], remove: ['dataEntryDone'] }),
+    'Remove the "data entry done" tag in Paperless and add "inbox" back.',
   );
   return { ...res, paperlessWarning };
 }
