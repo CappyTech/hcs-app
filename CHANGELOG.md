@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.56.1] - 2026-10-08
+
+### Fixed
+- **Check the type counted a quoted invoice number as a second invoice.** Smiths Hire prints "Previous invoice number 17V1593269" on a continuing hire, so #1165, a single invoice, would have been flagged as holding two. A number labelled previous, prior, original, related, earlier, your, credited, replaces, against or for isn't counted any more.
+  - **Checked live:** #1165, #1164 and #428 read as one invoice each, and #1169 and #1035 still read as several.
+  - **Check version:** now 4.
+
 ## [6.56.0] - 2026-10-08
 
 ### Added

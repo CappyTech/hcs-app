@@ -99,6 +99,15 @@ describe('does it look like its type?', () => {
     assert.deepEqual(typeCheck.invoiceNumbersIn('Invoice No: 15v1524408. Invoice Number 15V1524408'), ['15V1524408']);
     assert.deepEqual(typeCheck.invoiceNumbersIn('Invoice No: Date 05/10 Invoice #INV-0042 Invoice Number: 260832'), ['INV-0042', '260832']);
     assert.equal(inv('Credit Number 1601/02004137 Invoice No: 1601/02003407 Total Credit 19.46', { creditNote: true }), null);
+    // #1165: a continuing hire quotes the previous invoice
+    const hire = 'HIRE INVOICE Invoice No: 17V1596465 3T Dumper Straight Tip (DPR189). £410.00 per week for 4 days (hire complete) '
+      + 'Previous invoice number 17V1593269 1 x Machine Key TOTAL £247.62';
+    assert.equal(inv(hire), null);
+    assert.deepEqual(typeCheck.invoiceNumbersIn(hire), ['17V1596465']);
+    assert.deepEqual(
+      typeCheck.invoiceNumbersIn('Invoice No: A1234 credit for invoice no 9999 Your Invoice Number 8888 Original Invoice No: 7777 Invoice No: B2222'),
+      ['A1234', 'B2222'],
+    );
   });
 
   it('an invoice the reader found nothing on', () => {
@@ -157,7 +166,7 @@ describe('the Check the type queue', () => {
 
   it('builds the stored check', () => {
     const c = buildTypeCheck({ documentType: null, added: NOW }, NOW);
-    assert.deepEqual({ ...c, at: undefined }, { version: 3, at: undefined, concern: { code: 'untyped', message: "It has no document type, so it isn't in any queue." }, open: true, confirmed: null });
+    assert.deepEqual({ ...c, at: undefined }, { version: 4, at: undefined, concern: { code: 'untyped', message: "It has no document type, so it isn't in any queue." }, open: true, confirmed: null });
   });
 });
 
