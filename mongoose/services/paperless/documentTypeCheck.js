@@ -18,13 +18,31 @@ import { isInvoiceDocument } from './documentStateService.js';
 import { isDocumentType, documentTypeQuery } from '../../config/paperlessTypesConfig.js';
 
 // Bump when the rules change, so the sweep checks every document again
-export const TYPE_CHECK_VERSION = 2; // 2: remittance needs "remittance advice" and no "invoice"
+export const TYPE_CHECK_VERSION = 3; // 2: remittance needs "remittance advice" and no "invoice"; 3: several invoices in one PDF
 
 // Untyped documents older than this are history, not work waiting
 const UNTYPED_DAYS = 90;
 const TOP_CHARS = 800;
 
 const words = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+
+// "Invoice No: 17V1596464", "Invoice Number 260832", "Invoice #INV-0042".
+// Credit notes say "Credit Number", so a credit note quoting the invoice it
+// credits still counts as one.
+const INVOICE_NO = /\binvoice\s*(?:no\.?|number|num\.?|#)\s*[:.]?\s*([A-Z0-9][A-Z0-9/-]{3,})/gi;
+
+/**
+ * The distinct invoice numbers printed in `text`, in order. A number repeated
+ * on each page of one invoice counts once. Pure.
+ */
+export function invoiceNumbersIn(text) {
+  const seen = [];
+  for (const m of String(text || '').matchAll(INVOICE_NO)) {
+    const n = m[1].toUpperCase().replace(/[-/.]+$/, '');
+    if (/\d/.test(n) && !seen.includes(n)) seen.push(n);
+  }
+  return seen;
+}
 
 /**
  * Why `doc` may not be the type it says, or null. Pure.
@@ -51,6 +69,17 @@ export function typeConcern(doc) {
     }
     if (top && !doc.creditNote && /\bcredit\s*note\b/i.test(top)) {
       return { code: 'looks-credit-note', message: 'It says "credit note" near the top. If it is one, use Mark as credit note on the entry screen.' };
+    }
+    // Smiths Hire sends several invoices in one PDF; only the first got entered
+    // and the rest never reached KashFlow (#943, #970, #1019, #1035)
+    const numbers = doc.excludedReason ? [] : invoiceNumbersIn(text);
+    if (numbers.length > 1) {
+      const shown = numbers.length > 4 ? `${numbers.slice(0, 4).join(', ')}, …` : numbers.join(', ');
+      return {
+        code: 'multiple-invoices',
+        message: `This PDF holds ${numbers.length} invoices (${shown}). Split it in Paperless so each is entered on its own, `
+          + 'and tag this one "original/multiple invoice one pdf".',
+      };
     }
     const r = doc.reading;
     if (r && !r.error && r.hasText !== false && !r.fields?.invoiceNumber && !r.fields?.invoiceTotal) {
@@ -87,7 +116,7 @@ export function buildTypeCheck(doc, now = new Date()) {
   return { version: TYPE_CHECK_VERSION, at: now, concern, open, confirmed };
 }
 
-const CHECK_FIELDS = 'paperlessId documentType ocrText processingState creditNote statementReviewed reading.fields.invoiceNumber reading.fields.invoiceTotal reading.error reading.hasText added deletedInPaperlessAt typeCheck';
+const CHECK_FIELDS = 'paperlessId documentType ocrText processingState creditNote excludedReason statementReviewed reading.fields.invoiceNumber reading.fields.invoiceTotal reading.error reading.hasText added deletedInPaperlessAt typeCheck';
 
 const same = (a, b) => a?.version === b.version && a?.open === b.open && (a?.concern?.code ?? null) === (b.concern?.code ?? null);
 
@@ -139,4 +168,4 @@ export async function confirmType(OcrDocument, paperlessId, actor, { now = new D
   return { ok: true, changed: true };
 }
 
-export default { TYPE_CHECK_VERSION, typeConcern, isCheckCandidate, buildTypeCheck, refreshTypeCheck, sweepTypeChecks, confirmType };
+export default { TYPE_CHECK_VERSION, typeConcern, invoiceNumbersIn, isCheckCandidate, buildTypeCheck, refreshTypeCheck, sweepTypeChecks, confirmType };
