@@ -129,10 +129,19 @@ export async function loadQueue(OcrDocument, key, { page = 1, pageSize = 50, now
   };
 }
 
-/** Base of the Paperless web UI, for "open in Paperless" links. */
-export function paperlessUiBase() {
-  return (process.env.PAPERLESS_UI_URL
-    || (process.env.PAPERLESS_BASE_URL || '').replace(/\/api\/?$/i, '')).replace(/\/+$/, '');
+/**
+ * Base of the Paperless web UI, for "open in Paperless" links, emails and
+ * Discord posts. Always absolute: a setting of `docs.heroncs.co.uk` with no
+ * scheme made every link relative, so it opened
+ * /paperless/ocr/1158/docs.heroncs.co.uk/documents/1158/details in hcs-app.
+ */
+export function paperlessUiBase(env = process.env) {
+  const raw = String(env.PAPERLESS_UI_URL || '').trim()
+    || String(env.PAPERLESS_BASE_URL || '').trim().replace(/\/api\/?$/i, '');
+  if (!raw) return '';
+  const base = raw.replace(/\/+$/, '');
+  if (/^https?:\/\//i.test(base)) return base;
+  return `https://${base.replace(/^\/+/, '')}`;
 }
 
 export default { QUEUES, QUEUE_KEYS, QUEUE_SORT, QUEUE_SORTS, queueFilter, unclassifiedFilters, daysWaiting, loadQueue, paperlessUiBase };
