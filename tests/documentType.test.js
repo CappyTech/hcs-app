@@ -12,6 +12,7 @@ import typeSvc from '../mongoose/services/paperless/documentTypeService.js';
 import queues from '../mongoose/services/paperless/documentQueueService.js';
 import { backUrl, changedMessage } from '../mongoose/controllers/documentTypeController.js';
 import mockPaperless from '../mongoose/services/paperless/mock/paperlessMockClient.js';
+import { transition } from '../mongoose/services/paperless/documentStateService.js';
 
 const require = createRequire(import.meta.url);
 const ejs = require('ejs');
@@ -288,6 +289,18 @@ describe('wiring', () => {
     assert.equal(backUrl('details', 7), '/paperless/ocr/7');
     assert.equal(backUrl('check-type', 7), '/paperless/queues/check-type');
     assert.equal(backUrl('https://evil.example', 7), '/paperless/ocr/7/entry');
+  });
+
+  it('closes as soon as a state change settles it (#267)', async () => {
+    const M = model([{ paperlessId: 1, documentType: PI, processingState: 'awaiting_entry', ocrText: 'CREDIT NOTE Credit Number 02003407' }]);
+    await refreshTypeCheck(M, 1, { now: NOW });
+    assert.equal(M.docs[0].typeCheck.concern.code, 'looks-credit-note');
+    assert.equal(M.docs[0].typeCheck.open, true);
+
+    const res = await transition(M, 1, 'flag_credit_note', JACK);
+    assert.equal(res.ok, true, res.message);
+    assert.equal(M.docs[0].processingState, 'manual_kashflow');
+    assert.equal(M.docs[0].typeCheck.open, false, 'no wait for the hourly sweep');
   });
 
   it('checks on every ingest and reading, and hourly', () => {

@@ -25,6 +25,8 @@
 
 import mongoose from 'mongoose';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
+// Circular (documentTypeCheck imports isInvoiceDocument from here); only used at call time
+import { refreshTypeCheck } from './documentTypeCheck.js';
 
 export const TRANSITIONS = {
   initialise:         { from: [null],                       to: 'awaiting_entry' },
@@ -127,6 +129,9 @@ export async function transition(OcrDocument, paperlessId, action, actor, opts =
   if (!updated) {
     return { ok: false, reason: 'conflict', message: 'The document changed while you were working on it — reload and try again.' };
   }
+  // A new state can settle or raise a type concern (a flagged credit note no
+  // longer "looks like a credit note"), so don't wait for the hourly sweep (#267)
+  await refreshTypeCheck(OcrDocument, paperlessId).catch(() => {});
   return { ok: true, from: plan.from, to: plan.to, doc: updated };
 }
 
@@ -149,6 +154,7 @@ export async function markStatementReviewed(OcrDocument, paperlessId, actor, { n
     },
     { new: true },
   ).lean();
+  if (updated) await refreshTypeCheck(OcrDocument, paperlessId, { now }).catch(() => {});
   return { ok: true, firstTime: !!updated };
 }
 
