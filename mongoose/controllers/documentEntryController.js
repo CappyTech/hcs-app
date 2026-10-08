@@ -160,7 +160,7 @@ export const postCreditNote = async (req, res, next) => {
       req.flash('error', r.message);
     } else {
       req.flash('success', flag
-        ? "Marked as a credit note. It leaves both invoice queues; credit notes aren't entered in KashFlow."
+        ? 'Marked as a credit note. It leaves both invoice queues and is keyed into KashFlow by hand.'
         : 'No longer a credit note. It is back in Needs Data Entry.');
       if (r.paperlessWarning) req.flash('error', r.paperlessWarning);
     }

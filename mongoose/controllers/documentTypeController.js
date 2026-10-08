@@ -24,7 +24,7 @@ export function backUrl(back, paperlessId) {
   return `/paperless/ocr/${paperlessId}/entry`;
 }
 
-const QUEUE_NAMES = { awaiting_entry: 'Needs Data Entry', entered: 'Ready for KashFlow', manual_kashflow: 'the credit notes (not entered in KashFlow)' };
+const QUEUE_NAMES = { awaiting_entry: 'Needs Data Entry', entered: 'Ready for KashFlow', manual_kashflow: 'the credit notes (keyed into KashFlow by hand)' };
 
 /** What the person is told after a change. */
 export function changedMessage(r) {

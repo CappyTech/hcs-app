@@ -6,6 +6,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
 ### Fixed
 - **The log viewer's "time ago" was wrong for most dates.** Log timestamps are written day first (`08-10-2026 17:59:16`), and the browser read them month first, so an entry from minutes ago on 8 October showed as "59d ago" (10 August). It now reads the day first. Entries from the 13th onwards, which month-first reading couldn't parse, showed no time at all and now show one too.
+- **6.56.4's credit-note wording was wrong, and is reverted.** Supplier credit notes are entered in KashFlow: they're checked and keyed in by hand, never sent from hcs-app. The screens, messages and `PAPERLESS-MIGRATION.md` say "keyed into KashFlow by hand" again, and the Phase 2 credit note draft service is back in the backlog. Behaviour is unchanged.
 
 ## [6.56.4] - 2026-10-08
 

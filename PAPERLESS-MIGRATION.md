@@ -377,7 +377,7 @@ Each behaviour gets a PB-ID. Phase 1 is done when every PB passes its check.
 | PB-9 | Credit note emails Bev once (WF5) | **Credit note** checkbox on the entry screen sends E2 once when first set | One email per credit note |
 | PB-10 | Statements to Review queue, and Bev emailed on first review (view 13, WF2) | Statement queue plus a **Mark reviewed** action that sends C2a once | One email per statement |
 | PB-11 | Documents can't silently drop out of queues | Queues are driven by hcs-app state, not by Paperless tags or the inbox | A document opened and saved without completing stays in its queue |
-| PB-12 | Credit notes are not entered in KashFlow at all (corrected 8 Oct 2026; earlier this said "by hand"); they're excluded from the Needs Data Entry queue by the `notified/credit-note` tag (22) | A credit note gets state `manual_kashflow` once flagged; it leaves both invoice queues and is never offered for the KashFlow send | A flagged credit note appears in neither queue, and the send action is unavailable for it |
+| PB-12 | Credit notes are checked and entered in KashFlow by hand, outside hcs-app; they're excluded from the Needs Data Entry queue by the `notified/credit-note` tag (22) | A credit note gets state `manual_kashflow` once flagged; it leaves both invoice queues and is never offered for the KashFlow send | A flagged credit note appears in neither queue, and the send action is unavailable for it |
 
 Leave **WF1** (owner, permissions, title) and the **mail rules** in Paperless. They are intake concerns.
 
@@ -514,7 +514,7 @@ Everything needed to build is in this document: IDs, field names, templates and 
 ## 7. Open items (before or alongside Phase 1)
 
 - [ ] **Documents 1005 (3 Sep) and 1069 (21 Sep):** invoices outside the inbox, never entered or sent. Probably missed; check them.
-- [x] **Credit notes: resolved.** They are not entered into KashFlow at all (confirmed 8 Oct 2026; this item first said "entered by hand", which was wrong). Bev is emailed each one (E2). This is why 297, 342, 573, 609, 673 and 947 have no `added` tag. The state is still called `manual_kashflow`, kept to avoid a data migration; the screens call it "Credit note (not entered in KashFlow)". The Phase 2 credit note draft service is dropped.
+- [x] **Credit notes: resolved.** They are checked and entered into KashFlow by hand, directly in KashFlow, never through hcs-app (confirmed 8 Oct 2026; 6.56.4 briefly said they weren't entered at all, which was wrong and was reverted in 6.56.5). Bev is emailed each one (E2). This is why 297, 342, 573, 609, 673 and 947 have no `added` tag. Phase 1 keeps this (see PB-12); a credit note draft service is in the Phase 2 backlog.
 - [ ] Run `document_exporter` as a backup. None was taken before the 29 September changes.
 - [ ] Set `PAPERLESS_PROXY_SSL_HEADER='["HTTP_X_FORWARDED_PROTO", "https"]'` on the Paperless container.
 - [ ] Tell whoever does data entry: add only `data entry done` (John's email is automatic), use `notify` only to re-send, and tick **Credit Note** instead of adding the `credit/refund` tag.
@@ -523,7 +523,7 @@ Everything needed to build is in this document: IDs, field names, templates and 
 
 ## 8. Phase 2 backlog (after parity)
 
-1. ~~**Credit note draft service.**~~ Dropped (8 Oct 2026): credit notes aren't entered in KashFlow at all, so there's no manual entry to replace.
+1. **Credit note draft service.** A `creditNoteDraftService` modelled on the existing purchase draft service. It builds a KashFlow purchase credit note from the entered fields, links it to the original invoice where known, and sends it through the same claim guard and notification log. It replaces the manual KashFlow entry in PB-12.
 2. **Reduce data entry.**
    - Ask the accountant whether KashFlow needs line-level detail, or whether one line per nominal code would do.
    - Supplier-specific parsers to pre-fill fields from the OCR text, starting with the top suppliers (about 75% of volume).
