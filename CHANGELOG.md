@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.56.3] - 2026-10-08
+
+### Fixed
+- **Pages split off an entered PDF arrived marked In KashFlow, with no way out.** Paperless's split copies the original's tags, so a page split from an invoice already sent arrived tagged `added`. hcs-app read that as sent, so #1178 (17V1593269, £250.80, not in KashFlow) went straight to In KashFlow. 6.55.4 had already stopped the copies being linked to the original's purchase, which left nothing to unlink.
+  - **Arriving and following tags:** `added` now means sent only when the document is linked to a KashFlow purchase. That applies when it arrives and when its tags are followed later. A copy goes to Needs Data Entry instead, or to Ready for KashFlow if it's also tagged `data entry done`. The H7 backfill still reads tags as they are.
+  - **The way out:** a document marked In KashFlow but linked to no purchase now has **Back to Needs Data Entry** on its details page, behind a confirmation box. It uses the Unlink action, which also removes `added` in Paperless.
+
 ## [6.56.2] - 2026-10-08
 
 ### Fixed

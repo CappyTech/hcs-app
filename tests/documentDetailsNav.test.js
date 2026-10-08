@@ -62,3 +62,21 @@ describe('readability and back links on linked documents', () => {
     assert.match(nav, /← All documents/);
   });
 });
+
+describe('a document marked In KashFlow with no purchase', () => {
+  const file = path.resolve('mongoose/views/tailwindcss/paperless/read.ejs');
+  const render = (doc) => ejs.renderFile(file, {
+    hasTag, title: 't', ingest: null, hasDrift: false, cfKashflowPurchaseId: null, hashDuplicate: null,
+    slimDateTime: () => '', formatCurrency: () => '', csrfToken: 't',
+    doc: { paperlessId: 1178, tags: [], customFields: [], documentType: { name: 'Purchase Invoice' }, ...doc },
+  });
+
+  it('offers a way back to Needs Data Entry (#1178, a split copy that inherited `added`)', async () => {
+    const html = await render({ processingState: 'sent', kashflowPurchaseId: null });
+    assert.match(html, /data-sent-unlinked/);
+    assert.match(html, /action="\/paperless\/ocr\/1178\/unlink"/);
+    assert.match(html, /name="confirm" value="yes" required/);
+    assert.ok(!(await render({ processingState: 'sent', kashflowPurchaseId: 14806, kashflowPurchaseNumber: 14806 })).includes('data-sent-unlinked'));
+    assert.ok(!(await render({ processingState: 'awaiting_entry', kashflowPurchaseId: null })).includes('data-sent-unlinked'));
+  });
+});
