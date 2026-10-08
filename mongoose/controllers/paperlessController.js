@@ -1731,6 +1731,24 @@ export const reIngestOne = async (req, res, next) => {
   }
 };
 
+/**
+ * The purchase search on Match Purchase. A reference matches whatever the
+ * spacing: KashFlow has Beers' I1389496 as "I 1389496" (#216). A number
+ * searches references as well as purchase numbers, since many references are
+ * all digits. Pure.
+ */
+export function matchSearchFilter(q) {
+  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const ref = [...q.replace(/\s+/g, '')].map(escape).join('\\s*');
+  const or = [
+    { SupplierName: { $regex: escape(q), $options: 'i' } },
+    { SupplierReference: { $regex: ref, $options: 'i' } },
+  ];
+  const n = parseInt(q, 10);
+  if (Number.isFinite(n) && String(n) === q) or.unshift({ Number: n });
+  return { $or: or };
+}
+
 /** GET /paperless/ocr/:paperlessId/match — manual purchase-matching UI */
 export const getMatchPurchase = async (req, res, next) => {
   try {
@@ -1759,15 +1777,7 @@ export const getMatchPurchase = async (req, res, next) => {
     let purchaseTotal = 0;
 
     if (Purchase && q) {
-      const numQ = parseInt(q, 10);
-      const filter = Number.isFinite(numQ) && String(numQ) === q
-        ? { Number: numQ }
-        : {
-            $or: [
-              { SupplierName:      { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
-              { SupplierReference: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
-            ],
-          };
+      const filter = matchSearchFilter(q);
       [purchaseTotal, purchases] = await Promise.all([
         Purchase.countDocuments(filter),
         Purchase.find(filter)

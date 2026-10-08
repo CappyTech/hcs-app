@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.56.6] - 2026-10-08
+
+### Fixed
+- **"Check the type" stayed on a document after it was marked as a credit note.** The type check only ran on ingest, on a reading and in the hourly sweep, so a document flagged as a credit note kept saying it "looks like a credit note" for up to an hour (#267). Every state change, and marking a statement reviewed, now checks the type again straight away.
+- **The reader took Beers' invoice total as the VAT.** Beers print "VAT 20.00%  8.28" with no "@", and the OCR splits the word ("V AT"), so no VAT label matched and the reader fell back to where earlier Beers invoices had the VAT, landing on the TOTAL line below (#216: £49.68 instead of £8.28). A plain "VAT" label now counts, the amount taken from further along the row past the rate. It ranks last, and the goods + VAT = total check overrules it. Reader version 3, so stored readings are read again.
+- **A PDF holding several Beers invoices wasn't flagged.** The multiple-invoices type check counted only "Invoice No" numbers, and Beers print "DOCUMENT No." (#216 holds I1389496 and I1389497). Document numbers now count too, kept apart from invoice numbers so an invoice with both isn't taken for two. Type check version 5, so the sweep checks every open document again.
+- **Match Purchase couldn't find a reference spelled with different spacing, or by an all-digit reference.** KashFlow holds Beers' I1389496 as "I 1389496", and a search for digits only looked at purchase numbers. References now match ignoring spaces, and a number searches references as well as purchase numbers.
+
 ## [6.56.5] - 2026-10-08
 
 ### Fixed

@@ -12,6 +12,7 @@ import typeSvc from '../mongoose/services/paperless/documentTypeService.js';
 import queues from '../mongoose/services/paperless/documentQueueService.js';
 import { backUrl, changedMessage } from '../mongoose/controllers/documentTypeController.js';
 import mockPaperless from '../mongoose/services/paperless/mock/paperlessMockClient.js';
+import { transition } from '../mongoose/services/paperless/documentStateService.js';
 
 const require = createRequire(import.meta.url);
 const ejs = require('ejs');
@@ -108,6 +109,15 @@ describe('does it look like its type?', () => {
       typeCheck.invoiceNumbersIn('Invoice No: A1234 credit for invoice no 9999 Your Invoice Number 8888 Original Invoice No: 7777 Invoice No: B2222'),
       ['A1234', 'B2222'],
     );
+    // #216: Beers number their sales invoices "DOCUMENT No."
+    const beers = 'SALES INVOICE DOCUMENT No.: I1389496 DATE: 12Dec25 TOTAL 49.68 '
+      + 'SALES INVOICE DOCUMENT No.: I1389497 DATE: 16Dec25 TOTAL 16.94';
+    assert.equal(inv(beers).code, 'multiple-invoices');
+    assert.deepEqual(typeCheck.invoiceNumbersIn(beers), ['I1389496', 'I1389497']);
+    // Duttons: one invoice, one document number
+    assert.equal(inv('INVOICE Document No. 260461 Date 28/09/2026 Total VAT £7.57'), null);
+    // An invoice number and a different document number are still one invoice
+    assert.deepEqual(typeCheck.invoiceNumbersIn('Invoice No: 5521 Document No: D-0099'), ['5521']);
   });
 
   it('an invoice the reader found nothing on', () => {
@@ -166,7 +176,7 @@ describe('the Check the type queue', () => {
 
   it('builds the stored check', () => {
     const c = buildTypeCheck({ documentType: null, added: NOW }, NOW);
-    assert.deepEqual({ ...c, at: undefined }, { version: 4, at: undefined, concern: { code: 'untyped', message: "It has no document type, so it isn't in any queue." }, open: true, confirmed: null });
+    assert.deepEqual({ ...c, at: undefined }, { version: typeCheck.TYPE_CHECK_VERSION, at: undefined, concern: { code: 'untyped', message: "It has no document type, so it isn't in any queue." }, open: true, confirmed: null });
   });
 });
 
@@ -288,6 +298,18 @@ describe('wiring', () => {
     assert.equal(backUrl('details', 7), '/paperless/ocr/7');
     assert.equal(backUrl('check-type', 7), '/paperless/queues/check-type');
     assert.equal(backUrl('https://evil.example', 7), '/paperless/ocr/7/entry');
+  });
+
+  it('closes as soon as a state change settles it (#267)', async () => {
+    const M = model([{ paperlessId: 1, documentType: PI, processingState: 'awaiting_entry', ocrText: 'CREDIT NOTE Credit Number 02003407' }]);
+    await refreshTypeCheck(M, 1, { now: NOW });
+    assert.equal(M.docs[0].typeCheck.concern.code, 'looks-credit-note');
+    assert.equal(M.docs[0].typeCheck.open, true);
+
+    const res = await transition(M, 1, 'flag_credit_note', JACK);
+    assert.equal(res.ok, true, res.message);
+    assert.equal(M.docs[0].processingState, 'manual_kashflow');
+    assert.equal(M.docs[0].typeCheck.open, false, 'no wait for the hourly sweep');
   });
 
   it('checks on every ingest and reading, and hourly', () => {

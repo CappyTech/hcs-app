@@ -316,6 +316,28 @@ describe('learned supplier layouts', () => {
   });
 });
 
+describe('"V AT 20.00%" (Beers, #216)', () => {
+  // The OCR splits VAT, there's no "@", and the rate sits between label and amount
+  const items = toItems([
+    item([330, 120, 90, 'Total Goods (Excl VAT)']), item([450, 120, 30, '41.40']),
+    item([330, 105, 8, 'V']), item([339, 105, 12, 'AT']), item([390, 105, 30, '20.00%']), item([450, 105, 30, '8.28']),
+    item([330, 90, 80, 'TOTAL (£ STERLING)']), item([450, 90, 30, '49.68']),
+  ], 1);
+
+  it('reads the VAT amount, not the rate', () => {
+    const f = findFields(items);
+    assert.equal(f.totalVat?.value, '8.28');
+    assert.equal(f.totalGoods.value, '41.40');
+    assert.equal(f.invoiceTotal.value, '49.68');
+  });
+
+  it("and the label beats a learned spot that's a line out", () => {
+    // Where an earlier Beers invoice was saved with its VAT on the TOTAL line
+    const f = findFields(items, { layout: { totalVat: { page: 1, x: 450, y: 87.5, w: 30, h: 12.5 } } });
+    assert.equal(f.totalVat.value, '8.28');
+  });
+});
+
 describe('custom label words', () => {
   // Screwfix/Electricfix: "Charged to Account: £45.42" and "Our Reference" that the reader doesn't know
   const items = toItems([
