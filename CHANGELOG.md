@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.56.5] - 2026-10-08
+
+### Fixed
+- **The log viewer's "time ago" was wrong for most dates.** Log timestamps are written day first (`08-10-2026 17:59:16`), and the browser read them month first, so an entry from minutes ago on 8 October showed as "59d ago" (10 August). It now reads the day first. Entries from the 13th onwards, which month-first reading couldn't parse, showed no time at all and now show one too.
+
 ## [6.56.4] - 2026-10-08
 
 ### Fixed
