@@ -50,6 +50,7 @@ import documentEntry from '../services/paperless/documentEntryService.js';
 import { actorFromUser, isInvoiceDocument, notForEntryMessage } from '../services/paperless/documentStateService.js';
 import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
 import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
+import { purchaseHeldElsewhere } from '../services/grabServicePaperless.js';
 
 // Only purchase and subcontractor invoices become a KashFlow purchase. A
 // supplier statement (or any other document) is reviewed, never drafted or sent.
@@ -2370,7 +2371,7 @@ export const repairDrift = async (req, res) => {
         // Continue anyway — each doc will try its own resolution and fail if needed
       }
 
-      let ok = 0, fail = 0;
+      let ok = 0, fail = 0, skipped = 0;
       for (const doc of drifted) {
         // Case 2: Paperless has the KashFlow ID but MongoDB doesn't
         // — could be an orphaned doc (purchase deleted) or a failed write-back.
@@ -2387,7 +2388,20 @@ export const repairDrift = async (req, res) => {
               ? await Purchase.findOne({ Id: cfId, deletedAt: null, DeletedAt: null }).select('Id Number Permalink').lean()
               : null;
 
-            if (activePurchase) {
+            const holder = activePurchase ? await purchaseHeldElsewhere(OcrDocument, cfId, doc.paperlessId) : null;
+            const deletedPurchase = !activePurchase && Purchase
+              ? await Purchase.findOne({ Id: cfId, $or: [{ deletedAt: { $ne: null } }, { DeletedAt: { $ne: null } }] }).select('Id').lean()
+              : null;
+            if (holder) {
+              // Another document holds this purchase: the field was copied (a Paperless split), not a lost link
+              logger.warn(`[repairDrift] Case2 paperlessId=${doc.paperlessId}: KF id=${cfId} is already linked to #${holder.paperlessId} — not linking; unlink or clear it by hand`);
+              skipped++;
+            } else if (!activePurchase && !deletedPurchase) {
+              // Not in hcs-app's copy of KashFlow at all. That doesn't prove it's gone (hcs-sync may not
+              // have it), and the field may be the only record of the link — so leave it alone.
+              logger.warn(`[repairDrift] Case2 paperlessId=${doc.paperlessId}: KF id=${cfId} isn't in the synced KashFlow data — left as it is; check KashFlow`);
+              skipped++;
+            } else if (activePurchase) {
               // Purchase still exists → restore the MongoDB link
               await OcrDocument.updateOne(
                 { paperlessId: doc.paperlessId },
@@ -2399,7 +2413,7 @@ export const repairDrift = async (req, res) => {
               );
               logger.info(`[repairDrift] Case2 restored link paperlessId=${doc.paperlessId} → KF id=${cfId}`);
             } else {
-              // Purchase is gone (orphaned) → clear MongoDB customFields immediately (resolves drift
+              // Purchase deleted in KashFlow (soft-deleted in REST) → clear MongoDB customFields immediately (resolves drift
               // count at once), then attempt Paperless cleanup in the background.
               await OcrDocument.updateOne(
                 { paperlessId: doc.paperlessId },
@@ -2412,7 +2426,7 @@ export const repairDrift = async (req, res) => {
               } catch (e) {
                 logger.warn(`[repairDrift] Case2 Paperless clear failed for paperlessId=${doc.paperlessId}: ${e.message}`);
               }
-              logger.info(`[repairDrift] Case2 cleared orphaned fields for paperlessId=${doc.paperlessId} (KF id=${cfId} not found)`);
+              logger.info(`[repairDrift] Case2 cleared orphaned fields for paperlessId=${doc.paperlessId} (KF id=${cfId} deleted in KashFlow)`);
             }
             ok++;
           } catch (e) {
@@ -2455,7 +2469,7 @@ export const repairDrift = async (req, res) => {
           logger.warn(`[repairDrift] Failed for paperlessId=${doc.paperlessId}: ${e.message}`);
         }
       }
-      logger.info(`[repairDrift] Complete. ok=${ok} failed=${fail}`);
+      logger.info(`[repairDrift] Complete. ok=${ok} failed=${fail} left=${skipped}`);
     } catch (err) {
       logger.error(`[repairDrift] Fatal error: ${err.message}`);
     } finally {

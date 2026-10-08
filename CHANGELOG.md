@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.55.5] - 2026-10-08
+
+### Fixed
+- **The Documents overview disagreed with hcs-app.** Its panels were defined by Paperless tags and send history alone.
+  - **Never Sent** listed #1139 (linked with Match Purchase) and the Smiths Hire split-outs, which are linked to purchases. It also listed #1158, which is flagged as a credit note.
+  - **Unlinked** listed #1158 as well.
+  - **The fix:** a document linked to a purchase isn't "never sent". The KashFlow-eligible filter also leaves out what hcs-app knows is never sent from here: flagged credit notes (`creditNote` / `manual_kashflow`) and excluded invoices (`excludedReason`).
+
+### Security
+- **Fix All could erase the only record of a KashFlow purchase.** For a document whose Paperless field has a KashFlow id that hcs-app doesn't hold, Fix All (`/paperless/repair-drift`) cleared the field whenever the purchase wasn't in hcs-app's synced copy of KashFlow. Not being in the copy doesn't prove the purchase is gone, since hcs-sync may simply not have it.
+  - **Cleared now:** only when the copy records the purchase as deleted.
+  - **Otherwise:** it's left alone, and the log says to check KashFlow.
+  - **Copied links:** a purchase another document already holds isn't linked either (a Paperless split copy).
+  - **Example:** nine invoices sent in January–February 2026 (#214–#295, purchases 13526–13666) were in this position.
+
 ## [6.55.4] - 2026-10-08
 
 ### Fixed

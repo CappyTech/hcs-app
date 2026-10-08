@@ -14,7 +14,7 @@ const DETAIL_LIMIT = 100;
 // Tags are resolved by id-or-known-name via paperlessTagsConfig, so renaming
 // one in Paperless does not silently empty these panels.
 const NOT_FOR_KASHFLOW_TAGS = ['originalMultiInvoice', 'creditRefund'];
-const KF_ELIGIBLE_MATCH = {
+export const KF_ELIGIBLE_MATCH = {
   // Matched by id-or-known-name: the type was renamed 'purchase' ->
   // 'Purchase Invoice', which a literal name match stopped seeing.
   ...documentTypeQuery('purchaseInvoice'),
@@ -22,12 +22,18 @@ const KF_ELIGIBLE_MATCH = {
   ...lacksAllTagsQuery(NOT_FOR_KASHFLOW_TAGS),
   // Ghosts deleted in Paperless can't be actioned — they get their own panel
   deletedInPaperlessAt: null,
+  // What hcs-app itself knows (the Paperless tags above lag behind it): a
+  // flagged credit note is keyed into KashFlow by hand, and an excluded
+  // invoice (tags 4/11, followed since 6.54.0) is never entered or sent
+  creditNote: { $ne: true },
+  processingState: { $ne: 'manual_kashflow' },
+  excludedReason: null,
 };
 
 // "manually added to kashflow" docs are already in KashFlow (entered by hand) so the app
 // will never send them — exclude from Never Sent only; they stay in Unlinked so
 // Match References / Resolve Numbers can still attach them to their purchase.
-const NEVER_SENT_ELIGIBLE_MATCH = {
+export const NEVER_SENT_ELIGIBLE_MATCH = {
   ...KF_ELIGIBLE_MATCH,
   // Intentionally replaces KF_ELIGIBLE_MATCH's `tags` clause with a wider one
   // — same list plus 'manually added to kashflow'. Safe because it is a
@@ -73,10 +79,11 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       error:    [{ $match: { error: { $ne: null } } }, { $count: 'n' }],
       direct:   [{ $match: { lastSendMode: 'direct' } }, { $count: 'n' }],
       webhook:  [{ $match: { lastSendMode: 'webhook' } }, { $count: 'n' }],
-      neverSent:[{ $match: { lastSentAt: null } }, { $count: 'n' }],
+      neverSent:[{ $match: { lastSentAt: null, kashflowPurchaseId: null } }, { $count: 'n' }],
       // Same, restricted to KF-eligible docs (drives the tile + panel)
       neverSentEligible: [
-        { $match: { lastSentAt: null, ...NEVER_SENT_ELIGIBLE_MATCH } },
+        // Linked with Match Purchase (or an older send) is in KashFlow, sent from here or not
+        { $match: { lastSentAt: null, kashflowPurchaseId: null, ...NEVER_SENT_ELIGIBLE_MATCH } },
         { $count: 'n' },
       ],
       // Unlinked, restricted to KF-eligible docs (drives the tile + panel)
@@ -194,7 +201,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   ]);
 
   // ── Never sent list (KF-eligible docs only) ───────────────────────────────
-  const neverSentList = await OcrDocument.find({ lastSentAt: null, ...NEVER_SENT_ELIGIBLE_MATCH })
+  const neverSentList = await OcrDocument.find({ lastSentAt: null, kashflowPurchaseId: null, ...NEVER_SENT_ELIGIBLE_MATCH })
     .sort({ added: -1 })
     .limit(DETAIL_LIMIT)
     .select('paperlessId title documentType added')
