@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import sift from 'sift';
 import entry from '../mongoose/services/paperless/documentEntryService.js';
 
 /**
@@ -120,22 +121,15 @@ describe('recording a KashFlow send', () => {
 });
 
 describe('repairing sends that were never recorded', () => {
-  // Enough of a model for documentStateService.transition
+  // Enough of a model for documentStateService.transition, with real Mongo matching
   function model(docs) {
-    const match = (d, f) => Object.entries(f).every(([k, v]) => {
-      const val = d[k];
-      if (v && typeof v === 'object' && '$ne' in v) return val !== v.$ne && !(v.$ne === null && val == null);
-      if (v && typeof v === 'object' && '$in' in v) return v.$in.includes(val);
-      if (v === null) return val == null;
-      return val === v;
-    });
     const q = (r) => ({ select: () => q(r), lean: async () => structuredClone(r) });
     return {
       docs,
-      find: (f) => q(docs.filter((d) => match(d, f))),
-      findOne: (f) => q(docs.find((d) => match(d, f)) || null),
+      find: (f) => q(docs.filter(sift(f))),
+      findOne: (f) => q(docs.find(sift(f)) || null),
       findOneAndUpdate: (f, u) => {
-        const d = docs.find((x) => match(x, f));
+        const d = docs.find(sift(f));
         if (d) Object.assign(d, u.$set || {});
         return q(d || null);
       },
@@ -150,12 +144,26 @@ describe('repairing sends that were never recorded', () => {
       { paperlessId: 3, documentType: PI, processingState: 'entered', kashflowPurchaseId: null, lastSendStatus: null, deletedInPaperlessAt: null },
       { paperlessId: 4, documentType: PI, processingState: 'entered', kashflowPurchaseId: 14800, lastSendStatus: 400, deletedInPaperlessAt: null },
       { paperlessId: 5, documentType: PI, processingState: 'sent', kashflowPurchaseId: 14700, lastSendStatus: 201, deletedInPaperlessAt: null },
+      // #1139: linked with Match Purchase (status 200, or none), never sent from hcs-app
+      { paperlessId: 6, documentType: PI, processingState: 'entered', kashflowPurchaseId: 153542300, lastSendStatus: 200, deletedInPaperlessAt: null },
+      { paperlessId: 7, documentType: PI, processingState: 'awaiting_entry', kashflowPurchaseId: 153542301, lastSendStatus: null, deletedInPaperlessAt: null },
     ]);
     const r = await entry.repairUnmarkedSends(m);
-    assert.deepEqual(r.repaired.sort(), [1, 2]);
-    assert.deepEqual(m.docs.map((d) => [d.paperlessId, d.processingState]), [[1, 'sent'], [2, 'sent'], [3, 'entered'], [4, 'entered'], [5, 'sent']]);
+    assert.deepEqual(r.repaired.sort(), [1, 2, 6, 7]);
+    assert.deepEqual(m.docs.map((d) => [d.paperlessId, d.processingState]), [[1, 'sent'], [2, 'sent'], [3, 'entered'], [4, 'entered'], [5, 'sent'], [6, 'sent'], [7, 'sent']]);
     // Running it again changes nothing
     assert.deepEqual((await entry.repairUnmarkedSends(m)).repaired, []);
+  });
+
+  it('can be limited to one document, as Match Purchase does', async () => {
+    const m = model([
+      { paperlessId: 6, documentType: PI, processingState: 'entered', kashflowPurchaseId: 1, lastSendStatus: 200, deletedInPaperlessAt: null },
+      { paperlessId: 8, documentType: PI, processingState: 'entered', kashflowPurchaseId: 2, lastSendStatus: 200, deletedInPaperlessAt: null },
+    ]);
+    assert.deepEqual((await entry.repairUnmarkedSends(m, { paperlessIds: [6] })).repaired, [6]);
+    assert.equal(m.docs[1].processingState, 'entered');
+    const ctrl = fs.readFileSync(path.resolve('mongoose/controllers/paperlessController.js'), 'utf8');
+    assert.match(ctrl, /repairUnmarkedSends\(OcrDocument, \{ paperlessIds: \[paperlessId\] \}\)/);
   });
 
   it('is registered as a background job', () => {

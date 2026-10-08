@@ -23,15 +23,27 @@ import logger from '../../../services/loggerService.js';
 const SEND_CLAIM_STALE_MS = 5 * 60 * 1000;
 
 /**
- * True when the document is already successfully linked to a KashFlow
- * purchase — the same condition claimSend's filter refuses on. The draft
- * screen's "already sent" lock uses this too, so the UI and the server guard
- * cannot disagree (the UI used to require `added` to be the only Paperless
- * tag, which broke as soon as a workflow added another one).
+ * True when the document is already linked to a KashFlow purchase — the same
+ * condition claimSend's filter refuses on. The draft screen's "already sent"
+ * lock uses this too, so the UI and the server guard cannot disagree.
+ *
+ * Linked = a purchase id, and the last send either succeeded (2xx) or there
+ * was no send at all. Until 6.55.4 it needed exactly 201, the status a send
+ * from hcs-app gets. Match Purchase links an existing purchase with 200 (or no
+ * status), so a matched invoice looked unsent and could be sent again as a
+ * second purchase (#1139). A failed send (4xx/5xx) still doesn't block a retry.
  */
 function isAlreadyLinked(doc) {
-  return doc != null && doc.kashflowPurchaseId != null && Number(doc.lastSendStatus) === 201;
+  if (doc == null || doc.kashflowPurchaseId == null) return false;
+  const status = doc.lastSendStatus == null || doc.lastSendStatus === '' ? null : Number(doc.lastSendStatus);
+  return status == null || (status >= 200 && status < 300);
 }
+
+/** isAlreadyLinked as a Mongo filter. */
+const LINKED_QUERY = {
+  kashflowPurchaseId: { $ne: null },
+  $or: [{ lastSendStatus: null }, { lastSendStatus: { $gte: 200, $lt: 300 } }],
+};
 
 /**
  * Atomically claim the document for sending.
@@ -48,8 +60,8 @@ async function claimSend(OcrDocument, paperlessId, { staleMs = SEND_CLAIM_STALE_
   const claimed = await OcrDocument.findOneAndUpdate(
     {
       paperlessId,
-      // Not already successfully linked to a KashFlow purchase
-      $nor: [{ kashflowPurchaseId: { $ne: null }, lastSendStatus: 201 }],
+      // Not already linked to a KashFlow purchase
+      $nor: [LINKED_QUERY],
       // No live in-flight claim (missing, cleared, or stale)
       $or: [
         { kfSendLockedAt: null },
@@ -104,4 +116,4 @@ async function releaseSend(OcrDocument, paperlessId) {
   }
 }
 
-export default { claimSend, releaseSend, isAlreadyLinked, SEND_CLAIM_STALE_MS };
+export default { claimSend, releaseSend, isAlreadyLinked, LINKED_QUERY, SEND_CLAIM_STALE_MS };

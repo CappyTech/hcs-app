@@ -40,11 +40,24 @@ describe('claimSend', () => {
     assert.equal(model.calls.findOne.length, 0);
   });
 
-  it('claim filter excludes documents already linked with a 201', async () => {
+  it('claim filter excludes documents already linked: a purchase id and a successful or no send', async () => {
     const model = mockModel({ claimResult: { _id: 'x' } });
     await claimSend(model, 42);
     const { filter } = model.calls.findOneAndUpdate[0];
-    assert.deepEqual(filter.$nor, [{ kashflowPurchaseId: { $ne: null }, lastSendStatus: 201 }]);
+    assert.deepEqual(filter.$nor, [{
+      kashflowPurchaseId: { $ne: null },
+      $or: [{ lastSendStatus: null }, { lastSendStatus: { $gte: 200, $lt: 300 } }],
+    }]);
+  });
+
+  it('a purchase linked with Match Purchase (200 or no status) counts as sent (#1139)', async () => {
+    const { default: { isAlreadyLinked } } = await import('../mongoose/services/paperless/kashflowSendClaimService.js');
+    assert.equal(isAlreadyLinked({ kashflowPurchaseId: 153542300, lastSendStatus: 200 }), true);
+    assert.equal(isAlreadyLinked({ kashflowPurchaseId: 153542300, lastSendStatus: null }), true);
+    assert.equal(isAlreadyLinked({ kashflowPurchaseId: 153542300 }), true);
+    assert.equal(isAlreadyLinked({ kashflowPurchaseId: 153542300, lastSendStatus: 201 }), true);
+    assert.equal(isAlreadyLinked({ kashflowPurchaseId: 153542300, lastSendStatus: 500 }), false, 'a failed send can be retried');
+    assert.equal(isAlreadyLinked({ kashflowPurchaseId: null, lastSendStatus: 201 }), false);
   });
 
   it('claim filter allows takeover of a stale claim', async () => {
@@ -91,14 +104,14 @@ describe('claimSend', () => {
     assert.equal(result.reason, 'not-found');
   });
 
-  it('a failed send (non-201) does not permanently block re-claiming', async () => {
+  it('a failed send (4xx/5xx) does not permanently block re-claiming', async () => {
     // Document has a purchase id from an earlier attempt but lastSendStatus 500:
-    // the $nor only excludes id + 201, so the claim filter still matches.
+    // the $nor only excludes an id with a 2xx or no status, so the filter still matches.
     const model = mockModel({ claimResult: { _id: 'x' } });
     const result = await claimSend(model, 42);
     assert.equal(result.ok, true);
     const { filter } = model.calls.findOneAndUpdate[0];
-    // Sanity: the only exclusion is the id+201 combination
+    // Sanity: the only exclusion is the linked combination
     assert.equal(filter.$nor.length, 1);
   });
 });

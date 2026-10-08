@@ -1834,6 +1834,10 @@ export const postMatchPurchase = async (req, res, next) => {
       },
     );
     logger.info(`[matchPurchase] Manually linked paperlessId=${paperlessId} → purchase #${purchaseNumber} (Id=${purchaseId})`);
+    // It's in KashFlow now: out of the invoice queues, and never sent again
+    await documentEntry.repairUnmarkedSends(OcrDocument, { paperlessIds: [paperlessId] }).catch((e) => {
+      logger.warn(`[matchPurchase] Marking ${paperlessId} as in KashFlow failed: ${e.message}`);
+    });
 
     // Write back to Paperless custom fields (best-effort)
     try {
@@ -1984,6 +1988,7 @@ export const reassignPaperlessDocument = async (req, res, next) => {
       update.$max = { sendCount: oldDoc.sendCount };
     }
     await OcrDocument.updateOne({ paperlessId: newId }, update);
+    await documentEntry.repairUnmarkedSends(OcrDocument, { paperlessIds: [newId] }).catch(() => {});
 
     // Write the KashFlow custom fields onto the live replacement doc, so the
     // Paperless-side record matches (mirrors postMatchPurchase's write-back).
