@@ -25,6 +25,7 @@
 
 import mongoose from 'mongoose';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
+import { EXCLUDED_REASONS } from '../../models/mongoose/PAPERLESS/OcrDocument.js';
 // Circular (documentTypeCheck imports isInvoiceDocument from here); only used at call time
 import { refreshTypeCheck } from './documentTypeCheck.js';
 
@@ -164,19 +165,26 @@ export const EXCLUDED_MESSAGES = {
     + "Each invoice is entered from its own document, so this one isn't entered or sent to KashFlow.",
   manually_added: 'This was keyed into KashFlow by hand (tagged "manually added to kashflow" in Paperless), '
     + "so it isn't entered or sent from here.",
+  not_for_kashflow: "Marked not for KashFlow, so it isn't entered or sent.",
 };
 
 /** The reason `doc` is kept out of entry and sending, or null when it isn't. */
 export function notForEntryMessage(doc) {
-  return EXCLUDED_MESSAGES[doc?.excludedReason] || null;
+  const message = EXCLUDED_MESSAGES[doc?.excludedReason] || null;
+  if (message && doc.excludedReason === 'not_for_kashflow' && doc.excludedNote) {
+    return `${message} Reason: ${doc.excludedNote}`;
+  }
+  return message;
 }
 
 /**
  * Set or clear why a document is kept out of the invoice queues.
- * @param {'original_multiple'|'manually_added'|null} reason
+ * @param {'original_multiple'|'manually_added'|'not_for_kashflow'|null} reason
+ * @param {object} [opts] note: for the history; excludedNote: why it's not for
+ *   KashFlow, kept on the document (cleared with the exclusion)
  */
-export async function setExcludedReason(OcrDocument, paperlessId, reason, actor, { now = new Date(), note = null } = {}) {
-  if (reason != null && !['original_multiple', 'manually_added'].includes(reason)) {
+export async function setExcludedReason(OcrDocument, paperlessId, reason, actor, { now = new Date(), note = null, excludedNote = null } = {}) {
+  if (reason != null && !EXCLUDED_REASONS.includes(reason)) {
     return { ok: false, reason: 'invalid-reason', message: `Unknown exclusion reason "${reason}".` };
   }
   const doc = await OcrDocument.findOne({ paperlessId }).select('excludedReason').lean();
@@ -188,7 +196,7 @@ export async function setExcludedReason(OcrDocument, paperlessId, reason, actor,
   const updated = await OcrDocument.findOneAndUpdate(
     { paperlessId, excludedReason: from },
     {
-      $set: { excludedReason: reason, excludedReasonChanged: { at: now, by } },
+      $set: { excludedReason: reason, excludedReasonChanged: { at: now, by }, excludedNote: reason ? excludedNote : null },
       $push: { processingHistory: { field: 'excludedReason', from, to: reason, action: 'set_excluded', at: now, by, note } },
     },
     { new: true },

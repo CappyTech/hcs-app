@@ -18,7 +18,7 @@
  *   tag 22 or Credit Note field true  → manual_kashflow (creditNote)
  *   tag `data entry done`             → entered
  *   otherwise                         → awaiting_entry
- *   tag 4 / tag 11                    → excludedReason original_multiple / manually_added
+ *   tag 4 / tag 11 / not for kashflow → excludedReason original_multiple / manually_added / not_for_kashflow
  *   tag 21 (supplier statement)       → statementReviewed
  *
  * Invoices and supplier statements also get classifiedAt, which is how a
@@ -104,6 +104,7 @@ export function initialStateFromPaperless(doc, { requireLink = false } = {}) {
 
     if (hasTag(tags, 'originalMultiInvoice')) out.excludedReason = 'original_multiple';
     else if (hasTag(tags, 'manuallyAddedToKashflow')) out.excludedReason = 'manually_added';
+    else if (hasTag(tags, 'notForKashflow')) out.excludedReason = 'not_for_kashflow';
   } else if (isDocumentType(doc?.documentType, 'supplierStatement')) {
     out.statementReviewed = hasTag(tags, 'notifiedAdminStatement');
   }
@@ -283,7 +284,7 @@ export async function applyExclusionTags(OcrDocument, { now = new Date() } = {})
     processingState: { $in: EXCLUDABLE_STATES },
     deletedInPaperlessAt: null,
     $or: [
-      { excludedReason: null, ...hasAnyTagQuery(['originalMultiInvoice', 'manuallyAddedToKashflow']) },
+      { excludedReason: null, ...hasAnyTagQuery(['originalMultiInvoice', 'manuallyAddedToKashflow', 'notForKashflow']) },
       { excludedReason: { $ne: null } },
     ],
   }).select('paperlessId').lean();

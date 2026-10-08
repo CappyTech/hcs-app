@@ -13,7 +13,7 @@ const DETAIL_LIMIT = 100;
 // can coexist with facets that also match on 'tags.name' (e.g. addedNoKf).
 // Tags are resolved by id-or-known-name via paperlessTagsConfig, so renaming
 // one in Paperless does not silently empty these panels.
-const NOT_FOR_KASHFLOW_TAGS = ['originalMultiInvoice', 'creditRefund'];
+const NOT_FOR_KASHFLOW_TAGS = ['originalMultiInvoice', 'creditRefund', 'notForKashflow'];
 export const KF_ELIGIBLE_MATCH = {
   // Matched by id-or-known-name: the type was renamed 'purchase' ->
   // 'Purchase Invoice', which a literal name match stopped seeing.

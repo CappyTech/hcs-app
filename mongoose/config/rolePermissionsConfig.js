@@ -315,6 +315,7 @@ const routeAccess = {
   '/paperless/ingest/trigger':         ['admin'],
   '/paperless/ocr/:paperlessId/entry':       ['admin'],
   '/paperless/ocr/:paperlessId/credit-note': ['admin'],
+  '/paperless/ocr/:paperlessId/not-for-kashflow': ['admin'],
   '/paperless/ocr/:paperlessId/reopen':      ['admin'],
   '/paperless/ocr/:paperlessId/resend-john': ['admin'],
   '/paperless/ocr/:paperlessId/reviewed':    ['admin'],
