@@ -20,7 +20,7 @@
  * saying what to do by hand.
  */
 
-import { transition, isInvoiceDocument, markStatementReviewed, notForEntryMessage } from './documentStateService.js';
+import { transition, isInvoiceDocument, markStatementReviewed, notForEntryMessage, setExcludedReason } from './documentStateService.js';
 import { notifySafely } from './documentNotifyService.js';
 import { classifyDocument } from './documentIngestService.js';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
@@ -373,6 +373,59 @@ export async function setCreditNote(OcrDocument, paperlessId, flag, actor, deps 
   return { ...res, paperlessWarning, notification };
 }
 
+export const NOT_FOR_KASHFLOW_NOTE_MAX = 300;
+
+/**
+ * Not for KashFlow: a real invoice that must never be entered, e.g. one paid
+ * with store credit from a refund, so the two net to nothing (#252/#253). It
+ * leaves both queues, keeps its reason, and is tagged "not for kashflow" in
+ * Paperless. Undoing it is admin-only and puts it back where it was.
+ * @param {{flag: boolean, note?: string}} change
+ */
+export async function setNotForKashflow(OcrDocument, paperlessId, { flag, note = '' }, actor, deps = {}) {
+  const d = { ...defaultDeps(), ...deps };
+  const doc = await OcrDocument.findOne({ paperlessId })
+    .select('documentType processingState excludedReason excludedNote creditNote deletedInPaperlessAt').lean();
+  if (!doc) return { ok: false, reason: 'not-found', message: 'Document not found.' };
+
+  if (flag) {
+    const reason = String(note || '').replace(/\s+/g, ' ').trim();
+    if (!isInvoiceDocument(doc)) return { ok: false, reason: 'not-invoice', message: 'Only invoices can be marked not for KashFlow.' };
+    if (doc.processingState === 'sent') {
+      return { ok: false, reason: 'sent', message: "It's linked to a KashFlow purchase. Unlink it first." };
+    }
+    if (!['awaiting_entry', 'entered'].includes(doc.processingState) || doc.creditNote) {
+      return { ok: false, reason: 'state', message: 'Only an invoice waiting for entry or to be sent can be marked not for KashFlow.' };
+    }
+    if (doc.excludedReason) return { ok: false, reason: 'excluded', message: notForEntryMessage(doc) };
+    if (reason.length < 3) return { ok: false, reason: 'no-note', message: "Say why it isn't for KashFlow, so it makes sense later." };
+    if (reason.length > NOT_FOR_KASHFLOW_NOTE_MAX) {
+      return { ok: false, reason: 'long-note', message: `Keep the reason under ${NOT_FOR_KASHFLOW_NOTE_MAX} characters.` };
+    }
+    const res = await setExcludedReason(OcrDocument, paperlessId, 'not_for_kashflow', actor, { note: reason, excludedNote: reason });
+    if (!res.ok) return res;
+    const paperlessWarning = await tellPaperless(
+      `Adding "not for kashflow" to ${paperlessId}`,
+      () => d.modifyTags(paperlessId, { add: ['notForKashflow'] }),
+      'Add the "not for kashflow" tag in Paperless.',
+    );
+    return { ...res, paperlessWarning };
+  }
+
+  if (doc.excludedReason !== 'not_for_kashflow') {
+    return { ok: false, reason: 'not-marked', message: "It isn't marked not for KashFlow." };
+  }
+  const res = await setExcludedReason(OcrDocument, paperlessId, null, actor, { note: 'No longer not for KashFlow' });
+  if (!res.ok) return res;
+  // Or following Paperless's tags would mark it again
+  const paperlessWarning = await tellPaperless(
+    `Removing "not for kashflow" from ${paperlessId}`,
+    () => d.modifyTags(paperlessId, { remove: ['notForKashflow'] }),
+    'Remove the "not for kashflow" tag in Paperless, or it will be marked again.',
+  );
+  return { ...res, paperlessWarning };
+}
+
 /** Reopen entry (admin): back to Needs Data Entry, and untag Paperless. */
 export async function reopenEntry(OcrDocument, paperlessId, actor, deps = {}) {
   const d = { ...defaultDeps(), ...deps };
@@ -503,6 +556,8 @@ export default {
   saveEntry,
   completeEntry,
   setCreditNote,
+  setNotForKashflow,
+  NOT_FOR_KASHFLOW_NOTE_MAX,
   reopenEntry,
   resendToJohn,
   markReviewed,

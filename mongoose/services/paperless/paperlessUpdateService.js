@@ -154,21 +154,41 @@ export default {
  * @param {{ add?: Array<string|number>, remove?: Array<string|number> }} changes
  *   Keys of PAPERLESS_TAGS (e.g. 'added', 'dataEntryDone') or raw tag ids.
  */
+/** The id of the Paperless tag called any of `names` (case-insensitive), or null. */
+async function findTagIdByName(api, names) {
+  const want = names.map((n) => String(n).trim().toLowerCase());
+  const all = await api.listTags({ page: 1, pageSize: 1000, ordering: "name" });
+  const hit = (all?.results || []).find((t) => want.includes(String(t?.name || "").trim().toLowerCase()));
+  return typeof hit?.id === "number" ? hit.id : null;
+}
+
 async function modifyPaperlessDocumentTags(paperlessId, { add = [], remove = [] } = {}) {
   const id = Number(paperlessId);
   if (!Number.isFinite(id)) throw new Error("paperlessId must be a number");
 
-  const toId = (t) => {
+  const api = makeClient();
+  // A tag with no configured id (e.g. "not for kashflow") is found by name,
+  // and created when it's being added and doesn't exist yet
+  const toId = async (t, create) => {
     if (typeof t === "number" && Number.isFinite(t)) return t;
     const tag = PAPERLESS_TAGS[t];
     if (!tag) throw new Error(`Unknown Paperless tag "${t}"`);
-    return tag.id;
+    if (tag.id > 0) return tag.id;
+    const found = await findTagIdByName(api, tag.names);
+    if (found != null || !create) return found;
+    const made = await api.createTag({ name: tag.names[0] });
+    if (typeof made?.id !== "number") throw new Error(`Couldn't create the Paperless tag "${tag.names[0]}"`);
+    return made.id;
   };
-  const addIds = add.map(toId);
-  const removeIds = remove.map(toId);
+  const addIds = [];
+  for (const t of add) addIds.push(await toId(t, true));
+  const removeIds = [];
+  for (const t of remove) {
+    const tid = await toId(t, false);
+    if (tid != null) removeIds.push(tid); // never created, so not on the document
+  }
   if (addIds.length === 0 && removeIds.length === 0) return { updated: false };
 
-  const api = makeClient();
   try {
     const res = await api.modifyDocumentTags([id], { add: addIds, remove: removeIds });
     logger.info(

@@ -171,7 +171,7 @@ describe('runBackfill', () => {
 
     assert.deepEqual(s.byState, { awaiting_entry: 4, entered: 1, sent: 2, manual_kashflow: 1 });
     assert.equal(s.classified, 8);
-    assert.deepEqual(s.excluded, { original_multiple: 1, manually_added: 1 });
+    assert.deepEqual(s.excluded, { original_multiple: 1, manually_added: 1, not_for_kashflow: 0 });
     assert.deepEqual([s.statementsClassified, s.statementsReviewed], [2, 1]);
     assert.equal(s.classifiedAtStamped, 1);
     assert.equal(s.skippedDeleted, 1);

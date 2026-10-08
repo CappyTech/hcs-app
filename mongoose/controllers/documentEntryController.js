@@ -6,6 +6,7 @@
  *   GET  /paperless/ocr/:paperlessId/entry        entry screen
  *   POST /paperless/ocr/:paperlessId/entry        save | addLine | complete
  *   POST /paperless/ocr/:paperlessId/credit-note  flag=on|off
+ *   POST /paperless/ocr/:paperlessId/not-for-kashflow  flag=on (note) | off (admin)
  *   POST /paperless/ocr/:paperlessId/reopen       admin: back to Needs Data Entry
  *   POST /paperless/ocr/:paperlessId/resend-john  re-send the invoice to John (H6)
  *   POST /paperless/ocr/:paperlessId/reviewed     mark a supplier statement reviewed (H6)
@@ -171,6 +172,33 @@ export const postCreditNote = async (req, res, next) => {
   }
 };
 
+/** POST /paperless/ocr/:paperlessId/not-for-kashflow  flag=on (with note) | off (admin) */
+export const postNotForKashflow = async (req, res, next) => {
+  try {
+    const id = idParam(req);
+    if (!id) return notFound(res);
+    const flag = req.body.flag === 'on';
+    if (!flag && req.user?.role !== 'admin') {
+      req.flash('error', 'Only an admin can undo Not for KashFlow.');
+      return res.redirect(entryUrl(id));
+    }
+    await mdb.connect();
+    const r = await entry.setNotForKashflow(mdb.PAPERLESS.OcrDocument, id, { flag, note: req.body.note }, actorFromUser(req.user));
+    if (!r.ok) {
+      req.flash('error', r.message);
+    } else {
+      req.flash('success', flag
+        ? "Marked not for KashFlow. It's out of both queues and won't be entered or sent."
+        : 'No longer marked not for KashFlow. It is back in its queue.');
+      if (r.paperlessWarning) req.flash('error', r.paperlessWarning);
+    }
+    return res.redirect(entryUrl(id));
+  } catch (err) {
+    logger.error(`[documentEntry] not-for-kashflow ${req.params.paperlessId}: ${err.message}`);
+    next(err);
+  }
+};
+
 export const postReopen = async (req, res, next) => {
   try {
     const id = idParam(req);
@@ -262,4 +290,4 @@ export function makeGetFile(deps = {}) {
 
 export const getFile = makeGetFile();
 
-export default { getEntry, postEntry, postCreditNote, postReopen, postResendJohn, postReviewed, getFile, makeGetFile };
+export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendJohn, postReviewed, getFile, makeGetFile };

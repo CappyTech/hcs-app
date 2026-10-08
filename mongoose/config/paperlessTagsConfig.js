@@ -44,6 +44,16 @@ export const PAPERLESS_TAGS = {
     id: envId('PAPERLESS_TAG_MANUAL_KF_ID', 11),
     names: ['manually added to kashflow'],
   },
+  /**
+   * A real invoice that must never be entered in KashFlow, e.g. one paid with
+   * store credit from a refund, so the pair nets to nothing (#252/#253). Id 0
+   * until PAPERLESS_TAG_NOT_FOR_KASHFLOW_ID is set: matched by name, and
+   * paperlessUpdateService looks the id up (creating the tag if need be).
+   */
+  notForKashflow: {
+    id: envId('PAPERLESS_TAG_NOT_FOR_KASHFLOW_ID', 0),
+    names: ['not for kashflow'],
+  },
   /** Data entry complete. Note the live tag is spaced, not hyphenated. */
   dataEntryDone: {
     id: envId('PAPERLESS_TAG_DATA_ENTRY_DONE_ID', 1),

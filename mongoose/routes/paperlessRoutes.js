@@ -48,6 +48,7 @@ router.get("/paperless/queues/:queue", ...paperlessGuard, queueCtrl.getQueue);
 router.get("/paperless/ocr/:paperlessId/entry", ...paperlessGuard, entryCtrl.getEntry);
 router.post("/paperless/ocr/:paperlessId/entry", ...paperlessGuard, entryCtrl.postEntry);
 router.post("/paperless/ocr/:paperlessId/credit-note", ...paperlessGuard, entryCtrl.postCreditNote);
+router.post("/paperless/ocr/:paperlessId/not-for-kashflow", ...paperlessGuard, entryCtrl.postNotForKashflow);
 router.post("/paperless/ocr/:paperlessId/reopen", ...paperlessGuard, entryCtrl.postReopen);
 router.post("/paperless/ocr/:paperlessId/resend-john", ...paperlessGuard, entryCtrl.postResendJohn);
 router.post("/paperless/ocr/:paperlessId/reviewed", ...paperlessGuard, entryCtrl.postReviewed);

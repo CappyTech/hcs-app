@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.57.0] - 2026-10-08
+
+### Added
+- **Not for KashFlow.** A real invoice that must never be entered in KashFlow can now be marked as such on the entry screen, with a reason. The case that prompted it is Electricfix #252: a £12.99 purchase paid with the store credit from refund #253, so the pair nets to nothing and neither belongs in KashFlow. A marked invoice leaves Needs Data Entry and Ready for KashFlow, can't be entered or sent, and drops off the overview's to-do panels. It keeps its reason, who marked it and when, shown on the entry screen and the details page. It's tagged `not for kashflow` in Paperless (the tag is created on first use, no setup needed), and tagging a document there marks it here too. An admin can undo it, which puts the invoice back in its queue and removes the tag. Only an invoice waiting for entry or to be sent can be marked: a linked one must be unlinked first, and a credit note stays a credit note.
+
+### Changed
+- Tags with no configured id are looked up in Paperless by name when added or removed, and created when added for the first time. `PAPERLESS_TAG_NOT_FOR_KASHFLOW_ID` can pin the new tag's id.
+
 ## [6.56.7] - 2026-10-08
 
 ### Fixed

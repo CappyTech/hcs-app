@@ -28,7 +28,7 @@ const DraftExtraLineSchema = new mongoose.Schema({
 // hcs-app owns document process state; Paperless tags no longer drive it.
 // Transitions and their rules live in services/paperless/documentStateService.js.
 export const PROCESSING_STATES = ['awaiting_entry', 'entered', 'sent', 'manual_kashflow'];
-export const EXCLUDED_REASONS = ['original_multiple', 'manually_added'];
+export const EXCLUDED_REASONS = ['original_multiple', 'manually_added', 'not_for_kashflow'];
 
 const ActorSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, default: null },
@@ -129,9 +129,11 @@ const OcrDocumentSchema = new mongoose.Schema({
   // Credit note flag (PB-9, PB-12); flagging moves the invoice to manual_kashflow
   creditNote:               { type: Boolean, default: false },
   creditNoteChanged:        { type: ChangeStampSchema, default: null },
-  // Kept out of the invoice queues (Paperless tags 4 and 11)
+  // Kept out of the invoice queues (Paperless tags 4 and 11, or "not for kashflow")
   excludedReason:           { type: String, enum: [...EXCLUDED_REASONS, null], default: null },
   excludedReasonChanged:    { type: ChangeStampSchema, default: null },
+  // Why it's not for KashFlow, in the words of whoever marked it
+  excludedNote:             { type: String, default: null },
   processingHistory:        { type: [ProcessingHistorySchema], default: undefined },
   // When H3 ingest or the H7 backfill first classified the document. A supplier
   // statement has no processingState, so this is what tells "not reviewed"
