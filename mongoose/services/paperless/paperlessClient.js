@@ -5,6 +5,7 @@ import logger from '../../../services/loggerService.js';
 import paperlessApiLog from '../../../services/paperlessApiLogService.js';
 import fs from 'fs';
 import { isMockPaperless, makeMockClient } from './mock/paperlessMockClient.js';
+import { customFieldValue } from './customFieldValue.js';
 
 let sshServer = null;
 let localPort = null;
@@ -15,6 +16,11 @@ let localPort = null;
 const CF_CACHE_TTL_MS = parseInt(process.env.PAPERLESS_CF_CACHE_MS, 10) || 5 * 60 * 1000;
 let _cfCacheMap = null;   // Map<string, number> lowercased-name -> fieldId
 let _cfCacheAt  = 0;      // epoch ms when cache was last populated
+// fieldId -> data_type, filled with the map above: a value is sent in its field's type
+const _cfTypeById = new Map();
+function _rememberCfTypes(defs) {
+  for (const d of defs) if (typeof d?.id === "number" && d.data_type) _cfTypeById.set(Number(d.id), d.data_type);
+}
 
 function _isCfCacheValid() {
   return _cfCacheMap !== null && (Date.now() - _cfCacheAt) < CF_CACHE_TTL_MS;
@@ -22,6 +28,7 @@ function _isCfCacheValid() {
 function _invalidateCfCache() {
   _cfCacheMap = null;
   _cfCacheAt  = 0;
+  _cfTypeById.clear();
 }
 
 /**
@@ -483,6 +490,7 @@ function makeClient() {
           if (d?.name && typeof d.id === "number")
             idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
         }
+        _rememberCfTypes(defs);
         _cfCacheMap = idByName;
         _cfCacheAt  = Date.now();
       }
@@ -518,7 +526,7 @@ function makeClient() {
         if (value == null) {
           existing.delete(Number(fid));
         } else {
-          existing.set(Number(fid), String(value));
+          existing.set(Number(fid), customFieldValue(_cfTypeById.get(Number(fid)), value));
         }
       }
 
@@ -559,6 +567,7 @@ function makeClient() {
         if (d?.name && typeof d.id === "number")
           idByName.set(String(d.name).trim().toLowerCase(), Number(d.id));
       }
+      _rememberCfTypes(defs);
       _cfCacheMap = idByName;
       _cfCacheAt = Date.now();
       return idByName;
@@ -622,7 +631,8 @@ function makeClient() {
           fid = Number(created.id);
           idByName.set(key, fid);
         }
-        addCustomFields[fid] = String(value);
+        // e.g. Credit Note is boolean: Paperless refuses the string "true" (#253)
+        addCustomFields[fid] = customFieldValue(_cfTypeById.get(Number(fid)), value);
       }
       if (Object.keys(addCustomFields).length === 0) return null;
 

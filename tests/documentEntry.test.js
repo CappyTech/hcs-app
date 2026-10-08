@@ -334,13 +334,13 @@ describe('actions against the mock Paperless', () => {
     assert.equal(on.ok, true);
     assert.equal(M.rows[0].processingState, 'manual_kashflow');
     assert.equal(M.rows[0].creditNote, true);
-    assert.equal(cfOf(9003, 58), 'true');
+    assert.equal(cfOf(9003, 58), true, 'a boolean: Paperless refuses "true" (#253)');
 
     assert.equal((await setCreditNote(M, 9003, false, user)).reason, 'forbidden');
     const off = await setCreditNote(M, 9003, false, admin);
     assert.equal(off.ok, true);
     assert.equal(M.rows[0].processingState, 'awaiting_entry');
-    assert.equal(cfOf(9003, 58), 'false');
+    assert.equal(cfOf(9003, 58), false);
   });
 
   it('will not flag an invoice already in KashFlow', async () => {
