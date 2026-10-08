@@ -428,10 +428,20 @@ describe('following Paperless', () => {
 
   it('moves forward to match the tags, one step at a time', () => {
     assert.deepEqual(followSteps(inv('awaiting_entry', [T.dataEntryDone])), ['complete_entry']);
-    assert.deepEqual(followSteps(inv('awaiting_entry', [T.added])), ['complete_entry', 'mark_sent']);
-    assert.deepEqual(followSteps(inv('entered', [T.added])), ['mark_sent']);
+    const linked = { kashflowPurchaseId: 14806 };
+    assert.deepEqual(followSteps(inv('awaiting_entry', [T.added], linked)), ['complete_entry', 'mark_sent']);
+    assert.deepEqual(followSteps(inv('entered', [T.added], linked)), ['mark_sent']);
     assert.deepEqual(followSteps(inv('entered', [T.notifiedCredit])), ['flag_credit_note']);
     assert.deepEqual(followSteps(inv('awaiting_entry', [], { customFields: [{ fieldId: 58, value: true }] })), ['flag_credit_note']);
+  });
+
+  it("`added` with no KashFlow purchase is a copied tag, not a send (#1178: a Paperless split)", () => {
+    assert.deepEqual(followSteps(inv('awaiting_entry', [T.added])), []);
+    assert.deepEqual(followSteps(inv('awaiting_entry', [T.added, T.dataEntryDone])), ['complete_entry']);
+    const copy = { documentType: PI, tags: [T.added, tag(20, 'notified/kashflow')], customFields: [], kashflowPurchaseId: null };
+    assert.equal(ingest.initialStateFromPaperless(copy, { requireLink: true }).processingState, 'awaiting_entry');
+    assert.equal(ingest.initialStateFromPaperless(copy).processingState, 'sent', 'the H7 backfill reads tags as they are');
+    assert.equal(ingest.initialStateFromPaperless({ ...copy, kashflowPurchaseId: 14806 }, { requireLink: true }).processingState, 'sent');
   });
 
   it('never moves backwards or touches unclassified documents', () => {
@@ -451,7 +461,7 @@ describe('following Paperless', () => {
   });
 
   it('records each followed step as the system user with a note', async () => {
-    const M = fakeOcrDocument([invoice({ processingState: 'awaiting_entry', tags: [T.added] })]);
+    const M = fakeOcrDocument([invoice({ processingState: 'awaiting_entry', tags: [T.added], kashflowPurchaseId: 14806 })]);
     assert.deepEqual(await followPaperlessTags(M, 1131), ['complete_entry', 'mark_sent']);
     const h = M.rows[0].processingHistory;
     assert.deepEqual(h.map((e) => [e.action, e.by.name, e.note]), [

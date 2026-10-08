@@ -81,9 +81,14 @@ const truthy = (v) => v === true || (typeof v === 'string' && v.trim().toLowerCa
 /**
  * The state a document should start in, read from its Paperless tags and
  * fields. Pure. `processingState` is null for anything but an invoice.
- * @param {object} doc - OcrDocument shape: { documentType, tags, customFields }
+ * @param {object} doc - OcrDocument shape: { documentType, tags, customFields, kashflowPurchaseId }
+ * @param {{requireLink?: boolean}} [opts] - requireLink: `added` only means
+ *   sent when the document is linked to a KashFlow purchase. Paperless's split
+ *   copies the original's tags, so a page split off an entered PDF arrived
+ *   tagged `added`, was marked In KashFlow without being in it, and had no link
+ *   to unlink (#1177, #1178). The H7 backfill reads the tags as they are.
  */
-export function initialStateFromPaperless(doc) {
+export function initialStateFromPaperless(doc, { requireLink = false } = {}) {
   const tags = doc?.tags || [];
   const out = { processingState: null, creditNote: false, excludedReason: null, statementReviewed: false };
 
@@ -91,7 +96,8 @@ export function initialStateFromPaperless(doc) {
     out.creditNote = hasTag(tags, 'notifiedCreditNote')
       || (doc.customFields || []).some((cf) => isCreditNoteField(cf) && truthy(cf.value));
 
-    if (hasTag(tags, 'added')) out.processingState = 'sent';
+    const added = hasTag(tags, 'added') && (!requireLink || doc.kashflowPurchaseId != null);
+    if (added) out.processingState = 'sent';
     else if (out.creditNote) out.processingState = 'manual_kashflow';
     else if (hasTag(tags, 'dataEntryDone')) out.processingState = 'entered';
     else out.processingState = 'awaiting_entry';
@@ -108,8 +114,8 @@ export function initialStateFromPaperless(doc) {
  * The compare-and-set filter and update that classify `doc`, or null when
  * there is nothing to set. Pure.
  */
-export function buildClassifyUpdate(doc, { now = new Date(), action = 'classify', note = CLASSIFY_NOTE } = {}) {
-  const plan = initialStateFromPaperless(doc);
+export function buildClassifyUpdate(doc, { now = new Date(), action = 'classify', note = CLASSIFY_NOTE, requireLink = false } = {}) {
+  const plan = initialStateFromPaperless(doc, { requireLink });
   const stamp = { at: now, by: storedSystem };
   const entry = (field, from, to) => ({ field, from, to, action, at: now, by: storedSystem, note });
 
@@ -154,13 +160,13 @@ export function buildClassifyUpdate(doc, { now = new Date(), action = 'classify'
  */
 export async function classifyDocument(OcrDocument, paperlessId, { now = new Date() } = {}) {
   const doc = await OcrDocument.findOne({ paperlessId })
-    .select('paperlessId documentType tags customFields processingState statementReviewed classifiedAt deletedInPaperlessAt')
+    .select('paperlessId documentType tags customFields processingState statementReviewed classifiedAt deletedInPaperlessAt kashflowPurchaseId')
     .lean();
   if (!doc) return { classified: false, reason: 'not-found' };
   if (doc.deletedInPaperlessAt) return { classified: false, reason: 'deleted' };
   if (doc.processingState || doc.classifiedAt) return { classified: false, reason: 'already-classified' };
 
-  const built = buildClassifyUpdate(doc, { now });
+  const built = buildClassifyUpdate(doc, { now, requireLink: true });
   if (!built) return { classified: false, reason: 'nothing-to-set' };
 
   const updated = await OcrDocument.findOneAndUpdate(built.filter, built.update, { new: true }).lean();
@@ -190,7 +196,8 @@ export const STEP_NOTIFICATION = {
  * @returns {string[]} transition actions, plus 'mark_reviewed' for statements
  */
 export function followSteps(doc) {
-  const plan = initialStateFromPaperless(doc);
+  // `added` without a purchase is a copied tag, not a send (see initialStateFromPaperless)
+  const plan = initialStateFromPaperless(doc, { requireLink: true });
   if (isInvoiceDocument(doc)) {
     const state = doc.processingState;
     if (!state) return [];
@@ -216,7 +223,7 @@ export function followSteps(doc) {
 export async function followPaperlessTags(OcrDocument, paperlessId, { now = new Date() } = {}) {
   if (!followEnabled()) return [];
   const doc = await OcrDocument.findOne({ paperlessId })
-    .select('paperlessId documentType tags customFields processingState statementReviewed classifiedAt deletedInPaperlessAt')
+    .select('paperlessId documentType tags customFields processingState statementReviewed classifiedAt deletedInPaperlessAt kashflowPurchaseId')
     .lean();
   if (!doc || doc.deletedInPaperlessAt) return [];
   const applied = [];
