@@ -286,3 +286,27 @@ describe('H4 wiring', () => {
     assert.match(read('mongoose/views/tailwindcss/overview/documents.ejs'), /href="\/paperless\/queues"/);
   });
 });
+
+describe('the Paperless web address', () => {
+  const base = (env) => queues.paperlessUiBase(env);
+
+  it('is always absolute, so "Open in Paperless" never opens a path inside hcs-app', () => {
+    // Set without https://, the link was /paperless/ocr/1158/docs.heroncs.co.uk/documents/1158/details
+    assert.equal(base({ PAPERLESS_UI_URL: 'docs.heroncs.co.uk' }), 'https://docs.heroncs.co.uk');
+    assert.equal(base({ PAPERLESS_UI_URL: ' docs.heroncs.co.uk/ ' }), 'https://docs.heroncs.co.uk');
+    assert.equal(base({ PAPERLESS_UI_URL: 'https://docs.heroncs.co.uk/' }), 'https://docs.heroncs.co.uk');
+    assert.equal(base({ PAPERLESS_UI_URL: 'http://paperless.local:8000' }), 'http://paperless.local:8000');
+  });
+
+  it('falls back to the API address without /api, and is empty when neither is set', () => {
+    assert.equal(base({ PAPERLESS_BASE_URL: 'https://docs.heroncs.co.uk/api/' }), 'https://docs.heroncs.co.uk');
+    assert.equal(base({ PAPERLESS_BASE_URL: 'docs.heroncs.co.uk/api' }), 'https://docs.heroncs.co.uk');
+    assert.equal(base({}), '');
+  });
+
+  it('the draft page uses it too', () => {
+    const ctrl = fs.readFileSync(path.resolve('mongoose/controllers/paperlessController.js'), 'utf8');
+    assert.match(ctrl, /paperlessUiBase: paperlessUiBase\(\),/);
+    assert.ok(!/process\.env\.PAPERLESS_UI_URL/.test(ctrl));
+  });
+});

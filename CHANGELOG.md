@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.55.3] - 2026-10-08
+
+### Fixed
+- **"Open in Paperless" opened a page inside hcs-app.** The Paperless web address was set as `docs.heroncs.co.uk` with no `https://`. That made the links relative, so from #1158 the entry screen went to `/paperless/ocr/1158/docs.heroncs.co.uk/documents/1158/details`.
+  - **Pages affected:** the entry screen, the queues, the shadow report and the KashFlow draft.
+  - **Also affected:** the `{{doc_url}}` link in notification emails and Discord posts, which would have carried it once notifications go live.
+  - **The fix:** `paperlessUiBase()` now always returns an absolute address, adding `https://` when it's missing, and the draft page uses it instead of its own copy.
+
 ## [6.55.2] - 2026-10-08
 
 ### Security

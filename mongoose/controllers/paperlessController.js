@@ -49,6 +49,7 @@ import __ocrOrphanService from '../services/ocrOrphanService.js';
 import documentEntry from '../services/paperless/documentEntryService.js';
 import { actorFromUser, isInvoiceDocument, notForEntryMessage } from '../services/paperless/documentStateService.js';
 import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
+import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
 
 // Only purchase and subcontractor invoices become a KashFlow purchase. A
 // supplier statement (or any other document) is reviewed, never drafted or sent.
@@ -640,10 +641,7 @@ export const getPurchaseDraft = async (req, res, next) => {
       sendDirectEnabled: hasDirectAuth,
       sendWebhookEnabled: !!webhookUrl,
       kashflowApiBaseUrl: KF_BASE,
-      paperlessUiBase: (
-        process.env.PAPERLESS_UI_URL ||
-        (process.env.PAPERLESS_BASE_URL || '').replace(/\/api\/?$/i, '').replace(/\/+$/, '')
-      ),
+      paperlessUiBase: paperlessUiBase(),
       canSend: (() => {
         const hasSupplier = !!(selectedSupplier || draft.SupplierId || draft.SupplierName);
         const lineItems = Array.isArray(draft.LineItems) ? draft.LineItems : [];
