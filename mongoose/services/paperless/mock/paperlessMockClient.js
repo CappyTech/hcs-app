@@ -134,6 +134,7 @@ export function makeMockClient() {
 
   return {
     async listDocuments({ page = 1, pageSize = 50, query = null, modified__gte = null, tagsIdAll = null, fields = null } = {}) {
+      maybeFail('listDocuments');
       record('GET', '/documents/', { page, pageSize, query, modified__gte, tagsIdAll });
       let docs = [...state.documents].sort((a, b) => String(b.modified).localeCompare(String(a.modified)));
       if (tagsIdAll != null) {
