@@ -450,6 +450,12 @@ describe('entry view', () => {
     const doc = { paperlessId: 1, documentType: PI, processingState: 'entered', excludedReason: 'manually_added', customFields: [] };
     const html = await render(doc, { locked: true, excluded: 'This was keyed into KashFlow by hand.' });
     assert.match(html, /Kept out of the queues\. This was keyed into KashFlow by hand\. Remove the tag in Paperless/);
+    // The badge says why, not the queue it isn't in (#252), and back goes to the queue list
+    assert.match(html, />Keyed into KashFlow by hand<\/span>/);
+    assert.ok(!html.includes('>Ready for KashFlow</span>'));
+    assert.match(html, /href="\/paperless\/queues" class/);
+    const nfk = await render({ ...doc, excludedReason: 'not_for_kashflow', excludedNote: 'Paid with refund credit' }, { locked: true, excluded: 'x' });
+    assert.match(nfk, />Not for KashFlow<\/span>/);
     assert.ok(!html.includes('This invoice is in KashFlow'));
     assert.ok(!html.includes('value="save"'));
     assert.ok(!html.includes('/paperless/ocr/1/draft'));
