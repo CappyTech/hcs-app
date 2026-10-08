@@ -34,7 +34,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Bump when the reader changes enough that stored readings should be redone
-export const READER_VERSION = 3; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers)
+export const READER_VERSION = 4; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25")
 export const MAX_PAGES = 5;
 export const HEADER_FIELDS = FIELDS.map((f) => f.field);
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));

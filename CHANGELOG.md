@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.56.7] - 2026-10-08
+
+### Fixed
+- **The reader missed dates printed without spaces.** Beers print "16Dec25" and "Invoice due for payment by 31Jan26"; the date parser needed a space or dash between day, month and year, so neither the invoice date nor the due date was read (#216). Run-together dates now read, as long as the letters are a real month ("16Dec25", "28Sept2026"; not "12ABC34"), and "Invoice due for payment by" is a due date label. Reader version 4, so stored readings are read again. A reference that is really a date, such as "3MAR22", is no longer taken for an invoice number.
+
 ## [6.56.6] - 2026-10-08
 
 ### Fixed

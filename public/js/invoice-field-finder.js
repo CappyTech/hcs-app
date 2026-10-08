@@ -17,6 +17,9 @@ const MONTHS = {
   jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
 };
 
+// A month as a word: its three-letter short form, "Sept", or in full
+const MONTH_WORD = /^(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sept?(ember)?|oct(ober)?|nov(ember)?|dec(ember)?)$/i;
+
 const pad = (n) => String(n).padStart(2, '0');
 
 /** UK-order date text → 'YYYY-MM-DD', or null. */
@@ -26,8 +29,9 @@ export function parseDate(text) {
   let r = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/);
   if (r) [, d, m, y] = r.map(Number);
   if (!r) {
-    r = s.match(/^(\d{1,2})[\s-]+([a-z]{3,9})\.?,?[\s-]+(\d{2}|\d{4})$/i);
-    if (r) { d = Number(r[1]); m = MONTHS[r[2].slice(0, 3).toLowerCase()]; y = Number(r[3]); }
+    // "28 Sep 2026", "28-Sept-26", or run together as Beers print it: "16Dec25"
+    r = s.match(/^(\d{1,2})[\s-]*([a-z]{3,9})\.?,?[\s-]*(\d{2}|\d{4})$/i);
+    if (r && MONTH_WORD.test(r[2])) { d = Number(r[1]); m = MONTHS[r[2].slice(0, 3).toLowerCase()]; y = Number(r[3]); } else r = null;
   }
   if (!r) {
     r = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
@@ -90,6 +94,8 @@ export const FIELDS = [
     labels: [
       { re: /(payment\s*)?due(\s*date)?\b/iy, below: true },
       { re: /pay(ment)?\s*by\b/iy, below: true },
+      // Beers: "Invoice due for payment by 31Jan26"
+      { re: /invoice\s*due(\s*for\s*payment)?(\s*by)?\b/iy, below: false },
     ],
   },
   {
