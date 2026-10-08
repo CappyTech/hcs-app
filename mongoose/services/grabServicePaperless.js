@@ -283,6 +283,11 @@ async function grabPaperlessOCR(options = {}) {
               logger.warn(`[paperless] CF "KashFlow Purchase Number"=${_cfKfNum} not found in REST for paperlessId=${doc.id} — storing number without ID`);
               return { kashflowPurchaseNumber: _cfKfNum };
             }
+            const holder = await purchaseHeldElsewhere(OcrDocument, restPurchase.Id, doc.id);
+            if (holder) {
+              logger.warn(`[paperless] paperlessId=${doc.id} has KashFlow purchase #${_cfKfNum} in its custom fields, but #${holder.paperlessId} already holds that purchase (copied by a Paperless split?) — not linking`);
+              return {};
+            }
             const patch = { kashflowPurchaseNumber: restPurchase.Number ?? _cfKfNum };
             if (typeof restPurchase.Id === 'number') patch.kashflowPurchaseId = restPurchase.Id;
             if (restPurchase.Permalink) patch.kashflowPermalink = restPurchase.Permalink;
@@ -417,6 +422,23 @@ async function grabPaperlessOCR(options = {}) {
 }
 
 // Ingest a single Paperless document by ID and upsert into Mongo
+/**
+ * The other document already linked to this KashFlow purchase, if any.
+ *
+ * A purchase is one invoice, so it belongs to one document. Paperless's split
+ * tool copies the original's custom fields — KashFlow Purchase Id and Number
+ * included — onto every invoice split out of it, so each copy arrived looking
+ * linked to the original's purchase and was treated as already in KashFlow
+ * (#1163–#1172). A link read from custom fields is only taken when no other
+ * document holds that purchase.
+ */
+export async function purchaseHeldElsewhere(OcrDocument, purchaseId, paperlessId) {
+  if (purchaseId == null) return null;
+  return OcrDocument.findOne({ kashflowPurchaseId: purchaseId, paperlessId: { $ne: paperlessId }, deletedInPaperlessAt: null })
+    .select('paperlessId')
+    .lean();
+}
+
 async function ingestOnePaperlessDoc(paperlessId) {
   if (!Number.isFinite(Number(paperlessId))) throw new Error('paperlessId must be a number');
   await mdb.connect();
@@ -530,7 +552,12 @@ async function ingestOnePaperlessDoc(paperlessId) {
           .findOne({ Number: cfPurchaseNum })
           .select('Number Id Permalink')
           .lean();
-        if (restPurchase) {
+        const holder = restPurchase ? await purchaseHeldElsewhere(OcrDocument, restPurchase.Id, doc.id) : null;
+        if (holder) {
+          logger.warn(
+            `[paperless] paperlessId=${doc.id} has KashFlow purchase #${cfPurchaseNum} in its custom fields, but #${holder.paperlessId} already holds that purchase (copied by a Paperless split?) — not linking`
+          );
+        } else if (restPurchase) {
           kfBackfill.kashflowPurchaseNumber = restPurchase.Number ?? cfPurchaseNum;
           if (typeof restPurchase.Id === 'number') kfBackfill.kashflowPurchaseId = restPurchase.Id;
           if (restPurchase.Permalink) kfBackfill.kashflowPermalink = restPurchase.Permalink;

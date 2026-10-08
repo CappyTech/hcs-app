@@ -10,6 +10,11 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - **Linked now means:** a purchase id, with the last send either successful (any 2xx) or no send at all. A failed send (4xx/5xx) can still be retried.
   - **Match Purchase**, and moving a link to a replacement document, now mark the invoice as in KashFlow straight away.
   - **`paperless-repair-unmarked-sends`** now runs hourly instead of every 6 hours and catches any linked invoice still in a queue, including #1139 and any others like it. No notifications are sent.
+- **Invoices split out of a multi-invoice PDF were marked In KashFlow without being in it, and couldn't be unlinked.** Paperless's split tool copies the original's custom fields onto every invoice it splits out, including KashFlow Purchase Id and Number. hcs-app linked each copy to the original's purchase and treated it as sent. Ten Smiths Hire invoices (#1163–#1172) shared two purchases (14819, 14770), each of which is only one invoice, so they never reached Needs Data Entry.
+  - **Ingest:** a link read from custom fields is no longer taken when another document already holds that purchase (`purchaseHeldElsewhere`). One purchase belongs to one document.
+  - **Unlink from KashFlow:** a new button on the details page, with a confirmation box. Clearing the fields in Paperless didn't stick, because hcs-app writes them back while it holds the link. The action existed but nothing on any page called it.
+  - **Where an unlinked invoice goes:** back to Needs Data Entry when nothing was ever entered (new `unlink_unentered` transition), otherwise to Ready for KashFlow as before.
+  - **Entry screen:** for an invoice in KashFlow it now points to the Details page to unlink.
 
 ## [6.55.3] - 2026-10-08
 

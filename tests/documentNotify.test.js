@@ -462,8 +462,8 @@ describe('following Paperless', () => {
 });
 
 describe('unlink', () => {
-  it('moves sent back to entered', async () => {
-    const M = fakeOcrDocument([invoice({ processingState: 'sent' })]);
+  it('moves sent back to entered when something was entered', async () => {
+    const M = fakeOcrDocument([invoice({ processingState: 'sent', entry: { savedAt: new Date('2026-10-01'), invoiceNumber: '260832' } })]);
     assert.equal((await entrySvc.recordUnlinked(M, 1131, user)).ok, true);
     assert.equal(M.rows[0].processingState, 'entered');
     assert.equal((await entrySvc.recordUnlinked(M, 1131, user)).reason, 'not-sent');

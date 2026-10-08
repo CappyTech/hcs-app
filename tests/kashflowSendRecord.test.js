@@ -172,3 +172,50 @@ describe('repairing sends that were never recorded', () => {
     assert.match(jobs, /repairUnmarkedSends\(__mdbForJobs\.PAPERLESS\.OcrDocument\)/);
   });
 });
+
+describe('unlinking a document from the wrong KashFlow purchase', () => {
+  const PI = { id: 1, name: 'Purchase Invoice' };
+  const model = (docs) => {
+    const q = (r) => ({ select: () => q(r), lean: async () => structuredClone(r) });
+    return {
+      docs,
+      find: (f) => q(docs.filter(sift(f))),
+      findOne: (f) => q(docs.find(sift(f)) || null),
+      findOneAndUpdate: (f, u) => {
+        const d = docs.find(sift(f));
+        if (d) Object.assign(d, u.$set || {});
+        return q(d || null);
+      },
+    };
+  };
+
+  it('a split-out invoice nobody entered goes back to Needs Data Entry; an entered one to Ready for KashFlow', async () => {
+    const m = model([
+      { paperlessId: 1171, documentType: PI, processingState: 'sent' },
+      { paperlessId: 1139, documentType: PI, processingState: 'sent', entry: { savedAt: new Date(), invoiceNumber: '45219' } },
+    ]);
+    assert.equal((await entry.recordUnlinked(m, 1171, null)).to, 'awaiting_entry');
+    assert.equal((await entry.recordUnlinked(m, 1139, null)).to, 'entered');
+  });
+
+  it('needs the confirmation box, and the details page offers it while linked', async () => {
+    const ctrl = fs.readFileSync(path.resolve('mongoose/controllers/paperlessController.js'), 'utf8');
+    assert.match(ctrl, /if \(req\.body\?\.confirm !== 'yes'\)/);
+    const view = fs.readFileSync(path.resolve('mongoose/views/tailwindcss/paperless/read.ejs'), 'utf8');
+    assert.match(view, /action="\/paperless\/ocr\/<%= doc\.paperlessId %>\/unlink"/);
+    assert.match(view, /name="confirm" value="yes" required/);
+  });
+
+  it("a link copied by a Paperless split isn't taken when another document holds that purchase", async () => {
+    const { purchaseHeldElsewhere } = await import('../mongoose/services/grabServicePaperless.js');
+    const m = model([
+      { paperlessId: 970, kashflowPurchaseId: 152740609, deletedInPaperlessAt: null },
+      { paperlessId: 1171, kashflowPurchaseId: null, deletedInPaperlessAt: null },
+    ]);
+    assert.equal((await purchaseHeldElsewhere(m, 152740609, 1171)).paperlessId, 970);
+    assert.equal(await purchaseHeldElsewhere(m, 152740609, 970), null, 'its own link');
+    assert.equal(await purchaseHeldElsewhere(m, 999, 1171), null);
+    const grab = fs.readFileSync(path.resolve('mongoose/services/grabServicePaperless.js'), 'utf8');
+    assert.equal((grab.match(/await purchaseHeldElsewhere\(OcrDocument, restPurchase\.Id, doc\.id\)/g) || []).length, 2, 'both ingest paths');
+  });
+});

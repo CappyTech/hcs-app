@@ -1874,6 +1874,10 @@ export const unlinkKashflow = async (req, res, next) => {
     if (!Number.isFinite(paperlessId)) {
       return res.status(400).json({ error: 'Invalid paperlessId' });
     }
+    if (req.body?.confirm !== 'yes') {
+      req.flash('error', "Tick the box to confirm this document isn't that KashFlow purchase.");
+      return res.redirect(`/paperless/ocr/${paperlessId}`);
+    }
     await OcrDocument.updateOne(
       { paperlessId },
       {

@@ -478,9 +478,12 @@ export async function recordSentToKashflow(OcrDocument, paperlessId, actor, deps
 /** After a KashFlow link is cleared (unlink or orphan clean-up): sent → entered. */
 export async function recordUnlinked(OcrDocument, paperlessId, actor, { note = null } = {}) {
   try {
-    const doc = await OcrDocument.findOne({ paperlessId }).select('processingState').lean();
+    const doc = await OcrDocument.findOne({ paperlessId }).select('processingState entry.savedAt').lean();
     if (doc?.processingState !== 'sent') return { ok: false, reason: 'not-sent' };
-    return await transition(OcrDocument, paperlessId, 'unlink', actor, { note });
+    // Nothing was ever entered (e.g. a split-out invoice that inherited its
+    // original's link): it needs entering, not sending
+    const action = doc.entry?.savedAt ? 'unlink' : 'unlink_unentered';
+    return await transition(OcrDocument, paperlessId, action, actor, { note });
   } catch (err) {
     logger.warn(`[documentEntry] Recording the unlink for ${paperlessId} failed: ${err.message}`);
     return { ok: false, reason: 'error' };
