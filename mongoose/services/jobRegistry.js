@@ -157,9 +157,10 @@ function registerAll() {
   scheduler.register('paperless-repair-unmarked-sends', {
     description:
       'Move invoices that are already in KashFlow (linked to a purchase) but still in Needs Data Entry '
-      + 'or Ready for KashFlow to In KashFlow. From 6.47.0 until 6.53.1 a send created the purchase but '
-      + 'failed before recording it. Idempotent; sends no notifications.',
-    intervalMs: 6 * HOUR,
+      + 'or Ready for KashFlow to In KashFlow: ones linked with Match Purchase or another way of linking an '
+      + 'existing purchase, and sends from 6.47.0 until 6.53.1 that created the purchase but failed before '
+      + 'recording it. Idempotent; sends no notifications.',
+    intervalMs: HOUR,
     run: async () => {
       await __mdbForJobs.connect();
       return __documentEntryService.repairUnmarkedSends(__mdbForJobs.PAPERLESS.OcrDocument);

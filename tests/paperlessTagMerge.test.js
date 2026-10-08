@@ -124,8 +124,9 @@ describe('already-sent lock', () => {
     assert.equal(isAlreadyLinked(doc), true);
   });
 
-  it('matches claimSend: needs a purchase id and a 201', () => {
+  it('matches claimSend: needs a purchase id and a successful (or no) send', () => {
     assert.equal(isAlreadyLinked({ kashflowPurchaseId: 555, lastSendStatus: 400 }), false);
+    assert.equal(isAlreadyLinked({ kashflowPurchaseId: 555, lastSendStatus: 200 }), true);
     assert.equal(isAlreadyLinked({ kashflowPurchaseId: null, lastSendStatus: 201 }), false);
     assert.equal(isAlreadyLinked(null), false);
   });

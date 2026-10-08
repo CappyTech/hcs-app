@@ -25,6 +25,7 @@ import { notifySafely } from './documentNotifyService.js';
 import { classifyDocument } from './documentIngestService.js';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
 import __paperlessUpdateService from './paperlessUpdateService.js';
+import __kfSendClaim from './kashflowSendClaimService.js';
 import __paperlessClient from './paperlessClient.js';
 import logger from '../../../services/loggerService.js';
 import { entryAsCustomFields } from './entryOverlay.js';
@@ -424,22 +425,24 @@ export async function markReviewed(OcrDocument, paperlessId, actor, deps = {}) {
  * "added to kashflow" post (PB-8). Never throws: the purchase already exists.
  */
 /**
- * Documents that were sent to KashFlow but never marked as sent. From 6.47.0
- * until 6.53.1 the send created the purchase and linked it, then failed before
- * moving the document on, so it stayed in Needs Data Entry or Ready for
- * KashFlow. Moves each one to In KashFlow. Idempotent; sends no
- * notifications, since the purchase went in long ago.
+ * Documents linked to a KashFlow purchase but not marked as sent, moved to In
+ * KashFlow. Two ways in: from 6.47.0 until 6.53.1 a send created the purchase
+ * and linked it, then failed before moving the document on; and Match Purchase
+ * (and the other ways of linking an existing purchase) link without sending, so
+ * the invoice stayed in Ready for KashFlow (#1139). Idempotent; sends no
+ * notifications, since the purchase is already in KashFlow.
+ * @param {{paperlessIds?: number[]}} [opts]  only these documents
  * @returns {Promise<{repaired: number[]}>}
  */
-export async function repairUnmarkedSends(OcrDocument) {
+export async function repairUnmarkedSends(OcrDocument, { paperlessIds = null } = {}) {
   const docs = await OcrDocument.find({
-    kashflowPurchaseId: { $ne: null },
-    lastSendStatus: 201,
+    ...__kfSendClaim.LINKED_QUERY,
     processingState: { $in: ['awaiting_entry', 'entered'] },
     deletedInPaperlessAt: null,
+    ...(paperlessIds ? { paperlessId: { $in: paperlessIds } } : {}),
   }).select('paperlessId processingState kashflowPurchaseId').lean();
   const repaired = [];
-  const note = 'Repair: already in KashFlow, but the send had not been recorded';
+  const note = 'Already in KashFlow (linked to a purchase), so marked as sent';
   for (const doc of docs) {
     try {
       if (doc.processingState === 'awaiting_entry') {

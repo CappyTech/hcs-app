@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.55.4] - 2026-10-08
+
+### Fixed
+- **An invoice linked with Match Purchase stayed in Ready for KashFlow, and could be sent again as a second purchase.** #1139 (Mainsway, invoice 45219) was linked to purchase 14972 but stayed in Ready for KashFlow.
+  - **Cause:** the double-send guard (`isAlreadyLinked` and `claimSend`) only counted a document as in KashFlow when its last send status was exactly 201, which only a send from hcs-app sets. Match Purchase writes 200, or no status at all. So the draft page didn't lock and the send would have created a duplicate. The repair job only looked at 201 too.
+  - **Linked now means:** a purchase id, with the last send either successful (any 2xx) or no send at all. A failed send (4xx/5xx) can still be retried.
+  - **Match Purchase**, and moving a link to a replacement document, now mark the invoice as in KashFlow straight away.
+  - **`paperless-repair-unmarked-sends`** now runs hourly instead of every 6 hours and catches any linked invoice still in a queue, including #1139 and any others like it. No notifications are sent.
+
 ## [6.55.3] - 2026-10-08
 
 ### Fixed
