@@ -102,6 +102,10 @@ export const FIELDS = [
     field: 'totalVat', label: 'Total VAT', type: 'money',
     labels: [
       { re: /(total\s*vat|vat\s*total|vat\s*amount|tax\s*amount|total\s*tax|vat\s*@\s*\d+(\.\d+)?\s*%)/iy, below: true },
+      // Bare "VAT", the amount further along the row past any rate: Beers prints
+      // "V AT   20.00%   8.28" (the OCR splits the word). Ranked last; the
+      // goods + VAT = total check settles it when it's wrong.
+      { re: /v\s?at\b(?!\s*(reg|no\b|number|code|rate|summary|analysis|%))/iy, below: false, rank: 3 },
     ],
   },
   {

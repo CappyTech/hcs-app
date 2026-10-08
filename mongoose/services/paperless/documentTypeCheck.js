@@ -18,7 +18,7 @@ import { isInvoiceDocument } from './documentStateService.js';
 import { isDocumentType, documentTypeQuery } from '../../config/paperlessTypesConfig.js';
 
 // Bump when the rules change, so the sweep checks every document again
-export const TYPE_CHECK_VERSION = 4; // 2: remittance needs "remittance advice" and no "invoice"; 3: several invoices in one PDF; 4: ignore quoted ("previous") invoice numbers
+export const TYPE_CHECK_VERSION = 5; // 2: remittance needs "remittance advice" and no "invoice"; 3: several invoices in one PDF; 4: ignore quoted ("previous") invoice numbers; 5: "Document No." counts too (Beers)
 
 // Untyped documents older than this are history, not work waiting
 const UNTYPED_DAYS = 90;
@@ -30,6 +30,10 @@ const words = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 // Credit notes say "Credit Number", so a credit note quoting the invoice it
 // credits still counts as one.
 const INVOICE_NO = /\binvoice\s*(?:no\.?|number|num\.?|#)\s*[:.]?\s*([A-Z0-9][A-Z0-9/-]{3,})/gi;
+// Beers and Duttons print "DOCUMENT No.: I1389496" on a sales invoice (#216).
+// Counted on its own, so an invoice with an invoice number and a different
+// document number isn't two invoices.
+const DOCUMENT_NO = /\bdocument\s*(?:no\.?|number|#)\s*[:.]?\s*([A-Z0-9][A-Z0-9/-]{3,})/gi;
 // A number quoted from another invoice, not this one: Smiths Hire prints
 // "Previous invoice number 17V1593269" on a continuing hire (#1165)
 const QUOTED_BEFORE = /\b(?:previous|prior|original|related|earlier|your|credited|replaces?|against|for)\s*$/i;
@@ -37,17 +41,23 @@ const QUOTED_BEFORE = /\b(?:previous|prior|original|related|earlier|your|credite
 /**
  * The distinct invoice numbers printed in `text`, in order. A number repeated
  * on each page of one invoice counts once, and one quoted from another
- * invoice ("Previous invoice number …") doesn't count. Pure.
+ * invoice ("Previous invoice number …") doesn't count. Invoice numbers and
+ * document numbers are counted apart; the longer list is returned. Pure.
  */
 export function invoiceNumbersIn(text) {
-  const seen = [];
   const s = String(text || '');
-  for (const m of s.matchAll(INVOICE_NO)) {
-    if (QUOTED_BEFORE.test(s.slice(Math.max(0, m.index - 20), m.index))) continue;
-    const n = m[1].toUpperCase().replace(/[-/.]+$/, '');
-    if (/\d/.test(n) && !seen.includes(n)) seen.push(n);
-  }
-  return seen;
+  const numbers = (re) => {
+    const seen = [];
+    for (const m of s.matchAll(re)) {
+      if (QUOTED_BEFORE.test(s.slice(Math.max(0, m.index - 20), m.index))) continue;
+      const n = m[1].toUpperCase().replace(/[-/.]+$/, '');
+      if (/\d/.test(n) && !seen.includes(n)) seen.push(n);
+    }
+    return seen;
+  };
+  const byInvoice = numbers(INVOICE_NO);
+  const byDocument = numbers(DOCUMENT_NO);
+  return byDocument.length > byInvoice.length ? byDocument : byInvoice;
 }
 
 /**
