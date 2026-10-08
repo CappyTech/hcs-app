@@ -31,7 +31,7 @@ const BUCKETS = [
       <p class="text-lg font-bold <%= live.clean ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400' %>">
         <%= live.clean ? 'Clean' : `${live.totals.missing + live.totals.extra} mismatch${live.totals.missing + live.totals.extra === 1 ? '' : 'es'}` %>
       </p>
-      <p class="text-xs text-gray-500 dark:text-gray-400"><%= live.totals.matched %> matched · <%= live.totals.pending %> pending · <%= live.resends %> re-send<%= live.resends === 1 ? '' : 's' %> (not comparable)</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400"><%= live.totals.matched %> matched · <%= live.totals.pending %> pending · <% if (live.totals.gone) { %><span title="hcs-app recorded a send for a document since deleted or removed, so there's nothing left to compare"><%= live.totals.gone %> deleted since (not comparable)</span> · <% } %><%= live.resends %> re-send<%= live.resends === 1 ? '' : 's' %> (not comparable)</p>
     </div>
   </div>
 
