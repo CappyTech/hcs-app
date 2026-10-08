@@ -6,7 +6,15 @@ const STATES = {
   sent:            ['In KashFlow', 'green'],
   manual_kashflow: ['Credit note: keyed into KashFlow by hand', 'slate'],
 };
-const [stateLabel, stateColour] = STATES[state] || [kind === 'statement' ? (doc.statementReviewed ? 'Reviewed' : 'Not reviewed yet') : 'No state yet', 'slate'];
+// An excluded invoice keeps its state underneath, but it isn't in that queue (#252)
+const EXCLUDED_LABELS = {
+  original_multiple: 'Original of several invoices',
+  manually_added: 'Keyed into KashFlow by hand',
+  not_for_kashflow: 'Not for KashFlow',
+};
+const excludedLabel = (state === 'awaiting_entry' || state === 'entered') && EXCLUDED_LABELS[doc.excludedReason];
+const [stateLabel, stateColour] = excludedLabel ? [excludedLabel, 'slate']
+  : STATES[state] || [kind === 'statement' ? (doc.statementReviewed ? 'Reviewed' : 'Not reviewed yet') : 'No state yet', 'slate'];
 // Written out in full so Tailwind's build can see every class
 const BADGES = {
   amber: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
@@ -21,12 +29,12 @@ const val = (v) => (v == null ? '' : v);
 const inputCls = (name) => `w-full text-sm border ${err(name) ? 'border-red-400 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-60`;
 const labelCls = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1';
 const disabled = locked ? 'disabled' : '';
-const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statements' : 'needs-entry';
+const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 'statement' ? 'statements' : 'needs-entry';
 %>
 <link rel="stylesheet" href="/resources/vendor/pdfjs/pdf_viewer.css">
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
   <div class="flex flex-wrap items-center gap-3 mb-6">
-    <a href="/paperless/queues/<%= queueBack %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Queues</a>
+    <a href="/paperless/queues<%= queueBack ? `/${queueBack}` : '' %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Queues</a>
     <span class="text-gray-400">/</span>
     <h1 class="text-xl font-bold break-all"><%= title %></h1>
     <span class="<%= badge(stateColour) %>"><%= stateLabel %></span>

@@ -6,6 +6,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
 ### Fixed
 - **Marking a credit note couldn't tick Credit Note in Paperless.** Credit Note (field 58) is a true/false field in Paperless, and hcs-app sent every custom field value as text, so Paperless refused `"true"` ("Error performing bulk edit") and the credit note email wasn't triggered (#253). Values now go in their field's type: true/false for boolean fields, numbers for integer and number fields, text for the rest. The Paperless mock now refuses text in a boolean field, as Paperless does, so the tests would have caught it.
+- **An invoice kept out of the queues still had its queue's badge.** #252, marked not for KashFlow, said "Ready for KashFlow" at the top of its entry screen. The badge now says why it's kept out ("Not for KashFlow", "Keyed into KashFlow by hand" or "Original of several invoices"), and the back link goes to the list of queues instead of one it isn't in.
 
 ## [6.57.0] - 2026-10-08
 
