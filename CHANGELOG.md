@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.57.2] - 2026-10-09
+
+### Fixed
+- **The shadow report called sends for deleted documents mismatches.** #1174, #1175 and #1177 (split copies, deleted in Paperless and then removed from hcs-app) showed as "hcs-app would send, Paperless didn't" for the new document post, though Paperless posts for every document added. With the document gone there's nothing left to compare, so these now count as "deleted since (not comparable)", shown in the summary but not as mismatches.
+
 ## [6.57.1] - 2026-10-08
 
 ### Fixed

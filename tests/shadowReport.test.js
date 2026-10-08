@@ -72,6 +72,18 @@ describe('compareWindow', () => {
     assert.equal(r.kinds.credit_note.extra[0].source, 'app');
   });
 
+  it("doesn't call a send for a deleted or removed document a mismatch (#1174, #1175, #1177)", async () => {
+    // 7 deleted in Paperless; 8 removed from hcs-app altogether; 9 still here
+    const docs = [doc(7, { added: hoursAgo(6), deletedInPaperlessAt: hoursAgo(2) }), doc(9, { added: hoursAgo(6) })];
+    const logs = [row(7, 'new_doc'), row(8, 'new_doc'), row(9, 'new_doc')];
+    const r = await compareWindow({ OcrDocument: siftModel(docs), NotificationLog: siftModel(logs), from, to: now, now, shadowStart: EARLY });
+    assert.deepEqual(bucketIds(r, 'new_doc', 'gone'), [7, 8]);
+    assert.deepEqual(bucketIds(r, 'new_doc', 'extra'), []);
+    assert.deepEqual(bucketIds(r, 'new_doc', 'matched'), [9]);
+    assert.equal(r.totals.gone, 2);
+    assert.equal(r.clean, true);
+  });
+
   it('leaves backfill history out, and ignores sends outside the window', async () => {
     const docs = [
       doc(7, { tags: [TAG.cn] }),                                   // tagged before the shadow run

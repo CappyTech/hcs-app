@@ -17,6 +17,9 @@
  *   missing  Paperless sent, hcs-app recorded nothing        ← a gap in hcs-app
  *   extra    hcs-app would send, Paperless shows no sign     ← hcs-app would over-send
  *   pending  too recent to judge: hcs-app follows Paperless every 15 minutes
+ *   gone     hcs-app recorded a send for a document since deleted in Paperless
+ *            or removed from hcs-app: no copy left to compare, so not a mismatch
+ *            (split copies #1174, #1175, #1177)
  *
  * Rows from the H7 backfill are history, not shadow sends, and are left out.
  * So is everything before shadow recording began (the first non-backfill
@@ -72,13 +75,13 @@ export async function shadowStartedAt(NotificationLog) {
 
 export async function compareWindow({ OcrDocument, NotificationLog, from: requestedFrom, to, now = new Date(), shadowStart }) {
   const kinds = {};
-  const totals = { matched: 0, missing: 0, extra: 0, pending: 0 };
+  const totals = { matched: 0, missing: 0, extra: 0, pending: 0, gone: 0 };
   const started = shadowStart === undefined ? await shadowStartedAt(NotificationLog) : shadowStart;
   // Nothing recorded yet: an empty window rather than everything "missing"
   const from = started ? new Date(Math.max(requestedFrom.getTime(), started.getTime())) : to;
 
   for (const [kind, spec] of Object.entries(COMPARED_KINDS)) {
-    const result = { label: spec.label, workflow: spec.workflow, matched: [], missing: [], extra: [], pending: [] };
+    const result = { label: spec.label, workflow: spec.workflow, matched: [], missing: [], extra: [], pending: [], gone: [] };
 
     // What Paperless sent in the window
     const paperlessDocs = spec.tag
@@ -119,13 +122,17 @@ export async function compareWindow({ OcrDocument, NotificationLog, from: reques
     for (const id of rowDocIds) {
       const doc = docById.get(id);
       const row = rows.find((r) => r.paperlessId === id);
-      const paperlessSent = doc && (spec.tag ? hasTag(doc.tags, spec.tag) : Boolean(doc.added));
+      if (!doc || doc.deletedInPaperlessAt) {
+        result.gone.push(item(doc, kind, { paperlessId: id, at: row.createdAt, source: row.source }));
+        continue;
+      }
+      const paperlessSent = spec.tag ? hasTag(doc.tags, spec.tag) : Boolean(doc.added);
       if (paperlessSent) result.matched.push(item(doc, kind, { at: row.createdAt }));
       else if (recent(row.createdAt, now)) result.pending.push(item(doc, kind, { paperlessId: id, at: row.createdAt }));
       else result.extra.push(item(doc, kind, { paperlessId: id, at: row.createdAt, source: row.source }));
     }
 
-    for (const k of ['matched', 'missing', 'extra', 'pending']) totals[k] += result[k].length;
+    for (const k of ['matched', 'missing', 'extra', 'pending', 'gone']) totals[k] += result[k].length;
     kinds[kind] = result;
   }
 
