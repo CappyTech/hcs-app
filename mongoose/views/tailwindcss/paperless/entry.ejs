@@ -4,7 +4,7 @@ const STATES = {
   awaiting_entry:  ['Needs data entry', 'amber'],
   entered:         ['Ready for KashFlow', 'blue'],
   sent:            ['In KashFlow', 'green'],
-  manual_kashflow: ['Credit note: keyed into KashFlow by hand', 'slate'],
+  manual_kashflow: ['Credit note (not entered in KashFlow)', 'slate'],
 };
 const [stateLabel, stateColour] = STATES[state] || [kind === 'statement' ? (doc.statementReviewed ? 'Reviewed' : 'Not reviewed yet') : 'No state yet', 'slate'];
 // Written out in full so Tailwind's build can see every class
@@ -229,7 +229,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-3 text-sm">
           <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Credit note</h2>
           <% if (doc.creditNote || state === 'manual_kashflow') { %>
-            <p class="text-gray-700 dark:text-gray-300"><i class="bi bi-check-square-fill text-green-600"></i> This is a credit note. It's in neither invoice queue and is keyed into KashFlow by hand.</p>
+            <p class="text-gray-700 dark:text-gray-300"><i class="bi bi-check-square-fill text-green-600"></i> This is a credit note. It's in neither invoice queue, and credit notes aren't entered in KashFlow.</p>
             <% if (isAdmin && state === 'manual_kashflow') { %>
               <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note">
                 <%- include('../partials/csrfHidden') %>

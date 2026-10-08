@@ -23,7 +23,7 @@ export const KF_ELIGIBLE_MATCH = {
   // Ghosts deleted in Paperless can't be actioned — they get their own panel
   deletedInPaperlessAt: null,
   // What hcs-app itself knows (the Paperless tags above lag behind it): a
-  // flagged credit note is keyed into KashFlow by hand, and an excluded
+  // flagged credit note isn't entered in KashFlow at all, and an excluded
   // invoice (tags 4/11, followed since 6.54.0) is never entered or sent
   creditNote: { $ne: true },
   processingState: { $ne: 'manual_kashflow' },
