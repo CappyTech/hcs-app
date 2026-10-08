@@ -214,6 +214,15 @@ describe('invoice field finder', () => {
     assert.equal(parseDate('28/09/2026'), '2026-09-28');
     assert.equal(parseDate('1st September 26'), '2026-09-01');
     assert.equal(parseDate('31/02/2026'), null);
+    // Beers run the date together (#216)
+    assert.equal(parseDate('16Dec25'), '2025-12-16');
+    assert.equal(parseDate('31Jan26'), '2026-01-31');
+    assert.equal(parseDate('28-Sept-2026'), '2026-09-28');
+    assert.equal(parseDate('5 March 2026'), '2026-03-05');
+    // Not months, so not dates
+    assert.equal(parseDate('12Decent25'), null);
+    assert.equal(parseDate('12ABC34'), null);
+    assert.equal(parseReference('3MAR22'), null, 'a date, not an invoice number');
     assert.equal(parseMoney('£1,234.50'), '1234.50');
     assert.equal(parseMoney('(12.00)'), '-12.00');
     assert.equal(parseMoney('3.00') , '3.00');
@@ -329,6 +338,17 @@ describe('"V AT 20.00%" (Beers, #216)', () => {
     assert.equal(f.totalVat?.value, '8.28');
     assert.equal(f.totalGoods.value, '41.40');
     assert.equal(f.invoiceTotal.value, '49.68');
+  });
+
+  it('reads the run-together dates', () => {
+    const f = findFields(toItems([
+      item([390, 700, 70, 'DOCUMENT No.:']), item([480, 700, 40, 'I1389497']),
+      item([390, 685, 30, 'DATE:']), item([485, 685, 35, '16Dec25']),
+      item([40, 130, 150, 'Invoice due for payment by 31Jan26']),
+    ], 1));
+    assert.equal(f.invoiceNumber.value, 'I1389497');
+    assert.equal(f.invoiceDate?.value, '2025-12-16');
+    assert.equal(f.dueDate?.value, '2026-01-31');
   });
 
   it("and the label beats a learned spot that's a line out", () => {
