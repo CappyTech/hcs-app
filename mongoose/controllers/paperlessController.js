@@ -90,7 +90,7 @@ export function sendBlockedMessage(doc) {
   if (!isInvoiceDocument(doc)) return notDraftableMessage(doc);
   const excluded = notForEntryMessage(doc);
   if (excluded) return excluded;
-  if (doc.processingState === 'manual_kashflow') return "This is a credit note. Credit notes aren't entered in KashFlow, so it isn't sent.";
+  if (doc.processingState === 'manual_kashflow') return 'This is a credit note. Credit notes are keyed into KashFlow by hand, not sent from here.';
   return null;
 }
 import hcsSync from '../services/hcsSyncService.js';
