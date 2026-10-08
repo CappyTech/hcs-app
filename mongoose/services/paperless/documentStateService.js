@@ -9,6 +9,7 @@
  *   complete_entry      awaiting_entry          → entered
  *   mark_sent           entered                 → sent
  *   unlink              sent                    → entered   (unlink / orphaned purchase)
+ *   unlink_unentered    sent                    → awaiting_entry   (unlink, nothing was ever entered)
  *   reopen_entry        entered                 → awaiting_entry   (admin)
  *   flag_credit_note    awaiting_entry, entered → manual_kashflow
  *   unflag_credit_note  manual_kashflow         → awaiting_entry   (admin)
@@ -30,6 +31,7 @@ export const TRANSITIONS = {
   complete_entry:     { from: ['awaiting_entry'],           to: 'entered' },
   mark_sent:          { from: ['entered'],                  to: 'sent' },
   unlink:             { from: ['sent'],                     to: 'entered' },
+  unlink_unentered:   { from: ['sent'],                     to: 'awaiting_entry' },
   reopen_entry:       { from: ['entered'],                  to: 'awaiting_entry', adminOnly: true },
   flag_credit_note:   { from: ['awaiting_entry', 'entered'], to: 'manual_kashflow', sets: { creditNote: true } },
   unflag_credit_note: { from: ['manual_kashflow'],          to: 'awaiting_entry', adminOnly: true, sets: { creditNote: false } },

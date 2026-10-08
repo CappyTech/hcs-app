@@ -68,6 +68,16 @@
                 <span class="ml-2"><a href="https://app.kashflow.com/#purchases" target="_blank" class="underline hover:no-underline">Open in KashFlow</a></span>
               <% } %>
             </div>
+            <%# Removing the KashFlow fields in Paperless doesn't stick: hcs-app writes them back while it holds the link %>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/unlink" class="mt-2 flex flex-wrap items-center gap-2 text-xs" data-unlink-form>
+              <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+              <label class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                <input type="checkbox" name="confirm" value="yes" required>
+                This document isn't purchase #<%= doc.kashflowPurchaseNumber || doc.kashflowPurchaseId %>
+              </label>
+              <button type="submit" class="px-2.5 py-1 rounded-lg border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 font-medium">Unlink from KashFlow</button>
+              <span class="text-gray-400 w-full">Removes the link here and in Paperless. Nothing is deleted in KashFlow. It goes back to Needs Data Entry, or to Ready for KashFlow if it was entered.</span>
+            </form>
             <% if (doc.lastSentAt) { %>
               <% const _modifiedAfterSent = doc.modified && doc.modifiedAtLastSend && new Date(doc.modified) > new Date(doc.modifiedAtLastSend); %>
               <div class="text-xs text-green-700 mt-1">Last sent: <%= new Date(doc.lastSentAt).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %> via <%= doc.lastSendMode || '-' %> (status <%= doc.lastSendStatus ?? '-' %>)</div>

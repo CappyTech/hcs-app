@@ -133,7 +133,7 @@ const queueBack = state === 'entered' ? 'ready' : kind === 'statement' ? 'statem
 
       <% if (locked && !locals.excluded) { %>
         <div class="border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300">
-          This invoice is in KashFlow, so what was entered can't be changed. Unlink it from KashFlow first if it needs correcting.
+          This invoice is in KashFlow, so what was entered can't be changed. If it needs correcting, or isn't really that purchase, <a href="/paperless/ocr/<%= doc.paperlessId %>" class="underline font-medium">unlink it from KashFlow on the Details page</a> first.
         </div>
       <% } %>
 
