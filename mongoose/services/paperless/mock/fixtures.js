@@ -125,7 +125,7 @@ export const DOCUMENTS = [
     modified: '2026-09-10T08:30:00Z',
   },
   {
-    // Credit note: flagged, Bev emailed, keyed into KashFlow by hand
+    // Credit note: flagged, Bev emailed, not entered in KashFlow
     id: 9004,
     title: 'CN-0007.pdf',
     correspondent: 1,

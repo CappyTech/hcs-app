@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.56.4] - 2026-10-08
+
+### Fixed
+- **Credit notes were described as "keyed into KashFlow by hand".** Heron doesn't enter supplier credit notes in KashFlow at all; Bev is emailed each one. That phrase appeared on the entry screen's state badge and its Credit note panel, the message after marking one, the type-change message, and the refusal on the KashFlow draft and send. It now says credit notes aren't entered in KashFlow. Nothing changes in behaviour: a flagged credit note is still kept out of both queues and is never sent. The internal state keeps its name, `manual_kashflow`, to avoid a data migration.
+- **PAPERLESS-MIGRATION.md:** PB-12 and the "credit notes resolved" item are corrected, and the Phase 2 credit note draft service is dropped.
+
 ## [6.56.3] - 2026-10-08
 
 ### Fixed
