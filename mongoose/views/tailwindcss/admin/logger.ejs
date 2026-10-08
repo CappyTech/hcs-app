@@ -167,8 +167,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return d.innerHTML;
   }
 
+  // Log timestamps are "DD-MM-YYYY HH:mm:ss" (UK time). new Date() reads that
+  // as MM-DD, so 08-10 (8 Oct) became 10 Aug and showed as "59d ago".
+  function parseLogTime(ts) {
+    const m = /^(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(ts || ''));
+    if (!m) return new Date(ts);
+    return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0));
+  }
+
   function relativeTime(ts) {
-    const diff = Date.now() - new Date(ts).getTime();
+    const diff = Date.now() - parseLogTime(ts).getTime();
     if (isNaN(diff) || diff < 0) return '';
     const s = Math.floor(diff / 1000);
     if (s < 60) return 'just now';
