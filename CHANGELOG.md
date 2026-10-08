@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.56.2] - 2026-10-08
+
+### Fixed
+- **The Unlink from KashFlow wording was nearly unreadable in dark mode.** The green "Linked KashFlow Purchase" box stays pale green in dark mode, but the tick-box wording ("This document isn't purchase #…") turned light grey there, at 1.41:1 contrast, and the help line was 2.43:1. WCAG AA asks for 4.5:1. Both now use the box's own dark greens, about 9.6:1 and 6.8:1, in either theme.
+- **The KashFlow draft's back link pointed at Ready for KashFlow for an invoice already in KashFlow.** It now links to the queue the invoice is in (Needs Data Entry or Ready for KashFlow), or to All documents when it's in none.
+
 ## [6.56.1] - 2026-10-08
 
 ### Fixed
