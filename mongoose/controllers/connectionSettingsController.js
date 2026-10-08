@@ -18,6 +18,7 @@ import axios from 'axios';
 import kashflowSessionService from '../../services/kashflowSessionService.js';
 import smsService from '../../services/smsService.js';
 import emailService from '../../services/emailService.js';
+import paperlessClient from '../services/paperless/paperlessClient.js';
 
 // ── Live connection tests ────────────────────────────────────────────────────
 
@@ -69,20 +70,25 @@ const TESTS = {
     return `Tenant reachable — sign-in will use ${data.authorization_endpoint}. Ensure the app registration's Redirect URI matches this app's /auth/microsoft/callback.`;
   },
 
+  // Through the same client the app uses, so a pass means the app can reach
+  // Paperless: same address (scheme and /api added), Accept header, tunnel.
+  // It used to build its own URL without /api, got Paperless's web page and
+  // failed with "Unexpected token '<'" while the app itself worked.
   paperless: async () => {
-    const base = (configService.get('PAPERLESS_BASE_URL') || '').replace(/\/+$/, '');
-    const token = configService.get('PAPERLESS_TOKEN');
-    if (!base || !token) throw new Error('Paperless base URL or token not configured.');
-    const resp = await fetch(`${base}/documents/?page_size=1`, {
-      headers: {
-        Authorization: `Token ${token}`,
-        Accept: configService.get('PAPERLESS_ACCEPT', 'application/json'),
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!resp.ok) throw new Error(`Paperless responded ${resp.status} ${resp.statusText}.`);
-    const data = await resp.json();
-    return `Paperless reachable — ${data.count ?? '?'} document(s) visible to this token.`;
+    const base = paperlessClient.buildPaperlessBaseURL();
+    if ((!base && process.env.PAPERLESS_SSH_TUNNEL_ENABLED !== 'true') || !configService.get('PAPERLESS_TOKEN')) {
+      throw new Error('Paperless base URL or token not configured.');
+    }
+    const where = base || 'the SSH tunnel';
+    try {
+      const data = await paperlessClient.makeClient().listDocuments({ pageSize: 1, fields: 'id' });
+      return `Paperless reachable at ${where}: ${data.count ?? '?'} document(s) visible to this token.`;
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 401 || status === 403) throw new Error(`${where} refused the token (${status}).`);
+      if (/non-JSON/.test(err.message)) throw new Error(`${where} answered with a web page, not the API. Check the base URL.`);
+      throw new Error(`${where}: ${status ? `HTTP ${status}` : err.message}`);
+    }
   },
 
   kashflow: async () => {

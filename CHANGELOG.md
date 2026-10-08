@@ -9,6 +9,10 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - **Pages affected:** the entry screen, the queues, the shadow report and the KashFlow draft.
   - **Also affected:** the `{{doc_url}}` link in notification emails and Discord posts, which would have carried it once notifications go live.
   - **The fix:** `paperlessUiBase()` now always returns an absolute address, adding `https://` when it's missing, and the draft page uses it instead of its own copy.
+- **The Paperless "Test connection" button failed with "Unexpected token '<', "<!doctype "... is not valid JSON"** while Paperless itself worked.
+  - **Cause:** the test built its own address, `<base URL>/documents/`, without adding `/api` or the scheme as the app's client does. It got Paperless's web page instead of the API.
+  - **The fix:** it now goes through the same client as the rest of the app (`listDocuments`), so a pass means the app can reach Paperless. It names the address it tested, and says plainly when the token is refused or when a web page comes back instead of the API.
+  - **Code:** the client's address builder is exported as `buildPaperlessBaseURL()`.
 
 ## [6.55.2] - 2026-10-08
 

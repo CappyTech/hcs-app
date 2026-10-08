@@ -24,45 +24,50 @@ function _invalidateCfCache() {
   _cfCacheAt  = 0;
 }
 
+/**
+ * The Paperless API address the client uses. Accepts a hostname/IP (with
+ * optional port) or a full http(s) URL, with or without a trailing /api.
+ * Exported so the connection test proves the same address the app uses.
+ * @returns {string|null}
+ */
+export function buildPaperlessBaseURL(env = process.env) {
+  const raw = (env.PAPERLESS_BASE_URL || "").trim();
+  if (!raw) return null;
+  let url = raw;
+  if (!/^https?:\/\//i.test(url)) {
+    // Treat as host or host:port; compose with scheme and optional env port
+    const noPort = String(env.NO_PORT || "").toLowerCase() === "true";
+    const scheme = (
+      env.PAPERLESS_SCHEME ||
+      env.PAPERLESS_PROTOCOL ||
+      (noPort ? "https" : "http")
+    ).toString();
+    const hasExplicitPort = /:[0-9]+$/.test(url);
+    const port = (env.PAPERLESS_PORT || "8000").toString();
+    url = `${scheme}://${url}${noPort || hasExplicitPort ? "" : `:${port}`}`;
+  }
+  // If NO_PORT is true, strip any explicit port from the URL (use standard 80/443 via reverse proxy)
+  const noPort = String(env.NO_PORT || "").toLowerCase() === "true";
+  if (noPort) {
+    try {
+      const u = new URL(url);
+      u.port = "";
+      url = u.origin + u.pathname + u.search + u.hash;
+    } catch (_) {
+      /* ignore parse issues; keep url as-is */
+    }
+  }
+  // Ensure trailing /api
+  if (!/\/api(\/|$)/i.test(url)) url = url.replace(/\/+$/, "") + "/api";
+  return url;
+}
+
 function makeClient() {
   // PAPERLESS_URL=mock swaps in the in-memory fake (development and tests only)
   if (isMockPaperless()) return makeMockClient();
 
   const useSsh = process.env.PAPERLESS_SSH_TUNNEL_ENABLED === "true";
-  // Build a robust baseURL that accepts either a hostname/IP (with optional port)
-  // OR a full http(s) URL (with or without trailing /api)
-  const buildBaseURL = () => {
-    const raw = (process.env.PAPERLESS_BASE_URL || "").trim();
-    if (!raw) return null;
-    let url = raw;
-    if (!/^https?:\/\//i.test(url)) {
-      // Treat as host or host:port; compose with scheme and optional env port
-      const noPort = String(process.env.NO_PORT || "").toLowerCase() === "true";
-      const scheme = (
-        process.env.PAPERLESS_SCHEME ||
-        process.env.PAPERLESS_PROTOCOL ||
-        (noPort ? "https" : "http")
-      ).toString();
-      const hasExplicitPort = /:[0-9]+$/.test(url);
-      const port = (process.env.PAPERLESS_PORT || "8000").toString();
-      url = `${scheme}://${url}${noPort || hasExplicitPort ? "" : `:${port}`}`;
-    }
-    // If NO_PORT is true, strip any explicit port from the URL (use standard 80/443 via reverse proxy)
-    const noPort = String(process.env.NO_PORT || "").toLowerCase() === "true";
-    if (noPort) {
-      try {
-        const u = new URL(url);
-        u.port = "";
-        url = u.origin + u.pathname + u.search + u.hash;
-      } catch (_) {
-        /* ignore parse issues; keep url as-is */
-      }
-    }
-    // Ensure trailing /api
-    if (!/\/api(\/|$)/i.test(url)) url = url.replace(/\/+$/, "") + "/api";
-    return url;
-  };
-  let baseURL = buildBaseURL();
+  let baseURL = buildPaperlessBaseURL();
   const token = process.env.PAPERLESS_TOKEN;
   const accept = process.env.PAPERLESS_ACCEPT || "application/json; version=6";
   const verbose = process.env.PAPERLESS_VERBOSE === "true" || process.env.DEBUG;
@@ -727,4 +732,4 @@ async function warmCfCache(OcrDocument = null) {
   logger.info(`[paperlessClient] CF cache warmed from MongoDB fallback: ${map.size} field definitions`);
 }
 
-export default { makeClient, invalidateCfCache: _invalidateCfCache, warmCfCache };
+export default { makeClient, buildPaperlessBaseURL, invalidateCfCache: _invalidateCfCache, warmCfCache };
