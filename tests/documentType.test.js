@@ -79,6 +79,28 @@ describe('does it look like its type?', () => {
     assert.equal(inv('SALES INVOICE Invoice No 1 ' + 'x '.repeat(500) + 'refer to the reverse of your statement'), null);
   });
 
+  it('a PDF holding several invoices (Smiths Hire)', () => {
+    // #1035: five invoices in one PDF; only the first was ever entered
+    const pages = ['17V1596463', '17V1596464', '17V1596465', '17V1596466', '17V1596712']
+      .map((n) => `HIRE INVOICE Invoice No: ${n} HERON CONSTRUCTIVE SOLUTIONS LTD Account ACME001 TOTAL £18.29`).join(' ');
+    const c = inv(pages);
+    assert.equal(c.code, 'multiple-invoices');
+    assert.equal(c.message, 'This PDF holds 5 invoices (17V1596463, 17V1596464, 17V1596465, 17V1596466, …). '
+      + 'Split it in Paperless so each is entered on its own, and tag this one "original/multiple invoice one pdf".');
+    assert.equal(inv('Invoice No: 17V1588790 TOTAL £215.83 Invoice No: 17V1588791 TOTAL £109.66').message.slice(0, 51),
+      'This PDF holds 2 invoices (17V1588790, 17V1588791).');
+    // Already tagged as the original: that's the point of the tag
+    assert.equal(inv(pages, { excludedReason: 'original_multiple' }), null);
+  });
+
+  it('one invoice is one invoice, even over several pages or quoted by a credit note', () => {
+    // #428: 15V1524408 printed at the top of both of its pages
+    assert.equal(inv('HIRE INVOICE Invoice No: 15V1524408 page 1 … HIRE INVOICE Invoice No: 15V1524408 TOTAL £323.74'), null);
+    assert.deepEqual(typeCheck.invoiceNumbersIn('Invoice No: 15v1524408. Invoice Number 15V1524408'), ['15V1524408']);
+    assert.deepEqual(typeCheck.invoiceNumbersIn('Invoice No: Date 05/10 Invoice #INV-0042 Invoice Number: 260832'), ['INV-0042', '260832']);
+    assert.equal(inv('Credit Number 1601/02004137 Invoice No: 1601/02003407 Total Credit 19.46', { creditNote: true }), null);
+  });
+
   it('an invoice the reader found nothing on', () => {
     const r = (fields) => ({ hasText: true, fields });
     assert.equal(inv('Some text', { reading: r({}) }).code, 'nothing-read');
@@ -135,7 +157,7 @@ describe('the Check the type queue', () => {
 
   it('builds the stored check', () => {
     const c = buildTypeCheck({ documentType: null, added: NOW }, NOW);
-    assert.deepEqual({ ...c, at: undefined }, { version: 2, at: undefined, concern: { code: 'untyped', message: "It has no document type, so it isn't in any queue." }, open: true, confirmed: null });
+    assert.deepEqual({ ...c, at: undefined }, { version: 3, at: undefined, concern: { code: 'untyped', message: "It has no document type, so it isn't in any queue." }, open: true, confirmed: null });
   });
 });
 

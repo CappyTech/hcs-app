@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.56.0] - 2026-10-08
+
+### Added
+- **Check the type now flags a PDF holding several invoices.** It reads the invoice numbers in the document's text ("Invoice No:", "Invoice Number", "Invoice #"), and an invoice waiting for entry or sending that shows two or more different ones goes to the Check the type queue: "This PDF holds 5 invoices (17V1596463, 17V1596464, …). Split it in Paperless so each is entered on its own, and tag this one "original/multiple invoice one pdf"."
+  - **Not counted:** a number repeated on each page of one invoice counts once, a credit note quoting the invoice it credits isn't counted, and documents already tagged as originals are left alone.
+  - **Why:** Smiths Hire sends several invoices in one PDF, and only the first got entered. Eight invoices (£923.31) from #943, #970, #1019 and #1035 never reached KashFlow.
+  - **Live test:** across 427 live purchase and subcontractor invoices (#1–#420 and #950–#1172) it flagged only Smiths Hire multi-invoice PDFs.
+  - **Check version:** now 3, so every document in progress is checked again on the next run.
+
 ## [6.55.5] - 2026-10-08
 
 ### Fixed
