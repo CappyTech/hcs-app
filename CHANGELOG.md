@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.57.1] - 2026-10-08
+
+### Fixed
+- **Marking a credit note couldn't tick Credit Note in Paperless.** Credit Note (field 58) is a true/false field in Paperless, and hcs-app sent every custom field value as text, so Paperless refused `"true"` ("Error performing bulk edit") and the credit note email wasn't triggered (#253). Values now go in their field's type: true/false for boolean fields, numbers for integer and number fields, text for the rest. The Paperless mock now refuses text in a boolean field, as Paperless does, so the tests would have caught it.
+
 ## [6.57.0] - 2026-10-08
 
 ### Added

@@ -14,6 +14,7 @@
 
 import logger from '../../../../services/loggerService.js';
 import fixtures from './fixtures.js';
+import { customFieldValue } from '../customFieldValue.js';
 import { Readable } from 'node:stream';
 import { buildFixturePdf } from './fixturePdf.js';
 
@@ -247,9 +248,17 @@ export function makeMockClient() {
           fid = nextId(state.customFields);
           state.customFields.push({ id: fid, name, data_type: 'string' });
         }
-        add[fid] = String(value);
+        add[fid] = customFieldValue(state.customFields.find((f) => f.id === fid)?.data_type, value);
       }
       if (Object.keys(add).length === 0) return null;
+      // Like Paperless: a value not in its field's type fails the whole bulk edit
+      for (const [fid, value] of Object.entries(add)) {
+        if (state.customFields.find((f) => f.id === Number(fid))?.data_type === 'boolean' && typeof value !== 'boolean') {
+          const err = new Error('Request failed with status code 400');
+          err.response = { status: 400, data: 'Error performing bulk edit, check logs for more detail.' };
+          throw err;
+        }
+      }
       record('POST', '/documents/bulk_edit/', {
         documents: ids,
         method: 'modify_custom_fields',
