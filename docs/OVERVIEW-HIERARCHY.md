@@ -196,7 +196,7 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 **Definition format as built** (differs slightly from the §3 sketch):
 - Node: `{ id, model?, label: { one, many }, icon?, description?, parents: [areaOrNodeId…], overviewPath?, listPath?, actions?: [{ label, href, op }], figures?: { id: { label, where, severity?, hint? } }, summary?: [figureRef], overview?: { figures, breakdowns: [{ label, by, where?, labels? }], lists: [{ figure|where, title?, sort, limit, columns: [{ field, label, format?, ref?: { model, field } }] }], panels: [customPanelName], related: [figureRef] } }`.
 - Figure refs: `'figureId'` (own) or `'nodeId.figureId'`. Group nodes (no `model`) own no figures and borrow others' in `summary`.
-- `where` vocabulary: plain Mongo plus `$withinNextDays`, `$withinPastDays`, `$notAfterDays`, `$beforeNow`, `$set` (resolved at request time).
+- `where` vocabulary: plain Mongo plus `$withinNextDays`, `$withinPastDays`, `$notAfterDays`, `$beforeNow`, `$set`, and `$me` (the viewing user's `_id`, so per-user figures like "your reminders" are possible). All are resolved at request time.
 - Breakdown segments link via the list's own `tabsby` or select `filters` when they cover the field; otherwise unlinked.
 - `?view=` only ever applies a definition from code (unknown/foreign refs ignored), ANDed with the list's normal data scoping.
 
