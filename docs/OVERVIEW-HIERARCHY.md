@@ -166,5 +166,6 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 
 ## 6. Other in-flight work at the time of writing
 
-- **hcs-app PR #148** (`fix/tasks`, 6.58.0, tag `v6.58.0` pushed): task system fixes — recurring tasks, compliance reminder keys, task-due emails. CI was pending when the session ended. Merge with a merge commit or fast-forward, **not squash** (the tag points at the branch commit). Post-deploy notes are in the PR body.
+- **hcs-app PR #148** (6.58.0 task fixes) is **merged**, squashed into master as `f82e5bd`. Post-deploy notes are in the PR body.
+- **Tag to fix (for Jack):** `v6.58.0` still points at the pre-squash branch commit `45a5d0c`, which isn't on master. Re-point it at `f82e5bd` (needs a force-push of the tag). For future squash merges, tag on master after merging.
 - `v6.57.2` tag was missing and has been added.
