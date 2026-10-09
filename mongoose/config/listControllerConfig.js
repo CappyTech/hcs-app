@@ -1,5 +1,6 @@
 import __path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
+import { cisSupplierQuery } from '../../services/cisService.js';
 
 /**
  * listControllerConfig.js
@@ -53,10 +54,9 @@ export default {
     },
     fieldOrder: ['title', 'contractId', 'weekStart', 'status', 'estimatedHours', 'assignedEmployees', 'assignedSubcontractors'],
     referenceFilters: {
-      // Scope the subcontractor dropdown to only suppliers who have a WHT rate set,
-      // which is the defining characteristic of a CIS-registered subcontractor.
-      // Avoids polluting the picker with ordinary trade suppliers.
-      assignedSubcontractors: { WithholdingTaxRate: { $gte: 0 } },
+      // Scope the subcontractor dropdown to CIS subcontractors (cisService.cisSupplierQuery),
+      // keeping ordinary trade suppliers out of the picker.
+      assignedSubcontractors: cisSupplierQuery(),
     },
     fieldTransforms: {
       // These resolve MongoDB ObjectId references stored in the assignment document
@@ -782,17 +782,20 @@ export default {
     deny: ['c', 'r', 'u', 'd', 'l'],
   },
   subcontractor: {
-    // Alias of the supplier collection — subcontractors are suppliers that have a
-    // WithholdingTaxRate set (i.e. are registered under the Construction Industry Scheme).
+    // Alias of the supplier collection — subcontractors are suppliers with CIS details
+    // (registered under the Construction Industry Scheme); see baseFilter.
     // Using an alias means we avoid a separate collection while still giving CIS users
     // a focused view with CIS-relevant fields prominently shown.
     aliasOf: 'supplier',
     layout: 'rows',
     basePath: 'supplier',
-    // baseFilter was previously { Subcontractor: true } but the Subcontractor boolean flag
-    // was unreliable — KashFlow doesn't always set it. WithholdingTaxRate >= 0 is the
-    // definitive indicator: only CIS-registered suppliers have this field populated.
-    baseFilter: { WithholdingTaxRate: { $gte: 0 } },
+    // A subcontractor is a supplier with CIS details: withholding tax applied in KashFlow,
+    // a CIS rate set in hcs-app (Edit CIS details), or HMRC references recorded
+    // (cisService.cisSupplierQuery — the one definition used app-wide).
+    // History: { Subcontractor: true } was unreliable (KashFlow doesn't always set it), and
+    // { WithholdingTaxRate: { $gte: 0 } } matched almost every supplier because KashFlow
+    // stores 0 for suppliers that aren't in CIS at all (Oct 2026: 764 matches incl. Microsoft).
+    baseFilter: cisSupplierQuery(),
     title: 'Subcontractors',
     linkField: 'Name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
@@ -845,7 +848,7 @@ export default {
       { label: 'Edit CIS Details', href: '/subcontractor/assign', icon: 'bi bi-pencil-square', class: 'bg-green-600 hover:bg-green-700' },
     ],
     description: {
-      manage: 'Manage subcontractors (suppliers with WithholdingTaxRate set).',
+      manage: 'Manage subcontractors (suppliers with CIS details).',
     },
   },
   supplier: {

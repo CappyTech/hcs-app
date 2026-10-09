@@ -239,6 +239,13 @@ describe('isCisSupplier', () => {
   it('false for a plain supplier', () => {
     assert.ok(!isCisSupplier({ ApplyWithholdingTax: false, CISRate: null, WithholdingTaxReferences: [] }));
   });
+
+  it('counts a KashFlow WHT rate above 0% but not a bare 0%', () => {
+    assert.ok(isCisSupplier({ WithholdingTaxRate: 20 }));
+    assert.ok(isCisSupplier({ WithholdingTaxRate: 30 }));
+    // KashFlow stores 0 for ordinary suppliers, so 0 alone isn't a subcontractor
+    assert.ok(!isCisSupplier({ WithholdingTaxRate: 0 }));
+  });
 });
 
 describe('isHmrcVerified', () => {

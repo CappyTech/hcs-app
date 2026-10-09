@@ -183,7 +183,9 @@ describe('subcontractors (alias list + KashFlow join)', () => {
     assert.equal(f.value, 7);
     assert.equal(f.href, '/subcontractors?view=subcontractor.active');
     const count = calls.find((c) => c.name === 'supplier' && c.op === 'count');
-    assert.deepStrictEqual(count.filter.$and[1], { WithholdingTaxRate: { $gte: 0 } });
+    // the same rule as the /subcontractors list: cisService.cisSupplierQuery
+    assert.ok(count.filter.$and[1].$or.some((c) => c.ApplyWithholdingTax === true));
+    assert.ok(count.filter.$and[1].$or.some((c) => c.WithholdingTaxRate && c.WithholdingTaxRate.$gt === 0));
   });
 
   it('applies ?view= on the alias list', async () => {

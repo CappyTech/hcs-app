@@ -1,6 +1,8 @@
+import { cisSupplierQuery } from '../../../../services/cisService.js';
+
 // Subcontractors: KashFlow suppliers registered under CIS. Same rows as the
-// /subcontractors alias list (baseWhere mirrors its baseFilter), so every
-// figure opens exactly the subcontractors it counts.
+// /subcontractors alias list (baseWhere is the same cisSupplierQuery as its
+// baseFilter), so every figure opens exactly the subcontractors it counts.
 const HMRC_VERIFIED = {
   WithholdingTaxReferences: {
     $elemMatch: { Name: 'Verification Number', Value: { $regex: '^V\\d{7,10}(\\/[A-Z]{1,2})?$' } },
@@ -11,7 +13,7 @@ export default {
   id: 'subcontractor',
   model: 'supplier',
   listName: 'subcontractor',
-  baseWhere: { WithholdingTaxRate: { $gte: 0 } },
+  baseWhere: cisSupplierQuery(),
   label: { one: 'Subcontractor', many: 'Subcontractors' },
   icon: 'bi-person-gear',
   description: 'CIS-registered suppliers: deduction rates, HMRC verification and what they are owed.',

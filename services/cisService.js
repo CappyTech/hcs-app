@@ -75,12 +75,17 @@ function calculateInvoiceAmounts(
 
 /**
  * Return a Mongoose query filter that matches any supplier identifiable as a
- * CIS subcontractor via any of the known indicator fields.
+ * CIS subcontractor via any of the known indicator fields. This is THE
+ * definition of a subcontractor across the app: the /subcontractors list,
+ * the Subcontractors overview and every subcontractor picker use it.
+ * A WithholdingTaxRate of 0 on its own doesn't count: KashFlow stores 0 for
+ * suppliers that aren't in CIS at all.
  */
 function cisSupplierQuery() {
   return {
     $or: [
       { ApplyWithholdingTax: true },
+      { WithholdingTaxRate: { $gt: 0 } },
       { CISRate: { $ne: null } },
       { WithholdingTaxReferences: { $exists: true, $not: { $size: 0 } } },
     ],
@@ -95,6 +100,7 @@ function cisSupplierQuery() {
 function isCisSupplier(s) {
   return (
     s.ApplyWithholdingTax === true ||
+    Number(s.WithholdingTaxRate) > 0 ||
     s.CISRate != null ||
     (Array.isArray(s.WithholdingTaxReferences) && s.WithholdingTaxReferences.length > 0)
   );

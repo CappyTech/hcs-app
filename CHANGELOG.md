@@ -5,6 +5,10 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ## [6.59.1] - 2026-10-09
 
 ### Fixed
+- **"Subcontractors" included almost every supplier.** A subcontractor was any supplier with a WHT rate of 0% or more. KashFlow stores 0% for suppliers that aren't in CIS at all, so the list, the new overview and the subcontractor pickers counted 764, including Travis Perkins, Microsoft Office and KashFlow itself.
+  - A subcontractor is now a supplier with CIS details: withholding tax applied in KashFlow, a WHT rate above 0%, a CIS rate set in hcs-app (Edit CIS details), or HMRC references recorded.
+  - That one rule (`cisService.cisSupplierQuery`) now drives the Subcontractors list and overview, the subcontractor pickers on the attendance, assignment and other forms, and the assignment list's subcontractor filter.
+  - A gross-paid (0%) subcontractor still counts, as long as it has CIS details.
 - **Overview wording, from checking the live pages.**
   - Area cards ended with "Open tasks", which read like the "Open tasks" figure above it. They now say "Tasks overview".
   - Figures under "Elsewhere" now name where they come from ("Attendance · Awaiting approval", not just "Awaiting approval").
