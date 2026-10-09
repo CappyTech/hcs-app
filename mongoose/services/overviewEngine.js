@@ -296,6 +296,7 @@ const customPanels = {
       rows: rows.map((r) => ({ href: `/employee/read/${r.uuid}`, cells: [formatValue(r.name), formatValue(r.position)] })),
       total,
       href: '/assignments',
+      linkLabel: 'Open assignments',
     };
   },
 };
@@ -349,7 +350,8 @@ async function buildArea(req, areaId, now = new Date()) {
     const href = nodeHref(req, node);
     if (!href) continue; // nothing here the user may open
     const figures = await computeFigures(req, node, node.summary, now);
-    cards.push({ id: node.id, label: node.label.many, icon: node.icon || null, description: node.description || '', href, figures });
+    const linkLabel = href === node.overviewPath ? `${node.label.many} overview` : `All ${node.label.many.toLowerCase()}`;
+    cards.push({ id: node.id, label: node.label.many, icon: node.icon || null, description: node.description || '', href, linkLabel, figures });
   }
   return {
     kind: 'area',
@@ -376,7 +378,9 @@ async function buildNodeOverview(req, nodeId, now = new Date()) {
         return null;
       }
     })),
-    computeFigures(req, node, ov.related, now),
+    computeFigures(req, node, ov.related, now).then((figs) => figs.map((f) => ({
+      ...f, group: registry.getFigure(f.ref)?.node.label.many || null,
+    }))),
   ]);
   return {
     kind: 'node',
