@@ -1,6 +1,6 @@
 import path from 'path';
 import fleetService from '../services/fleetService.js';
-import humanOverviewService from '../services/humanOverviewService.js';
+import overviewEngine from '../services/overviewEngine.js';
 import holidayOverviewService from '../services/holidayOverviewService.js';
 import financeOverviewService from '../services/financeOverviewService.js';
 import projectsOverviewService from '../services/projectsOverviewService.js';
@@ -25,14 +25,22 @@ export const getFleetOverview = async (req, res, next) => {
   }
 };
 
-export const getHumanOverview = async (req, res, next) => {
+// Generated overviews (config/overviews): areas at depth 1, model overviews at depth 2
+export const getGeneratedArea = (areaId) => async (req, res, next) => {
   try {
-    const contractEndDays = parseInt(req.query.days) || 60;
-    const overview = await humanOverviewService.getHumanOverview({ contractEndDays });
-    res.render(path.join('tailwindcss', 'overview', 'human'), {
-      title: 'Human Resources',
-      ...overview,
-    });
+    const page = await overviewEngine.buildArea(req, areaId);
+    if (!page) return next();
+    res.render(path.join('tailwindcss', 'overview', 'generated'), { title: page.title, page });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getGeneratedNode = (nodeId) => async (req, res, next) => {
+  try {
+    const page = await overviewEngine.buildNodeOverview(req, nodeId);
+    if (!page) return next();
+    res.render(path.join('tailwindcss', 'overview', 'generated'), { title: page.title, page });
   } catch (err) {
     next(err);
   }
@@ -164,4 +172,4 @@ export const postProjectMarkComplete = async (req, res, next) => {
   res.redirect('/overview/projects');
 };
 
-export default { getFleetOverview, getHumanOverview, getHolidayOverview, getFinanceOverview, getProjectsOverview, getAdminOverview, getDocumentsOverview, getSubcontractorsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };
+export default { getFleetOverview, getGeneratedArea, getGeneratedNode, getHolidayOverview, getFinanceOverview, getProjectsOverview, getAdminOverview, getDocumentsOverview, getSubcontractorsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };

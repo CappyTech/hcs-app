@@ -493,6 +493,8 @@ const main = async () => {
         : [];
       // Helper: check if user can access a department (usable in templates)
       res.locals.canDept = (dept) => req.user ? rbac.canAccessDepartment(req.user.role, dept, _customPerms) : false;
+      // Helper: check a controlled route (rolePermissionsConfig.routeAccess), the same rule the route enforces
+      res.locals.canRoute = (routePath) => req.user ? rbac.canAccessRoute(req.user.role, routePath, _customPerms) : false;
       // Canonical department registry — drives the top nav in layout.ejs
       res.locals.departmentsConfig = departmentsConfig;
       // Helper: check CRUD access on a model

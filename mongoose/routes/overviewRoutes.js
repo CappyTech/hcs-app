@@ -2,14 +2,20 @@ import express from 'express';
 const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/overviewController.js';
+import rbac from '../config/rolePermissionsConfig.js';
+import overviews from '../config/overviews/index.js';
+
+// Generated overview pages use the route rule for their own path, the same
+// rule the engine uses to decide whether to link to them.
+const routeGuard = (routePath) => (req, res, next) => {
+  if (!req.user) return next({ statusCode: 401, name: 'UnauthorizedError', message: 'User not authenticated' });
+  if (rbac.canAccessRoute(req.user.role, routePath, req.user.customPermissions || {})) return next();
+  return next({ statusCode: 403, name: 'ForbiddenError', message: 'You do not have permission to access this page.' });
+};
 
 router.get('/overview/fleet',
   authService.ensureRole('admin'),
   ctrl.getFleetOverview);
-
-router.get('/overview/human',
-  authService.ensureRole('admin'),
-  ctrl.getHumanOverview);
 
 router.get('/overview/holiday',
   authService.ensureRole('admin'),
@@ -50,5 +56,15 @@ router.get('/overview/payroll',
 router.get('/overview/policies',
   authService.ensureRole('admin'),
   ctrl.getPoliciesOverview);
+
+// ── Generated overviews (config/overviews) ──────────────────────────────
+for (const area of overviews.listAreas()) {
+  router.get(area.path, routeGuard(area.path), ctrl.getGeneratedArea(area.id));
+}
+for (const node of overviews.listNodes()) {
+  if (node.overview && node.overviewPath) {
+    router.get(node.overviewPath, routeGuard(node.overviewPath), ctrl.getGeneratedNode(node.id));
+  }
+}
 
 export default router;

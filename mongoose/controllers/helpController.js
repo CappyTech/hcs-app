@@ -1121,7 +1121,7 @@ const helpContent = [
         description: 'Each department has a dedicated overview that summarises key metrics and alerts at a glance. Overviews are accessible from the home page grid and via direct URL.',
         fields: [
           { name: 'Fleet Overview', required: '', description: '/overview/fleet — vehicles with MOT, insurance, or road tax expiring within the selected threshold (default 30 days). Accepts ?days= to adjust the window.' },
-          { name: 'Human Resources Overview', required: '', description: '/overview/human — employees with contracts ending within 60 days, holiday balances, and headcount by status. Accepts ?days= for the contract-end window.' },
+          { name: 'Human Resources Overview', required: '', description: '/overview/human — summary of Employees, Holiday, Attendance and Tasks. Each figure opens the matching records; each section opens its own overview (/overview/employee, /overview/holiday, /overview/attendance, /overview/task).' },
           { name: 'Finance Overview', required: '', description: '/overview/finance — outstanding invoice totals, overdue invoices, recent payments. Accessible to admin and accountant.' },
           { name: 'Projects Overview', required: '', description: '/overview/projects — active KashFlow projects with linked contracts and assigned subcontractors.' },
           { name: 'Admin Overview', required: '', description: '/overview/admin — open tasks, pending attendance records, user account summary, and system health indicators.' },
