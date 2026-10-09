@@ -2,6 +2,26 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.66.0] - 2026-10-09
+
+### Added
+- **Overview settings can be stored in the database** (`overviewConfig`, INTERNAL). The definitions in `config/overviews/` are now the shipped defaults. A company's changes are stored as overrides and merged on top at startup and on every save.
+  - **What a change can do:** relabel; reorder or hide areas; remove or add figures; change lists, breakdowns and actions.
+  - **New areas and overviews** can be created, with the roles that may open them.
+  - **Reset to default** removes the override.
+  - There's no editor yet; it comes next. Nothing changes until something is stored.
+- **Stored changes are checked strictly before saving:**
+  - only known settings, with the right shapes
+  - filter fields must exist on the model
+  - operators come from a fixed list; nothing that runs code or scans text (`$where`, `$function`, `$expr`, `$regex`) is accepted
+  - totals must be a plain field
+  - custom panels can be removed or reordered but not added
+  - links must stay inside the app
+  - the merged hierarchy must still hang together
+  A stored change that no longer fits after an upgrade is skipped and logged, and the defaults keep working. Changes are recorded in the audit log.
+- **Overview pages are found per request** (`/overview/:id`), so areas and overviews added or hidden in the database work without a restart.
+- **Access for new pages:** built-in pages keep their code rule (`routeAccess`), which a stored change can't widen. Pages created in the database are opened by the roles stored with them.
+
 ## [6.65.0] - 2026-10-09
 
 ### Added

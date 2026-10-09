@@ -87,10 +87,16 @@ function perms(req) {
   return { role: req.user?.role, custom: req.user?.customPermissions || {} };
 }
 
+// One rule for every page: a controlled route (rolePermissionsConfig.routeAccess)
+// when there is one; otherwise, for an area or overview added from the
+// database, the roles stored with it. Anything else stays closed.
 function canOpenPath(req, path) {
   if (!req.user || !path) return false;
   const { role, custom } = perms(req);
-  return rbac.canAccessRoute(role, path, custom);
+  if (rbac.getAllowedRolesForRoute(path) || role === 'admin') return rbac.canAccessRoute(role, path, custom);
+  const def = registry.getAreaByPath(path) || registry.getNodeByOverviewPath(path);
+  if (def && !def._default && Array.isArray(def.roles)) return def.roles.includes(role) || !!custom?.routes?.includes(path);
+  return false;
 }
 
 function canListModel(req, model) {
@@ -538,6 +544,8 @@ function actionsFor(req, node) {
 }
 
 // Home page Overviews grid: every top-level area the user can open, in order.
+function customPanelNames() { return Object.keys(customPanels); }
+
 function homeTiles(req) {
   return registry.listAreas()
     .filter((a) => canOpenPath(req, a.path))
@@ -550,7 +558,7 @@ async function buildArea(req, areaId, now = new Date()) {
   const cards = [];
   for (const childId of area.children || []) {
     const node = registry.getNode(childId);
-    if (!node) continue;
+    if (!node || node.hidden) continue;
     let href = nodeHref(req, node);
     if (!href) continue; // nothing here the user may open
     // Reached through a secondary parent: carry it so the breadcrumb leads back here
@@ -572,7 +580,7 @@ async function buildArea(req, areaId, now = new Date()) {
 
 async function buildNodeOverview(req, nodeId, now = new Date()) {
   const node = registry.getNode(nodeId);
-  if (!node?.overview) return null;
+  if (!node?.overview || node.hidden) return null;
   const ov = node.overview;
   const [figures, breakdowns, lists, panels, related] = await Promise.all([
     computeFigures(req, node, ov.figures, now),
@@ -627,6 +635,6 @@ async function resolveListView(req, listName, now = new Date()) {
 }
 
 export default {
-  compileWhere, breadcrumbs, homeTiles, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels,
+  compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels,
 };
-export { compileWhere, breadcrumbs, homeTiles, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels };
+export { compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels };
