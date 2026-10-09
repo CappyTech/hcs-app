@@ -2,7 +2,6 @@ import path from 'path';
 import overviewEngine from '../services/overviewEngine.js';
 import holidayOverviewService from '../services/holidayOverviewService.js';
 import financeOverviewService from '../services/financeOverviewService.js';
-import projectsOverviewService from '../services/projectsOverviewService.js';
 import kashflowProjectService from '../services/kashflowProjectService.js';
 import adminOverviewService from '../services/adminOverviewService.js';
 import documentsOverviewService from '../services/documentsOverviewService.js';
@@ -47,18 +46,6 @@ export const getFinanceOverview = async (req, res, next) => {
     const overview = await financeOverviewService.getFinanceOverview();
     res.render(path.join('tailwindcss', 'overview', 'finance'), {
       title: 'Finance Overview',
-      ...overview,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const getProjectsOverview = async (req, res, next) => {
-  try {
-    const overview = await projectsOverviewService.getProjectsOverview();
-    res.render(path.join('tailwindcss', 'overview', 'projects'), {
-      title: 'Projects Overview',
       ...overview,
     });
   } catch (err) {
@@ -118,7 +105,7 @@ export const postProjectsFinancialCheck = async (req, res, next) => {
   } catch (err) {
     req.flash?.('error', `Financial check failed: ${err.message}`);
   }
-  res.redirect('/overview/projects');
+  res.redirect('/overview/project');
 };
 
 export const getPoliciesOverview = async (req, res, next) => {
@@ -141,7 +128,7 @@ export const postProjectMarkComplete = async (req, res, next) => {
   } catch (err) {
     req.flash?.('error', `Failed to mark project ${projectNumber} complete: ${err.message}`);
   }
-  res.redirect('/overview/projects');
+  res.redirect('/overview/project');
 };
 
-export default { getGeneratedArea, getGeneratedNode, getHolidayOverview, getFinanceOverview, getProjectsOverview, getAdminOverview, getDocumentsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };
+export default { getGeneratedArea, getGeneratedNode, getHolidayOverview, getFinanceOverview, getAdminOverview, getDocumentsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };

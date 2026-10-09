@@ -148,6 +148,11 @@
       </div>
     <% } %>
 
+    <% (page.partials || []).forEach((p) => { %>
+      <%# Custom panels with their own markup (forms, modals); names come from code, never from input %>
+      <%- include(p.partial, p.locals) %>
+    <% }) %>
+
     <% if (page.related.length) { %>
       <section class="mb-8">
         <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Elsewhere</h2>

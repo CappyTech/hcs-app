@@ -21,10 +21,6 @@ router.get('/overview/finance',
   authService.ensureRoles('admin', 'accountant'),
   ctrl.getFinanceOverview);
 
-router.get('/overview/projects',
-  authService.ensureRole('admin'),
-  ctrl.getProjectsOverview);
-
 router.post('/overview/projects/check',
   authService.ensureRole('admin'),
   ctrl.postProjectsFinancialCheck);

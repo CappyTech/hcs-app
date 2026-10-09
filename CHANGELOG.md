@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.61.0] - 2026-10-09
+
+### Added
+- **Projects is a generated area** (`/overview/projects`) with three new overviews:
+  - **Contracts** (`/overview/contract`): in progress, planned, past their end date, ending or starting in 30 days, and in-progress contracts nobody is assigned to.
+  - **Assignments** (`/overview/assignment`): this week, the next four weeks, and assignments not done with nobody on them.
+  - **KashFlow projects** (`/overview/project`): projects with income below target or ready to close, and work-in-progress value. The financial health table, Run Financial Check and Mark Complete are here, unchanged.
+- **Custom panels can have their own markup** (forms, modals), for features the generic figures and lists can't express. The project financial check is the first.
+
+### Changed
+- After Run Financial Check or Mark Complete you return to the KashFlow projects overview (`/overview/project`). The routes are unchanged.
+
+### Removed
+- The hand-built Projects page (`projectsOverviewService`, `overview/projects.ejs`), replaced by the generated area. Its financial section moved to `overview/panels/projectFinancials.ejs`.
+
 ## [6.60.0] - 2026-10-09
 
 ### Added

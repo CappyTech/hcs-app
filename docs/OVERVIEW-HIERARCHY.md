@@ -218,9 +218,15 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - **Sum figures:** `{ sum: 'field', format: 'money' | unit: 'mi' }` totals the matching rows, and the link still opens those rows.
 - New task figures `task.vehicleReminders` and `task.employeeReminders` (open system tasks matched by `systemKey` prefix) are linked from the Vehicles and Employees overviews.
 
+### Projects — built (6.61.0, branch `feat/overview-projects`)
+
+- Area `projects` (`/overview/projects`) replaces the bespoke page. Nodes `contract`, `assignment` and `project` (KashFlow REST) are in `nodes/projects.js`.
+- `where` accepts `$expr` for comparing two fields (income vs target), passed through unchanged.
+- **Partial panels:** a custom panel may return `{ partial, locals, always }`. `generated.ejs` then includes `overview/<partial>` with those locals; this is for features with forms or modals. `projectFinancials` holds the old financial table plus the Run Financial Check and Mark Complete modals; their POST routes stay at `/overview/projects/check` and `/overview/projects/:number/complete` and now redirect to `/overview/project`.
+
 ### Next
 
-1. Convert the next areas: Projects (contract, assignment, project), Finance (adds the second parent for suppliers), then Payroll/Documents/Policies/Admin with custom panels.
+1. Convert the next areas: Finance (adds the second parent for suppliers), then Payroll/Documents/Policies/Admin with custom panels (partial panels suit their forms).
 3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
 4. Per-user home (§3).
 

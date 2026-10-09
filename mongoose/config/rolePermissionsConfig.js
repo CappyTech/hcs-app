@@ -228,7 +228,9 @@ const routeAccess = {
   // entry: '/overview/finance' and '/overview/payroll' are wider than the
   // rest, and longest-prefix matching would hide that.
   '/overview/admin':          ['admin'],
+  '/overview/assignment':     ['admin'],
   '/overview/attendance':     ['admin'],
+  '/overview/contract':       ['admin'],
   '/overview/documents':      ['admin'],
   '/overview/employee':       ['admin'],
   '/overview/finance':        ['admin', 'accountant'],
@@ -237,6 +239,7 @@ const routeAccess = {
   '/overview/human':          ['admin'],
   '/overview/payroll':        ['admin', 'accountant'],
   '/overview/policies':       ['admin'],
+  '/overview/project':        ['admin'],
   '/overview/projects':       ['admin'],
   '/overview/subcontractors': ['admin', 'accountant', 'hmrc'],
   '/overview/subcontractor':  ['admin', 'accountant', 'hmrc'],

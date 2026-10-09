@@ -249,3 +249,48 @@ describe('fleet', () => {
     assert.deepStrictEqual(count.filter.$or.map((c) => Object.keys(c)[0]), ['motExpiryDate', 'insuranceExpiryDate', 'roadTaxExpiryDate']);
   });
 });
+
+describe('projects', () => {
+  beforeEach(() => {
+    patchModels();
+    mdb.INTERNAL.contract = mockModel('contract', { count: 2, rows: [{ uuid: 'c-1', title: 'Sample job', endDate: new Date('2026-09-30') }] });
+    mdb.INTERNAL.assignment = { ...mockModel('assignment', { count: 1 }), distinct: async () => [] };
+    mdb.REST = {
+      ...mdb.REST,
+      project: mockModel('project', { count: 3, rows: [
+        { Number: 1, Name: 'Below', Status: 'Active', TargetSalesAmount: 1000, ActualSalesAmount: 400 },
+        { Number: 2, Name: 'Met', Status: 'Active', TargetSalesAmount: 500, ActualSalesAmount: 600 },
+        { Number: 3, Name: 'No income', Status: 'Active', TargetSalesAmount: 500, ActualSalesAmount: 0 },
+      ] }),
+    };
+    delete mdb.INTERNAL.project;
+  });
+
+  it('builds the Projects area from contracts, assignments and KashFlow projects', async () => {
+    const page = await engine.buildArea(admin, 'projects');
+    assert.deepStrictEqual(page.cards.map((c) => c.id), ['contract', 'assignment', 'project']);
+  });
+
+  it('passes $expr through untouched for income-against-target figures', () => {
+    const f = registry.getFigure('project.belowTarget');
+    const w = engine.compileWhere(f.figure.where, new Date());
+    assert.deepStrictEqual(w.$expr.$and[1], { $lt: ['$ActualSalesAmount', '$TargetSalesAmount'] });
+    assert.deepStrictEqual(w.Status, { $nin: ['Completed', 'Archived'] });
+  });
+
+  it('keeps the financial check panel (with its actions) on the KashFlow projects overview', async () => {
+    const page = await engine.buildNodeOverview(admin, 'project');
+    assert.equal(page.partials.length, 1);
+    const p = page.partials[0];
+    assert.equal(p.partial, 'panels/projectFinancials');
+    assert.deepStrictEqual(p.locals.restProjectsAtRisk.map((x) => x.Name), ['Below']);
+    assert.deepStrictEqual(p.locals.restProjectsReadyToComplete.map((x) => x.Name), ['Met']);
+    assert.deepStrictEqual(p.locals.restProjects.map((x) => x.Name), ['Below', 'Met']);
+  });
+
+  it('lists in-progress contracts nobody is assigned to', async () => {
+    const page = await engine.buildNodeOverview(admin, 'contract');
+    const panel = page.lists.find((l) => l.title === 'In progress with no current assignments');
+    assert.equal(panel.rows[0].href, '/contract/read/c-1');
+  });
+});

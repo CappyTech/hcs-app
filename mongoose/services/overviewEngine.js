@@ -4,6 +4,7 @@ import registry from '../config/overviews/index.js';
 import listControllerConfig from '../config/listControllerConfig.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
 import logger from '../../services/loggerService.js';
+import kashflowProjectService from './kashflowProjectService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
 
 /**
@@ -344,6 +345,47 @@ customPanels.subcontractorRecentPurchases = async (req, now) => {
   };
 };
 
+// In-progress contracts with no Planned/In Progress assignment against them.
+customPanels.contractsWithoutAssignments = async (req) => {
+  if (!canListModel(req, 'contract') || !canListModel(req, 'assignment')) return null;
+  const Contract = modelFor('contract');
+  const Assignment = modelFor('assignment');
+  if (!Contract || !Assignment) return null;
+  const staffed = await Assignment.distinct('contractId', { status: { $in: ['Planned', 'In Progress'] } });
+  const filter = { status: 'In Progress', _id: { $nin: staffed } };
+  const [rows, total] = await Promise.all([
+    Contract.find(filter).sort({ endDate: 1 }).limit(10).select('uuid title endDate').lean(),
+    Contract.countDocuments(filter),
+  ]);
+  return {
+    title: 'In progress with no current assignments',
+    severity: 'warning',
+    columns: ['Contract', 'Ends'],
+    rows: rows.map((r) => ({ href: `/contract/read/${r.uuid}`, cells: [formatValue(r.title), formatValue(r.endDate, 'date')] })),
+    total,
+    href: '/assignments',
+    linkLabel: 'Open assignments',
+  };
+};
+
+// KashFlow project financial health with its two actions (Run Financial Check,
+// Mark Complete). Rendered by its own partial: it has forms and modals the
+// generic list shape can't express. The POST routes stay in overviewRoutes.
+customPanels.projectFinancials = async (req) => {
+  if (!canListModel(req, 'project') || !canOpenPath(req, '/overview/projects')) return null;
+  const RestProject = modelFor('project');
+  if (!RestProject) return null;
+  const active = await RestProject.find({ Status: { $nin: ['Completed', 'Archived'] } }).sort({ StartDate: -1 }).lean();
+  for (const p of active) p._financials = kashflowProjectService.computeFinancials(p);
+  const restProjectsAtRisk = active.filter((p) => p._financials.atRisk);
+  const restProjectsReadyToComplete = active.filter((p) => !p._financials.atRisk && p._financials.incomeTarget > 0 && p._financials.incomeActual > 0);
+  return {
+    partial: 'panels/projectFinancials',
+    always: true, // keeps the Run Financial Check button even when nothing needs attention
+    locals: { restProjects: [...restProjectsAtRisk, ...restProjectsReadyToComplete], restProjectsAtRisk, restProjectsReadyToComplete },
+  };
+};
+
 // ── Pages ────────────────────────────────────────────────────────────────
 function actionsFor(req, node) {
   const { role, custom } = perms(req);
@@ -404,7 +446,8 @@ async function buildNodeOverview(req, nodeId, now = new Date()) {
     crumbs: breadcrumbs(req, node.id, { from: req.query?.from }).slice(0, -1),
     figures,
     breakdowns: breakdowns.filter((b) => b && b.segments.length),
-    lists: [...lists, ...panels].filter((l) => l && l.total > 0),
+    lists: [...lists, ...panels].filter((l) => l && !l.partial && l.total > 0),
+    partials: panels.filter((p) => p && p.partial),
     related,
     listHref: node.listPath && canListModel(req, node.model) ? node.listPath : null,
     listLabel: `All ${node.label.many.toLowerCase()}`,
