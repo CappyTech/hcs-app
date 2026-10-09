@@ -3,6 +3,7 @@ import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 import listControllerConfig from '../config/listControllerConfig.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
+import overviewEngine from '../services/overviewEngine.js';
 
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
@@ -255,6 +256,22 @@ function countActiveFilters(req, filterConfigs) {
       mongoFilter = applyFilterParams(req, filterConfigs, mongoFilter);
       const activeFilterCount = countActiveFilters(req, filterConfigs);
 
+      // ── Overview hierarchy: ?view=node.figure narrows to that figure's rows
+      // (defined in config/overviews, never taken from the query itself), plus
+      // breadcrumbs back up through the overviews.
+      let overviewCrumbs = null;
+      let activeView = null;
+      try {
+        const ov = await overviewEngine.resolveListView(req, modelName);
+        overviewCrumbs = ov.crumbs;
+        activeView = ov.view;
+        if (ov.filter) {
+          mongoFilter = Object.keys(mongoFilter).length ? { $and: [mongoFilter, ov.filter] } : ov.filter;
+        }
+      } catch (err) {
+        logger.warn(`[listController] overview view for ${modelName} skipped: ${err.message}`);
+      }
+
       const listLayout = req.query.layout || config.layout || 'table';
 
       try {
@@ -343,6 +360,8 @@ function countActiveFilters(req, filterConfigs) {
             totalPages,
             query,
             reqQuery: req.query,
+            overviewCrumbs,
+            activeView,
             actions: config.actions || [],
             canCreate: !denyGuard(config, "c"),
             headerActions: config.headerActions || [],
@@ -518,6 +537,8 @@ function countActiveFilters(req, filterConfigs) {
           totalPages,
           query,
           reqQuery: req.query,
+          overviewCrumbs,
+          activeView,
           model: modelName,
           actions: config.actions || [],
           canCreate: !denyGuard(config, "c"),

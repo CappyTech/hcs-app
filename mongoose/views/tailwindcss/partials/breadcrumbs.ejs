@@ -1,0 +1,20 @@
+<%# Breadcrumbs from overviewEngine: crumbs = [{ label, href|null }], current = page title %>
+<% if (typeof crumbs !== 'undefined' && Array.isArray(crumbs) && crumbs.length) { %>
+  <nav aria-label="Breadcrumb" class="mb-4 print:hidden">
+    <ol class="flex flex-wrap items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+      <% crumbs.forEach((c) => { %>
+        <li class="flex items-center gap-1.5">
+          <% if (c.href) { %>
+            <a href="<%= c.href %>" class="text-green-700 dark:text-green-400 hover:underline"><%= c.label %></a>
+          <% } else { %>
+            <span><%= c.label %></span>
+          <% } %>
+          <i class="bi bi-chevron-right text-[10px] text-gray-400" aria-hidden="true"></i>
+        </li>
+      <% }) %>
+      <% if (typeof current !== 'undefined' && current) { %>
+        <li aria-current="page" class="font-medium text-gray-700 dark:text-gray-200"><%= current %></li>
+      <% } %>
+    </ol>
+  </nav>
+<% } %>

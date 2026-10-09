@@ -1,6 +1,6 @@
 # Overview Hierarchy — Design & Handover
 
-Status: **agreed direction, not started.** Written 2026-10-09 at the end of a session so the work can continue without that session (by a person or a fresh Claude session). Nothing in this document has been built yet.
+Status: **in progress.** Pilot order decided by Jack on 2026-10-09: **HR → Employee → Supplier (subcontractor)**. HR and Employee are built (6.59.0, branch `feat/overview-hierarchy`); Supplier is next. See §7 for what's built and how to continue.
 
 ## 1. The goal (in Jack's words, condensed)
 
@@ -174,3 +174,40 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - **hcs-app PR #148** (6.58.0 task fixes) is **merged**, squashed into master as `f82e5bd`. Post-deploy notes are in the PR body.
 - **Tag to fix (for Jack):** `v6.58.0` still points at the pre-squash branch commit `45a5d0c`, which isn't on master. Re-point it at `f82e5bd` (needs a force-push of the tag). For future squash merges, tag on master after merging.
 - `v6.57.2` tag was missing and has been added.
+
+## 7. Progress & how to continue
+
+### Built (6.59.0, branch `feat/overview-hierarchy`)
+
+| Piece | File |
+|---|---|
+| Areas (depth 1) | `mongoose/config/overviews/areas.js` |
+| Nodes (models or groups) | `mongoose/config/overviews/nodes/*.js`: employee, attendance, task, leave (Holiday group + holidayRequest, employeeHoliday, holiday, holidayCustom), vehicle (list-only) |
+| Registry + `validate()` | `mongoose/config/overviews/index.js` |
+| Engine | `mongoose/services/overviewEngine.js`: `compileWhere`, `breadcrumbs`, `buildArea`, `buildNodeOverview`, `resolveListView`, `customPanels` |
+| Routes | `overviewRoutes.js` registers every area path and node `overviewPath` from the registry (guarded by `routeAccess`) |
+| Template | `views/tailwindcss/overview/generated.ejs` (area + node), `partials/breadcrumbs.ejs` |
+| List integration | `listController.js` applies `?view=` and passes `overviewCrumbs`/`activeView`; `listTable.ejs` shows breadcrumbs + "Showing: …" banner and keeps `view` across paging/tabs/filters |
+| Home tiles | `index.ejs` filters tiles with `res.locals.canRoute` (added in `app.js`) |
+| Permissions | `routeAccess` entries for `/overview/employee`, `/overview/attendance`, `/overview/task` (admin) |
+| Tests | `tests/overviewEngine.test.js` (registry validity, filter vocabulary, breadcrumbs, list views, area + node pages with mocked models) |
+| Removed | `humanOverviewService.js`, `overview/human.ejs` |
+
+**Definition format as built** (differs slightly from the §3 sketch):
+- Node: `{ id, model?, label: { one, many }, icon?, description?, parents: [areaOrNodeId…], overviewPath?, listPath?, actions?: [{ label, href, op }], figures?: { id: { label, where, severity?, hint? } }, summary?: [figureRef], overview?: { figures, breakdowns: [{ label, by, where?, labels? }], lists: [{ figure|where, title?, sort, limit, columns: [{ field, label, format?, ref?: { model, field } }] }], panels: [customPanelName], related: [figureRef] } }`.
+- Figure refs: `'figureId'` (own) or `'nodeId.figureId'`. Group nodes (no `model`) own no figures and borrow others' in `summary`.
+- `where` vocabulary: plain Mongo plus `$withinNextDays`, `$withinPastDays`, `$notAfterDays`, `$beforeNow`, `$set` (resolved at request time).
+- Breakdown segments link via the list's own `tabsby` or select `filters` when they cover the field; otherwise unlinked.
+- `?view=` only ever applies a definition from code (unknown/foreign refs ignored), ANDed with the list's normal data scoping.
+
+**Not verified in a browser:** no local DB in the build session. Templates render with mocked data and all unit tests pass; check `/overview/human`, `/overview/employee`, `/employees?view=employee.contractsEndingSoon` after deploy.
+
+### Next: Supplier (subcontractor)
+
+1. Look at the `supplier` (REST, KashFlow) and `subcontractor` list configs and `subcontractorsOverviewService.js` / `overview/subcontractors.ejs`.
+2. Add a `subcontractors` area (path `/overview/subcontractors`, replacing the bespoke page) and probably a `finance` area stub, with a `supplier` node whose `parents` are both (tests the `from` breadcrumb).
+3. Supplier figures will need REST joins by `SupplierCode`/`SupplierId` (purchases, CIS); add custom panels for anything `where` can't express. Watch the `hmrc`/`accountant` roles: `/overview/subcontractors` is wider than admin, so data scoping matters.
+4. Then convert lists to opt-in definitions (§4 step 3) and the remaining areas; per-user home last.
+
+### Decisions still open
+Q2–Q5 in §5 (home = top-level areas only? Holiday shape? non-admin overviews? config store?). Until answered: home still shows the Holiday tile; Holiday stays the hand-built page as a group node.

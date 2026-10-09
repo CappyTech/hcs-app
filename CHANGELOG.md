@@ -2,6 +2,22 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.59.0] - 2026-10-09
+
+### Added
+- **Overview hierarchy, first area.** Overviews are now generated from definitions in `mongoose/config/overviews/` (see `docs/OVERVIEW-HIERARCHY.md`) and form a chain: home → area → model overview → list. Each level links one level down, and every figure opens its list already filtered to exactly the records it counts (`?view=`), with a "Showing: …" bar and a Show all link.
+- **Human Resources** (`/overview/human`) is the first generated area. It shows Employees, Holiday, Attendance and Tasks, each with its key figures. The Holiday section opens the Holiday overview instead of the holiday records list.
+- **New overviews for Employees, Attendance and Tasks** (`/overview/employee`, `/overview/attendance`, `/overview/task`). Each has figures, breakdowns, lists of what needs attention, and links to related figures in other areas.
+  - Employees: ended and ending fixed-term contracts, right-to-work checks due, recent hires, employees with no current assignment, holiday and attendance waiting for approval, vehicles with an employee.
+- **Breadcrumbs** on generated overviews and on the lists beneath them (e.g. Home › Human Resources › Holiday › Holiday requests).
+
+### Changed
+- The old hand-built HR page and `humanOverviewService` are replaced by the generated area. Its detail moved one level down to the Employee, Attendance and Holiday overviews.
+- Contract-ending figures now count active employees only; an ended contract for someone who has left isn't something to act on.
+
+### Fixed
+- **Home showed overview tiles some users couldn't open.** For example, Holiday was shown to management users although `/overview/holiday` is admin-only. A tile now only appears if the user can open its page, using the same rule as the route.
+
 ## [6.58.0] - 2026-10-09
 
 ### Added

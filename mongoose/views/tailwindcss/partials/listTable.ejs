@@ -56,6 +56,9 @@
       }
     });
   }
+  // Keep an overview view (?view=node.figure) across paging, tabs and filters
+  const _activeView = typeof activeView !== 'undefined' && activeView ? activeView : null;
+  if (_activeView) _fqsParts.push(`view=${encodeURIComponent(_activeView.ref)}`);
   const _fqs = _fqsParts.length ? '&' + _fqsParts.join('&') : '';
 
   // Classify a header field for the rows layout
@@ -75,6 +78,13 @@
   }
 %>
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('breadcrumbs', { crumbs: typeof overviewCrumbs !== 'undefined' ? overviewCrumbs : null, current: title }) %>
+  <% if (_activeView) { %>
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-xl px-4 py-3 text-sm">
+      <span class="text-blue-800 dark:text-blue-300"><i class="bi bi-funnel-fill" aria-hidden="true"></i> Showing: <strong><%= _activeView.label %></strong></span>
+      <a href="<%= _activeView.clearHref %>" class="font-medium text-blue-700 dark:text-blue-300 hover:underline">Show all</a>
+    </div>
+  <% } %>
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
     <!-- Green accent bar -->
     <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
@@ -146,6 +156,7 @@
         </select>
 
         <input type="hidden" name="page" value="1">
+        <% if (_activeView) { %><input type="hidden" name="view" value="<%= _activeView.ref %>"><% } %>
         <% if (typeof listLayout !== 'undefined' && listLayout === 'rows') { %>
           <input type="hidden" name="layout" value="rows">
         <% } %>
@@ -189,6 +200,7 @@
         %>
         <form id="filter-panel" method="GET" action="" class="<%= _hasActiveFilters ? '' : 'hidden' %> mt-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <input type="hidden" name="page" value="1">
+        <% if (_activeView) { %><input type="hidden" name="view" value="<%= _activeView.ref %>"><% } %>
           <input type="hidden" name="limit" value="<%= limit %>">
           <% if (typeof query === 'string' && query) { %><input type="hidden" name="search" value="<%= query %>"><% } %>
           <% if (activeTab) { %><input type="hidden" name="tab" value="<%= activeTab %>"><% } %>

@@ -1,0 +1,19 @@
+/**
+ * Overview hierarchy — areas (depth 1).
+ *
+ * An area groups the nodes (models or model groups) beneath it. Its page is
+ * generated from each child's `summary` figures; nothing here is page code.
+ * Access to an area is the route rule for its `path` in rolePermissionsConfig.
+ *
+ * See docs/OVERVIEW-HIERARCHY.md for the design.
+ */
+export default [
+  {
+    id: 'human',
+    path: '/overview/human',
+    label: 'Human Resources',
+    icon: 'bi-people',
+    description: 'People, holiday, attendance and tasks.',
+    children: ['employee', 'leave', 'attendance', 'task'],
+  },
+];
