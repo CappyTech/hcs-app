@@ -231,7 +231,13 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 
 ### Next
 
-1. Convert the remaining areas: Payroll, Documents, Policies, Admin. These are mostly custom/partial panels (their forms and queues), plus Holiday (still the bespoke `/overview/holiday` behind the `leave` group).
+### Holiday — built (6.64.0, branch `feat/overview-holiday`)
+
+- The `leave` group node has its own generated overview at `/overview/holiday`, which replaces the bespoke page. **Group overviews:** `computeList` takes rows from the figure's own node, so a group can list its children's figures. Group actions name their model (`action.model`).
+- Custom panels `holidayBalances` (entitlement + carry-over − taken, lowest first) and `upcomingHolidays` (bank holidays stored as strings, merged with company holidays, de-duplicated across UK divisions).
+- New filter operator `$afterNow`; new holiday-request figures `onLeaveToday` and `decided30`.
+
+1. Convert the remaining areas: Payroll, Documents, Policies, Admin. These are mostly custom/partial panels (their forms and queues).
 2. ~~Home tiles~~: done in 6.63.0. Q2 is answered (Jack: top-level areas only). `overviewEngine.homeTiles(req)` lists `areas.js` filtered by route access. Areas still hand-built are marked `bespoke: true`: they get no generated route and `buildArea` returns null for them.
 3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
 4. Per-user home (§3).
