@@ -245,6 +245,35 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - The payroll monthly table and RTI banner are the `payrollMonthly` partial panel; `payrollOverviewService` stays to supply it.
 
 1. **Documents stays hand-built for now** (Jack, 2026-10-09: it has specifics). It's the last `bespoke` area.
+
+### Database-backed config — decided 2026-10-09 (Jack)
+
+- **Storage:** overrides on top of the code defaults (not a full copy). Reset = delete the override.
+- **Editor scope:** everything, including creating areas and moving models between areas.
+- **Home pins:** areas, figures and lists, filtered by permission.
+- **Order:** database config first (store, then editor), then per-user home.
+
+#### Store — built (6.66.0, branch `feat/overview-config-store`)
+
+- Model `overviewConfig` (INTERNAL, audited): `{ kind: 'area'|'node', key, custom, override, updatedBy }`, unique on kind + key.
+- `config/overviews/index.js`: code files are the defaults. `buildState(docs)` merges overrides; `applyOverrides(docs)` swaps the live state. Merge rules:
+  - objects merge by key
+  - arrays and `where`/`baseWhere`/`sum` are replaced whole
+  - `null` deletes a key
+  - `hidden` drops an area or node from pages but keeps it in `listAllAreas()` for the editor
+  - `order` positions an area
+- `services/overviewConfigService.js`: `load()` (at startup in app.js, after the settings store), `save()`, `reset()` and `validateOverride()`. The validation whitelist:
+  - overrides of a default may change label, icon, description, parents, summary, figures, overview, actions and hidden
+  - custom nodes may also set model, listPath, overviewPath (`/overview/<key>`) and roles
+  - custom areas need roles
+  - filter operators: `$eq $ne $in $nin $gt $gte $lt $lte $exists $and $or`, plus the relative ones
+  - fields are checked against the model schema
+  - panels can only be removed or reordered
+- Routes: one `GET /overview/:id` resolves areas and node overviews per request. `overviewEngine.canOpenPath` uses `routeAccess` when an entry exists, otherwise the stored roles of a custom area or node.
+
+#### Next
+1. **Editor UI** (`/admin/overviews`, admin): area and node pages with forms, a guided filter builder (field, operator, value), reset buttons, error messages from validation. Forms only; no client fetch (CSP).
+2. **Per-user home:** `user.homeLayout`, role defaults stored in the database, a customise mode on home.
 2. ~~Home tiles~~: done in 6.63.0. Q2 is answered (Jack: top-level areas only). `overviewEngine.homeTiles(req)` lists `areas.js` filtered by route access. Areas still hand-built are marked `bespoke: true`: they get no generated route and `buildArea` returns null for them.
 3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
 4. Per-user home (§3).

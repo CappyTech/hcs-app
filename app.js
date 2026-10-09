@@ -339,6 +339,15 @@ const main = async () => {
       configStore.logMigrationState();
     }
 
+    // Company changes to the overview hierarchy (overviewConfig) on top of the
+    // code defaults. A failure leaves the defaults in place.
+    try {
+      const overviewConfig = (await import('./mongoose/services/overviewConfigService.js')).default;
+      await overviewConfig.load();
+    } catch (e) {
+      logger.warn('[startup] Overview changes not loaded, using defaults: ' + e.message);
+    }
+
     // One-time migration: mark existing users (without a verification token) as email-verified
     try {
       const result = await mdb.INTERNAL.user.updateMany(
