@@ -43,6 +43,7 @@ router.get('/overview/policies',
 
 // ── Generated overviews (config/overviews) ──────────────────────────────
 for (const area of overviews.listAreas()) {
+  if (area.bespoke) continue; // still a hand-built page with its own route above
   router.get(area.path, routeGuard(area.path), ctrl.getGeneratedArea(area.id));
 }
 for (const node of overviews.listNodes()) {

@@ -5,6 +5,11 @@
  * generated from each child's `summary` figures; nothing here is page code.
  * Access to an area is the route rule for its `path` in rolePermissionsConfig.
  *
+ * The home page's Overviews grid is this list, in this order, filtered by the
+ * same route rule. Holiday isn't here: it's reached through Human Resources.
+ * Areas marked `bespoke: true` still have a hand-built page (their own route);
+ * they're listed so home has one source while they wait to be converted.
+ *
  * See docs/OVERVIEW-HIERARCHY.md for the design.
  */
 export default [
@@ -47,5 +52,21 @@ export default [
     icon: 'bi-person-gear',
     description: 'Construction Industry Scheme subcontractors and their verification.',
     children: ['subcontractor'],
+  },
+  {
+    id: 'payroll', path: '/overview/payroll', bespoke: true,
+    label: 'Payroll', icon: 'bi-cash-coin', description: 'Tax year summary, submissions and PAYE.',
+  },
+  {
+    id: 'documents', path: '/overview/documents', bespoke: true,
+    label: 'Documents', icon: 'bi-file-earmark-text', description: 'Paperless documents, queues and data entry.',
+  },
+  {
+    id: 'policies', path: '/overview/policies', bespoke: true,
+    label: 'Policies', icon: 'bi-journal-text', description: 'Company policies and review dates.',
+  },
+  {
+    id: 'admin', path: '/overview/admin', bespoke: true,
+    label: 'Admin', icon: 'bi-shield-check', description: 'Users, roles and two-factor sign-in.',
   },
 ];

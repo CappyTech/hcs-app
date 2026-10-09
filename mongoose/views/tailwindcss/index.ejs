@@ -28,24 +28,8 @@
       </div>
     </div>
 
-    <!-- Overviews -->
-    <%
-      const overviews = [];
-      if (canDept('maintenance'))                    overviews.push({ href: '/overview/fleet',           icon: 'bi-truck',             label: 'Fleet',           desc: 'Vehicles, compliance & assignments' });
-      if (canDept('human-resources'))                overviews.push({ href: '/overview/human',           icon: 'bi-people',            label: 'Human Resources', desc: 'Employees, attendance & holidays' });
-      if (canDept('human-resources') || canDept('management')) overviews.push({ href: '/overview/holiday',   icon: 'bi-calendar-check',    label: 'Holiday',         desc: 'Accrual, requests & approvals' });
-      if (canDept('finance'))                        overviews.push({ href: '/overview/finance',         icon: 'bi-wallet2',           label: 'Finance',         desc: 'Invoices, purchases & overdue' });
-      if (canDept('management'))                     overviews.push({ href: '/overview/projects',        icon: 'bi-clipboard-check',   label: 'Projects',        desc: 'Contracts & assignments' });
-      if (canDept('documents'))                      overviews.push({ href: '/overview/documents',       icon: 'bi-file-earmark-text', label: 'Documents',       desc: 'OCR & paperless sync' });
-      if (canDept('construction-industry-scheme'))   overviews.push({ href: '/overview/subcontractors', icon: 'bi-person-gear',       label: 'Subcontractors',  desc: 'CIS rates & IR35' });
-      if (canDept('payroll') || canDept('finance'))  overviews.push({ href: '/overview/payroll',         icon: 'bi-cash-coin',         label: 'Payroll',         desc: 'Tax year summary, submissions & PAYE' });
-      if (canDept('admin'))                          overviews.push({ href: '/overview/admin',           icon: 'bi-shield-check',      label: 'Admin',           desc: 'Users, roles & 2FA' });
-      // A tile only shows if its page would open: the department check above
-      // decides relevance, the route rule decides access (same rule as the route).
-      for (let i = overviews.length - 1; i >= 0; i--) {
-        if (typeof canRoute === 'function' && !canRoute(overviews[i].href)) overviews.splice(i, 1);
-      }
-    %>
+    <!-- Overviews: the top-level areas from config/overviews/areas.js the user can open -->
+    <% const overviews = typeof overviewTiles !== 'undefined' ? overviewTiles : []; %>
     <% if (overviews.length > 0) { %>
     <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
       <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -56,7 +40,7 @@
           <a href="<%= ov.href %>" class="flex flex-col gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-700 p-4 transition">
             <i class="bi <%= ov.icon %> text-2xl text-green-600 dark:text-green-400"></i>
             <span class="font-semibold text-sm text-gray-900 dark:text-gray-100"><%= ov.label %></span>
-            <span class="text-xs text-gray-500 dark:text-gray-400"><%= ov.desc %></span>
+            <span class="text-xs text-gray-500 dark:text-gray-400"><%= ov.description %></span>
           </a>
         <% } %>
       </div>

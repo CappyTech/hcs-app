@@ -344,3 +344,26 @@ describe('finance (and a node with two parents)', () => {
     assert.ok(h.cards.every((c) => c.id === 'subcontractor' || c.id === 'supplier'));
   });
 });
+
+describe('home tiles', () => {
+  const as = (role) => ({ user: { role, customPermissions: {} }, query: {} });
+
+  it('lists the top-level areas in order, without Holiday', () => {
+    const tiles = engine.homeTiles(admin).map((t) => t.href);
+    assert.deepStrictEqual(tiles, [
+      '/overview/human', '/overview/fleet', '/overview/finance', '/overview/projects', '/overview/subcontractors',
+      '/overview/payroll', '/overview/documents', '/overview/policies', '/overview/admin',
+    ]);
+    assert.ok(!tiles.includes('/overview/holiday'));
+  });
+
+  it('only shows a role the areas it can open', () => {
+    assert.deepStrictEqual(engine.homeTiles(as('accountant')).map((t) => t.label), ['Finance', 'Subcontractors', 'Payroll']);
+    assert.deepStrictEqual(engine.homeTiles(as('hmrc')).map((t) => t.label), ['Subcontractors']);
+    assert.deepStrictEqual(engine.homeTiles(as('employee')), []);
+  });
+
+  it("doesn't generate pages for areas that are still hand-built", async () => {
+    assert.equal(await engine.buildArea(admin, 'payroll'), null);
+  });
+});
