@@ -378,10 +378,12 @@ describe('holiday (a group node with its own overview)', () => {
       { uuid: 'h-2', employeeId: 'e2', entitlementType: 'hours', entitlementHours: 100, carryOverHours: 0, takenHours: 40 },
     ] });
     mdb.INTERNAL.employee = mockModel('employee', { rows: [{ _id: 'e1', name: 'Sample A' }, { _id: 'e2', name: 'Sample B' }] });
-    mdb.INTERNAL.holiday = mockModel('holiday', { rows: [
-      { date: '2026-12-25', title: 'Christmas Day', division: 'england-and-wales' },
-      { date: '2026-12-25', title: 'Christmas Day', division: 'scotland' },
-    ] });
+    mdb.INTERNAL.holiday = { ...mockModel('holiday'), find: (filter) => {
+      calls.push({ name: 'holiday', op: 'find', filter });
+      const rows = [{ date: '2026-12-25', title: 'Christmas Day', division: 'england-and-wales' }];
+      const c = { sort: () => c, limit: () => c, select: () => c, lean: async () => rows };
+      return c;
+    } };
     mdb.INTERNAL.holidayCustom = mockModel('holidayCustom', { rows: [{ date: new Date('2026-12-24'), title: 'Office closed' }] });
   });
 
@@ -404,10 +406,11 @@ describe('holiday (a group node with its own overview)', () => {
     assert.equal(bal.severity, 'warning'); // Sample A has 2 days left
   });
 
-  it('lists each upcoming holiday once, bank and company together', async () => {
+  it('lists England and Wales bank holidays with company holidays, in date order', async () => {
     const page = await engine.buildNodeOverview(admin, 'leave');
     const up = page.lists.find((l) => l.title === 'Holidays in the next 60 days');
     assert.deepStrictEqual(up.rows.map((r) => r.cells[1]), ['Office closed', 'Christmas Day']);
+    assert.equal(calls.find((c) => c.name === 'holiday').filter.division, 'england-and-wales');
   });
 });
 

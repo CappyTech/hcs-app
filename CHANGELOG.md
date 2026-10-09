@@ -13,6 +13,9 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - **Overviews for records with their own pages.** A node whose list is a custom page uses that page's route rule for access (`listRoute`), links rows to its own detail page (`readPath`), and opens the list page from its figures.
 - **"This tax year"** in overview filters (`$currentTaxYear`).
 
+### Fixed
+- **The Holiday overview listed Scottish and Northern Irish bank holidays.** Upcoming holidays now use England and Wales, like the rest of the app.
+
 ### Removed
 - The hand-built Payroll, Policies and Admin pages (`adminOverviewService`, `policiesOverviewService`, and their templates). The payroll monthly table moved to `overview/panels/payrollMonthly.ejs`.
 
