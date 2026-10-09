@@ -25,6 +25,14 @@ export default [
     children: ['vehicle', 'vehicleService', 'vehicleFuelLog', 'vehicleMileageLog'],
   },
   {
+    id: 'finance',
+    path: '/overview/finance',
+    label: 'Finance',
+    icon: 'bi-wallet2',
+    description: 'Invoices, purchases, customers, suppliers and quotes.',
+    children: ['invoice', 'purchase', 'customer', 'supplier', 'subcontractor', 'quote'],
+  },
+  {
     id: 'projects',
     path: '/overview/projects',
     label: 'Projects',

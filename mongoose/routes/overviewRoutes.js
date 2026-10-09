@@ -17,10 +17,6 @@ router.get('/overview/holiday',
   authService.ensureRole('admin'),
   ctrl.getHolidayOverview);
 
-router.get('/overview/finance',
-  authService.ensureRoles('admin', 'accountant'),
-  ctrl.getFinanceOverview);
-
 router.post('/overview/projects/check',
   authService.ensureRole('admin'),
   ctrl.postProjectsFinancialCheck);

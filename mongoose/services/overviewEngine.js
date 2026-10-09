@@ -407,10 +407,12 @@ async function buildArea(req, areaId, now = new Date()) {
   for (const childId of area.children || []) {
     const node = registry.getNode(childId);
     if (!node) continue;
-    const href = nodeHref(req, node);
+    let href = nodeHref(req, node);
     if (!href) continue; // nothing here the user may open
+    // Reached through a secondary parent: carry it so the breadcrumb leads back here
+    if (href === node.overviewPath && node.parents?.[0] !== area.id) href += `?from=${encodeURIComponent(area.id)}`;
     const figures = await computeFigures(req, node, node.summary, now);
-    const linkLabel = href === node.overviewPath ? `${node.label.many} overview` : `All ${node.label.many.toLowerCase()}`;
+    const linkLabel = href.split('?')[0] === node.overviewPath ? `${node.label.many} overview` : `All ${node.label.many.toLowerCase()}`;
     cards.push({ id: node.id, label: node.label.many, icon: node.icon || null, description: node.description || '', href, linkLabel, figures });
   }
   return {

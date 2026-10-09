@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.62.0] - 2026-10-09
+
+### Added
+- **Finance is a generated area** (`/overview/finance`), with new overviews for:
+  - **Invoices** (`/overview/invoice`): owed to us, unpaid and overdue (count and value), invoiced and paid in the last 30 days.
+  - **Purchases** (`/overview/purchase`): what we owe, unpaid and overdue, due in the next 7 days, purchases in the last 30 days.
+  - **Customers** (`/overview/customer`): customers owing us, slow payers (average over 60 days to pay), new customers.
+  - **Suppliers** (`/overview/supplier`): suppliers we owe and how much, suppliers with no purchase in a year.
+  - **Quotes** (`/overview/quote`): waiting on an answer (count and value), waiting over 30 days, accepted in the last 90 days.
+  Each overview links to related figures in other areas, such as the customers behind overdue invoices.
+- **Subcontractors now sits under two areas, Finance and Subcontractors.** Its breadcrumb follows the way you came in (Home › Finance › Subcontractors, or Home › Subcontractors). Finance and the Finance overviews are open to admin and accountant users.
+
+### Removed
+- The hand-built Finance page (`financeOverviewService`, `overview/finance.ejs`), replaced by the generated area.
+
 ## [6.61.0] - 2026-10-09
 
 ### Added

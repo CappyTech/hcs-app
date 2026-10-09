@@ -299,3 +299,48 @@ describe('projects', () => {
     assert.equal(panel.rows[0].href, '/contract/read/c-1');
   });
 });
+
+describe('finance (and a node with two parents)', () => {
+  beforeEach(() => {
+    patchModels();
+    const rest = {};
+    for (const m of ['invoice', 'purchase', 'customer', 'supplier', 'quote']) {
+      rest[m] = { ...mockModel(m, { count: 3 }), aggregate: async (p) => { calls.push({ name: m, op: 'aggregate', pipeline: p }); return p[1].$group._id === null ? [{ total: 1500.25 }] : []; }, distinct: async () => [] };
+      delete mdb.INTERNAL[m];
+    }
+    mdb.REST = { ...mdb.REST, ...rest };
+  });
+
+  it('builds Finance with Subcontractors as a second-parent child that remembers the way in', async () => {
+    const page = await engine.buildArea(admin, 'finance');
+    assert.deepStrictEqual(page.cards.map((c) => c.id), ['invoice', 'purchase', 'customer', 'supplier', 'subcontractor', 'quote']);
+    const sub = page.cards.find((c) => c.id === 'subcontractor');
+    assert.equal(sub.href, '/overview/subcontractor?from=finance');
+    assert.equal(sub.linkLabel, 'Subcontractors overview');
+    assert.equal(page.cards.find((c) => c.id === 'invoice').href, '/overview/invoice'); // primary parent: no from
+  });
+
+  it('follows the way in for breadcrumbs, and the primary parent otherwise', async () => {
+    const viaFinance = await engine.buildNodeOverview({ ...admin, query: { from: 'finance' } }, 'subcontractor');
+    assert.deepStrictEqual(viaFinance.crumbs.map((c) => c.label), ['Home', 'Finance']);
+    const direct = await engine.buildNodeOverview(admin, 'subcontractor');
+    assert.deepStrictEqual(direct.crumbs.map((c) => c.label), ['Home', 'Subcontractors']);
+  });
+
+  it('sums what customers owe from unpaid, unarchived invoices', async () => {
+    const f = await engine.computeFigure(admin, 'invoice.owed', new Date());
+    assert.equal(f.display, '£1,500.25');
+    const agg = calls.find((c) => c.name === 'invoice' && c.op === 'aggregate');
+    assert.deepStrictEqual(agg.pipeline[0].$match.Status, { $nin: ['Paid', 'Credited', 'Cancelled'] });
+    assert.deepStrictEqual(agg.pipeline[0].$match.IsArchived, { $ne: true });
+  });
+
+  it('keeps accountants out of nothing they can open, and HMRC out of Finance', async () => {
+    const accountant = { user: { role: 'accountant', customPermissions: {} }, query: {} };
+    const a = await engine.buildArea(accountant, 'finance');
+    assert.ok(a.cards.length >= 5);
+    const hmrc = { user: { role: 'hmrc', customPermissions: {} }, query: {} };
+    const h = await engine.buildArea(hmrc, 'finance');
+    assert.ok(h.cards.every((c) => c.id === 'subcontractor' || c.id === 'supplier'));
+  });
+});
