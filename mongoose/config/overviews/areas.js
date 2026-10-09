@@ -25,6 +25,14 @@ export default [
     children: ['vehicle', 'vehicleService', 'vehicleFuelLog', 'vehicleMileageLog'],
   },
   {
+    id: 'projects',
+    path: '/overview/projects',
+    label: 'Projects',
+    icon: 'bi-clipboard-check',
+    description: 'Contracts, weekly assignments and KashFlow projects.',
+    children: ['contract', 'assignment', 'project'],
+  },
+  {
     id: 'subcontractors',
     path: '/overview/subcontractors',
     label: 'Subcontractors',
