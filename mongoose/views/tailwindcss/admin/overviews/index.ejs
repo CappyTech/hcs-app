@@ -24,6 +24,16 @@
     <a href="/admin" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">← Admin</a>
   </div>
 
+  <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 space-y-2">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Home page by role</h2>
+    <p class="text-sm text-gray-600 dark:text-gray-400">The tiles, figures and lists each role starts with on home. People can still customise their own, and only ever see what they may open.</p>
+    <div class="flex flex-wrap gap-2">
+      <% roles.filter((r) => r !== 'none').forEach((r) => { %>
+        <a href="/admin/overviews/home/<%= r %>" class="px-3 py-1.5 rounded-lg text-sm border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300"><%= r %></a>
+      <% }) %>
+    </div>
+  </section>
+
   <section class="space-y-4">
     <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Areas (home page order)</h2>
     <% areas.forEach((a) => { %>

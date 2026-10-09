@@ -28,15 +28,44 @@
       </div>
     </div>
 
-    <!-- Overviews: the top-level areas from config/overviews/areas.js the user can open -->
-    <% const overviews = typeof overviewTiles !== 'undefined' ? overviewTiles : []; %>
-    <% if (overviews.length > 0) { %>
+    <!-- Overviews: this person's pinned figures, lists and area tiles (homeLayoutService) -->
+    <% const _home = typeof home !== 'undefined' && home ? home : { tiles: [], figures: [], lists: [] }; %>
+    <% if (_home.figures.length) { %>
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
+      <% _home.figures.forEach((f) => { %>
+        <%
+          const _hot = f.value > 0 && (f.severity === 'critical' || f.severity === 'warning');
+          const _card = !_hot ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
+            : f.severity === 'critical' ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20';
+          const _val = f.value === null ? 'text-gray-400 dark:text-gray-500'
+            : !_hot ? 'text-gray-900 dark:text-gray-100' : f.severity === 'critical' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400';
+        %>
+        <a href="<%= f.href %>" title="<%= f.hint || 'Show these in the list' %>" class="block border rounded-2xl shadow-sm p-4 hover:shadow-md hover:border-green-400 dark:hover:border-green-600 transition <%= _card %>">
+          <p class="text-2xl font-bold tabular-nums <%= _val %>"><%= f.display || (f.value === null ? '—' : Number(f.value).toLocaleString('en-GB')) %></p>
+          <p class="mt-1 text-xs font-medium text-gray-600 dark:text-gray-400 leading-snug"><%= f.label %></p>
+          <% if (f.group) { %><p class="text-[11px] text-gray-400 dark:text-gray-500"><%= f.group %></p><% } %>
+        </a>
+      <% }) %>
+    </div>
+    <% } %>
+
+    <% if (_home.lists.length) { %>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <% _home.lists.forEach((l) => { %>
+        <%- include('overview/partials/listCard', { l }) %>
+      <% }) %>
+    </div>
+    <% } %>
+
+    <% if (isAuthenticated) { %>
     <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-      <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
-        <i class="bi bi-speedometer2 text-green-600 dark:text-green-400"></i> Overviews
+      <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center justify-between gap-2">
+        <span class="flex items-center gap-2"><i class="bi bi-speedometer2 text-green-600 dark:text-green-400"></i> Overviews</span>
+        <a href="/home/customise" class="text-xs font-medium text-green-700 dark:text-green-400 hover:underline inline-flex items-center gap-1"><i class="bi bi-sliders" aria-hidden="true"></i> Customise home</a>
       </div>
+      <% if (_home.tiles.length) { %>
       <div class="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        <% for (const ov of overviews) { %>
+        <% for (const ov of _home.tiles) { %>
           <a href="<%= ov.href %>" class="flex flex-col gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-700 p-4 transition">
             <i class="bi <%= ov.icon %> text-2xl text-green-600 dark:text-green-400"></i>
             <span class="font-semibold text-sm text-gray-900 dark:text-gray-100"><%= ov.label %></span>
@@ -44,6 +73,9 @@
           </a>
         <% } %>
       </div>
+      <% } else { %>
+      <p class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">No overview tiles are pinned. <a href="/home/customise" class="text-green-700 dark:text-green-400 hover:underline">Choose some</a>.</p>
+      <% } %>
     </div>
     <% } %>
 

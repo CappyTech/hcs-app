@@ -115,35 +115,7 @@
     <% if (page.lists.length) { %>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <% page.lists.forEach((l) => { %>
-          <% const _border = l.severity === 'critical' ? 'border-red-300 dark:border-red-700' : l.severity === 'warning' ? 'border-amber-300 dark:border-amber-700' : 'border-gray-200 dark:border-gray-700'; %>
-          <section class="bg-white dark:bg-gray-900 border <%= _border %> rounded-2xl shadow-sm overflow-hidden min-w-0">
-            <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-              <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= l.title %></h2>
-              <% if (l.href) { %><a href="<%= l.href %>" class="text-xs font-medium text-green-700 dark:text-green-400 hover:underline whitespace-nowrap"><%= l.linkLabel || ('View all ' + _fmt(l.total)) %> <i class="bi bi-arrow-right" aria-hidden="true"></i></a><% } %>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="min-w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <% l.columns.forEach((c) => { %>
-                      <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= c %></th>
-                    <% }) %>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                  <% l.rows.forEach((r) => { %>
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <% r.cells.forEach((cell, i) => { %>
-                        <td class="px-4 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                          <% if (i === 0 && r.href) { %><a href="<%= r.href %>" class="font-medium text-green-700 dark:text-green-400 hover:underline"><%= cell %></a><% } else { %><%= cell %><% } %>
-                        </td>
-                      <% }) %>
-                    </tr>
-                  <% }) %>
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <%- include('partials/listCard', { l }) %>
         <% }) %>
       </div>
     <% } %>

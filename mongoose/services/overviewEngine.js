@@ -543,8 +543,20 @@ function actionsFor(req, node) {
   });
 }
 
-// Home page Overviews grid: every top-level area the user can open, in order.
 function customPanelNames() { return Object.keys(customPanels); }
+
+// Panels shaped like a list, which home can pin. Panels with their own partial
+// (forms, modals) only make sense on their overview, so they aren't listed.
+const pinnablePanels = {
+  unassignedEmployees: 'Active employees with no current assignment',
+  subcontractorRecentPurchases: 'Subcontractor purchases in the last 30 days',
+  contractsWithoutAssignments: 'Contracts in progress with no current assignments',
+  holidayBalances: 'Holiday balances',
+  upcomingHolidays: 'Holidays in the next 60 days',
+  activeSessions: 'Signed-in sessions',
+};
+
+// Home page Overviews grid: every top-level area the user can open, in order.
 
 function homeTiles(req) {
   return registry.listAreas()
@@ -635,6 +647,6 @@ async function resolveListView(req, listName, now = new Date()) {
 }
 
 export default {
-  compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels,
+  compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, computeList, customPanels, pinnablePanels, canSeeNode,
 };
-export { compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels };
+export { compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, computeList, customPanels, pinnablePanels, canSeeNode };
