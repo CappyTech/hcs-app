@@ -400,9 +400,16 @@ function actionsFor(req, node) {
   });
 }
 
+// Home page Overviews grid: every top-level area the user can open, in order.
+function homeTiles(req) {
+  return registry.listAreas()
+    .filter((a) => canOpenPath(req, a.path))
+    .map((a) => ({ href: a.path, label: a.label, icon: a.icon || 'bi-grid', description: a.description || '' }));
+}
+
 async function buildArea(req, areaId, now = new Date()) {
   const area = registry.getArea(areaId);
-  if (!area) return null;
+  if (!area || area.bespoke) return null;
   const cards = [];
   for (const childId of area.children || []) {
     const node = registry.getNode(childId);
@@ -483,6 +490,6 @@ async function resolveListView(req, listName, now = new Date()) {
 }
 
 export default {
-  compileWhere, breadcrumbs, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels,
+  compileWhere, breadcrumbs, homeTiles, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels,
 };
-export { compileWhere, breadcrumbs, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels };
+export { compileWhere, breadcrumbs, homeTiles, buildArea, buildNodeOverview, resolveListView, computeFigure, customPanels };

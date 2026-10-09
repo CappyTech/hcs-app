@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.63.0] - 2026-10-09
+
+### Changed
+- **The home page's Overviews grid shows the top-level areas only, from the same list that defines the hierarchy** (`config/overviews/areas.js`). The grid is Human Resources, Fleet, Finance, Projects, Subcontractors, Payroll, Documents, Policies and Admin.
+  - Holiday is no longer on home; it's reached through Human Resources.
+  - Policies, which wasn't on home before, now is.
+- **Tiles are shown by one rule: whether you can open the page.** The old extra department check is gone. An accountant sees Finance, Subcontractors and Payroll; HMRC sees Subcontractors.
+- Payroll, Documents, Policies and Admin are still hand-built pages, listed as areas until they're converted.
+
 ## [6.62.0] - 2026-10-09
 
 ### Added

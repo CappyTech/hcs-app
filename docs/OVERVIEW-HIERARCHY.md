@@ -232,9 +232,9 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 ### Next
 
 1. Convert the remaining areas: Payroll, Documents, Policies, Admin. These are mostly custom/partial panels (their forms and queues), plus Holiday (still the bespoke `/overview/holiday` behind the `leave` group).
-2. Generate the home tiles from `areas.js`, and settle Q2 (top-level areas only).
+2. ~~Home tiles~~: done in 6.63.0. Q2 is answered (Jack: top-level areas only). `overviewEngine.homeTiles(req)` lists `areas.js` filtered by route access. Areas still hand-built are marked `bespoke: true`: they get no generated route and `buildArea` returns null for them.
 3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
 4. Per-user home (§3).
 
 ### Decisions still open
-Q2–Q5 in §5 (home = top-level areas only? Holiday shape? non-admin overviews? config store?). Until answered: home still shows the Holiday tile; Holiday stays the hand-built page as a group node.
+Q3–Q5 in §5 (Holiday shape? non-admin overviews? config store?). Q2 is answered: home shows top-level areas only. Holiday stays the hand-built page behind the `leave` group node.
