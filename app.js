@@ -80,6 +80,7 @@ import __bankRoutes from './mongoose/routes/bankRoutes.js';
 import __paymentRoutes from './mongoose/routes/paymentRoutes.js';
 import __accountantRoutes from './mongoose/routes/accountantRoutes.js';
 import __overviewRoutes from './mongoose/routes/overviewRoutes.js';
+import __overviewEditorRoutes from './mongoose/routes/overviewEditorRoutes.js';
 import __ssoRoutes from './mongoose/routes/ssoRoutes.js';
 import __microsoftSsoRoutes from './mongoose/routes/microsoftSsoRoutes.js';
 import __helpRoutes from './mongoose/routes/helpRoutes.js';
@@ -602,6 +603,7 @@ const main = async () => {
     appRouter.use('/', __paymentRoutes);
     appRouter.use('/', __accountantRoutes);
     appRouter.use('/', __overviewRoutes);
+    appRouter.use('/', __overviewEditorRoutes);
     appRouter.use('/', __ssoRoutes);
     appRouter.use('/', __helpRoutes);
     appRouter.use('/', __payrollRoutes);

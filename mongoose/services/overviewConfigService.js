@@ -141,8 +141,8 @@ function checkNodeOverride(key, ov, { custom, base, customPanels }) {
     if (!isPlain(ov.label)) fail(`${key}: label needs a singular and a plural.`);
     text(ov.label.one, 60, `${key} label`); text(ov.label.many, 60, `${key} label`);
   }
-  if (ov.icon !== undefined && !ICON.test(ov.icon)) fail(`${key}: icon must be a Bootstrap icon name like bi-people.`);
-  if (ov.description !== undefined) text(ov.description, 300, `${key} description`);
+  if (ov.icon !== undefined && ov.icon !== null && !ICON.test(ov.icon)) fail(`${key}: icon must be a Bootstrap icon name like bi-people.`);
+  if (ov.description !== undefined && ov.description !== null) text(ov.description, 300, `${key} description`);
   if (ov.hidden !== undefined && typeof ov.hidden !== 'boolean') fail(`${key}: hidden must be true or false.`);
   if (ov.parents !== undefined && (!Array.isArray(ov.parents) || !ov.parents.every((p) => ID.test(p)))) fail(`${key}: parents must be a list of area or node ids.`);
   if (ov.summary !== undefined && (!Array.isArray(ov.summary) || ov.summary.length > 8 || !ov.summary.every(figureRefOk))) fail(`${key}: summary must be up to 8 figure references.`);
@@ -217,8 +217,8 @@ function checkAreaOverride(key, ov, { custom }) {
   if (custom) allowed.push('roles');
   for (const k of Object.keys(ov)) if (!allowed.includes(k)) fail(`${key}: "${k}" can't be changed here.`);
   if (ov.label !== undefined) text(ov.label, 60, `${key} label`);
-  if (ov.icon !== undefined && !ICON.test(ov.icon)) fail(`${key}: icon must be a Bootstrap icon name like bi-people.`);
-  if (ov.description !== undefined) text(ov.description, 300, `${key} description`);
+  if (ov.icon !== undefined && ov.icon !== null && !ICON.test(ov.icon)) fail(`${key}: icon must be a Bootstrap icon name like bi-people.`);
+  if (ov.description !== undefined && ov.description !== null) text(ov.description, 300, `${key} description`);
   if (ov.children !== undefined && (!Array.isArray(ov.children) || ov.children.length > 12 || !ov.children.every((c) => ID.test(c)))) fail(`${key}: children must be up to 12 node ids.`);
   if (ov.order !== undefined && !(Number.isInteger(ov.order) && ov.order >= 0 && ov.order <= 999)) fail(`${key}: order must be a whole number from 0 to 999.`);
   if (ov.hidden !== undefined && typeof ov.hidden !== 'boolean') fail(`${key}: hidden must be true or false.`);
