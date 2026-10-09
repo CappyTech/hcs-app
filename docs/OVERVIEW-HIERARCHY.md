@@ -237,7 +237,14 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - Custom panels `holidayBalances` (entitlement + carry-over − taken, lowest first) and `upcomingHolidays` (bank holidays stored as strings, merged with company holidays, de-duplicated across UK divisions).
 - New filter operator `$afterNow`; new holiday-request figures `onLeaveToday` and `decided30`.
 
-1. Convert the remaining areas: Payroll, Documents, Policies, Admin. These are mostly custom/partial panels (their forms and queues).
+### Payroll, Policies, Admin — built (6.65.0, branch `feat/overview-payroll-policies-admin`)
+
+- Areas `payroll` (nodes `payrollRun`, `payrollSubmission`), `policies` (`policyDocument`) and `admin` (`user`; sessions are a count-only panel because session records are never listable). Defined in `nodes/payroll.js`, `nodes/policies.js` and `nodes/user.js`.
+- **Route-guarded nodes:** `listRoute` makes access follow a controlled route instead of a model rule. Payroll is open to accountants by route, not by model. Data scoping is skipped for these nodes, because the route grants the whole set. Figures open the list page (custom pages can't take `?view=`). `readPath: '/x/:uuid'` sets the row link, and `readPath: false` means no link.
+- `$currentTaxYear` resolves to `'YYYY/YY'` via `taxService.calculateTaxYearAndMonth`. `routeAccess` now mirrors the `/payroll/runs` and `/payroll/submissions` guards.
+- The payroll monthly table and RTI banner are the `payrollMonthly` partial panel; `payrollOverviewService` stays to supply it.
+
+1. **Documents stays hand-built for now** (Jack, 2026-10-09: it has specifics). It's the last `bespoke` area.
 2. ~~Home tiles~~: done in 6.63.0. Q2 is answered (Jack: top-level areas only). `overviewEngine.homeTiles(req)` lists `areas.js` filtered by route access. Areas still hand-built are marked `bespoke: true`: they get no generated route and `buildArea` returns null for them.
 3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
 4. Per-user home (§3).

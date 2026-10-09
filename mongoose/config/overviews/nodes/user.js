@@ -1,11 +1,36 @@
-// Users: list-only node for now (Admin area not converted yet).
+// Users: the Admin area's main node. Sign-in health (verified email, two-factor),
+// roles, and accounts waiting for a role.
 export default {
   id: 'user',
   model: 'user',
   label: { one: 'User', many: 'Users' },
-  parents: [],
+  icon: 'bi-person-badge',
+  description: 'Accounts, roles, verified email and two-factor sign-in.',
+  parents: ['admin'],
+  overviewPath: '/overview/user',
   listPath: '/users',
+  actions: [{ label: 'Add user', href: '/user/create', op: 'c' }],
   figures: {
+    all: { label: 'Users', where: {} },
+    awaitingRole: { label: 'Waiting for a role', hint: 'Signed up but have no role yet', severity: 'warning', where: { role: 'none' } },
+    unverified: { label: 'Email not verified', severity: 'warning', where: { emailVerified: { $ne: true } } },
+    without2FA: { label: 'Without two-factor sign-in', severity: 'warning', where: { role: { $ne: 'none' }, totpSecret: { $set: false } } },
+    new30: { label: 'Joined in the last 30 days', where: { createdAt: { $withinPastDays: 30 } } },
+    idle90: { label: 'Not signed in for 90 days', where: { role: { $ne: 'none' }, lastLoginAt: { $notAfterDays: -90 } } },
     subcontractorPortal: { label: 'Subcontractor portal users', where: { role: 'subcontractor' } },
+  },
+  summary: ['all', 'awaitingRole', 'without2FA'],
+  overview: {
+    figures: ['all', 'awaitingRole', 'unverified', 'without2FA', 'new30', 'idle90'],
+    breakdowns: [{ label: 'By role', by: 'role' }],
+    lists: [
+      { figure: 'awaitingRole', sort: { createdAt: -1 }, limit: 10,
+        columns: [{ field: 'username', label: 'User' }, { field: 'createdAt', label: 'Joined', format: 'date' }] },
+      { figure: 'without2FA', sort: { username: 1 }, limit: 10,
+        columns: [{ field: 'username', label: 'User' }, { field: 'role', label: 'Role' }, { field: 'lastLoginAt', label: 'Last sign-in', format: 'date' }] },
+      { figure: 'idle90', sort: { lastLoginAt: 1 }, limit: 10,
+        columns: [{ field: 'username', label: 'User' }, { field: 'role', label: 'Role' }, { field: 'lastLoginAt', label: 'Last sign-in', format: 'date' }] },
+    ],
+    panels: ['activeSessions'],
   },
 };

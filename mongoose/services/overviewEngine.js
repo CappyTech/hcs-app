@@ -5,7 +5,10 @@ import listControllerConfig from '../config/listControllerConfig.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
 import logger from '../../services/loggerService.js';
 import kashflowProjectService from './kashflowProjectService.js';
+import payrollOverviewService from './payrollOverviewService.js';
+import currencyService from '../../services/currencyService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
+import taxService from '../../services/taxService.js';
 
 /**
  * Overview engine: turns the definitions in config/overviews into page data.
@@ -29,6 +32,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 //   { $afterNow: true }     → now or later
 //   { $set: true|false }    → field has / has no value
 //   { $me: true }           → equals the viewing user's _id (e.g. "your tasks")
+//   { $currentTaxYear: true } → the UK tax year now, as payroll stores it ('2026/27')
 const RELATIVE = {
   $withinNextDays: (n, now) => ({ $gte: now, $lte: new Date(now.getTime() + n * DAY_MS) }),
   $withinPastDays: (n, now) => ({ $gte: new Date(now.getTime() - n * DAY_MS), $lte: now }),
@@ -38,6 +42,10 @@ const RELATIVE = {
   $set: (v) => (v ? { $ne: null } : null),
   // No user → match nothing rather than everything
   $me: (_v, _now, ctx) => (ctx?.userId ? { $eq: ctx.userId } : { $in: [] }),
+  $currentTaxYear: (_v, now) => {
+    const { taxYear } = taxService.calculateTaxYearAndMonth(now);
+    return { $eq: `${taxYear}/${String(taxYear + 1).slice(-2)}` };
+  },
 };
 
 function compileWhere(where = {}, now = new Date(), ctx = {}) {
@@ -91,15 +99,31 @@ function canListModel(req, model) {
   return rbac.canAccess(role, model, 'l', custom).allowed;
 }
 
+// Can the user see this node's records? Most nodes use the generic list and
+// the model rule. A node whose list is a custom page guarded by a route
+// (`listRoute`, e.g. payroll runs) uses that route's rule instead: that's what
+// decides who may read those records.
+function canSeeNode(req, node) {
+  if (!node?.model) return false;
+  if (node.listRoute) return canOpenPath(req, node.listRoute);
+  return canListModel(req, node.model);
+}
+
 // The figure's condition AND the node's base filter AND the user's data scope;
-// null when they can't list it. `baseWhere` mirrors an alias list's baseFilter
-// (e.g. subcontractors = suppliers with a WHT rate) so counts match the list.
-async function scopedFilter(req, model, where, now, baseWhere = null) {
-  const scope = await scopeQuery(req, model, 'l');
-  if (scope === null) return null;
+// null when they can't see it. `baseWhere` mirrors an alias list's baseFilter
+// (e.g. subcontractors = suppliers with CIS details) so counts match the list.
+// Route-guarded nodes have no per-record scoping: the route grants the whole set.
+async function scopedFilter(req, node, where, now) {
+  let scope = {};
+  if (!node.listRoute) {
+    scope = await scopeQuery(req, node.model, 'l');
+    if (scope === null) return null;
+  } else if (!canSeeNode(req, node)) {
+    return null;
+  }
   const ctx = { userId: req.user?._id };
   const own = compileWhere(where, now, ctx);
-  const base = baseWhere ? compileWhere(baseWhere, now, ctx) : {};
+  const base = node.baseWhere ? compileWhere(node.baseWhere, now, ctx) : {};
   const parts = [own, base].filter((p) => Object.keys(p).length);
   const compiled = parts.length > 1 ? { $and: parts } : (parts[0] || {});
   if (!Object.keys(scope).length) return compiled;
@@ -110,12 +134,21 @@ async function scopedFilter(req, model, where, now, baseWhere = null) {
 // Where a node leads: its overview if the user can open it, else its list.
 function nodeHref(req, node) {
   if (node.overviewPath && canOpenPath(req, node.overviewPath)) return node.overviewPath;
-  if (node.model && node.listPath && canListModel(req, node.model)) return node.listPath;
+  if (node.model && node.listPath && canSeeNode(req, node)) return node.listPath;
   return null;
 }
 
+// Custom list pages (listRoute) don't take ?view=, so their figures open the
+// list itself; the overview's own lists show the matching rows.
 function figureHref(node, figureId) {
+  if (node.listRoute) return node.listPath;
   return `${node.listPath}?view=${encodeURIComponent(`${node.id}.${figureId}`)}`;
+}
+
+// A row's detail page: `readPath` with :uuid for custom pages, else the generic read page.
+function readHref(node, row) {
+  if (!row?.uuid || node.readPath === false) return null;
+  return node.readPath ? node.readPath.replace(':uuid', encodeURIComponent(row.uuid)) : `/${node.model}/read/${row.uuid}`;
 }
 
 // ── Breadcrumbs ──────────────────────────────────────────────────────────
@@ -146,7 +179,7 @@ async function computeFigure(req, ref, now) {
   const found = registry.getFigure(ref);
   if (!found) return null;
   const { node, figureId, figure } = found;
-  if (!canListModel(req, node.model)) return null;
+  if (!canSeeNode(req, node)) return null;
   const base = {
     ref, label: figure.label, hint: figure.hint || null, severity: figure.severity || null,
     href: figureHref(node, figureId), value: null, display: null,
@@ -154,7 +187,7 @@ async function computeFigure(req, ref, now) {
   const Model = modelFor(node.model);
   if (!Model) return base;
   try {
-    const filter = await scopedFilter(req, node.model, figure.where, now, node.baseWhere);
+    const filter = await scopedFilter(req, node, figure.where, now);
     if (filter === null) return null;
     if (figure.sum) {
       // A total over the matching rows (e.g. fuel spend); the link still opens those rows
@@ -200,7 +233,7 @@ async function computeBreakdown(req, node, bd, now) {
   const Model = modelFor(node.model);
   if (!Model) return null;
   try {
-    const filter = await scopedFilter(req, node.model, bd.where, now, node.baseWhere);
+    const filter = await scopedFilter(req, node, bd.where, now);
     if (filter === null) return null;
     const groups = await Model.aggregate([
       { $match: filter },
@@ -261,12 +294,12 @@ async function computeList(req, ownerNode, list, now) {
   const figure = list.figure ? registry.getFigure(fullRef(ownerNode, list.figure)) : null;
   // Rows come from the figure's model: a group node's lists borrow other nodes' figures
   const node = figure ? figure.node : ownerNode;
-  if (!node.model || !canListModel(req, node.model)) return null;
+  if (!canSeeNode(req, node)) return null;
   const Model = modelFor(node.model);
   if (!Model) return null;
   const where = figure ? figure.figure.where : list.where;
   try {
-    const filter = await scopedFilter(req, node.model, where, now, node.baseWhere);
+    const filter = await scopedFilter(req, node, where, now);
     if (filter === null) return null;
     const [rows, total] = await Promise.all([
       Model.find(filter).sort(list.sort || { createdAt: -1 }).limit(list.limit || 10).lean(),
@@ -280,7 +313,7 @@ async function computeList(req, ownerNode, list, now) {
       severity: figure?.figure.severity || null,
       columns: columns.map((c) => c.label),
       rows: rows.map((r) => ({
-        href: r.uuid ? `/${node.model}/read/${r.uuid}` : null,
+        href: readHref(node, r),
         cells: columns.map((c) => {
           const raw = getPath(r, c.field);
           if (c.ref) return formatValue(lookups[c.field]?.[String(raw)] ?? null);
@@ -464,6 +497,35 @@ customPanels.upcomingHolidays = async (req, now) => {
   };
 };
 
+// RTI deadline and the month-by-month table for this tax year, rendered by its
+// own partial (moved from the old Payroll page). Same access as the runs list.
+customPanels.payrollMonthly = async (req) => {
+  if (!canOpenPath(req, '/payroll/runs')) return null;
+  const o = await payrollOverviewService.getPayrollOverview();
+  return {
+    partial: 'panels/payrollMonthly',
+    always: true,
+    locals: { nextDeadline: o.nextDeadline, monthlyRows: o.monthlyRows, taxMonth: o.taxMonth, taxYear: o.taxYear, formatCurrency: currencyService.formatCurrency },
+  };
+};
+
+// Signed-in sessions right now. Session records are never listable (they hold
+// auth state), so this is a count with no link.
+customPanels.activeSessions = async (req, now) => {
+  if (req.user?.role !== 'admin') return null;
+  const Session = modelFor('session');
+  if (!Session) return null;
+  const count = await Session.countDocuments({ expires: { $gte: now } });
+  return {
+    title: 'Signed-in sessions',
+    severity: null,
+    columns: ['Active now'],
+    rows: [{ href: null, cells: [String(count)] }],
+    total: 1,
+    href: null,
+  };
+};
+
 // ── Pages ────────────────────────────────────────────────────────────────
 function actionsFor(req, node) {
   const { role, custom } = perms(req);
@@ -536,7 +598,7 @@ async function buildNodeOverview(req, nodeId, now = new Date()) {
     lists: [...lists, ...panels].filter((l) => l && !l.partial && l.total > 0),
     partials: panels.filter((p) => p && p.partial),
     related,
-    listHref: node.listPath && canListModel(req, node.model) ? node.listPath : null,
+    listHref: node.listPath && canSeeNode(req, node) ? node.listPath : null,
     listLabel: `All ${node.label.many.toLowerCase()}`,
     actions: actionsFor(req, node),
   };
