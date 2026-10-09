@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.64.0] - 2026-10-09
+
+### Added
+- **The Holiday overview is generated** (`/overview/holiday`, under Human Resources). It shows:
+  - holiday requests to approve, people on holiday today, approved holiday starting in the next 30 days, and requests decided in the last 30 days, each opening the matching requests
+  - lists of the requests behind each
+  - current holiday balances, lowest first (entitlement plus carry-over, minus taken), flagged when someone has 3 or fewer left
+  - bank and company holidays in the next 60 days, each listed once
+- **Group overviews.** A node that groups several models can have its own overview, with lists drawn from its children's figures.
+- **"Now or later" dates** in overview filters (`$afterNow`).
+
+### Removed
+- The hand-built Holiday page (`holidayOverviewService`, `overview/holiday.ejs`), replaced by the generated overview.
 ## [6.63.1] - 2026-10-09
 
 ### Security

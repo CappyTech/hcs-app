@@ -26,6 +26,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 //   { $withinPastDays: n }  → now − n days … now
 //   { $notAfterDays: n }    → anything up to now + n days (includes the past)
 //   { $beforeNow: true }    → before now
+//   { $afterNow: true }     → now or later
 //   { $set: true|false }    → field has / has no value
 //   { $me: true }           → equals the viewing user's _id (e.g. "your tasks")
 const RELATIVE = {
@@ -33,6 +34,7 @@ const RELATIVE = {
   $withinPastDays: (n, now) => ({ $gte: new Date(now.getTime() - n * DAY_MS), $lte: now }),
   $notAfterDays: (n, now) => ({ $ne: null, $lte: new Date(now.getTime() + n * DAY_MS) }),
   $beforeNow: (_v, now) => ({ $ne: null, $lt: now }),
+  $afterNow: (_v, now) => ({ $ne: null, $gte: now }),
   $set: (v) => (v ? { $ne: null } : null),
   // No user → match nothing rather than everything
   $me: (_v, _now, ctx) => (ctx?.userId ? { $eq: ctx.userId } : { $in: [] }),
@@ -255,10 +257,13 @@ async function resolveRefs(rows, columns) {
   return lookups;
 }
 
-async function computeList(req, node, list, now) {
+async function computeList(req, ownerNode, list, now) {
+  const figure = list.figure ? registry.getFigure(fullRef(ownerNode, list.figure)) : null;
+  // Rows come from the figure's model: a group node's lists borrow other nodes' figures
+  const node = figure ? figure.node : ownerNode;
+  if (!node.model || !canListModel(req, node.model)) return null;
   const Model = modelFor(node.model);
   if (!Model) return null;
-  const figure = list.figure ? registry.getFigure(fullRef(node, list.figure)) : null;
   const where = figure ? figure.figure.where : list.where;
   try {
     const filter = await scopedFilter(req, node.model, where, now, node.baseWhere);
@@ -397,13 +402,75 @@ customPanels.projectFinancials = async (req) => {
   };
 };
 
+// Current-period holiday balances, lowest first. Remaining is worked out
+// (entitlement + carry-over − taken), so it can't be a plain figure.
+const LOW_BALANCE = 3;
+customPanels.holidayBalances = async (req, now) => {
+  if (!canListModel(req, 'employeeHoliday')) return null;
+  const EmployeeHoliday = modelFor('employeeHoliday');
+  const Employee = modelFor('employee');
+  if (!EmployeeHoliday || !Employee) return null;
+  const records = await EmployeeHoliday.find({ periodStart: { $lte: now }, periodEnd: { $gte: now } }).lean();
+  const emps = await Employee.find({ _id: { $in: records.map((r) => r.employeeId).filter(Boolean) } }).select('name').lean();
+  const names = Object.fromEntries(emps.map((e) => [String(e._id), e.name]));
+  const rows = records.map((h) => {
+    const hours = h.entitlementType === 'hours';
+    const entitlement = (hours ? h.entitlementHours : h.entitlementDays) || 0;
+    const carry = (hours ? h.carryOverHours : h.carryOverDays) || 0;
+    const taken = (hours ? h.takenHours : h.takenDays) || 0;
+    return { uuid: h.uuid, name: names[String(h.employeeId)] || 'Unknown', unit: hours ? 'h' : 'd', entitlement: entitlement + carry, taken, remaining: entitlement + carry - taken };
+  }).sort((a, b) => a.remaining - b.remaining);
+  const low = rows.filter((r) => r.remaining <= LOW_BALANCE).length;
+  return {
+    title: low ? `Holiday balances (${low} at ${LOW_BALANCE} or fewer left)` : 'Holiday balances',
+    severity: low ? 'warning' : null,
+    columns: ['Employee', 'Entitlement', 'Taken', 'Remaining'],
+    rows: rows.slice(0, 15).map((r) => ({
+      href: r.uuid ? `/employeeHoliday/read/${r.uuid}` : null,
+      cells: [r.name, `${r.entitlement}${r.unit}`, `${r.taken}${r.unit}`, `${r.remaining}${r.unit}`],
+    })),
+    total: rows.length,
+    href: '/employeeHolidays',
+    linkLabel: `All ${rows.length} holiday records`,
+  };
+};
+
+// Bank holidays (stored as YYYY-MM-DD strings) and company holidays (Dates), merged.
+customPanels.upcomingHolidays = async (req, now) => {
+  const Holiday = modelFor('holiday');
+  const HolidayCustom = modelFor('holidayCustom');
+  const horizon = new Date(now.getTime() + 60 * DAY_MS);
+  const items = [];
+  if (Holiday && canListModel(req, 'holiday')) {
+    const govt = await Holiday.find({ date: { $gte: now.toISOString().slice(0, 10), $lte: horizon.toISOString().slice(0, 10) } }).sort({ date: 1 }).lean();
+    for (const h of govt) items.push({ date: new Date(`${h.date}T00:00:00`), title: h.title, kind: 'Bank holiday' });
+  }
+  if (HolidayCustom && canListModel(req, 'holidayCustom')) {
+    const custom = await HolidayCustom.find({ date: { $gte: now, $lte: horizon } }).sort({ date: 1 }).lean();
+    for (const h of custom) items.push({ date: h.date, title: h.title, kind: 'Company' });
+  }
+  items.sort((a, b) => a.date - b.date);
+  // Bank holidays are listed once per UK division; one row per day and name is enough
+  const seen = new Set();
+  const unique = items.filter((i) => { const k = `${formatValue(i.date, 'date')}|${i.title}`; if (seen.has(k)) return false; seen.add(k); return true; });
+  return {
+    title: 'Holidays in the next 60 days',
+    severity: null,
+    columns: ['Date', 'Holiday', 'Type'],
+    rows: unique.map((i) => ({ href: null, cells: [formatValue(i.date, 'date'), i.title, i.kind] })),
+    total: unique.length,
+    href: '/holidays',
+    linkLabel: 'All bank holidays',
+  };
+};
+
 // ── Pages ────────────────────────────────────────────────────────────────
 function actionsFor(req, node) {
   const { role, custom } = perms(req);
   // An action is shown only if its page would open: a controlled route's rule, or the model operation
   return (node.actions || []).filter((a) => {
     if (a.route) return canOpenPath(req, a.route);
-    return !a.op || rbac.canAccess(role, node.model, a.op, custom).allowed;
+    return !a.op || rbac.canAccess(role, a.model || node.model, a.op, custom).allowed;
   });
 }
 
