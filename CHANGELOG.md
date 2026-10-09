@@ -2,6 +2,20 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.60.0] - 2026-10-09
+
+### Added
+- **Fleet is a generated area** (`/overview/fleet`) with four new overviews:
+  - **Vehicles** (`/overview/vehicle`): MOT, insurance or tax expired or due in 30 days, vehicles off the road, who has each vehicle, leases ending, and breakdowns by status, type, fuel and ownership.
+  - **Services** (`/overview/vehicleService`): services booked or in progress, next services due, MOT fails, spend over the last 30 days and the last year.
+  - **Fuel** (`/overview/vehicleFuelLog`): spend, litres and fill-ups over the last 30 days, and fuel paid personally (to reimburse).
+  - **Mileage** (`/overview/vehicleMileageLog`): journeys, miles and claimable miles over the last 30 days.
+- **Totals in overviews** (spend, litres, miles). Like counts, each total opens the records it adds up.
+- **Open compliance reminders** now appear under "Elsewhere": vehicle reminders on the Vehicles overview, HR reminders on the Employees overview. Each opens the matching tasks.
+
+### Removed
+- The hand-built Fleet page (`fleetService`, `overview/fleet.ejs`), replaced by the generated area.
+
 ## [6.59.1] - 2026-10-09
 
 ### Fixed

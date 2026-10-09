@@ -212,10 +212,15 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - `listController`'s alias handler applies `?view=` and breadcrumbs too.
 - **Two-parent test still pending:** a plain `supplier` node (all suppliers, `/suppliers`) under a generated Finance area would give Suppliers two parents. Do it when Finance is converted.
 
+### Fleet — built (6.60.0, branch `feat/overview-fleet`)
+
+- Area `fleet` (`/overview/fleet`) replaces the bespoke page (`fleetService` removed). Nodes `vehicle`, `vehicleService`, `vehicleFuelLog` and `vehicleMileageLog` are defined in `nodes/vehicle.js` and `nodes/fleetLogs.js`, each with its own overview.
+- **Sum figures:** `{ sum: 'field', format: 'money' | unit: 'mi' }` totals the matching rows, and the link still opens those rows.
+- New task figures `task.vehicleReminders` and `task.employeeReminders` (open system tasks matched by `systemKey` prefix) are linked from the Vehicles and Employees overviews.
+
 ### Next
 
-1. Get Jack to check the pilot pages on the live app (PR from `feat/overview-hierarchy`).
-2. Convert the next areas: Fleet (vehicle node exists as list-only), Projects, Finance (adds the second parent for suppliers), then Payroll/Documents/Policies/Admin with custom panels.
+1. Convert the next areas: Projects (contract, assignment, project), Finance (adds the second parent for suppliers), then Payroll/Documents/Policies/Admin with custom panels.
 3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
 4. Per-user home (§3).
 

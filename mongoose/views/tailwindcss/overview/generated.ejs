@@ -64,7 +64,7 @@
               <li>
                 <a href="<%= f.href %>" class="flex items-center justify-between gap-4 px-5 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
                   <span class="text-sm text-gray-700 dark:text-gray-300"><%= f.label %></span>
-                  <span class="text-lg font-semibold tabular-nums <%= _sevValue(f) %>"><%= _fmt(f.value) %></span>
+                  <span class="text-lg font-semibold tabular-nums <%= _sevValue(f) %>"><%= f.display || _fmt(f.value) %></span>
                 </a>
               </li>
             <% }) %>
@@ -82,7 +82,7 @@
         <% page.figures.forEach((f) => { %>
           <a href="<%= f.href %>" title="<%= f.hint || ('Show these in the list') %>"
              class="block border rounded-2xl shadow-sm p-4 hover:shadow-md hover:border-green-400 dark:hover:border-green-600 transition <%= _sevCard(f) %>">
-            <p class="text-2xl font-bold tabular-nums <%= _sevValue(f) %>"><%= _fmt(f.value) %></p>
+            <p class="text-2xl font-bold tabular-nums <%= _sevValue(f) %>"><%= f.display || _fmt(f.value) %></p>
             <p class="mt-1 text-xs font-medium text-gray-600 dark:text-gray-400 leading-snug"><%= f.label %></p>
           </a>
         <% }) %>
@@ -155,7 +155,7 @@
           <% page.related.forEach((f) => { %>
             <a href="<%= f.href %>" class="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border shadow-sm text-sm hover:border-green-400 dark:hover:border-green-600 transition <%= _sevCard(f) %>">
               <span class="text-gray-700 dark:text-gray-300"><% if (f.group) { %><span class="text-gray-500 dark:text-gray-400"><%= f.group %> · </span><% } %><%= f.label %></span>
-              <strong class="tabular-nums <%= _sevValue(f) %>"><%= _fmt(f.value) %></strong>
+              <strong class="tabular-nums <%= _sevValue(f) %>"><%= f.display || _fmt(f.value) %></strong>
             </a>
           <% }) %>
         </div>

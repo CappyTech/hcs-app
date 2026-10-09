@@ -142,14 +142,27 @@ async function computeFigure(req, ref, now) {
   if (!canListModel(req, node.model)) return null;
   const base = {
     ref, label: figure.label, hint: figure.hint || null, severity: figure.severity || null,
-    href: figureHref(node, figureId), value: null,
+    href: figureHref(node, figureId), value: null, display: null,
   };
   const Model = modelFor(node.model);
   if (!Model) return base;
   try {
     const filter = await scopedFilter(req, node.model, figure.where, now, node.baseWhere);
     if (filter === null) return null;
-    base.value = await Model.countDocuments(filter);
+    if (figure.sum) {
+      // A total over the matching rows (e.g. fuel spend); the link still opens those rows
+      const [agg] = await Model.aggregate([
+        { $match: filter },
+        { $group: { _id: null, total: { $sum: `$${figure.sum}` } } },
+      ]);
+      const total = agg?.total;
+      base.value = Number(total?._bsontype === 'Decimal128' ? total.toString() : (total || 0));
+      base.display = figure.format === 'money'
+        ? formatValue(base.value, 'money')
+        : `${Math.round(base.value).toLocaleString('en-GB')}${figure.unit ? ` ${figure.unit}` : ''}`;
+    } else {
+      base.value = await Model.countDocuments(filter);
+    }
   } catch (err) {
     logger.warn(`[overviewEngine] figure ${ref} failed: ${err.message}`);
   }

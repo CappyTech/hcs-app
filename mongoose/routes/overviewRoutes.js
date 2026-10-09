@@ -13,10 +13,6 @@ const routeGuard = (routePath) => (req, res, next) => {
   return next({ statusCode: 403, name: 'ForbiddenError', message: 'You do not have permission to access this page.' });
 };
 
-router.get('/overview/fleet',
-  authService.ensureRole('admin'),
-  ctrl.getFleetOverview);
-
 router.get('/overview/holiday',
   authService.ensureRole('admin'),
   ctrl.getHolidayOverview);

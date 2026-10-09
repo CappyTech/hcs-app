@@ -241,6 +241,10 @@ const routeAccess = {
   '/overview/subcontractors': ['admin', 'accountant', 'hmrc'],
   '/overview/subcontractor':  ['admin', 'accountant', 'hmrc'],
   '/overview/task':           ['admin'],
+  '/overview/vehicle':        ['admin'],
+  '/overview/vehicleFuelLog': ['admin'],
+  '/overview/vehicleMileageLog': ['admin'],
+  '/overview/vehicleService': ['admin'],
 
   // Subcontractor administration
   '/subcontractor/assign':['admin'],
