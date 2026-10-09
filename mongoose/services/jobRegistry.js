@@ -8,6 +8,8 @@ import __gdprDeadlineService from './gdprDeadlineService.js';
 import __deletedItemsPurgeService from './deletedItemsPurgeService.js';
 import __holidayService from './holidayService.js';
 import __hrComplianceService from './hrComplianceService.js';
+import __taskService from './taskService.js';
+import __taskReminderService from './taskReminderService.js';
 import __policyReviewReminderService from './policyReviewReminderService.js';
 import __unsubscribeRotationService from './unsubscribeRotationService.js';
 import __holidayCarryOverService from './holidayCarryOverService.js';
@@ -229,7 +231,7 @@ function registerAll() {
   });
 
   scheduler.register('vehicle-compliance', {
-    description: 'Create tasks and email alerts for vehicles with MOT/insurance/road tax expiring within 90 days.',
+    description: 'Create tasks (one per admin, completing one completes all) and email alerts for vehicles with MOT/insurance/road tax expired or expiring within 90 days; close them once the date is renewed.',
     intervalMs: DAY,
     run: () => __vehicleComplianceService.checkComplianceAndCreateTasks(),
   });
@@ -265,9 +267,23 @@ function registerAll() {
   });
 
   scheduler.register('hr-compliance', {
-    description: 'Create tasks and email alerts for employee contracts and right-to-work checks expiring within 90 days.',
+    description: 'Create tasks (one per admin, completing one completes all) and email alerts for employee contracts and right-to-work checks expired or expiring within 90 days; close them once the date is updated.',
     intervalMs: DAY,
     run: () => __hrComplianceService.checkExpiriesAndCreateTasks(),
+  });
+
+  scheduler.register('recurring-tasks', {
+    description: 'Create the next occurrence of any completed recurring task that is missing one (normally created the moment the task is completed; this catches failures). Idempotent.',
+    intervalMs: HOUR,
+    initialDelayMs: 45_000,
+    run: () => __taskService.processRecurringTasks(),
+  });
+
+  scheduler.register('task-due-reminder', {
+    description: 'Email each user one daily digest of their open tasks that are overdue or due in the next 24 hours ("Task reminders" email type; users can unsubscribe).',
+    intervalMs: 6 * HOUR,
+    initialDelayMs: 5 * MINUTE,
+    run: () => __taskReminderService.queueDueReminders(),
   });
 
   scheduler.register('policy-review-reminder', {

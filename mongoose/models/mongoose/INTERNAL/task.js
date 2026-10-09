@@ -14,7 +14,19 @@ const taskSchema = new mongoose.Schema({
   source: { type: String, enum: ['manual', 'system'], default: 'manual', index: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true, index: true },
   contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'contract', default: null },
-  completed: { type: Boolean, default: false, index: true }
+  completed: { type: Boolean, default: false, index: true },
+  completedAt: { type: Date, default: null },
+  // Who ticked it off. null with autoResolved=true means the system closed it
+  // (e.g. a compliance date was renewed, so the reminder no longer applies).
+  completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'user', default: null },
+  autoResolved: { type: Boolean, default: false },
+  // Recurring tasks: set once the next occurrence has been created, so the
+  // completion handler and the recurring-tasks job never both spawn one.
+  nextSpawnedAt: { type: Date, default: null },
+  // System tasks: stable identity of the thing being reminded about, e.g.
+  // 'vehicle:<id>:motExpiryDate:2026-11-01'. Shared by every admin's copy, so
+  // completing one completes them all and a completed reminder isn't re-created.
+  systemKey: { type: String, default: null, index: true }
 }, {
   timestamps: true
 });

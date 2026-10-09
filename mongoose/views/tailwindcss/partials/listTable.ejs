@@ -441,7 +441,8 @@
                 <span title="Recurring: <%= row.recurrence %>" class="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">🔁 <%= row.recurrence %></span>
               <% } %>
               <% if (_completed) { %>
-                <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">Done</span>
+                <% const _autoResolved = row.autoResolved === true || row.autoResolved === 'true'; %>
+                <span <% if (_autoResolved) { %>title="Closed by the compliance check once the date was updated"<% } %> class="inline-flex items-center rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide"><%= _autoResolved ? 'Closed automatically' : 'Done' %></span>
               <% } %>
             </div>
             <div class="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs mt-1">
@@ -453,6 +454,10 @@
                 <% } %>
               <% } else { %>
                 <span class="text-gray-400 dark:text-gray-500">No due date</span>
+              <% } %>
+              <% const _doneAt = _completed && row.completedAt ? new Date(row.completedAt) : null; %>
+              <% if (_doneAt && !isNaN(_doneAt.getTime())) { %>
+                <span class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400"><i class="bi bi-check2"></i> Completed <%= slimDateTime(_doneAt) %></span>
               <% } %>
               <% if (row.userId != null && String(row.userId).trim()) { %>
                 <span class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
