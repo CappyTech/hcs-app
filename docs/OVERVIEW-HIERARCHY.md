@@ -224,9 +224,15 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - `where` accepts `$expr` for comparing two fields (income vs target), passed through unchanged.
 - **Partial panels:** a custom panel may return `{ partial, locals, always }`. `generated.ejs` then includes `overview/<partial>` with those locals; this is for features with forms or modals. `projectFinancials` holds the old financial table plus the Run Financial Check and Mark Complete modals; their POST routes stay at `/overview/projects/check` and `/overview/projects/:number/complete` and now redirect to `/overview/project`.
 
+### Finance — built (6.62.0, branch `feat/overview-finance`)
+
+- Area `finance` (`/overview/finance`, admin/accountant) replaces the bespoke page. Nodes `invoice`, `purchase`, `customer`, `supplier` and `quote` (KashFlow REST) are in `nodes/finance.js`.
+- **Two parents, done:** `subcontractor` has `parents: ['subcontractors', 'finance']` and is a child of both areas. An area card for a node whose primary parent is another area gets `?from=<area>`, and the node overview's breadcrumb follows it. (Figure links into lists don't carry `from` yet; their breadcrumb uses the primary parent.)
+
 ### Next
 
-1. Convert the next areas: Finance (adds the second parent for suppliers), then Payroll/Documents/Policies/Admin with custom panels (partial panels suit their forms).
+1. Convert the remaining areas: Payroll, Documents, Policies, Admin. These are mostly custom/partial panels (their forms and queues), plus Holiday (still the bespoke `/overview/holiday` behind the `leave` group).
+2. Generate the home tiles from `areas.js`, and settle Q2 (top-level areas only).
 3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
 4. Per-user home (§3).
 

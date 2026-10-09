@@ -17,7 +17,9 @@ export default {
   label: { one: 'Subcontractor', many: 'Subcontractors' },
   icon: 'bi-person-gear',
   description: 'CIS-registered suppliers: deduction rates, HMRC verification and what they are owed.',
-  parents: ['subcontractors'],
+  // Two parents: reached from Subcontractors (primary) and from Finance; the
+  // breadcrumb follows whichever the visitor came from (?from=finance).
+  parents: ['subcontractors', 'finance'],
   overviewPath: '/overview/subcontractor',
   listPath: '/subcontractors',
   actions: [{ label: 'Edit CIS details', href: '/subcontractor/assign', route: '/subcontractor/assign', icon: 'bi-pencil-square' }],
