@@ -67,7 +67,11 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The builder image comes from Google's Docker Hub mirror: anonymous pulls
+      # from Docker Hub were rate-limited or timing out on the shared runners.
       - uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
