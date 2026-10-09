@@ -368,6 +368,9 @@ function countActiveFilters(req, filterConfigs) {
         ]);
         if (config.linkField) hidden.delete(config.linkField);
         const allowedKeys = new Set(headers.map((h) => h.key)); // already filtered
+        // Headers come from the first document, which may predate a field; rowFields
+        // keeps such fields on every row for custom layouts without adding columns.
+        for (const k of config.rowFields || []) allowedKeys.add(k);
 
         // Optional field transforms (resolve references, map arrays, etc.)
         const transforms = config.fieldTransforms || {};
@@ -708,6 +711,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
       const hidden = new Set([...(config.hideFields || []), ...defaultHidden]);
       if (config.linkField) hidden.delete(config.linkField);
       const allowedKeys = new Set(headers.map((h) => h.key));
+      for (const k of config.rowFields || []) allowedKeys.add(k);
       const transforms = config.fieldTransforms || {};
       const pendingLookups = {};
 

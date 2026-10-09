@@ -6,6 +6,7 @@ import auditLog from '../../services/auditLogService.js';
 import crypto from 'crypto';
 import rbac from './rolePermissionsConfig.js';
 import mdb from '../services/mongooseDatabaseService.js';
+import __taskService from '../services/taskService.js';
 import __holidayRequestService from '../services/holidayRequestService.js';
 
 // Vehicles have no name/title field, so reference dropdowns fell back to the
@@ -345,7 +346,8 @@ export default {
     // (_id/__v previously leaked as a raw "Id" field with the ObjectId default fn).
     // source is set programmatically (manual vs system) — never via the form, so
     // it is stripped from the POST body too (a manual create can't spoof 'system').
-    hideFields: ['_id', '__v', 'uuid', 'completed', 'source'],
+    // The completion/recurrence/system bookkeeping fields are likewise code-only.
+    hideFields: ['_id', '__v', 'uuid', 'completed', 'source', 'completedAt', 'completedBy', 'autoResolved', 'nextSpawnedAt', 'systemKey'],
     // Lead with the task itself and its owner, then the scheduling/importance
     // fields, then optional detail. strictOrder keeps stray schema fields out.
     fieldOrder: ['title', 'userId', 'dueDate', 'priority', 'recurrence', 'description', 'contractId'],
@@ -361,6 +363,12 @@ export default {
       description: value => !value || typeof value === 'string',
       dueDate: value => !value || !isNaN(Date.parse(value)),
       priority: value => !value || ['low', 'normal', 'high'].includes(value),
+    },
+    // Email the assignee, as quick add does (taskService.createTask). No email
+    // when an admin assigns a task to themselves.
+    afterCreate: async (doc, req) => {
+      const task = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+      await __taskService.notifyTaskAssigned(task, { assignedBy: req.user?._id });
     },
     middleware: {
       read: ['ensureRole:admin'],

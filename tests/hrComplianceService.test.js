@@ -4,17 +4,25 @@ import assert from 'node:assert/strict';
 /*
  * hrComplianceService requires mdb, taskService, and logger at top level.
  * Patch mdb singleton; patch taskService exports (same pattern as the
- * vehicleComplianceService tests).
+ * vehicleComplianceService tests). The task rules themselves are covered in
+ * taskService.test.js.
  */
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
 import taskService from '../mongoose/services/taskService.js';
 
-let createTaskCalls = [];
+let ensureCalls = [];
+let resolveCalls = [];
 
-function patchMdb({ employees = [], admins = [], existingTask = null } = {}) {
-  createTaskCalls = [];
-  taskService.createTask = mock.fn(async (data) => {
-    createTaskCalls.push(data);
+function patchMdb({ employees = [], admins = [] } = {}) {
+  ensureCalls = [];
+  resolveCalls = [];
+  taskService.ensureSystemTask = mock.fn(async (args) => {
+    ensureCalls.push(args);
+    return { created: args.userIds.length, updated: 0, skipped: 0 };
+  });
+  taskService.resolveStaleSystemTasks = mock.fn(async (prefix, keys) => {
+    resolveCalls.push({ prefix, keys: [...keys] });
+    return 0;
   });
 
   mdb.INTERNAL = {
@@ -26,13 +34,6 @@ function patchMdb({ employees = [], admins = [], existingTask = null } = {}) {
       find: mock.fn(() => ({
         select: mock.fn(() => ({
           lean: mock.fn(() => Promise.resolve(admins)),
-        })),
-      })),
-    },
-    task: {
-      findOne: mock.fn(() => ({
-        select: mock.fn(() => ({
-          lean: mock.fn(() => Promise.resolve(existingTask)),
         })),
       })),
     },
@@ -66,69 +67,49 @@ describe('hrComplianceService', () => {
     assert.equal(stats.created, 0);
   });
 
-  it('creates a task for an expired contract end date', async () => {
+  it('asks for an EXPIRED reminder for an expired contract end date', async () => {
+    const end = daysFromNow(-5);
     patchMdb({
       admins: [{ _id: 'admin1' }],
-      employees: [{
-        name: 'Jane Doe',
-        contract: { endDate: daysFromNow(-5) },
-      }],
+      employees: [{ _id: 'e1', name: 'Jane Doe', contract: { endDate: end } }],
     });
 
     const stats = await checkExpiriesAndCreateTasks();
     assert.equal(stats.created, 1);
-    assert.ok(createTaskCalls[0].title.includes('EXPIRED'));
-    assert.ok(createTaskCalls[0].title.includes('Contract end'));
-    assert.ok(createTaskCalls[0].title.includes('Jane Doe'));
+    assert.equal(ensureCalls[0].title, '[EXPIRED] Contract end – Jane Doe');
+    assert.equal(ensureCalls[0].systemKey, `employee:e1:contract.endDate:${end.toISOString().slice(0, 10)}`);
+    assert.equal(ensureCalls[0].priority, 'high');
+    assert.ok(ensureCalls[0].legacyTitles.includes('[EXPIRING] Contract end – Jane Doe'));
   });
 
-  it('creates a task for an expiring right-to-work check', async () => {
+  it('asks for an EXPIRING reminder for a right-to-work check due soon', async () => {
     patchMdb({
       admins: [{ _id: 'admin1' }],
-      employees: [{
-        name: 'John Smith',
-        rightToWork: { expiryDate: daysFromNow(14) },
-      }],
+      employees: [{ _id: 'e2', name: 'John Smith', rightToWork: { expiryDate: daysFromNow(14) } }],
     });
 
-    const stats = await checkExpiriesAndCreateTasks();
-    assert.equal(stats.created, 1);
-    assert.ok(createTaskCalls[0].title.includes('EXPIRING'));
-    assert.ok(createTaskCalls[0].title.includes('Right to work'));
+    await checkExpiriesAndCreateTasks();
+    assert.ok(ensureCalls[0].title.startsWith('[EXPIRING] Right to work'));
+    assert.ok(ensureCalls[0].systemKey.startsWith('employee:e2:rightToWork.expiryDate:'));
   });
 
   it('ignores dates beyond the horizon', async () => {
     patchMdb({
       admins: [{ _id: 'admin1' }],
-      employees: [{
-        name: 'Far Future',
-        contract: { endDate: daysFromNow(120) },
-      }],
+      employees: [{ _id: 'e3', name: 'Far Future', contract: { endDate: daysFromNow(120) } }],
     });
 
     const stats = await checkExpiriesAndCreateTasks();
     assert.equal(stats.created, 0);
+    assert.equal(ensureCalls.length, 0);
+    assert.deepStrictEqual(resolveCalls[0].keys, []); // any open reminder for it gets closed
   });
 
-  it('skips when an uncompleted task already exists (idempotent)', async () => {
-    patchMdb({
-      admins: [{ _id: 'admin1' }],
-      employees: [{
-        name: 'Jane Doe',
-        contract: { endDate: daysFromNow(-1) },
-      }],
-      existingTask: { _id: 'existing' },
-    });
-
-    const stats = await checkExpiriesAndCreateTasks();
-    assert.equal(stats.skipped, 1);
-    assert.equal(createTaskCalls.length, 0);
-  });
-
-  it('creates one task per item per admin', async () => {
+  it('one reminder per item, shared by every admin', async () => {
     patchMdb({
       admins: [{ _id: 'admin1' }, { _id: 'admin2' }],
       employees: [{
+        _id: 'e4',
         name: 'Jane Doe',
         contract: { endDate: daysFromNow(3) },
         rightToWork: { expiryDate: daysFromNow(7) },
@@ -136,17 +117,21 @@ describe('hrComplianceService', () => {
     });
 
     const stats = await checkExpiriesAndCreateTasks();
+    assert.equal(ensureCalls.length, 2);
     assert.equal(stats.created, 4); // 2 items × 2 admins
+    assert.equal(resolveCalls[0].prefix, 'employee:');
+    assert.equal(resolveCalls[0].keys.length, 2);
   });
 
-  it('counts errors when task creation fails', async () => {
+  it('counts errors and closes nothing when a reminder fails', async () => {
     patchMdb({
       admins: [{ _id: 'admin1' }],
-      employees: [{ name: 'Err Case', contract: { endDate: daysFromNow(-1) } }],
+      employees: [{ _id: 'e5', name: 'Err Case', contract: { endDate: daysFromNow(-1) } }],
     });
-    taskService.createTask = mock.fn(() => Promise.reject(new Error('fail')));
+    taskService.ensureSystemTask = mock.fn(() => Promise.reject(new Error('fail')));
 
     const stats = await checkExpiriesAndCreateTasks();
     assert.equal(stats.errors, 1);
+    assert.equal(resolveCalls.length, 0);
   });
 });

@@ -2,6 +2,24 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.58.0] - 2026-10-09
+
+### Added
+- **Task reminder emails.** The "Task reminders" email type (`task-due`) was seeded and on by default but nothing sent it. A new `task-due-reminder` job sends each user one email a day listing their open tasks that are overdue or due in the next 24 hours. Users can turn it off in their email preferences.
+- **Tasks record when they were completed and by whom** (`completedAt`, `completedBy`). The Tasks list shows "Completed <date>" on finished tasks.
+
+### Fixed
+- **Recurring tasks never repeated.** `processRecurringTasks` existed but nothing ran it. Now completing a recurring task creates the next one straight away, one period after the old due date. Periods that have already gone by are skipped, so a weekly task finished three weeks late isn't followed by copies that are overdue on arrival. A new hourly `recurring-tasks` job catches any that failed to spawn. An overdue recurring task now stays a single overdue task: the old logic would have added another copy every period it was left open. Monthly tasks on the 29th–31st land on the last day of shorter months instead of rolling into the next month. Recurring tasks completed before this release are not restarted.
+- **Completed compliance reminders came back the next day.** Vehicle and HR compliance tasks were matched by title among open tasks only. Completing one without changing the date made the next daily check create it again, and an item going from EXPIRING to EXPIRED got a second task alongside the first. Each reminder now has a stable key (record, field, expiry date). Once completed it isn't re-created, and when the date passes the same task changes to [EXPIRED] and becomes high priority. The description no longer gives a day count, which went stale while the task sat open. Open reminders from before this release are adopted by title, not duplicated.
+- **Each admin had to complete their own copy of a compliance task.** Completing any admin's copy now completes all of them.
+- **Compliance tasks stayed open after the date was renewed.** After a scan with no errors, the check closes open reminders that no longer apply: the date was updated, the vehicle was disposed, the employee is no longer active, or the record was deleted. These show as "Closed automatically" in the Tasks list.
+- **Tasks assigned from the admin form didn't email the assignee.** Only quick add sent the "task assigned" email, and quick add always assigns to yourself. The form now emails the assignee. Nobody is emailed about a task they assigned to themselves, and system tasks don't send one per admin on top of the daily summary.
+- **Non-admins' task titles on the dashboard linked to a page they can't open.** The task detail page is admin-only, so for everyone else the title is now plain text.
+- **The Help pages described tasks wrongly.** They gave a 30-day compliance window (it's 90), said quick add is admin-only (anyone can use it), described recurrence incorrectly and didn't mention HR compliance. They now match the behaviour above.
+
+### Removed
+- `vehicleComplianceService.start()`/`stop()`, its old `setInterval` loop, which nothing called since the job scheduler took over.
+
 ## [6.57.2] - 2026-10-09
 
 ### Fixed

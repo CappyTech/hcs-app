@@ -16,9 +16,14 @@
           </form>
           <div class="min-w-0 flex-grow">
             <div class="flex items-center gap-2 flex-wrap">
-              <a href="/task/read/<%= t.uuid %>" class="font-semibold text-green-700 dark:text-green-400 hover:underline">
-                <%= t.title %>
-              </a>
+              <%# The task detail page is admin-only; everyone else just sees the title. %>
+              <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+                <a href="/task/read/<%= t.uuid %>" class="font-semibold text-green-700 dark:text-green-400 hover:underline">
+                  <%= t.title %>
+                </a>
+              <% } else { %>
+                <span class="font-semibold text-gray-900 dark:text-gray-100"><%= t.title %></span>
+              <% } %>
               <% if (t.priority === 'high') { %>
                 <span class="inline-flex items-center rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">High</span>
               <% } else if (t.priority === 'low') { %>

@@ -4,9 +4,7 @@ import logger from '../../services/loggerService.js';
 import notificationService from '../../services/notificationService.js';
 
 const DEFAULT_DAYS_AHEAD = 90; // give enough lead time to arrange MOT/insurance/tax renewals
-const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
-
-let intervalHandle = null;
+const KEY_PREFIX = 'vehicle:';
 
 /**
  * Fields to check and their human-readable labels.
@@ -22,12 +20,15 @@ const COMPLIANCE_FIELDS = [
  *  • Already expired (past due)
  *  • Expiring within `daysAhead` days
  *
- * For each match, create a task for every admin user — but only if no
- * matching uncompleted task already exists (idempotent).
+ * Each (vehicle, field, date) is one reminder, identified by its systemKey and
+ * given to every admin (taskService.ensureSystemTask): completing any copy
+ * completes them all and the reminder isn't re-created; EXPIRING turns into
+ * EXPIRED on the same task. After a clean scan, open reminders that no longer
+ * apply (date renewed, vehicle disposed or deleted) are closed automatically.
  *
  * @param {Object} [opts]
  * @param {number} [opts.daysAhead=90]
- * @returns {Promise<{ created: number, skipped: number, errors: number }>}
+ * @returns {Promise<{ created: number, skipped: number, errors: number, resolved?: number }>}
  */
 async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } = {}) {
   const stats = { created: 0, skipped: 0, errors: 0 };
@@ -50,6 +51,8 @@ async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } 
     logger.warn('[vehicleComplianceService] No admin users found — cannot create tasks.');
     return stats;
   }
+  const userIds = adminUsers.map((u) => u._id);
+  const currentKeys = new Set();
 
   for (const { field, label } of COMPLIANCE_FIELDS) {
     // Vehicles where this date is within the horizon (including already expired)
@@ -64,49 +67,46 @@ async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } 
 
       const isExpired = expiryDate < now;
       const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+      const dateStr = new Date(expiryDate).toISOString().slice(0, 10);
+      const systemKey = `${KEY_PREFIX}${vehicle._id}:${field}:${dateStr}`;
+      currentKeys.add(systemKey);
 
-      const prefix = isExpired ? 'EXPIRED' : 'EXPIRING';
       const suffix = isExpired
         ? `expired ${Math.abs(daysLeft)} day(s) ago`
         : `expires in ${daysLeft} day(s)`;
+      const subject = `${label} – ${vehicle.registrationNumber} (${vehicle.make} ${vehicle.model})`;
+      const title = `[${isExpired ? 'EXPIRED' : 'EXPIRING'}] ${subject}`;
+      // No day count here: the task is kept for weeks and would go stale.
+      const description = `Vehicle ${vehicle.registrationNumber} ${label} ${isExpired ? 'expired' : 'expires'} on ${dateStr}. Renew it and update the vehicle record; this task closes itself once the date is updated.`;
 
-      const title = `[${prefix}] ${label} – ${vehicle.registrationNumber} (${vehicle.make} ${vehicle.model})`;
-      const description = `Vehicle ${vehicle.registrationNumber} ${label} ${suffix} on ${expiryDate.toISOString().slice(0, 10)}. Please renew or update the record.`;
-
-      let createdForVehicle = false;
-      for (const admin of adminUsers) {
-        try {
-          // Idempotency: check if an uncompleted task with same title already exists
-          const existing = await mdb.INTERNAL.task.findOne({
-            userId: admin._id,
-            title,
-            completed: false
-          }).select('_id').lean();
-
-          if (existing) {
-            stats.skipped++;
-            continue;
-          }
-
-          await taskService.createTask({
-            title,
-            description,
-            userId: admin._id,
-            dueDate: expiryDate,
-            source: 'system',
-            priority: isExpired ? 'high' : 'normal'
-          });
-          stats.created++;
-          createdForVehicle = true;
-        } catch (err) {
-          logger.error(`[vehicleComplianceService] Failed to create task for ${vehicle.registrationNumber} / ${label}: ${err.message}`);
-          stats.errors++;
+      try {
+        const r = await taskService.ensureSystemTask({
+          systemKey,
+          title,
+          legacyTitles: [`[EXPIRED] ${subject}`, `[EXPIRING] ${subject}`],
+          description,
+          dueDate: expiryDate,
+          priority: isExpired ? 'high' : 'normal',
+          userIds,
+        });
+        stats.created += r.created;
+        stats.skipped += r.skipped;
+        if (r.created > 0 || r.updated > 0) {
+          newAlerts.push(`${vehicle.registrationNumber} (${vehicle.make} ${vehicle.model}) — ${label} ${suffix}`);
         }
+      } catch (err) {
+        logger.error(`[vehicleComplianceService] Failed to create task for ${vehicle.registrationNumber} / ${label}: ${err.message}`);
+        stats.errors++;
       }
+    }
+  }
 
-      if (createdForVehicle) {
-        newAlerts.push(`${vehicle.registrationNumber} (${vehicle.make} ${vehicle.model}) — ${label} ${suffix}`);
-      }
+  // Only a complete scan can say a reminder no longer applies.
+  if (stats.errors === 0) {
+    try {
+      stats.resolved = await taskService.resolveStaleSystemTasks(KEY_PREFIX, currentKeys);
+    } catch (err) {
+      logger.error(`[vehicleComplianceService] Failed to close resolved tasks: ${err.message}`);
     }
   }
 
@@ -134,54 +134,15 @@ async function checkComplianceAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD } 
     }
   }
 
-  if (stats.created > 0 || stats.errors > 0) {
-    logger.info(`[vehicleComplianceService] Compliance check complete: ${stats.created} tasks created, ${stats.skipped} skipped, ${stats.errors} errors.`);
+  if (stats.created > 0 || stats.errors > 0 || stats.resolved > 0) {
+    logger.info(`[vehicleComplianceService] Compliance check complete: ${stats.created} tasks created, ${stats.skipped} skipped, ${stats.resolved || 0} closed, ${stats.errors} errors.`);
   }
 
   return stats;
 }
 
-/**
- * Start the periodic compliance check (runs once immediately, then every 24 h).
- */
-function start() {
-  if (intervalHandle) return; // already running
-
-  logger.info('[vehicleComplianceService] Starting periodic compliance check (every 24 h).');
-
-  // Run after a short delay on startup to allow DB models to settle
-  setTimeout(async () => {
-    try {
-      await checkComplianceAndCreateTasks();
-    } catch (err) {
-      logger.error(`[vehicleComplianceService] Initial compliance check failed: ${err.message}`, { stack: err.stack });
-    }
-  }, 10_000);
-
-  intervalHandle = setInterval(async () => {
-    try {
-      await checkComplianceAndCreateTasks();
-    } catch (err) {
-      logger.error(`[vehicleComplianceService] Periodic compliance check failed: ${err.message}`, { stack: err.stack });
-    }
-  }, CHECK_INTERVAL_MS);
-}
-
-/**
- * Stop the periodic compliance check.
- */
-function stop() {
-  if (intervalHandle) {
-    clearInterval(intervalHandle);
-    intervalHandle = null;
-    logger.info('[vehicleComplianceService] Stopped periodic compliance check.');
-  }
-}
-
 export default {
   checkComplianceAndCreateTasks,
-  start,
-  stop,
 };
 
-export { checkComplianceAndCreateTasks, start, stop };
+export { checkComplianceAndCreateTasks };
