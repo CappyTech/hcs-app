@@ -794,7 +794,7 @@ export default {
     // (cisService.cisSupplierQuery — the one definition used app-wide).
     // History: { Subcontractor: true } was unreliable (KashFlow doesn't always set it), and
     // { WithholdingTaxRate: { $gte: 0 } } matched almost every supplier because KashFlow
-    // stores 0 for suppliers that aren't in CIS at all (Oct 2026: 764 matches incl. Microsoft).
+    // stores 0 for suppliers that aren't in CIS at all, so it matched nearly every supplier.
     baseFilter: cisSupplierQuery(),
     title: 'Subcontractors',
     linkField: 'Name',
