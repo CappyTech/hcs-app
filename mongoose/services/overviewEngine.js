@@ -475,7 +475,8 @@ customPanels.upcomingHolidays = async (req, now) => {
   const horizon = new Date(now.getTime() + 60 * DAY_MS);
   const items = [];
   if (Holiday && canListModel(req, 'holiday')) {
-    const govt = await Holiday.find({ date: { $gte: now.toISOString().slice(0, 10), $lte: horizon.toISOString().slice(0, 10) } }).sort({ date: 1 }).lean();
+    // England and Wales, as everywhere else in the app (holidayService.getNextHoliday)
+    const govt = await Holiday.find({ division: 'england-and-wales', date: { $gte: now.toISOString().slice(0, 10), $lte: horizon.toISOString().slice(0, 10) } }).sort({ date: 1 }).lean();
     for (const h of govt) items.push({ date: new Date(`${h.date}T00:00:00`), title: h.title, kind: 'Bank holiday' });
   }
   if (HolidayCustom && canListModel(req, 'holidayCustom')) {
@@ -483,7 +484,7 @@ customPanels.upcomingHolidays = async (req, now) => {
     for (const h of custom) items.push({ date: h.date, title: h.title, kind: 'Company' });
   }
   items.sort((a, b) => a.date - b.date);
-  // Bank holidays are listed once per UK division; one row per day and name is enough
+  // One row per day and name, in case a holiday is recorded twice
   const seen = new Set();
   const unique = items.filter((i) => { const k = `${formatValue(i.date, 'date')}|${i.title}`; if (seen.has(k)) return false; seen.add(k); return true; });
   return {
