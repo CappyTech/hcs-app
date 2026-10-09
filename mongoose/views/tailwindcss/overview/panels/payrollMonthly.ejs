@@ -1,0 +1,76 @@
+<%# RTI deadline and monthly breakdown for the current tax year: custom panel 'payrollMonthly'
+    (overviewEngine), moved from the old hand-built Payroll page. Locals: nextDeadline,
+    monthlyRows, taxMonth, taxYear, formatCurrency. %>
+<div class="space-y-6 mb-8">
+  <!-- Next RTI deadline banner -->
+  <% if (nextDeadline) { %>
+  <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl p-4 flex items-center justify-between">
+    <div>
+      <p class="text-sm font-semibold text-yellow-800 dark:text-yellow-300">&#9203; Next RTI Deadline</p>
+      <p class="text-xs text-yellow-700 dark:text-yellow-400 mt-0.5">
+        FPS due by the payment date — EPS by 19th of each month
+        <% if (nextDeadline.periodEnd) { %> &mdash; Period ends <strong><%= new Date(nextDeadline.periodEnd).toLocaleDateString('en-GB') %></strong><% } %>
+      </p>
+    </div>
+    <a href="/payroll/submissions" class="text-xs text-yellow-700 dark:text-yellow-400 underline hover:no-underline">View Submissions</a>
+  </div>
+  <% } %>
+  <!-- Monthly breakdown table -->
+  <% if (monthlyRows.length > 0) { %>
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 pt-5 pb-3">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200">Monthly Breakdown</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Month</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Runs</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Gross Pay</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Tax</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Emp NI</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Er NI</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Net Pay</th>
+            <th class="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-300">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <% const taxMonthLabel = m => { const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar']; return `M${m} — ${months[(m-1) % 12]}`; }; %>
+          <% for (const row of monthlyRows) { %>
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 <%= row.taxMonth === taxMonth ? 'bg-indigo-50 dark:bg-indigo-900/20' : '' %>">
+            <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+              <%= taxMonthLabel(row.taxMonth) %>
+              <% if (row.taxMonth === taxMonth) { %><span class="ml-1 text-xs text-indigo-500">current</span><% } %>
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"><%= row.runs %></td>
+            <td class="px-4 py-3 text-right text-gray-900 dark:text-gray-100 font-mono text-xs"><%= formatCurrency(row.grossPay) %></td>
+            <td class="px-4 py-3 text-right text-red-600 dark:text-red-400 font-mono text-xs"><%= formatCurrency(row.taxDeducted) %></td>
+            <td class="px-4 py-3 text-right text-orange-600 dark:text-orange-400 font-mono text-xs"><%= formatCurrency(row.employeeNI) %></td>
+            <td class="px-4 py-3 text-right text-orange-500 dark:text-orange-300 font-mono text-xs"><%= formatCurrency(row.employerNI) %></td>
+            <td class="px-4 py-3 text-right text-green-600 dark:text-green-400 font-mono text-xs"><%= formatCurrency(row.netPay) %></td>
+            <td class="px-4 py-3 text-center">
+              <% const hasSubmitted = row.statuses.includes('submitted'); const hasLocked = row.statuses.includes('locked'); const allDraft = row.statuses.every(s => s === 'draft'); %>
+              <% if (hasSubmitted) { %>
+                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-800/20 dark:text-green-400">Submitted</span>
+              <% } else if (hasLocked) { %>
+                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-800/20 dark:text-blue-300">Locked</span>
+              <% } else if (allDraft) { %>
+                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-800/20 dark:text-yellow-300">Draft</span>
+              <% } else { %>
+                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Mixed</span>
+              <% } %>
+            </td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } else { %>
+  <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center">
+    <p class="text-gray-500 dark:text-gray-400 text-sm">No payroll runs found for <strong><%= taxYear %></strong>.</p>
+    <a href="/payroll/runs/create" class="mt-4 inline-block text-sm text-indigo-600 hover:underline dark:text-indigo-400">Create first run &rarr;</a>
+  </div>
+  <% } %>
+</div>

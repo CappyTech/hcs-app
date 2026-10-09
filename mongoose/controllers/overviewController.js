@@ -1,10 +1,7 @@
 import path from 'path';
 import overviewEngine from '../services/overviewEngine.js';
 import kashflowProjectService from '../services/kashflowProjectService.js';
-import adminOverviewService from '../services/adminOverviewService.js';
 import documentsOverviewService from '../services/documentsOverviewService.js';
-import payrollOverviewService from '../services/payrollOverviewService.js';
-import policiesOverviewService from '../services/policiesOverviewService.js';
 import currencyService from '../../services/currencyService.js';
 
 export const getGeneratedArea = (areaId) => async (req, res, next) => {
@@ -27,37 +24,12 @@ export const getGeneratedNode = (nodeId) => async (req, res, next) => {
   }
 };
 
-export const getAdminOverview = async (req, res, next) => {
-  try {
-    const overview = await adminOverviewService.getAdminOverview();
-    res.render(path.join('tailwindcss', 'overview', 'admin'), {
-      title: 'Admin Overview',
-      ...overview,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
 export const getDocumentsOverview = async (req, res, next) => {
   try {
     const overview = await documentsOverviewService.getDocumentsOverview();
     res.render(path.join('tailwindcss', 'overview', 'documents'), {
       title: 'Documents Overview',
       ...overview,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const getPayrollOverview = async (req, res, next) => {
-  try {
-    const overview = await payrollOverviewService.getPayrollOverview();
-    res.render(path.join('tailwindcss', 'overview', 'payroll'), {
-      title: `Payroll Overview — ${overview.taxYear}`,
-      formatCurrency: currencyService.formatCurrency,
-      ...overview
     });
   } catch (err) {
     next(err);
@@ -82,18 +54,6 @@ export const postProjectsFinancialCheck = async (req, res, next) => {
   res.redirect('/overview/project');
 };
 
-export const getPoliciesOverview = async (req, res, next) => {
-  try {
-    const overview = await policiesOverviewService.getPoliciesOverview();
-    res.render(path.join('tailwindcss', 'overview', 'policies'), {
-      title: 'Policies Overview',
-      ...overview,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
 export const postProjectMarkComplete = async (req, res, next) => {
   const projectNumber = parseInt(req.params.number, 10);
   try {
@@ -105,4 +65,4 @@ export const postProjectMarkComplete = async (req, res, next) => {
   res.redirect('/overview/project');
 };
 
-export default { getGeneratedArea, getGeneratedNode, getAdminOverview, getDocumentsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };
+export default { getGeneratedArea, getGeneratedNode, getDocumentsOverview, postProjectsFinancialCheck, postProjectMarkComplete };

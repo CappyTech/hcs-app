@@ -32,6 +32,7 @@ export default {
       where: { status: 'active', 'rightToWork.expiryDate': { $notAfterDays: 90 } },
     },
     recentHires: { label: 'Hired in the last 30 days', where: { hireDate: { $withinPastDays: 30 } } },
+    pensionEnrolled: { label: 'Active employees in the pension', where: { status: 'active', 'payroll.pensionEnrolled': true } },
     ir35Subcontractor: {
       label: 'IR35 workers paid as subcontractors',
       hint: 'Inside IR35 and linked to a supplier record',

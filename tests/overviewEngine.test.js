@@ -365,7 +365,7 @@ describe('home tiles', () => {
   });
 
   it("doesn't generate pages for areas that are still hand-built", async () => {
-    assert.equal(await engine.buildArea(admin, 'payroll'), null);
+    assert.equal(await engine.buildArea(admin, 'documents'), null);
   });
 });
 
@@ -408,5 +408,55 @@ describe('holiday (a group node with its own overview)', () => {
     const page = await engine.buildNodeOverview(admin, 'leave');
     const up = page.lists.find((l) => l.title === 'Holidays in the next 60 days');
     assert.deepStrictEqual(up.rows.map((r) => r.cells[1]), ['Office closed', 'Christmas Day']);
+  });
+});
+
+describe('payroll, policies and admin', () => {
+  const accountant = { user: { role: 'accountant', customPermissions: {} }, query: {} };
+  beforeEach(() => {
+    patchModels();
+    const sum = (name, total) => ({ ...mockModel(name, { count: 4, rows: [{ uuid: 'x-1', paymentDate: new Date('2026-09-30'), taxMonth: 6, frequency: 'monthly', status: 'locked', totals: { grossPay: 1000 } }] }),
+      aggregate: async (p) => { calls.push({ name, op: 'aggregate', pipeline: p }); return p[1].$group._id === null ? [{ total }] : []; } });
+    mdb.INTERNAL.payrollRun = sum('payrollRun', 12345.6);
+    mdb.INTERNAL.payrollSubmission = mockModel('payrollSubmission', { count: 1, rows: [{ uuid: 's-1', type: 'FPS', taxMonth: 6, createdAt: new Date() }] });
+    mdb.INTERNAL.policyDocument = mockModel('policyDocument', { count: 2, rows: [{ uuid: 'p-1', title: 'Sample policy', version: '1.0', reviewDate: new Date('2026-09-01') }] });
+    mdb.INTERNAL.session = mockModel('session', { count: 3 });
+  });
+
+  it('resolves the current tax year the way payroll stores it', () => {
+    const w = engine.compileWhere({ taxYear: { $currentTaxYear: true } }, new Date('2026-10-09T12:00:00Z'));
+    assert.deepStrictEqual(w.taxYear, { $eq: '2026/27' });
+    const spring = engine.compileWhere({ taxYear: { $currentTaxYear: true } }, new Date('2027-04-05T12:00:00Z'));
+    assert.deepStrictEqual(spring.taxYear, { $eq: '2026/27' });
+  });
+
+  it('lets accountants into payroll through the route rule, not a model rule', async () => {
+    const area = await engine.buildArea(accountant, 'payroll');
+    assert.deepStrictEqual(area.cards.map((c) => c.id), ['payrollRun', 'payrollSubmission']);
+    const gross = await engine.computeFigure(accountant, 'payrollRun.gross', new Date());
+    assert.equal(gross.display, '£12,345.60');
+    assert.equal(gross.href, '/payroll/runs'); // custom list page: no ?view=
+  });
+
+  it('links rows to their custom detail pages, or not at all', async () => {
+    const runs = await engine.buildNodeOverview(admin, 'payrollRun');
+    const locked = runs.lists.find((l) => l.title === 'Locked, not yet submitted');
+    assert.equal(locked.rows[0].href, '/payroll/run/x-1');
+    assert.equal(locked.rows[0].cells[4], '£1,000.00');
+    assert.equal(runs.partials[0].partial, 'panels/payrollMonthly');
+    const subs = await engine.buildNodeOverview(admin, 'payrollSubmission');
+    assert.equal(subs.lists[0].rows[0].href, null);
+  });
+
+  it('builds Policies and Admin, keeping both admin-only', async () => {
+    const pol = await engine.buildNodeOverview(admin, 'policyDocument');
+    assert.equal(pol.lists[0].rows[0].href, '/company-docs/policies/p-1/edit');
+    assert.equal(pol.actions[0].label, 'New policy');
+    const users = await engine.buildNodeOverview(admin, 'user');
+    const sessions = users.lists.find((l) => l.title === 'Signed-in sessions');
+    assert.equal(sessions.rows[0].cells[0], '3');
+    assert.equal(sessions.href, null);
+    assert.deepStrictEqual((await engine.buildArea(accountant, 'admin')).cards, []);
+    assert.deepStrictEqual((await engine.buildArea(accountant, 'policies')).cards, []);
   });
 });

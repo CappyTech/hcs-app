@@ -21,21 +21,9 @@ router.post('/overview/projects/:number/complete',
   authService.ensureRole('admin'),
   ctrl.postProjectMarkComplete);
 
-router.get('/overview/admin',
-  authService.ensureRole('admin'),
-  ctrl.getAdminOverview);
-
 router.get('/overview/documents',
   authService.ensureRole('admin'),
   ctrl.getDocumentsOverview);
-
-router.get('/overview/payroll',
-  authService.ensureRoles('admin', 'accountant'),
-  ctrl.getPayrollOverview);
-
-router.get('/overview/policies',
-  authService.ensureRole('admin'),
-  ctrl.getPoliciesOverview);
 
 // ── Generated overviews (config/overviews) ──────────────────────────────
 for (const area of overviews.listAreas()) {

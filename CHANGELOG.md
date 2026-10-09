@@ -2,6 +2,20 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.65.0] - 2026-10-09
+
+### Added
+- **Payroll is a generated area** (`/overview/payroll`, admin and accountant). It has two new overviews:
+  - **Payroll runs** (`/overview/payrollRun`): runs this tax year, draft runs, locked runs not yet submitted, and year-to-date gross, tax, employee and employer NI, and net pay. The RTI deadline and month-by-month table are unchanged.
+  - **HMRC submissions** (`/overview/payrollSubmission`): submissions this tax year, generated but not sent, rejected and accepted.
+- **Policies is a generated area** (`/overview/policies`). The new **Policies** overview (`/overview/policyDocument`) shows published and draft policies, policies past or near their review date, and individual employee documents.
+- **Admin is a generated area** (`/overview/admin`). The new **Users** overview (`/overview/user`) shows accounts waiting for a role, unverified email, users without two-factor sign-in, accounts idle for 90 days, users by role, and signed-in sessions.
+- **Overviews for records with their own pages.** A node whose list is a custom page uses that page's route rule for access (`listRoute`), links rows to its own detail page (`readPath`), and opens the list page from its figures.
+- **"This tax year"** in overview filters (`$currentTaxYear`).
+
+### Removed
+- The hand-built Payroll, Policies and Admin pages (`adminOverviewService`, `policiesOverviewService`, and their templates). The payroll monthly table moved to `overview/panels/payrollMonthly.ejs`.
+
 ## [6.64.0] - 2026-10-09
 
 ### Added

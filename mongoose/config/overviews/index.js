@@ -7,6 +7,8 @@ import vehicle from './nodes/vehicle.js';
 import fleetLogs from './nodes/fleetLogs.js';
 import projects from './nodes/projects.js';
 import finance from './nodes/finance.js';
+import payroll from './nodes/payroll.js';
+import policies from './nodes/policies.js';
 import subcontractor from './nodes/subcontractor.js';
 import user from './nodes/user.js';
 
@@ -25,7 +27,7 @@ import user from './nodes/user.js';
  * Definitions are plain data so they can later move to the config store
  * (single-tenant config direction). See docs/OVERVIEW-HIERARCHY.md.
  */
-const nodeList = [employee, attendance, task, ...leave, vehicle, ...fleetLogs, ...projects, ...finance, subcontractor, user];
+const nodeList = [employee, attendance, task, ...leave, vehicle, ...fleetLogs, ...projects, ...finance, ...payroll, policies, subcontractor, user];
 
 const areaById = new Map(areas.map((a) => [a.id, a]));
 const nodeById = new Map(nodeList.map((n) => [n.id, n]));

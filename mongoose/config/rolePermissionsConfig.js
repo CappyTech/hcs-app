@@ -240,7 +240,10 @@ const routeAccess = {
   '/overview/human':          ['admin'],
   '/overview/invoice':        ['admin', 'accountant'],
   '/overview/payroll':        ['admin', 'accountant'],
+  '/overview/payrollRun':     ['admin', 'accountant'],
+  '/overview/payrollSubmission': ['admin', 'accountant'],
   '/overview/policies':       ['admin'],
+  '/overview/policyDocument': ['admin'],
   '/overview/project':        ['admin'],
   '/overview/purchase':       ['admin', 'accountant'],
   '/overview/quote':          ['admin', 'accountant'],
@@ -249,6 +252,7 @@ const routeAccess = {
   '/overview/subcontractor':  ['admin', 'accountant', 'hmrc'],
   '/overview/supplier':       ['admin', 'accountant'],
   '/overview/task':           ['admin'],
+  '/overview/user':           ['admin'],
   '/overview/vehicle':        ['admin'],
   '/overview/vehicleFuelLog': ['admin'],
   '/overview/vehicleMileageLog': ['admin'],
@@ -272,6 +276,9 @@ const routeAccess = {
       ]),
   ),
   '/payroll/dashboard':   ['admin', 'accountant'],
+  // Mirror the guards in payrollRoutes.js so the overviews can tell who may see runs and submissions
+  '/payroll/runs':        ['admin', 'accountant'],
+  '/payroll/submissions': ['admin', 'accountant'],
   // Legacy dashboard URLs that now redirect (kashflow → finance,
   // paperless dashboard → documents; /paperless/* OCR routes listed below)
   '/kashflow':            ['admin', 'accountant'],
