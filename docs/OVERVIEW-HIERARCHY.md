@@ -158,7 +158,12 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 
 ## 5. Open questions for Jack
 
-1. HR as the pilot — confirmed? (proposed; not yet answered)
+1. HR as the pilot — confirmed? (proposed; not yet answered). Reference analysis (2026-10-09), counting models that point *at* each model (audit-style `user` refs excluded):
+   - **Employee — 11**, all ObjectId refs inside INTERNAL: assignment, attendance, employeeHoliday, holidayRequest, payrollEntry, policyDocument, user, vehicle, vehicleDeployment, vehicleFuelLog, vehicleMileageLog. Spans 7 areas (HR, Holiday, Payroll, Fleet, Projects, Policies, Admin).
+   - **Supplier — 11**: 8 INTERNAL refs (assignment, attendance, employee, user, vehicle, vehicleDeployment, vehicleFuelLog, vehicleMileageLog) + 3 REST joins by `SupplierCode`/`SupplierId` (purchase, purchaseOrder, bankTransaction). The only hub spanning both namespaces; has two parent areas (Finance, Subcontractors).
+   - **Project — 9**: 4 INTERNAL (attendance, contract, vehicle, vehicleMileageLog) + 5 REST by `ProjectNumber` (invoice, purchase, purchaseOrder, quote, bankTransaction).
+   - Customer 5, contract 4, vehicle 4. (`user` has 11 refs but they're mostly "who did it" audit links.)
+   - **Recommendation:** pilot the **Employee** model overview inside HR. It touches the most areas through clean ObjectId refs, so it tests cross-area, pre-filtered links without the code-based REST joins. Do **Supplier second**, to prove REST joins and a model with two parents.
 2. Home before per-user layouts: top-level areas only (Holiday reached via HR)? (proposed; not yet answered)
 3. Holiday: one overview over all holiday models, or separate model overviews?
 4. Should non-admin roles (employee, subcontractor) get overviews of their own data, or keep today's home shortcuts?
