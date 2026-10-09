@@ -4,6 +4,7 @@ import registry from '../config/overviews/index.js';
 import listControllerConfig from '../config/listControllerConfig.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
 import logger from '../../services/loggerService.js';
+import { cisSupplierQuery } from '../../services/cisService.js';
 
 /**
  * Overview engine: turns the definitions in config/overviews into page data.
@@ -307,7 +308,7 @@ customPanels.subcontractorRecentPurchases = async (req, now) => {
   const Supplier = modelFor('supplier');
   const Purchase = modelFor('purchase');
   if (!Supplier || !Purchase) return null;
-  const codes = await Supplier.distinct('Code', { WithholdingTaxRate: { $gte: 0 }, IsArchived: { $ne: true } });
+  const codes = await Supplier.distinct('Code', { $and: [cisSupplierQuery(), { IsArchived: { $ne: true } }] });
   if (!codes.length) return null;
   const scope = await scopeQuery(req, 'purchase', 'l');
   if (scope === null) return null;

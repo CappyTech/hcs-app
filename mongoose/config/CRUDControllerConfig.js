@@ -6,6 +6,7 @@ import auditLog from '../../services/auditLogService.js';
 import crypto from 'crypto';
 import rbac from './rolePermissionsConfig.js';
 import mdb from '../services/mongooseDatabaseService.js';
+import { cisSupplierQuery } from '../../services/cisService.js';
 import __taskService from '../services/taskService.js';
 import __holidayRequestService from '../services/holidayRequestService.js';
 
@@ -98,8 +99,8 @@ export default {
       ['hoursWorked', 'dayRate']
     ],
     referenceFilters: {
-      // OLD: subcontractorId: { IsSubcontractor: true },
-      subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
+      // Subcontractor pickers list CIS subcontractors only (cisService.cisSupplierQuery)
+      subcontractorId: cisSupplierQuery(),
       employeeId: { status: 'active' },
       projectId: { Status: { $nin: ['Archived', 'Completed'] } }
     },
@@ -581,8 +582,8 @@ export default {
     ],
     referenceFilters: {
       employeeId: { status: 'active' },
-      // OLD: subcontractorId: { IsSubcontractor: true },
-      subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
+      // Subcontractor pickers list CIS subcontractors only (cisService.cisSupplierQuery)
+      subcontractorId: cisSupplierQuery(),
       projectId: { Status: { $nin: ['Archived', 'Completed'] } }
     },
     middleware: {
@@ -682,8 +683,8 @@ export default {
     ],
     referenceFilters: {
       employeeId: { status: 'active' },
-      // OLD: subcontractorId: { IsSubcontractor: true }
-      subcontractorId: { WithholdingTaxRate: { $gte: 0 } }
+      // Subcontractor pickers list CIS subcontractors only (cisService.cisSupplierQuery)
+      subcontractorId: cisSupplierQuery()
     },
     referenceLabelFormat: {
       vehicleId: vehicleLabel,
@@ -712,8 +713,8 @@ export default {
     ],
     referenceFilters: {
       employeeId: { status: 'active' },
-      // OLD: subcontractorId: { IsSubcontractor: true },
-      subcontractorId: { WithholdingTaxRate: { $gte: 0 } },
+      // Subcontractor pickers list CIS subcontractors only (cisService.cisSupplierQuery)
+      subcontractorId: cisSupplierQuery(),
       projectId: { Status: { $nin: ['Archived', 'Completed'] } }
     },
     referenceLabelFormat: {
