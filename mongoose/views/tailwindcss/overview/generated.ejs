@@ -78,7 +78,7 @@
   <% } else { %>
 
     <% if (page.figures.length) { %>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-4 mb-8">
         <% page.figures.forEach((f) => { %>
           <a href="<%= f.href %>" title="<%= f.hint || ('Show these in the list') %>"
              class="block border rounded-2xl shadow-sm p-4 hover:shadow-md hover:border-green-400 dark:hover:border-green-600 transition <%= _sevCard(f) %>">

@@ -14,6 +14,10 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ### Changed
 - After Run Financial Check or Mark Complete you return to the KashFlow projects overview (`/overview/project`). The routes are unchanged.
 
+### Fixed
+- **Compliance reminder figures counted every admin's copy.** The Vehicles overview showed 8 open reminders for one vehicle, because each of 8 admins gets a copy. The figure now counts the viewer's own reminders ("Your open vehicle compliance reminders"), one per reminder. HR reminders are counted the same way. Figures can now match the viewing user (`$me`).
+- **Overview figure tiles wrapped unevenly** (7 on one row, 1 on the next). Tiles now share the row evenly at any width.
+
 ### Removed
 - The hand-built Projects page (`projectsOverviewService`, `overview/projects.ejs`), replaced by the generated area. Its financial section moved to `overview/panels/projectFinancials.ejs`.
 

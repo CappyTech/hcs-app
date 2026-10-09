@@ -75,6 +75,11 @@ describe('compileWhere', () => {
     assert.equal(w.f, 'x');
     assert.deepStrictEqual(w.g, { $ne: 'Disposed' });
   });
+
+  it("resolves $me to the viewer, and to nothing when there's no viewer", () => {
+    assert.deepStrictEqual(engine.compileWhere({ userId: { $me: true } }, now, { userId: 'u-9' }).userId, { $eq: 'u-9' });
+    assert.deepStrictEqual(engine.compileWhere({ userId: { $me: true } }, now).userId, { $in: [] });
+  });
 });
 
 describe('breadcrumbs', () => {
