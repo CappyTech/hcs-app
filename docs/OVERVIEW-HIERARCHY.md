@@ -152,7 +152,7 @@ Not yet decided: final placement of note, location, OcrDocumentIngest; whether H
 1. **Engine:** definition format + hierarchy registry; generic area/model overview controller + template; figure → filtered-list links (extend `listController` filters as needed); breadcrumbs; single permission check. Lists keep using `listControllerConfig` until step 3 converts them.
 2. **Pilot — HR end to end:** HR area page generated; Employees, Holiday, Attendance, Tasks model overviews; lists filtered from figures. Check on real pages with Jack before continuing. Fix the Holiday Balances link and the management/holiday permission mismatch here.
 3. **Roll out** area by area (Fleet, Projects, Finance, Subcontractors, then the custom-panel-heavy Payroll/Documents). Convert each model's list to the opt-in `list` definition; retire each bespoke `*OverviewService` + template once replaced. Generated home tiles from the hierarchy (role-default only).
-4. **Per-user home:** `homeLayout` on user, role defaults, customise UI, permission intersection.
+4. **Per-user home:** done in 6.68.0 (stored in its own `homeLayout` collection rather than on user; see §7).
 
 Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm test`, tag `v*` (see AGENTS.md).
 
@@ -282,11 +282,29 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - The controller builds the full candidate definition from the form, diffs it against the default (custom areas and nodes store their whole definition), and saves through `overviewConfigService`. An empty diff means reset. Moving an overview between areas also updates its parents: added before the area save, removed after.
 - **Known limits:** a refused save redirects with a message and loses the input. There are no fixed-date conditions.
 
+### Per-user home — built (6.68.0, branch `feat/home-layout`)
+
+- **Store:** INTERNAL `homeLayout` (`models/mongoose/INTERNAL/homeLayout.js`), one doc per `{scope, key}`. `scope: 'user'` is keyed by user `_id`; `scope: 'role'` is keyed by role name. Each doc holds three pin arrays: `areas`, `figures`, `lists`. It is a separate collection rather than a field on `user`, so it stays out of the user schema and its audit noise.
+- **Pin keys:**
+  - area: `'human'`
+  - figure: `'employee.rtwDue'`
+  - list: `'employee:list:<figure>'`, an overview list identified by its figure, so editing its columns keeps the pin
+  - panel: `'leave:panel:<name>'`, a list-shaped custom panel (`overviewEngine.pinnablePanels`). Panels with their own partial (projectFinancials, payrollMonthly) can't be pinned.
+- **Resolution** (`services/homeLayoutService.js`, `resolve`): the user's own layout, then their role's, then built-in (every area they may open, no figures or lists).
+- **Permissions are checked on every render** (`build`). Areas use `canOpenPath`, figures `computeFigure` (`canSeeNode` + scoping), and lists the overview path plus `canSeeNode` / the panel's own check. Pins that no longer exist are skipped, so a role default can hold anything safely.
+- **Saving:** `fromForm` keeps only keys from `options(req)`. A person can only store what they may open; role defaults use `options(null)`. Pins are ordered by the posted numbers and capped at `LIMITS` (30 areas, 24 figures, 8 lists). Lists show 5 rows on home.
+- **Routes** (`routes/homeLayoutRoutes.js`, `controllers/homeLayoutController.js`, view `views/tailwindcss/home/customise.ejs`, forms only):
+  - `GET/POST /home/customise` and `POST /home/customise/reset` (signed in)
+  - `GET/POST /admin/overviews/home/:role` and `…/reset` (admin; linked from Overview settings, "Home page by role")
+- **Home** (`index.ejs`) draws pinned figures, then pinned lists, then the Overviews tile card with a "Customise home" link. The list card markup is shared with overview pages (`views/tailwindcss/overview/partials/listCard.ejs`).
+- `overviewEngine.homeTiles` is kept: it's tested and equals the built-in tile set.
+
 #### Next
-1. **Per-user home:** `user.homeLayout`, role defaults stored in the database, a customise mode on home.
-2. ~~Home tiles~~: done in 6.63.0. Q2 is answered (Jack: top-level areas only). `overviewEngine.homeTiles(req)` lists `areas.js` filtered by route access. Areas still hand-built are marked `bespoke: true`: they get no generated route and `buildArea` returns null for them.
-3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
-4. Per-user home (§3).
+1. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
+2. Possible later additions:
+   - pin a breakdown
+   - figure sizes
+   - drag ordering (would need a script; the CSP allows only external JS files)
 
 ### Decisions still open
 Q3–Q5 in §5 (Holiday shape? non-admin overviews? config store?). Q2 is answered: home shows top-level areas only. Holiday stays the hand-built page behind the `leave` group node.

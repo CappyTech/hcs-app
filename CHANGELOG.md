@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.68.0] - 2026-10-10
+
+### Added
+- **Customise home** (`/home/customise`, a link on the home page's Overviews card). Each person picks:
+  - which area tiles appear, and in what order
+  - figures to pin as numbers at the top of home
+  - lists to pin (their first five records)
+  
+  Every pin links to its full list. Only things the person may open are offered, and each pin is checked again every time home is drawn.
+- **Home page by role** (`/admin/overviews/home/:role`, admin; on Overview settings). Sets the starting home page for each role. People with that role see it until they customise their own, and each person still sees only what their permissions allow.
+- New INTERNAL `homeLayout` collection holding personal and role layouts. Without either, home is unchanged: every area the person may open.
+
+### Changed
+- The list card on overview pages is now a shared partial, also used on home. An empty pinned list says "Nothing here right now."
+
 ## [6.67.0] - 2026-10-09
 
 ### Added
