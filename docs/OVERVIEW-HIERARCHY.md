@@ -200,9 +200,9 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - Breakdown segments link via the list's own `tabsby` or select `filters` when they cover the field; otherwise unlinked.
 - `?view=` only ever applies a definition from code (unknown/foreign refs ignored), ANDed with the list's normal data scoping.
 
-**Checked live (2026-10-09, 6.59.0 deployed):** `/overview/human`, `/overview/employee`, `/employees?view=employee.active` (breadcrumbs, "Showing" bar, 8 rows) and `/overview/subcontractor` all work with real data. Fixed in 6.59.1 (PR #150):
+**Checked live (2026-10-09, 6.59.0 deployed):** `/overview/human`, `/overview/employee`, `/employees?view=employee.active` (breadcrumbs, "Showing" bar, the right rows) and `/overview/subcontractor` all work with real data. Fixed in 6.59.1 (PR #150):
 - unclear wording on area-card links and related figures
-- **the subcontractor rule.** `WithholdingTaxRate >= 0` matched 764 suppliers. Jack chose the CIS-details rule app-wide: `cisService.cisSupplierQuery()`, extended with WHT rate > 0, is now the only definition, used by the list, overview, pickers and purchase join.
+- **the subcontractor rule.** `WithholdingTaxRate >= 0` matched nearly every supplier. Jack chose the CIS-details rule app-wide: `cisService.cisSupplierQuery()`, extended with WHT rate > 0, is now the only definition, used by the list, overview, pickers and purchase join.
 
 ### Supplier (subcontractor) — built
 

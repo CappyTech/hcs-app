@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.63.1] - 2026-10-09
+
+### Security
+- Removed customer and supplier names, amounts and live record counts from recent changelog entries, code comments and the overview design doc. Business data doesn't belong in the repository.
+
 ## [6.63.0] - 2026-10-09
 
 ### Changed
@@ -12,7 +17,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - Payroll, Documents, Policies and Admin are still hand-built pages, listed as areas until they're converted.
 
 ### Fixed
-- **Finance showed £0.00 owed with invoices overdue.** KashFlow's due amount isn't filled in by the sync: it reads £0.00 on unpaid invoices and purchases. The live page showed "Owed to us £0.00" next to 6 overdue Plus Dane Housing invoices worth over £13,000. "Owed" figures and columns now use gross minus paid. Overview totals can now be calculated (`sum` accepts an expression), and list columns can show one field minus another (`minus`).
+- **Finance showed £0.00 owed while invoices were overdue.** KashFlow's due amount isn't filled in by the sync: it reads £0.00 on unpaid invoices and purchases. "Owed" figures and columns now use gross minus paid. Overview totals can now be calculated (`sum` accepts an expression), and list columns can show one field minus another (`minus`).
 
 ## [6.62.0] - 2026-10-09
 
@@ -28,7 +33,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
 ### Removed
 - The hand-built Finance page (`financeOverviewService`, `overview/finance.ejs`), replaced by the generated area.
-- The "Work in progress (value)" figure on the KashFlow projects overview. On the live data it showed −£2,995,301.41, and what KashFlow's work-in-progress field means isn't clear enough to show it as a figure.
+- The "Work in progress (value)" figure on the KashFlow projects overview. On the live data it showed a large negative total, and what KashFlow's work-in-progress field means isn't clear enough to show it as a figure.
 
 ## [6.61.0] - 2026-10-09
 
@@ -66,7 +71,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ## [6.59.1] - 2026-10-09
 
 ### Fixed
-- **"Subcontractors" included almost every supplier.** A subcontractor was any supplier with a WHT rate of 0% or more. KashFlow stores 0% for suppliers that aren't in CIS at all, so the list, the new overview and the subcontractor pickers counted 764, including Travis Perkins, Microsoft Office and KashFlow itself.
+- **"Subcontractors" included almost every supplier.** A subcontractor was any supplier with a WHT rate of 0% or more. KashFlow stores 0% for suppliers that aren't in CIS at all, so the list, the new overview and the subcontractor pickers counted nearly every supplier, including ordinary trade suppliers.
   - A subcontractor is now a supplier with CIS details: withholding tax applied in KashFlow, a WHT rate above 0%, a CIS rate set in hcs-app (Edit CIS details), or HMRC references recorded.
   - That one rule (`cisService.cisSupplierQuery`) now drives the Subcontractors list and overview, the subcontractor pickers on the attendance, assignment and other forms, and the assignment list's subcontractor filter.
   - A gross-paid (0%) subcontractor still counts, as long as it has CIS details.
