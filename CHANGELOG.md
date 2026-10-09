@@ -24,6 +24,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
 ### Changed
 - **The Docker build pulls its Node base image from Amazon's public mirror of the official images** (`public.ecr.aws/docker/library/node:24-alpine`), not Docker Hub. It's the same image, but anonymous Docker Hub pulls from CI were being refused for too many requests, which failed the build twice.
+- **CI's Docker builder image** (`moby/buildkit`) likewise comes from Google's Docker Hub mirror (`mirror.gcr.io`), after Docker Hub timed out on it.
 
 ## [6.65.0] - 2026-10-09
 
