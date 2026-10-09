@@ -20,6 +20,13 @@ export default {
         department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    OverviewSettings: {
+        title: 'Overview Settings',
+        description: 'Choose what each overview and area shows, add figures, and create new areas.',
+        link: '/admin/overviews',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     BackgroundJobs: {
         title: 'Background Jobs',
         description: 'Monitor scheduled tasks, notification outbox, and trigger jobs manually.',

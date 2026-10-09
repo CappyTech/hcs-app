@@ -271,9 +271,19 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
   - panels can only be removed or reordered
 - Routes: one `GET /overview/:id` resolves areas and node overviews per request. `overviewEngine.canOpenPath` uses `routeAccess` when an entry exists, otherwise the stored roles of a custom area or node.
 
+#### Editor — built (6.67.0, branch `feat/overview-editor`)
+
+- `routes/overviewEditorRoutes.js` (admin-only `/admin/overviews`, `/area/:key`, `/node/:key`, `…/reset`, plus POST `/area` and `/node` to create) and `controllers/overviewEditorController.js`. Views are in `views/tailwindcss/admin/overviews/` (`index`, `area`, `node`).
+- `services/overviewEditorService.js`:
+  - **Builder operators:** the `OPERATORS` list.
+  - **Filter conversion:** `whereToRows` turns a filter into rows (null when the builder can't show it) and `rowsToWhere` turns rows back, casting values by schema type with plain errors. Fixed dates and ObjectId equality are refused.
+  - **Fields:** `schemaFields` omits secret fields.
+  - **Diffing:** `diffNode` / `diffArea` work out the minimal override, per key and per figure.
+- The controller builds the full candidate definition from the form, diffs it against the default (custom areas and nodes store their whole definition), and saves through `overviewConfigService`. An empty diff means reset. Moving an overview between areas also updates its parents: added before the area save, removed after.
+- **Known limits:** a refused save redirects with a message and loses the input. There are no fixed-date conditions.
+
 #### Next
-1. **Editor UI** (`/admin/overviews`, admin): area and node pages with forms, a guided filter builder (field, operator, value), reset buttons, error messages from validation. Forms only; no client fetch (CSP).
-2. **Per-user home:** `user.homeLayout`, role defaults stored in the database, a customise mode on home.
+1. **Per-user home:** `user.homeLayout`, role defaults stored in the database, a customise mode on home.
 2. ~~Home tiles~~: done in 6.63.0. Q2 is answered (Jack: top-level areas only). `overviewEngine.homeTiles(req)` lists `areas.js` filtered by route access. Areas still hand-built are marked `bespoke: true`: they get no generated route and `buildArea` returns null for them.
 3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
 4. Per-user home (§3).

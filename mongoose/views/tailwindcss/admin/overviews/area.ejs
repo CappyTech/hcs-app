@@ -1,0 +1,75 @@
+<%# Edit one area: name, icon, position on home, hidden, and which overviews it holds. %>
+<% const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500'; %>
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex items-center gap-3 text-sm">
+    <a href="/admin/overviews" class="text-green-700 dark:text-green-400 hover:underline">← Overview settings</a>
+    <span class="text-gray-400">/</span>
+    <a href="<%= area.path %>" class="text-gray-500 dark:text-gray-400 hover:underline">Open page</a>
+  </div>
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= area.label %></h1>
+
+  <form method="POST" action="/admin/overviews/area/<%= encodeURIComponent(area.id) %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-5">
+    <%- include('../../partials/csrfHidden') %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="a-label" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+        <input id="a-label" name="label" value="<%= area.label %>" required maxlength="60" class="<%= _input %>">
+      </div>
+      <div>
+        <label for="a-icon" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Icon</label>
+        <input id="a-icon" name="icon" value="<%= area.icon || '' %>" pattern="bi-[a-z0-9-]{1,40}" class="<%= _input %> font-mono">
+      </div>
+    </div>
+    <div>
+      <label for="a-desc" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+      <input id="a-desc" name="description" value="<%= area.description || '' %>" maxlength="300" class="<%= _input %>">
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="a-order" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Position on home <span class="text-xs text-gray-400">(0 = first; blank = default)</span></label>
+        <input id="a-order" name="order" type="number" min="0" max="999" value="<%= area.order ?? '' %>" class="<%= _input %>">
+      </div>
+      <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 sm:mt-7">
+        <input type="checkbox" name="hidden" <%= area.hidden ? 'checked' : '' %>> Hide this area (its page and home tile)
+      </label>
+    </div>
+
+    <% if (custom) { %>
+      <fieldset>
+        <legend class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Who may open it</legend>
+        <div class="flex flex-wrap gap-3">
+          <% roles.filter((r) => r !== 'none').forEach((r) => { %>
+            <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="roles" value="<%= r %>" <%= (area.roles || []).includes(r) ? 'checked' : '' %>> <%= r %></label>
+          <% }) %>
+        </div>
+      </fieldset>
+    <% } else { %>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Who may open this area is part of the app's permissions and can't be changed here.</p>
+    <% } %>
+
+    <fieldset>
+      <legend class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Overviews in this area <span class="text-xs text-gray-400">(tick to include; number to order)</span></legend>
+      <div class="border border-gray-200 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-800 max-h-96 overflow-y-auto">
+        <% nodes.sort((x, y) => (y.inArea - x.inArea) || (x.order - y.order) || x.label.localeCompare(y.label)).forEach((n) => { %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2">
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input type="checkbox" name="child_pick[<%= n.id %>]" <%= n.inArea ? 'checked' : '' %>> <%= n.label %>
+            </label>
+            <input type="number" name="child_order[<%= n.id %>]" value="<%= n.inArea ? n.order : '' %>" min="0" max="99" aria-label="Order for <%= n.label %>" class="w-16 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+          </div>
+        <% }) %>
+      </div>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Adding an overview here also lists this area as one of its places, so its breadcrumb can lead back.</p>
+    </fieldset>
+
+    <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
+  </form>
+
+  <% if (changed || custom) { %>
+    <form method="POST" action="/admin/overviews/area/<%= encodeURIComponent(area.id) %>/reset" class="flex items-center justify-between gap-3 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-3">
+      <%- include('../../partials/csrfHidden') %>
+      <span class="text-sm text-red-700 dark:text-red-400"><%= custom ? 'Delete this area. Its overviews stay, but leave this area.' : 'Undo every change to this area and use the built-in settings.' %></span>
+      <button type="submit" class="text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition"><%= custom ? 'Delete area' : 'Reset to default' %></button>
+    </form>
+  <% } %>
+</div>

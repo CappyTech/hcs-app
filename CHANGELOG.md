@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.67.0] - 2026-10-09
+
+### Added
+- **Overview Settings** (`/admin/overviews`, admin only; tile on the Admin dashboard and an article in Help). Admins can change what every generated area and overview shows, without code:
+  - **Areas:** name, icon, description, position on the home page, hide, and which overviews they hold. Adding an overview to an area also adds the area to its places, so breadcrumbs lead back.
+  - **Overviews:**
+    - name and where it sits
+    - each figure's label, hint, highlight, and whether it counts or adds up a field
+    - a **guided filter builder**: field, a comparison such as "is one of", "within the last … days", "is more than … days ago", "is empty", "is the person viewing" or "this tax year", and a value
+    - add and remove figures
+    - which figures show on the area card and the overview
+    - breakdowns, lists (rename, rows, order, remove, add with chosen columns), built-in panels (hide) and "Elsewhere" figures
+  - **New areas and overviews**, with who may open them.
+  - **Reset to default**, or Delete for anything added here.
+- **Only what's changed is stored,** so an unchanged form stores nothing and later improvements to the defaults still arrive. Filters the builder can't show (a few built-in ones that combine conditions) are kept as they are. Every save goes through the 6.66.0 validation, and a refused change says why.
+- A test that loads the help articles file, so a stray quote in it fails the tests instead of stopping the app at startup.
+
 ## [6.66.0] - 2026-10-09
 
 ### Added

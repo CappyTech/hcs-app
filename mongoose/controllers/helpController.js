@@ -1032,6 +1032,24 @@ const helpContent = [
         ],
       },
       {
+        id: 'overview-settings',
+        title: 'Overview Settings',
+        badge: 'Admin',
+        description: 'Admin → Overview Settings (/admin/overviews) controls what the home page areas and each overview show. Your changes are kept on top of the built-in settings, so app updates still improve everything you have not changed, and Reset puts any page back.',
+        steps: [
+          'Areas: rename, change the icon, set the position on the home page, hide, and choose which overviews are in the area.',
+          'Overviews: rename, choose where they sit, and choose which figures show on the area card and at the top of the overview.',
+          'Figures: change the label, hint and highlight (amber or red when above zero), count records or add up a field, and build the filter by picking a field, a comparison and a value. Add new figures the same way.',
+          'Lists and breakdowns: rename, change how many rows show, reorder, remove, or add new ones.',
+          'New areas and overviews: create them from the settings page and choose who may open them.',
+        ],
+        notes: [
+          'A change that would break a page (a missing field, an unsupported comparison, a figure still in use) is refused with a message saying why.',
+          'Filters can use relative dates ("within the last 30 days") but not fixed dates.',
+          'Who may open the built-in pages is part of the app permissions and cannot be widened here. People still only see records their role allows.',
+        ],
+      },
+      {
         id: 'email-graph',
         title: 'Sending Email via Microsoft Graph',
         badge: 'Admin',

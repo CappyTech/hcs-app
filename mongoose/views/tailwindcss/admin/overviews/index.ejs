@@ -1,0 +1,134 @@
+<%#
+  Overview settings (admin): every area and the overviews in it, with links to
+  edit each, and forms to create a new area or overview. Changes are stored as
+  overrides on the defaults (overviewConfigService).
+%>
+<%
+  const _badge = (cls, text) => `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${cls}">${text}</span>`;
+  const _badges = (x) => [
+    x.custom ? _badge('bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300', 'Added here') : '',
+    !x.custom && x.changed ? _badge('bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', 'Changed') : '',
+    x.hidden ? _badge('bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300', 'Hidden') : '',
+    x.bespoke ? _badge('bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400', 'Hand-built page') : '',
+  ].join(' ');
+  const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+%>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-diagram-3 text-green-600" aria-hidden="true"></i> Overview settings</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Choose what each overview shows. Your changes are kept on top of the built-in settings; <em>Reset</em> on any page goes back to them.
+      </p>
+    </div>
+    <a href="/admin" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">← Admin</a>
+  </div>
+
+  <section class="space-y-4">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Areas (home page order)</h2>
+    <% areas.forEach((a) => { %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="font-semibold text-gray-900 dark:text-gray-100"><%= a.label %></span>
+            <span class="font-mono text-xs text-gray-400"><%= a.path %></span>
+            <%- _badges(a) %>
+          </div>
+          <% if (!a.bespoke) { %>
+            <a href="/admin/overviews/area/<%= encodeURIComponent(a.id) %>" class="text-sm font-medium text-green-700 dark:text-green-400 hover:underline">Edit area</a>
+          <% } %>
+        </div>
+        <% if (a.children.length) { %>
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            <% a.children.forEach((n) => { %>
+              <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5">
+                <span class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><%= n.label %> <%- _badges(n) %></span>
+                <a href="/admin/overviews/node/<%= encodeURIComponent(n.id) %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">Edit</a>
+              </li>
+            <% }) %>
+          </ul>
+        <% } else if (!a.bespoke) { %>
+          <p class="px-5 py-3 text-sm italic text-gray-500 dark:text-gray-400">No overviews yet.</p>
+        <% } %>
+      </div>
+    <% }) %>
+  </section>
+
+  <% if (otherNodes.length) { %>
+    <section class="space-y-2">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Lists and groups inside other overviews</h2>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+          <% otherNodes.forEach((n) => { %>
+            <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5">
+              <span class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <%= n.label %> <% if (n.parent) { %><span class="text-xs text-gray-400">in <%= n.parent %></span><% } %> <%- _badges(n) %>
+              </span>
+              <a href="/admin/overviews/node/<%= encodeURIComponent(n.id) %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">Edit</a>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+    </section>
+  <% } %>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <form method="POST" action="/admin/overviews/area" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 space-y-3">
+      <%- include('../../partials/csrfHidden') %>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">New area</h2>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="na-label">Name</label>
+      <input id="na-label" name="label" required maxlength="60" class="<%= _input %>" placeholder="Operations">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="na-key">Short id <span class="text-xs text-gray-400">(letters and numbers; the page will be /overview/&lt;id&gt;)</span></label>
+      <input id="na-key" name="key" required pattern="[A-Za-z][A-Za-z0-9_-]{0,63}" class="<%= _input %> font-mono" placeholder="operations">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="na-icon">Icon <span class="text-xs text-gray-400">(Bootstrap icon, e.g. bi-gear)</span></label>
+      <input id="na-icon" name="icon" pattern="bi-[a-z0-9-]{1,40}" class="<%= _input %> font-mono" placeholder="bi-grid">
+      <fieldset>
+        <legend class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Who may open it</legend>
+        <div class="flex flex-wrap gap-3">
+          <% roles.filter((r) => r !== 'none').forEach((r) => { %>
+            <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="roles" value="<%= r %>" <%= r === 'admin' ? 'checked' : '' %>> <%= r %></label>
+          <% }) %>
+        </div>
+      </fieldset>
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Create area</button>
+    </form>
+
+    <form method="POST" action="/admin/overviews/node" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 space-y-3">
+      <%- include('../../partials/csrfHidden') %>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">New overview</h2>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="nn-model">Records</label>
+      <select id="nn-model" name="model" required class="<%= _input %>">
+        <option value="">— Choose —</option>
+        <% models.forEach((m) => { %><option value="<%= m.name %>"><%= m.name %> (<%= m.ns === 'REST' ? 'KashFlow' : 'hcs-app' %>)</option><% }) %>
+      </select>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="nn-many">Name</label>
+          <input id="nn-many" name="label_many" required maxlength="60" class="<%= _input %>" placeholder="Site visits">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="nn-one">One of them</label>
+          <input id="nn-one" name="label_one" maxlength="60" class="<%= _input %>" placeholder="Site visit">
+        </div>
+      </div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="nn-key">Short id</label>
+      <input id="nn-key" name="key" required pattern="[A-Za-z][A-Za-z0-9_-]{0,63}" class="<%= _input %> font-mono" placeholder="siteVisits">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="nn-area">In area</label>
+      <select id="nn-area" name="area" required class="<%= _input %>">
+        <% areas.filter((a) => !a.bespoke).forEach((a) => { %><option value="<%= a.id %>"><%= a.label %></option><% }) %>
+      </select>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="nn-list">List page <span class="text-xs text-gray-400">(leave blank for /&lt;records&gt;s)</span></label>
+      <input id="nn-list" name="listPath" pattern="/[A-Za-z0-9/_-]{0,120}" class="<%= _input %> font-mono" placeholder="/siteVisits">
+      <fieldset>
+        <legend class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Who may open it</legend>
+        <div class="flex flex-wrap gap-3">
+          <% roles.filter((r) => r !== 'none').forEach((r) => { %>
+            <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="roles" value="<%= r %>" <%= r === 'admin' ? 'checked' : '' %>> <%= r %></label>
+          <% }) %>
+        </div>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">People still only see records their role allows.</p>
+      </fieldset>
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Create overview</button>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,268 @@
+<%#
+  Edit one overview (a model, or a group of models): its name and place, its
+  figures (with the guided filter builder), and what its overview page shows.
+%>
+<%
+  const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const _small = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const _card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-4';
+  const _h2 = 'font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const _label = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
+  const hasModel = !!node.model;
+  const hasOverview = !!node.overview;
+  const pathLabel = (ref) => ref.startsWith(node.id + '.') ? figureLabel(ref) : `${figureLabel(ref)} (${ref.split('.')[0]})`;
+%>
+<%# One condition row of the filter builder: field, comparison, value %>
+<% const condRow = (prefix, i, row) => { %>
+  <div class="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr_1fr] gap-2">
+    <input name="cond[<%= prefix %>][<%= i %>][field]" value="<%= row ? row.field : '' %>" list="model-fields" aria-label="Field" placeholder="field" autocomplete="off" class="<%= _small %> font-mono">
+    <select name="cond[<%= prefix %>][<%= i %>][op]" aria-label="Comparison" class="<%= _small %>">
+      <% operators.forEach((o) => { %><option value="<%= o.op %>" <%= row && row.op === o.op ? 'selected' : '' %>><%= o.label %></option><% }) %>
+    </select>
+    <input name="cond[<%= prefix %>][<%= i %>][value]" value="<%= row ? row.value : '' %>" aria-label="Value" placeholder="value, number of days, or a, b, c" class="<%= _small %>">
+  </div>
+<% } %>
+<%# A total-field picker %>
+<% const sumPicker = (name, current) => { %>
+  <select name="<%= name %>" class="<%= _small %>" aria-label="Add up">
+    <option value="">Count the records</option>
+    <% fields.filter((f) => ['Number', 'Decimal128'].includes(f.type)).forEach((f) => { %><option value="<%= f.path %>" <%= current === f.path ? 'selected' : '' %>>Add up <%= f.path %></option><% }) %>
+  </select>
+<% } %>
+
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-wrap items-center gap-3 text-sm">
+    <a href="/admin/overviews" class="text-green-700 dark:text-green-400 hover:underline">← Overview settings</a>
+    <% if (node.overviewPath) { %><span class="text-gray-400">/</span><a href="<%= node.overviewPath %>" class="text-gray-500 dark:text-gray-400 hover:underline">Open overview</a><% } %>
+    <% if (node.listPath) { %><span class="text-gray-400">/</span><a href="<%= node.listPath %>" class="text-gray-500 dark:text-gray-400 hover:underline">Open list</a><% } %>
+  </div>
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= node.label.many %>
+    <span class="ml-2 font-mono text-xs font-normal text-gray-400"><%= node.model ? node.model : 'group' %></span>
+  </h1>
+
+  <%# One shared list of field names for every condition row (keeps the page small) %>
+  <datalist id="model-fields">
+    <% fields.forEach((f) => { %><option value="<%= f.path %>"><%= f.type %></option><% }) %>
+  </datalist>
+  <form method="POST" action="/admin/overviews/node/<%= encodeURIComponent(node.id) %>" class="space-y-6">
+    <%- include('../../partials/csrfHidden') %>
+
+    <section class="<%= _card %>">
+      <h2 class="<%= _h2 %>">Name and place</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div><label for="n-many" class="<%= _label %>">Name</label><input id="n-many" name="label_many" value="<%= node.label.many %>" required maxlength="60" class="<%= _input %>"></div>
+        <div><label for="n-one" class="<%= _label %>">One of them</label><input id="n-one" name="label_one" value="<%= node.label.one %>" maxlength="60" class="<%= _input %>"></div>
+        <div><label for="n-icon" class="<%= _label %>">Icon</label><input id="n-icon" name="icon" value="<%= node.icon || '' %>" pattern="bi-[a-z0-9-]{1,40}" class="<%= _input %> font-mono"></div>
+      </div>
+      <div><label for="n-desc" class="<%= _label %>">Description</label><input id="n-desc" name="description" value="<%= node.description || '' %>" maxlength="300" class="<%= _input %>"></div>
+      <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="hidden" <%= node.hidden ? 'checked' : '' %>> Hide this overview</label>
+      <fieldset>
+        <legend class="<%= _label %>">Where it sits <span class="text-xs text-gray-400">(the first is used for breadcrumbs; add it to an area from the area's page)</span></legend>
+        <div class="flex flex-wrap gap-x-5 gap-y-2">
+          <% parentChoices.forEach((p) => { const i = (node.parents || []).indexOf(p.id); %>
+            <span class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+              <input type="checkbox" id="par-<%= p.id %>" name="parent_pick[<%= p.id %>]" <%= i >= 0 ? 'checked' : '' %>>
+              <label for="par-<%= p.id %>"><%= p.label %></label>
+              <input type="number" name="parent_order[<%= p.id %>]" value="<%= i >= 0 ? i : '' %>" min="0" max="9" aria-label="Order for <%= p.label %>" class="w-12 <%= _small %>">
+            </span>
+          <% }) %>
+        </div>
+      </fieldset>
+      <% if (custom) { %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label for="n-list" class="<%= _label %>">List page</label><input id="n-list" name="listPath" value="<%= node.listPath || '' %>" pattern="/[A-Za-z0-9/_-]{0,120}" class="<%= _input %> font-mono"></div>
+          <fieldset>
+            <legend class="<%= _label %>">Who may open it</legend>
+            <div class="flex flex-wrap gap-3">
+              <% roles.filter((r) => r !== 'none').forEach((r) => { %>
+                <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="roles" value="<%= r %>" <%= (node.roles || []).includes(r) ? 'checked' : '' %>> <%= r %></label>
+              <% }) %>
+            </div>
+          </fieldset>
+        </div>
+      <% } %>
+    </section>
+
+    <% if (hasModel) { %>
+      <section class="<%= _card %>">
+        <h2 class="<%= _h2 %>">Figures</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Each figure counts (or adds up) the <%= node.label.many.toLowerCase() %> that match all its conditions, and opens exactly those records.</p>
+        <% figures.forEach((f) => { %>
+          <details class="border border-gray-200 dark:border-gray-700 rounded-xl" <%= figures.length <= 3 ? 'open' : '' %>>
+            <summary class="cursor-pointer px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100"><%= f.label %> <span class="font-mono text-xs text-gray-400"><%= f.id %></span></summary>
+            <div class="px-4 pb-4 space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label class="<%= _label %>" for="f-<%= f.id %>-label">Label</label><input id="f-<%= f.id %>-label" name="fig[<%= f.id %>][label]" value="<%= f.label %>" maxlength="120" class="<%= _input %>"></div>
+                <div><label class="<%= _label %>" for="f-<%= f.id %>-hint">Hint <span class="text-xs text-gray-400">(on hover)</span></label><input id="f-<%= f.id %>-hint" name="fig[<%= f.id %>][hint]" value="<%= f.hint || '' %>" maxlength="200" class="<%= _input %>"></div>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                <select name="fig[<%= f.id %>][severity]" class="<%= _small %>" aria-label="How it's highlighted">
+                  <option value="" <%= !f.severity ? 'selected' : '' %>>No highlight</option>
+                  <option value="warning" <%= f.severity === 'warning' ? 'selected' : '' %>>Amber when above zero</option>
+                  <option value="critical" <%= f.severity === 'critical' ? 'selected' : '' %>>Red when above zero</option>
+                </select>
+                <% if (f.sumExpr) { %>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">Total worked out in code (kept as it is)</span>
+                <% } else { %>
+                  <% sumPicker(`fig[${f.id}][sum]`, f.sumField) %>
+                  <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="fig[<%= f.id %>][money]" <%= f.format === 'money' ? 'checked' : '' %>> as money</label>
+                  <input name="fig[<%= f.id %>][unit]" value="<%= f.unit || '' %>" maxlength="10" placeholder="unit, e.g. mi" aria-label="Unit" class="w-24 <%= _small %>">
+                <% } %>
+              </div>
+              <div class="space-y-2">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Conditions</p>
+                <% if (f.editable) { %>
+                  <% f.rows.forEach((row, i) => condRow(f.id, i, row)) %>
+                  <% for (let i = f.rows.length; i < f.rows.length + blankRows; i++) condRow(f.id, i, null) %>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Leave a row's field empty to ignore it. No conditions means every record.</p>
+                <% } else { %>
+                  <input type="hidden" name="fig[<%= f.id %>][keepFilter]" value="1">
+                  <p class="text-xs text-gray-500 dark:text-gray-400">This filter is built into the app in a form the editor can't show, so it stays as it is. You can still change the label, hint and highlight.</p>
+                  <pre class="text-xs font-mono bg-gray-50 dark:bg-gray-800 rounded-lg p-2 overflow-x-auto text-gray-600 dark:text-gray-300"><%= JSON.stringify(f.where) %></pre>
+                <% } %>
+              </div>
+              <label class="inline-flex items-center gap-2 text-sm text-red-700 dark:text-red-400"><input type="checkbox" name="fig[<%= f.id %>][remove]"> Remove this figure</label>
+            </div>
+          </details>
+        <% }) %>
+
+        <details class="border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
+          <summary class="cursor-pointer px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-400">+ Add a figure</summary>
+          <div class="px-4 pb-4 space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label class="<%= _label %>" for="nf-label">Label</label><input id="nf-label" name="newfig[label]" maxlength="120" class="<%= _input %>" placeholder="e.g. Part-time staff"></div>
+              <div><label class="<%= _label %>" for="nf-id">Short id</label><input id="nf-id" name="newfig[id]" pattern="[A-Za-z][A-Za-z0-9_-]{0,63}" class="<%= _input %> font-mono" placeholder="partTime"></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <select name="newfig[severity]" class="<%= _small %>" aria-label="How it's highlighted">
+                <option value="">No highlight</option><option value="warning">Amber when above zero</option><option value="critical">Red when above zero</option>
+              </select>
+              <% sumPicker('newfig[sum]', '') %>
+              <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="newfig[money]"> as money</label>
+            </div>
+            <% for (let i = 0; i < blankRows + 1; i++) condRow('__new', i, null) %>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Then tick it below to show it.</p>
+          </div>
+        </details>
+      </section>
+    <% } %>
+
+    <section class="<%= _card %>">
+      <h2 class="<%= _h2 %>">On the area page</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400">The figures shown on this overview's card. Tick to show; number to order.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <% summaryChoices.forEach((ref) => { const i = summary.indexOf(ref); %>
+          <span class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input type="checkbox" id="sum-<%= ref %>" name="sum_pick[<%= ref %>]" <%= i >= 0 ? 'checked' : '' %>>
+            <input type="number" name="sum_order[<%= ref %>]" value="<%= i >= 0 ? i : '' %>" min="0" max="20" aria-label="Order" class="w-14 <%= _small %>">
+            <label for="sum-<%= ref %>"><%= pathLabel(ref) %></label>
+          </span>
+        <% }) %>
+      </div>
+    </section>
+
+    <% if (hasOverview) { %>
+      <section class="<%= _card %>">
+        <h2 class="<%= _h2 %>">On this overview</h2>
+        <p class="<%= _label %>">Figures at the top</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <% overviewChoices.forEach((ref) => { const i = ovFigures.indexOf(ref); %>
+            <span class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input type="checkbox" id="ov-<%= ref %>" name="ov_pick[<%= ref %>]" <%= i >= 0 ? 'checked' : '' %>>
+              <input type="number" name="ov_order[<%= ref %>]" value="<%= i >= 0 ? i : '' %>" min="0" max="20" aria-label="Order" class="w-14 <%= _small %>">
+              <label for="ov-<%= ref %>"><%= pathLabel(ref) %></label>
+            </span>
+          <% }) %>
+        </div>
+
+        <% if (hasModel) { %>
+          <p class="<%= _label %> pt-2">Breakdowns</p>
+          <% (node.overview.breakdowns || []).forEach((b, i) => { %>
+            <div class="flex flex-wrap items-center gap-3">
+              <input name="bd[<%= i %>][label]" value="<%= b.label %>" maxlength="60" aria-label="Breakdown label" class="<%= _small %>">
+              <span class="text-xs text-gray-500 dark:text-gray-400">by <span class="font-mono"><%= b.by %></span></span>
+              <label class="inline-flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400"><input type="checkbox" name="bd[<%= i %>][remove]"> Remove</label>
+            </div>
+          <% }) %>
+          <div class="flex flex-wrap items-center gap-3">
+            <input name="bd_new[label]" maxlength="60" placeholder="New breakdown, e.g. By type" aria-label="New breakdown label" class="<%= _small %>">
+            <select name="bd_new[by]" aria-label="Group by" class="<%= _small %>">
+              <option value="">— group by —</option>
+              <% fields.filter((f) => ['String', 'Boolean', 'Number'].includes(f.type)).forEach((f) => { %><option value="<%= f.path %>"><%= f.path %></option><% }) %>
+            </select>
+          </div>
+        <% } %>
+
+        <p class="<%= _label %> pt-2">Lists</p>
+        <% (node.overview.lists || []).forEach((l, i) => { %>
+          <div class="flex flex-wrap items-center gap-3">
+            <input type="number" name="list[<%= i %>][order]" value="<%= i %>" min="0" max="20" aria-label="Order" class="w-14 <%= _small %>">
+            <input name="list[<%= i %>][title]" value="<%= l.title || '' %>" maxlength="80" placeholder="<%= l.figure ? figureLabel(l.figure.includes('.') ? l.figure : node.id + '.' + l.figure) : 'List' %>" aria-label="List title" class="<%= _small %>">
+            <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">rows <input type="number" name="list[<%= i %>][limit]" value="<%= l.limit || 10 %>" min="1" max="25" class="w-16 <%= _small %>"></label>
+            <label class="inline-flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400"><input type="checkbox" name="list[<%= i %>][remove]"> Remove</label>
+          </div>
+        <% }) %>
+        <% if (hasModel) { %>
+          <details class="border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
+            <summary class="cursor-pointer px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-400">+ Add a list</summary>
+            <div class="px-4 pb-4 space-y-3">
+              <div class="flex flex-wrap items-center gap-3">
+                <select name="list_new[figure]" aria-label="Rows behind which figure" class="<%= _small %>">
+                  <option value="">— rows behind figure —</option>
+                  <% figures.forEach((f) => { %><option value="<%= f.id %>"><%= f.label %></option><% }) %>
+                </select>
+                <input name="list_new[title]" maxlength="80" placeholder="Title (optional)" aria-label="Title" class="<%= _small %>">
+                <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">rows <input type="number" name="list_new[limit]" value="10" min="1" max="25" class="w-16 <%= _small %>"></label>
+              </div>
+              <% for (let c = 0; c < 4; c++) { %>
+                <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+                  <select name="list_new[col][<%= c %>][field]" aria-label="Column field" class="<%= _small %>">
+                    <option value="">— column —</option>
+                    <% fields.forEach((f) => { %><option value="<%= f.path %>"><%= f.path %></option><% }) %>
+                  </select>
+                  <input name="list_new[col][<%= c %>][label]" maxlength="60" placeholder="Heading" aria-label="Column heading" class="<%= _small %>">
+                  <select name="list_new[col][<%= c %>][format]" aria-label="Column format" class="<%= _small %>">
+                    <option value="">as is</option><option value="date">date</option><option value="money">money</option>
+                  </select>
+                </div>
+              <% } %>
+            </div>
+          </details>
+        <% } %>
+
+        <% if (panels.length) { %>
+          <p class="<%= _label %> pt-2">Built-in panels</p>
+          <div class="flex flex-wrap gap-4">
+            <% panels.forEach((p) => { %>
+              <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="panel_pick[<%= p %>]" checked> <span class="font-mono text-xs"><%= p %></span></label>
+            <% }) %>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Untick to hide. Panels are built into the app; they can be removed here but not added.</p>
+        <% } %>
+
+        <details class="border border-gray-200 dark:border-gray-700 rounded-xl" <%= related.length ? 'open' : '' %>>
+          <summary class="cursor-pointer px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">"Elsewhere": figures from other overviews (<%= related.length %> shown)</summary>
+          <div class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+            <% relatedChoices.forEach((f) => { const i = related.indexOf(f.ref); %>
+              <span class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input type="checkbox" id="rel-<%= f.ref %>" name="rel_pick[<%= f.ref %>]" <%= i >= 0 ? 'checked' : '' %>>
+                <input type="number" name="rel_order[<%= f.ref %>]" value="<%= i >= 0 ? i : '' %>" min="0" max="20" aria-label="Order" class="w-14 <%= _small %>">
+                <label for="rel-<%= f.ref %>"><span class="text-gray-500 dark:text-gray-400"><%= f.nodeLabel %> ·</span> <%= f.label %></label>
+              </span>
+            <% }) %>
+          </div>
+        </details>
+      </section>
+    <% } %>
+
+    <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
+  </form>
+
+  <% if (changed || custom) { %>
+    <form method="POST" action="/admin/overviews/node/<%= encodeURIComponent(node.id) %>/reset" class="flex flex-wrap items-center justify-between gap-3 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-3">
+      <%- include('../../partials/csrfHidden') %>
+      <span class="text-sm text-red-700 dark:text-red-400"><%= custom ? 'Delete this overview and take it out of its areas.' : 'Undo every change to this overview and use the built-in settings.' %></span>
+      <button type="submit" class="text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-sm font-medium transition"><%= custom ? 'Delete overview' : 'Reset to default' %></button>
+    </form>
+  <% } %>
+</div>
