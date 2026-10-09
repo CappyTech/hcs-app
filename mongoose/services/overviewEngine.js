@@ -84,11 +84,16 @@ function canListModel(req, model) {
   return rbac.canAccess(role, model, 'l', custom).allowed;
 }
 
-// The figure's condition AND the user's data scope; null when they can't list it.
-async function scopedFilter(req, model, where, now) {
+// The figure's condition AND the node's base filter AND the user's data scope;
+// null when they can't list it. `baseWhere` mirrors an alias list's baseFilter
+// (e.g. subcontractors = suppliers with a WHT rate) so counts match the list.
+async function scopedFilter(req, model, where, now, baseWhere = null) {
   const scope = await scopeQuery(req, model, 'l');
   if (scope === null) return null;
-  const compiled = compileWhere(where, now);
+  const own = compileWhere(where, now);
+  const base = baseWhere ? compileWhere(baseWhere, now) : {};
+  const parts = [own, base].filter((p) => Object.keys(p).length);
+  const compiled = parts.length > 1 ? { $and: parts } : (parts[0] || {});
   if (!Object.keys(scope).length) return compiled;
   if (!Object.keys(compiled).length) return scope;
   return { $and: [compiled, scope] };
@@ -141,7 +146,7 @@ async function computeFigure(req, ref, now) {
   const Model = modelFor(node.model);
   if (!Model) return base;
   try {
-    const filter = await scopedFilter(req, node.model, figure.where, now);
+    const filter = await scopedFilter(req, node.model, figure.where, now, node.baseWhere);
     if (filter === null) return null;
     base.value = await Model.countDocuments(filter);
   } catch (err) {
@@ -162,7 +167,7 @@ async function computeFigures(req, node, refs, now) {
 // the field; otherwise the segment is shown without a link.
 function segmentHref(node, by, value) {
   if (value === null || value === undefined || value === '') return null;
-  const cfg = listControllerConfig[node.model] || {};
+  const cfg = listControllerConfig[node.listName || node.model] || {};
   if (cfg.tabsby === by) return `${node.listPath}?tab=${encodeURIComponent(value)}`;
   const filter = (cfg.filters || []).find((f) => f.field === by && f.type === 'select');
   if (filter) return `${node.listPath}?f_${encodeURIComponent(by)}=${encodeURIComponent(value)}`;
@@ -173,7 +178,7 @@ async function computeBreakdown(req, node, bd, now) {
   const Model = modelFor(node.model);
   if (!Model) return null;
   try {
-    const filter = await scopedFilter(req, node.model, bd.where, now);
+    const filter = await scopedFilter(req, node.model, bd.where, now, node.baseWhere);
     if (filter === null) return null;
     const groups = await Model.aggregate([
       { $match: filter },
@@ -205,6 +210,10 @@ function formatValue(value, format) {
     const d = new Date(value);
     return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB');
   }
+  if (format === 'money') {
+    const n = Number(value?._bsontype === 'Decimal128' ? value.toString() : value);
+    return isNaN(n) ? '—' : n.toLocaleString('en-GB', { style: 'currency', currency: 'GBP' });
+  }
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (value?._bsontype === 'Decimal128') return value.toString();
   return String(value);
@@ -232,7 +241,7 @@ async function computeList(req, node, list, now) {
   const figure = list.figure ? registry.getFigure(fullRef(node, list.figure)) : null;
   const where = figure ? figure.figure.where : list.where;
   try {
-    const filter = await scopedFilter(req, node.model, where, now);
+    const filter = await scopedFilter(req, node.model, where, now, node.baseWhere);
     if (filter === null) return null;
     const [rows, total] = await Promise.all([
       Model.find(filter).sort(list.sort || { createdAt: -1 }).limit(list.limit || 10).lean(),
@@ -291,10 +300,43 @@ const customPanels = {
   },
 };
 
+// Purchases are joined to suppliers by SupplierCode (KashFlow data: no ObjectId refs).
+customPanels.subcontractorRecentPurchases = async (req, now) => {
+  if (!canListModel(req, 'supplier') || !canListModel(req, 'purchase')) return null;
+  const Supplier = modelFor('supplier');
+  const Purchase = modelFor('purchase');
+  if (!Supplier || !Purchase) return null;
+  const codes = await Supplier.distinct('Code', { WithholdingTaxRate: { $gte: 0 }, IsArchived: { $ne: true } });
+  if (!codes.length) return null;
+  const scope = await scopeQuery(req, 'purchase', 'l');
+  if (scope === null) return null;
+  const own = { SupplierCode: { $in: codes }, IssuedDate: { $gte: new Date(now.getTime() - 30 * DAY_MS) } };
+  const filter = Object.keys(scope).length ? { $and: [own, scope] } : own;
+  const [rows, total] = await Promise.all([
+    Purchase.find(filter).sort({ IssuedDate: -1 }).limit(10).select('uuid Number SupplierName IssuedDate GrossAmount').lean(),
+    Purchase.countDocuments(filter),
+  ]);
+  return {
+    title: 'Subcontractor purchases in the last 30 days',
+    severity: null,
+    columns: ['Number', 'Subcontractor', 'Date', 'Gross'],
+    rows: rows.map((r) => ({
+      href: r.uuid ? `/purchase/read/${r.uuid}` : null,
+      cells: [formatValue(r.Number), formatValue(r.SupplierName), formatValue(r.IssuedDate, 'date'), formatValue(r.GrossAmount, 'money')],
+    })),
+    total,
+    href: '/purchases',
+  };
+};
+
 // ── Pages ────────────────────────────────────────────────────────────────
 function actionsFor(req, node) {
   const { role, custom } = perms(req);
-  return (node.actions || []).filter((a) => !a.op || rbac.canAccess(role, node.model, a.op, custom).allowed);
+  // An action is shown only if its page would open: a controlled route's rule, or the model operation
+  return (node.actions || []).filter((a) => {
+    if (a.route) return canOpenPath(req, a.route);
+    return !a.op || rbac.canAccess(role, node.model, a.op, custom).allowed;
+  });
 }
 
 async function buildArea(req, areaId, now = new Date()) {
@@ -357,15 +399,15 @@ async function buildNodeOverview(req, nodeId, now = new Date()) {
  * breadcrumbs for a model's list. Unknown or foreign views are ignored, so a
  * hand-typed ?view= can only ever narrow a list to a definition in code.
  */
-async function resolveListView(req, modelName, now = new Date()) {
-  const node = registry.getNodeForModel(modelName);
+async function resolveListView(req, listName, now = new Date()) {
+  const node = registry.getNodeForList(listName);
   if (!node) return { filter: null, view: null, crumbs: null };
   const crumbs = breadcrumbs(req, node.id, { from: req.query?.from });
   // The list itself is the last crumb, shown as the page title, so drop it
   const result = { filter: null, view: null, crumbs: crumbs.slice(0, -1) };
   const ref = typeof req.query?.view === 'string' ? req.query.view : null;
   const found = ref ? registry.getFigure(ref) : null;
-  if (found && found.node.model === modelName) {
+  if (found && found.node.id === node.id) {
     result.filter = compileWhere(found.figure.where, now);
     const clear = new URLSearchParams(Object.entries(req.query || {}).filter(([k]) => k !== 'view' && k !== 'page'));
     result.view = { ref, label: found.figure.label, clearHref: `${node.listPath}${clear.toString() ? `?${clear}` : ''}` };

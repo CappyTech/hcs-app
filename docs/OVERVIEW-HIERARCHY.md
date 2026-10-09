@@ -1,6 +1,6 @@
 # Overview Hierarchy — Design & Handover
 
-Status: **in progress.** Pilot order decided by Jack on 2026-10-09: **HR → Employee → Supplier (subcontractor)**. HR and Employee are built (6.59.0, branch `feat/overview-hierarchy`); Supplier is next. See §7 for what's built and how to continue.
+Status: **pilot built.** Pilot order decided by Jack on 2026-10-09: **HR → Employee → Supplier (subcontractor)**. All three are built (6.59.0, branch `feat/overview-hierarchy`). See §7 for what's built and how to continue.
 
 ## 1. The goal (in Jack's words, condensed)
 
@@ -202,12 +202,20 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 
 **Not verified in a browser:** no local DB in the build session. Templates render with mocked data and all unit tests pass; check `/overview/human`, `/overview/employee`, `/employees?view=employee.contractsEndingSoon` after deploy.
 
-### Next: Supplier (subcontractor)
+### Supplier (subcontractor) — built
 
-1. Look at the `supplier` (REST, KashFlow) and `subcontractor` list configs and `subcontractorsOverviewService.js` / `overview/subcontractors.ejs`.
-2. Add a `subcontractors` area (path `/overview/subcontractors`, replacing the bespoke page) and probably a `finance` area stub, with a `supplier` node whose `parents` are both (tests the `from` breadcrumb).
-3. Supplier figures will need REST joins by `SupplierCode`/`SupplierId` (purchases, CIS); add custom panels for anything `where` can't express. Watch the `hmrc`/`accountant` roles: `/overview/subcontractors` is wider than admin, so data scoping matters.
-4. Then convert lists to opt-in definitions (§4 step 3) and the remaining areas; per-user home last.
+- Area `subcontractors` (`/overview/subcontractors`, admin/accountant/hmrc) replaces the bespoke page; node `subcontractor` (`/overview/subcontractor`) is the KashFlow `supplier` model listed through the `subcontractor` **alias list**. New node fields: `listName` (the alias) and `baseWhere` (mirrors the alias `baseFilter`, `WithholdingTaxRate >= 0`), so counts match the list. Node `user` (list-only) and figure `employee.ir35Subcontractor` back the related figures.
+- KashFlow join: custom panel `subcontractorRecentPurchases` matches purchases by `SupplierCode` (REST data has no ObjectId refs).
+- Actions can be gated by a controlled route (`action.route`) instead of a model op. Example: "Edit CIS details" needs `/subcontractor/assign`, which is admin-only.
+- `listController`'s alias handler applies `?view=` and breadcrumbs too.
+- **Two-parent test still pending:** a plain `supplier` node (all suppliers, `/suppliers`) under a generated Finance area would give Suppliers two parents. Do it when Finance is converted.
+
+### Next
+
+1. Get Jack to check the pilot pages on the live app (PR from `feat/overview-hierarchy`).
+2. Convert the next areas: Fleet (vehicle node exists as list-only), Projects, Finance (adds the second parent for suppliers), then Payroll/Documents/Policies/Admin with custom panels.
+3. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
+4. Per-user home (§3).
 
 ### Decisions still open
 Q2–Q5 in §5 (home = top-level areas only? Holiday shape? non-admin overviews? config store?). Until answered: home still shows the Holiday tile; Holiday stays the hand-built page as a group node.

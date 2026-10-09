@@ -32,6 +32,11 @@ export default {
       where: { status: 'active', 'rightToWork.expiryDate': { $notAfterDays: 90 } },
     },
     recentHires: { label: 'Hired in the last 30 days', where: { hireDate: { $withinPastDays: 30 } } },
+    ir35Subcontractor: {
+      label: 'IR35 workers paid as subcontractors',
+      hint: 'Inside IR35 and linked to a supplier record',
+      where: { ir35: true, subcontractorSupplierId: { $set: true } },
+    },
   },
 
   // Depth 1: what the HR area shows for employees
