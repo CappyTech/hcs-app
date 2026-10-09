@@ -1,5 +1,5 @@
 # ── Stage 1: build CSS ────────────────────────────────────────────────────────
-FROM node:24-alpine AS builder
+FROM public.ecr.aws/docker/library/node:24-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -25,7 +25,7 @@ COPY scripts ./scripts
 RUN npm run build:vendor && npm run build:css
 
 # ── Stage 2: production image ─────────────────────────────────────────────────
-FROM node:24-alpine
+FROM public.ecr.aws/docker/library/node:24-alpine
 WORKDIR /app
 
 RUN apk add --no-cache dumb-init curl tailscale

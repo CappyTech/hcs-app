@@ -22,6 +22,9 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - **Overview pages are found per request** (`/overview/:id`), so areas and overviews added or hidden in the database work without a restart.
 - **Access for new pages:** built-in pages keep their code rule (`routeAccess`), which a stored change can't widen. Pages created in the database are opened by the roles stored with them.
 
+### Changed
+- **The Docker build pulls its Node base image from Amazon's public mirror of the official images** (`public.ecr.aws/docker/library/node:24-alpine`), not Docker Hub. It's the same image, but anonymous Docker Hub pulls from CI were being refused for too many requests, which failed the build twice.
+
 ## [6.65.0] - 2026-10-09
 
 ### Added
