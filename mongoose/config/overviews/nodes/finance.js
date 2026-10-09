@@ -4,6 +4,10 @@ const LIVE = { IsArchived: { $ne: true } };
 const INVOICE_UNPAID = { ...LIVE, Status: { $nin: ['Paid', 'Credited', 'Cancelled'] } };
 const PURCHASE_UNPAID = { Status: { $nin: ['Paid', 'Cancelled'] } };
 const money = (field, label) => ({ field, label, format: 'money' });
+// KashFlow's DueAmount isn't filled in by the sync (it reads £0.00 on unpaid
+// invoices and purchases), so "still owed" is gross minus what's been paid.
+const STILL_OWED = { $subtract: [{ $ifNull: ['$GrossAmount', 0] }, { $ifNull: ['$TotalPaidAmount', 0] }] };
+const owedCol = (label) => ({ field: 'GrossAmount', minus: 'TotalPaidAmount', label, format: 'money' });
 
 export default [
   {
@@ -16,10 +20,10 @@ export default [
     overviewPath: '/overview/invoice',
     listPath: '/invoices',
     figures: {
-      owed: { label: 'Owed to us', sum: 'DueAmount', format: 'money', where: INVOICE_UNPAID },
+      owed: { label: 'Owed to us', sum: STILL_OWED, format: 'money', where: INVOICE_UNPAID },
       unpaid: { label: 'Unpaid invoices', where: INVOICE_UNPAID },
       overdue: { label: 'Overdue invoices', severity: 'critical', where: { ...INVOICE_UNPAID, DueDate: { $beforeNow: true } } },
-      overdueValue: { label: 'Overdue value', sum: 'DueAmount', format: 'money', where: { ...INVOICE_UNPAID, DueDate: { $beforeNow: true } } },
+      overdueValue: { label: 'Overdue value', sum: STILL_OWED, format: 'money', where: { ...INVOICE_UNPAID, DueDate: { $beforeNow: true } } },
       issued30: { label: 'Invoiced, last 30 days', sum: 'GrossAmount', format: 'money', where: { ...LIVE, IssuedDate: { $withinPastDays: 30 } } },
       paid30: { label: 'Paid to us, last 30 days', sum: 'GrossAmount', format: 'money', where: { ...LIVE, Status: 'Paid', PaidDate: { $withinPastDays: 30 } } },
     },
@@ -29,7 +33,7 @@ export default [
       breakdowns: [{ label: 'By status', by: 'Status', where: LIVE }],
       lists: [
         { figure: 'overdue', sort: { DueDate: 1 }, limit: 10,
-          columns: [{ field: 'Number', label: 'Invoice' }, { field: 'CustomerName', label: 'Customer' }, { field: 'DueDate', label: 'Was due', format: 'date' }, money('DueAmount', 'Owed')] },
+          columns: [{ field: 'Number', label: 'Invoice' }, { field: 'CustomerName', label: 'Customer' }, { field: 'DueDate', label: 'Was due', format: 'date' }, owedCol('Owed')] },
         { figure: 'issued30', sort: { IssuedDate: -1 }, limit: 10,
           columns: [{ field: 'Number', label: 'Invoice' }, { field: 'CustomerName', label: 'Customer' }, { field: 'IssuedDate', label: 'Issued', format: 'date' }, money('GrossAmount', 'Gross')] },
       ],
@@ -46,10 +50,10 @@ export default [
     overviewPath: '/overview/purchase',
     listPath: '/purchases',
     figures: {
-      owing: { label: 'We owe', sum: 'DueAmount', format: 'money', where: PURCHASE_UNPAID },
+      owing: { label: 'We owe', sum: STILL_OWED, format: 'money', where: PURCHASE_UNPAID },
       unpaid: { label: 'Unpaid purchases', where: PURCHASE_UNPAID },
       overdue: { label: 'Overdue purchases', severity: 'critical', where: { ...PURCHASE_UNPAID, DueDate: { $beforeNow: true } } },
-      overdueValue: { label: 'Overdue value', sum: 'DueAmount', format: 'money', where: { ...PURCHASE_UNPAID, DueDate: { $beforeNow: true } } },
+      overdueValue: { label: 'Overdue value', sum: STILL_OWED, format: 'money', where: { ...PURCHASE_UNPAID, DueDate: { $beforeNow: true } } },
       dueWeek: { label: 'Due in the next 7 days', severity: 'warning', where: { ...PURCHASE_UNPAID, DueDate: { $withinNextDays: 7 } } },
       received30: { label: 'Purchases, last 30 days', sum: 'GrossAmount', format: 'money', where: { IssuedDate: { $withinPastDays: 30 } } },
     },
@@ -59,9 +63,9 @@ export default [
       breakdowns: [{ label: 'By status', by: 'Status' }],
       lists: [
         { figure: 'overdue', sort: { DueDate: 1 }, limit: 10,
-          columns: [{ field: 'Number', label: 'Purchase' }, { field: 'SupplierName', label: 'Supplier' }, { field: 'DueDate', label: 'Was due', format: 'date' }, money('DueAmount', 'Owed')] },
+          columns: [{ field: 'Number', label: 'Purchase' }, { field: 'SupplierName', label: 'Supplier' }, { field: 'DueDate', label: 'Was due', format: 'date' }, owedCol('Owed')] },
         { figure: 'dueWeek', sort: { DueDate: 1 }, limit: 10,
-          columns: [{ field: 'Number', label: 'Purchase' }, { field: 'SupplierName', label: 'Supplier' }, { field: 'DueDate', label: 'Due', format: 'date' }, money('DueAmount', 'Owed')] },
+          columns: [{ field: 'Number', label: 'Purchase' }, { field: 'SupplierName', label: 'Supplier' }, { field: 'DueDate', label: 'Due', format: 'date' }, owedCol('Owed')] },
       ],
       related: ['supplier.owed', 'subcontractor.owed'],
     },

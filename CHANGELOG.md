@@ -11,6 +11,9 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - **Tiles are shown by one rule: whether you can open the page.** The old extra department check is gone. An accountant sees Finance, Subcontractors and Payroll; HMRC sees Subcontractors.
 - Payroll, Documents, Policies and Admin are still hand-built pages, listed as areas until they're converted.
 
+### Fixed
+- **Finance showed £0.00 owed with invoices overdue.** KashFlow's due amount isn't filled in by the sync: it reads £0.00 on unpaid invoices and purchases. The live page showed "Owed to us £0.00" next to 6 overdue Plus Dane Housing invoices worth over £13,000. "Owed" figures and columns now use gross minus paid. Overview totals can now be calculated (`sum` accepts an expression), and list columns can show one field minus another (`minus`).
+
 ## [6.62.0] - 2026-10-09
 
 ### Added
