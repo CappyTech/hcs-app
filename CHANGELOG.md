@@ -16,6 +16,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
 ### Removed
 - The hand-built Finance page (`financeOverviewService`, `overview/finance.ejs`), replaced by the generated area.
+- The "Work in progress (value)" figure on the KashFlow projects overview. On the live data it showed −£2,995,301.41, and what KashFlow's work-in-progress field means isn't clear enough to show it as a figure.
 
 ## [6.61.0] - 2026-10-09
 

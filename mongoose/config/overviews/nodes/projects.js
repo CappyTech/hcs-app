@@ -88,11 +88,11 @@ export default [
       active: { label: 'Active projects', where: ACTIVE_PROJECT },
       belowTarget: { label: 'Income below target', hint: 'Income recorded, but less than the target', severity: 'critical', where: { ...ACTIVE_PROJECT, ...BELOW_TARGET } },
       metTarget: { label: 'Met target, ready to close', severity: 'warning', where: { ...ACTIVE_PROJECT, ...MET_TARGET } },
-      wip: { label: 'Work in progress (value)', sum: 'WorkInProgressAmount', format: 'money', where: ACTIVE_PROJECT },
+      // No WorkInProgressAmount figure: live it summed to −£2,995,301 and its meaning in KashFlow isn't clear.
     },
     summary: ['active', 'belowTarget', 'metTarget'],
     overview: {
-      figures: ['active', 'belowTarget', 'metTarget', 'wip'],
+      figures: ['active', 'belowTarget', 'metTarget'],
       breakdowns: [{ label: 'By status', by: 'Status' }],
       panels: ['projectFinancials'],
     },
