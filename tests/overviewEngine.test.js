@@ -151,7 +151,7 @@ describe('buildNodeOverview', () => {
     assert.equal(ended.rows[0].href, '/employee/read/e-1');
     assert.equal(ended.rows[0].cells[2], '01/09/2026');
     assert.equal(ended.href, '/employees?view=employee.contractsExpired');
-    assert.deepStrictEqual(page.related.map((f) => f.ref), ['holidayRequest.pending', 'attendance.pending', 'vehicle.withEmployee']);
+    assert.deepStrictEqual(page.related.map((f) => f.ref), ['holidayRequest.pending', 'attendance.pending', 'vehicle.withEmployee', 'task.employeeReminders']);
     assert.equal(page.related[1].group, 'Attendance'); // "Attendance · Awaiting approval", not a bare label
     assert.deepStrictEqual(page.crumbs.map((c) => c.label), ['Home', 'Human Resources']);
     assert.equal(page.listHref, '/employees');
@@ -212,5 +212,40 @@ describe('subcontractors (alias list + KashFlow join)', () => {
     assert.deepStrictEqual(hmrcPage.related, []); // employee and user figures aren't theirs to see
     assert.deepStrictEqual(hmrcPage.actions, []); // /subcontractor/assign is admin-only
     assert.equal(hmrcPage.crumbs[1].href, '/overview/subcontractors');
+  });
+});
+
+describe('fleet', () => {
+  beforeEach(() => {
+    patchModels();
+    const sumModel = (name, total) => ({ ...mockModel(name, { count: 6 }), aggregate: async (pipeline) => {
+      calls.push({ name, op: 'aggregate', pipeline });
+      return pipeline[1].$group._id === null ? [{ _id: null, total }] : [];
+    } });
+    mdb.INTERNAL.vehicleFuelLog = sumModel('vehicleFuelLog', 412.5);
+    mdb.INTERNAL.vehicleMileageLog = sumModel('vehicleMileageLog', 1234.4);
+    mdb.INTERNAL.vehicleService = sumModel('vehicleService', 0);
+  });
+
+  it('shows totals as sum figures that still open the rows behind them', async () => {
+    const spend = await engine.computeFigure(admin, 'vehicleFuelLog.spend30', new Date());
+    assert.equal(spend.value, 412.5);
+    assert.equal(spend.display, '£412.50');
+    assert.equal(spend.href, '/vehicleFuelLogs?view=vehicleFuelLog.spend30');
+    const miles = await engine.computeFigure(admin, 'vehicleMileageLog.miles30', new Date());
+    assert.equal(miles.display, '1,234 mi');
+  });
+
+  it('builds the Fleet area from its four models', async () => {
+    const page = await engine.buildArea(admin, 'fleet');
+    assert.deepStrictEqual(page.cards.map((c) => c.id), ['vehicle', 'vehicleService', 'vehicleFuelLog', 'vehicleMileageLog']);
+    assert.ok(page.cards.every((c) => c.href.startsWith('/overview/')));
+  });
+
+  it('expired compliance checks MOT, insurance and road tax on vehicles still in the fleet', async () => {
+    await engine.computeFigure(admin, 'vehicle.complianceExpired', new Date());
+    const count = calls.find((c) => c.name === 'vehicle' && c.op === 'count');
+    assert.deepStrictEqual(count.filter.availabilityStatus, { $ne: 'Disposed' });
+    assert.deepStrictEqual(count.filter.$or.map((c) => Object.keys(c)[0]), ['motExpiryDate', 'insuranceExpiryDate', 'roadTaxExpiryDate']);
   });
 });

@@ -64,6 +64,6 @@ export default {
     ],
     panels: ['unassignedEmployees'],
     // Figures owned by other models: shown under "Elsewhere", each linking into that model's list
-    related: ['holidayRequest.pending', 'attendance.pending', 'vehicle.withEmployee'],
+    related: ['holidayRequest.pending', 'attendance.pending', 'vehicle.withEmployee', 'task.employeeReminders'],
   },
 };
