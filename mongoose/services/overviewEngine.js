@@ -158,7 +158,8 @@ async function computeFigure(req, ref, now) {
       // A total over the matching rows (e.g. fuel spend); the link still opens those rows
       const [agg] = await Model.aggregate([
         { $match: filter },
-        { $group: { _id: null, total: { $sum: `$${figure.sum}` } } },
+        // `sum` is a field name, or a Mongo expression for derived totals (e.g. gross − paid)
+        { $group: { _id: null, total: { $sum: typeof figure.sum === 'string' ? `$${figure.sum}` : figure.sum } } },
       ]);
       const total = agg?.total;
       base.value = Number(total?._bsontype === 'Decimal128' ? total.toString() : (total || 0));
@@ -277,7 +278,13 @@ async function computeList(req, node, list, now) {
         href: r.uuid ? `/${node.model}/read/${r.uuid}` : null,
         cells: columns.map((c) => {
           const raw = getPath(r, c.field);
-          return c.ref ? formatValue(lookups[c.field]?.[String(raw)] ?? null) : formatValue(raw, c.format);
+          if (c.ref) return formatValue(lookups[c.field]?.[String(raw)] ?? null);
+          // `minus`: show field − other field (e.g. gross − paid = still owed)
+          if (c.minus) {
+            const num = (v) => Number(v?._bsontype === 'Decimal128' ? v.toString() : (v || 0));
+            return formatValue(num(raw) - num(getPath(r, c.minus)), c.format);
+          }
+          return formatValue(raw, c.format);
         }),
       })),
       total,

@@ -333,6 +333,8 @@ describe('finance (and a node with two parents)', () => {
     const agg = calls.find((c) => c.name === 'invoice' && c.op === 'aggregate');
     assert.deepStrictEqual(agg.pipeline[0].$match.Status, { $nin: ['Paid', 'Credited', 'Cancelled'] });
     assert.deepStrictEqual(agg.pipeline[0].$match.IsArchived, { $ne: true });
+    // DueAmount isn't synced, so owed = gross − paid
+    assert.ok(agg.pipeline[1].$group.total.$sum.$subtract);
   });
 
   it('keeps accountants out of nothing they can open, and HMRC out of Finance', async () => {
