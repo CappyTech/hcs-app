@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.59.1] - 2026-10-09
+
+### Fixed
+- **Overview wording, from checking the live pages.**
+  - Area cards ended with "Open tasks", which read like the "Open tasks" figure above it. They now say "Tasks overview".
+  - Figures under "Elsewhere" now name where they come from ("Attendance · Awaiting approval", not just "Awaiting approval").
+  - The "no current assignment" panel's link says "Open assignments" instead of "View all 8": it goes to all assignments, not those 8 employees.
+
 ## [6.59.0] - 2026-10-09
 
 ### Added

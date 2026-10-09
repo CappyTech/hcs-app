@@ -123,6 +123,7 @@ describe('buildArea', () => {
     assert.equal(leave.figures[0].href, '/holidayRequests?view=holidayRequest.pending');
     const emp = page.cards.find((c) => c.id === 'employee');
     assert.equal(emp.href, '/overview/employee');
+    assert.equal(emp.linkLabel, 'Employees overview');
     assert.equal(emp.figures[0].value, 4);
     assert.equal(emp.figures[0].href, '/employees?view=employee.active');
   });
@@ -151,6 +152,7 @@ describe('buildNodeOverview', () => {
     assert.equal(ended.rows[0].cells[2], '01/09/2026');
     assert.equal(ended.href, '/employees?view=employee.contractsExpired');
     assert.deepStrictEqual(page.related.map((f) => f.ref), ['holidayRequest.pending', 'attendance.pending', 'vehicle.withEmployee']);
+    assert.equal(page.related[1].group, 'Attendance'); // "Attendance · Awaiting approval", not a bare label
     assert.deepStrictEqual(page.crumbs.map((c) => c.label), ['Home', 'Human Resources']);
     assert.equal(page.listHref, '/employees');
   });

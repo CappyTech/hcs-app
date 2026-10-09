@@ -70,7 +70,7 @@
             <% }) %>
           </ul>
           <a href="<%= card.href %>" class="px-5 py-3 text-sm font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 border-t border-gray-100 dark:border-gray-800 transition">
-            Open <%= card.label.toLowerCase() %> <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            <%= card.linkLabel %> <i class="bi bi-arrow-right" aria-hidden="true"></i>
           </a>
         </section>
       <% }) %>
@@ -119,7 +119,7 @@
           <section class="bg-white dark:bg-gray-900 border <%= _border %> rounded-2xl shadow-sm overflow-hidden min-w-0">
             <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
               <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= l.title %></h2>
-              <a href="<%= l.href %>" class="text-xs font-medium text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">View all <%= _fmt(l.total) %> <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+              <a href="<%= l.href %>" class="text-xs font-medium text-green-700 dark:text-green-400 hover:underline whitespace-nowrap"><%= l.linkLabel || ('View all ' + _fmt(l.total)) %> <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
             </div>
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm">
@@ -154,7 +154,7 @@
         <div class="flex flex-wrap gap-3">
           <% page.related.forEach((f) => { %>
             <a href="<%= f.href %>" class="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border shadow-sm text-sm hover:border-green-400 dark:hover:border-green-600 transition <%= _sevCard(f) %>">
-              <span class="text-gray-700 dark:text-gray-300"><%= f.label %></span>
+              <span class="text-gray-700 dark:text-gray-300"><% if (f.group) { %><span class="text-gray-500 dark:text-gray-400"><%= f.group %> · </span><% } %><%= f.label %></span>
               <strong class="tabular-nums <%= _sevValue(f) %>"><%= _fmt(f.value) %></strong>
             </a>
           <% }) %>
