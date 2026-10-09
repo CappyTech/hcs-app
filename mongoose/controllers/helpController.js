@@ -1120,7 +1120,7 @@ const helpContent = [
         badge: 'Admin',
         description: 'Each department has a dedicated overview that summarises key metrics and alerts at a glance. Overviews are accessible from the home page grid and via direct URL.',
         fields: [
-          { name: 'Fleet Overview', required: '', description: '/overview/fleet — vehicles with MOT, insurance, or road tax expiring within the selected threshold (default 30 days). Accepts ?days= to adjust the window.' },
+          { name: 'Fleet Overview', required: '', description: '/overview/fleet — Vehicles, Services, Fuel and Mileage. Each opens its own overview (/overview/vehicle, /overview/vehicleService, /overview/vehicleFuelLog, /overview/vehicleMileageLog): expired or due MOT/insurance/tax, vehicles off the road, booked services, fuel spend and claimable miles. Every figure opens the matching records.' },
           { name: 'Human Resources Overview', required: '', description: '/overview/human — summary of Employees, Holiday, Attendance and Tasks. Each figure opens the matching records; each section opens its own overview (/overview/employee, /overview/holiday, /overview/attendance, /overview/task).' },
           { name: 'Finance Overview', required: '', description: '/overview/finance — outstanding invoice totals, overdue invoices, recent payments. Accessible to admin and accountant.' },
           { name: 'Projects Overview', required: '', description: '/overview/projects — active KashFlow projects with linked contracts and assigned subcontractors.' },

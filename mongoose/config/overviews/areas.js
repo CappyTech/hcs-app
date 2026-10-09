@@ -17,6 +17,14 @@ export default [
     children: ['employee', 'leave', 'attendance', 'task'],
   },
   {
+    id: 'fleet',
+    path: '/overview/fleet',
+    label: 'Fleet',
+    icon: 'bi-truck',
+    description: 'Vehicles, servicing, fuel and mileage.',
+    children: ['vehicle', 'vehicleService', 'vehicleFuelLog', 'vehicleMileageLog'],
+  },
+  {
     id: 'subcontractors',
     path: '/overview/subcontractors',
     label: 'Subcontractors',

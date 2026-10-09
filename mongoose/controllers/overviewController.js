@@ -1,5 +1,4 @@
 import path from 'path';
-import fleetService from '../services/fleetService.js';
 import overviewEngine from '../services/overviewEngine.js';
 import holidayOverviewService from '../services/holidayOverviewService.js';
 import financeOverviewService from '../services/financeOverviewService.js';
@@ -11,20 +10,6 @@ import payrollOverviewService from '../services/payrollOverviewService.js';
 import policiesOverviewService from '../services/policiesOverviewService.js';
 import currencyService from '../../services/currencyService.js';
 
-export const getFleetOverview = async (req, res, next) => {
-  try {
-    const expiryDays = parseInt(req.query.days) || 30;
-    const overview = await fleetService.getFleetOverview({ expiryDays });
-    res.render(path.join('tailwindcss', 'overview', 'fleet'), {
-      title: 'Fleet Overview',
-      ...overview,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// Generated overviews (config/overviews): areas at depth 1, model overviews at depth 2
 export const getGeneratedArea = (areaId) => async (req, res, next) => {
   try {
     const page = await overviewEngine.buildArea(req, areaId);
@@ -159,4 +144,4 @@ export const postProjectMarkComplete = async (req, res, next) => {
   res.redirect('/overview/projects');
 };
 
-export default { getFleetOverview, getGeneratedArea, getGeneratedNode, getHolidayOverview, getFinanceOverview, getProjectsOverview, getAdminOverview, getDocumentsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };
+export default { getGeneratedArea, getGeneratedNode, getHolidayOverview, getFinanceOverview, getProjectsOverview, getAdminOverview, getDocumentsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };
