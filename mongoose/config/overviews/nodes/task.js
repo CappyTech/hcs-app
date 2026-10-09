@@ -14,8 +14,10 @@ export default {
     overdue: { label: 'Overdue', severity: 'critical', where: { completed: false, dueDate: { $beforeNow: true } } },
     dueWeek: { label: 'Due in the next 7 days', where: { completed: false, dueDate: { $withinNextDays: 7 } } },
     systemOpen: { label: 'Open compliance reminders', where: { completed: false, source: 'system' } },
-    vehicleReminders: { label: 'Open vehicle compliance reminders', severity: 'warning', where: { completed: false, systemKey: { $regex: '^vehicle:' } } },
-    employeeReminders: { label: 'Open HR compliance reminders', severity: 'warning', where: { completed: false, systemKey: { $regex: '^employee:' } } },
+    // Each admin gets their own copy of a compliance reminder, so count the viewer's copies:
+    // one per reminder, matching what they can tick off.
+    vehicleReminders: { label: 'Your open vehicle compliance reminders', severity: 'warning', where: { completed: false, userId: { $me: true }, systemKey: { $regex: '^vehicle:' } } },
+    employeeReminders: { label: 'Your open HR compliance reminders', severity: 'warning', where: { completed: false, userId: { $me: true }, systemKey: { $regex: '^employee:' } } },
     doneMonth: { label: 'Completed in the last 30 days', where: { completed: true, completedAt: { $withinPastDays: 30 } } },
   },
 

@@ -27,26 +27,29 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 //   { $notAfterDays: n }    → anything up to now + n days (includes the past)
 //   { $beforeNow: true }    → before now
 //   { $set: true|false }    → field has / has no value
+//   { $me: true }           → equals the viewing user's _id (e.g. "your tasks")
 const RELATIVE = {
   $withinNextDays: (n, now) => ({ $gte: now, $lte: new Date(now.getTime() + n * DAY_MS) }),
   $withinPastDays: (n, now) => ({ $gte: new Date(now.getTime() - n * DAY_MS), $lte: now }),
   $notAfterDays: (n, now) => ({ $ne: null, $lte: new Date(now.getTime() + n * DAY_MS) }),
   $beforeNow: (_v, now) => ({ $ne: null, $lt: now }),
   $set: (v) => (v ? { $ne: null } : null),
+  // No user → match nothing rather than everything
+  $me: (_v, _now, ctx) => (ctx?.userId ? { $eq: ctx.userId } : { $in: [] }),
 };
 
-function compileWhere(where = {}, now = new Date()) {
+function compileWhere(where = {}, now = new Date(), ctx = {}) {
   const out = {};
   for (const [field, cond] of Object.entries(where || {})) {
     if (field === '$and' || field === '$or') {
-      out[field] = cond.map((c) => compileWhere(c, now));
+      out[field] = cond.map((c) => compileWhere(c, now, ctx));
       continue;
     }
     if (cond && typeof cond === 'object' && !Array.isArray(cond) && !(cond instanceof Date)) {
       const merged = {};
       for (const [op, arg] of Object.entries(cond)) {
         if (RELATIVE[op]) {
-          const r = RELATIVE[op](arg, now);
+          const r = RELATIVE[op](arg, now, ctx);
           if (r === null) { out[field] = null; continue; }
           Object.assign(merged, r);
         } else {
@@ -92,8 +95,9 @@ function canListModel(req, model) {
 async function scopedFilter(req, model, where, now, baseWhere = null) {
   const scope = await scopeQuery(req, model, 'l');
   if (scope === null) return null;
-  const own = compileWhere(where, now);
-  const base = baseWhere ? compileWhere(baseWhere, now) : {};
+  const ctx = { userId: req.user?._id };
+  const own = compileWhere(where, now, ctx);
+  const base = baseWhere ? compileWhere(baseWhere, now, ctx) : {};
   const parts = [own, base].filter((p) => Object.keys(p).length);
   const compiled = parts.length > 1 ? { $and: parts } : (parts[0] || {});
   if (!Object.keys(scope).length) return compiled;
@@ -469,7 +473,7 @@ async function resolveListView(req, listName, now = new Date()) {
   const ref = typeof req.query?.view === 'string' ? req.query.view : null;
   const found = ref ? registry.getFigure(ref) : null;
   if (found && found.node.id === node.id) {
-    result.filter = compileWhere(found.figure.where, now);
+    result.filter = compileWhere(found.figure.where, now, { userId: req.user?._id });
     const clear = new URLSearchParams(Object.entries(req.query || {}).filter(([k]) => k !== 'view' && k !== 'page'));
     result.view = { ref, label: found.figure.label, clearHref: `${node.listPath}${clear.toString() ? `?${clear}` : ''}` };
   }
