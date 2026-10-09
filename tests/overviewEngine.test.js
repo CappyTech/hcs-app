@@ -163,7 +163,6 @@ describe('buildNodeOverview', () => {
   });
 
   it('returns null for nodes without a generated overview', async () => {
-    assert.equal(await engine.buildNodeOverview(admin, 'leave'), null);
     assert.equal(await engine.buildNodeOverview(admin, 'holidayRequest'), null);
   });
 });
@@ -367,5 +366,47 @@ describe('home tiles', () => {
 
   it("doesn't generate pages for areas that are still hand-built", async () => {
     assert.equal(await engine.buildArea(admin, 'payroll'), null);
+  });
+});
+
+describe('holiday (a group node with its own overview)', () => {
+  beforeEach(() => {
+    patchModels();
+    mdb.INTERNAL.holidayRequest = mockModel('holidayRequest', { count: 2, rows: [{ uuid: 'r-1', employeeId: 'e1', startDate: new Date('2026-10-12'), endDate: new Date('2026-10-16'), daysRequested: 5, leaveType: 'annual' }] });
+    mdb.INTERNAL.employeeHoliday = mockModel('employeeHoliday', { rows: [
+      { uuid: 'h-1', employeeId: 'e1', entitlementType: 'days', entitlementDays: 28, carryOverDays: 2, takenDays: 28 },
+      { uuid: 'h-2', employeeId: 'e2', entitlementType: 'hours', entitlementHours: 100, carryOverHours: 0, takenHours: 40 },
+    ] });
+    mdb.INTERNAL.employee = mockModel('employee', { rows: [{ _id: 'e1', name: 'Sample A' }, { _id: 'e2', name: 'Sample B' }] });
+    mdb.INTERNAL.holiday = mockModel('holiday', { rows: [
+      { date: '2026-12-25', title: 'Christmas Day', division: 'england-and-wales' },
+      { date: '2026-12-25', title: 'Christmas Day', division: 'scotland' },
+    ] });
+    mdb.INTERNAL.holidayCustom = mockModel('holidayCustom', { rows: [{ date: new Date('2026-12-24'), title: 'Office closed' }] });
+  });
+
+  it('builds the Holiday overview from holiday-request figures, with lists from that model', async () => {
+    const page = await engine.buildNodeOverview(admin, 'leave');
+    assert.equal(page.title, 'Holiday');
+    assert.deepStrictEqual(page.crumbs.map((c) => c.label), ['Home', 'Human Resources']);
+    assert.equal(page.figures[0].href, '/holidayRequests?view=holidayRequest.pending');
+    const pending = page.lists.find((l) => l.title === 'Holiday requests to approve');
+    assert.equal(pending.rows[0].href, '/holidayRequest/read/r-1');
+    assert.equal(pending.rows[0].cells[0], 'Sample A');
+    assert.equal(page.listHref, null); // a group has no single list
+    assert.equal(page.actions[0].label, 'New holiday record');
+  });
+
+  it('works out balances (entitlement + carry-over − taken), lowest first', async () => {
+    const page = await engine.buildNodeOverview(admin, 'leave');
+    const bal = page.lists.find((l) => l.title.startsWith('Holiday balances'));
+    assert.deepStrictEqual(bal.rows.map((r) => r.cells), [['Sample A', '30d', '28d', '2d'], ['Sample B', '100h', '40h', '60h']]);
+    assert.equal(bal.severity, 'warning'); // Sample A has 2 days left
+  });
+
+  it('lists each upcoming holiday once, bank and company together', async () => {
+    const page = await engine.buildNodeOverview(admin, 'leave');
+    const up = page.lists.find((l) => l.title === 'Holidays in the next 60 days');
+    assert.deepStrictEqual(up.rows.map((r) => r.cells[1]), ['Office closed', 'Christmas Day']);
   });
 });

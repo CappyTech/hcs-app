@@ -1,6 +1,5 @@
 import path from 'path';
 import overviewEngine from '../services/overviewEngine.js';
-import holidayOverviewService from '../services/holidayOverviewService.js';
 import kashflowProjectService from '../services/kashflowProjectService.js';
 import adminOverviewService from '../services/adminOverviewService.js';
 import documentsOverviewService from '../services/documentsOverviewService.js';
@@ -23,18 +22,6 @@ export const getGeneratedNode = (nodeId) => async (req, res, next) => {
     const page = await overviewEngine.buildNodeOverview(req, nodeId);
     if (!page) return next();
     res.render(path.join('tailwindcss', 'overview', 'generated'), { title: page.title, page });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const getHolidayOverview = async (req, res, next) => {
-  try {
-    const overview = await holidayOverviewService.getHolidayOverview();
-    res.render(path.join('tailwindcss', 'overview', 'holiday'), {
-      title: 'Holiday Overview',
-      ...overview,
-    });
   } catch (err) {
     next(err);
   }
@@ -118,4 +105,4 @@ export const postProjectMarkComplete = async (req, res, next) => {
   res.redirect('/overview/project');
 };
 
-export default { getGeneratedArea, getGeneratedNode, getHolidayOverview, getAdminOverview, getDocumentsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };
+export default { getGeneratedArea, getGeneratedNode, getAdminOverview, getDocumentsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };
