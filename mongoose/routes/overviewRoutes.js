@@ -45,10 +45,6 @@ router.get('/overview/documents',
   authService.ensureRole('admin'),
   ctrl.getDocumentsOverview);
 
-router.get('/overview/subcontractors',
-  authService.ensureRoles('admin', 'accountant', 'hmrc'),
-  ctrl.getSubcontractorsOverview);
-
 router.get('/overview/payroll',
   authService.ensureRoles('admin', 'accountant'),
   ctrl.getPayrollOverview);

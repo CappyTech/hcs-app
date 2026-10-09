@@ -4,6 +4,8 @@ import attendance from './nodes/attendance.js';
 import task from './nodes/task.js';
 import leave from './nodes/leave.js';
 import vehicle from './nodes/vehicle.js';
+import subcontractor from './nodes/subcontractor.js';
+import user from './nodes/user.js';
 
 /**
  * Overview hierarchy registry.
@@ -20,7 +22,7 @@ import vehicle from './nodes/vehicle.js';
  * Definitions are plain data so they can later move to the config store
  * (single-tenant config direction). See docs/OVERVIEW-HIERARCHY.md.
  */
-const nodeList = [employee, attendance, task, ...leave, vehicle];
+const nodeList = [employee, attendance, task, ...leave, vehicle, subcontractor, user];
 
 const areaById = new Map(areas.map((a) => [a.id, a]));
 const nodeById = new Map(nodeList.map((n) => [n.id, n]));
@@ -29,6 +31,11 @@ function getArea(id) { return areaById.get(id) || null; }
 function getNode(id) { return nodeById.get(id) || null; }
 function getNodeForModel(model) {
   return nodeList.find((n) => n.model === model) || null;
+}
+// The node whose list is `listName` (a model's own list, or an alias list such
+// as 'subcontractor', which lists suppliers through a base filter).
+function getNodeForList(listName) {
+  return nodeList.find((n) => n.model && (n.listName || n.model) === listName) || null;
 }
 function getNodeByOverviewPath(path) {
   return nodeList.find((n) => n.model && n.overviewPath === path) || null;
@@ -83,5 +90,5 @@ function validate() {
   return problems;
 }
 
-export default { getArea, getNode, getNodeForModel, getNodeByOverviewPath, getFigure, listAreas, listNodes, validate };
-export { getArea, getNode, getNodeForModel, getNodeByOverviewPath, getFigure, listAreas, listNodes, validate };
+export default { getArea, getNode, getNodeForModel, getNodeForList, getNodeByOverviewPath, getFigure, listAreas, listNodes, validate };
+export { getArea, getNode, getNodeForModel, getNodeForList, getNodeByOverviewPath, getFigure, listAreas, listNodes, validate };

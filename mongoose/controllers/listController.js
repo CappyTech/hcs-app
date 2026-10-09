@@ -662,6 +662,20 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
     mongoFilter = applyFilterParams(req, filterConfigs, mongoFilter);
     const activeFilterCount = countActiveFilters(req, filterConfigs);
 
+    // Overview hierarchy: ?view= and breadcrumbs (see the main handler)
+    let overviewCrumbs = null;
+    let activeView = null;
+    try {
+      const ov = await overviewEngine.resolveListView(req, aliasName);
+      overviewCrumbs = ov.crumbs;
+      activeView = ov.view;
+      if (ov.filter) {
+        mongoFilter = Object.keys(mongoFilter).length ? { $and: [mongoFilter, ov.filter] } : ov.filter;
+      }
+    } catch (err) {
+      logger.warn(`[listController] overview view for ${aliasName} skipped: ${err.message}`);
+    }
+
     const listLayout = req.query.layout || config.layout || 'table';
 
     try {
@@ -709,6 +723,8 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
           totalPages,
           query,
           reqQuery: req.query,
+          overviewCrumbs,
+          activeView,
           model: aliasName,
           actions: config.actions || [],
           canCreate: !denyGuard(config, "c"),
@@ -864,6 +880,8 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
         totalPages,
         query,
         reqQuery: req.query,
+        overviewCrumbs,
+        activeView,
         model: aliasName,
         actions: config.actions || [],
         canCreate: !denyGuard(config, "c"),

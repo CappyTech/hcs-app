@@ -16,4 +16,12 @@ export default [
     description: 'People, holiday, attendance and tasks.',
     children: ['employee', 'leave', 'attendance', 'task'],
   },
+  {
+    id: 'subcontractors',
+    path: '/overview/subcontractors',
+    label: 'Subcontractors',
+    icon: 'bi-person-gear',
+    description: 'Construction Industry Scheme subcontractors and their verification.',
+    children: ['subcontractor'],
+  },
 ];

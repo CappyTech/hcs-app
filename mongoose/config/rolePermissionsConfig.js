@@ -239,6 +239,7 @@ const routeAccess = {
   '/overview/policies':       ['admin'],
   '/overview/projects':       ['admin'],
   '/overview/subcontractors': ['admin', 'accountant', 'hmrc'],
+  '/overview/subcontractor':  ['admin', 'accountant', 'hmrc'],
   '/overview/task':           ['admin'],
 
   // Subcontractor administration

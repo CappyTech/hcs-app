@@ -9,10 +9,18 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - **Human Resources** (`/overview/human`) is the first generated area. It shows Employees, Holiday, Attendance and Tasks, each with its key figures. The Holiday section opens the Holiday overview instead of the holiday records list.
 - **New overviews for Employees, Attendance and Tasks** (`/overview/employee`, `/overview/attendance`, `/overview/task`). Each has figures, breakdowns, lists of what needs attention, and links to related figures in other areas.
   - Employees: ended and ending fixed-term contracts, right-to-work checks due, recent hires, employees with no current assignment, holiday and attendance waiting for approval, vehicles with an employee.
+- **Subcontractors** (`/overview/subcontractors`) is the second generated area. Its new overview (`/overview/subcontractor`) shows:
+  - subcontractors by deduction rate, each rate opening its tab of the list
+  - those not verified with HMRC, and those deducted at 30%
+  - balances outstanding
+  - subcontractor purchases in the last 30 days, matched to KashFlow purchases by supplier code
+  - IR35 workers paid as subcontractors, and subcontractor portal users
+  Counts match the Subcontractors list exactly: both use suppliers with a WHT rate. HMRC and accountant users see the subcontractor figures, but not the employee and user figures their role can't open.
 - **Breadcrumbs** on generated overviews and on the lists beneath them (e.g. Home › Human Resources › Holiday › Holiday requests).
 
 ### Changed
-- The old hand-built HR page and `humanOverviewService` are replaced by the generated area. Its detail moved one level down to the Employee, Attendance and Holiday overviews.
+- The old hand-built HR and Subcontractors pages (`humanOverviewService`, `subcontractorsOverviewService` and their templates) are replaced by generated areas. Their detail moved one level down into the new overviews.
+- The Subcontractors overview now counts subcontractors the way the Subcontractors list does: suppliers with a WHT rate. The old page used a broader CIS test (CIS rate, withholding-tax flag or references), so its figures didn't match the list.
 - Contract-ending figures now count active employees only; an ended contract for someone who has left isn't something to act on.
 
 ### Fixed

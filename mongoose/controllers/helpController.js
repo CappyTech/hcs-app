@@ -73,7 +73,7 @@ const helpContent = [
           { name: 'Supplier Records', required: '', description: 'Read-only access to all supplier records — verify CIS numbers (UTRs), withholding tax flags, and HMRC verification numbers.' },
           { name: 'CIS Dashboard', required: '', description: 'View monthly CIS deduction summaries for all subcontractors at /CIS/Dashboard/:year/:month.' },
           { name: 'CIS Returns', required: '', description: 'Access the returns form (/CIS/returns/form) and view all monthly and yearly CIS return reports.' },
-          { name: 'Subcontractors Overview', required: '', description: 'The overview at /overview/subcontractors shows all CIS subcontractors with rates, verification numbers, and payment totals.' },
+          { name: 'Subcontractors Overview', required: '', description: 'The overview at /overview/subcontractors summarises CIS subcontractors. Open the Subcontractors overview (/overview/subcontractor) for deduction rates, HMRC verification, balances owed and recent purchases. Every figure opens the matching subcontractors.' },
         ],
         notes: [
           'The HMRC role is read-only — no records can be created, edited, or deleted.',
@@ -1126,7 +1126,7 @@ const helpContent = [
           { name: 'Projects Overview', required: '', description: '/overview/projects — active KashFlow projects with linked contracts and assigned subcontractors.' },
           { name: 'Admin Overview', required: '', description: '/overview/admin — open tasks, pending attendance records, user account summary, and system health indicators.' },
           { name: 'Documents Overview', required: '', description: '/overview/documents — unlinked OCR documents and recent Paperless-ngx ingest activity.' },
-          { name: 'Subcontractors Overview', required: '', description: '/overview/subcontractors — all CIS subcontractors with rates, HMRC verification numbers, and outstanding purchase totals. Accessible to admin, accountant, and hmrc.' },
+          { name: 'Subcontractors Overview', required: '', description: '/overview/subcontractors (area) and /overview/subcontractor (detail): subcontractors by deduction rate, HMRC verification, balances outstanding and purchases in the last 30 days. Accessible to admin, accountant and hmrc; figures for employees and users only show for roles that can open them.' },
         ],
         notes: [
           'Overview tiles only appear on the dashboard home page if your role has access to that department.',

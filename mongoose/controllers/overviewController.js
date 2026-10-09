@@ -7,7 +7,6 @@ import projectsOverviewService from '../services/projectsOverviewService.js';
 import kashflowProjectService from '../services/kashflowProjectService.js';
 import adminOverviewService from '../services/adminOverviewService.js';
 import documentsOverviewService from '../services/documentsOverviewService.js';
-import subcontractorsOverviewService from '../services/subcontractorsOverviewService.js';
 import payrollOverviewService from '../services/payrollOverviewService.js';
 import policiesOverviewService from '../services/policiesOverviewService.js';
 import currencyService from '../../services/currencyService.js';
@@ -106,18 +105,6 @@ export const getDocumentsOverview = async (req, res, next) => {
   }
 };
 
-export const getSubcontractorsOverview = async (req, res, next) => {
-  try {
-    const overview = await subcontractorsOverviewService.getSubcontractorsOverview();
-    res.render(path.join('tailwindcss', 'overview', 'subcontractors'), {
-      title: 'Subcontractors Overview',
-      ...overview,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
 export const getPayrollOverview = async (req, res, next) => {
   try {
     const overview = await payrollOverviewService.getPayrollOverview();
@@ -172,4 +159,4 @@ export const postProjectMarkComplete = async (req, res, next) => {
   res.redirect('/overview/projects');
 };
 
-export default { getFleetOverview, getGeneratedArea, getGeneratedNode, getHolidayOverview, getFinanceOverview, getProjectsOverview, getAdminOverview, getDocumentsOverview, getSubcontractorsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };
+export default { getFleetOverview, getGeneratedArea, getGeneratedNode, getHolidayOverview, getFinanceOverview, getProjectsOverview, getAdminOverview, getDocumentsOverview, getPayrollOverview, postProjectsFinancialCheck, getPoliciesOverview, postProjectMarkComplete };

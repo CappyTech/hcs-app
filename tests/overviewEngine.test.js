@@ -160,3 +160,53 @@ describe('buildNodeOverview', () => {
     assert.equal(await engine.buildNodeOverview(admin, 'holidayRequest'), null);
   });
 });
+
+describe('subcontractors (alias list + KashFlow join)', () => {
+  const hmrc = { user: { role: 'hmrc', customPermissions: {} }, query: {} };
+
+  beforeEach(() => {
+    patchModels();
+    mdb.REST = {
+      ...mdb.REST,
+      supplier: { ...mockModel('supplier', { count: 7, groups: [{ _id: 20, count: 5 }, { _id: 30, count: 2 }] }), distinct: async () => ['SUB1', 'SUB2'] },
+      purchase: mockModel('purchase', { count: 2, rows: [{ uuid: 'p-1', Number: 101, SupplierName: 'Sample Sub', IssuedDate: new Date('2026-10-01'), GrossAmount: 1200 }] }),
+    };
+    // keep INTERNAL lookups from shadowing the REST models
+    delete mdb.INTERNAL.supplier;
+    delete mdb.INTERNAL.purchase;
+  });
+
+  it("counts only the alias list's rows (base filter applied)", async () => {
+    const f = await engine.computeFigure(admin, 'subcontractor.active', new Date());
+    assert.equal(f.value, 7);
+    assert.equal(f.href, '/subcontractors?view=subcontractor.active');
+    const count = calls.find((c) => c.name === 'supplier' && c.op === 'count');
+    assert.deepStrictEqual(count.filter.$and[1], { WithholdingTaxRate: { $gte: 0 } });
+  });
+
+  it('applies ?view= on the alias list', async () => {
+    const r = await engine.resolveListView({ ...admin, query: { view: 'subcontractor.unverified' } }, 'subcontractor');
+    assert.equal(r.view.label, 'Not verified with HMRC');
+    assert.ok(Array.isArray(r.filter.$nor));
+    assert.deepStrictEqual(r.crumbs.map((c) => c.label), ['Home', 'Subcontractors']);
+    // the plain supplier list isn't the subcontractor node's list
+    assert.equal((await engine.resolveListView({ ...admin, query: { view: 'subcontractor.unverified' } }, 'supplier')).filter, null);
+  });
+
+  it('builds the overview: rate tabs, purchases joined by supplier code, admin-only links hidden from HMRC', async () => {
+    const page = await engine.buildNodeOverview(admin, 'subcontractor');
+    const rates = page.breakdowns[0];
+    assert.deepStrictEqual(rates.segments.map((s) => [s.label, s.href]), [['20%', '/subcontractors?tab=20'], ['30%', '/subcontractors?tab=30']]);
+    const purchases = page.lists.find((l) => l.title.startsWith('Subcontractor purchases'));
+    assert.equal(purchases.rows[0].href, '/purchase/read/p-1');
+    assert.equal(purchases.rows[0].cells[3], '£1,200.00');
+    const find = calls.find((c) => c.name === 'purchase' && c.op === 'find');
+    assert.deepStrictEqual(find.filter.SupplierCode, { $in: ['SUB1', 'SUB2'] });
+    assert.equal(page.actions[0].label, 'Edit CIS details');
+
+    const hmrcPage = await engine.buildNodeOverview(hmrc, 'subcontractor');
+    assert.deepStrictEqual(hmrcPage.related, []); // employee and user figures aren't theirs to see
+    assert.deepStrictEqual(hmrcPage.actions, []); // /subcontractor/assign is admin-only
+    assert.equal(hmrcPage.crumbs[1].href, '/overview/subcontractors');
+  });
+});
