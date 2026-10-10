@@ -19,8 +19,10 @@ function selection(layout) {
   return pos;
 }
 
-function render(res, opts) {
-  res.render(view, { ...opts, selected: selection(opts.layout), limits: homeLayout.LIMITS });
+// `layout` is express-ejs-layouts' own local (the page template's path), so
+// the pins are passed as `selected` only; a `layout` object here is a 500.
+function render(res, { layout, ...opts }) {
+  res.render(view, { ...opts, selected: selection(layout), limits: homeLayout.LIMITS });
 }
 
 // ── Your own home ────────────────────────────────────────────────────────

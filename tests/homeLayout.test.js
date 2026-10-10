@@ -119,3 +119,26 @@ describe('home layout resolution and drawing', () => {
     assert.deepStrictEqual(home.lists, []);
   });
 });
+
+describe('home layout pages', async () => {
+  const ctrl = (await import('../mongoose/controllers/homeLayoutController.js')).default;
+  const capture = () => {
+    const res = { rendered: null, render(view, locals) { this.rendered = { view, locals }; } };
+    return res;
+  };
+
+  // express-ejs-layouts reads `layout` as the page template's path; an object there is a 500
+  it("doesn't pass a `layout` local to the customise pages", async () => {
+    await homeLayout.save('user', 'u-1', { areas: ['human'], figures: [], lists: [] });
+    const own = capture();
+    await ctrl.getCustomise(as('admin', 'u-1'), own, (err) => { throw err; });
+    assert.ok(own.rendered);
+    assert.equal(own.rendered.locals.layout, undefined);
+    assert.equal(own.rendered.locals.selected.human, 1);
+
+    const role = capture();
+    await ctrl.getRoleDefault({ ...admin, params: { role: 'accountant' } }, role, (err) => { throw err; });
+    assert.ok(role.rendered);
+    assert.equal(role.rendered.locals.layout, undefined);
+  });
+});
