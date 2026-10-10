@@ -22,6 +22,17 @@ export default {
   parents: ['subcontractors', 'finance'],
   overviewPath: '/overview/subcontractor',
   listPath: '/subcontractors',
+  list: {
+    columns: [
+      { field: 'Name', label: 'Name' },
+      { field: 'Code', label: 'Code' },
+      { field: 'WithholdingTaxRate', label: 'WHT Rate' },
+      { field: 'Note', label: 'Note' },
+      { field: 'OutstandingBalance', label: 'Outstanding' },
+      { field: 'TotalPaidAmount', label: 'Total Paid' },
+      { field: 'VatNumber', label: 'VAT No.' },
+    ],
+  },
   actions: [{ label: 'Edit CIS details', href: '/subcontractor/assign', route: '/subcontractor/assign', icon: 'bi-pencil-square' }],
 
   figures: {

@@ -29,6 +29,9 @@ const FORMATS = ['date', 'money'];
 const ICON = /^bi-[a-z0-9-]{1,40}$/;
 const ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const PATH = /^\/[A-Za-z0-9/_-]{0,120}$/;
+// Fields no page may show, whatever the role (same rule as the editor's field list)
+const SECRET = /(^|\.)(password|totpSecret|resetToken|unsubscribeToken)/i;
+const LIST_FIELD = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 
 function modelFor(name) {
   for (const ns of ['INTERNAL', 'REST', 'PAPERLESS']) {
@@ -112,6 +115,7 @@ function checkColumns(cols, model, at) {
     if (!isPlain(c)) fail(`${at}[${i}]: a column must be an object.`);
     for (const k of Object.keys(c)) if (!['field', 'label', 'format', 'ref', 'minus'].includes(k)) fail(`${at}[${i}]: "${k}" isn't a column setting.`);
     if (!fieldExists(model, c.field)) fail(`${at}[${i}]: "${c.field}" isn't a field of ${model.modelName}.`);
+    if (SECRET.test(c.field)) fail(`${at}[${i}]: "${c.field}" can't be shown.`);
     text(c.label, 60, `${at}[${i}] label`);
     if (c.format !== undefined && !FORMATS.includes(c.format)) fail(`${at}[${i}]: format must be date or money.`);
     if (c.minus !== undefined && !fieldExists(model, c.minus)) fail(`${at}[${i}]: "${c.minus}" isn't a field of ${model.modelName}.`);
@@ -122,11 +126,32 @@ function checkColumns(cols, model, at) {
   });
 }
 
+// A list page's columns (node.list). Top-level fields only: the list table
+// reads each row's own keys, and resolves links through listControllerConfig.
+function checkListDefinition(list, model, at) {
+  if (list === null) return; // back to the older automatic columns
+  if (!model) fail(`${at}: a group has no list of its own.`);
+  if (!isPlain(list)) fail(`${at} must be an object.`);
+  for (const k of Object.keys(list)) if (k !== 'columns') fail(`${at}: "${k}" isn't a list setting.`);
+  const cols = list.columns;
+  if (!Array.isArray(cols) || !cols.length || cols.length > 30) fail(`${at}: a list needs 1 to 30 columns.`);
+  const seen = new Set();
+  cols.forEach((c, i) => {
+    if (!isPlain(c)) fail(`${at}.columns[${i}]: a column must be an object.`);
+    for (const k of Object.keys(c)) if (!['field', 'label'].includes(k)) fail(`${at}.columns[${i}]: "${k}" isn't a column setting.`);
+    if (typeof c.field !== 'string' || !LIST_FIELD.test(c.field) || !fieldExists(model, c.field)) fail(`${at}.columns[${i}]: "${c.field}" isn't a field of ${model.modelName}.`);
+    if (SECRET.test(c.field) || c.field === '__v') fail(`${at}.columns[${i}]: "${c.field}" can't be shown.`);
+    if (seen.has(c.field)) fail(`${at}: "${c.field}" is listed twice.`);
+    seen.add(c.field);
+    text(c.label, 60, `${at}.columns[${i}] label`);
+  });
+}
+
 const figureRefOk = (r) => typeof r === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,63}(\.[A-Za-z][A-Za-z0-9_-]{0,63})?$/.test(r);
 
 function checkNodeOverride(key, ov, { custom, base, customPanels }) {
   const model = modelFor(ov.model ?? base?.model);
-  const allowed = ['label', 'icon', 'description', 'parents', 'summary', 'figures', 'overview', 'actions', 'hidden'];
+  const allowed = ['label', 'icon', 'description', 'parents', 'summary', 'figures', 'overview', 'actions', 'hidden', 'list'];
   // Only a node that doesn't exist in code may set where it lives and what it lists
   if (custom) allowed.push('model', 'listPath', 'overviewPath', 'roles');
   for (const k of Object.keys(ov)) if (!allowed.includes(k)) fail(`${key}: "${k}" can't be changed here.`);
@@ -156,6 +181,7 @@ function checkNodeOverride(key, ov, { custom, base, customPanels }) {
       if (fig && !base?.figures?.[id] && (!merged.label || !merged.where)) fail(`${key}.figures.${id}: a new figure needs a label and a filter.`);
     }
   }
+  if (ov.list !== undefined) checkListDefinition(ov.list, model, `${key}.list`);
   if (ov.actions !== undefined) {
     if (!Array.isArray(ov.actions) || ov.actions.length > 4) fail(`${key}: up to 4 actions.`);
     ov.actions.forEach((a, i) => {

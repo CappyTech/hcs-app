@@ -299,8 +299,28 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - **Home** (`index.ejs`) draws pinned figures, then pinned lists, then the Overviews tile card with a "Customise home" link. The list card markup is shared with overview pages (`views/tailwindcss/overview/partials/listCard.ejs`).
 - `overviewEngine.homeTiles` is kept: it's tested and equals the built-in tile set.
 
+### List columns on the overview (6.69.0, branch `feat/overview-lists`)
+
+- **Definition:** a model node may set `list: { columns: [{ field, label }] }`, the columns its list page shows, in order. This is opt-in: a field the definition doesn't name never appears. Columns no longer depend on the first record's keys.
+- **Use:** `listController.generateHeaders(firstDoc, config, listName)` returns exactly those columns when the node for `listName` (`registry.getNodeForList`) has a definition. Otherwise it falls back to the older `hideFields` / `fieldOrder` / `labelOverrides` rules. Both the main and the alias list handlers pass the list name, and CSV export uses the same headers.
+- **Still from `listControllerConfig`:** links (`fieldTransforms`), tabs, filters, layout, sort, `rowFields`, header actions and department. These move in later steps.
+- **Defined for every generic list on a node:**
+  - HR: employee, attendance, task, holidayRequest
+  - Fleet: vehicle, vehicleService, vehicleFuelLog, vehicleMileageLog
+  - Projects: contract, assignment, project
+  - Finance: invoice, purchase, customer, supplier, quote
+  - subcontractor (alias) and user
+
+  Each was generated from its `fieldOrder` (minus hidden, non-schema, nested and secret fields) and its `labelOverrides`, so the pages look the same. Fields that showed only because a record held them, outside `fieldOrder`, are now off. Payroll and Policies use their own pages (`listRoute`) and have no generic list.
+- The task card layout in `listTable.ejs` reads fields directly. Task `rowFields` lists all of them, so the cards keep working whichever columns are chosen.
+- Lists of models without a node (lookups like nominal, vatrate, country) keep the automatic rules.
+- **Store:** `list` is in the node override whitelist (`overviewConfigService.checkListDefinition`). It takes 1–30 columns of top-level fields that exist on the model, with no duplicates and no secret fields (`SECRET`; the same rule now also guards overview list columns). `list: null` goes back to automatic.
+- **Editor:** the node page has an "On the list page" section. Choose "These columns" or "Automatic"; then order, field (datalist of top-level fields), heading and remove, plus blank rows to add (`listFromForm`). `diffNode` includes `list`.
+
 #### Next
-1. Lists: replace each model's `listControllerConfig` entry with an opt-in `list` definition on its node (§3 rule 2).
+1. Lists, continued:
+   - move tabs, filters and sort onto the definition
+   - retire `listControllerConfig` entries once nothing reads them
 2. Possible later additions:
    - pin a breakdown
    - figure sizes

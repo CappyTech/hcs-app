@@ -21,6 +21,10 @@ import user from './nodes/user.js';
  * borrows other nodes' figures for its summary). A node's `parents` are area
  * or node ids; the first is its primary parent for breadcrumbs.
  *
+ * A model node may also define `list: { columns: [{ field, label }] }`: the
+ * columns its list page shows (depth 3), in order, opt-in. Without it the list
+ * uses listControllerConfig's older automatic columns.
+ *
  * Figure refs are 'nodeId.figureId'. Every figure links to its model's list
  * filtered by `?view=nodeId.figureId`.
  *
@@ -167,6 +171,13 @@ function validate(candidate = state) {
     for (const ref of ov.related || []) refOk(node.id, ref);
     for (const list of ov.lists || []) if (list.figure) refOk(node.id, list.figure);
     if (node.overview && !node.overviewPath) problems.push(`${node.id}: overview without overviewPath`);
+    if (node.list !== undefined) {
+      const cols = node.list?.columns;
+      if (!node.model) problems.push(`${node.id}: a group has no list of its own`);
+      else if (!Array.isArray(cols) || !cols.length || !cols.every((c) => c && typeof c.field === 'string' && !c.field.includes('.') && typeof c.label === 'string')) {
+        problems.push(`${node.id}: list.columns must be [{ field, label }] with top-level fields`);
+      }
+    }
   }
   return problems;
 }

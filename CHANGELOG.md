@@ -2,6 +2,25 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.69.0] - 2026-10-10
+
+### Added
+- **List columns are set on the overview.** An overview can now name the columns its list page shows, in order. Only those columns show: a new field stays off the list until someone adds it, and a column no longer goes missing because the first record lacks it.
+  - **Editing:** admins change the columns in Overview settings, in the overview's new "On the list page" section, or pick "Automatic" to go back to the older rules.
+  - **Defined for every generated list on an overview,** using each list's current column order and headings:
+    - HR: employees, attendance, tasks, holiday requests
+    - Fleet: vehicles, services, fuel, mileage
+    - Projects: contracts, assignments, KashFlow projects
+    - Finance: invoices, purchases, customers, suppliers, quotes
+    - Subcontractors
+    - Users
+  - **What changes:** fields that only appeared because a record happened to hold them no longer show. Payroll and Policies keep their own pages.
+
+### Fixed
+- **Home page by role** for a role with no saved layout started with every area ticked, including ones that role can't open. It now starts from that role's own areas.
+
+### Security
+- Overview list columns can no longer be set to secret fields (passwords, 2FA secrets, reset tokens).
 ## [6.68.2] - 2026-10-10
 
 ### Security

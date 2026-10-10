@@ -9,6 +9,27 @@ export default {
   overviewPath: '/overview/employee',
   listPath: '/employees',
   actions: [{ label: 'Add employee', href: '/employee/create', op: 'c' }],
+  // The list page's columns (depth 3), in order. Only these show.
+  list: {
+    columns: [
+      { field: 'name', label: 'Name' },
+      { field: 'email', label: 'Email' },
+      { field: 'phoneNumber', label: 'Number' },
+      { field: 'position', label: 'Position' },
+      { field: 'status', label: 'Status' },
+      { field: 'type', label: 'Type' },
+      { field: 'ir35', label: 'IR35' },
+      { field: 'definedRate', label: 'Defined Rate' },
+      { field: 'dailyRate', label: 'Daily Rate' },
+      { field: 'weeklyRate', label: 'Weekly Rate' },
+      { field: 'monthlyRate', label: 'Monthly Rate' },
+      { field: 'yearlyRate', label: 'Yearly Rate' },
+      { field: 'hourlyRate', label: 'Hourly Rate' },
+      { field: 'hireDate', label: 'Hire Date' },
+      { field: 'managerId', label: 'Manager' },
+      { field: 'subcontractorSupplierId', label: 'Linked Supplier' },
+    ],
+  },
 
   figures: {
     active: { label: 'Active employees', where: { status: 'active' } },

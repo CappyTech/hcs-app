@@ -7,6 +7,21 @@ export default {
   parents: ['human'],
   overviewPath: '/overview/task',
   listPath: '/tasks',
+  // The list page's columns (depth 3), in order. Only these show.
+  list: {
+    columns: [
+      { field: 'title', label: 'Title' },
+      { field: 'userId', label: 'Assignee' },
+      { field: 'dueDate', label: 'Due Date' },
+      { field: 'priority', label: 'Priority' },
+      { field: 'source', label: 'Origin' },
+      { field: 'recurrence', label: 'Recurrence' },
+      { field: 'completed', label: 'Completed' },
+      { field: 'completedAt', label: 'Completed At' },
+      { field: 'autoResolved', label: 'Auto Resolved' },
+      { field: 'contractId', label: 'Contract' },
+    ],
+  },
   actions: [{ label: 'New task', href: '/task/create', op: 'c' }],
 
   figures: {

@@ -79,7 +79,8 @@ export const getRoleDefault = async (req, res, next) => {
     const role = roleParam(req);
     if (!role) return next();
     const stored = await homeLayout.resolve({ user: { role } });
-    const layout = stored.source === 'role' ? stored.layout : homeLayout.builtIn(null);
+    // Nothing stored: start from what that role would see today, not every area
+    const layout = stored.source === 'role' ? stored.layout : homeLayout.builtIn({ user: { role, customPermissions: {} } });
     render(res, {
       title: `Home for ${role}`,
       heading: `Starting home page for the ${role} role`,
