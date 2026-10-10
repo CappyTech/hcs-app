@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.68.2] - 2026-10-10
+
+### Security
+- `shell-quote` is pinned to 1.11.0 through `overrides`, clearing a critical Dependabot alert: command injection in `quote()`. It only reaches the project through `concurrently`, which runs `npm run dev`, so the deployed app was never exposed. `concurrently` 9.2.4 pins the affected 1.9.0 exactly.
+
 ## [6.68.1] - 2026-10-10
 
 ### Fixed
