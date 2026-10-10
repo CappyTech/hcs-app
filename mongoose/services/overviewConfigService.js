@@ -126,25 +126,75 @@ function checkColumns(cols, model, at) {
   });
 }
 
-// A list page's columns (node.list). Top-level fields only: the list table
-// reads each row's own keys, and resolves links through listControllerConfig.
+// A list page's settings (node.list): columns, default sort, tabs, filters.
+// Columns are top-level fields only: the list table reads each row's own keys,
+// and resolves links through listControllerConfig.
+const FILTER_TYPES = ['select', 'boolean', 'daterange', 'numberrange'];
+const scalarOpt = (v) => ['string', 'number', 'boolean'].includes(typeof v) && String(v).length <= 80;
+
 function checkListDefinition(list, model, at) {
-  if (list === null) return; // back to the older automatic columns
+  if (list === null) return; // back to the older automatic settings
   if (!model) fail(`${at}: a group has no list of its own.`);
   if (!isPlain(list)) fail(`${at} must be an object.`);
-  for (const k of Object.keys(list)) if (k !== 'columns') fail(`${at}: "${k}" isn't a list setting.`);
-  const cols = list.columns;
-  if (!Array.isArray(cols) || !cols.length || cols.length > 30) fail(`${at}: a list needs 1 to 30 columns.`);
-  const seen = new Set();
-  cols.forEach((c, i) => {
-    if (!isPlain(c)) fail(`${at}.columns[${i}]: a column must be an object.`);
-    for (const k of Object.keys(c)) if (!['field', 'label'].includes(k)) fail(`${at}.columns[${i}]: "${k}" isn't a column setting.`);
-    if (typeof c.field !== 'string' || !LIST_FIELD.test(c.field) || !fieldExists(model, c.field)) fail(`${at}.columns[${i}]: "${c.field}" isn't a field of ${model.modelName}.`);
-    if (SECRET.test(c.field) || c.field === '__v') fail(`${at}.columns[${i}]: "${c.field}" can't be shown.`);
-    if (seen.has(c.field)) fail(`${at}: "${c.field}" is listed twice.`);
-    seen.add(c.field);
-    text(c.label, 60, `${at}.columns[${i}] label`);
-  });
+  for (const k of Object.keys(list)) if (!['columns', 'sort', 'tabs', 'filters'].includes(k)) fail(`${at}: "${k}" isn't a list setting.`);
+  if (!Object.keys(list).length) fail(`${at}: nothing to set.`);
+  const shown = (field, where) => {
+    if (typeof field !== 'string' || !fieldExists(model, field)) fail(`${where}: "${field}" isn't a field of ${model.modelName}.`);
+    if (SECRET.test(field) || field === '__v') fail(`${where}: "${field}" can't be used.`);
+  };
+
+  if (list.columns !== undefined) {
+    const cols = list.columns;
+    if (!Array.isArray(cols) || !cols.length || cols.length > 30) fail(`${at}: a list needs 1 to 30 columns.`);
+    const seen = new Set();
+    cols.forEach((c, i) => {
+      const w = `${at}.columns[${i}]`;
+      if (!isPlain(c)) fail(`${w}: a column must be an object.`);
+      for (const k of Object.keys(c)) if (!['field', 'label'].includes(k)) fail(`${w}: "${k}" isn't a column setting.`);
+      if (typeof c.field !== 'string' || !LIST_FIELD.test(c.field)) fail(`${w}: "${c.field}" isn't a field of ${model.modelName}.`);
+      shown(c.field, w);
+      if (seen.has(c.field)) fail(`${at}: "${c.field}" is listed twice.`);
+      seen.add(c.field);
+      text(c.label, 60, `${w} label`);
+    });
+  }
+
+  if (list.sort !== undefined && list.sort !== null) {
+    const entries = isPlain(list.sort) ? Object.entries(list.sort) : [];
+    if (entries.length !== 1 || ![1, -1].includes(entries[0][1])) fail(`${at}.sort: sort by one field, up or down.`);
+    shown(entries[0][0], `${at}.sort`);
+  }
+
+  if (list.tabs !== undefined && list.tabs !== null && list.tabs !== false) {
+    const t = list.tabs;
+    if (!isPlain(t)) fail(`${at}.tabs must be an object.`);
+    for (const k of Object.keys(t)) if (!['by', 'values'].includes(k)) fail(`${at}.tabs: "${k}" isn't a tab setting.`);
+    shown(t.by, `${at}.tabs`);
+    if (!Array.isArray(t.values) || !t.values.length || t.values.length > 20) fail(`${at}.tabs: 1 to 20 tabs.`);
+    t.values.forEach((v, i) => {
+      if (!isPlain(v) || !scalarOpt(v.value) || Object.keys(v).some((k) => !['value', 'label'].includes(k))) fail(`${at}.tabs.values[${i}]: a tab needs a value and a label.`);
+      text(v.label, 40, `${at}.tabs.values[${i}] label`);
+    });
+  }
+
+  if (list.filters !== undefined && list.filters !== null) {
+    if (!Array.isArray(list.filters) || list.filters.length > 12) fail(`${at}.filters: up to 12 filters.`);
+    list.filters.forEach((f, i) => {
+      const w = `${at}.filters[${i}]`;
+      if (!isPlain(f)) fail(`${w} must be an object.`);
+      for (const k of Object.keys(f)) if (!['field', 'label', 'type', 'options'].includes(k)) fail(`${w}: "${k}" isn't a filter setting.`);
+      shown(f.field, w);
+      text(f.label, 40, `${w} label`);
+      if (!FILTER_TYPES.includes(f.type)) fail(`${w}: type must be one of ${FILTER_TYPES.join(', ')}.`);
+      if (f.type === 'select') {
+        if (!Array.isArray(f.options) || !f.options.length || f.options.length > 50) fail(`${w}: a choice filter needs 1 to 50 options.`);
+        f.options.forEach((o, j) => {
+          if (!isPlain(o) || !scalarOpt(o.value) || Object.keys(o).some((k) => !['value', 'label'].includes(k))) fail(`${w}.options[${j}]: an option needs a value and a label.`);
+          text(o.label, 60, `${w}.options[${j}] label`);
+        });
+      } else if (f.options !== undefined) fail(`${w}: only a choice filter has options.`);
+    });
+  }
 }
 
 const figureRefOk = (r) => typeof r === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,63}(\.[A-Za-z][A-Za-z0-9_-]{0,63})?$/.test(r);

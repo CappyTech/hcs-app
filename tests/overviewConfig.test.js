@@ -105,6 +105,22 @@ describe('validating a stored change', () => {
     refused({ kind: 'node', key: 'leave', override: { list: { columns: [{ field: 'name', label: 'Name' }] } } }, /group has no list/);
   });
 
+  it('checks list sort, tabs and filters', () => {
+    ok({ kind: 'node', key: 'employee', override: { list: {
+      sort: { hireDate: -1 },
+      tabs: { by: 'status', values: [{ value: 'active', label: 'Active' }] },
+      filters: [{ field: 'type', label: 'Type', type: 'select', options: [{ value: 'employee', label: 'Employee' }] }, { field: 'hireDate', label: 'Hired', type: 'daterange' }],
+    } } });
+    ok({ kind: 'node', key: 'employee', override: { list: { tabs: false, filters: [] } } });
+    refused({ kind: 'node', key: 'employee', override: { list: { sort: { name: 1, status: -1 } } } }, /one field/);
+    refused({ kind: 'node', key: 'employee', override: { list: { sort: { nope: 1 } } } }, /isn't a field/);
+    refused({ kind: 'node', key: 'employee', override: { list: { tabs: { by: 'status', values: [] } } } }, /1 to 20 tabs/);
+    refused({ kind: 'node', key: 'employee', override: { list: { filters: [{ field: 'type', label: 'Type', type: 'regex' }] } } }, /type must be/);
+    refused({ kind: 'node', key: 'employee', override: { list: { filters: [{ field: 'type', label: 'Type', type: 'select' }] } } }, /1 to 50 options/);
+    refused({ kind: 'node', key: 'employee', override: { list: { filters: [{ field: 'hireDate', label: 'H', type: 'daterange', options: [] }] } } }, /only a choice filter/);
+    refused({ kind: 'node', key: 'employee', override: { list: {} } }, /nothing to set/);
+  });
+
   it('refuses changes that would break the hierarchy', () => {
     refused({ kind: 'node', key: 'employee', override: { figures: { active: null } } }, /unknown figure 'active'/);
     refused({ kind: 'area', key: 'human', override: { children: ['employee', 'invoice'] } }, /doesn't list it as a parent/);

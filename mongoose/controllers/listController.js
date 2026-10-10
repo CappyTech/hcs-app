@@ -5,6 +5,7 @@ import listControllerConfig from '../config/listControllerConfig.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
 import overviewEngine from '../services/overviewEngine.js';
 import registry from '../config/overviews/index.js';
+import { withListControls } from '../services/listDefinitionService.js';
 
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
@@ -142,19 +143,21 @@ function countActiveFilters(req, filterConfigs) {
     const model = namespace[modelName];
     if (typeof model?.find !== "function") continue; // not a mongoose model
 
-    const config = resolveConfig(modelName);
-    if (!config || Object.keys(config).length === 0) {
+    const baseConfig = resolveConfig(modelName);
+    if (!baseConfig || Object.keys(baseConfig).length === 0) {
       logger.debug &&
         logger.debug(
           `[listController] No config found for model '${modelName}', using defaults.`,
         );
     }
-    if (denyGuard(config, "l")) continue; // skip if list denied in config
+    if (denyGuard(baseConfig, "l")) continue; // skip if list denied in config
 
     const functionName = `list${capitalize(modelName)}`;
     if (listController[functionName]) continue; // avoid duplicates if name exists in both namespaces
 
     listController[functionName] = async (req, res, next) => {
+      // Per request: Overview settings can change sort, tabs and filters at any time
+      const config = withListControls(baseConfig, modelName);
       const rawSort = req.query.sort;
       const sortField = (rawSort && /^[a-zA-Z0-9_.]+$/.test(rawSort)) ? rawSort : (config.sortField || "createdAt");
       const sortOrder = req.query.order === 'asc' ? 1 : req.query.order === 'desc' ? -1 : (config.sortOrder ?? -1);
@@ -590,10 +593,10 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
     continue;
   }
 
-  const config = aliasConfig;
-  if (denyGuard(config, "l")) continue;
+  if (denyGuard(aliasConfig, "l")) continue;
 
   listController[functionName] = async (req, res, next) => {
+    const config = withListControls(aliasConfig, aliasName);
     const rawSort = req.query.sort;
     const sortField = (rawSort && /^[a-zA-Z0-9_.]+$/.test(rawSort)) ? rawSort : (config.sortField || "createdAt");
     const sortOrder = req.query.order === 'asc' ? 1 : req.query.order === 'desc' ? -1 : (config.sortOrder ?? -1);

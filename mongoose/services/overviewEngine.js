@@ -1,7 +1,7 @@
 import mdb from './mongooseDatabaseService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import registry from '../config/overviews/index.js';
-import listControllerConfig from '../config/listControllerConfig.js';
+import { listConfig } from './listDefinitionService.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
 import logger from '../../services/loggerService.js';
 import kashflowProjectService from './kashflowProjectService.js';
@@ -228,7 +228,7 @@ async function computeFigures(req, node, refs, now) {
 // the field; otherwise the segment is shown without a link.
 function segmentHref(node, by, value) {
   if (value === null || value === undefined || value === '') return null;
-  const cfg = listControllerConfig[node.listName || node.model] || {};
+  const cfg = listConfig(node.listName || node.model);
   if (cfg.tabsby === by) return `${node.listPath}?tab=${encodeURIComponent(value)}`;
   const filter = (cfg.filters || []).find((f) => f.field === by && f.type === 'select');
   if (filter) return `${node.listPath}?f_${encodeURIComponent(by)}=${encodeURIComponent(value)}`;

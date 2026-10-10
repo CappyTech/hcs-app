@@ -2,6 +2,7 @@ import path from 'path';
 import registry from '../config/overviews/index.js';
 import overviewConfig from '../services/overviewConfigService.js';
 import editor from '../services/overviewEditorService.js';
+import listDefs from '../services/listDefinitionService.js';
 import overviewEngine from '../services/overviewEngine.js';
 import logger from '../../services/loggerService.js';
 
@@ -218,24 +219,84 @@ export const getNode = (req, res, next) => {
     panels: node.overview?.panels || [],
     roles: overviewConfig.ROLES,
     listColumns: node.list?.columns || [],
+    listControls: node.model ? listDefs.currentControls(node.listName || node.model) : null,
     // The list table reads each row's own keys, so only top-level fields
     listFields: fields.filter((f) => !f.path.includes('.')),
   });
 };
 
-// The list page's columns from the form: 'auto' drops the definition (older
-// automatic columns); otherwise the filled rows, in the order given.
-function listFromForm(body, current) {
-  if (body.list_mode === 'auto') return undefined;
-  if (body.list_mode !== 'defined') return current;
-  const raw = body.lcol || {};
-  const rows = (Array.isArray(raw) ? raw : Object.keys(raw).sort((a, b) => a - b).map((k) => raw[k]))
-    .map((r, i) => ({ r: r || {}, i }))
-    .filter(({ r }) => str(r.field) && !on(r.remove))
-    .sort((x, y) => (intOr(x.r.order, 1000 + x.i) - intOr(y.r.order, 1000 + y.i)) || (x.i - y.i))
-    .map(({ r }) => ({ field: str(r.field), label: str(r.label) || str(r.field) }));
-  if (!rows.length) throw new Error('Add at least one column, or choose Automatic.');
-  return { columns: rows };
+// The list page from the form. Columns: 'auto' drops them (older automatic
+// columns), 'defined' takes the filled rows in the order given. Sort, tabs and
+// filters are stored only where they differ from listControllerConfig, so an
+// untouched list keeps following the code. Forms without these fields
+// (`list_controls` absent) leave them as they are.
+// Compared as text: the form casts 'false' to false for a Boolean field, while
+// listControllerConfig often writes the string; both mean the same tab or option.
+const sameJson = (a, b) => JSON.stringify(a, (k, v) => (typeof v === 'number' || typeof v === 'boolean' ? String(v) : v))
+  === JSON.stringify(b, (k, v) => (typeof v === 'number' || typeof v === 'boolean' ? String(v) : v));
+const rowsOf = (raw) => (Array.isArray(raw) ? raw : Object.keys(raw || {}).sort((a, b) => a - b).map((k) => raw[k]))
+  .map((r, i) => ({ r: r || {}, i }));
+
+function castOption(raw, type) {
+  const v = String(raw).trim();
+  if (type === 'Number') { const n = Number(v); if (v === '' || Number.isNaN(n)) throw new Error(`"${raw}" isn't a number.`); return n; }
+  if (type === 'Boolean') { if (/^(true|yes)$/i.test(v)) return true; if (/^(false|no)$/i.test(v)) return false; throw new Error(`"${raw}" should be yes or no.`); }
+  return v;
+}
+
+// "value = Label" per line (or separated by ;). A line without "=" uses itself as both.
+function parseOptions(text, type, what) {
+  const items = String(text || '').split(/[;\r\n]/).map((x) => x.trim()).filter(Boolean);
+  if (!items.length) throw new Error(`${what}: list its choices, one per line, as value = label.`);
+  return items.map((item) => {
+    const eq = item.indexOf('=');
+    const value = eq >= 0 ? item.slice(0, eq).trim() : item;
+    const label = eq >= 0 ? item.slice(eq + 1).trim() || value : value;
+    return { value: castOption(value, type), label };
+  });
+}
+
+function listFromForm(body, current, modelName, listName) {
+  const out = {};
+  if (body.list_mode === 'defined') {
+    const cols = rowsOf(body.lcol)
+      .filter(({ r }) => str(r.field) && !on(r.remove))
+      .sort((x, y) => (intOr(x.r.order, 1000 + x.i) - intOr(y.r.order, 1000 + y.i)) || (x.i - y.i))
+      .map(({ r }) => ({ field: str(r.field), label: str(r.label) || str(r.field) }));
+    if (!cols.length) throw new Error('Add at least one column, or choose Automatic.');
+    out.columns = cols;
+  } else if (body.list_mode !== 'auto' && current?.columns) out.columns = current.columns;
+
+  if (!body.list_controls) {
+    for (const k of ['sort', 'tabs', 'filters']) if (current?.[k] !== undefined) out[k] = current[k];
+  } else {
+    const base = listDefs.baseControls(listName);
+    const sortField = str(body.lsort_field);
+    if (sortField) {
+      const sort = { [sortField]: body.lsort_order === '1' ? 1 : -1 };
+      if (!sameJson(sort, base.sort)) out.sort = sort;
+    }
+
+    const by = str(body.ltabs_by);
+    const tabs = by ? {
+      by,
+      values: rowsOf(body.ltab).filter(({ r }) => str(r.value) && !on(r.remove))
+        .map(({ r }) => ({ value: castOption(r.value, editor.fieldType(modelName, by)), label: str(r.label) || str(r.value) })),
+    } : null;
+    if (tabs && !tabs.values.length) throw new Error('Add at least one tab, or leave "Tabs by" empty for none.');
+    // No tabs is stored as false: in a stored change, null means "back to the default"
+    if (!sameJson(tabs, base.tabs) && !(tabs === null && base.dynamicTabs)) out.tabs = tabs || false;
+
+    const filters = rowsOf(body.lfil).filter(({ r }) => str(r.field) && !on(r.remove)).map(({ r }) => {
+      const field = str(r.field);
+      const type = ['select', 'boolean', 'daterange', 'numberrange'].includes(r.type) ? r.type : 'select';
+      const f = { field, label: str(r.label) || field, type };
+      if (type === 'select') f.options = parseOptions(r.options, editor.fieldType(modelName, field), `Filter "${f.label}"`);
+      return f;
+    });
+    if (!sameJson(filters, base.filters)) out.filters = filters;
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 function figureFromForm(body, id, current, modelName) {
@@ -293,7 +354,7 @@ export const postNode = async (req, res) => {
         if (str(b.newfig.sum)) { figures[newId].sum = str(b.newfig.sum); if (on(b.newfig.money)) figures[newId].format = 'money'; }
       }
       candidate.figures = figures;
-      candidate.list = listFromForm(b, node.list);
+      candidate.list = listFromForm(b, node.list, node.model, node.listName || node.model);
       if (candidate.list === undefined) delete candidate.list;
     }
     const own = Object.keys(candidate.figures || {}).map((id) => `${key}.${id}`);
