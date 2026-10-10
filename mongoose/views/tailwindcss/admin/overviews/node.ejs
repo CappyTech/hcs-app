@@ -255,6 +255,50 @@
       </section>
     <% } %>
 
+    <% if (hasModel) { %>
+      <section class="<%= _card %>">
+        <h2 class="<%= _h2 %>">On the list page</h2>
+        <fieldset class="space-y-1">
+          <legend class="sr-only">Which columns the list shows</legend>
+          <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input type="radio" name="list_mode" value="defined" class="mt-1" <%= listColumns.length ? 'checked' : '' %>>
+            <span><strong>These columns, in this order.</strong> New fields stay off the list until you add them.</span>
+          </label>
+          <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input type="radio" name="list_mode" value="auto" class="mt-1" <%= listColumns.length ? '' : 'checked' %>>
+            <span><strong>Automatic</strong>: the older rules, which show most fields.</span>
+          </label>
+        </fieldset>
+        <datalist id="list-fields">
+          <% listFields.forEach((f) => { %><option value="<%= f.path %>"><%= f.type %></option><% }) %>
+        </datalist>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <th class="py-1 pr-2 font-semibold">Order</th>
+                <th class="py-1 pr-2 font-semibold">Field</th>
+                <th class="py-1 pr-2 font-semibold">Heading</th>
+                <th class="py-1 font-semibold">Remove</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% const _lrows = [...listColumns, ...Array.from({ length: blankRows }, () => ({ field: '', label: '' }))]; %>
+              <% _lrows.forEach((c, i) => { %>
+                <tr>
+                  <td class="py-1 pr-2"><input type="number" name="lcol[<%= i %>][order]" value="<%= c.field ? i : '' %>" min="0" max="99" aria-label="Order" class="w-16 <%= _small %>"></td>
+                  <td class="py-1 pr-2"><input name="lcol[<%= i %>][field]" value="<%= c.field %>" list="list-fields" aria-label="Field" class="w-48 font-mono <%= _small %>"></td>
+                  <td class="py-1 pr-2"><input name="lcol[<%= i %>][label]" value="<%= c.label %>" maxlength="60" aria-label="Heading" class="w-48 <%= _small %>"></td>
+                  <td class="py-1"><% if (c.field) { %><input type="checkbox" name="lcol[<%= i %>][remove]" aria-label="Remove <%= c.label %>"><% } %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Fill the blank rows to add columns; save again for more. Linked records (an employee, a contract) show their name as before. Who may see the list doesn't change.</p>
+      </section>
+    <% } %>
+
     <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
   </form>
 

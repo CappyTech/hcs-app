@@ -109,6 +109,45 @@ describe('editing through the forms', () => {
     assert.equal(registry.getNode('employee').label.many, 'People');
   });
 
+  it('sets the list page columns, and goes back to automatic columns', async () => {
+    const node = registry.getNode('employee');
+    const base = {
+      label_many: node.label.many, label_one: node.label.one, icon: node.icon, description: node.description,
+      parent_pick: { human: 'on' }, parent_order: { human: '0' },
+      fig: Object.fromEntries(Object.entries(node.figures).map(([id, f]) => [id, {
+        label: f.label, hint: f.hint || '', severity: f.severity || '', keepFilter: '1',
+      }])),
+      sum_pick: Object.fromEntries(node.summary.map((r) => [`employee.${r}`, 'on'])),
+      sum_order: Object.fromEntries(node.summary.map((r, i) => [`employee.${r}`, String(i)])),
+      ov_pick: Object.fromEntries(node.overview.figures.map((r) => [`employee.${r}`, 'on'])),
+      ov_order: Object.fromEntries(node.overview.figures.map((r, i) => [`employee.${r}`, String(i)])),
+      rel_pick: Object.fromEntries(node.overview.related.map((r) => [r, 'on'])),
+      rel_order: Object.fromEntries(node.overview.related.map((r, i) => [r, String(i)])),
+      panel_pick: Object.fromEntries((node.overview.panels || []).map((p) => [p, 'on'])),
+      bd: Object.fromEntries(node.overview.breakdowns.map((b, i) => [i, { label: b.label }])),
+      list: Object.fromEntries(node.overview.lists.map((l, i) => [i, { title: l.title || '', limit: String(l.limit), order: String(i) }])),
+    };
+    const lcol = {
+      0: { field: 'name', label: 'Name', order: '1' },
+      1: { field: 'status', label: '', order: '0' },
+      2: { field: 'email', label: 'Email', order: '2', remove: 'on' },
+      3: { field: '', label: '' },
+    };
+    let out = await call(ctrl.postNode, { params: { key: 'employee' }, body: { ...base, list_mode: 'defined', lcol } });
+    assert.equal(out.flashes[0][0], 'success');
+    assert.deepStrictEqual(stored[0].override.list, { columns: [{ field: 'status', label: 'status' }, { field: 'name', label: 'Name' }] });
+    assert.deepStrictEqual(registry.getNode('employee').list.columns.map((c) => c.field), ['status', 'name']);
+
+    out = await call(ctrl.postNode, { params: { key: 'employee' }, body: { ...base, list_mode: 'auto' } });
+    assert.equal(out.flashes[0][0], 'success');
+    assert.equal(stored[0].override.list, null);
+    assert.equal(registry.getNode('employee').list, undefined);
+
+    out = await call(ctrl.postNode, { params: { key: 'employee' }, body: { ...base, list_mode: 'defined', lcol: { 0: { field: '' } } } });
+    assert.equal(out.flashes[0][0], 'error');
+    assert.match(out.flashes[0][1], /at least one column/);
+  });
+
   it('refuses a broken change with a plain message and stores nothing', async () => {
     const { flashes } = await call(ctrl.postNode, {
       params: { key: 'employee' },

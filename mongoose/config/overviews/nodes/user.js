@@ -9,6 +9,17 @@ export default {
   parents: ['admin'],
   overviewPath: '/overview/user',
   listPath: '/users',
+  list: {
+    columns: [
+      { field: 'username', label: 'Username' },
+      { field: 'email', label: 'Email' },
+      { field: 'emailVerified', label: 'Email Verified' },
+      { field: 'role', label: 'Role' },
+      { field: 'employeeId', label: 'Employee' },
+      { field: 'subcontractorId', label: 'Subcontractor' },
+      { field: 'clientId', label: 'Client' },
+    ],
+  },
   actions: [{ label: 'Add user', href: '/user/create', op: 'c' }],
   figures: {
     all: { label: 'Users', where: {} },

@@ -94,6 +94,17 @@ describe('validating a stored change', () => {
     refused({ kind: 'node', key: 'employee', override: { actions: [{ label: 'Go', href: 'https://example.com' }] } }, /path in this app/);
   });
 
+  it('accepts list page columns, and refuses ones a list table cannot show', () => {
+    ok({ kind: 'node', key: 'employee', override: { list: { columns: [{ field: 'name', label: 'Name' }, { field: 'status', label: 'Status' }] } } });
+    ok({ kind: 'node', key: 'employee', override: { list: null } });
+    refused({ kind: 'node', key: 'employee', override: { list: { columns: [] } } }, /1 to 30 columns/);
+    refused({ kind: 'node', key: 'employee', override: { list: { columns: [{ field: 'nope', label: 'Nope' }] } } }, /isn't a field of employee/);
+    refused({ kind: 'node', key: 'employee', override: { list: { columns: [{ field: 'contract.endDate', label: 'Ends' }] } } }, /isn't a field of employee/);
+    refused({ kind: 'node', key: 'employee', override: { list: { columns: [{ field: 'name', label: 'A' }, { field: 'name', label: 'B' }] } } }, /listed twice/);
+    refused({ kind: 'node', key: 'employee', override: { list: { columns: [{ field: 'name', label: 'Name', format: 'date' }] } } }, /isn't a column setting/);
+    refused({ kind: 'node', key: 'leave', override: { list: { columns: [{ field: 'name', label: 'Name' }] } } }, /group has no list/);
+  });
+
   it('refuses changes that would break the hierarchy', () => {
     refused({ kind: 'node', key: 'employee', override: { figures: { active: null } } }, /unknown figure 'active'/);
     refused({ kind: 'area', key: 'human', override: { children: ['employee', 'invoice'] } }, /doesn't list it as a parent/);

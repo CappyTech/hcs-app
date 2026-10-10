@@ -168,7 +168,7 @@ const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 /** What `candidate` changes compared with `base`, per top-level key; figures per figure and key. */
 function diffNode(base, candidate) {
   const out = {};
-  for (const k of ['label', 'icon', 'description', 'parents', 'summary', 'actions', 'hidden']) {
+  for (const k of ['label', 'icon', 'description', 'parents', 'summary', 'actions', 'hidden', 'list']) {
     if (!same(base[k], candidate[k]) && !(k === 'hidden' && !base[k] && !candidate[k])) out[k] = candidate[k] ?? null;
   }
   const bf = base.figures || {};

@@ -4,6 +4,7 @@ import logger from '../../services/loggerService.js';
 import listControllerConfig from '../config/listControllerConfig.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
 import overviewEngine from '../services/overviewEngine.js';
+import registry from '../config/overviews/index.js';
 
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
@@ -22,7 +23,17 @@ const resolveConfig = (modelName) => {
   return {};
 };
 
-const generateHeaders = (firstDoc, config = {}) => {
+// A list defined on its overview node (config/overviews, or Overview settings)
+// names its columns: exactly those, in that order, whatever the first record
+// happens to hold. Lists without one keep the older opt-out rules below.
+const definedColumns = (listName) => {
+  const cols = listName ? registry.getNodeForList(listName)?.list?.columns : null;
+  return Array.isArray(cols) && cols.length ? cols : null;
+};
+
+const generateHeaders = (firstDoc, config = {}, listName = null) => {
+  const defined = definedColumns(listName);
+  if (defined) return defined.map((c) => ({ key: c.field, label: c.label }));
   const defaultHidden = ["_id", "__v"];
   const hidden = new Set([...(config.hideFields || []), ...defaultHidden]);
   const autoHideUnderscore = config.autoHideUnderscore !== false; // default true
@@ -376,7 +387,7 @@ function countActiveFilters(req, filterConfigs) {
           });
         }
 
-        const headers = generateHeaders(items[0], config);
+        const headers = generateHeaders(items[0], config, modelName);
 
         // Hidden management
         const defaultHidden = ["_id", "__v"];
@@ -742,7 +753,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
         });
       }
 
-      const headers = generateHeaders(items[0], config);
+      const headers = generateHeaders(items[0], config, aliasName);
       const defaultHidden = ["_id", "__v"];
       const autoHideUnderscore = config.autoHideUnderscore !== false;
       const hidden = new Set([...(config.hideFields || []), ...defaultHidden]);
@@ -903,3 +914,4 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
 }
 
 export default listController;
+export { generateHeaders };

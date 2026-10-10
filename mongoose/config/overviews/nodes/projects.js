@@ -17,6 +17,18 @@ export default [
     parents: ['projects'],
     overviewPath: '/overview/contract',
     listPath: '/contracts',
+    list: {
+      columns: [
+        { field: 'title', label: 'Name' },
+        { field: 'status', label: 'Current Status' },
+        { field: 'startDate', label: 'Start Date' },
+        { field: 'endDate', label: 'End Date' },
+        { field: 'location', label: 'Site Location' },
+        { field: 'projectId', label: 'Project' },
+        { field: 'locationId', label: 'Location' },
+        { field: 'notes', label: 'Notes' },
+      ],
+    },
     actions: [{ label: 'New contract', href: '/contract/create', op: 'c' }],
     figures: {
       inProgress: { label: 'In progress', where: { status: 'In Progress' } },
@@ -51,6 +63,17 @@ export default [
     parents: ['projects'],
     overviewPath: '/overview/assignment',
     listPath: '/assignments',
+    list: {
+      columns: [
+        { field: 'title', label: 'Title' },
+        { field: 'contractId', label: 'Contract' },
+        { field: 'weekStart', label: 'Week Start' },
+        { field: 'status', label: 'Status' },
+        { field: 'estimatedHours', label: 'Estimated Hours' },
+        { field: 'assignedEmployees', label: 'Assigned Employees' },
+        { field: 'assignedSubcontractors', label: 'Assigned Subcontractors' },
+      ],
+    },
     actions: [{ label: 'New assignment', href: '/assignment/create', op: 'c' }],
     figures: {
       thisWeek: { label: 'Assignments this week', where: { weekStart: { $withinPastDays: 7 } } },
@@ -84,6 +107,26 @@ export default [
     parents: ['projects'],
     overviewPath: '/overview/project',
     listPath: '/projects',
+    list: {
+      columns: [
+        { field: 'Number', label: 'Job Ref' },
+        { field: 'Name', label: 'Name' },
+        { field: 'Status', label: 'Status' },
+        { field: 'CustomerCode', label: 'Customer' },
+        { field: 'CustomerName', label: 'Customer Name' },
+        { field: 'Reference', label: 'Reference' },
+        { field: 'Description', label: 'Description' },
+        { field: 'Note', label: 'Note' },
+        { field: 'StartDate', label: 'Start' },
+        { field: 'EndDate', label: 'End' },
+        { field: 'ActualSalesAmount', label: 'Actual Sales' },
+        { field: 'ActualPurchasesAmount', label: 'Actual Purchases' },
+        { field: 'WorkInProgressAmount', label: 'WIP' },
+        { field: 'TargetSalesAmount', label: 'Target Sales' },
+        { field: 'TargetPurchasesAmount', label: 'Target Purchases' },
+        { field: 'AssociatedQuotesCount', label: 'Quotes' },
+      ],
+    },
     figures: {
       active: { label: 'Active projects', where: ACTIVE_PROJECT },
       belowTarget: { label: 'Income below target', hint: 'Income recorded, but less than the target', severity: 'critical', where: { ...ACTIVE_PROJECT, ...BELOW_TARGET } },

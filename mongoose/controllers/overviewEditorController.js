@@ -217,8 +217,26 @@ export const getNode = (req, res, next) => {
       ...registry.listNodes().filter((n) => n.id !== node.id && !n.model).map((n) => ({ id: n.id, label: `${n.label.many} (group)` }))],
     panels: node.overview?.panels || [],
     roles: overviewConfig.ROLES,
+    listColumns: node.list?.columns || [],
+    // The list table reads each row's own keys, so only top-level fields
+    listFields: fields.filter((f) => !f.path.includes('.')),
   });
 };
+
+// The list page's columns from the form: 'auto' drops the definition (older
+// automatic columns); otherwise the filled rows, in the order given.
+function listFromForm(body, current) {
+  if (body.list_mode === 'auto') return undefined;
+  if (body.list_mode !== 'defined') return current;
+  const raw = body.lcol || {};
+  const rows = (Array.isArray(raw) ? raw : Object.keys(raw).sort((a, b) => a - b).map((k) => raw[k]))
+    .map((r, i) => ({ r: r || {}, i }))
+    .filter(({ r }) => str(r.field) && !on(r.remove))
+    .sort((x, y) => (intOr(x.r.order, 1000 + x.i) - intOr(y.r.order, 1000 + y.i)) || (x.i - y.i))
+    .map(({ r }) => ({ field: str(r.field), label: str(r.label) || str(r.field) }));
+  if (!rows.length) throw new Error('Add at least one column, or choose Automatic.');
+  return { columns: rows };
+}
 
 function figureFromForm(body, id, current, modelName) {
   const f = body.fig?.[id] || {};
@@ -275,6 +293,8 @@ export const postNode = async (req, res) => {
         if (str(b.newfig.sum)) { figures[newId].sum = str(b.newfig.sum); if (on(b.newfig.money)) figures[newId].format = 'money'; }
       }
       candidate.figures = figures;
+      candidate.list = listFromForm(b, node.list);
+      if (candidate.list === undefined) delete candidate.list;
     }
     const own = Object.keys(candidate.figures || {}).map((id) => `${key}.${id}`);
     const shorten = (refs) => refs.map((r) => (r.startsWith(`${key}.`) ? r.slice(key.length + 1) : r));

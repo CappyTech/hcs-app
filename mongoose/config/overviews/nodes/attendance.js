@@ -7,6 +7,23 @@ export default {
   parents: ['human'],
   overviewPath: '/overview/attendance',
   listPath: '/attendances',
+  // The list page's columns (depth 3), in order. Only these show.
+  list: {
+    columns: [
+      { field: 'date', label: 'Date' },
+      { field: 'type', label: 'Type' },
+      { field: 'status', label: 'Status' },
+      { field: 'employeeId', label: 'Employee' },
+      { field: 'subcontractorId', label: 'Subcontractor' },
+      { field: 'hoursWorked', label: 'Hours Worked' },
+      { field: 'overtimeHours', label: 'OT Hours' },
+      { field: 'dayRate', label: 'Day Rate' },
+      { field: 'payRate', label: 'Pay Rate' },
+      { field: 'locationId', label: 'Location' },
+      { field: 'projectId', label: 'Project' },
+      { field: 'notes', label: 'Notes' },
+    ],
+  },
   actions: [{ label: 'Log attendance', href: '/attendance/create', op: 'c' }],
 
   figures: {

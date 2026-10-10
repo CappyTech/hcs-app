@@ -38,6 +38,21 @@ export default [
     label: { one: 'Holiday request', many: 'Holiday requests' },
     parents: ['leave'],
     listPath: '/holidayRequests',
+    // The list page's columns (depth 3), in order. Only these show.
+    list: {
+      columns: [
+        { field: 'employeeId', label: 'Employee' },
+        { field: 'startDate', label: 'From' },
+        { field: 'endDate', label: 'To' },
+        { field: 'daysRequested', label: 'Days' },
+        { field: 'leaveType', label: 'Type' },
+        { field: 'status', label: 'Status' },
+        { field: 'reason', label: 'Reason' },
+        { field: 'reviewedBy', label: 'Reviewed By' },
+        { field: 'reviewedAt', label: 'Reviewed At' },
+        { field: 'reviewNotes', label: 'Review Notes' },
+      ],
+    },
     figures: {
       pending: { label: 'Holiday requests to approve', severity: 'warning', where: { status: 'pending' } },
       upcoming: { label: 'Approved holiday starting in 30 days', where: { status: 'approved', startDate: { $withinNextDays: 30 } } },

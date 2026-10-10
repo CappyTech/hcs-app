@@ -920,9 +920,10 @@ export default {
     linkField: 'title',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'description', 'completedBy', 'nextSpawnedAt', 'systemKey'],
     fieldOrder: ['title', 'userId', 'dueDate', 'priority', 'source', 'recurrence', 'completed', 'completedAt', 'autoResolved', 'contractId'],
-    // Tasks completed before 6.58.0 have no completedAt/autoResolved, so make sure
-    // the task cards get them regardless of which document comes first.
-    rowFields: ['completedAt', 'autoResolved'],
+    // Everything the task cards in listTable.ejs read, so they keep working
+    // whichever columns the list shows (Overview settings can change those),
+    // and for tasks completed before 6.58.0, which have no completedAt/autoResolved.
+    rowFields: ['title', 'dueDate', 'priority', 'source', 'recurrence', 'completed', 'completedAt', 'autoResolved'],
     sortField: 'dueDate',
     sortOrder: 1,
     department: ['human-resources'],
