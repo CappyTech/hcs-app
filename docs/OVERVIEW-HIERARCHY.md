@@ -317,10 +317,31 @@ Each step: own branch, version bump + CHANGELOG (new pages/routes = MINOR), `npm
 - **Store:** `list` is in the node override whitelist (`overviewConfigService.checkListDefinition`). It takes 1–30 columns of top-level fields that exist on the model, with no duplicates and no secret fields (`SECRET`; the same rule now also guards overview list columns). `list: null` goes back to automatic.
 - **Editor:** the node page has an "On the list page" section. Choose "These columns" or "Automatic"; then order, field (datalist of top-level fields), heading and remove, plus blank rows to add (`listFromForm`). `diffNode` includes `list`.
 
+### List sort, tabs and filters (6.70.0, branch `feat/overview-list-controls`)
+
+- **Definition:** `node.list` may also set:
+  - `sort: { field: 1|-1 }`
+  - `tabs: { by, values: [{ value, label }] }`: "All" is added in front. `false` means no tabs. It can't be `null`, because in a stored change `null` means "back to the default".
+  - `filters: [{ field, label, type: select|boolean|daterange|numberrange, options? }]`
+- **Where they apply:** `services/listDefinitionService.js`:
+  - `withListControls(config, listName)` lays them over the `listControllerConfig` entry.
+  - `listController` calls it per request (main and alias handlers), so a saved change applies at once.
+  - `overviewEngine.segmentHref` uses `listConfig(name)`, so breakdown links follow changed tabs and filters.
+  - Anything not set still comes from `listControllerConfig`. Nothing was moved out of it: it is now the set of defaults.
+- **Merging:** `sort` and `tabs` are in `REPLACE_WHOLE`, so a stored sort replaces the default instead of merging into it.
+- **Store:** `checkListDefinition` validates sort (one field, ±1), tabs (an existing field, 1–20 values), and filters (an existing field, a known type, options only for choice filters, 1–50 of them). Secret fields are refused everywhere.
+- **Editor:** the "On the list page" section also has:
+  - sort field and direction
+  - tabs (field plus value/label rows)
+  - filters (field, label, type, and choices as `value = Label` lines)
+  
+  `listFromForm` stores each only where it differs from the `listControllerConfig` value. Values are compared as text, because code often writes `'false'` for a Boolean. An untouched list keeps following the code. Dynamic tabs (`tabsDynamic`) stay code-only.
+- **diffNode** treats an empty overview list (`panels: []`, `related: []`) as the same as none. Saving an untouched overview no longer stores noise.
+
 #### Next
 1. Lists, continued:
-   - move tabs, filters and sort onto the definition
-   - retire `listControllerConfig` entries once nothing reads them
+   - links (`fieldTransforms`) and layout onto the definition, if wanted
+   - retire `listControllerConfig` entries once nothing reads them (it's the defaults layer for now)
 2. Possible later additions:
    - pin a breakdown
    - figure sizes

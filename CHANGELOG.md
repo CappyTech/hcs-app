@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.70.0] - 2026-10-10
+
+### Added
+- **List sort, tabs and filters in Overview settings.** The "On the list page" section now also sets:
+  - the list's default order
+  - its tabs (the field, and each tab's value and name), or no tabs
+  - its filters (yes/no, a choice with its options, date range or number range)
+  
+  Changes apply straight away. Breakdown links on overview pages follow them. Lists nobody has changed keep the built-in settings.
+
+### Fixed
+- Saving an overview in Overview settings without changing anything no longer stores empty panel and "Elsewhere" lists as a change.
+
 ## [6.69.0] - 2026-10-10
 
 ### Added

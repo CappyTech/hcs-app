@@ -296,6 +296,60 @@
           </table>
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400">Fill the blank rows to add columns; save again for more. Linked records (an employee, a contract) show their name as before. Who may see the list doesn't change.</p>
+
+        <% const lc = listControls; %>
+        <input type="hidden" name="list_controls" value="1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="lsort-field" class="<%= _label %>">Sorted by</label>
+            <input id="lsort-field" name="lsort_field" value="<%= Object.keys(lc.sort)[0] %>" list="model-fields" class="w-full font-mono <%= _small %>">
+          </div>
+          <div>
+            <label for="lsort-order" class="<%= _label %>">Order</label>
+            <select id="lsort-order" name="lsort_order" class="w-full <%= _small %>">
+              <option value="1" <%= Object.values(lc.sort)[0] === 1 ? 'selected' : '' %>>Ascending (A–Z, oldest first)</option>
+              <option value="-1" <%= Object.values(lc.sort)[0] === 1 ? '' : 'selected' %>>Descending (Z–A, newest first)</option>
+            </select>
+          </div>
+        </div>
+
+        <details class="border border-gray-200 dark:border-gray-700 rounded-xl" <%= lc.tabs ? 'open' : '' %>>
+          <summary class="cursor-pointer px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">Tabs (<%= lc.tabs ? lc.tabs.values.length : (lc.dynamicTabs ? 'automatic' : 'none') %>)</summary>
+          <div class="px-4 pb-4 space-y-2">
+            <% if (lc.dynamicTabs) { %><p class="text-xs text-gray-500 dark:text-gray-400">This list makes a tab for each value it finds. Fill these in to choose the tabs yourself.</p><% } %>
+            <label class="<%= _label %>" for="ltabs-by">Tabs by <span class="text-xs text-gray-400">(field; leave empty for no tabs. "All" is always first.)</span></label>
+            <input id="ltabs-by" name="ltabs_by" value="<%= lc.tabs ? lc.tabs.by : '' %>" list="model-fields" class="w-64 font-mono <%= _small %>">
+            <% const _tabs = [...(lc.tabs ? lc.tabs.values : []), ...Array.from({ length: blankRows }, () => ({ value: '', label: '' }))]; %>
+            <% _tabs.forEach((t, i) => { %>
+              <div class="flex flex-wrap items-center gap-2">
+                <input name="ltab[<%= i %>][value]" value="<%= t.value %>" placeholder="Value" aria-label="Tab value" class="w-40 font-mono <%= _small %>">
+                <input name="ltab[<%= i %>][label]" value="<%= t.label %>" placeholder="Label" maxlength="40" aria-label="Tab label" class="w-40 <%= _small %>">
+                <% if (t.value !== '') { %><label class="text-xs text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><input type="checkbox" name="ltab[<%= i %>][remove]"> Remove</label><% } %>
+              </div>
+            <% }) %>
+          </div>
+        </details>
+
+        <details class="border border-gray-200 dark:border-gray-700 rounded-xl" <%= lc.filters.length ? 'open' : '' %>>
+          <summary class="cursor-pointer px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">Filters (<%= lc.filters.length %>)</summary>
+          <div class="px-4 pb-4 space-y-3">
+            <p class="text-xs text-gray-500 dark:text-gray-400">For a choice, list one option per line as <span class="font-mono">value = Label</span>.</p>
+            <% const _fils = [...lc.filters, ...Array.from({ length: 2 }, () => ({ field: '', label: '', type: 'select', options: [] }))]; %>
+            <% _fils.forEach((f, i) => { %>
+              <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_10rem] gap-2 items-start border-t border-gray-100 dark:border-gray-800 pt-3 first:border-t-0 first:pt-0">
+                <input name="lfil[<%= i %>][field]" value="<%= f.field %>" list="model-fields" placeholder="Field" aria-label="Filter field" class="font-mono <%= _small %>">
+                <input name="lfil[<%= i %>][label]" value="<%= f.label %>" maxlength="40" placeholder="Label" aria-label="Filter label" class="<%= _small %>">
+                <select name="lfil[<%= i %>][type]" aria-label="Filter type" class="<%= _small %>">
+                  <% [['select', 'Choice'], ['boolean', 'Yes / no'], ['daterange', 'Date range'], ['numberrange', 'Number range']].forEach(([v, l]) => { %>
+                    <option value="<%= v %>" <%= f.type === v ? 'selected' : '' %>><%= l %></option>
+                  <% }) %>
+                </select>
+                <textarea name="lfil[<%= i %>][options]" rows="2" placeholder="active = Active" aria-label="Choices" class="sm:col-span-2 font-mono <%= _small %>"><%= (f.options || []).map((o) => `${o.value} = ${o.label}`).join('\n') %></textarea>
+                <% if (f.field) { %><label class="text-xs text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><input type="checkbox" name="lfil[<%= i %>][remove]"> Remove</label><% } %>
+              </div>
+            <% }) %>
+          </div>
+        </details>
       </section>
     <% } %>
 

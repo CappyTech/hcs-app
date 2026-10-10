@@ -5,6 +5,7 @@ import mdb from '../mongoose/services/mongooseDatabaseService.js';
 import registry from '../mongoose/config/overviews/index.js';
 import svc from '../mongoose/services/overviewConfigService.js';
 import editor from '../mongoose/services/overviewEditorService.js';
+import listDefs from '../mongoose/services/listDefinitionService.js';
 import ctrl from '../mongoose/controllers/overviewEditorController.js';
 import employeeDef from '../mongoose/models/mongoose/INTERNAL/employee.js';
 import taskDef from '../mongoose/models/mongoose/INTERNAL/task.js';
@@ -71,6 +72,40 @@ describe('filter builder', () => {
   });
 });
 
+// Everything the node form posts when nothing is changed
+function formFor(node) {
+  const ref = (r) => (r.includes('.') ? r : `${node.id}.${r}`);
+  return {
+    label_many: node.label.many, label_one: node.label.one, icon: node.icon, description: node.description,
+    parent_pick: Object.fromEntries(node.parents.map((p) => [p, 'on'])), parent_order: Object.fromEntries(node.parents.map((p, i) => [p, String(i)])),
+    fig: Object.fromEntries(Object.entries(node.figures || {}).map(([id, f]) => [id, {
+      label: f.label, hint: f.hint || '', severity: f.severity || '', keepFilter: '1',
+    }])),
+    sum_pick: Object.fromEntries((node.summary || []).map((r) => [ref(r), 'on'])),
+    sum_order: Object.fromEntries((node.summary || []).map((r, i) => [ref(r), String(i)])),
+    ov_pick: Object.fromEntries((node.overview?.figures || []).map((r) => [ref(r), 'on'])),
+    ov_order: Object.fromEntries((node.overview?.figures || []).map((r, i) => [ref(r), String(i)])),
+    rel_pick: Object.fromEntries((node.overview?.related || []).map((r) => [r, 'on'])),
+    rel_order: Object.fromEntries((node.overview?.related || []).map((r, i) => [r, String(i)])),
+    panel_pick: Object.fromEntries((node.overview?.panels || []).map((p) => [p, 'on'])),
+    bd: Object.fromEntries((node.overview?.breakdowns || []).map((b, i) => [i, { label: b.label }])),
+    list: Object.fromEntries((node.overview?.lists || []).map((l, i) => [i, { title: l.title || '', limit: String(l.limit), order: String(i) }])),
+  };
+}
+
+// The list controls as the form shows them now
+function controlsFor(listName) {
+  const c = listDefs.currentControls(listName);
+  const [field, order] = Object.entries(c.sort)[0];
+  return {
+    list_controls: '1',
+    lsort_field: field, lsort_order: String(order),
+    ltabs_by: c.tabs ? c.tabs.by : '',
+    ltab: Object.fromEntries((c.tabs?.values || []).map((t, i) => [i, { value: String(t.value), label: t.label }])),
+    lfil: Object.fromEntries(c.filters.map((f, i) => [i, { field: f.field, label: f.label, type: f.type, options: (f.options || []).map((o) => `${o.value} = ${o.label}`).join('; ') }])),
+  };
+}
+
 describe('editing through the forms', () => {
   beforeEach(async () => { patch(); await svc.load(); });
   afterEach(() => registry.applyOverrides([]));
@@ -110,23 +145,7 @@ describe('editing through the forms', () => {
   });
 
   it('sets the list page columns, and goes back to automatic columns', async () => {
-    const node = registry.getNode('employee');
-    const base = {
-      label_many: node.label.many, label_one: node.label.one, icon: node.icon, description: node.description,
-      parent_pick: { human: 'on' }, parent_order: { human: '0' },
-      fig: Object.fromEntries(Object.entries(node.figures).map(([id, f]) => [id, {
-        label: f.label, hint: f.hint || '', severity: f.severity || '', keepFilter: '1',
-      }])),
-      sum_pick: Object.fromEntries(node.summary.map((r) => [`employee.${r}`, 'on'])),
-      sum_order: Object.fromEntries(node.summary.map((r, i) => [`employee.${r}`, String(i)])),
-      ov_pick: Object.fromEntries(node.overview.figures.map((r) => [`employee.${r}`, 'on'])),
-      ov_order: Object.fromEntries(node.overview.figures.map((r, i) => [`employee.${r}`, String(i)])),
-      rel_pick: Object.fromEntries(node.overview.related.map((r) => [r, 'on'])),
-      rel_order: Object.fromEntries(node.overview.related.map((r, i) => [r, String(i)])),
-      panel_pick: Object.fromEntries((node.overview.panels || []).map((p) => [p, 'on'])),
-      bd: Object.fromEntries(node.overview.breakdowns.map((b, i) => [i, { label: b.label }])),
-      list: Object.fromEntries(node.overview.lists.map((l, i) => [i, { title: l.title || '', limit: String(l.limit), order: String(i) }])),
-    };
+    const base = formFor(registry.getNode('employee'));
     const lcol = {
       0: { field: 'name', label: 'Name', order: '1' },
       1: { field: 'status', label: '', order: '0' },
@@ -146,6 +165,31 @@ describe('editing through the forms', () => {
     out = await call(ctrl.postNode, { params: { key: 'employee' }, body: { ...base, list_mode: 'defined', lcol: { 0: { field: '' } } } });
     assert.equal(out.flashes[0][0], 'error');
     assert.match(out.flashes[0][1], /at least one column/);
+  });
+
+  it("stores list sort, tabs and filters only where they differ from the code", async () => {
+    const task = registry.getNode('task');
+    // Untouched (task tabs are Boolean values written as strings in code): nothing stored
+    let out = await call(ctrl.postNode, { params: { key: 'task' }, body: { ...formFor(task), ...controlsFor('task') } });
+    assert.equal(out.flashes[0][0], 'success');
+    assert.equal(stored.length, 0);
+
+    const changed = controlsFor('task');
+    changed.lsort_order = '-1';
+    changed.lfil[0].remove = 'on';
+    changed.lfil[9] = { field: 'dueDate', label: 'Due', type: 'daterange' };
+    out = await call(ctrl.postNode, { params: { key: 'task' }, body: { ...formFor(task), ...changed } });
+    assert.equal(out.flashes[0][0], 'success');
+    const list = stored[0].override.list;
+    assert.deepStrictEqual(list.sort, { dueDate: -1 });
+    assert.equal(list.tabs, undefined);
+    assert.deepStrictEqual(list.filters.at(-1), { field: 'dueDate', label: 'Due', type: 'daterange' });
+    assert.equal(list.filters.length, listDefs.baseControls('task').filters.length);
+
+    // No tabs at all
+    out = await call(ctrl.postNode, { params: { key: 'task' }, body: { ...formFor(registry.getNode('task')), ...controlsFor('task'), ltabs_by: '' } });
+    assert.equal(stored[0].override.list.tabs, false);
+    assert.equal(listDefs.listConfig('task').tabsby, undefined);
   });
 
   it('refuses a broken change with a plain message and stores nothing', async () => {

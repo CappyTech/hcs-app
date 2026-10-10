@@ -187,8 +187,10 @@ function diffNode(base, candidate) {
   const bo = base.overview || {};
   const co = candidate.overview || {};
   const ov = {};
+  // The form always posts these as lists; an empty one matches a default that has none
+  const orNone = (v) => (Array.isArray(v) && !v.length ? undefined : v);
   for (const k of ['figures', 'breakdowns', 'lists', 'panels', 'related']) {
-    if (!same(bo[k], co[k])) ov[k] = co[k] ?? null;
+    if (!same(orNone(bo[k]), orNone(co[k]))) ov[k] = co[k] ?? null;
   }
   if (Object.keys(ov).length) out.overview = ov;
   return out;
