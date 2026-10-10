@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.68.1] - 2026-10-10
+
+### Fixed
+- **Customise home and Home page by role returned a 500.** The pages passed the chosen pins to the template as `layout`, which express-ejs-layouts reads as the page template's path. A test now checks that both pages render without it.
+
 ## [6.68.0] - 2026-10-10
 
 ### Added
