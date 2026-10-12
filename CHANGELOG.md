@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.70.2] - 2026-10-12
+
+### Changed
+- The supplier panels on the CIS Monthly Returns list now use the browser's built-in collapsible sections. Opening one still closes the others, and they work before any script loads.
+
+### Removed
+- `public/js/toggleAccordion.js`, which is no longer needed.
+
 ## [6.70.1] - 2026-10-12
 
 ### Fixed

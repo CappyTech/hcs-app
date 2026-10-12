@@ -10,18 +10,15 @@
       </div>
       <% } %>
 
-        <div id="suppliersAccordion" class="space-y-4">
+        <div class="space-y-4">
           <% suppliersWithMonths.forEach((data, index)=> {
             const supplier = data.supplier;
             const years = data.years;
             const receiptsByYear = data.receiptsByYear;
             %>
-            <div class="border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
-              <h2>
-                <button type="button"
-                  class="accordion-toggle w-full px-4 py-3 text-left flex justify-between items-center focus:outline-none focus:ring focus:ring-green-500"
-                  aria-expanded="false" aria-controls="collapse-<%= supplier.uuid %>"
-                  id="heading-<%= supplier.uuid %>">
+            <details name="cis-suppliers" class="group border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
+                <summary
+                  class="list-none [&::-webkit-details-marker]:hidden cursor-pointer w-full px-4 py-3 text-left flex justify-between items-center focus:outline-none focus-visible:ring focus-visible:ring-green-500">
                   <span class="font-semibold text-lg text-gray-900 dark:text-gray-100">
                     <%= supplier.Name %>
                       <span class="inline-block bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-100 text-xs font-medium ml-2 px-2.5 py-1 rounded-full">
@@ -35,16 +32,14 @@
                       </span>
                       <% } %>
                   </span>
-                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200"
+                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200 group-open:rotate-180"
                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                     aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
-                </button>
-              </h2>
+                </summary>
 
-              <div id="collapse-<%= supplier.uuid %>" role="region" aria-labelledby="heading-<%= supplier.uuid %>"
-                class="hidden px-4 pb-4 mt-2">
+              <div class="px-4 pb-4 mt-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <% years.forEach(year=> { %>
                     <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl h-full flex flex-col">
@@ -70,11 +65,9 @@
                     <% }) %>
                 </div>
               </div>
-            </div>
+            </details>
             <% }); %>
         </div>
     </div>
   </div>
 </div>
-
-<script src="/resources/js/toggleAccordion.js"></script>
