@@ -158,6 +158,18 @@ describe('supplier checks', () => {
     assert.deepEqual(ins.duplicates.kashflow.map((p) => p.number), [5012]);
     assert.deepEqual(ins.duplicates.documents.map((d) => d.paperlessId), [1099]);
   });
+
+  it("doesn't count the purchase the document is linked to, and gives others' uuid to link to", async () => {
+    const m = models({
+      docs: [{ paperlessId: 1110, correspondent: { id: 7, name: 'Duttons Builders Merchants Ltd' }, deletedInPaperlessAt: null, kashflowPurchaseId: 900, kashflowPurchaseNumber: 5012 }],
+      purchases: [
+        { uuid: 'own', Id: 900, Number: 5012, SupplierCode: 'DUT01', SupplierReference: '260461' },
+        { uuid: 'other', Id: 901, Number: 5014, SupplierCode: 'DUT01', SupplierReference: '260461' },
+      ],
+    });
+    const ins = await svc.insights(1110, { invoiceNumber: '260461' }, depsFor(m, { ownVat: '' }));
+    assert.deepEqual(ins.duplicates.kashflow.map((p) => [p.number, p.uuid]), [[5014, 'other']]);
+  });
 });
 
 describe('accuracy and fixtures', () => {

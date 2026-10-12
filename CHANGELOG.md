@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.70.1] - 2026-10-12
+
+### Fixed
+- An invoice that's already been sent to KashFlow no longer warns that it's a duplicate of its own purchase. The duplicate check now leaves out the purchase the document is linked to.
+- The "already in KashFlow as purchase …" warning now links to that purchase's page.
+
 ## [6.70.0] - 2026-10-10
 
 ### Added

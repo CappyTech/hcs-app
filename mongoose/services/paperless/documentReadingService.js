@@ -246,7 +246,7 @@ export async function duplicatesOf({ Purchase, OcrDocument }, doc, invoiceNumber
     : {};
   const [purchases, docs] = await Promise.all([
     Purchase
-      ? Purchase.find({ SupplierReference: loose, ...who }).select('Number SupplierReference SupplierName IssuedDate GrossAmount').limit(5).lean()
+      ? Purchase.find({ SupplierReference: loose, ...who }).select('uuid Id Number SupplierReference SupplierName IssuedDate GrossAmount').limit(5).lean()
       : [],
     OcrDocument
       ? OcrDocument.find({
@@ -257,9 +257,12 @@ export async function duplicatesOf({ Purchase, OcrDocument }, doc, invoiceNumber
       }).select('paperlessId title processingState entry.invoiceNumber reading.fields.invoiceNumber.value').limit(5).lean()
       : [],
   ]);
+  // The purchase this document is already linked to isn't a duplicate of it
+  const own = (p) => (doc.kashflowPurchaseId != null && p.Id === doc.kashflowPurchaseId)
+    || (doc.kashflowPurchaseNumber != null && p.Number === doc.kashflowPurchaseNumber);
   return {
-    kashflow: purchases.filter((p) => normRef(p.SupplierReference) === want).map((p) => ({
-      number: p.Number, reference: p.SupplierReference, supplier: p.SupplierName,
+    kashflow: purchases.filter((p) => normRef(p.SupplierReference) === want && !own(p)).map((p) => ({
+      uuid: p.uuid || null, number: p.Number, reference: p.SupplierReference, supplier: p.SupplierName,
       date: p.IssuedDate || null, gross: p.GrossAmount ?? null,
     })),
     documents: docs.filter((d) => normRef(d.entry?.invoiceNumber) === want || normRef(d.reading?.fields?.invoiceNumber?.value) === want)
@@ -437,7 +440,7 @@ export async function insights(paperlessId, { invoiceNumber = null, vatNumbers =
   if (d.connect) await d.connect();
   const { OcrDocument, SupplierLayout, Supplier, Purchase } = d.m;
   const doc = await OcrDocument.findOne({ paperlessId })
-    .select('paperlessId correspondent reading entry.invoiceNumber').lean();
+    .select('paperlessId correspondent reading entry.invoiceNumber kashflowPurchaseId kashflowPurchaseNumber').lean();
   if (!doc) return null;
   const supplier = await supplierFor(Supplier, doc.correspondent?.name);
   const numbers = vatNumbers?.length ? vatNumbers : (doc.reading?.vatNumbers || []).map((v) => v.number);
