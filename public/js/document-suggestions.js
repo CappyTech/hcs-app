@@ -405,7 +405,10 @@ function renderInsights(ins) {
     notes.push(['info', `KashFlow has no VAT number for ${supplier}. The invoice shows ${ins.vat.found.map(fmtVat).join(', ')}.`]);
   }
   for (const p of ins.duplicates?.kashflow || []) {
-    notes.push(['danger', `Invoice ${p.reference} from ${p.supplier || supplier || 'this supplier'} is already in KashFlow as purchase ${p.number}${p.date ? ` (${fmtDate(p.date)})` : ''}${p.gross != null ? `, ${money(p.gross)}` : ''}.`]);
+    const label = `purchase ${p.number}`;
+    notes.push(['danger', el('span', {}, `Invoice ${p.reference} from ${p.supplier || supplier || 'this supplier'} is already in KashFlow as `,
+      p.uuid ? el('a', { href: `/purchase/read/${encodeURIComponent(p.uuid)}`, className: 'underline', textContent: label }) : label,
+      `${p.date ? ` (${fmtDate(p.date)})` : ''}${p.gross != null ? `, ${money(p.gross)}` : ''}.`)]);
   }
   for (const d of ins.duplicates?.documents || []) {
     notes.push(['warn', el('span', {}, 'The same invoice number is on another document: ',
