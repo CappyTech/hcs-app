@@ -324,6 +324,12 @@
 					<input type="checkbox" name="forceDuplicate" value="true" class="rounded border-gray-200 dark:border-gray-700 accent-amber-600 dark:bg-gray-800">
 					Send even if a matching supplier reference already exists (override duplicate check)
 				</label>
+				<% if (!(headerVsLinesNetOk && headerVsLinesVatOk)) { %>
+				<label class="inline-flex items-start gap-2 text-sm" title="Use this when the invoice itself is wrong: its printed lines don't add up to its printed totals, and it has been accepted as it stands. KashFlow totals the purchase from the lines, so it will carry the lines' figures.">
+					<input type="checkbox" id="accept-line-mismatch" name="acceptLineMismatch" value="true" class="mt-0.5 rounded border-gray-200 dark:border-gray-700 accent-amber-600 dark:bg-gray-800">
+					<span>The lines don't add up to the invoice's totals and that is how the invoice was issued. Send the lines as they are (override line check). This is recorded on the document.</span>
+				</label>
+				<% } %>
 				<div>
 						<button id="send-button" type="submit" class="inline-flex items-center px-4 py-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700 shadow-sm font-medium transition" <%= canSend ? '' : 'disabled' %>>
 							<%= isSubcontractor ? 'Send to KashFlow (Create a Subcontractor Invoice)' : 'Send to KashFlow (Create a Purchase Invoice)' %>
@@ -385,8 +391,8 @@
 						<span>Net + VAT equals Gross</span>
 					</li>
 					<li class="flex items-start gap-2">
-						<i class="bi <%= (headerVsLinesNetOk && headerVsLinesVatOk) ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
-						<span>Lines add up to Net and VAT<% if (!(headerVsLinesNetOk && headerVsLinesVatOk)) { %> (they don't: correct them in <a href="/paperless/ocr/<%= paperlessId %>/entry" class="underline">Edit entry</a>, or add the missing lines. Sending is refused until they do.)<% } %></span>
+						<i id="check-lines-icon" class="bi <%= (headerVsLinesNetOk && headerVsLinesVatOk) ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span>Lines add up to Net and VAT<% if (!(headerVsLinesNetOk && headerVsLinesVatOk)) { %> (they don't: correct them in <a href="/paperless/ocr/<%= paperlessId %>/entry" class="underline">Edit entry</a>, or add the missing lines. Sending is refused until they do<span id="check-lines-accepted" class="hidden">, unless the override on the left is ticked because the invoice itself doesn't add up</span>.)<% } %></span>
 					</li>
 					<li class="flex items-start gap-2">
 						<i class="bi <%= hasSupplierRef ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-yellow-500' %>"></i>
@@ -579,6 +585,21 @@
 					$nominalText.textContent = `Nominal code for items (${ok ? (hasDef ? 'from supplier default if missing' : 'set per line') : 'set per line or choose supplier with default'})`;
 				}
 				return ok;
+			}
+
+			// The line-check override: the checklist item goes amber while it is ticked
+			const $acceptLines = document.getElementById('accept-line-mismatch');
+			if ($acceptLines) {
+				const $icon = document.getElementById('check-lines-icon');
+				const $note = document.getElementById('check-lines-accepted');
+				$acceptLines.addEventListener('change', () => {
+					const on = $acceptLines.checked;
+					if ($icon) {
+						$icon.classList.remove('text-red-600', 'text-amber-500');
+						$icon.classList.add(on ? 'text-amber-500' : 'text-red-600');
+					}
+					if ($note) $note.classList.toggle('hidden', !on);
+				});
 			}
 
 			function recomputeCanSend() {

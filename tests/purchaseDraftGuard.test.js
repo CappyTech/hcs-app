@@ -121,4 +121,18 @@ describe('lines that do not add up to the invoice', () => {
     const dry = send.indexOf('if (dryRun)');
     assert.ok(added > 0 && guard > added && guard < dry, 'guard sits after extra lines and before the send');
   });
+
+  it('can be sent anyway when the sender confirms the invoice itself does not add up, and that is noted on the document', () => {
+    const ctrl = fs.readFileSync(path.resolve('mongoose/controllers/paperlessController.js'), 'utf8');
+    const send = ctrl.slice(ctrl.indexOf('export const sendDraftToKashflow'));
+    // The override is read from the form, the refusal only applies without it
+    assert.match(send, /acceptLineMismatch = \["true", "on", "1", "yes"\]\.includes\(\s*String\(req\.body\?\.acceptLineMismatch/);
+    assert.match(send, /if \(linesProblem && !acceptLineMismatch\) \{[\s\S]*?send refused/);
+    // An accepted mismatch is written to the document's history on both send paths
+    assert.match(send, /if \(linesProblem && acceptLineMismatch\) \{\s*sentNote = /);
+    assert.equal((send.match(/recordSentToKashflow\([^\n]*\{ note: sentNote \}\)/g) || []).length, 2, 'direct and webhook paths');
+    // The draft page only offers the override when the lines don't add up
+    const view = fs.readFileSync(path.resolve('mongoose/views/tailwindcss/paperless/draft.ejs'), 'utf8');
+    assert.match(view, /<% if \(!\(headerVsLinesNetOk && headerVsLinesVatOk\)\) \{ %>\s*<label[^]*?name="acceptLineMismatch"/);
+  });
 });

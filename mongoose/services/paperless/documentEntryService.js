@@ -511,7 +511,7 @@ export async function repairUnmarkedSends(OcrDocument, { paperlessIds = null } =
   return { repaired };
 }
 
-export async function recordSentToKashflow(OcrDocument, paperlessId, actor, deps = {}) {
+export async function recordSentToKashflow(OcrDocument, paperlessId, actor, { note = null, ...deps } = {}) {
   const d = { ...defaultDeps(), ...deps };
   try {
     const doc = await OcrDocument.findOne({ paperlessId }).select('documentType processingState').lean();
@@ -520,7 +520,8 @@ export async function recordSentToKashflow(OcrDocument, paperlessId, actor, deps
     }
     const after = await OcrDocument.findOne({ paperlessId }).select('processingState').lean();
     if (after?.processingState === 'entered') {
-      await transition(OcrDocument, paperlessId, 'mark_sent', actor);
+      // e.g. that the lines were sent although they don't add up to the invoice
+      await transition(OcrDocument, paperlessId, 'mark_sent', actor, note ? { note } : {});
     }
   } catch (err) {
     logger.warn(`[documentEntry] Recording the KashFlow send for ${paperlessId} failed: ${err.message}`);

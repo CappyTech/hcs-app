@@ -404,6 +404,20 @@ describe('each PB notification fires exactly once', () => {
     assert.equal(count(h, 'kashflow'), 1);
   });
 
+  it('a send that accepted a line mismatch records why on the mark_sent history entry', async () => {
+    const h = harness([invoice({ processingState: 'entered' })]);
+    const note = "Sent with lines that don't add up to the invoice, accepted by the sender as the supplier's own figures.";
+    await entrySvc.recordSentToKashflow(h.OcrDocument, 1131, user, { note, notify: wire(h) });
+    const row = h.OcrDocument.rows[0];
+    assert.equal(row.processingState, 'sent');
+    const sent = (row.processingHistory || []).find((e) => e.action === 'mark_sent');
+    assert.equal(sent?.note, note);
+    // Without a note the entry carries none, as before
+    const h2 = harness([invoice({ processingState: 'entered' })]);
+    await entrySvc.recordSentToKashflow(h2.OcrDocument, 1131, user, { notify: wire(h2) });
+    assert.equal((h2.OcrDocument.rows[0].processingHistory || []).find((e) => e.action === 'mark_sent')?.note ?? null, null);
+  });
+
   it('PB-8 a send straight from the draft screen goes via entered, without sending the invoice email', async () => {
     const h = harness([invoice({ processingState: 'awaiting_entry' })]);
     await entrySvc.recordSentToKashflow(h.OcrDocument, 1131, user, { notify: wire(h) });

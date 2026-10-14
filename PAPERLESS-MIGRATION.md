@@ -57,7 +57,7 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - Reopen removes `data entry done`.
 
   The hcs-app state change is made first and counts. If Paperless can't be updated, the screen says what to do by hand. H6/H8 replace the Paperless sends.
-- **H5 Complete entry needs** an invoice number, invoice date, invoice total and at least one line with a description and a total. Totals that don't add up are warnings, not blockers; the KashFlow send validates again. Unit prices keep 4 decimal places.
+- **H5 Complete entry needs** an invoice number, invoice date, invoice total and at least one line with a description and a total. Totals that don't add up are warnings, not blockers; the KashFlow send validates again. The send refuses lines that don't add up to the invoice's Net and VAT, unless the sender ticks the override on the draft page because the invoice itself was issued that way; an accepted mismatch is noted in the document's history. Unit prices keep 4 decimal places.
 - **H5 file route** is `GET /paperless/ocr/:paperlessId/file` rather than `/documents/:paperlessId/file`, to sit under the existing Paperless guard and route prefix.
 
 - **H6: hcs-app follows Paperless tag changes until cutover** (agreed 3 Oct 2026). When an ingest sees that a document has progressed in Paperless, the state moves forward as the system user, and the matching notification is recorded with `source: 'paperless'`:
