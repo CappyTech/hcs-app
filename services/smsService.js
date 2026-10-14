@@ -1,5 +1,6 @@
 import logger from './loggerService.js';
 import twilio from 'twilio';
+import org from './organisationService.js';
 
 // ── Twilio client (lazy-initialised) ─────────────────────────────────
 let _client = null;
@@ -52,7 +53,7 @@ async function sendSms({ to, body }) {
 
 // ── Send password reset OTP ───────────────────────────────────────────
 async function sendPasswordResetOtp(phoneNumber, otp) {
-  const body = `Your Heron CS password reset code is: ${otp}. It expires in 10 minutes. Do not share this code.`;
+  const body = `Your ${org.companyShortName()} password reset code is: ${otp}. It expires in 10 minutes. Do not share this code.`;
   return sendSms({ to: phoneNumber, body });
 }
 

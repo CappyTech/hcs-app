@@ -10,8 +10,8 @@
  * The two actions that change a document's state also tell Paperless, so its
  * workflows keep sending the emails until cutover (H8):
  *
- *   Complete entry   awaiting_entry → entered, then adds `data entry done`  (WF3 emails John)
- *   Credit note on   → manual_kashflow, then sets Credit Note = true         (WF5 emails Bev)
+ *   Complete entry   awaiting_entry → entered, then adds `data entry done`  (WF3 sends the invoice email)
+ *   Credit note on   → manual_kashflow, then sets Credit Note = true         (WF5 sends the credit note email)
  *   Credit note off  → awaiting_entry (admin), then sets Credit Note = false
  *   Reopen entry     entered → awaiting_entry (admin), removes `data entry done`
  *
@@ -354,7 +354,7 @@ export async function completeEntry(OcrDocument, paperlessId, actor, deps = {}) 
     () => d.modifyTags(paperlessId, { add: ['dataEntryDone'] }),
     'Add the "data entry done" tag in Paperless so the invoice email is sent.',
   );
-  const notification = await d.notify('john', paperlessId, { actor });
+  const notification = await d.notify('invoice', paperlessId, { actor });
   return { ...res, paperlessWarning, notification };
 }
 
@@ -440,10 +440,10 @@ export async function reopenEntry(OcrDocument, paperlessId, actor, deps = {}) {
 }
 
 /**
- * Resend to John (PB-6): always sends and is logged every time. Until
- * cutover it also adds the `notify` tag, so Paperless (WF9) does the sending.
+ * Resend the invoice email (PB-6): always sends and is logged every time.
+ * Until cutover it also adds the `notify` tag, so Paperless (WF9) does the sending.
  */
-export async function resendToJohn(OcrDocument, paperlessId, actor, deps = {}) {
+export async function resendInvoice(OcrDocument, paperlessId, actor, deps = {}) {
   const d = { ...defaultDeps(), ...deps };
   const doc = await OcrDocument.findOne({ paperlessId }).select('documentType').lean();
   if (!doc) return { ok: false, reason: 'not-found', message: 'Document not found.' };
@@ -455,13 +455,13 @@ export async function resendToJohn(OcrDocument, paperlessId, actor, deps = {}) {
     () => d.modifyTags(paperlessId, { add: ['notify'] }),
     'Add the "notify" tag in Paperless to re-send it.',
   );
-  const notification = await d.notify('john_resend', paperlessId, { actor });
+  const notification = await d.notify('invoice_resend', paperlessId, { actor });
   return { ok: true, paperlessWarning, notification };
 }
 
 /**
- * Mark a supplier statement reviewed (PB-10). The first time emails Bev.
- * Paperless isn't told: its WF2 already emails Bev on the first save there,
+ * Mark a supplier statement reviewed (PB-10). The first time sends the
+ * statement email. Paperless isn't told: its WF2 already sends it on the first save there,
  * and adding tag 21 from here would stop that email before cutover.
  */
 export async function markReviewed(OcrDocument, paperlessId, actor, deps = {}) {
@@ -559,7 +559,7 @@ export default {
   setNotForKashflow,
   NOT_FOR_KASHFLOW_NOTE_MAX,
   reopenEntry,
-  resendToJohn,
+  resendInvoice,
   markReviewed,
   recordSentToKashflow,
   repairUnmarkedSends,

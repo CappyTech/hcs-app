@@ -185,7 +185,7 @@ const FORWARD = ['awaiting_entry', 'entered', 'sent'];
 
 /** Which notification each followed step fires. */
 export const STEP_NOTIFICATION = {
-  complete_entry: 'john',
+  complete_entry: 'invoice',
   mark_sent: 'kashflow',
   flag_credit_note: 'credit_note',
   mark_reviewed: 'statement',
@@ -373,7 +373,7 @@ let reconcileRunning = false;
  * Lists documents modified within the lookback window, ingests any hcs-app
  * has no copy of or an older copy of, then classifies every document in the
  * window. Bounded to the window on purpose: classifying the historical
- * backlog is the H7 backfill, which Jack runs by hand.
+ * backlog is the H7 backfill, which an admin runs by hand.
  */
 export async function reconcileRecentDocuments(deps = {}) {
   if (reconcileRunning) {

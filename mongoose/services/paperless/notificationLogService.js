@@ -2,19 +2,19 @@
  * notificationLogService.js — the exactly-once ledger for document
  * notifications (Paperless migration H2).
  *
- * A one-shot notification (new_doc, john, kashflow, statement, credit_note)
+ * A one-shot notification (new_doc, invoice, kashflow, statement, credit_note)
  * is *claimed* by inserting its NotificationLog row before anything is sent.
  * The partial unique index on (paperlessId, kind) lets exactly one insert win;
  * every other caller gets `claimed: false` and must not send. This replaces
  * the `notified/*` tags in Paperless.
  *
- * Re-sends (john_resend) are recorded every time and never deduplicated.
+ * Re-sends (invoice_resend) are recorded every time and never deduplicated.
  *
  * What happens to a claim whose send then fails (retry or leave) is decided
  * by the notification service in H6; completeNotification records the outcome.
  */
 
-import { ONE_SHOT_KINDS, REPEATABLE_KINDS } from '../../models/mongoose/PAPERLESS/NotificationLog.js';
+import { ONE_SHOT_KINDS, REPEATABLE_KINDS, LEGACY_KINDS } from '../../models/mongoose/PAPERLESS/NotificationLog.js';
 
 const isDuplicateKey = (err) => err?.code === 11000 || /E11000/.test(String(err?.message || ''));
 
@@ -43,7 +43,7 @@ export async function claimOneShot(NotificationLog, paperlessId, kind, { actor =
   }
 }
 
-/** Record a repeatable notification (e.g. a re-send to John). Always inserts. */
+/** Record a repeatable notification (e.g. an invoice re-send). Always inserts. */
 export async function recordRepeatable(NotificationLog, paperlessId, kind, { actor = null, mode = null, source = 'app' } = {}) {
   if (!REPEATABLE_KINDS.includes(kind)) throw new Error(`"${kind}" is not a repeatable notification kind`);
   return NotificationLog.create({ paperlessId, kind, mode, source, triggeredBy: storedActor(actor) });
@@ -60,4 +60,20 @@ export async function hasOneShot(NotificationLog, paperlessId, kind) {
   return !!(await NotificationLog.exists({ paperlessId, kind, oneShot: true }));
 }
 
-export default { claimOneShot, recordRepeatable, completeNotification, hasOneShot };
+/**
+ * Rename rows written under the old kind names (`john` → `invoice`,
+ * `john_resend` → `invoice_resend`). Run once at startup; a no-op afterwards.
+ * The rename is one-to-one, so the one-shot unique index cannot collide.
+ * @returns {Promise<{renamed: number}>}
+ */
+export async function migrateLegacyKinds(NotificationLog) {
+  if (!NotificationLog) return { renamed: 0 };
+  let renamed = 0;
+  for (const [legacy, current] of Object.entries(LEGACY_KINDS)) {
+    const r = await NotificationLog.updateMany({ kind: legacy }, { $set: { kind: current } });
+    renamed += r?.modifiedCount || 0;
+  }
+  return { renamed };
+}
+
+export default { claimOneShot, recordRepeatable, completeNotification, hasOneShot, migrateLegacyKinds };

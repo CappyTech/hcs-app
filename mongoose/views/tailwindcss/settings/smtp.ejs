@@ -91,7 +91,7 @@ function srcBadge(f) {
               <%- srcBadge(fields.SMTP_FROM) %>
             </div>
             <input type="email" name="SMTP_FROM"
-              placeholder="<%= fields.SMTP_FROM.display || 'noreply@heroncs.co.uk' %>"
+              placeholder="<%= fields.SMTP_FROM.display || 'noreply@example.com' %>"
               <% if (fields.SMTP_FROM.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
             <p class="text-xs text-gray-400 mt-1">Sender address on outbound emails.</p>
@@ -102,7 +102,7 @@ function srcBadge(f) {
               <%- srcBadge(fields.BASE_URL) %>
             </div>
             <input type="url" name="BASE_URL"
-              placeholder="<%= fields.BASE_URL.display || 'https://hcs.heroncs.co.uk' %>"
+              placeholder="<%= fields.BASE_URL.display || 'https://app.example.com' %>"
               <% if (fields.BASE_URL.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
             <p class="text-xs text-gray-400 mt-1">Used in email links (e.g. verify email, password reset).</p>

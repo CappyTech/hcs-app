@@ -1,6 +1,6 @@
 <%
 const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—';
-const plUrl = (id) => `https://docs.heroncs.co.uk/documents/${id}`;
+const plUrl = (id) => locals.paperlessUiBase ? `${paperlessUiBase}/documents/${id}` : `/paperless/ocr/${id}`;
 // Permalinks from KashFlow are API-relative paths (/v2/documents/...) — never render them raw.
 // Prefer the KashFlow UI purchase page; fall back to the API-hosted PDF link.
 const kfUrl = (d) => d.kashflowPurchaseNumber
@@ -201,7 +201,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
     <p class="text-sm text-amber-800 dark:text-amber-300">
       <%= addedNoKfNumber %> document<%= addedNoKfNumber !== 1 ? 's are' : ' is' %> tagged <strong>added</strong> in Paperless but have no KashFlow Purchase Number recorded.
       They may have been sent outside this system. Open each document in
-      <a href="https://docs.heroncs.co.uk" target="_blank" rel="noopener noreferrer" class="underline font-medium">docs.heroncs.co.uk</a>,
+      <% if (locals.paperlessUiBase) { %><a href="<%= paperlessUiBase %>" target="_blank" rel="noopener noreferrer" class="underline font-medium">Paperless</a><% } else { %>Paperless<% } %>,
       enter the <strong>KashFlow Purchase Number</strong> custom field, then re-fetch the document to link it automatically.
     </p>
     <div class="mt-2">

@@ -50,7 +50,7 @@ router.post("/paperless/ocr/:paperlessId/entry", ...paperlessGuard, entryCtrl.po
 router.post("/paperless/ocr/:paperlessId/credit-note", ...paperlessGuard, entryCtrl.postCreditNote);
 router.post("/paperless/ocr/:paperlessId/not-for-kashflow", ...paperlessGuard, entryCtrl.postNotForKashflow);
 router.post("/paperless/ocr/:paperlessId/reopen", ...paperlessGuard, entryCtrl.postReopen);
-router.post("/paperless/ocr/:paperlessId/resend-john", ...paperlessGuard, entryCtrl.postResendJohn);
+router.post("/paperless/ocr/:paperlessId/resend-invoice", ...paperlessGuard, entryCtrl.postResendInvoice);
 router.post("/paperless/ocr/:paperlessId/reviewed", ...paperlessGuard, entryCtrl.postReviewed);
 router.post("/paperless/ocr/:paperlessId/type", ...paperlessGuard, typeCtrl.postType);
 router.post("/paperless/ocr/:paperlessId/type-confirmed", ...paperlessGuard, typeCtrl.postTypeConfirmed);

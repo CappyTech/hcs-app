@@ -22,7 +22,7 @@
           <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
             <input type="checkbox" name="headerEnabled" <%= branding.headerEnabled ? 'checked' : '' %>> Enable email header
           </label>
-          <textarea name="headerHtml" rows="6" maxlength="20000" placeholder="&lt;div style=&quot;text-align:center&quot;&gt;&lt;img src=&quot;https://…/logo.png&quot; alt=&quot;Heron CS&quot; height=&quot;40&quot;&gt;&lt;/div&gt;" class="w-full font-mono text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= branding.headerHtml || '' %></textarea>
+          <textarea name="headerHtml" rows="6" maxlength="20000" placeholder="&lt;div style=&quot;text-align:center&quot;&gt;&lt;img src=&quot;https://…/logo.png&quot; alt=&quot;Example Ltd&quot; height=&quot;40&quot;&gt;&lt;/div&gt;" class="w-full font-mono text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= branding.headerHtml || '' %></textarea>
           <p class="text-xs text-gray-400 mt-1">HTML rendered at the very top of each email.</p>
         </div>
 
@@ -31,7 +31,7 @@
           <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
             <input type="checkbox" name="footerEnabled" <%= branding.footerEnabled ? 'checked' : '' %>> Enable email footer
           </label>
-          <textarea name="footerHtml" rows="6" maxlength="20000" placeholder="&lt;p style=&quot;color:#999;font-size:12px&quot;&gt;Heron CS Ltd · 123 Example St · &lt;a href=&quot;https://heroncs.co.uk&quot;&gt;heroncs.co.uk&lt;/a&gt;&lt;/p&gt;" class="w-full font-mono text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= branding.footerHtml || '' %></textarea>
+          <textarea name="footerHtml" rows="6" maxlength="20000" placeholder="&lt;p style=&quot;color:#999;font-size:12px&quot;&gt;Example Ltd · 123 Example St · &lt;a href=&quot;https://example.com&quot;&gt;example.com&lt;/a&gt;&lt;/p&gt;" class="w-full font-mono text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= branding.footerHtml || '' %></textarea>
           <p class="text-xs text-gray-400 mt-1">HTML rendered below the body, above the unsubscribe line.</p>
         </div>
 

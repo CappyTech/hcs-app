@@ -75,6 +75,9 @@ import __submissionRoutes from './mongoose/routes/submissionRoutes.js';
 import __holidayRoutes from './mongoose/routes/holidayRoutes.js';
 import __fileRoutes from './mongoose/routes/fileRoutes.js';
 import __paperlessTags from './mongoose/config/paperlessTagsConfig.js';
+import { paperlessUiBase as __paperlessUiBase } from './mongoose/services/paperless/documentQueueService.js';
+import __organisation from './services/organisationService.js';
+import { migrateLegacyKinds as __migrateNotificationKinds } from './mongoose/services/paperless/notificationLogService.js';
 import __paperlessRoutes from './mongoose/routes/paperlessRoutes.js';
 import __bankRoutes from './mongoose/routes/bankRoutes.js';
 import __paymentRoutes from './mongoose/routes/paymentRoutes.js';
@@ -363,6 +366,15 @@ const main = async () => {
       logger.error('[migration] Email verification backfill failed', { error: migrationErr.message });
     }
 
+    // One-time migration: NotificationLog kinds `john`/`john_resend` became
+    // `invoice`/`invoice_resend` when the wording was made configurable.
+    try {
+      const { renamed } = await __migrateNotificationKinds(mdb.PAPERLESS?.NotificationLog);
+      if (renamed > 0) logger.info(`[migration] Renamed ${renamed} legacy notification kind row(s)`);
+    } catch (migrationErr) {
+      logger.error('[migration] Notification kind rename failed', { error: migrationErr.message });
+    }
+
     // Bootstrap: create first admin from setup wizard credentials (app-config.json only)
     try {
       const bootstrap = configService.get('_bootstrapAdmin');
@@ -533,8 +545,11 @@ const main = async () => {
       if (!res.locals.csrfToken && req.session?.csrfToken) {
         res.locals.csrfToken = req.session.csrfToken;
       }
-      res.locals.contactEmail = configService.get('SUPPORTEMAIL');
-      res.locals.companyName = configService.get('COMPANY_NAME', '');
+      // Company wording (name, short name, address, contact email, website):
+      // every view reads these rather than naming a company in the template.
+      Object.assign(res.locals, __organisation.viewLocals());
+      // Base of the Paperless web UI for "open in Paperless" links; '' when unset.
+      res.locals.paperlessUiBase = __paperlessUiBase();
       // Maintenance banner: pre-announcement notice + active flag (admins
       // bypass the maintenance page, so remind them it's on)
       res.locals.maintenanceActive = maintenance.isMaintenanceOn();

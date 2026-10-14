@@ -6,6 +6,7 @@ import emailPreferenceService from '../mongoose/services/emailPreferenceService.
 import emailBrandingService from '../mongoose/services/emailBrandingService.js';
 import unsubscribeTokenService from '../mongoose/services/unsubscribeTokenService.js';
 import emailLayout from './emailLayout.js';
+import org from './organisationService.js';
 
 /**
  * Central notification service (email outbox).
@@ -67,8 +68,8 @@ function wrapTemplate({ heading, bodyLines = [], bodyHtml = '', ctaText, ctaUrl,
 // Standing "automated message" notice appended below *everything* (body,
 // branded footer and the mandatory unsubscribe line) by enqueue() and the
 // preview, so it always sits at the very bottom of the email.
-const AUTOMATED_NOTICE_HTML = note('<p style="margin:0;">This is an automated message from the Heron CS platform.</p>');
-const AUTOMATED_NOTICE_TEXT = '\n\n—\nThis is an automated message from the Heron CS platform.';
+const automatedNoticeHtml = () => note(`<p style="margin:0;">This is an automated message from the ${escapeHtml(org.companyShortName())} platform.</p>`);
+const automatedNoticeText = () => `\n\n—\nThis is an automated message from the ${org.companyShortName()} platform.`;
 
 /** Crude HTML→text for the plaintext part of branded header/footer blocks. */
 function htmlToText(html) {
@@ -251,13 +252,13 @@ async function enqueue({
         title: subject,
         preheader: type && type.intro ? type.intro : '',
         contentHtml: `${brand.header}${html}${brand.footer}`,
-        afterHtml: `${footer.html}${AUTOMATED_NOTICE_HTML}`,
+        afterHtml: `${footer.html}${automatedNoticeHtml()}`,
       })
     : html;
   const brandHeaderText = brand.header ? `${htmlToText(brand.header)}\n\n` : '';
   const brandFooterText = brand.footer ? `\n\n${htmlToText(brand.footer)}` : '';
   const finalText = text != null
-    ? `${brandHeaderText}${text}${brandFooterText}${footer.text}${AUTOMATED_NOTICE_TEXT}`
+    ? `${brandHeaderText}${text}${brandFooterText}${footer.text}${automatedNoticeText()}`
     : text;
 
   const doc = await Notification.create({
@@ -362,7 +363,7 @@ const PREVIEW_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data
 function renderPreviewDocument(type, branding = null) {
   const actions = Array.isArray(type.actions) && type.actions.length
     ? type.actions.map((a) => ({ text: a.label, url: a.url }))
-    : [{ text: 'Open Heron CS', url: baseUrl() + '/' }];
+    : [{ text: `Open ${org.companyShortName()}`, url: baseUrl() + '/' }];
   const html = wrapTemplate({
     heading: type.heading || type.label,
     bodyLines: [type.intro || '', type.description || 'Example notification body.'].filter(Boolean),
@@ -383,7 +384,7 @@ function renderPreviewDocument(type, branding = null) {
     title: `Email preview — ${type.label || ''}`,
     preheader: type.intro || '',
     contentHtml: `${brand.header}${html}${brand.footer}`,
-    afterHtml: `${footer.html}${AUTOMATED_NOTICE_HTML}`,
+    afterHtml: `${footer.html}${automatedNoticeHtml()}`,
   });
 }
 

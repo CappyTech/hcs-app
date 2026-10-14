@@ -99,7 +99,7 @@ export const DOCUMENTS = [
     modified: '2026-09-01T09:00:00Z',
   },
   {
-    // Scanned purchase invoice: entered, John emailed, ready for KashFlow
+    // Scanned purchase invoice: entered, invoice emailed, ready for KashFlow
     id: 9002,
     title: 'scan_0042.pdf',
     correspondent: 2,
@@ -125,7 +125,7 @@ export const DOCUMENTS = [
     modified: '2026-09-10T08:30:00Z',
   },
   {
-    // Credit note: flagged, Bev emailed, keyed into KashFlow by hand
+    // Credit note: flagged, credit note emailed, keyed into KashFlow by hand
     id: 9004,
     title: 'CN-0007.pdf',
     correspondent: 1,

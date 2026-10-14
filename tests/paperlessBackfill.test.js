@@ -21,7 +21,7 @@ const BANK = { id: 4, name: 'Bank Statement' };
 const t = (id, name) => ({ id, name });
 const T = {
   dataEntryDone: t(1, 'data entry done'), added: t(2, 'added'), inbox: t(3, 'inbox'), originalMulti: t(4, 'original/multiple invoice one pdf'),
-  manual: t(11, 'manually added to kashflow'), john: t(19, 'notified/john'), kf: t(20, 'notified/kashflow'),
+  manual: t(11, 'manually added to kashflow'), invoice: t(19, 'notified/john'), kf: t(20, 'notified/kashflow'),
   statementSent: t(21, 'notified/admin-statement'), creditSent: t(22, 'notified/credit-note'),
 };
 
@@ -90,8 +90,8 @@ function fakeNotificationLog(preexisting = []) {
 // A Paperless-shaped history: one of each case the backfill has to handle
 const HISTORY = [
   { paperlessId: 1, documentType: PI, tags: [T.inbox] },                                    // fresh
-  { paperlessId: 2, documentType: PI, tags: [T.dataEntryDone, T.john] },                    // entered, John emailed
-  { paperlessId: 3, documentType: PI, tags: [T.added, T.kf, T.john] },                      // in KashFlow
+  { paperlessId: 2, documentType: PI, tags: [T.dataEntryDone, T.invoice] },                    // entered, invoice emailed
+  { paperlessId: 3, documentType: PI, tags: [T.added, T.kf, T.invoice] },                      // in KashFlow
   { paperlessId: 4, documentType: PI, tags: [T.creditSent], customFields: [{ fieldId: 58, value: true }] }, // credit note
   { paperlessId: 5, documentType: PI, tags: [T.originalMulti] },                            // multi-invoice source PDF
   { paperlessId: 6, documentType: PI, tags: [T.manual] },                                   // keyed into KashFlow by hand
@@ -113,8 +113,8 @@ describe('planDocument / sentNotifications (the H7 table)', () => {
   it('maps each Paperless history to a state and the notifications already sent', () => {
     const cases = {
       1: ['awaiting_entry', []],
-      2: ['entered', ['john']],
-      3: ['sent', ['kashflow', 'john']],
+      2: ['entered', ['invoice']],
+      3: ['sent', ['kashflow', 'invoice']],
       4: ['manual_kashflow', ['credit_note']],
       5: ['awaiting_entry', []],
       6: ['awaiting_entry', []],
@@ -176,7 +176,7 @@ describe('runBackfill', () => {
     assert.equal(s.classifiedAtStamped, 1);
     assert.equal(s.skippedDeleted, 1);
     // #13 keeps its hcs-app state, but its `added` tag means Paperless already announced it
-    assert.deepEqual(s.notificationsRecorded, { kashflow: 3, statement: 1, credit_note: 1, john: 2 });
+    assert.deepEqual(s.notificationsRecorded, { kashflow: 3, statement: 1, credit_note: 1, invoice: 2 });
 
     assert.equal(row(3).processingState, 'sent');
     assert.equal(row(4).creditNote, true);
@@ -200,7 +200,7 @@ describe('runBackfill', () => {
     assert.equal(M.writes.length, writesBefore, 'no document written');
     assert.equal(JSON.stringify({ rows: M.rows, logs: L.rows.length }), snapshot);
     assert.equal(second.classified + second.statementsClassified + second.classifiedAtStamped, 0);
-    assert.deepEqual(second.notificationsRecorded, { kashflow: 0, statement: 0, credit_note: 0, john: 0 });
+    assert.deepEqual(second.notificationsRecorded, { kashflow: 0, statement: 0, credit_note: 0, invoice: 0 });
     assert.equal(second.alreadyDone, HISTORY.length - 1, 'everything but the deleted one is already done');
   });
 

@@ -355,7 +355,7 @@ describe('actions against the mock Paperless', () => {
     assert.equal(r.ok, true);
     assert.equal(M.rows[0].processingState, 'awaiting_entry');
     assert.ok(!tagsOf(9002).includes(1));
-    assert.ok(tagsOf(9002).includes(19), 'notified/john kept, so John is not emailed twice');
+    assert.ok(tagsOf(9002).includes(19), 'notified/john kept, so the invoice is not emailed twice');
   });
 });
 

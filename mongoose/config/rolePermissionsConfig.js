@@ -341,7 +341,7 @@ const routeAccess = {
   '/paperless/ocr/:paperlessId/credit-note': ['admin'],
   '/paperless/ocr/:paperlessId/not-for-kashflow': ['admin'],
   '/paperless/ocr/:paperlessId/reopen':      ['admin'],
-  '/paperless/ocr/:paperlessId/resend-john': ['admin'],
+  '/paperless/ocr/:paperlessId/resend-invoice': ['admin'],
   '/paperless/ocr/:paperlessId/reviewed':    ['admin'],
   '/paperless/ocr/:paperlessId/type':        ['admin'],
   '/paperless/ocr/:paperlessId/type-confirmed': ['admin'],

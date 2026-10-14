@@ -27,7 +27,7 @@ const T = {
   inbox: tag(3, 'inbox'),
   originalMulti: tag(4, 'original/multiple invoice one pdf'),
   manual: tag(11, 'manually added to kashflow'),
-  notifiedJohn: tag(19, 'notified/john'),
+  notifiedInvoice: tag(19, 'notified/john'),
   notifiedKf: tag(20, 'notified/kashflow'),
   notifiedStatement: tag(21, 'notified/admin-statement'),
   notifiedCredit: tag(22, 'notified/credit-note'),
@@ -112,7 +112,7 @@ describe('initialStateFromPaperless (the H7 table)', () => {
   });
 
   it('maps `data entry done` to entered and `added` to sent', () => {
-    assert.equal(s(PI, [T.dataEntryDone, T.notifiedJohn]).processingState, 'entered');
+    assert.equal(s(PI, [T.dataEntryDone, T.notifiedInvoice]).processingState, 'entered');
     assert.equal(s(PI, [T.added, T.notifiedKf]).processingState, 'sent');
     assert.equal(s(PI, [T.added, T.dataEntryDone]).processingState, 'sent', 'added wins over data entry done');
   });

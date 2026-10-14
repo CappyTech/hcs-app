@@ -48,12 +48,14 @@
       </div>
     </div>
 
+    <% if (locals.contactEmail) { %>
     <div class="mt-6 text-sm text-gray-500 dark:text-gray-400">
       If the problem persists, please contact
-      <a href="mailto:<%= (typeof contactEmail !== 'undefined' && contactEmail) ? contactEmail : 'admin@heroncs.co.uk' %>" class="text-green-600 dark:text-green-400 hover:underline">
-        <%= (typeof contactEmail !== 'undefined' && contactEmail) ? contactEmail : 'admin@heroncs.co.uk' %>
+      <a href="mailto:<%= contactEmail %>" class="text-green-600 dark:text-green-400 hover:underline">
+        <%= contactEmail %>
       </a>
     </div>
+    <% } %>
 
     <div class="mt-4">
       <a href="/" class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 shadow-sm transition">Retry now</a>

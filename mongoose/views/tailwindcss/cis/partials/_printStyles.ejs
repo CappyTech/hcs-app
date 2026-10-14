@@ -3,7 +3,7 @@
   @page {
     margin-bottom: 18mm;
     @bottom-center {
-      content: var(--hcs-footer, "Heron Constructive Solutions LTD");
+      content: var(--hcs-footer, "<%= String(locals.companyName || '').replace(/"/g, '\\"') %>");
       font-size: 7pt;
       color: #555;
     }

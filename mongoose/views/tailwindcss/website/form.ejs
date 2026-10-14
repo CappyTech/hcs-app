@@ -7,8 +7,8 @@
     ? '/website/settings'
     : (isNew ? `/website/${type}` : `/website/${type}/${record.uuid}`);
   const published = !!record && record.status === 'published';
-  const publicUrl = cfg.publicPath && record
-    ? `https://heroncs.co.uk${cfg.publicPath.replace(':slug', record.slug || '')}`
+  const publicUrl = cfg.publicPath && record && locals.websiteUrl
+    ? `${websiteUrl}${cfg.publicPath.replace(':slug', record.slug || '')}`
     : null;
 %>
 <div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -92,7 +92,7 @@
               Publish
             </button>
           </form>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Makes this visible on heroncs.co.uk.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Makes this visible on <%= locals.websiteHost || 'the public website' %>.</p>
         <% } %>
       </div>
     </div>

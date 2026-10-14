@@ -40,7 +40,7 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
 - **Credit notes can be unflagged by an admin**, which moves `manual_kashflow` back to `awaiting_entry`. Bev's one-shot E2 email is not sent again. An invoice already in KashFlow must be unlinked before it can be flagged.
 - **No state until classified.** Existing documents have `processingState: null` until H3 ingest or the H7 backfill sets one. Only Purchase and Subcontractor Invoices get a state. Supplier statements use `statementReviewed`. Bank statements and remittances get nothing.
 - **Storage.** `NotificationLog` lives in the PAPERLESS namespace. Each state or flag change stores who (user id and name) and when, plus a `processingHistory` entry. `excludedReason` is `original_multiple` (tag 4) or `manually_added` (tag 11).
-- **One-shot uniqueness** is a partial unique index on (paperlessId, kind) covering rows with `oneShot: true`, so `john_resend` rows can repeat.
+- **One-shot uniqueness** is a partial unique index on (paperlessId, kind) covering rows with `oneShot: true`, so `invoice_resend` rows can repeat.
 - **H3 derives the first state from Paperless tags** using the H7 table (`added` → `sent`, tag 22 or field 58 → `manual_kashflow`, `data entry done` → `entered`, otherwise `awaiting_entry`; tags 4/11 → `excludedReason`; tag 21 → `statementReviewed`). This means an invoice already entered or sent in Paperless is never put back into Needs Data Entry, even if H3 sees it before H7 has run. It only fills an empty state, never overrides one, and writes no `NotificationLog` rows. H7 reuses the same function (`initialStateFromPaperless` in `documentIngestService.js`) and adds the log rows. The reconciliation job only classifies documents modified inside its lookback window, so the historical backlog is still left to H7 (⏸).
 
 - **H4 queue rules.**
@@ -69,8 +69,8 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   It never moves backwards. Without this, the shadow run would only see documents handled in hcs-app. `PAPERLESS_FOLLOW_TAGS=false` turns it off at cutover.
 - **H6 triggers:**
   - **new_doc:** fired by the webhook, or by reconciliation for a document *added* inside its lookback window.
-  - **john:** Complete entry. Purchase Invoices only, as WF3.
-  - **john_resend:** the Resend button. Until cutover it also adds the `notify` tag, so Paperless (WF9) sends.
+  - **invoice:** Complete entry. Purchase Invoices only, as WF3.
+  - **invoice_resend:** the Resend button. Until cutover it also adds the `notify` tag, so Paperless (WF9) sends.
   - **kashflow:** a successful send.
   - **credit_note:** flagging. Purchase Invoices only, as WF5. One-shot, so flagging again after an admin unflags doesn't re-email Bev.
   - **statement:** Mark reviewed. This doesn't tag Paperless, because adding tag 21 would stop WF2 emailing Bev before cutover.
@@ -88,7 +88,7 @@ Agreed with Jack on 2 Oct 2026, filling gaps this document didn't cover.
   - Documents deleted in Paperless are skipped.
 
 - **H8: how the shadow report finds Paperless's sends.**
-  - **Emails and the KashFlow post** are read from Paperless's own tags: john = tag 19 (also set by WF9 re-sends), kashflow = tag 20, statement = tag 21, credit_note = tag 22. A document counts in a window when it was modified in that window.
+  - **Emails and the KashFlow post** are read from Paperless's own tags: invoice = tag 19 (also set by WF9 re-sends), kashflow = tag 20, statement = tag 21, credit_note = tag 22. A document counts in a window when it was modified in that window.
   - **The new-document post** counts against every document added in the window.
   - **Pending, not mismatches:** anything under 30 minutes old, to allow for the 15-minute follow.
   - **Not compared:** H7 backfill rows are history and are left out. Re-sends have no Paperless evidence, so they're counted only.
@@ -114,10 +114,10 @@ Inside the hcs-app container on server2:
 3. Run step 2 again. Every count should be 0 and "Documents with nothing to do" should equal the documents read.
 4. Check `/paperless/queues`. Needs Data Entry, Ready for KashFlow and Statements to Review should match Paperless views 12, 4 and 13, and the "not classified yet" note should be gone.
 
-### 0d. Cutover (⏸ Jack decides, H8)
+### 0d. Cutover (⏸ the owner decides, H8)
 
 1. About a week of clean daily reports on `/paperless/shadow-report`. Also compare a few of hcs-app's posts by eye with Discord, for the date format and wording.
-2. Set the recipient emails and the Discord webhook URL on Configuration → Document notifications.
+2. Set the recipient emails, the recipient names used in the Discord wording, the sender name and the Discord webhook URL on Configuration → Document notifications. The company name, short name, address, contact email and website are on Configuration → Organisation; nothing user-facing names a company or a person in code.
 3. In Paperless, disable WF2, 3, 4, 5, 8 and 9.
 4. In the same hour, set Mode to **Live**, and turn **Follow Paperless tags** off on the Paperless settings page.
 5. Later, once entry has fully moved to hcs-app, retire WF6 and WF7. Keep WF1 and the mail rules. H9 clean-up comes after about a month of stable running.
@@ -418,7 +418,7 @@ Around lines 610–622, the lock requires `added` to be the **only** tag. Once W
 
 ### H2: Data model
 - Add processing state to `OcrDocument`: `awaiting_entry` → `entered` → `sent`, plus the terminal state `manual_kashflow` for credit notes (PB-12), plus `statementReviewed`, `creditNote`, `excludedReason` (original/multiple, manually added), and who changed each and when.
-- New `NotificationLog` collection with a **unique index on (paperlessId, kind)** for one-shot notifications. Kinds: `new_doc`, `john`, `kashflow`, `statement`, `credit_note`. Re-sends go in with `kind: john_resend` and no uniqueness.
+- New `NotificationLog` collection with a **unique index on (paperlessId, kind)** for one-shot notifications. Kinds: `new_doc`, `invoice`, `kashflow`, `statement`, `credit_note`. Re-sends go in with `kind: invoice_resend` and no uniqueness. (These were `john` and `john_resend` until the wording was made configurable; rows are renamed at startup by `migrateLegacyKinds`.)
 - The unique index is what replaces all the `notified/*` tags. It makes "exactly once" a database guarantee rather than a tag convention.
 
 ### H3: Ingest trigger
@@ -465,7 +465,7 @@ Backfill state from Paperless so nothing historical fires:
 | `added` | state `sent` and a `kashflow` log entry |
 | tag 21 | `statementReviewed` and a `statement` log entry |
 | tag 22 or field 58 | `creditNote` and a `credit_note` log entry |
-| tag 19 | `john` log entry |
+| tag 19 | `invoice` log entry |
 | tags 4 and 11 | `excludedReason` |
 
 ### H8: Shadow run, then cutover
@@ -492,7 +492,12 @@ Everything needed to build is in this document: IDs, field names, templates and 
   PAPERLESS_WEBHOOK_SECRET          (H3)
   DISCORD_WEBHOOK_URL
   NOTIFY_INVOICE_EMAIL, NOTIFY_STATEMENT_EMAIL, NOTIFY_CREDIT_NOTE_EMAIL
+  NOTIFY_INVOICE_RECIPIENT_NAME, NOTIFY_STATEMENT_RECIPIENT_NAME, NOTIFY_CREDIT_NOTE_RECIPIENT_NAME
+                                    (the "Emailed … to <name>" wording; default to the address)
+  NOTIFY_SENDER_NAME                (email display name and Discord user; default "<COMPANY_SHORT_NAME> | Documents")
   NOTIFY_MODE=shadow|live           (H8; defaults to shadow)
+  COMPANY_NAME, COMPANY_SHORT_NAME, COMPANY_ADDRESS, SUPPORTEMAIL, COMPANY_WEBSITE_URL
+                                    (Organisation group; all company wording reads these)
   ```
 
 - **Mock Paperless client.** Add a fake implementation of the existing `paperlessClient` interface. It should serve a few fixture PDFs, plus JSON document records in the shape of `GET /api/documents/<id>/` (`id`, `title`, `correspondent`, `document_type`, `tags`, `custom_fields: [{field, value}]`, `content`, `created`, `added`). Select it with `PAPERLESS_URL=mock`.

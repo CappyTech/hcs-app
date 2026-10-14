@@ -48,7 +48,7 @@
           <% } %>
         </div>
         <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <a href="https://docs.heroncs.co.uk/documents/<%= doc.paperlessId %>/details" target="_blank" rel="noopener noreferrer"
+          <a href="<%= locals.paperlessUiBase || '' %>/documents/<%= doc.paperlessId %>/details" target="_blank" rel="noopener noreferrer"
              class="text-xs text-green-700 dark:text-green-400 hover:underline">View in Paperless ↗</a>
         </div>
       </div>
