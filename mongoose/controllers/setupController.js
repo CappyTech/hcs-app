@@ -162,7 +162,7 @@ export const getStep2 = (req, res) => {
 };
 
 export const postStep2 = (req, res) => {
-  const { companyName, supportEmail, incorporationYear, notifyEmail, sessionSecret, encryptionKey } = req.body;
+  const { companyName, companyShortName, companyAddress, companyWebsite, supportEmail, incorporationYear, notifyEmail, sessionSecret, encryptionKey } = req.body;
 
   // Skip: no company info, secrets generated server-side (reusing any the
   // wizard already stored, so a revisit doesn't rotate them).
@@ -199,7 +199,7 @@ export const postStep2 = (req, res) => {
   }
 
   const w = sessionWizard(req);
-  w.step2 = { companyName, supportEmail, incorporationYear, notifyEmail, sessionSecret, encryptionKey };
+  w.step2 = { companyName, companyShortName, companyAddress, companyWebsite, supportEmail, incorporationYear, notifyEmail, sessionSecret, encryptionKey };
   writeDraft(w);
   res.redirect('/setup/step3');
 };
@@ -277,7 +277,10 @@ export const postComplete = (req, res) => {
   if (s1.mongoDbInternal && s1.mongoDbInternal.trim())   config.MONGO_DBNAME_INTERNAL  = s1.mongoDbInternal.trim();
   if (s1.mongoDbPaperless && s1.mongoDbPaperless.trim()) config.MONGO_DBNAME_PAPERLESS = s1.mongoDbPaperless.trim();
 
-  if (s2.companyName)       config.COMPANY_NAME       = s2.companyName.trim();
+  if (s2.companyName)       config.COMPANY_NAME        = s2.companyName.trim();
+  if (s2.companyShortName)  config.COMPANY_SHORT_NAME  = s2.companyShortName.trim();
+  if (s2.companyAddress)    config.COMPANY_ADDRESS     = s2.companyAddress.trim();
+  if (s2.companyWebsite)    config.COMPANY_WEBSITE_URL = s2.companyWebsite.trim();
   if (s2.supportEmail)      config.SUPPORTEMAIL       = s2.supportEmail.trim();
   if (s2.incorporationYear) config.INCORPORATION_YEAR = s2.incorporationYear.trim();
   if (s2.notifyEmail)       config.NOTIFY_EMAIL       = s2.notifyEmail.trim();
