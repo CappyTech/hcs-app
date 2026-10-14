@@ -1045,13 +1045,25 @@ export const sendDraftToKashflow = async (req, res, next) => {
       draft.LineItems.push(...parsedExtras.lines);
     }
 
-    // The lines, including any added on the draft page, must add up to the invoice
+    // The lines, including any added on the draft page, must add up to the
+    // invoice. Unless the sender has confirmed the mismatch is the supplier's
+    // own (the printed lines don't add up to the printed totals, and the
+    // invoice is accepted as it stands): then it goes, and the document's
+    // history records that the lines were sent as they are.
     const linesProblem = lineTotalsProblem(draft);
-    if (linesProblem) {
+    const acceptLineMismatch = ["true", "on", "1", "yes"].includes(
+      String(req.body?.acceptLineMismatch || "").toLowerCase(),
+    );
+    let sentNote = null;
+    if (linesProblem && !acceptLineMismatch) {
       logger.warn(`[paperless] send refused for ${paperlessId}: ${linesProblem}`);
       req.flash("error", linesProblem);
       await releaseSendClaim();
       return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
+    }
+    if (linesProblem && acceptLineMismatch) {
+      sentNote = `Sent with lines that don't add up to the invoice, accepted by the sender as the supplier's own figures. ${linesProblem}`;
+      logger.warn(`[paperless] send for ${paperlessId} accepts a line mismatch: ${linesProblem}`);
     }
 
     // Subcontractor-only: attach payment lines posted from the draft view.
@@ -1302,7 +1314,7 @@ export const sendDraftToKashflow = async (req, res, next) => {
 
         // H6: state → sent and the "added to kashflow" post (shadow until cutover).
         // The model comes from mdb here: the OcrDocument above is scoped to its try block.
-        await documentEntry.recordSentToKashflow(mdb.PAPERLESS.OcrDocument, paperlessId, actorFromUser(req.user));
+        await documentEntry.recordSentToKashflow(mdb.PAPERLESS.OcrDocument, paperlessId, actorFromUser(req.user), { note: sentNote });
       } catch (sendErr) {
         const status = sendErr?.response?.status;
         const data = sendErr?.response?.data;
@@ -1429,7 +1441,7 @@ export const sendDraftToKashflow = async (req, res, next) => {
         // H6: only when the creator actually returned a purchase
         const _linked = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).select('kashflowPurchaseId kashflowPurchaseNumber').lean().catch(() => null);
         if (_linked?.kashflowPurchaseId != null || _linked?.kashflowPurchaseNumber != null) {
-          await documentEntry.recordSentToKashflow(mdb.PAPERLESS.OcrDocument, paperlessId, actorFromUser(req.user));
+          await documentEntry.recordSentToKashflow(mdb.PAPERLESS.OcrDocument, paperlessId, actorFromUser(req.user), { note: sentNote });
         }
       } catch (sendErr) {
         const status = sendErr?.response?.status;
