@@ -152,6 +152,7 @@ export const GROUPS = [
       { key: 'KASHFLOW_SESSION_TOKEN', label: 'Session token', type: 'secret', help: 'Cached session token. Normally obtained automatically.' },
       { key: 'KASHFLOW_DEBUG_SESSION', label: 'Debug session', type: 'boolean', help: 'Log the session handshake in detail.' },
       { key: 'KASHFLOW_DEFER_DEFAULTS', label: 'Defer defaults', type: 'boolean', help: 'Skip applying default values on create.' },
+      { key: 'NOTIFY_EMAIL', label: 'Project alert email', type: 'email', help: 'Gets the "projects below income target" alert from the KashFlow project check. Blank sends it to the SMTP From address.' },
     ],
   },
   {
