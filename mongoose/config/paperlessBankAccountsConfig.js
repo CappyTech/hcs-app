@@ -31,7 +31,7 @@
 
 /** Paperless correspondent id -> KashFlow bankAccount.Id */
 const DEFAULT_CORRESPONDENT_TO_ACCOUNT = {
-  65: 611594, // Heron Constructive Solutions LTD
+  65: 611594, // main business current account
   66: 680198, // Credit Card 3998/2060/5865/5760
   67: 938298, // Business Credit Card 2829/5766/7859
   68: 571488, // Petty Cash

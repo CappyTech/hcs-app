@@ -258,7 +258,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
           <% } %>
 
           <% if (/purchase/i.test(doc.documentType?.name || '') && (state === 'entered' || state === 'sent')) { %>
-            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/resend-john" class="pt-3 border-t border-gray-100 dark:border-gray-700">
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/resend-invoice" class="pt-3 border-t border-gray-100 dark:border-gray-700">
               <%- include('../partials/csrfHidden') %>
               <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-envelope"></i> Resend invoice email</button>
               <p class="text-xs text-gray-400 mt-1">Sends the invoice email again, every time it's clicked.</p>
@@ -361,7 +361,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
 
       <%# Notifications (H6) %>
       <%
-        const KIND_LABELS = { new_doc: 'New document (Discord)', john: 'Invoice emailed', john_resend: 'Invoice email re-sent', kashflow: 'Added to KashFlow (Discord)', statement: 'Statement emailed', credit_note: 'Credit note emailed' };
+        const KIND_LABELS = { new_doc: 'New document (Discord)', invoice: 'Invoice emailed', invoice_resend: 'Invoice email re-sent', kashflow: 'Added to KashFlow (Discord)', statement: 'Statement emailed', credit_note: 'Credit note emailed' };
         const STATUS_BADGE = {
           sent:     'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
           shadow:   'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
@@ -375,7 +375,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
       <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm">
         <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Notifications</h2>
         <% if ((locals.notifyMode || 'shadow') === 'shadow') { %>
-          <p class="text-xs text-gray-400 mb-2">Shadow mode: hcs-app records what it would send, and Paperless still does the sending.</p>
+          <p class="text-xs text-gray-400 mb-2">Shadow mode: hcs-app records what it would send, and Paperless still does the sending.<% if (locals.isAdmin) { %> <a href="/admin/config/document-notifications" class="underline hover:no-underline">Configure</a><% } %></p>
         <% } %>
         <% if (!notifyList.length) { %>
           <p class="text-gray-400">None yet.</p>

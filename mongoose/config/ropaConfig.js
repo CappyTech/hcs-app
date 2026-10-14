@@ -6,11 +6,14 @@
  * To update: edit this file, commit, and deploy. No restart required
  * beyond the normal deployment cycle.
  */
+import org from '../../services/organisationService.js';
+
 const ropa = {
   version: '2026-08-21',
   lastUpdated: '2026-08-21',
   controller: {
-    name: 'Heron Constructive Solutions LTD',
+    // The data controller is whichever company this deployment belongs to.
+    get name() { return org.companyName(); },
     system: 'hcs-app',
   },
 

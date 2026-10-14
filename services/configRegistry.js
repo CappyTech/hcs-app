@@ -52,6 +52,22 @@ export const BOOTSTRAP_KEYS = [
 
 export const GROUPS = [
   {
+    id: 'organisation',
+    label: 'Organisation',
+    icon: 'bi-building-fill',
+    description: 'The company name, address, contact details and website. Everything user-facing that names the company reads these; nothing is hard-coded.',
+    keys: [
+      { key: 'COMPANY_NAME', label: 'Company name', type: 'text', help: 'Full legal name, as it appears on CIS statements, legal pages and the footer.' },
+      { key: 'COMPANY_SHORT_NAME', label: 'Short name', type: 'text', help: 'Everyday name for email subjects, SMS, the authenticator app and sender names. Blank uses the full name.' },
+      { key: 'COMPANY_ADDRESS', label: 'Postal address', type: 'text', help: 'One line, e.g. "1 Example Street, Town, AB1 2CD". Printed on CIS statements and in email notices.' },
+      { key: 'SUPPORTEMAIL', label: 'Contact email', type: 'email', help: 'Shown on the maintenance page, CIS print footers and automated email notices.' },
+      { key: 'COMPANY_WEBSITE_URL', label: 'Website', type: 'text', help: 'The public website, e.g. https://www.example.com. Used for the footer link and the Website area\'s public URLs.' },
+      { key: 'ONEDRIVE_URL', label: 'OneDrive URL', type: 'text', help: 'Where the Microsoft OneDrive dashboard tile links to. Blank hides the tile.' },
+      { key: 'ICO_NUMBER', label: 'ICO registration number', type: 'text', help: 'Shown in the privacy policy.' },
+      { key: 'INCORPORATION_YEAR', label: 'Incorporation year', type: 'number', help: 'First year of the copyright range in the footer.' },
+    ],
+  },
+  {
     id: 'paperless',
     label: 'Paperless-ngx',
     icon: 'bi-file-earmark-text-fill',
@@ -67,7 +83,7 @@ export const GROUPS = [
       { key: 'PAPERLESS_PORT', label: 'Port', type: 'number', help: 'Used only when the base URL is a bare host.' },
       { key: 'PAPERLESS_ACCEPT', label: 'Accept header', type: 'text', help: 'API version to request. Default `application/json; version=6`. Paperless retires old versions — a version it no longer serves answers 406 on every call.' },
       { key: 'PAPERLESS_TIMEOUT_MS', label: 'Timeout (ms)', type: 'number', help: 'Per-request timeout. Default 60000.' },
-      { key: 'PAPERLESS_UI_URL', label: 'Web UI URL', type: 'text', help: 'Where "open in Paperless" links point, e.g. `https://docs.heroncs.co.uk`. Blank uses the base URL without `/api`, which is wrong when that is an internal address.' },
+      { key: 'PAPERLESS_UI_URL', label: 'Web UI URL', type: 'text', help: 'Where "open in Paperless" links point, e.g. `https://docs.example.com`. Blank uses the base URL without `/api`, which is wrong when that is an internal address.' },
       // SSH tunnel (only when the toggle is on). The tunnel stays open once made.
       { key: 'PAPERLESS_SSH_TUNNEL_ENABLED', label: 'Use SSH tunnel', type: 'boolean', help: 'Reach Paperless through an SSH tunnel instead of directly. Needs the SSH fields below.' },
       { key: 'PAPERLESS_SSH_HOST', label: 'SSH host', type: 'text', restart: true, help: 'Tunnel host. Falls back to `SSH_HOST`. An open tunnel keeps its settings until the app restarts.' },
@@ -107,6 +123,10 @@ export const GROUPS = [
       { key: 'NOTIFY_STATEMENT_EMAIL', label: 'Supplier statement email', type: 'email', help: 'Gets each supplier statement, PDF attached, the first time it is marked reviewed.' },
       { key: 'NOTIFY_CREDIT_NOTE_EMAIL', label: 'Credit note email', type: 'email', help: 'Gets each credit note, PDF attached, the first time an invoice is marked as a credit note.' },
       { key: 'DISCORD_WEBHOOK_URL', label: 'Discord webhook URL', type: 'secret', help: 'Where document posts go. Unset: posts are skipped and logged.' },
+      { key: 'NOTIFY_SENDER_NAME', label: 'Sender name', type: 'text', help: 'Display name on the document emails and the Discord posts. Blank uses "<short company name> | Documents".' },
+      { key: 'NOTIFY_INVOICE_RECIPIENT_NAME', label: 'Invoice recipient name', type: 'text', help: 'How the Discord post names who got the invoice: "Emailed invoice to <name>". Blank uses the invoice email address.' },
+      { key: 'NOTIFY_STATEMENT_RECIPIENT_NAME', label: 'Statement recipient name', type: 'text', help: 'As above, for "Emailed statement to <name>".' },
+      { key: 'NOTIFY_CREDIT_NOTE_RECIPIENT_NAME', label: 'Credit note recipient name', type: 'text', help: 'As above, for "Emailed credit note to <name>".' },
     ],
   },
   {
@@ -165,7 +185,7 @@ export const GROUPS = [
       { key: 'GRAPH_TENANT_ID', label: 'Tenant ID', type: 'text', help: 'Entra directory (tenant) ID of the app registration.' },
       { key: 'GRAPH_CLIENT_ID', label: 'Client ID', type: 'text', help: 'Application (client) ID of the Entra app registration.' },
       { key: 'GRAPH_CLIENT_SECRET', label: 'Client secret', type: 'secret', help: 'A client secret value from the app registration.' },
-      { key: 'GRAPH_MAIL_SENDER', label: 'Sender mailbox', type: 'text', help: 'The mailbox to send as, e.g. noreply@heroncs.co.uk. The app needs Mail.Send scoped to this mailbox via an Application Access Policy.' },
+      { key: 'GRAPH_MAIL_SENDER', label: 'Sender mailbox', type: 'text', help: 'The mailbox to send as, e.g. noreply@example.com. The app needs Mail.Send scoped to this mailbox via an Application Access Policy.' },
     ],
   },
   {
@@ -222,7 +242,7 @@ export const GROUPS = [
     icon: 'bi-box-arrow-in-right',
     description: 'Session cookie scope, and the trust relationship with hcs-sync.',
     keys: [
-      { key: 'SESSION_COOKIE_DOMAIN', label: 'Session cookie domain', type: 'text', restart: true, help: 'Share the session across subdomains, e.g. .heroncs.co.uk. Read once when the session middleware is built.' },
+      { key: 'SESSION_COOKIE_DOMAIN', label: 'Session cookie domain', type: 'text', restart: true, help: 'Share the session across subdomains, e.g. .example.com. Read once when the session middleware is built.' },
       { key: 'HCS_SSO_JWT_SECRET', label: 'SSO JWT secret', type: 'secret', help: 'Signs the SSO cookie. Must match hcs-sync.' },
       { key: 'HCS_SYNC_API_KEY', label: 'hcs-sync API key', type: 'secret', help: 'Shared key for POST /api/sso/token and POST /api/pull. Must match hcs-sync.' },
       { key: 'HCS_SYNC_BASE_URL', label: 'hcs-sync base URL', type: 'text', help: 'Where per-item re-sync requests are sent.' },

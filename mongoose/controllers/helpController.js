@@ -1059,7 +1059,7 @@ const helpContent = [
           'Under API permissions, add Microsoft Graph → Application permissions → Mail.Send, then click "Grant admin consent". (Application, not Delegated — the app sends on its own, with no signed-in user.)',
           'Under Certificates & secrets, create a new client secret and copy its Value immediately (it is only shown once).',
           'Scope the app to just the sending mailbox with an Application Access Policy so it cannot send as anyone else. In Exchange Online PowerShell: New-ApplicationAccessPolicy -AppId <client-id> -PolicyScopeGroupId <mail-enabled security group containing noreply@> -AccessRight RestrictAccess -Description "hcs-app Graph mail". Verify with Test-ApplicationAccessPolicy.',
-          'In the app, go to Admin → Configuration → Email (Microsoft Graph) and fill in Tenant ID, Client ID, Client secret, and Sender mailbox (e.g. noreply@heroncs.co.uk).',
+          'In the app, go to Admin → Configuration → Email (Microsoft Graph) and fill in Tenant ID, Client ID, Client secret, and Sender mailbox (e.g. noreply@example.com).',
           'Click "Test connection" — it acquires a token and confirms the tenant/client/secret are valid.',
           'Set "Use Microsoft Graph" to true and Save. Mail immediately starts going out via Graph — no restart needed.',
           'On the Email Outbox (Admin → Email & Notifications → Outbox), use "Retry all failed" to re-queue anything that failed under the old configuration.',
@@ -1069,7 +1069,7 @@ const helpContent = [
           { name: 'Tenant ID', required: true, description: 'Directory (tenant) ID of the Entra app registration.' },
           { name: 'Client ID', required: true, description: 'Application (client) ID of the Entra app registration.' },
           { name: 'Client secret', required: true, description: 'A client secret Value from the app registration (stored encrypted).' },
-          { name: 'Sender mailbox', required: true, description: 'The mailbox to send as, e.g. noreply@heroncs.co.uk. The Application Access Policy must allow the app to send as this mailbox.' },
+          { name: 'Sender mailbox', required: true, description: 'The mailbox to send as, e.g. noreply@example.com. The Application Access Policy must allow the app to send as this mailbox.' },
         ],
         notes: [
           'Graph app-only needs no mailbox password and no SMTP AUTH, so it is unaffected by "Authentication unsuccessful (535)" errors, Security Defaults, or app-password requirements.',
@@ -1086,7 +1086,7 @@ const helpContent = [
         description: 'Users can sign in with their Microsoft 365 account instead of a password. It is sign-in only: a Microsoft login is matched to an existing hcs-app account by email address and refused if there is no match — signing in with Microsoft never creates an account. Password login keeps working alongside it. Configure it at Admin → Configuration → Microsoft Sign-in (SSO).',
         steps: [
           'In the Microsoft Entra admin center, register a NEW application (separate from the Graph mail app). Note its Application (client) ID and Directory (tenant) ID.',
-          'Add a Redirect URI of type Web: https://app.heroncs.co.uk/auth/microsoft/callback (it must match exactly). No other platform is needed.',
+          'Add a Redirect URI of type Web: https://<your base URL>/auth/microsoft/callback (it must match exactly). No other platform is needed.',
           'Under Certificates & secrets, create a client secret and copy its Value.',
           'API permissions: the default delegated Microsoft Graph "User.Read" is enough (sign-in reads openid, profile and email). No admin consent or application permissions are required for sign-in.',
           'In the app, go to Admin → Configuration → Microsoft Sign-in (SSO) and fill in Tenant ID, Client ID and Client secret. Leave Redirect URI blank to use the default above, or set it if you use a different host.',

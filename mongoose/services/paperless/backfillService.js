@@ -9,7 +9,7 @@
  *   `added`               state sent, plus a `kashflow` log row
  *   tag 21                statementReviewed, plus a `statement` log row
  *   tag 22 or field 58    creditNote (state manual_kashflow), plus a `credit_note` log row
- *   tag 19                a `john` log row
+ *   tag 19                an `invoice` log row
  *   tags 4 and 11         excludedReason
  *
  * The state comes from initialStateFromPaperless(), the same function H3 uses
@@ -40,7 +40,7 @@ export function sentNotifications(doc) {
   if (hasTag(tags, 'added')) kinds.push('kashflow');
   if (isStatement(doc) && plan.statementReviewed) kinds.push('statement');
   if (isInvoiceDocument(doc) && plan.creditNote) kinds.push('credit_note');
-  if (hasTag(tags, 'notifiedJohn')) kinds.push('john');
+  if (hasTag(tags, 'notifiedInvoice')) kinds.push('invoice');
   return kinds;
 }
 
@@ -83,7 +83,7 @@ export async function runBackfill({ OcrDocument, NotificationLog, apply = false,
     statementsReviewed: 0,
     excluded: { original_multiple: 0, manually_added: 0, not_for_kashflow: 0 },
     classifiedAtStamped: 0,
-    notificationsRecorded: { kashflow: 0, statement: 0, credit_note: 0, john: 0 },
+    notificationsRecorded: { kashflow: 0, statement: 0, credit_note: 0, invoice: 0 },
     notificationsAlreadyThere: 0,
     alreadyDone: 0,
   };

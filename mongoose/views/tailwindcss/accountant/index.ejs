@@ -2,7 +2,7 @@
 
   <h1 class="text-2xl font-bold mb-1">Bank reconciliation</h1>
   <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-    Heron CS bank accounts as recorded in KashFlow, with the supporting document for each line.
+    <%= locals.companyShortName || 'Company' %> bank accounts as recorded in KashFlow, with the supporting document for each line.
   </p>
 
   <%- include('partials/_portal-nav', { active: 'overview' }) %>

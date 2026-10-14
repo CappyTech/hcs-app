@@ -3,14 +3,20 @@
 // Every document notification hcs-app sends (or, in shadow mode, would send).
 // Paperless migration H2: the partial unique index on (paperlessId, kind) for
 // one-shot kinds is what replaces the `notified/*` tags — "exactly once" is a
-// database guarantee, not a tag convention. Re-sends to John (`john_resend`)
+// database guarantee, not a tag convention. Invoice re-sends (`invoice_resend`)
 // are logged every time and are not unique.
+//
+// Kinds `john` and `john_resend` were renamed `invoice` and `invoice_resend`
+// (the wording is configurable, not a person's name); notificationLogService
+// migrateLegacyKinds() renames stored rows at startup.
 import mongoose from 'mongoose';
 
 /** Kinds that may be sent at most once per document. */
-export const ONE_SHOT_KINDS = ['new_doc', 'john', 'kashflow', 'statement', 'credit_note'];
+export const ONE_SHOT_KINDS = ['new_doc', 'invoice', 'kashflow', 'statement', 'credit_note'];
 /** Kinds logged on every send. */
-export const REPEATABLE_KINDS = ['john_resend'];
+export const REPEATABLE_KINDS = ['invoice_resend'];
+/** Old kind names still found in rows written before the rename. */
+export const LEGACY_KINDS = { john: 'invoice', john_resend: 'invoice_resend' };
 
 const ActorSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, default: null },
@@ -49,7 +55,7 @@ NotificationLogSchema.pre('validate', function setOneShot(next) {
   next();
 });
 
-// Partial: only one-shot rows are unique, so john_resend can repeat.
+// Partial: only one-shot rows are unique, so invoice_resend can repeat.
 // $eq on a boolean works as a partial filter on every supported MongoDB version.
 NotificationLogSchema.index(
   { paperlessId: 1, kind: 1 },

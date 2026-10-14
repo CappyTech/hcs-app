@@ -8,7 +8,7 @@
  *   POST /paperless/ocr/:paperlessId/credit-note  flag=on|off
  *   POST /paperless/ocr/:paperlessId/not-for-kashflow  flag=on (note) | off (admin)
  *   POST /paperless/ocr/:paperlessId/reopen       admin: back to Needs Data Entry
- *   POST /paperless/ocr/:paperlessId/resend-john  re-send the invoice to John (H6)
+ *   POST /paperless/ocr/:paperlessId/resend-invoice  re-send the invoice email (H6)
  *   POST /paperless/ocr/:paperlessId/reviewed     mark a supplier statement reviewed (H6)
  *   GET  /paperless/ocr/:paperlessId/file         the PDF, streamed from Paperless
  */
@@ -218,12 +218,12 @@ export const postReopen = async (req, res, next) => {
   }
 };
 
-export const postResendJohn = async (req, res, next) => {
+export const postResendInvoice = async (req, res, next) => {
   try {
     const id = idParam(req);
     if (!id) return notFound(res);
     await mdb.connect();
-    const r = await entry.resendToJohn(mdb.PAPERLESS.OcrDocument, id, actorFromUser(req.user));
+    const r = await entry.resendInvoice(mdb.PAPERLESS.OcrDocument, id, actorFromUser(req.user));
     if (!r.ok) {
       req.flash('error', r.message);
     } else {
@@ -234,7 +234,7 @@ export const postResendJohn = async (req, res, next) => {
     }
     return res.redirect(entryUrl(id));
   } catch (err) {
-    logger.error(`[documentEntry] resend-john ${req.params.paperlessId}: ${err.message}`);
+    logger.error(`[documentEntry] resend-invoice ${req.params.paperlessId}: ${err.message}`);
     next(err);
   }
 };
@@ -290,4 +290,4 @@ export function makeGetFile(deps = {}) {
 
 export const getFile = makeGetFile();
 
-export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendJohn, postReviewed, getFile, makeGetFile };
+export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendInvoice, postReviewed, getFile, makeGetFile };

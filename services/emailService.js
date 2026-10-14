@@ -3,6 +3,12 @@ import axios from 'axios';
 import logger from './loggerService.js';
 import emailLayout from './emailLayout.js';
 import configService from './configService.js';
+import org from './organisationService.js';
+
+/** Hostname of the public base URL, for a last-resort sender address. */
+function baseHost() {
+  try { return new URL(process.env.BASE_URL || 'http://localhost').hostname || 'localhost'; } catch { return 'localhost'; }
+}
 
 // ── Transporter (lazy-initialised) ───────────────────────────────────
 let _transporter = null;
@@ -238,8 +244,8 @@ async function sendMail({ to, subject, html, text, preheader, attachments = [], 
     configService.get("GRAPH_MAIL_SENDER") ||
     configService.get("SMTP_FROM") ||
     configService.get("SMTP_USER") ||
-    "noreply@heroncs.co.uk";
-  // `fromName` sets the display name only, e.g. "Heron CS | Documents"
+    `noreply@${baseHost()}`;
+  // `fromName` sets the display name only, e.g. "<company> | Documents"
   const fromHeader = fromName ? { name: fromName, address: String(from).replace(/^.*<([^>]+)>.*$/, "$1") } : from;
 
   if (html != null && !emailLayout.isDocument(html)) {
@@ -310,7 +316,7 @@ async function sendVerificationEmail(email, token) {
     process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const verifyUrl = `${baseUrl}/user/verify-email?token=${encodeURIComponent(token)}`;
 
-  const subject = "Verify your email — Heron CS";
+  const subject = `Verify your email — ${org.companyShortName()}`;
   const html = buildActionEmail({
     heading: "Verify Your Email",
     intro: "Thank you for registering. Please use the button below to verify your email address:",
@@ -325,7 +331,7 @@ async function sendVerificationEmail(email, token) {
     subject,
     html,
     text,
-    preheader: "Confirm your email address to finish setting up your Heron CS account.",
+    preheader: `Confirm your email address to finish setting up your ${org.companyShortName()} account.`,
   });
 }
 
@@ -335,7 +341,7 @@ async function sendPasswordResetEmail(email, token) {
     process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const resetUrl = `${baseUrl}/user/reset-password?token=${encodeURIComponent(token)}`;
 
-  const subject = "Reset your password — Heron CS";
+  const subject = `Reset your password — ${org.companyShortName()}`;
   const html = buildActionEmail({
     heading: "Reset Your Password",
     intro: "We received a request to reset the password for your account. Use the button below to choose a new password:",

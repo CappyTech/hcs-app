@@ -5,8 +5,12 @@
  * Each notification uses the exact Paperless template (PAPERLESS-MIGRATION.md
  * section 3a). Before anything is sent, a one-shot notification is claimed in
  * NotificationLog; the unique index means only one caller ever wins, so each
- * fires exactly once however many paths reach it. Re-sends to John are
+ * fires exactly once however many paths reach it. Invoice re-sends are
  * recorded every time.
+ *
+ * No wording names a person or the company: the sender name and the
+ * "Emailed … to <who>" names come from the Document notifications and
+ * Organisation configuration groups (organisationService).
  *
  * NOTIFY_MODE decides what a claimed notification does:
  *   shadow (default)  log what would be sent; send nothing. Paperless's own
@@ -27,8 +31,10 @@ import { paperlessUiBase } from './documentQueueService.js';
 import __paperlessClient from './paperlessClient.js';
 import emailService from '../../../services/emailService.js';
 import logger from '../../../services/loggerService.js';
+import org from '../../../services/organisationService.js';
 
-export const SENDER_NAME = 'Heron CS | Documents';
+/** Display name on emails and Discord posts (NOTIFY_SENDER_NAME, or "<short name> | Documents"). */
+export const senderName = () => org.documentsSenderName();
 export const MAX_ATTEMPTS = 5;
 const RETRY_BASE_MS = 10 * 60 * 1000;
 
@@ -40,11 +46,11 @@ const isPurchaseInvoice = (doc) => isDocumentType(doc?.documentType, 'purchaseIn
 const isStatement = (doc) => isDocumentType(doc?.documentType, 'supplierStatement');
 const anyDocument = () => true;
 
-const JOHN_EMAIL = {
+const INVOICE_EMAIL = {
   to: () => process.env.NOTIFY_INVOICE_EMAIL,
   subject: 'New purchase invoice: {{filename}} from {{correspondent}}',
   body: [
-    'A new purchase invoice has been added to Heron CS | Documents.',
+    'A new purchase invoice has been added to {{sender}}.',
     '',
     '',
     'Title: {{filename}}',
@@ -66,15 +72,15 @@ export const KINDS = {
     workflow: 'WF8', appliesTo: anyDocument,
     discord: 'New document: {{filename}} ({{document_type}}) from {{correspondent}} - {{doc_url}}',
   },
-  john: {
+  invoice: {
     workflow: 'WF3', appliesTo: isPurchaseInvoice,
-    email: JOHN_EMAIL,
-    discord: 'Emailed invoice to John: {{filename}} - {{doc_url}}',
+    email: INVOICE_EMAIL,
+    discord: 'Emailed invoice to {{invoice_recipient}}: {{filename}} - {{doc_url}}',
   },
-  john_resend: {
+  invoice_resend: {
     workflow: 'WF9', appliesTo: isPurchaseInvoice,
-    email: JOHN_EMAIL,
-    discord: 'Re-sent invoice to John: {{filename}} - {{doc_url}}',
+    email: INVOICE_EMAIL,
+    discord: 'Re-sent invoice to {{invoice_recipient}}: {{filename}} - {{doc_url}}',
   },
   kashflow: {
     workflow: 'WF4', appliesTo: anyDocument,
@@ -86,7 +92,7 @@ export const KINDS = {
       to: () => process.env.NOTIFY_STATEMENT_EMAIL,
       subject: 'New statement: {{filename}} from {{correspondent}}',
       body: [
-        'A new statement has been added to https://docs.heroncs.co.uk/',
+        'A new statement has been added to {{docs_url}}',
         '',
         'Title: {{filename}}',
         'Type: {{document_type}}',
@@ -95,7 +101,7 @@ export const KINDS = {
         'Statement: {{doc_url}}',
       ].join('\n'),
     },
-    discord: 'Emailed statement to Admin: {{filename}} - {{doc_url}}',
+    discord: 'Emailed statement to {{statement_recipient}}: {{filename}} - {{doc_url}}',
   },
   credit_note: {
     workflow: 'WF5', appliesTo: isPurchaseInvoice,
@@ -103,7 +109,7 @@ export const KINDS = {
       to: () => process.env.NOTIFY_CREDIT_NOTE_EMAIL,
       subject: 'New credit note: {{filename}} from {{correspondent}}',
       body: [
-        'A new credit note has been added to https://docs.heroncs.co.uk/',
+        'A new credit note has been added to {{docs_url}}',
         '',
         'Title: {{filename}}',
         'Type: {{document_type}}',
@@ -112,7 +118,7 @@ export const KINDS = {
         'Credit note: {{doc_url}}',
       ].join('\n'),
     },
-    discord: 'Emailed credit note to Admin: {{filename}} - {{doc_url}}',
+    discord: 'Emailed credit note to {{credit_note_recipient}}: {{filename}} - {{doc_url}}',
   },
 };
 
@@ -122,7 +128,11 @@ const isoDate = (d) => {
   return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
 };
 
-/** The section 3a placeholder values for a document. Pure. */
+/**
+ * The section 3a placeholder values for a document, plus the configurable
+ * wording: `sender`, `docs_url` and the three `*_recipient` names. Pure apart
+ * from reading configuration.
+ */
 export function placeholders(doc, { uiBase = paperlessUiBase() } = {}) {
   return {
     filename: doc.title || doc.originalFileName || `Document ${doc.paperlessId}`,
@@ -130,6 +140,11 @@ export function placeholders(doc, { uiBase = paperlessUiBase() } = {}) {
     document_type: doc.documentType?.name || 'None',
     created: isoDate(doc.created),
     doc_url: uiBase ? `${uiBase}/documents/${doc.paperlessId}/details` : `/paperless/ocr/${doc.paperlessId}`,
+    docs_url: uiBase ? `${uiBase}/` : '/paperless/ocr',
+    sender: senderName(),
+    invoice_recipient: org.notifyRecipientName('invoice'),
+    statement_recipient: org.notifyRecipientName('statement'),
+    credit_note_recipient: org.notifyRecipientName('credit_note'),
   };
 }
 
@@ -150,7 +165,7 @@ export function buildMessages(kind, doc, opts = {}) {
       text: fill(spec.email.body, v),
     } : null,
     discord: spec.discord ? {
-      username: SENDER_NAME,
+      username: senderName(),
       content: fill(spec.discord, v),
     } : null,
   };
@@ -195,7 +210,7 @@ async function deliver(messages, doc, d, { mode, only = null }) {
           to,
           subject: messages.email.subject,
           text: messages.email.text,
-          fromName: SENDER_NAME,
+          fromName: senderName(),
           attachments: [{ filename, content: pdf.content, contentType: /pdf/i.test(pdf.contentType || '') ? 'application/pdf' : pdf.contentType }],
         });
         if (res && res.fallback) throw new Error('No email transport is configured (SMTP or Microsoft Graph).');
@@ -331,5 +346,5 @@ export async function historyFor(NotificationLog, paperlessId) {
 }
 
 export default {
-  SENDER_NAME, MAX_ATTEMPTS, KINDS, notifyMode, placeholders, fill, buildMessages, notify, notifySafely, retryFailed, historyFor,
+  senderName, MAX_ATTEMPTS, KINDS, notifyMode, placeholders, fill, buildMessages, notify, notifySafely, retryFailed, historyFor,
 };

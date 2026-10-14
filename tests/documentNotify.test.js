@@ -26,11 +26,13 @@ const tag = (id, name) => ({ id, name });
 const T = { dataEntryDone: tag(1, 'data entry done'), added: tag(2, 'added'), notifiedStatement: tag(21, 'notified/admin-statement'), notifiedCredit: tag(22, 'notified/credit-note') };
 const user = { userId: new mongoose.Types.ObjectId(), name: 'bev', isAdmin: false };
 
-const ENV_KEYS = ['NOTIFY_MODE', 'NOTIFY_INVOICE_EMAIL', 'NOTIFY_STATEMENT_EMAIL', 'NOTIFY_CREDIT_NOTE_EMAIL', 'DISCORD_WEBHOOK_URL', 'PAPERLESS_UI_URL', 'PAPERLESS_BASE_URL', 'PAPERLESS_FOLLOW_TAGS'];
+const ENV_KEYS = ['NOTIFY_MODE', 'NOTIFY_SENDER_NAME', 'NOTIFY_INVOICE_RECIPIENT_NAME', 'NOTIFY_STATEMENT_RECIPIENT_NAME', 'NOTIFY_CREDIT_NOTE_RECIPIENT_NAME', 'COMPANY_SHORT_NAME', 'NOTIFY_INVOICE_EMAIL', 'NOTIFY_STATEMENT_EMAIL', 'NOTIFY_CREDIT_NOTE_EMAIL', 'DISCORD_WEBHOOK_URL', 'PAPERLESS_UI_URL', 'PAPERLESS_BASE_URL', 'PAPERLESS_FOLLOW_TAGS'];
 let savedEnv;
 beforeEach(() => {
   savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
-  Object.assign(process.env, { NOTIFY_INVOICE_EMAIL: 'john@example.test', NOTIFY_STATEMENT_EMAIL: 'bev@example.test', NOTIFY_CREDIT_NOTE_EMAIL: 'credits@example.test', PAPERLESS_UI_URL: 'https://docs.heroncs.co.uk' });
+  Object.assign(process.env, { NOTIFY_INVOICE_EMAIL: 'john@example.test', NOTIFY_STATEMENT_EMAIL: 'bev@example.test', NOTIFY_CREDIT_NOTE_EMAIL: 'credits@example.test', PAPERLESS_UI_URL: 'https://docs.heroncs.co.uk',
+    NOTIFY_SENDER_NAME: 'Heron CS | Documents', NOTIFY_INVOICE_RECIPIENT_NAME: 'John', NOTIFY_STATEMENT_RECIPIENT_NAME: 'Admin', NOTIFY_CREDIT_NOTE_RECIPIENT_NAME: 'Admin' });
+  delete process.env.COMPANY_SHORT_NAME;
   delete process.env.NOTIFY_MODE;
   delete process.env.DISCORD_WEBHOOK_URL;
   delete process.env.PAPERLESS_FOLLOW_TAGS;
@@ -143,20 +145,44 @@ const invoice = (extra = {}) => ({ paperlessId: 1131, title: 'Heron 260832', ori
 describe('templates (section 3a, exact)', () => {
   const doc = invoice();
 
-  it('fills the Paperless placeholders', () => {
+  it('fills the Paperless placeholders, plus the configured wording', () => {
     assert.deepEqual(placeholders(doc), {
       filename: 'Heron 260832',
       correspondent: 'Duttons Builders Merchants Ltd',
       document_type: 'Purchase Invoice',
       created: '2026-10-01',
       doc_url: 'https://docs.heroncs.co.uk/documents/1131/details',
+      docs_url: 'https://docs.heroncs.co.uk/',
+      sender: 'Heron CS | Documents',
+      invoice_recipient: 'John',
+      statement_recipient: 'Admin',
+      credit_note_recipient: 'Admin',
     });
     assert.equal(placeholders({ paperlessId: 5 }).correspondent, 'None');
+  });
+
+  it('no name or company is hard-coded: unset names fall back to the address, the sender to the short company name', () => {
+    delete process.env.NOTIFY_SENDER_NAME;
+    delete process.env.NOTIFY_INVOICE_RECIPIENT_NAME;
+    delete process.env.NOTIFY_STATEMENT_RECIPIENT_NAME;
+    delete process.env.NOTIFY_INVOICE_EMAIL;
+    process.env.COMPANY_SHORT_NAME = 'Acme';
+    const v = placeholders(doc);
+    assert.equal(v.sender, 'Acme | Documents');
+    assert.equal(v.invoice_recipient, 'recipient', 'no name and no address');
+    assert.equal(v.statement_recipient, 'bev@example.test', 'falls back to the configured address');
+    assert.equal(v.credit_note_recipient, 'Admin');
+    assert.equal(buildMessages('invoice', doc).discord.username, 'Acme | Documents');
+    assert.match(buildMessages('statement', doc).discord.content, /^Emailed statement to bev@example\.test: /);
+    assert.match(buildMessages('statement', doc).email.text, /added to https:\/\/docs\.heroncs\.co\.uk\//);
+    for (const src of ['mongoose/services/paperless/documentNotifyService.js', 'mongoose/views/tailwindcss/paperless/entry.ejs']) {
+      assert.doesNotMatch(fs.readFileSync(path.join(process.cwd(), src), 'utf8'), /\bJohn\b|\bBev\b|Heron/, `${src} names a person or the company`);
+    }
     assert.equal(fill('{{a}} {{ b }} {{c}}', { a: 1, b: 2 }), '1 2 {{c}}');
   });
 
-  it('E1 to John, word for word', () => {
-    const m = buildMessages('john', doc);
+  it('E1 invoice email, word for word', () => {
+    const m = buildMessages('invoice', doc);
     assert.equal(m.email.to, 'john@example.test');
     assert.equal(m.email.subject, 'New purchase invoice: Heron 260832 from Duttons Builders Merchants Ltd');
     assert.equal(m.email.text, [
@@ -170,7 +196,7 @@ describe('templates (section 3a, exact)', () => {
       '',
       'Document Attached.',
     ].join('\n'));
-    assert.deepEqual(buildMessages('john_resend', doc).email, m.email, 'WF9 uses the identical email');
+    assert.deepEqual(buildMessages('invoice_resend', doc).email, m.email, 'WF9 uses the identical email');
   });
 
   it('C2a statement and E2 credit note to Bev', () => {
@@ -184,13 +210,13 @@ describe('templates (section 3a, exact)', () => {
     assert.match(c.text, /^A new credit note has been added to https:\/\/docs\.heroncs\.co\.uk\/\n\n[\s\S]*\nCredit note: https:\/\/docs\.heroncs\.co\.uk\/documents\/1131\/details$/);
   });
 
-  it('every Discord message, as the "Heron CS | Documents" user', () => {
+  it('every Discord message, as the configured sender, naming the configured recipients', () => {
     const url = 'https://docs.heroncs.co.uk/documents/1131/details';
     const expected = {
       new_doc: `New document: Heron 260832 (Purchase Invoice) from Duttons Builders Merchants Ltd - ${url}`,
       statement: `Emailed statement to Admin: Heron 260832 - ${url}`,
-      john: `Emailed invoice to John: Heron 260832 - ${url}`,
-      john_resend: `Re-sent invoice to John: Heron 260832 - ${url}`,
+      invoice: `Emailed invoice to John: Heron 260832 - ${url}`,
+      invoice_resend: `Re-sent invoice to John: Heron 260832 - ${url}`,
       kashflow: `Document added to kashflow: Heron 260832 - ${url}`,
       credit_note: `Emailed credit note to Admin: Heron 260832 - ${url}`,
     };
@@ -202,8 +228,8 @@ describe('templates (section 3a, exact)', () => {
   });
 
   it('applies each kind to the same documents as its Paperless workflow', () => {
-    assert.equal(KINDS.john.appliesTo({ documentType: PI }), true);
-    assert.equal(KINDS.john.appliesTo({ documentType: SI }), false, 'WF3 is Purchase Invoice only');
+    assert.equal(KINDS.invoice.appliesTo({ documentType: PI }), true);
+    assert.equal(KINDS.invoice.appliesTo({ documentType: SI }), false, 'WF3 is Purchase Invoice only');
     assert.equal(KINDS.credit_note.appliesTo({ documentType: SI }), false);
     assert.equal(KINDS.statement.appliesTo({ documentType: STATEMENT }), true);
     assert.equal(KINDS.statement.appliesTo({ documentType: PI }), false);
@@ -217,7 +243,7 @@ describe('templates (section 3a, exact)', () => {
 describe('notify', () => {
   it('defaults to shadow: records what would be sent and sends nothing', async () => {
     const h = harness([invoice()]);
-    const r = await notify('john', 1131, { deps: h.deps });
+    const r = await notify('invoice', 1131, { deps: h.deps });
     assert.equal(r.status, 'shadow');
     assert.deepEqual(r.channels.map((c) => [c.channel, c.status]), [['email', 'shadow'], ['discord', 'shadow']]);
     assert.deepEqual(h.sent, { emails: [], discord: [] });
@@ -226,7 +252,7 @@ describe('notify', () => {
 
   it('live: emails the PDF as the sender name and posts to Discord', async () => {
     const h = harness([invoice()], { live: true });
-    const r = await h.run('john', 1131, { actor: user });
+    const r = await h.run('invoice', 1131, { actor: user });
     assert.equal(r.status, 'sent');
     const [mail] = h.sent.emails;
     assert.equal(mail.to, 'john@example.test');
@@ -241,30 +267,30 @@ describe('notify', () => {
   it('live email attaches the real PDF from Paperless', async () => {
     const h = harness([{ ...invoice(), paperlessId: 9001 }], { live: true });
     delete h.deps.getPdf;
-    await h.run('john', 9001);
+    await h.run('invoice', 9001);
     assert.equal(h.sent.emails[0].attachments[0].content.subarray(0, 5).toString(), '%PDF-');
     assert.ok(mockPaperlessState().calls.some((c) => c.path === '/documents/9001/preview/'));
   });
 
   it('a one-shot kind fires exactly once, even when called concurrently', async () => {
     const h = harness([invoice()], { live: true });
-    const results = await Promise.all(Array.from({ length: 5 }, () => h.run('john', 1131)));
+    const results = await Promise.all(Array.from({ length: 5 }, () => h.run('invoice', 1131)));
     assert.equal(results.filter((r) => r.fired).length, 1);
     assert.ok(results.filter((r) => !r.fired).every((r) => r.reason === 'already-sent'));
     assert.equal(h.sent.emails.length, 1);
-    assert.equal((await h.run('john', 1131)).reason, 'already-sent');
+    assert.equal((await h.run('invoice', 1131)).reason, 'already-sent');
   });
 
-  it('a re-send to John fires every time (PB-6)', async () => {
+  it('an invoice re-send fires every time (PB-6)', async () => {
     const h = harness([invoice()], { live: true });
-    for (let i = 0; i < 3; i++) assert.equal((await h.run('john_resend', 1131)).fired, true);
+    for (let i = 0; i < 3; i++) assert.equal((await h.run('invoice_resend', 1131)).fired, true);
     assert.equal(h.sent.emails.length, 3);
-    assert.equal(h.NotificationLog.rows.filter((r) => r.kind === 'john_resend').length, 3);
+    assert.equal(h.NotificationLog.rows.filter((r) => r.kind === 'invoice_resend').length, 3);
   });
 
   it('skips documents a kind does not apply to, without claiming it', async () => {
     const h = harness([invoice({ documentType: SI })], { live: true });
-    assert.equal((await h.run('john', 1131)).reason, 'not-applicable');
+    assert.equal((await h.run('invoice', 1131)).reason, 'not-applicable');
     assert.equal(h.NotificationLog.rows.length, 0);
   });
 
@@ -272,7 +298,7 @@ describe('notify', () => {
     delete process.env.NOTIFY_INVOICE_EMAIL;
     const h = harness([invoice()], { live: true });
     h.deps.postDiscord = async () => ({ skipped: true });
-    const r = await h.run('john', 1131);
+    const r = await h.run('invoice', 1131);
     assert.deepEqual(r.channels.map((c) => [c.channel, c.status]), [['email', 'skipped'], ['discord', 'skipped']]);
     assert.equal(r.status, 'sent', 'nothing failed');
 
@@ -288,7 +314,7 @@ describe('retryFailed', () => {
   it('resends only the channel that failed, then marks it sent', async () => {
     const h = harness([invoice()], { live: true });
     h.deps.sendMail = async () => { throw new Error('SMTP down'); };
-    const first = await h.run('john', 1131);
+    const first = await h.run('invoice', 1131);
     assert.equal(first.status, 'failed');
     assert.equal(h.sent.discord.length, 1, 'Discord went out');
 
@@ -305,7 +331,7 @@ describe('retryFailed', () => {
   it('waits for the backoff and stops after the maximum attempts', async () => {
     const h = harness([invoice()], { live: true });
     h.deps.sendMail = async () => { throw new Error('down'); };
-    await h.run('john', 1131);
+    await h.run('invoice', 1131);
     assert.equal((await retryFailed({ deps: h.deps, now: new Date() })).retried, 0, 'too soon');
     h.NotificationLog.rows[0].attempts = MAX_ATTEMPTS;
     assert.equal((await retryFailed({ deps: h.deps, now: new Date(Date.now() + 864e5) })).retried, 0, 'given up');
@@ -313,7 +339,7 @@ describe('retryFailed', () => {
 
   it('never retries shadow rows', async () => {
     const h = harness([invoice()]);
-    await h.run('john', 1131);
+    await h.run('invoice', 1131);
     h.NotificationLog.rows[0].status = 'failed';
     assert.equal((await retryFailed({ deps: h.deps, now: new Date(Date.now() + 864e5) })).retried, 0);
   });
@@ -348,24 +374,24 @@ describe('each PB notification fires exactly once', () => {
     assert.deepEqual(h.NotificationLog.rows.filter((r) => r.kind === 'new_doc').map((r) => r.paperlessId), [9200]);
   });
 
-  it('PB-5 John: once, whether entry is completed in hcs-app or Paperless is followed afterwards', async () => {
+  it('PB-5 invoice email: once, whether entry is completed in hcs-app or Paperless is followed afterwards', async () => {
     const h = harness([invoice({ processingState: 'awaiting_entry', entry: fullEntry })]);
     const r = await entrySvc.completeEntry(h.OcrDocument, 1131, user, { modifyTags: async () => {}, notify: wire(h) });
     assert.equal(r.ok, true);
     h.OcrDocument.rows[0].tags = [T.dataEntryDone];
     await syncDocument(h.OcrDocument, 1131, { notify: wire(h) });
-    assert.equal(count(h, 'john'), 1);
+    assert.equal(count(h, 'invoice'), 1);
     assert.equal(h.sent.emails.length, 1);
   });
 
-  it('PB-5 John: fired by following Paperless when entry was completed there (source paperless)', async () => {
+  it('PB-5 invoice email: fired by following Paperless when entry was completed there (source paperless)', async () => {
     const h = harness([invoice({ processingState: 'awaiting_entry', classifiedAt: new Date(), tags: [T.dataEntryDone] })]);
     const res = await syncDocument(h.OcrDocument, 1131, { notify: wire(h) });
     assert.deepEqual(res.followed, ['complete_entry']);
     assert.equal(h.OcrDocument.rows[0].processingState, 'entered');
     assert.equal(h.NotificationLog.rows[0].source, 'paperless');
     await syncDocument(h.OcrDocument, 1131, { notify: wire(h) });
-    assert.equal(count(h, 'john'), 1);
+    assert.equal(count(h, 'invoice'), 1);
   });
 
   it('PB-8 KashFlow: once across the send and the follow; the state moves to sent', async () => {
@@ -378,11 +404,11 @@ describe('each PB notification fires exactly once', () => {
     assert.equal(count(h, 'kashflow'), 1);
   });
 
-  it('PB-8 a send straight from the draft screen goes via entered, without emailing John', async () => {
+  it('PB-8 a send straight from the draft screen goes via entered, without sending the invoice email', async () => {
     const h = harness([invoice({ processingState: 'awaiting_entry' })]);
     await entrySvc.recordSentToKashflow(h.OcrDocument, 1131, user, { notify: wire(h) });
     assert.equal(h.OcrDocument.rows[0].processingState, 'sent');
-    assert.equal(count(h, 'john'), 0);
+    assert.equal(count(h, 'invoice'), 0);
     assert.equal(count(h, 'kashflow'), 1);
   });
 
@@ -413,13 +439,13 @@ describe('each PB notification fires exactly once', () => {
     assert.equal(count(h2, 'statement'), 1);
   });
 
-  it('PB-6 Resend to John adds the notify tag until cutover and logs every click', async () => {
+  it('PB-6 Resend invoice adds the notify tag until cutover and logs every click', async () => {
     const h = harness([invoice({ paperlessId: 9002, processingState: 'entered' })]);
-    for (let i = 0; i < 2; i++) await entrySvc.resendToJohn(h.OcrDocument, 9002, user, { notify: wire(h) });
-    assert.equal(count(h, 'john_resend'), 2);
+    for (let i = 0; i < 2; i++) await entrySvc.resendInvoice(h.OcrDocument, 9002, user, { notify: wire(h) });
+    assert.equal(count(h, 'invoice_resend'), 2);
     assert.ok(mockPaperlessState().documents.find((d) => d.id === 9002).tags.includes(10));
     const si = harness([invoice({ documentType: SI })]);
-    assert.equal((await entrySvc.resendToJohn(si.OcrDocument, 1131, user, { notify: wire(si) })).reason, 'not-applicable');
+    assert.equal((await entrySvc.resendInvoice(si.OcrDocument, 1131, user, { notify: wire(si) })).reason, 'not-applicable');
   });
 });
 
@@ -484,10 +510,10 @@ describe('H6 wiring', () => {
   const read = (p) => fs.readFileSync(path.resolve(p), 'utf8');
   it('routes, RBAC, retry job and settings are registered', () => {
     const routes = read('mongoose/routes/paperlessRoutes.js');
-    assert.ok(routes.includes('router.post("/paperless/ocr/:paperlessId/resend-john", ...paperlessGuard, entryCtrl.postResendJohn)'));
+    assert.ok(routes.includes('router.post("/paperless/ocr/:paperlessId/resend-invoice", ...paperlessGuard, entryCtrl.postResendInvoice)'));
     assert.ok(routes.includes('router.post("/paperless/ocr/:paperlessId/reviewed", ...paperlessGuard, entryCtrl.postReviewed)'));
     const rbac = read('mongoose/config/rolePermissionsConfig.js');
-    assert.match(rbac, /'\/paperless\/ocr\/:paperlessId\/resend-john':\s+\['admin'\]/);
+    assert.match(rbac, /'\/paperless\/ocr\/:paperlessId\/resend-invoice':\s+\['admin'\]/);
     assert.match(rbac, /'\/paperless\/ocr\/:paperlessId\/reviewed':\s+\['admin'\]/);
     assert.match(read('mongoose/services/jobRegistry.js'), /scheduler\.register\('paperless-notification-retry'/);
     const reg = read('services/configRegistry.js');

@@ -58,7 +58,7 @@
             <div class="font-medium flex items-center gap-1"><i class="bi bi-exclamation-triangle-fill"></i> KashFlow linkage missing</div>
             <div class="mt-1">This document is tagged <strong>added</strong> but has no KashFlow Purchase Number recorded. It may have been sent outside this system.</div>
             <div class="mt-1">Enter the KashFlow Purchase Number in the <strong>"KashFlow Purchase Number"</strong> custom field at
-              <a href="https://docs.heroncs.co.uk/documents/<%= doc.paperlessId %>" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline font-medium">docs.heroncs.co.uk/documents/<%= doc.paperlessId %></a>,
+              <a href="<%= locals.paperlessUiBase || '' %>/documents/<%= doc.paperlessId %>" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline font-medium">Paperless document <%= doc.paperlessId %></a>,
               then re-fetch this document to link it automatically.
             </div>
           </div>
@@ -149,7 +149,7 @@
           <i class="bi bi-link-45deg"></i> Match Purchase
         </a>
         <div class="m-2 flex flex-wrap items-center gap-3">
-          <a href="https://docs.heroncs.co.uk/documents/<%= doc.paperlessId %>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium bg-slate-100 text-slate-700 hover:bg-green-50 hover:text-green-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-green-900/30 focus:outline-none focus:ring-2 focus:ring-green-600">
+          <a href="<%= locals.paperlessUiBase || '' %>/documents/<%= doc.paperlessId %>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium bg-slate-100 text-slate-700 hover:bg-green-50 hover:text-green-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-green-900/30 focus:outline-none focus:ring-2 focus:ring-green-600">
             <i class="bi bi-box-arrow-up-right text-xs"></i>
             <span>View Document</span>
           </a>

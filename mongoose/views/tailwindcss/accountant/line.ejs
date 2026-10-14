@@ -98,7 +98,7 @@
         Internal transfer
       </h2>
       <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
-        This is one side of a movement between two Heron CS accounts. KashFlow records both sides
+        This is one side of a movement between two <%= locals.companyShortName || 'company' %> accounts. KashFlow records both sides
         under the same number, each from its own account&rsquo;s point of view, so the pair nets to nil.
       </p>
       <a href="/accountant/lines/<%= otherHalf.AccountId %>/<%= otherHalf.Id %>"

@@ -30,6 +30,8 @@
  */
 
 // Brand palette — the emerald the app and the FileBrowser branding use.
+import org from './organisationService.js';
+
 const BRAND = '#15803d';
 const BRAND_DARK = '#166534';
 const TEXT = '#1f2937';
@@ -226,7 +228,7 @@ function preheaderBlock(preheader) {
  * @param {string}  [opts.title]
  * @param {string}  [opts.preheader]  inbox preview line
  */
-function renderDocument({ contentHtml = '', afterHtml = '', title = 'Heron CS', preheader = '' } = {}) {
+function renderDocument({ contentHtml = '', afterHtml = '', title = org.companyShortName(), preheader = '' } = {}) {
   return `<!doctype html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>

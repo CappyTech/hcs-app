@@ -4,6 +4,7 @@ import encryptionService from './encryptionService.js';
 import logger from './loggerService.js';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
+import org from './organisationService.js';
 
 /**
  * Generates a TOTP (Time-Based One-Time Password) secret for a user, encrypts it,
@@ -37,8 +38,8 @@ const generateTOTPSecret = async (user) => {
  */
 const generateQRCode = async (secret, user) => {
   const otpAuthUrl = authenticator.keyuri(
-    `${user.username} - HeronCS LTD`, // account label (shown in the authenticator app)
-    "HeronCS LTD",                    // issuer
+    `${user.username} - ${org.companyShortName()}`, // account label (shown in the authenticator app)
+    org.companyShortName(),                          // issuer
     secret                            // Base32 TOTP secret
   );
   return await qrcode.toDataURL(otpAuthUrl); // Generate a QR code as a Base64 data URL

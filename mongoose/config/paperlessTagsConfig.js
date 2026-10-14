@@ -59,27 +59,28 @@ export const PAPERLESS_TAGS = {
     id: envId('PAPERLESS_TAG_DATA_ENTRY_DONE_ID', 1),
     names: ['data entry done', 'data-entry-done', 'data_entry_done'],
   },
-  /** Manual re-send to John (WF9). Added by hcs-app's Resend button until cutover. */
+  /** Manual re-send of the invoice email (WF9). Added by hcs-app's Resend button until cutover. */
   notify: {
     id: envId('PAPERLESS_TAG_NOTIFY_ID', 10),
     names: ['notify'],
   },
-  /** WF3 has emailed John the invoice (E1). Read by the H7 backfill. */
-  notifiedJohn: {
-    id: envId('PAPERLESS_TAG_NOTIFIED_JOHN_ID', 19),
-    names: ['notified/john', 'john'],
+  /** WF3 has sent the invoice email (E1). Read by the H7 backfill. The legacy
+   *  env name PAPERLESS_TAG_NOTIFIED_JOHN_ID is still honoured. */
+  notifiedInvoice: {
+    id: envId('PAPERLESS_TAG_NOTIFIED_INVOICE_ID', envId('PAPERLESS_TAG_NOTIFIED_JOHN_ID', 19)),
+    names: ['notified/invoice', 'notified/john', 'invoice', 'john'],
   },
   /** WF4 has posted "added to kashflow" (D3). Read by the H8 shadow report. */
   notifiedKashflow: {
     id: envId('PAPERLESS_TAG_NOTIFIED_KASHFLOW_ID', 20),
     names: ['notified/kashflow', 'kashflow'],
   },
-  /** WF2 has emailed Bev the supplier statement (C2a). Read at ingest to classify. */
+  /** WF2 has sent the supplier statement email (C2a). Read at ingest to classify. */
   notifiedAdminStatement: {
     id: envId('PAPERLESS_TAG_NOTIFIED_STATEMENT_ID', 21),
     names: ['notified/admin-statement', 'admin-statement'],
   },
-  /** WF5 has emailed Bev the credit note (E2). Read at ingest to classify. */
+  /** WF5 has sent the credit note email (E2). Read at ingest to classify. */
   notifiedCreditNote: {
     id: envId('PAPERLESS_TAG_NOTIFIED_CREDIT_NOTE_ID', 22),
     names: ['notified/credit-note', 'credit-note'],

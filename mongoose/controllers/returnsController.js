@@ -4,6 +4,7 @@ import taxService from '../../services/taxService.js';
 import cisMappings from '../config/cisMappings.js';
 import { whtRateLabel } from '../../services/cisService.js';
 import { formatInTimeZone } from 'date-fns-tz';
+import org from '../../services/organisationService.js';
 
 // Tax months run April(1) → March(12)
 const TAX_MONTH_NAMES = ["April", "May", "June", "July", "August", "September",
@@ -220,7 +221,7 @@ export const renderMonthlyReturns = async (req, res, next) => {
     const formatCurrencyM = (n) => `£${Number(n || 0).toFixed(2)}`;
 
     const nextYearShortM = (Number(year) + 1).toString().slice(-2);
-    const dynamicTitleM = `${supplier.Name} | Heron Constructive Solutions LTD | ${year}-${nextYearShortM} CIS Returns — ${monthName}`;
+    const dynamicTitleM = `${supplier.Name} | ${org.companyName()} | ${year}-${nextYearShortM} CIS Returns — ${monthName}`;
     return res.render(
       path.join("tailwindcss", "cis", "monthlyReturns"),
       {
@@ -348,7 +349,7 @@ export const renderYearlyReturns = async (req, res, next) => {
     const formatCurrency = (n) => `£${Number(n || 0).toFixed(2)}`;
 
     const nextYearShort = (Number(year) + 1).toString().slice(-2);
-    const dynamicTitle = `${supplier.Name} | Heron Constructive Solutions LTD | ${year}-${nextYearShort} CIS Returns`;
+    const dynamicTitle = `${supplier.Name} | ${org.companyName()} | ${year}-${nextYearShort} CIS Returns`;
     return res.render(path.join("tailwindcss", "cis", "yearlyReturns"), {
       title: dynamicTitle,
       year: +year,

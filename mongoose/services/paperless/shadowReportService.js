@@ -6,7 +6,7 @@
  * in NotificationLog, and Paperless still does the sending. Paperless leaves
  * evidence of each send in its tags:
  *
- *   john         tag 19 notified/john           (WF3, and WF9 re-sends)
+ *   invoice      tag 19 notified/john           (WF3, and WF9 re-sends)
  *   kashflow     tag 20 notified/kashflow       (WF4)
  *   statement    tag 21 notified/admin-statement (WF2)
  *   credit_note  tag 22 notified/credit-note    (WF5)
@@ -25,7 +25,7 @@
  * So is everything before shadow recording began (the first non-backfill
  * NotificationLog row): hcs-app can't have recorded a document that arrived
  * before it started looking.
- * Re-sends to John leave no trace in Paperless (WF9 removes `notify` again),
+ * Invoice re-sends leave no trace in Paperless (WF9 removes `notify` again),
  * so they are counted but not compared.
  *
  * Reads only hcs-app's copy of each document; Paperless itself isn't called.
@@ -36,7 +36,7 @@ import { notifyMode, buildMessages } from './documentNotifyService.js';
 import logger from '../../../services/loggerService.js';
 
 export const COMPARED_KINDS = {
-  john: { tag: 'notifiedJohn', workflow: 'WF3', label: 'Invoice emailed' },
+  invoice: { tag: 'notifiedInvoice', workflow: 'WF3', label: 'Invoice emailed' },
   kashflow: { tag: 'notifiedKashflow', workflow: 'WF4', label: 'Added to KashFlow (Discord)' },
   statement: { tag: 'notifiedAdminStatement', workflow: 'WF2', label: 'Statement emailed' },
   credit_note: { tag: 'notifiedCreditNote', workflow: 'WF5', label: 'Credit note emailed' },
@@ -94,8 +94,8 @@ export async function compareWindow({ OcrDocument, NotificationLog, from: reques
     // Every non-backfill row for the Paperless side's documents, whenever
     // recorded: a send just before midnight still matches a tag just after
     const ids = paperlessDocs.map((d) => d.paperlessId);
-    // WF9 re-sends also add tag 19, so a re-send counts for the john tag
-    const matchKinds = kind === 'john' ? ['john', 'john_resend'] : [kind];
+    // WF9 re-sends also add tag 19, so a re-send counts for the invoice tag
+    const matchKinds = kind === 'invoice' ? ['invoice', 'invoice_resend'] : [kind];
     const anyRows = ids.length
       ? await NotificationLog.find({ kind: { $in: matchKinds }, paperlessId: { $in: ids } }).lean()
       : [];
@@ -136,7 +136,7 @@ export async function compareWindow({ OcrDocument, NotificationLog, from: reques
     kinds[kind] = result;
   }
 
-  const resends = await NotificationLog.find({ kind: 'john_resend', createdAt: { $gte: from, $lt: to } }).lean();
+  const resends = await NotificationLog.find({ kind: 'invoice_resend', createdAt: { $gte: from, $lt: to } }).lean();
   return {
     from,
     to,

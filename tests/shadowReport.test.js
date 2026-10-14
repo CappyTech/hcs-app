@@ -15,7 +15,7 @@ const ejs = createRequire(import.meta.url)('ejs');
 const PI = { id: 1, name: 'Purchase Invoice' };
 const STATEMENT = { id: 2, name: 'Supplier Statement' };
 const t = (id, name) => ({ id, name });
-const TAG = { john: t(19, 'notified/john'), kf: t(20, 'notified/kashflow'), stmt: t(21, 'notified/admin-statement'), cn: t(22, 'notified/credit-note') };
+const TAG = { invoice: t(19, 'notified/john'), kf: t(20, 'notified/kashflow'), stmt: t(21, 'notified/admin-statement'), cn: t(22, 'notified/credit-note') };
 
 const now = new Date('2026-10-10T12:00:00Z');
 const from = new Date('2026-10-09T12:00:00Z');
@@ -46,10 +46,10 @@ const bucketIds = (r, kind, bucket) => r.kinds[kind][bucket].map((i) => i.paperl
 
 describe('compareWindow', () => {
   it('matches a Paperless send to hcs-app\'s record, including across the window edge', async () => {
-    const docs = [doc(1, { tags: [TAG.john] }), doc(2, { tags: [TAG.kf] })];
-    const logs = [row(1, 'john'), row(2, 'kashflow', { createdAt: hoursAgo(30) })]; // recorded before the window
+    const docs = [doc(1, { tags: [TAG.invoice] }), doc(2, { tags: [TAG.kf] })];
+    const logs = [row(1, 'invoice'), row(2, 'kashflow', { createdAt: hoursAgo(30) })]; // recorded before the window
     const r = await compareWindow({ OcrDocument: siftModel(docs), NotificationLog: siftModel(logs), from, to: now, now, shadowStart: EARLY });
-    assert.deepEqual(bucketIds(r, 'john', 'matched'), [1]);
+    assert.deepEqual(bucketIds(r, 'invoice', 'matched'), [1]);
     assert.deepEqual(bucketIds(r, 'kashflow', 'matched'), [2]);
     assert.equal(r.clean, true);
   });
@@ -107,12 +107,12 @@ describe('compareWindow', () => {
     assert.deepEqual(bucketIds(r, 'new_doc', 'pending'), [11]);
   });
 
-  it('counts re-sends, and a re-send satisfies the john tag', async () => {
-    const docs = [doc(12, { tags: [TAG.john] })];
-    const logs = [row(12, 'john_resend'), row(12, 'john_resend', { createdAt: hoursAgo(1) })];
+  it('counts re-sends, and a re-send satisfies the invoice tag', async () => {
+    const docs = [doc(12, { tags: [TAG.invoice] })];
+    const logs = [row(12, 'invoice_resend'), row(12, 'invoice_resend', { createdAt: hoursAgo(1) })];
     const r = await compareWindow({ OcrDocument: siftModel(docs), NotificationLog: siftModel(logs), from, to: now, now, shadowStart: EARLY });
     assert.equal(r.resends, 2);
-    assert.deepEqual(bucketIds(r, 'john', 'matched'), [12]);
+    assert.deepEqual(bucketIds(r, 'invoice', 'matched'), [12]);
   });
 
   it('ignores documents deleted in Paperless', async () => {
@@ -168,8 +168,8 @@ describe('saveDailyReport', () => {
 
 describe('shadow report page', () => {
   it('shows the totals, what to look at, the daily reports and the cutover steps', async () => {
-    const docs = [doc(3, { tags: [TAG.kf] }), doc(1, { tags: [TAG.john] })];
-    const live = await compareWindow({ OcrDocument: siftModel(docs), NotificationLog: siftModel([row(1, 'john')]), from, to: now, now, shadowStart: EARLY });
+    const docs = [doc(3, { tags: [TAG.kf] }), doc(1, { tags: [TAG.invoice] })];
+    const live = await compareWindow({ OcrDocument: siftModel(docs), NotificationLog: siftModel([row(1, 'invoice')]), from, to: now, now, shadowStart: EARLY });
     const view = path.resolve('mongoose/views/tailwindcss/paperless/shadowReport.ejs');
     const html = await ejs.renderFile(view, {
       days: 1, live, followTags: true, paperlessUiBase: 'https://docs.example.test',

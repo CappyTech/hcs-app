@@ -15,9 +15,11 @@
     <div class="flex items-center space-x-2">
       <small>&copy; <%= copyrightyearstart %>–<%= copyrightyear %></small>
       <img src="/resources/images/HCS-Logo-v4-Icon32.png" alt="Logo" class="w-4 h-4" />
-      <a href="https://www.heroncs.co.uk" class="text-green-600 hover:underline whitespace-nowrap">
-        <%= (typeof companyName !== 'undefined' && companyName) ? companyName : 'Heron Constructive Solutions LTD' %>
-      </a>
+      <% if (locals.websiteUrl) { %>
+      <a href="<%= websiteUrl %>" class="text-green-600 hover:underline whitespace-nowrap"><%= locals.companyName || websiteHost %></a>
+      <% } else if (locals.companyName) { %>
+      <span class="whitespace-nowrap"><%= companyName %></span>
+      <% } %>
     </div>
     <div>
       <small>

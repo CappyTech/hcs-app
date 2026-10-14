@@ -5,6 +5,10 @@
     .replace(/&amp;/g, '&')
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"');
-  const _cssFooter = _cssLine + ' \u2022 Heron Constructive Solutions LTD \u2022 103 Herondale Road, Mossley Hill, Liverpool, L18 1JZ \u2022 admin@heroncs.co.uk';
+  // _cssLine is already escaped above; the company values are escaped here
+  const _cssEsc = (s) => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const _cssFooter = [_cssLine, ...[locals.companyName, locals.companyAddress, locals.contactEmail].filter(Boolean).map(_cssEsc)]
+    .filter(Boolean)
+    .join(' \u2022 ');
 %>
 <style nonce="<%= locals.cspNonce %>">:root { --hcs-footer: "<%- _cssFooter %>"; }</style>

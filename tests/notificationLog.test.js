@@ -72,7 +72,7 @@ describe('NotificationLog schema', () => {
       await d.validate();
       assert.equal(d.oneShot, true, kind);
     }
-    const resend = new Model({ paperlessId: 1, kind: 'john_resend', oneShot: true });
+    const resend = new Model({ paperlessId: 1, kind: 'invoice_resend', oneShot: true });
     await resend.validate();
     assert.equal(resend.oneShot, false, 'a caller cannot make a re-send unique');
   });
@@ -87,8 +87,8 @@ describe('claimOneShot', () => {
   beforeEach(() => { NL = fakeNotificationLog(); });
 
   it('lets exactly one claim win per document and kind', async () => {
-    const first = await claimOneShot(NL, 9002, 'john');
-    const second = await claimOneShot(NL, 9002, 'john');
+    const first = await claimOneShot(NL, 9002, 'invoice');
+    const second = await claimOneShot(NL, 9002, 'invoice');
     assert.equal(first.claimed, true);
     assert.equal(second.claimed, false);
     assert.equal(String(second.existing._id), String(first.entry._id));
@@ -101,18 +101,18 @@ describe('claimOneShot', () => {
   });
 
   it('treats each kind and each document separately', async () => {
-    assert.equal((await claimOneShot(NL, 9002, 'john')).claimed, true);
+    assert.equal((await claimOneShot(NL, 9002, 'invoice')).claimed, true);
     assert.equal((await claimOneShot(NL, 9002, 'kashflow')).claimed, true);
-    assert.equal((await claimOneShot(NL, 9003, 'john')).claimed, true);
+    assert.equal((await claimOneShot(NL, 9003, 'invoice')).claimed, true);
   });
 
   it('refuses a repeatable kind', async () => {
-    await assert.rejects(claimOneShot(NL, 9002, 'john_resend'), /not a one-shot/);
+    await assert.rejects(claimOneShot(NL, 9002, 'invoice_resend'), /not a one-shot/);
   });
 
   it('rethrows errors other than a duplicate key', async () => {
     NL.create = async () => { throw new Error('connection reset'); };
-    await assert.rejects(claimOneShot(NL, 9002, 'john'), /connection reset/);
+    await assert.rejects(claimOneShot(NL, 9002, 'invoice'), /connection reset/);
   });
 
   it('records the actor without the admin flag', async () => {
@@ -123,26 +123,26 @@ describe('claimOneShot', () => {
 });
 
 describe('recordRepeatable / completeNotification / hasOneShot', () => {
-  it('records every re-send to John', async () => {
+  it('records every invoice re-send', async () => {
     const NL = fakeNotificationLog();
-    await claimOneShot(NL, 9002, 'john');
-    await recordRepeatable(NL, 9002, 'john_resend');
-    await recordRepeatable(NL, 9002, 'john_resend');
-    await recordRepeatable(NL, 9002, 'john_resend');
-    assert.equal(NL.rows.filter((r) => r.kind === 'john_resend').length, 3);
+    await claimOneShot(NL, 9002, 'invoice');
+    await recordRepeatable(NL, 9002, 'invoice_resend');
+    await recordRepeatable(NL, 9002, 'invoice_resend');
+    await recordRepeatable(NL, 9002, 'invoice_resend');
+    assert.equal(NL.rows.filter((r) => r.kind === 'invoice_resend').length, 3);
   });
 
   it('refuses a one-shot kind as a repeatable', async () => {
-    await assert.rejects(recordRepeatable(fakeNotificationLog(), 9002, 'john'), /not a repeatable/);
+    await assert.rejects(recordRepeatable(fakeNotificationLog(), 9002, 'invoice'), /not a repeatable/);
   });
 
   it('records the outcome and reports what has been sent', async () => {
     const NL = fakeNotificationLog();
-    assert.equal(await hasOneShot(NL, 9002, 'john'), false);
-    const { entry } = await claimOneShot(NL, 9002, 'john', { mode: 'shadow' });
+    assert.equal(await hasOneShot(NL, 9002, 'invoice'), false);
+    const { entry } = await claimOneShot(NL, 9002, 'invoice', { mode: 'shadow' });
     await completeNotification(NL, entry._id, { status: 'shadow', channels: [{ channel: 'email', status: 'shadow' }] });
     assert.equal(NL.rows[0].status, 'shadow');
-    assert.equal(await hasOneShot(NL, 9002, 'john'), true);
+    assert.equal(await hasOneShot(NL, 9002, 'invoice'), true);
     await assert.rejects(completeNotification(NL, entry._id, { status: 'done' }), /Invalid completion status/);
   });
 });
@@ -167,10 +167,24 @@ describe('NotificationLog index on a real MongoDB', { skip: !process.env.TEST_MO
   });
 
   it('rejects a duplicate one-shot and allows repeated re-sends', async () => {
-    assert.equal((await claimOneShot(RealNL, 1, 'john')).claimed, true);
-    assert.equal((await claimOneShot(RealNL, 1, 'john')).claimed, false);
-    await recordRepeatable(RealNL, 1, 'john_resend');
-    await recordRepeatable(RealNL, 1, 'john_resend');
+    assert.equal((await claimOneShot(RealNL, 1, 'invoice')).claimed, true);
+    assert.equal((await claimOneShot(RealNL, 1, 'invoice')).claimed, false);
+    await recordRepeatable(RealNL, 1, 'invoice_resend');
+    await recordRepeatable(RealNL, 1, 'invoice_resend');
     assert.equal(await RealNL.countDocuments({ paperlessId: 1 }), 3);
+  });
+});
+
+describe('migrateLegacyKinds', () => {
+  it('renames john / john_resend rows to invoice / invoice_resend, once', async () => {
+    const { migrateLegacyKinds } = await import('../mongoose/services/paperless/notificationLogService.js');
+    const calls = [];
+    const NL = { updateMany: async (filter, update) => { calls.push([filter, update]); return { modifiedCount: filter.kind === 'john' ? 2 : 1 }; } };
+    assert.deepEqual(await migrateLegacyKinds(NL), { renamed: 3 });
+    assert.deepEqual(calls, [
+      [{ kind: 'john' }, { $set: { kind: 'invoice' } }],
+      [{ kind: 'john_resend' }, { $set: { kind: 'invoice_resend' } }],
+    ]);
+    assert.deepEqual(await migrateLegacyKinds(null), { renamed: 0 }, 'no model: nothing to do');
   });
 });

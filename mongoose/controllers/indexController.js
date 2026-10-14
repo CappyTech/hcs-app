@@ -73,7 +73,8 @@ const getDashboardModels = async (department, userRole) => {
     });
 
   const extraTiles = Object.entries(customTiles)
-    .filter(([, tile]) => tile.department?.includes(department) && canUseTile(tile, userRole))
+    // A configurable external link that is unset (e.g. ONEDRIVE_URL) hides its tile
+    .filter(([, tile]) => tile.department?.includes(department) && canUseTile(tile, userRole) && tile.link)
     .map(([key, tile]) => ({ tileKey: key, ...tile }));
 
   // Dedupe by destination. A model-driven tile and a custom tile can point at the

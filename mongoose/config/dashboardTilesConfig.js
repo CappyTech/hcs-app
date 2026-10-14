@@ -3,7 +3,14 @@
  * for the canonical department registry). Model-backed tiles are generated
  * from listControllerConfig.js — this file is for everything else:
  * admin tools, external links, and workflow shortcuts.
+ *
+ * Text and links that name the company's own systems are getters, read from
+ * configuration when the dashboard renders. A tile whose link resolves to ''
+ * is not shown.
  */
+import org from '../../services/organisationService.js';
+import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
+
 export default {
     // ── Admin ─────────────────────────────────────────────────────────
     DeletedItems: {
@@ -323,7 +330,7 @@ export default {
     },
     Paperlessngx: {
         title: 'Document Management',
-        description: 'Manage OCR documents imported from docs.heroncs.co.uk.',
+        get description() { return `Manage OCR documents imported from ${paperlessUiBase() || 'Paperless'}.`; },
         link: '/paperless/ocr',
         department: ['documents'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
@@ -331,7 +338,7 @@ export default {
     ExternalPaperlessngx: {
         title: 'External Document Management',
         description: 'Access the external purchase invoice document management system.',
-        link: 'https://docs.heroncs.co.uk',
+        get link() { return paperlessUiBase(); },
         department: ['documents'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
@@ -346,21 +353,21 @@ export default {
     // ── Website ───────────────────────────────────────────────────────
     WebsiteCaseStudies: {
         title: 'Case Studies',
-        description: 'Project stories published at heroncs.co.uk/studies.',
+        get description() { return `Project stories published at ${org.websiteHost()}/studies.`; },
         link: '/website/case-studies',
         department: ['website'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     WebsitePosts: {
         title: 'Blog Posts',
-        description: 'News and updates published at heroncs.co.uk/blog.',
+        get description() { return `News and updates published at ${org.websiteHost()}/blog.`; },
         link: '/website/posts',
         department: ['website'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     WebsiteServices: {
         title: 'Services',
-        description: 'The service cards on heroncs.co.uk/services.',
+        get description() { return `The service cards on ${org.websiteHost()}/services.`; },
         link: '/website/services',
         department: ['website'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
@@ -394,7 +401,7 @@ export default {
     ExternalOneDrive: {
         title: 'Microsoft OneDrive',
         description: 'Access OneDrive for document storage and management.',
-        link: 'https://heroncscouk-my.sharepoint.com/',
+        get link() { return String(process.env.ONEDRIVE_URL || '').trim(); },
         department: ['management'],
         buttonClass: 'bg-blue-700 hover:bg-blue-800 bi bi-box-arrow-up-right'
     },
