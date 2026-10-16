@@ -9,6 +9,7 @@ import emailBrandingService from '../services/emailBrandingService.js';
 import unsubscribeTokenService from '../services/unsubscribeTokenService.js';
 import unsubscribeRotationService from '../services/unsubscribeRotationService.js';
 import configService from '../../services/configService.js';
+import configStore from '../../services/configStoreService.js';
 
 const VIEW = (name) => path.join('tailwindcss', 'settings', name);
 
@@ -27,7 +28,8 @@ export const getHub = async (req, res, next) => {
       types,
       counts,
       rotation,
-      rotationEnvLocked: configService.isFromStartupEnv('UNSUBSCRIBE_ROTATION_ENABLED'),
+      // The managed store wins over compose.env, so nothing locks this any more.
+      rotationEnvLocked: false,
     });
   } catch (err) { next(err); }
 };
@@ -35,12 +37,8 @@ export const getHub = async (req, res, next) => {
 // Enable/disable the automatic unsubscribe-link rotation (persisted to config).
 export const postRotationSettings = async (req, res) => {
   try {
-    if (configService.isFromStartupEnv('UNSUBSCRIBE_ROTATION_ENABLED')) {
-      req.flash('error', 'Rotation is fixed by an environment variable and cannot be changed here.');
-      return res.redirect('/admin/emails');
-    }
     const enabled = req.body.enabled === 'on' || req.body.enabled === 'true';
-    configService.save({ UNSUBSCRIBE_ROTATION_ENABLED: enabled ? 'true' : 'false' });
+    await configStore.set('UNSUBSCRIBE_ROTATION_ENABLED', enabled ? 'true' : 'false', req.user?.username || null);
     req.flash('success', `Automatic unsubscribe-link rotation ${enabled ? 'enabled' : 'disabled'}.`);
   } catch (err) {
     req.flash('error', `Could not update rotation setting: ${err.message}`);

@@ -1,34 +1,36 @@
 import express from 'express';
-const router = express.Router();
 import setup from '../controllers/setupController.js';
 
-// The wizard runs before the main app stack (which normally supplies the
-// body parsers), so it must parse its own request bodies.
-router.use(express.json());
-router.use(express.urlencoded({ extended: true }));
+/**
+ * The database wizard's router. Built by app.js with the continuation that
+ * mounts the full application once a database is saved.
+ *
+ * The wizard runs before the main app stack (which normally supplies the body
+ * parsers and CSRF), so it parses its own bodies and uses a same-origin check
+ * instead of the app-wide CSRF middleware.
+ */
+export default function createSetupRouter(onConfigured) {
+  const router = express.Router();
 
-// CSRF is not yet mounted when these routes are active, so they use their own
-// lightweight origin check instead of the app-wide CSRF middleware.
-function sameOriginOnly(req, res, next) {
-  // Allow GET and the POST routes from the same host only
-  if (req.method !== 'POST') return next();
-  const origin = req.get('origin') || '';
-  const host = req.get('host') || '';
-  if (origin && !origin.includes(host)) {
-    return res.status(403).json({ ok: false, error: 'Forbidden' });
-  }
-  next();
+  router.use(express.json());
+  router.use(express.urlencoded({ extended: true }));
+
+  router.use((req, res, next) => {
+    if (req.method !== 'POST') return next();
+    const origin = req.get('origin') || '';
+    const host = req.get('host') || '';
+    if (origin && !origin.includes(host)) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+    next();
+  });
+
+  router.get('/', setup.getStep1);
+  router.post('/test-db', setup.postTestDb);
+  router.post('/complete', setup.makePostComplete(onConfigured));
+  // Steps 2 and 3 of the old wizard: company details and the first admin now
+  // live on the first-run page once the database is connected.
+  router.get('/*', (_req, res) => res.redirect('/setup'));
+
+  return router;
 }
-
-router.use(sameOriginOnly);
-
-router.get('/',              setup.getStep1);
-router.post('/step1',        setup.postStep1);
-router.post('/test-db',      setup.postTestDb);
-router.get('/step2',         setup.getStep2);
-router.post('/step2',        setup.postStep2);
-router.get('/step3',         setup.getStep3);
-router.post('/complete',     setup.postComplete);
-router.post('/clear-draft',  setup.postClearDraft);
-
-export default router;

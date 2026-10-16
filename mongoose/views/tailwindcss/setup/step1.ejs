@@ -7,11 +7,13 @@
 <% } %>
 
 <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
-  Enter the connection details for your MongoDB instance. You can provide a full URI
-  or fill in the individual fields.
+  Nothing names a reachable MongoDB: no <code>MONGO_URI</code> or <code>MONGO_HOST</code> in the
+  environment, and none of the bundled-stack hosts (<code>hcs-mongo</code>, <code>mongodb</code>,
+  <code>localhost</code>) answered. Enter the connection details here. They are saved to the storage
+  volume, so this is asked once.
 </p>
 
-<form action="/setup/step1" method="POST" class="space-y-5" id="dbForm">
+<form action="/setup/complete" method="POST" class="space-y-5" id="dbForm">
 
   <!-- MongoDB URI -->
   <div>
@@ -76,8 +78,8 @@
   <!-- Database names per namespace -->
   <div>
     <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Database Names</label>
-    <p class="mb-2 text-xs text-gray-400">The three databases this app uses on the server above. Test Connection lists the databases it can see.</p>
-    <div class="grid grid-cols-3 gap-3">
+    <p class="mb-2 text-xs text-gray-400">The databases this app uses on the server above. Test Connection lists the databases it can see.</p>
+    <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">REST (KashFlow)</label>
         <input type="text" name="mongoDbRest" placeholder="rest"
@@ -94,6 +96,12 @@
         <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Paperless</label>
         <input type="text" name="mongoDbPaperless" placeholder="paperless"
           value="<%= values.mongoDbPaperless || '' %>"
+          class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
+      </div>
+      <div>
+        <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Website content</label>
+        <input type="text" name="mongoDbWeb" placeholder="hcs-webdb"
+          value="<%= values.mongoDbWeb || '' %>"
           class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
       </div>
     </div>
@@ -114,30 +122,12 @@
   <div class="pt-2 flex justify-end">
     <button type="submit"
       class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
-      Next: Company &amp; Secrets →
+      Save &amp; continue →
     </button>
   </div>
 </form>
 
 <script nonce="<%= locals.cspNonce %>">
-// Restore saved values — localStorage takes precedence over server-restored values.
-// Falls back to server-side wizard-draft.json (via session) if localStorage is empty.
-const _s1 = JSON.parse(localStorage.getItem('hcs_setup_step1') || '{}');
-['mongoUri','mongoHost','mongoPort','mongoUser','mongoAuthSource','mongoDbRest','mongoDbInternal','mongoDbPaperless'].forEach(id => {
-  const el = document.querySelector(`[name="${id}"]`);
-  if (el && _s1[id]) el.value = _s1[id];
-});
-
-// Save on change
-document.getElementById('dbForm').addEventListener('input', () => {
-  const data = {};
-  ['mongoUri','mongoHost','mongoPort','mongoUser','mongoAuthSource','mongoDbRest','mongoDbInternal','mongoDbPaperless'].forEach(id => {
-    const el = document.querySelector(`[name="${id}"]`);
-    if (el) data[id] = el.value;
-  });
-  localStorage.setItem('hcs_setup_step1', JSON.stringify(data));
-});
-
 document.getElementById('testBtn').addEventListener('click', async () => {
   const btn = document.getElementById('testBtn');
   const spinner = document.getElementById('testSpinner');

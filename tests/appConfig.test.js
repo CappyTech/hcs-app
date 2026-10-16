@@ -58,6 +58,15 @@ describe('configRegistry', () => {
     assert.notEqual(registry.findKey('TRUST_EDGE_TLS')?.restart, true, 'TRUST_EDGE_TLS is read per request');
   });
 
+  it('manages the keys that used to be written to app-config.json, and BASE_URL under Organisation', () => {
+    // adminController and emailAdminController used to write these to a file
+    // inside the image; they now go through the store like everything else.
+    for (const key of ['MAINTENANCE', 'MAINTENANCE_NOTICE', 'UNSUBSCRIBE_ROTATION_ENABLED']) {
+      assert.ok(registry.isManaged(key), `${key} must be managed`);
+    }
+    assert.equal(registry.findKey('BASE_URL')?.group, 'organisation');
+  });
+
   it('treats every credential as a secret', () => {
     for (const key of registry.managedKeys()) {
       if (/PASSWORD|TOKEN|SECRET|_PASS$|API_KEY|MEMORABLE/.test(key)) {

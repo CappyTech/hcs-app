@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Setup Complete — Restarting</title>
-  <meta http-equiv="refresh" content="8;url=/">
+  <title>Database connected</title>
+  <meta http-equiv="refresh" content="4;url=/setup">
   <link rel="stylesheet" href="/resources/css/tailwind.css">
   <script nonce="<%= locals.cspNonce %>">
     (function () {
@@ -19,24 +19,18 @@
 <body class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
   <div class="max-w-md w-full text-center space-y-6">
 
-    <!-- Animated tick -->
     <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 dark:bg-green-900/30">
       <svg class="h-10 w-10 text-green-600 dark:text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
       </svg>
     </div>
 
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Setup Complete!</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Database connected</h1>
     <p class="text-gray-600 dark:text-gray-400">
-      Your configuration has been saved. The application is restarting now&hellip;
+      The connection details are saved on the storage volume. The application is starting up
+      in place &mdash; no restart &mdash; and will ask you to create the first administrator next.
     </p>
 
-    <!-- Countdown -->
-    <p class="text-sm text-gray-500 dark:text-gray-500">
-      Redirecting to login in <span id="countdown" class="font-semibold text-green-600 dark:text-green-400">8</span>s
-    </p>
-
-    <!-- Spinner -->
     <div class="flex justify-center">
       <svg class="animate-spin h-6 w-6 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -44,31 +38,9 @@
       </svg>
     </div>
 
-    <a href="/" class="inline-block text-sm text-green-600 dark:text-green-400 hover:underline">
-      Click here if not redirected automatically
+    <a href="/setup" class="inline-block text-sm text-green-600 dark:text-green-400 hover:underline">
+      Continue
     </a>
-
-    <!-- Next steps: what the first admin still needs to set, once signed in -->
-    <div class="text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Next steps</h2>
-      <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-        Once you have signed in as the admin, finish the setup under <strong>Admin &rarr; Configuration</strong>:
-      </p>
-      <ul class="text-sm text-gray-700 dark:text-gray-300 space-y-2">
-        <li class="flex gap-2"><span class="text-green-600 dark:text-green-400">1.</span><span><strong>Organisation</strong> &mdash; check the company details, and add the ICO number and the OneDrive link if you use them.</span></li>
-        <li class="flex gap-2"><span class="text-green-600 dark:text-green-400">2.</span><span><strong>Email</strong> (SMTP or Microsoft Graph) &mdash; nothing can be sent until one is configured.</span></li>
-        <li class="flex gap-2"><span class="text-green-600 dark:text-green-400">3.</span><span><strong>KashFlow</strong> and <strong>Paperless-ngx</strong> &mdash; the accounting and document integrations, if you use them.</span></li>
-        <li class="flex gap-2"><span class="text-green-600 dark:text-green-400">4.</span><span><strong>Document notifications</strong> &mdash; the recipients, their names in the Discord wording, the sender name and the Discord webhook. Leave the mode on Shadow until you are ready to send.</span></li>
-      </ul>
-      <p class="mt-3 text-xs text-gray-400">The Configuration hub marks each group that still has settings to fill in.</p>
-    </div>
   </div>
-
-  <script nonce="<%= locals.cspNonce %>">
-    ['hcs_setup_step1','hcs_setup_step2','hcs_setup_step3'].forEach(k => localStorage.removeItem(k));
-    let n = 8;
-    const el = document.getElementById('countdown');
-    const t = setInterval(() => { n--; if (el) el.textContent = n; if (n <= 0) clearInterval(t); }, 1000);
-  </script>
 </body>
 </html>

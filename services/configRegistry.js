@@ -28,6 +28,11 @@
  * ENCRYPTION_KEY, because it is what encrypts the store's own secrets. They are
  * rendered read-only so the UI shows the whole picture rather than implying
  * these are unset.
+ *
+ * None of them has to be set by a human any more: ENCRYPTION_KEY is generated
+ * into a key file on the storage volume and SESSION_SECRET into Mongo when the
+ * environment is silent (bootstrapSecretsService), and the database wizard
+ * saves MONGO_* to the same volume. The environment still wins when set.
  */
 export const BOOTSTRAP_KEYS = [
   'NODE_ENV',
@@ -65,6 +70,17 @@ export const GROUPS = [
       { key: 'ONEDRIVE_URL', label: 'OneDrive URL', type: 'text', help: 'Where the Microsoft OneDrive dashboard tile links to. Blank hides the tile.' },
       { key: 'ICO_NUMBER', label: 'ICO registration number', type: 'text', help: 'Shown in the privacy policy.' },
       { key: 'INCORPORATION_YEAR', label: 'Incorporation year', type: 'number', help: 'First year of the copyright range in the footer.' },
+      { key: 'BASE_URL', label: 'This app\'s public URL', type: 'text', help: 'Where users reach this app, e.g. https://app.example.com. Absolute links in emails and the Content-Security-Policy\'s own-origin entries derive from it. Seeded from the first-run page, or from the first signed-in request when blank.' },
+    ],
+  },
+  {
+    id: 'maintenance',
+    label: 'Maintenance',
+    icon: 'bi-cone-striped',
+    description: 'Runtime maintenance mode and the notice banner. Also controlled from Admin → Maintenance.',
+    keys: [
+      { key: 'MAINTENANCE', label: 'Maintenance mode', type: 'boolean', help: 'When on, non-admin users see a 503 maintenance page. Admins can still use the app.' },
+      { key: 'MAINTENANCE_NOTICE', label: 'Notice banner', type: 'text', help: 'A short notice shown to all users, e.g. an upcoming maintenance window. Blank hides the banner.' },
     ],
   },
   {
@@ -171,7 +187,7 @@ export const GROUPS = [
       { key: 'SMTP_USER', label: 'Username', type: 'text', help: 'SMTP login (the mailbox address).' },
       { key: 'SMTP_PASS', label: 'Password', type: 'secret', help: 'SMTP password or app password.' },
       { key: 'SMTP_FROM', label: 'From address', type: 'text', help: 'Envelope sender for all outbound mail (must be the authenticated mailbox or an allowed alias).' },
-      { key: 'BASE_URL', label: 'Public base URL', type: 'text', help: 'Used to build absolute links in emails.' },
+      { key: 'UNSUBSCRIBE_ROTATION_ENABLED', label: 'Rotate unsubscribe links', type: 'boolean', help: 'Automatically rotate every user\'s unsubscribe token on the schedule. Default on. Also controlled from Admin → Emails.' },
     ],
   },
   {

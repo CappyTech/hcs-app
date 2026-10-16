@@ -29,6 +29,11 @@ services:
     volumes:
       - ./uploads:/uploads
       - ./logs:/logs
+      # FILE_STORAGE_DIR. Besides uploads it holds .bootstrap/encryption.key
+      # (the at-rest encryption key the app generates when ENCRYPTION_KEY is
+      # not set) and .bootstrap/bootstrap.json (the database connection the
+      # wizard saves). Both must outlive the image.
+      - ./storage:/app/storage
       # Inbound mail filtering decisions, written by the mailsiem collector on
       # the host. READ-ONLY on purpose: the collector owns these files and a
       # host cron job deletes them at 90 days, which is the only thing that
