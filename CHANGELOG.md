@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.74.0] - 2026-10-17
+
+### Added
+- Database-wide search at `/search`. One box searches every area the signed-in person may list — employees, customers, suppliers, invoices, quotes, purchases, projects, nominal codes, vehicles, tasks, contracts, assignments, locations, users and Paperless documents — and groups a few hits from each, every hit linking to its page and every group to its list view with the same term. `?type=` shows up to 50 for one area. Access is the list pages' own: the role must be able to list the model, the read route's middleware must admit the role, and the ownership scoping that limits employees, subcontractors and clients to their own records is ANDed into every query (`mongoose/services/searchService.js`). Matching is the list pages' type-aware rule (case-insensitive contains on strings, exact on numbers); queries are capped and time-limited, with no new indexes needed at current sizes.
+- Help → Navigation mentions `/search`.
+
 ## [6.73.2] - 2026-10-16
 
 ### Fixed

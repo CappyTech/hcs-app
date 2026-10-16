@@ -85,6 +85,7 @@ import __homeLayoutRoutes from './mongoose/routes/homeLayoutRoutes.js';
 import __ssoRoutes from './mongoose/routes/ssoRoutes.js';
 import __microsoftSsoRoutes from './mongoose/routes/microsoftSsoRoutes.js';
 import __helpRoutes from './mongoose/routes/helpRoutes.js';
+import __searchRoutes from './mongoose/routes/searchRoutes.js';
 import __payrollRoutes from './mongoose/routes/payrollRoutes.js';
 import __gdprRoutes from './mongoose/routes/gdprRoutes.js';
 import __legalRoutes from './mongoose/routes/legalRoutes.js';
@@ -603,6 +604,7 @@ const main = async () => {
     appRouter.use('/', __homeLayoutRoutes);
     appRouter.use('/', __ssoRoutes);
     appRouter.use('/', __helpRoutes);
+    appRouter.use('/', __searchRoutes);
     appRouter.use('/', __payrollRoutes);
     appRouter.use('/', __gdprRoutes);
     appRouter.use('/', __legalRoutes);

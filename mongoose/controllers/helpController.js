@@ -118,6 +118,7 @@ const helpContent = [
         description: 'The top navigation bar links to every section your role can access. Items are shown or hidden based on your role and department permissions — you will never see a link to an area you cannot use.',
         steps: [
           'Click the Home icon to return to the dashboard at any time.',
+          'To find a record without knowing where it lives, open /search and type a name, number, reference or registration: it searches every area you can open at once and links each hit to its page.',
           'Each icon in the nav bar represents a department (e.g. Attendance, Finance, Fleet).',
           'The Theme toggle (sun / moon icon) switches between light and dark mode — saved in your browser.',
           'On small screens, icon labels hide but icons remain clickable.',

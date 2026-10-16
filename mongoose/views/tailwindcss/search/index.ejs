@@ -1,0 +1,79 @@
+<%#
+  Database-wide search (searchController). One GET form; results grouped by
+  entity, each hit linking to its read page, each group to its list page with
+  the same term so "show all" is the familiar list view.
+%>
+<%
+  const _input = 'flex-1 min-w-0 text-base border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent';
+  const _btn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const _card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden';
+  const _esc = (s) => encodeURIComponent(s || '');
+%>
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex items-center gap-3">
+    <% if (type) { %>
+      <a href="/search?q=<%= _esc(q) %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← All results</a>
+      <span class="text-gray-400">/</span>
+    <% } %>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %></h1>
+  </div>
+
+  <form method="GET" action="/search" class="flex gap-2 flex-wrap" role="search">
+    <% if (type) { %><input type="hidden" name="type" value="<%= type %>"><% } %>
+    <label for="search-q" class="sr-only">Search</label>
+    <input id="search-q" name="q" value="<%= q %>" maxlength="<%= maxLength %>" autofocus autocomplete="off"
+      placeholder="<%= type ? 'Search ' + typeLabel.toLowerCase() : 'Name, number, reference, registration…' %>"
+      class="<%= _input %>" />
+    <button type="submit" class="<%= _btn %>">Search</button>
+  </form>
+
+  <% if (!q) { %>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Searches every area you can open — people, customers, suppliers, invoices, purchases, quotes, projects, vehicles, tasks, documents and more — and shows a few hits from each.
+    </p>
+  <% } else if (tooShort) { %>
+    <div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+      Type at least <%= minLength %> characters.
+    </div>
+  <% } else if (!groups.length) { %>
+    <div class="<%= _card %> px-5 py-8 text-center">
+      <p class="text-sm text-gray-700 dark:text-gray-300">Nothing matches <span class="font-medium">“<%= q %>”</span><%= type ? ' in ' + typeLabel.toLowerCase() : '' %>.</p>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Try fewer words, a number on its own, or part of a name.</p>
+    </div>
+  <% } else { %>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      <%= hits %> result<%= hits === 1 ? '' : 's' %> for <span class="font-medium text-gray-700 dark:text-gray-200">“<%= q %>”</span><%= type ? ' in ' + typeLabel.toLowerCase() : ' across ' + groups.length + ' area' + (groups.length === 1 ? '' : 's') %>.
+    </p>
+
+    <% groups.forEach((g) => { %>
+      <section class="<%= _card %>" aria-labelledby="group-<%= g.key %>">
+        <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+          <h2 id="group-<%= g.key %>" class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= g.label %></h2>
+          <% if (g.more && !type) { %>
+            <a href="/search?q=<%= _esc(q) %>&type=<%= g.key %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Show more</a>
+          <% } else if (g.list) { %>
+            <a href="<%= g.list %>?search=<%= _esc(q) %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Open in list</a>
+          <% } %>
+        </div>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+          <% g.items.forEach((it) => { %>
+            <li>
+              <a href="<%= it.href %>" class="flex items-center justify-between gap-4 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <span class="min-w-0">
+                  <span class="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate"><%= it.title %></span>
+                  <% if (it.subtitle) { %><span class="block text-xs text-gray-500 dark:text-gray-400 truncate"><%= it.subtitle %></span><% } %>
+                </span>
+                <i class="bi bi-chevron-right text-gray-400 text-xs shrink-0" aria-hidden="true"></i>
+              </a>
+            </li>
+          <% }) %>
+        </ul>
+        <% if (g.more && type && g.list) { %>
+          <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400">
+            Showing the first <%= g.items.length %>. <a href="<%= g.list %>?search=<%= _esc(q) %>" class="text-green-700 dark:text-green-400 hover:underline">Open the full list</a> to filter further.
+          </div>
+        <% } %>
+      </section>
+    <% }) %>
+  <% } %>
+</div>
