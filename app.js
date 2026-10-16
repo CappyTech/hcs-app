@@ -54,6 +54,8 @@ import __authService from './services/authService.js';
 import __ipService from './services/ipService.js';
 import rbac from './mongoose/config/rolePermissionsConfig.js';
 import departmentsConfig from './mongoose/config/departmentsConfig.js';
+import __navigationService from './services/navigationService.js';
+import __navPreferenceService from './mongoose/services/navPreferenceService.js';
 import __dateService from './services/dateService.js';
 import __currencyService from './services/currencyService.js';
 import holidayController from './mongoose/controllers/holidayController.js';
@@ -506,8 +508,13 @@ const main = async () => {
       res.locals.canDept = (dept) => req.user ? rbac.canAccessDepartment(req.user.role, dept, _customPerms) : false;
       // Helper: check a controlled route (rolePermissionsConfig.routeAccess), the same rule the route enforces
       res.locals.canRoute = (routePath) => req.user ? rbac.canAccessRoute(req.user.role, routePath, _customPerms) : false;
-      // Canonical department registry — drives the top nav in layout.ejs
+      // Canonical department registry — still exposed for views that list departments
       res.locals.departmentsConfig = departmentsConfig;
+      // The header: every nav style (partials/nav/*.ejs) draws from this one
+      // list. Built here, synchronously, so even a page that errors before
+      // the preference lookup below still gets a usable header.
+      res.locals.navStyle = __navigationService.DEFAULT_STYLE;
+      res.locals.nav = __navigationService.build({ path: req.path, user: req.user });
       // Helper: check CRUD access on a model
       res.locals.canModel = (model, op) => req.user ? rbac.canAccess(req.user.role, model, op, _customPerms).allowed : false;
       // Expose role flags for template convenience
@@ -547,6 +554,20 @@ const main = async () => {
       res.locals.session = null;
       res.locals.copyrightyearstart = configService.get('INCORPORATION_YEAR');
       res.locals.copyrightyear = new Date().getFullYear();
+      next();
+    });
+
+    // This person's navigation style and pinned list (their own choice, else
+    // the company default). One indexed read per page; a failure keeps 'tabs'.
+    appRouter.use(async (req, res, next) => {
+      if (!req.user) return next();
+      try {
+        const pref = await __navPreferenceService.resolve(req.user);
+        res.locals.navStyle = pref.style;
+        res.locals.nav = __navigationService.build({ path: req.path, user: req.user, pinned: pref.pinned });
+      } catch (err) {
+        logger.warn('[navPreference] resolve failed: ' + err.message);
+      }
       next();
     });
 

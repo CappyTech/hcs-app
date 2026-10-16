@@ -1,0 +1,82 @@
+<%#
+  Nav style 'sidebar': a slim header (menu toggle, brand, breadcrumb, Jump to,
+  Create, Help, theme, account) plus a 232px left sidebar grouping every area
+  as People / Money / Work, with a More link for System. On lg+ the sidebar is
+  always shown and the page is offset for it (layout.ejs); below lg it is a
+  drawer opened by the menu toggle.
+
+  The drawer is a navMenu too (alpine-components.js): the toggle button is
+  its trigger, so aria-expanded, Escape and click-outside all work the same.
+%>
+<% const _nav = locals.nav || { items: [], groups: [], home: { href: '/', active: false }, help: { href: '/help', active: false } }; %>
+<% const _link = (active) => 'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition ' + (active
+     ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 font-medium'
+     : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400'); %>
+<% const _main = _nav.groups.filter((g) => g.key !== 'system'); const _system = _nav.groups.find((g) => g.key === 'system'); %>
+<div x-data="navMenu" data-nav-style="sidebar">
+  <nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden" aria-label="Main navigation">
+    <div class="flex items-center gap-2 px-2 sm:px-4 h-14">
+      <button type="button" x-bind="trigger" id="nav-drawer-toggle" aria-controls="nav-sidebar" aria-expanded="false" aria-label="Open navigation"
+        class="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+        <i class="bi bi-list text-xl" aria-hidden="true"></i>
+      </button>
+      <%- include('./_shared.ejs', { part: 'brand' }) %>
+      <%# Breadcrumb: the active area, then the page title %>
+      <% if (_nav.active && !_nav.home.active) { %>
+      <ol class="hidden md:flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 min-w-0" aria-label="Breadcrumb">
+        <li class="flex items-center gap-1.5"><i class="bi bi-chevron-right text-[10px]" aria-hidden="true"></i><%= _nav.active.label %></li>
+        <% if (locals.title && locals.title !== _nav.active.title && locals.title !== _nav.active.label) { %>
+        <li class="flex items-center gap-1.5 min-w-0"><i class="bi bi-chevron-right text-[10px]" aria-hidden="true"></i><span class="truncate text-gray-700 dark:text-gray-200"><%= locals.title %></span></li>
+        <% } %>
+      </ol>
+      <% } %>
+      <div class="hidden sm:block flex-1 min-w-0 max-w-sm ml-auto">
+        <%- include('./_shared.ejs', { part: 'jump', jumpClass: 'w-full' }) %>
+      </div>
+      <div class="flex items-center gap-1 ml-auto sm:ml-0 shrink-0">
+        <%- include('./_shared.ejs', { part: 'create', createLabelClass: 'hidden sm:inline' }) %>
+        <%- include('./_shared.ejs', { part: 'utility' }) %>
+      </div>
+    </div>
+  </nav>
+
+  <%# Backdrop for the drawer below lg %>
+  <div x-bind="backdrop" x-cloak class="fixed inset-0 top-14 bg-gray-900/40 z-30 lg:hidden print:hidden" aria-hidden="true"></div>
+
+  <aside id="nav-sidebar" x-bind="drawer" aria-label="Areas"
+    class="fixed top-14 bottom-0 left-0 z-40 w-[232px] overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transform transition-transform duration-200 -translate-x-full lg:translate-x-0 print:hidden">
+    <div class="p-3 space-y-4">
+      <a href="/" class="<%= _link(_nav.home.active) %>" <%- _nav.home.active ? 'aria-current="page"' : '' %>>
+        <i class="bi bi-house text-base w-5 text-center" aria-hidden="true"></i><span>Home</span>
+      </a>
+      <% _main.forEach((g) => { %>
+      <div>
+        <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= g.label %></div>
+        <% g.items.forEach((item) => { %>
+        <a href="<%= item.href %>" class="<%= _link(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
+          <i class="bi <%= item.icon %> text-base w-5 text-center" aria-hidden="true"></i><span><%= item.label %></span>
+        </a>
+        <% }) %>
+      </div>
+      <% }) %>
+      <% if (_system) { %>
+      <details class="group" <%- _system.active ? 'open' : '' %>>
+        <summary class="<%= _link(false) %> cursor-pointer list-none select-none">
+          <i class="bi bi-three-dots text-base w-5 text-center" aria-hidden="true"></i><span>More</span>
+          <i class="bi bi-chevron-down text-[10px] ml-auto transition group-open:rotate-180" aria-hidden="true"></i>
+        </summary>
+        <div class="mt-1">
+          <% _system.items.forEach((item) => { %>
+          <a href="<%= item.href %>" class="<%= _link(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
+            <i class="bi <%= item.icon %> text-base w-5 text-center" aria-hidden="true"></i><span><%= item.label %></span>
+          </a>
+          <% }) %>
+        </div>
+      </details>
+      <% } %>
+      <a href="/help" class="<%= _link(_nav.help.active) %> border-t border-gray-100 dark:border-gray-700 rounded-t-none pt-3" <%- _nav.help.active ? 'aria-current="page"' : '' %>>
+        <i class="bi bi-question-circle text-base w-5 text-center" aria-hidden="true"></i><span>Help</span>
+      </a>
+    </div>
+  </aside>
+</div>

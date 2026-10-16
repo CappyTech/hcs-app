@@ -4,6 +4,7 @@ import authService from '../../services/authService.js';
 import settings from '../controllers/settingsController.js';
 import connSettings from '../controllers/connectionSettingsController.js';
 import appConfig from '../controllers/appConfigController.js';
+import navPreference from '../controllers/navPreferenceController.js';
 
 // ── Configuration (admin only) ────────────────────────────────────────────────
 // Every page is generated from configRegistry; there is no per-group route to
@@ -44,6 +45,17 @@ router.post(
   authService.ensureAnyRole(),
   settings.validateAccountSettings,
   settings.updateAccountSettings,
+);
+// Navigation style (Account Settings → Navigation). Applies on the next page load.
+router.post(
+  "/user/account/navigation",
+  authService.ensureAnyRole(),
+  navPreference.postNavigation,
+);
+router.post(
+  "/user/account/navigation/reset",
+  authService.ensureAnyRole(),
+  navPreference.postNavigationReset,
 );
 router.post(
   "/user/account/logout-session",

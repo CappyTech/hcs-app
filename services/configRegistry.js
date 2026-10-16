@@ -86,6 +86,25 @@ export const GROUPS = [
     ],
   },
   {
+    id: 'appearance',
+    label: 'Appearance',
+    icon: 'bi-layout-text-window-reverse',
+    description: 'How the app looks for everyone. Each person can override the navigation style on their Account Settings page.',
+    keys: [
+      {
+        key: 'NAV_STYLE_DEFAULT', label: 'Navigation style', type: 'select',
+        options: [
+          { value: 'tabs', label: 'Icon tabs: the classic centred row of icon-over-label tabs' },
+          { value: 'grouped', label: 'Grouped menus: People, Money, Work and System dropdowns' },
+          { value: 'two-tier', label: 'Two-tier: a utility bar above a row of area tabs' },
+          { value: 'command', label: 'Command rail: pinned chips, a More menu and Jump to (Ctrl+K)' },
+          { value: 'sidebar', label: 'Sidebar: a slim header with a grouped left sidebar' },
+        ],
+        help: 'The header layout people see until they pick their own on Account Settings. Unset means Icon tabs.',
+      },
+    ],
+  },
+  {
     id: 'paperless',
     label: 'Paperless-ngx',
     icon: 'bi-file-earmark-text-fill',

@@ -1,0 +1,74 @@
+<%#
+  Nav style 'command': the brand mark, this person's pinned areas as icon+label
+  chips, a More menu grouping everything else, a centred Jump to box with the
+  Ctrl K hint, then Create, Help, theme and the account avatar. Below sm the
+  chip row and the Jump to box are hidden and the More menu lists the pinned
+  areas as well, so everything stays one tap away on a phone.
+%>
+<% const _nav = locals.nav || { items: [], pinned: [], more: [], home: { href: '/', active: false }, help: { href: '/help', active: false } }; %>
+<% const _chip = (active) => 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition ' + (active
+     ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30'
+     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400'); %>
+<% const _entryCls = (active) => 'flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg ' + (active
+     ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 font-medium'
+     : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400'); %>
+<nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden" aria-label="Main navigation" data-nav-style="command">
+  <div class="max-w-7xl mx-auto flex items-center gap-2 px-2 sm:px-4 h-14">
+    <%- include('./_shared.ejs', { part: 'brand', brandLabelClass: 'sr-only xl:not-sr-only' }) %>
+
+    <%# Pinned chips (sm and up; on a phone the More menu lists them too) + More menu %>
+    <div class="hidden sm:flex items-center gap-1 min-w-0 overflow-x-auto" aria-label="Pinned areas">
+      <% _nav.pinned.forEach((item) => { %>
+      <a href="<%= item.href %>" class="<%= _chip(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
+        <i class="bi <%= item.icon %> text-base" aria-hidden="true"></i>
+        <span><%= item.label %></span>
+      </a>
+      <% }) %>
+    </div>
+    <% if (_nav.more.length || _nav.pinned.length) { %>
+    <% const _moreActive = _nav.more.some((g) => g.active); %>
+    <div x-data="navMenu" class="relative shrink-0">
+      <button type="button" x-bind="trigger" id="nav-menu-more" aria-haspopup="true" aria-expanded="false" aria-controls="nav-menu-more-panel"
+        class="<%= _chip(_moreActive) %>">
+        <i class="bi bi-grid-3x3-gap text-base" aria-hidden="true"></i>
+        <span>More</span>
+        <i class="bi bi-chevron-down text-[10px]" aria-hidden="true"></i>
+      </button>
+      <div x-bind="panel" x-cloak id="nav-menu-more-panel" role="menu" aria-labelledby="nav-menu-more"
+        class="absolute left-0 top-full mt-1 w-[calc(100vw-1rem)] sm:w-auto sm:min-w-[32rem] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-2 z-50 grid grid-cols-1 <%= ({ 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2' })[_nav.more.length] || 'sm:grid-cols-3' %> gap-2">
+        <% if (_nav.pinned.length) { %>
+        <%# Phone only: the chip row is hidden below sm, so the pinned areas live here too %>
+        <div class="sm:hidden">
+          <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pinned</div>
+          <% _nav.pinned.forEach((item) => { %>
+          <a href="<%= item.href %>" role="menuitem" class="<%= _entryCls(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
+            <i class="bi <%= item.icon %> text-base w-5 text-center" aria-hidden="true"></i><span><%= item.label %></span>
+          </a>
+          <% }) %>
+        </div>
+        <% } %>
+        <% _nav.more.forEach((g) => { %>
+        <div>
+          <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= g.label %></div>
+          <% g.items.forEach((item) => { %>
+          <a href="<%= item.href %>" role="menuitem" class="<%= _entryCls(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
+            <i class="bi <%= item.icon %> text-base w-5 text-center" aria-hidden="true"></i><span><%= item.label %></span>
+          </a>
+          <% }) %>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
+
+    <%# Centred Jump to %>
+    <div class="hidden sm:block flex-1 min-w-0 max-w-md mx-auto">
+      <%- include('./_shared.ejs', { part: 'jump', jumpClass: 'w-full' }) %>
+    </div>
+
+    <div class="flex items-center gap-1 ml-auto shrink-0">
+      <%- include('./_shared.ejs', { part: 'create', createLabelClass: 'hidden sm:inline' }) %>
+      <%- include('./_shared.ejs', { part: 'utility' }) %>
+    </div>
+  </div>
+</nav>

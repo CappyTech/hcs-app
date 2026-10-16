@@ -1,0 +1,69 @@
+<%#
+  Pieces the grouped, two-tier, command and sidebar styles share. Included
+  with `part` set to one of:
+    brand    the logo + company name link to Home
+    create   the green Create button (only when this person may create)
+    jump     the "Jump to" box: filters the nav items client-side, Ctrl+K focuses it
+    utility  Help, theme toggle and the account avatar
+  Every style keeps the theme toggle (#theme-toggle/#theme-icon, read by
+  theme-toggle.js) and Help reachable, so they live here rather than in each file.
+%>
+<% const _nav = locals.nav || { items: [], home: { href: '/', active: false }, help: { href: '/help', active: false }, create: null, account: null }; %>
+<% const _part = typeof part !== 'undefined' ? part : ''; %>
+<% const _iconBtn = 'inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition shrink-0'; %>
+
+<% if (_part === 'brand') { %>
+  <a href="/" class="inline-flex items-center gap-2 shrink-0 rounded-lg px-1 py-1 <%= _nav.home.active ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100 hover:text-green-600 dark:hover:text-green-400' %>" <%- _nav.home.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="home">
+    <img src="/resources/images/HCS-Logo-v4-Icon32.png" alt="" class="w-7 h-7 rounded" aria-hidden="true">
+    <span class="text-sm font-semibold whitespace-nowrap <%= typeof brandLabelClass !== 'undefined' ? brandLabelClass : '' %>"><%= locals.companyShortName || locals.companyName || 'Home' %></span>
+    <span class="sr-only">Home</span>
+  </a>
+
+<% } else if (_part === 'create') { %>
+  <% if (_nav.create) { %>
+  <a href="<%= _nav.create.href %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white shadow-sm transition whitespace-nowrap shrink-0" <%- _nav.create.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="<%= _nav.create.label.toLowerCase() %>">
+    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+    <span class="<%= typeof createLabelClass !== 'undefined' ? createLabelClass : '' %>"><%= _nav.create.label %></span>
+  </a>
+  <% } %>
+
+<% } else if (_part === 'jump') { %>
+  <%# Jump to: a client-side filter over the navigation (no search backend).
+      navJump (alpine-components.js) shows matching links as you type; Enter
+      opens the first one; Ctrl+K focuses the box from anywhere on the page. %>
+  <div x-data="navJump" class="relative <%= typeof jumpClass !== 'undefined' ? jumpClass : 'w-full max-w-sm' %>" data-nav-jump>
+    <label for="nav-jump" class="sr-only">Jump to an area</label>
+    <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true"></i>
+    <input id="nav-jump" type="search" x-bind="input" autocomplete="off" placeholder="Jump to…" role="combobox" aria-autocomplete="list" aria-controls="nav-jump-results" aria-expanded="false"
+      class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg pl-9 pr-14 py-1.5 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+    <kbd class="absolute right-2 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 text-[10px] font-mono text-gray-400 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 pointer-events-none" aria-hidden="true">Ctrl K</kbd>
+    <ul id="nav-jump-results" role="listbox" x-bind="results" x-cloak
+      class="absolute left-0 right-0 top-full mt-1 max-h-72 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg py-1 z-50">
+      <% const _jumpAll = [_nav.home, ..._nav.items, _nav.help]; %>
+      <% _jumpAll.forEach((item) => { %>
+      <li role="option" data-jump-item data-jump-text="<%= (item.label + ' ' + (item.title || '')).toLowerCase() %>" class="hidden">
+        <a href="<%= item.href %>" class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400">
+          <i class="bi <%= item.icon %> text-base" aria-hidden="true"></i>
+          <span><%= item.label %></span>
+          <% if (item.title && item.title !== item.label) { %><span class="text-xs text-gray-400 truncate"><%= item.title %></span><% } %>
+        </a>
+      </li>
+      <% }) %>
+      <li data-jump-empty class="hidden px-3 py-2 text-sm text-gray-400">Nothing matches.</li>
+    </ul>
+  </div>
+
+<% } else if (_part === 'utility') { %>
+  <a href="/help" class="<%= _iconBtn %> <%= _nav.help.active ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30' : '' %>" aria-label="Help" title="Help" <%- _nav.help.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="help">
+    <i class="bi bi-question-circle text-lg" aria-hidden="true"></i>
+  </a>
+  <button id="theme-toggle" type="button" aria-label="Toggle light or dark theme" title="Theme" class="<%= _iconBtn %> cursor-pointer">
+    <i id="theme-icon" class="bi bi-moon-stars text-lg" aria-hidden="true"></i>
+  </button>
+  <% if (_nav.account) { %>
+  <a href="<%= _nav.account.href %>" class="inline-flex items-center gap-2 pl-1 pr-1 sm:pr-2 py-1 rounded-full border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-500 transition shrink-0 <%= _nav.account.active ? 'ring-2 ring-green-500' : '' %>" aria-label="Your account" title="Your account" <%- _nav.account.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="<%= _nav.account.label.toLowerCase() %>">
+    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-600 text-white text-xs font-semibold" aria-hidden="true"><%= String(locals.firstName || 'U').charAt(0).toUpperCase() %></span>
+    <span class="hidden sm:inline text-sm text-gray-700 dark:text-gray-200 max-w-[8rem] truncate"><%= locals.firstName || _nav.account.label %></span>
+  </a>
+  <% } %>
+<% } %>

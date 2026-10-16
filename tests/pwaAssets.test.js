@@ -125,20 +125,28 @@ describe('third-party browser assets are self-hosted', () => {
 });
 
 describe('mobile navigation', () => {
+  // The default header (nav style 'tabs') lives in partials/nav/tabs.ejs;
+  // layout.ejs includes whichever style the person chose (navViews.test.js
+  // covers the other four).
+  const tabs = read('mongoose/views/tailwindcss/partials/nav/tabs.ejs');
+
   it('keeps nav labels visible at every breakpoint', () => {
     // Labels were `hidden sm:inline`, leaving phone users ~11 unlabelled icons.
-    const nav = layout.slice(layout.indexOf('<nav'), layout.indexOf('</nav>'));
+    const nav = tabs.slice(tabs.indexOf('<nav'), tabs.indexOf('</nav>'));
     assert.ok(!/hidden sm:inline/.test(nav), 'nav labels must not be hidden on small screens');
   });
 
   it('gives icon-only controls an accessible name', () => {
-    assert.match(layout, /aria-label="Main navigation"/);
-    assert.match(layout, /aria-label="Toggle light or dark theme"/);
-    assert.match(layout, /aria-hidden="true"/);
+    assert.match(tabs, /aria-label="Main navigation"/);
+    assert.match(tabs, /aria-label="Toggle light or dark theme"/);
+    assert.match(tabs, /aria-hidden="true"/);
+    assert.match(layout, /aria-label="Toggle light or dark theme"/, 'the signed-out bottom bar too');
   });
 
   it('emits aria-current unescaped so it is a real attribute', () => {
     // <%= %> would escape the quotes into &#34;, producing a dead attribute.
-    assert.match(layout, /<%-\s*navActive\([^)]*\)\s*\?\s*'aria-current="page"'/);
+    assert.match(tabs, /<%-\s*_nav\.home\.active\s*\?\s*'aria-current="page"'/);
+    assert.match(tabs, /<%-\s*item\.active\s*\?\s*'aria-current="page"'/);
+    assert.ok(!/<%=\s*[^%]*aria-current/.test(tabs), 'never through the escaping tag');
   });
 });

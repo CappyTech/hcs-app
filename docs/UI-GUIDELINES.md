@@ -343,6 +343,7 @@ The brand accent is **green**. Use it for primary actions, active states, and po
 | `partials/form-create` | Generic create form shell |
 | `partials/form-update` | Generic update form shell |
 | `partials/listTable` | Generic paginated list table |
+| `partials/nav/*` | The five header styles (`tabs`, `grouped`, `two-tier`, `command`, `sidebar`); `layout.ejs` includes the one in `res.locals.navStyle`. They draw from `res.locals.nav` (`services/navigationService.js`), never from `departmentsConfig` directly. Dropdowns use the `navMenu` Alpine component, Jump to uses `navJump` (both in `public/js/alpine-components.js`). |
 
 ---
 

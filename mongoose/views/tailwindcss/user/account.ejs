@@ -152,6 +152,70 @@
   </div>
 </div>
 
+<!-- Navigation style (navPreferenceController). Applies on the next page load. -->
+<% const _navPref = locals.navPreference || { style: 'tabs', pinned: null, source: 'default' }; %>
+<% const _navStyles = locals.navStyles || []; %>
+<% const _pinnable = (locals.nav && locals.nav.items ? locals.nav.items : []).filter((i) => i.special !== 'create' && i.slug !== 'user'); %>
+<% const _pinnedNow = Array.isArray(_navPref.pinned) ? _navPref.pinned : ['human-resources', 'attendance', 'documents', 'finance', 'construction-industry-scheme']; %>
+<div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden mt-6" id="navigation-style">
+  <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+  <div class="p-6 sm:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Navigation</h1>
+      <% if (_navPref.source === 'user') { %>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">Your choice</span>
+      <% } else { %>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700"><%= _navPref.source === 'company' ? 'Company default' : 'Standard' %></span>
+      <% } %>
+    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">Choose how the header looks for you. It changes on the next page you open. The company default is <strong><%= (_navStyles.find((s) => s.value === locals.navCompanyDefault) || {}).label || 'Icon tabs' %></strong>.</p>
+
+    <form action="/user/account/navigation" method="POST" class="space-y-5">
+      <%- include('../partials/csrfHidden.ejs') %>
+      <fieldset>
+        <legend class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Style</legend>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <% _navStyles.forEach((s) => { %>
+          <label class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition <%= _navPref.style === s.value ? 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800' %>">
+            <input type="radio" name="navStyle" value="<%= s.value %>" <%= _navPref.style === s.value ? 'checked' : '' %> class="mt-1 text-green-600 focus:ring-green-500">
+            <span>
+              <span class="block text-sm font-medium text-gray-900 dark:text-gray-100"><%= s.label %></span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400"><%= s.description %></span>
+            </span>
+          </label>
+          <% }) %>
+        </div>
+      </fieldset>
+
+      <% if (_pinnable.length) { %>
+      <fieldset>
+        <legend class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Pinned to the command rail</legend>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Only the Command rail style uses these. Everything else is under its More menu.</p>
+        <div class="flex flex-wrap gap-2">
+          <% _pinnable.forEach((item) => { %>
+          <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+            <input type="checkbox" name="pinned" value="<%= item.slug %>" <%= _pinnedNow.includes(item.slug) ? 'checked' : '' %> class="rounded text-green-600 focus:ring-green-500">
+            <i class="bi <%= item.icon %>" aria-hidden="true"></i> <%= item.label %>
+          </label>
+          <% }) %>
+        </div>
+      </fieldset>
+      <% } %>
+
+      <div class="flex flex-wrap justify-end gap-2">
+        <% if (_navPref.source === 'user') { %>
+        <button type="submit" formaction="/user/account/navigation/reset" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">
+          Use the company default
+        </button>
+        <% } %>
+        <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition shadow-sm">
+          Save navigation
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Active Sessions -->
 <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden mt-6">
   <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>

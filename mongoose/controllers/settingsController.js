@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import emailService from '../../services/emailService.js';
 import auditLog from '../../services/auditLogService.js';
 import hibpService from '../../services/hibpService.js';
+import navPreferenceService from '../services/navPreferenceService.js';
 import { validationResult, body } from 'express-validator';
 
 export const getProfilePage = async (req, res, next) => {
@@ -208,6 +209,11 @@ export const getAccountPage = async (req, res, next) => {
       sessions: activeSessions,
       currentSessionId: currentSid,
       twoFARequired: rolesRequiring2FA().includes(user.role),
+      // Navigation style section: the five styles, this person's current one
+      // and where it came from, plus what they may pin to the command rail.
+      navStyles: navPreferenceService.STYLES,
+      navPreference: await navPreferenceService.resolve(user),
+      navCompanyDefault: navPreferenceService.companyDefault(),
     });
   } catch (error) {
     logger.error(

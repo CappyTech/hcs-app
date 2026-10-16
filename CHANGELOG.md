@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.75.0] - 2026-10-17
+
+### Added
+- Five navigation styles, chosen per person. **Icon tabs** (the header as it was), **Grouped menus** (brand left; Home and People / Money / Work / System dropdowns; Create, Jump to, Help, theme and the account avatar right), **Two-tier** (a slim utility bar over a horizontally scrolling row of area tabs with a green underline), **Command rail** (pinned icon+label chips, a More menu grouped by area, a centred Jump to box with the Ctrl+K hint) and **Sidebar** (a slim header with breadcrumb plus a 232px left sidebar grouped People / Money / Work with a More fold for System; a drawer below the lg breakpoint). `mongoose/views/tailwindcss/partials/nav/`.
+- Account Settings → Navigation: a radio per style with a one-line description, the list of areas pinned to the command rail, and a "Use the company default" button. Saving applies on the next page load (`POST /user/account/navigation`, `INTERNAL.navPreference`, `mongoose/services/navPreferenceService.js`).
+- Appearance group at `/admin/config` with `NAV_STYLE_DEFAULT`, the style everyone sees until they choose their own. Resolution is own choice → company default → Icon tabs.
+- `services/navigationService.js` builds, once per request, the ordered list of areas this person may open (the same `canDept` and `showInNav` rules as before), their groups, the active item and the pinned set; every style draws from it. Each entry in `mongoose/config/departmentsConfig.js` now carries a `group` (`people | money | work | system`).
+- "Jump to" in the grouped, two-tier, command and sidebar headers filters the navigation client-side (no search backend); Ctrl+K or Cmd+K focuses it, Enter opens the first match. Menus and the sidebar drawer are the `navMenu` Alpine component: `aria-expanded`, Escape closes and refocuses the trigger, arrow keys move between entries, clicking outside closes.
+
+### Changed
+- The header moved out of `layout.ejs` into `partials/nav/tabs.ejs`. Its markup is unchanged: a test renders the old inline block and the new partial for every role and path and asserts they are identical, so nobody sees a difference until they opt in.
+
 ## [6.74.0] - 2026-10-17
 
 ### Added

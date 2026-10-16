@@ -1,0 +1,44 @@
+<%#
+  Nav style 'tabs': the centred row of icon-over-label tabs. This is the header
+  everyone had before styles existed and it must stay pixel-identical to it:
+  same markup, same classes, same order (Home, departments, Help, Theme). It
+  draws from res.locals.nav (navigationService) instead of departmentsConfig
+  directly, which is the only change.
+%>
+<% const _nav = locals.nav || { items: [], home: { href: '/', active: false }, help: { href: '/help', active: false } }; %>
+<nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden" aria-label="Main navigation" data-nav-style="tabs">
+  <div class="max-w-7xl mx-auto flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 overflow-x-auto">
+    <% const _navCls = (active) => active
+         ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 font-medium'
+         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400'; %>
+    <%# Labels stay visible at every breakpoint. They used to be hidden below the sm
+        breakpoint, which left phone users — the on-site staff who most need this —
+        with ~11 unlabelled icons and no way to tell CIS from Payroll from Finance.
+        The row already scrolls horizontally, so the labels cost nothing but width. %>
+    <% const _navItem = 'inline-flex flex-col items-center gap-0.5 px-1.5 sm:px-2 py-1 rounded-lg text-[10px] sm:text-xs leading-tight whitespace-nowrap shrink-0 transition'; %>
+    <a href="/" class="<%= _navItem %> <%= _navCls(_nav.home.active) %>" <%- _nav.home.active ? 'aria-current="page"' : '' %>>
+      <i class="bi bi-house text-base" aria-hidden="true"></i>
+      <span>Home</span>
+    </a>
+    <% _nav.items.forEach((item) => {
+         // Create gets the accented green style; everything else the standard nav style
+         const cls = item.special === 'create'
+           ? 'font-medium ' + (item.active
+               ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30'
+               : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30')
+           : _navCls(item.active); %>
+    <a href="<%= item.href %>" class="<%= _navItem %> <%= cls %>" <%- item.active ? 'aria-current="page"' : '' %>>
+      <i class="bi <%= item.icon %> text-base" aria-hidden="true"></i>
+      <span><%= item.label %></span>
+    </a>
+    <% }) %>
+    <a href="/help" class="<%= _navItem %> <%= _navCls(_nav.help.active) %>" <%- _nav.help.active ? 'aria-current="page"' : '' %>>
+      <i class="bi bi-question-circle text-base" aria-hidden="true"></i>
+      <span>Help</span>
+    </a>
+    <button id="theme-toggle" type="button" aria-label="Toggle light or dark theme" class="<%= _navItem %> text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 cursor-pointer">
+      <i id="theme-icon" class="bi bi-moon-stars text-base" aria-hidden="true"></i>
+      <span>Theme</span>
+    </button>
+  </div>
+</nav>
