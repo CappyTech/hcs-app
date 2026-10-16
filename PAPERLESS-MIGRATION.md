@@ -536,7 +536,7 @@ Everything needed to build is in this document: IDs, field names, templates and 
 3. **John's email.** If it's an approval, replace it with an approve/reject action in hcs-app. If it's just for information, use a daily digest.
 4. **Correspondents.** Clean up the 902 correspondents with no documents, or link Paperless correspondents to KashFlow supplier IDs.
 5. **Remittance advices.** Define a process, such as matching them to sales invoices.
-6. **Supplier statement reconciliation.** Compare the statement against KashFlow purchases for that supplier.
+6. **Supplier statement reconciliation.** Built in 6.71.0 (`statementReadingService.js`): the statement is read off the OCR text and set against that supplier's purchases, shown on the entry screen and summarised in Statements to Review. Still to do: a reviewer outcome (reconciled / discrepancy raised) with a follow-up task, per-supplier rules such as prepaid accounts, and emailing Bev only when there is a difference.
 
 ---
 

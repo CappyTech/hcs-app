@@ -10,6 +10,7 @@
  *   POST /paperless/ocr/:paperlessId/reopen       admin: back to Needs Data Entry
  *   POST /paperless/ocr/:paperlessId/resend-invoice  re-send the invoice email (H6)
  *   POST /paperless/ocr/:paperlessId/reviewed     mark a supplier statement reviewed (H6)
+ *   POST /paperless/ocr/:paperlessId/statement-check  set a supplier statement against KashFlow again
  *   GET  /paperless/ocr/:paperlessId/file         the PDF, streamed from Paperless
  */
 
@@ -21,6 +22,7 @@ import { actorFromUser, notForEntryMessage } from '../services/paperless/documen
 import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
 import notifySvc from '../services/paperless/documentNotifyService.js';
 import readingSvc from '../services/paperless/documentReadingService.js';
+import statementSvc from '../services/paperless/statementReadingService.js';
 import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import logger from '../../services/loggerService.js';
@@ -85,6 +87,11 @@ export const getEntry = async (req, res, next) => {
     // Read it on the server too, once, for the queue and for learning the supplier's layout
     if (entry.entryKind(doc) === 'invoice' && (!doc.reading || doc.reading.version < readingSvc.READER_VERSION)) {
       readingSvc.readSoon(id).catch(() => {});
+    }
+    // A statement is set against KashFlow from its OCR text, which is quick, so it's done before the page shows
+    if (entry.entryKind(doc) === 'statement' && statementSvc.needsReading(doc) && !doc.deletedInPaperlessAt) {
+      const statement = await statementSvc.readStatementSoon(id);
+      if (statement) doc = { ...doc, statement };
     }
     await render(req, res, doc, { extraLines: req.query.extraLines === '1' ? 1 : 0 });
   } catch (err) {
@@ -239,6 +246,22 @@ export const postResendInvoice = async (req, res, next) => {
   }
 };
 
+export const postStatementCheck = async (req, res, next) => {
+  try {
+    const id = idParam(req);
+    if (!id) return notFound(res);
+    await mdb.connect();
+    const statement = await statementSvc.readStatement(id);
+    if (!statement) req.flash('error', 'Only supplier statements can be set against KashFlow.');
+    else if (statement.error) req.flash('error', `Couldn't read the statement: ${statement.error}`);
+    else req.flash('success', `Set against KashFlow: ${statement.summaryText || 'done'}.`);
+    return res.redirect(entryUrl(id));
+  } catch (err) {
+    logger.error(`[documentEntry] statement-check ${req.params.paperlessId}: ${err.message}`);
+    next(err);
+  }
+};
+
 export const postReviewed = async (req, res, next) => {
   try {
     const id = idParam(req);
@@ -290,4 +313,4 @@ export function makeGetFile(deps = {}) {
 
 export const getFile = makeGetFile();
 
-export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendInvoice, postReviewed, getFile, makeGetFile };
+export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendInvoice, postReviewed, postStatementCheck, getFile, makeGetFile };

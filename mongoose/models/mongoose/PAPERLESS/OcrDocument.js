@@ -151,6 +151,12 @@ const OcrDocumentSchema = new mongoose.Schema({
   // corrected, filled (nothing read, typed by hand), missed (read, left blank)
   readingOutcome:           { type: mongoose.Schema.Types.Mixed, default: undefined },
 
+  // ── A supplier statement set against KashFlow (statementReadingService) ──
+  // { version, at, hasText, supplier, header, lines, lineCount, unread,
+  //   purchaseCount, reconciliation: { period, matched, onStatementOnly,
+  //   inKashflowOnly, payments, balance, summary }, summaryText, error }
+  statement:                { type: mongoose.Schema.Types.Mixed, default: undefined },
+
   // ── Does it look like its type? (documentTypeCheck) ──
   // { version, at, concern: {code, message} | null, open, confirmed: {code, at, by} | null }.
   // `open` puts it in the Check the type queue.

@@ -140,7 +140,7 @@ export async function transition(OcrDocument, paperlessId, action, actor, opts =
  * Mark a supplier statement reviewed (PB-10). Only the first call changes
  * anything; `firstTime` tells the caller whether this call did it.
  */
-export async function markStatementReviewed(OcrDocument, paperlessId, actor, { now = new Date() } = {}) {
+export async function markStatementReviewed(OcrDocument, paperlessId, actor, { now = new Date(), note = null } = {}) {
   const doc = await OcrDocument.findOne({ paperlessId }).select('documentType statementReviewed').lean();
   if (!doc) return { ok: false, reason: 'not-found', message: 'Document not found.' };
   if (!isDocumentType(doc.documentType, 'supplierStatement')) {
@@ -151,7 +151,7 @@ export async function markStatementReviewed(OcrDocument, paperlessId, actor, { n
     { paperlessId, statementReviewed: { $ne: true } },
     {
       $set: { statementReviewed: true, statementReviewedChanged: { at: now, by } },
-      $push: { processingHistory: { field: 'statementReviewed', from: false, to: true, action: 'mark_reviewed', at: now, by, note: null } },
+      $push: { processingHistory: { field: 'statementReviewed', from: false, to: true, action: 'mark_reviewed', at: now, by, note } },
     },
     { new: true },
   ).lean();

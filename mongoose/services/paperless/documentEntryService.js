@@ -466,10 +466,20 @@ export async function resendInvoice(OcrDocument, paperlessId, actor, deps = {}) 
  */
 export async function markReviewed(OcrDocument, paperlessId, actor, deps = {}) {
   const d = { ...defaultDeps(), ...deps };
-  const res = await markStatementReviewed(OcrDocument, paperlessId, actor);
+  // What the reviewer saw against KashFlow goes into the history with the mark
+  const current = await OcrDocument.findOne({ paperlessId }).select('statement.summaryText statement.at').lean();
+  const note = reviewNote(current?.statement);
+  const res = await markStatementReviewed(OcrDocument, paperlessId, actor, { note });
   if (!res.ok) return res;
   const notification = res.firstTime ? await d.notify('statement', paperlessId, { actor }) : null;
   return { ...res, notification };
+}
+
+/** The history note for a mark reviewed: how the statement stood against KashFlow at the time. */
+export function reviewNote(statement) {
+  if (!statement?.summaryText) return null;
+  const when = statement.at ? ` (checked ${new Date(statement.at).toISOString().slice(0, 10)})` : '';
+  return `Against KashFlow: ${statement.summaryText}${when}`;
 }
 
 /**
@@ -562,6 +572,7 @@ export default {
   reopenEntry,
   resendInvoice,
   markReviewed,
+  reviewNote,
   recordSentToKashflow,
   repairUnmarkedSends,
   recordUnlinked,

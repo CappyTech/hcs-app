@@ -52,6 +52,7 @@ router.post("/paperless/ocr/:paperlessId/not-for-kashflow", ...paperlessGuard, e
 router.post("/paperless/ocr/:paperlessId/reopen", ...paperlessGuard, entryCtrl.postReopen);
 router.post("/paperless/ocr/:paperlessId/resend-invoice", ...paperlessGuard, entryCtrl.postResendInvoice);
 router.post("/paperless/ocr/:paperlessId/reviewed", ...paperlessGuard, entryCtrl.postReviewed);
+router.post("/paperless/ocr/:paperlessId/statement-check", ...paperlessGuard, entryCtrl.postStatementCheck);
 router.post("/paperless/ocr/:paperlessId/type", ...paperlessGuard, typeCtrl.postType);
 router.post("/paperless/ocr/:paperlessId/type-confirmed", ...paperlessGuard, typeCtrl.postTypeConfirmed);
 router.get("/paperless/ocr/:paperlessId/file", ...paperlessGuard, entryCtrl.getFile);

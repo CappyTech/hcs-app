@@ -2,7 +2,7 @@
  * An in-memory stand-in for a Mongoose model, enough for services that use
  * find/findOne (select/sort/limit/lean), updateOne (upsert, $set/$inc/$unset),
  * deleteOne and countDocuments with plain filters: equality, RegExp, $ne, $in,
- * $nin, $exists, $lt, $or and dotted paths.
+ * $nin, $exists, $lt, $or, $and and dotted paths.
  */
 const get = (doc, p) => p.split('.').reduce((v, k) => (v == null ? undefined : v[k]), doc);
 const set = (doc, p, val) => {
@@ -36,6 +36,7 @@ function test(value, cond) {
 export function matches(doc, filter = {}) {
   return Object.entries(filter).every(([k, cond]) => {
     if (k === '$or') return cond.some((f) => matches(doc, f));
+    if (k === '$and') return cond.every((f) => matches(doc, f));
     return test(get(doc, k), cond);
   });
 }
