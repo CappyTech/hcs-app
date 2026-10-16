@@ -67,7 +67,8 @@ describe('organisationService', () => {
         const src = fs.readFileSync(p, 'utf8')
           // Comments may explain history; what renders or is sent may not name anyone.
           .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/<%#[\s\S]*?%>/g, '');
-        if (/\bHeron\b|heroncs\.co\.uk|HeronCS|\bBev\b|\bJack\b/.test(src)) offending.push(p);
+        // Compare with forward slashes so the allowlist below also matches on Windows.
+        if (/\bHeron\b|heroncs\.co\.uk|HeronCS|\bBev\b|\bJack\b/.test(src)) offending.push(p.split(path.sep).join('/'));
       }
     };
     roots.forEach(walk);

@@ -12,6 +12,9 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ### Changed
 - `npm audit fix`: nodemon 3.1.14 and tailwindcss 3.4.19 (dev dependencies). The remaining `braces` advisory has no fixed release and only reaches dev tooling.
 
+### Fixed
+- The test that checks no view or service names the company now passes on Windows checkouts too; its allowlist was being compared against backslash paths.
+
 ## [6.71.0] - 2026-10-16
 
 ### Added
