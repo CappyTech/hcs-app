@@ -26,6 +26,7 @@ import __documentTypeCheck from './paperless/documentTypeCheck.js';
 import __documentNotifyService from './paperless/documentNotifyService.js';
 import __shadowReportService from './paperless/shadowReportService.js';
 import __documentReadingService from './paperless/documentReadingService.js';
+import __statementReadingService from './paperless/statementReadingService.js';
 import __mdbForJobs from './mongooseDatabaseService.js';
 import __documentEntryService from './paperless/documentEntryService.js';
 
@@ -154,6 +155,16 @@ function registerAll() {
     intervalMs: 15 * MINUTE,
     initialDelayMs: 2 * MINUTE,
     run: () => __documentReadingService.readMissing({ limit: 20 }),
+  });
+
+  scheduler.register('paperless-read-statements', {
+    description:
+      'Set supplier statements waiting for review against KashFlow: read the statement lines off the '
+      + "OCR text and match them to that supplier's purchases, so the queue shows what's missing on either "
+      + 'side. 20 at a time, newest first; also redoes readings from an older version of the reader.',
+    intervalMs: 15 * MINUTE,
+    initialDelayMs: 3 * MINUTE,
+    run: () => __statementReadingService.readMissing({ limit: 20 }),
   });
 
   scheduler.register('paperless-repair-unmarked-sends', {

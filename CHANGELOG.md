@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.71.0] - 2026-10-16
+
+### Added
+- Supplier statements are set against KashFlow. hcs-app reads the statement's lines (reference, date, amount), its period, closing balance and payments total off the OCR text, matches the lines to that supplier's purchases by reference and then by amount and date, and shows the result on the statement's entry screen: matched lines, lines on the statement with no purchase, purchases the statement leaves out, and the balance and payments on each side. "Check again" reruns it. Statements to Review shows a one-line summary per statement.
+- A statement is checked when it arrives, when its entry screen opens, and by a new `paperless-read-statements` job for anything still unread.
+- Marking a statement reviewed records how it stood against KashFlow in the document's history.
+
 ## [6.70.2] - 2026-10-12
 
 ### Changed

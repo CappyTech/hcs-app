@@ -81,7 +81,9 @@ export function unclassifiedFilters() {
 const LIST_FIELDS = 'paperlessId title correspondent documentType added created processingState excludedReason creditNote statementReviewed kashflowPurchaseNumber'
   // What the invoice reader found on the PDF (documentReadingService)
   + ' reading.fields.invoiceNumber.value reading.fields.invoiceTotal.value reading.hasText reading.score reading.lineCount reading.linesAddUp reading.error'
-  + ' typeCheck.concern typeCheck.open';
+  + ' typeCheck.concern typeCheck.open'
+  // The statement set against KashFlow (statementReadingService)
+  + ' statement.summaryText statement.error statement.reconciliation.summary.status';
 
 /** Queue orders: oldest first, or best read first (most found on the PDF) and oldest within that. */
 export const QUEUE_SORTS = {

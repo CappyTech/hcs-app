@@ -55,6 +55,7 @@ import { isDocumentType } from '../../config/paperlessTypesConfig.js';
 import { isInvoiceDocument, actorFromUser, transition, markStatementReviewed, setExcludedReason } from './documentStateService.js';
 import { notifySafely } from './documentNotifyService.js';
 import { readSoon } from './documentReadingService.js';
+import { readStatementSoon } from './statementReadingService.js';
 import { refreshTypeCheck } from './documentTypeCheck.js';
 import logger from '../../../services/loggerService.js';
 
@@ -362,6 +363,8 @@ export async function handleDocumentAdded(paperlessId, deps = {}) {
   logger.info(`[paperless-ingest] Document added: paperlessId=${paperlessId} classified=${classification.classified}${classification.state?.processingState ? ` state=${classification.state.processingState}` : ''}`);
   // Read the invoice's PDF in the background, so the queue shows what's on it
   if (classification.state?.processingState === 'awaiting_entry') (d.readSoon ?? readSoon)(paperlessId).catch(() => {});
+  // A supplier statement is set against KashFlow, so the queue shows how it stands (a no-op for any other type)
+  else if (!classification.state?.processingState) (d.readStatementSoon ?? readStatementSoon)(paperlessId).catch(() => {});
   return { paperlessId, ...classification };
 }
 
