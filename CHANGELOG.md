@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.73.1] - 2026-10-16
+
+### Fixed
+- CI builds failed with `toomanyrequests: Data limit exceeded` pulling the Node base image from public ECR (the mirror adopted in 6.66.0 after Docker Hub rate-limited the runners). The Dockerfile now pulls `node:24-alpine` from Google's Docker Hub mirror (`mirror.gcr.io`), which the workflow already uses for buildkit.
+
 ## [6.73.0] - 2026-10-16
 
 ### Added
