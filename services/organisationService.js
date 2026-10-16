@@ -31,6 +31,16 @@ export function companyAddress() {
   return str('COMPANY_ADDRESS');
 }
 
+/** Companies House registration number. Empty when unset. */
+export function companyNumber() {
+  return str('COMPANY_NUMBER');
+}
+
+/** VAT registration number. Empty when unset. */
+export function companyVatNumber() {
+  return str('COMPANY_VAT_NUMBER');
+}
+
 /** The contact address shown to users and on documents. Empty when unset. */
 export function supportEmail() {
   return str('SUPPORTEMAIL');
@@ -77,6 +87,8 @@ export function viewLocals() {
     companyName: str('COMPANY_NAME'),
     companyShortName: companyShortName(),
     companyAddress: companyAddress(),
+    companyNumber: companyNumber(),
+    companyVatNumber: companyVatNumber(),
     contactEmail: supportEmail(),
     websiteUrl: websiteUrl(),
     websiteHost: websiteHost(),
@@ -84,6 +96,6 @@ export function viewLocals() {
 }
 
 export default {
-  companyName, companyShortName, companyAddress, supportEmail, websiteUrl, websiteHost,
+  companyName, companyShortName, companyAddress, companyNumber, companyVatNumber, supportEmail, websiteUrl, websiteHost,
   documentsSenderName, notifyRecipientName, viewLocals,
 };

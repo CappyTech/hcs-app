@@ -1,4 +1,4 @@
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<% if (turnstileEnabled) { %><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script><% } %>
 
 <div class="max-w-2xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
@@ -51,10 +51,12 @@
         >
       </div>
 
-      <!-- Cloudflare Turnstile -->
+      <!-- Cloudflare Turnstile: only when both keys are configured and the bypass is off -->
+      <% if (turnstileEnabled) { %>
       <div>
         <div class="cf-turnstile" data-sitekey="<%= siteKey %>"></div>
       </div>
+      <% } %>
 
       <!-- Submit + Link to Log in -->
       <div class="flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 pt-6">

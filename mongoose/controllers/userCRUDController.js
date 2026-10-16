@@ -1,7 +1,6 @@
 import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
-import axios from 'axios';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import encryptionService from '../../services/encryptionService.js';
@@ -13,6 +12,7 @@ import microsoftSsoService from '../../services/microsoftSsoService.js';
 import hibpService from '../../services/hibpService.js';
 import totpService from '../../services/totpService.js';
 import passwordResetDraft from '../../services/passwordResetDraft.js';
+import turnstile from '../../services/turnstileService.js';
 import { allSessionCookieNames, sessionCookieName } from '../../services/cookieNameService.js';
 import { plainString } from '../../services/plainStringInput.js';
 import mongoose from 'mongoose';
@@ -72,7 +72,7 @@ function getSafeNext(raw) {
 export const renderRegistrationForm = (req, res, next) => {
   res.render(path.join("tailwindcss", "user", "register"), {
     title: "Register",
-    siteKey: process.env.TURNSTILE_SITE_KEY,
+    ...turnstile.viewLocals(),
   });
 };
 
@@ -82,24 +82,11 @@ export const registerUser = async (req, res, next) => {
     const token = req.body["cf-turnstile-response"];
     const ip = req.ip;
 
-    if (!token) {
-      logger.error("CAPTCHA verification failed (token missing).");
-      req.flash("error", "CAPTCHA verification failed (token missing).");
-      return res.redirect("/user/register");
-    }
-
-    const verifyResponse = await axios.post(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      new URLSearchParams({
-        secret: process.env.TURNSTILE_SECRET_KEY,
-        response: token,
-        remoteip: ip,
-      }),
-    );
-
-    if (!verifyResponse.data.success) {
-      logger.error("CAPTCHA verification failed.");
-      req.flash("error", "CAPTCHA verification failed.");
+    // Enforced only when Turnstile is configured (see turnstileService).
+    const captcha = await turnstile.verify(token, ip);
+    if (!captcha.ok) {
+      logger.error(`CAPTCHA verification failed (${captcha.reason}).`);
+      req.flash("error", captcha.reason === "missing" ? "CAPTCHA verification failed (token missing)." : "CAPTCHA verification failed.");
       return res.redirect("/user/register");
     }
 
@@ -175,8 +162,7 @@ export const renderLoginForm = (req, res) => {
   const next = getSafeNext(req.query?.next);
   res.render(path.join("tailwindcss", "user", "login"), {
     title: "Log In",
-    siteKey: process.env.TURNSTILE_SITE_KEY,
-    skipTurnstile: process.env.SKIP_TURNSTILE === "true",
+    ...turnstile.viewLocals(),
     msSsoEnabled: microsoftSsoService.isEnabled(),
     next,
   });
@@ -191,7 +177,6 @@ export const loginUser = async (req, res) => {
     const token = req.body["cf-turnstile-response"];
     const ip = getClientIp(req);
     const agent = req.useragent || {};
-    const skipCaptcha = process.env.SKIP_TURNSTILE === "true";
 
     logger.info(
       `[login attempt] ident=${maskIdentifier(usernameOrEmail)} isEmail=${String(usernameOrEmail || "").includes("@") ? "Y" : "N"} ` +
@@ -199,31 +184,18 @@ export const loginUser = async (req, res) => {
         `secure=${req.secure ? "Y" : "N"} proto=${req.protocol} ua=${agent.browser || "Unknown"}/${agent.os || "Unknown"}`,
     );
 
-    if (!skipCaptcha && !token) {
-      logger.info("Login rejected: CAPTCHA token missing");
-      req.flash("error", "CAPTCHA token missing.");
+    // The CAPTCHA is enforced only when Turnstile is configured; a fresh
+    // deployment has no keys yet and must still be able to log its first
+    // administrator in. SKIP_TURNSTILE=true remains the explicit dev bypass.
+    const captcha = await turnstile.verify(token, ip);
+    if (!captcha.ok) {
+      logger.info(`Login rejected: CAPTCHA ${captcha.reason === "missing" ? "token missing" : "verification failed"}`);
+      req.flash("error", captcha.reason === "missing" ? "CAPTCHA token missing." : "CAPTCHA verification failed.");
       return res.redirect(
         "/user/login" + (next ? "?next=" + encodeURIComponent(next) : ""),
       );
     }
-
-    if (!skipCaptcha) {
-      const verifyResponse = await axios.post(
-        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-        new URLSearchParams({
-          secret: process.env.TURNSTILE_SECRET_KEY,
-          response: token,
-          remoteip: ip,
-        }),
-      );
-      if (!verifyResponse.data.success) {
-        logger.info("Login rejected: CAPTCHA verification failed");
-        req.flash("error", "CAPTCHA verification failed.");
-        return res.redirect(
-          "/user/login" + (next ? "?next=" + encodeURIComponent(next) : ""),
-        );
-      }
-    } else {
+    if (captcha.reason === "bypassed") {
       logger.info("Login CAPTCHA bypass active (SKIP_TURNSTILE=true)");
     }
 

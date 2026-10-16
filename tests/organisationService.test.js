@@ -31,7 +31,7 @@ describe('organisationService', () => {
     assert.equal(org.documentsSenderName(), 'This company | Documents');
     assert.equal(org.notifyRecipientName('invoice'), 'recipient');
     assert.equal(org.notifyRecipientName('nonsense'), 'recipient');
-    assert.deepEqual(org.viewLocals(), { companyName: '', companyShortName: 'This company', companyAddress: '', contactEmail: '', websiteUrl: '', websiteHost: 'the public website' });
+    assert.deepEqual(org.viewLocals(), { companyName: '', companyShortName: 'This company', companyAddress: '', companyNumber: '', companyVatNumber: '', contactEmail: '', websiteUrl: '', websiteHost: 'the public website' });
   });
 
   it('reads the configured values; the short name defaults to the full name', () => {

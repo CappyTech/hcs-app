@@ -68,6 +68,8 @@ export const GROUPS = [
       { key: 'SUPPORTEMAIL', label: 'Contact email', type: 'email', help: 'Shown on the maintenance page, CIS print footers and automated email notices.' },
       { key: 'COMPANY_WEBSITE_URL', label: 'Website', type: 'text', help: 'The public website, e.g. https://www.example.com. Used for the footer link and the Website area\'s public URLs.' },
       { key: 'ONEDRIVE_URL', label: 'OneDrive URL', type: 'text', help: 'Where the Microsoft OneDrive dashboard tile links to. Blank hides the tile.' },
+      { key: 'COMPANY_NUMBER', label: 'Company registration number', type: 'text', help: 'Companies House number. Shown in the footer (linked to the Companies House register) and the privacy policy. Blank hides it.' },
+      { key: 'COMPANY_VAT_NUMBER', label: 'VAT registration number', type: 'text', help: 'Shown in the footer and the privacy policy. Blank hides it.' },
       { key: 'ICO_NUMBER', label: 'ICO registration number', type: 'text', help: 'Shown in the privacy policy.' },
       { key: 'INCORPORATION_YEAR', label: 'Incorporation year', type: 'number', help: 'First year of the copyright range in the footer.' },
       { key: 'BASE_URL', label: 'This app\'s public URL', type: 'text', help: 'Where users reach this app, e.g. https://app.example.com. Absolute links in emails and the Content-Security-Policy\'s own-origin entries derive from it. Seeded from the first-run page, or from the first signed-in request when blank.' },
@@ -225,6 +227,8 @@ export const GROUPS = [
     icon: 'bi-shield-lock-fill',
     description: 'Transport, cookie and brute-force settings. Several are read at startup.',
     keys: [
+      { key: 'TURNSTILE_SITE_KEY', label: 'Turnstile site key', type: 'text', help: 'Cloudflare Turnstile public key for the login and registration forms. The CAPTCHA is enforced only when both Turnstile keys are set; blank means no CAPTCHA.' },
+      { key: 'TURNSTILE_SECRET_KEY', label: 'Turnstile secret key', type: 'secret', help: 'Cloudflare Turnstile secret used to verify tokens server-side.' },
       { key: 'TRUST_EDGE_TLS', label: 'TLS terminates upstream', type: 'boolean', help: 'Treat requests as HTTPS when a reverse proxy terminates TLS and forwards over plain HTTP. Do not set where the app is reachable directly over HTTP.' },
       { key: 'ENABLE_HSTS', label: 'Enable HSTS', type: 'boolean', restart: true, help: 'Send Strict-Transport-Security. Read once when helmet is configured.' },
       { key: 'COOKIE_SECURE', label: 'Secure cookies', type: 'text', restart: true, help: 'true / false, or blank for auto (secure only when the request is HTTPS). Read once when the session middleware is built.' },

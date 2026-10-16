@@ -21,11 +21,14 @@
       <span class="whitespace-nowrap"><%= companyName %></span>
       <% } %>
     </div>
+    <% if (locals.companyVatNumber || locals.companyNumber) { %>
     <div>
       <small>
-        VAT: <a href="https://beta.companieshouse.gov.uk/company/09276951" class="text-green-600 hover:underline">252295994</a> Company: <a href="https://beta.companieshouse.gov.uk/company/09276951" class="text-green-600 hover:underline">09276951</a>
+        <% if (locals.companyVatNumber) { %>VAT: <span class="whitespace-nowrap"><%= companyVatNumber %></span><% } %>
+        <% if (locals.companyNumber) { %>Company: <a href="https://find-and-update.company-information.service.gov.uk/company/<%= encodeURIComponent(companyNumber) %>" class="text-green-600 hover:underline" rel="noopener"><%= companyNumber %></a><% } %>
       </small>
     </div>
+    <% } %>
     <div class="flex items-center space-x-2">
       <small>
         <a href="/legal/privacy-policy" class="hover:underline">Privacy</a>

@@ -50,8 +50,7 @@ Shared Mongoose schemas are published separately via [`@cappytech/hcs-schemas`](
 ```
 app.js                  # Entry point — two-phase boot, middleware chain, route mounting
 Dockerfile              # Multi-stage build (CSS builder → production image)
-docker-compose.yml      # Production stack (Tailscale + app)
-docker-compose.local.yml# Local stack (Tailscale + app + MongoDB)
+docker-compose.yml      # The whole stack (app + MongoDB); zero-config, same file locally and in production
 compose.env.example     # Template for runtime environment variables
 docker-entrypoint.sh    # Container entrypoint
 
@@ -203,33 +202,44 @@ npm run dev                # runs the server (nodemon) + Tailwind CSS watch conc
 
 The app listens on `PORT` (default `3000` locally). `SESSION_SECRET` and `ENCRYPTION_KEY` are optional (generated and kept by the app); if no Mongo connection is configured or reachable, it boots into the database wizard at `/setup`.
 
-### Option B — Local Docker stack (includes MongoDB)
+### Option B — Docker (the deployment template)
 
 ```bash
-docker compose -f docker-compose.local.yml up -d --build
+docker compose up -d
 ```
 
-This brings up Tailscale, the app, and a `mongo:8` container. The app is reachable at **http://localhost:3000**. `ENABLE_HSTS=false` and `COOKIE_SECURE=false` are set so plain HTTP works. On first run, open the app: it finds the bundled `mongodb` container on its own and `/setup` creates the first admin straight in the database. No file is written under `/app/config` and no restart is needed.
+Then open **http://localhost:3000**. That is the whole setup, locally and in production: [`docker-compose.yml`](docker-compose.yml) brings up the app and a `mongo:8` container, the app finds the bundled `mongodb` on its own, generates its encryption key (`./storage/.bootstrap/encryption.key`) and session secret (kept, encrypted, in Mongo), and `/setup` creates the first administrator and the company details straight in the database. Nothing is edited by hand, nothing is written under `/app/config`, and no restart is needed. Everything after that is Admin → Configuration.
+
+To run a locally built image instead of the CI one:
+
+```bash
+docker build --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) -t hcs-app:dev .
+APP_IMAGE=hcs-app APP_IMAGE_TAG=dev APP_PULL_POLICY=missing docker compose up -d
+```
 
 ---
 
 ## Production Deployment
 
-Production runs the published CI image from GitHub Container Registry, with all app traffic routed through Tailscale. TLS terminates at the VPS-level Caddy (configured in the hcs-docs repo), which forwards traffic through the FRP tunnel to this stack.
+Production is the same `docker compose up -d` with the published CI image from GitHub Container Registry. TLS terminates at the VPS-level Caddy (configured in the hcs-docs repo), which forwards traffic through the FRP tunnel to this stack. Optional overrides go in a `compose.env` next to the compose file (see `compose.env.example`) or in the shell:
 
-```bash
-cp compose.env.example compose.env   # set APP_IMAGE_TAG, secrets, domain, etc.
-docker network create hcs-net        # external network (one-time)
-docker compose up -d
-```
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `HCS_APP_PORT` | Host port the app is published on | `3000` |
+| `APP_IMAGE` / `APP_IMAGE_TAG` | Image to run | `ghcr.io/cappytech/hcs-app` / `ci-latest` |
+| `APP_PULL_POLICY` | `always` for the moving CI tag, `missing` for a local build | `always` |
+| `BUNDLED_MONGO` | `0` to skip the bundled MongoDB and use the one named by `MONGO_HOST` / `MONGO_URI` | `1` |
+| `TS_AUTHKEY` | Tailscale auth key; when set the container joins the tailnet itself (userspace networking) | unset |
+| `MAILSIEM_HOST_DIR` | Host folder of inbound-mail decisions, mounted read-only | `./mailsiem` |
+| `TRUST_EDGE_TLS` | `true` behind a TLS-terminating proxy (also settable at Admin → Configuration → Security) | unset |
 
-Key details ([`docker-compose.yml`](docker-compose.yml)):
+Key details:
 
 - **Image:** `ghcr.io/cappytech/hcs-app:${APP_IMAGE_TAG:-ci-latest}` with `pull_policy: always`.
-- **Networking:** the app shares the **Tailscale** container's network namespace, so anything proxying to it must target `tailscale:${PORT}` (not `hcs-app:${PORT}`).
 - **TLS:** terminated upstream by the VPS **Caddy** (see `caddy/Caddyfile` in the hcs-docs repo) — no proxy runs in this stack.
-- **Health:** Docker health check hits `GET /healthz` (loopback-only; reports readiness of all three DB connections).
-- **Persistence:** `./uploads` and `./logs` are bind-mounted; Tailscale keeps its own named volume.
+- **Health:** Docker health check hits `GET /healthz` (loopback-only; reports readiness of all three DB connections); the app waits for the bundled Mongo's own health check before starting.
+- **Persistence:** `./storage` (documents **and the generated encryption key** — back it up), `./uploads` and `./logs` are bind-mounted; the bundled database lives in the `mongo_data` named volume.
+- **External database:** `BUNDLED_MONGO=0` scales the bundled Mongo to zero; with no `MONGO_HOST` reachable the app boots into the database wizard at `/setup`, which saves the connection to `./storage/.bootstrap/bootstrap.json`.
 - **Build identity:** pass `--build-arg GIT_COMMIT=$(git rev-parse --short HEAD)` so the short SHA appears in the app footer.
 
 The container is built from a multi-stage [`Dockerfile`](Dockerfile): stage 1 compiles Tailwind CSS, stage 2 produces a slim `node:24-alpine` production image (`npm ci --omit=dev`, `dumb-init` as PID 1, `NODE_ENV=production`, listening on port `5000`).
