@@ -9,6 +9,9 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - The client IP used for rate limiting, account-lockout audit and request logs is the one Express resolves from the `trust proxy` setting. The `CF-Connecting-IP`, `X-Real-IP` and `Forwarded` headers are no longer read, so a caller can no longer pick their own rate-limit bucket.
 - Employees and subcontractors using the generic attendance create route can only file a record against their own linked employee or subcontractor, it is always saved as pending, and the pay rate, overtime hours and overtime rate are left for an admin to set, matching the self-service submit form. Naming someone else is refused with a 403.
 
+### Changed
+- `npm audit fix`: nodemon 3.1.14 and tailwindcss 3.4.19 (dev dependencies). The remaining `braces` advisory has no fixed release and only reaches dev tooling.
+
 ## [6.71.0] - 2026-10-16
 
 ### Added
