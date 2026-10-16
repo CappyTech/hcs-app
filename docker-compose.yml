@@ -18,7 +18,7 @@
 #
 # Variables (all optional):
 #   HCS_APP_PORT       host port to publish the app on            (default 3000)
-#   APP_IMAGE/_TAG     image to run                                (ghcr.io/cappytech/hcs-app:ci-latest)
+#   APP_IMAGE/_TAG     image to run                                (ghcr.io/cappytech/hcs-app:latest, what CI publishes on master)
 #   APP_PULL_POLICY    "always" (default) or "missing" for a locally built image
 #   BUNDLED_MONGO      1 to run the bundled MongoDB, 0 to use an external one
 #                      named by MONGO_HOST/MONGO_URI in compose.env (default 1)
@@ -32,7 +32,7 @@
 
 services:
   hcs-app:
-    image: ${APP_IMAGE:-ghcr.io/cappytech/hcs-app}:${APP_IMAGE_TAG:-ci-latest}
+    image: ${APP_IMAGE:-ghcr.io/cappytech/hcs-app}:${APP_IMAGE_TAG:-latest}
     # "always" follows the moving CI tag; "missing" runs a locally built image.
     pull_policy: ${APP_PULL_POLICY:-always}
     container_name: hcs-app

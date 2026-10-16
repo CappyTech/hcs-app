@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.73.2] - 2026-10-16
+
+### Fixed
+- The compose file defaulted to the image tag `ci-latest`, which CI stopped publishing some time ago: a pure-defaults `docker compose up` pulled a stale build with the old wizard and never became healthy. The default is now `latest`, the tag the workflow pushes on every master build (verified by pulling it and running the first-run flow with no variables set).
+
 ## [6.73.1] - 2026-10-16
 
 ### Fixed

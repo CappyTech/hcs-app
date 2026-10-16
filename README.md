@@ -226,7 +226,7 @@ Production is the same `docker compose up -d` with the published CI image from G
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `HCS_APP_PORT` | Host port the app is published on | `3000` |
-| `APP_IMAGE` / `APP_IMAGE_TAG` | Image to run | `ghcr.io/cappytech/hcs-app` / `ci-latest` |
+| `APP_IMAGE` / `APP_IMAGE_TAG` | Image to run | `ghcr.io/cappytech/hcs-app` / `latest` |
 | `APP_PULL_POLICY` | `always` for the moving CI tag, `missing` for a local build | `always` |
 | `BUNDLED_MONGO` | `0` to skip the bundled MongoDB and use the one named by `MONGO_HOST` / `MONGO_URI` | `1` |
 | `TS_AUTHKEY` | Tailscale auth key; when set the container joins the tailnet itself (userspace networking) | unset |
@@ -235,7 +235,7 @@ Production is the same `docker compose up -d` with the published CI image from G
 
 Key details:
 
-- **Image:** `ghcr.io/cappytech/hcs-app:${APP_IMAGE_TAG:-ci-latest}` with `pull_policy: always`.
+- **Image:** `ghcr.io/cappytech/hcs-app:${APP_IMAGE_TAG:-latest}` with `pull_policy: always`.
 - **TLS:** terminated upstream by the VPS **Caddy** (see `caddy/Caddyfile` in the hcs-docs repo) — no proxy runs in this stack.
 - **Health:** Docker health check hits `GET /healthz` (loopback-only; reports readiness of all three DB connections); the app waits for the bundled Mongo's own health check before starting.
 - **Persistence:** `./storage` (documents **and the generated encryption key** — back it up), `./uploads` and `./logs` are bind-mounted; the bundled database lives in the `mongo_data` named volume.
