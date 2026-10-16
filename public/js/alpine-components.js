@@ -128,16 +128,17 @@ document.addEventListener('alpine:init', function () {
   });
 
   /**
-   * navJump – the "Jump to" box in the navigation: filters the nav's own links
-   * client-side as you type (no server round-trip), Enter opens the first
-   * match, Escape clears, Ctrl+K (or Cmd+K) focuses the box from anywhere.
-   * Usage:  <div x-data="navJump">
+   * navJump – the search box in the navigation. The box is a GET form to
+   * /search, so Enter runs the real search; on top of that this filters the
+   * nav's own links client-side as you type and shows them as suggestions.
+   * Escape clears, Ctrl+K (or Cmd+K) focuses the box from anywhere.
+   * Usage:  <form method="GET" action="/search" x-data="navJump">
    *           <input x-bind="input" role="combobox">
    *           <ul x-bind="results">
    *             <li data-jump-item data-jump-text="…" class="hidden"><a>…</a></li>…
    *             <li data-jump-empty class="hidden">Nothing matches.</li>
    *           </ul>
-   *         </div>
+   *         </form>
    */
   Alpine.data('navJump', function () {
     return {
@@ -188,10 +189,6 @@ document.addEventListener('alpine:init', function () {
         ['@input']: function (e) { this.q = e.target.value; this.filter(); },
         ['@focus']: function () { if (this.q) this.open = true; },
         ['@keydown.escape.prevent']: function (e) { this.clear(); e.target.blur(); },
-        ['@keydown.enter.prevent']: function () {
-          var first = this.visibleLinks()[0];
-          if (first) window.location.href = first.getAttribute('href');
-        },
         ['@keydown.arrow-down.prevent']: function () { this.move(1); },
         [':aria-expanded']: function () { return this.open ? 'true' : 'false'; }
       },

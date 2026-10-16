@@ -28,13 +28,14 @@
   <% } %>
 
 <% } else if (_part === 'jump') { %>
-  <%# Jump to: a client-side filter over the navigation (no search backend).
-      navJump (alpine-components.js) shows matching links as you type; Enter
-      opens the first one; Ctrl+K focuses the box from anywhere on the page. %>
-  <div x-data="navJump" class="relative <%= typeof jumpClass !== 'undefined' ? jumpClass : 'w-full max-w-sm' %>" data-nav-jump>
-    <label for="nav-jump" class="sr-only">Jump to an area</label>
+  <%# Jump to: a GET form to the database-wide search (GET /search?q=), so Enter
+      runs a real search. On top of that, navJump (alpine-components.js) filters
+      the navigation's own links as you type and shows them as suggestions;
+      Ctrl+K focuses the box from anywhere on the page. %>
+  <form method="GET" action="/search" role="search" x-data="navJump" class="relative <%= typeof jumpClass !== 'undefined' ? jumpClass : 'w-full max-w-sm' %>" data-nav-jump>
+    <label for="nav-jump" class="sr-only">Search, or jump to an area</label>
     <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true"></i>
-    <input id="nav-jump" type="search" x-bind="input" autocomplete="off" placeholder="Jump to…" role="combobox" aria-autocomplete="list" aria-controls="nav-jump-results" aria-expanded="false"
+    <input id="nav-jump" name="q" type="search" x-bind="input" autocomplete="off" placeholder="Search or jump to…" role="combobox" aria-autocomplete="list" aria-controls="nav-jump-results" aria-expanded="false"
       class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg pl-9 pr-14 py-1.5 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
     <kbd class="absolute right-2 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 text-[10px] font-mono text-gray-400 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 pointer-events-none" aria-hidden="true">Ctrl K</kbd>
     <ul id="nav-jump-results" role="listbox" x-bind="results" x-cloak
@@ -49,9 +50,9 @@
         </a>
       </li>
       <% }) %>
-      <li data-jump-empty class="hidden px-3 py-2 text-sm text-gray-400">Nothing matches.</li>
+      <li data-jump-empty class="hidden px-3 py-2 text-sm text-gray-400">No area matches. Press Enter to search everything.</li>
     </ul>
-  </div>
+  </form>
 
 <% } else if (_part === 'utility') { %>
   <a href="/help" class="<%= _iconBtn %> <%= _nav.help.active ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30' : '' %>" aria-label="Help" title="Help" <%- _nav.help.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="help">

@@ -184,6 +184,8 @@ describe('phone and desktop markup', () => {
     for (const style of ['grouped', 'two-tier', 'command', 'sidebar']) {
       const l = locals(style);
       const html = await renderPartial(style, l);
+      assert.match(html, /<form method="GET" action="\/search" role="search" x-data="navJump"/, `${style}: Jump to submits to the real search`);
+      assert.match(html, /<input id="nav-jump" name="q" type="search"/);
       const list = html.match(/<ul id="nav-jump-results"[\s\S]*?<\/ul>/)[0];
       for (const item of l.nav.items) assert.match(list, new RegExp(`data-jump-text="[^"]*${item.label.toLowerCase()}[^"]*"[\\s\\S]*?href="${item.href}"`), `${style}: ${item.label}`);
       assert.match(list, /data-jump-empty/);
