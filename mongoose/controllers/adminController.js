@@ -3,6 +3,7 @@ import mdb from '../services/mongooseDatabaseService.js';
 import ropa from '../config/ropaConfig.js';
 import jobScheduler from '../services/jobSchedulerService.js';
 import configService from '../../services/configService.js';
+import configStore from '../../services/configStoreService.js';
 import maintenanceService from '../../services/maintenanceService.js';
 
 const MODEL_LABEL = {
@@ -261,26 +262,27 @@ export const getMaintenance = (req, res) => {
     title: "Maintenance Mode",
     active: maintenanceService.isMaintenanceOn(),
     notice: configService.get("MAINTENANCE_NOTICE", ""),
-    envLocked: configService.isFromStartupEnv("MAINTENANCE"),
+    // The managed store wins over compose.env, so nothing locks this any more.
+    envLocked: false,
   });
 };
 
 /** POST /admin/maintenance — toggle maintenance mode / set the notice banner */
-export const postMaintenance = (req, res) => {
-  if (configService.isFromStartupEnv("MAINTENANCE")) {
-    req.flash("error", "MAINTENANCE is set by the deployment environment and cannot be changed here.");
-    return res.redirect("/admin/maintenance");
-  }
+export const postMaintenance = async (req, res) => {
   let active;
   if (req.body.action === "enable") active = true;
   else if (req.body.action === "disable") active = false;
   else active = maintenanceService.isMaintenanceOn(); // 'save' keeps current state
   const notice = String(req.body.notice || "").trim().slice(0, 300);
-  // Persist for restarts and sync the running process (bootstrap() copies
-  // file values into process.env at startup, so both must agree)
-  configService.save({ MAINTENANCE: active ? "true" : "false", MAINTENANCE_NOTICE: notice });
-  process.env.MAINTENANCE = active ? "true" : "false";
-  process.env.MAINTENANCE_NOTICE = notice;
+  // Persisted in the managed store (Mongo), which survives a redeploy and is
+  // applied to process.env on save — never to a file inside the image.
+  try {
+    await configStore.set("MAINTENANCE", active ? "true" : "false", req.user?.username || null);
+    await configStore.set("MAINTENANCE_NOTICE", notice, req.user?.username || null);
+  } catch (err) {
+    req.flash("error", "Could not save maintenance settings: " + err.message);
+    return res.redirect("/admin/maintenance");
+  }
   req.flash(
     "success",
     active

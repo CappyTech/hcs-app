@@ -1,14 +1,13 @@
-__dotenv.config();
-// Apply any values saved via the connections settings UI (app-config.json) for
-// keys not already set by the OS / docker-compose environment.
-__configService.bootstrap();
+// Must be the first import: it completes the environment (dotenv, legacy
+// app-config.json, the volume's bootstrap.json, and ENCRYPTION_KEY from or into
+// the key file) before any module that reads it at import is evaluated.
+import { encryptionKey as __encryptionKeyInfo } from './services/bootstrapEnv.js';
 import express from 'express';
 import path from 'path';
 import expressLayouts from 'express-ejs-layouts';
 import useragent from 'express-useragent';
 import cookieParser from 'cookie-parser';
 import logger from './services/loggerService.js';
-import crypto from 'crypto';
 import { readFileSync } from 'node:fs';
 
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
@@ -28,17 +27,15 @@ import authService from './services/authService.js';
 
 import mdb from './mongoose/services/mongooseDatabaseService.js';
 import configService from './services/configService.js';
-import __dotenv from 'dotenv';
-import __configService from './services/configService.js';
 import __child_process from 'child_process';
 import http from 'http';
 import maintenance from './services/maintenanceService.js';
 import __devDbRoutes from './mongoose/routes/devDbRoutes.js';
 import __requestBlocklistService from './services/requestBlocklistService.js';
-import __cookie_parser from 'cookie-parser';
-import session from 'express-session';
-import __setupRoutes from './mongoose/routes/setupRoutes.js';
-import bcrypt from 'bcrypt';
+import createSetupRouter from './mongoose/routes/setupRoutes.js';
+import bootstrapSecrets from './services/bootstrapSecretsService.js';
+import firstRunService from './services/firstRunService.js';
+import __firstRunRoutes from './mongoose/routes/firstRunRoutes.js';
 import __payrollTaxRatesSeedService from './mongoose/services/payrollTaxRatesSeedService.js';
 import __emailTypesSeedService from './mongoose/services/emailTypesSeedService.js';
 import __configValidatorService from './mongoose/services/configValidatorService.js';
@@ -273,34 +270,29 @@ const main = async () => {
   // Early request blocklist for common scanner/probe paths
   app.use(__requestBlocklistService);
 
-  // ── First-run setup wizard ──────────────────────────────────────────────────
-  // Only active when neither env vars nor app-config.json supply the minimum
-  // required config (MONGO_URI/MONGO_HOST, SESSION_SECRET, ENCRYPTION_KEY).
-  // Existing deployments with env vars set skip this entirely.
-  if (!configService.isConfigured()) {
-    logger.warn('[startup] Application is not configured — mounting setup wizard at /setup');
-    const cookieParser = __cookie_parser;
-    // Minimal in-memory session for wizard state (never persisted)
-    app.use(cookieParser());
-    app.use(session({
-      secret: 'setup-wizard-temporary-secret',
-      resave: false,
-      saveUninitialized: true,
-      cookie: { httpOnly: true, sameSite: 'lax' },
-    }));
-    app.use('/setup', __setupRoutes);
-    app.get('/', (req, res) => res.redirect('/setup'));
-    app.use((req, res) => res.redirect('/setup'));
-    // Start the HTTP server so the process stays alive to serve the wizard
-    const server = http.createServer(app);
-    const port = Number(process.env.PORT) || 3000;
-    const host = process.env.HOST || '0.0.0.0';
-    server.listen(port, host, () => {
-      logger.info(`[startup] Setup wizard listening on ${host}:${port} — visit /setup to configure`);
-    });
-    // Do not proceed to Phase 2 — wizard completion restarts the process
-    return;
+  // ── Database wizard (only when nothing names a reachable MongoDB) ──────────
+  // Everything else the app needs it writes for itself: ENCRYPTION_KEY is in
+  // the key file on the storage volume (bootstrapEnv.js), SESSION_SECRET is
+  // generated into Mongo once connected, and the first admin and company
+  // details are collected by the first-run page inside the full app. The one
+  // thing it cannot invent is where the database is. With no MONGO_URI /
+  // MONGO_HOST anywhere, the hosts a bundled stack provides are probed first;
+  // only if none answers does the wizard appear — and when it saves, startup
+  // continues in this process. No restart, nothing under /app/config.
+  let wizardActive = false;
+  if (!bootstrapSecrets.hasMongoConfig()) {
+    const found = await bootstrapSecrets.probeDefaultMongoHosts();
+    if (!found) {
+      wizardActive = true;
+      logger.warn('[startup] No database configured and none of the default hosts answer — mounting the database wizard at /setup');
+    }
   }
+  if (__encryptionKeyInfo.source !== 'env') {
+    logger.info(`[startup] ENCRYPTION_KEY source: ${__encryptionKeyInfo.source} (${__encryptionKeyInfo.file})`);
+  }
+
+  const wizardStack = express.Router();
+  app.use((req, res, next) => (wizardActive ? wizardStack(req, res, next) : next()));
 
   // ── App router: empty until Phase 2 populates it ───────────────────
   // All real middleware and routes are mounted here once MongoDB is ready.
@@ -326,23 +318,35 @@ const main = async () => {
   const host = process.env.HOST || '0.0.0.0';
 
   server.listen(port, host, () => {
-    logger.info(`[startup] Server listening on ${host}:${port} (waiting for MongoDB…)`);
+    logger.info(`[startup] Server listening on ${host}:${port}${wizardActive ? ' (database wizard)' : ' (waiting for MongoDB…)'}`);
   });
 
   // ── Phase 2: Connect to MongoDB and mount full app ──────────────────
+  // A function, because the database wizard calls it too — once it has saved
+  // a connection — so that path needs no restart either.
+  let phase2Started = false;
+  const mountFullApp = async () => {
+  if (phase2Started) return;
+  phase2Started = true;
   try {
     await mdb.connect();
     logger.info('[startup] MongoDB connected — mounting full application');
+
+    // SESSION_SECRET: from the environment when set, otherwise the one this
+    // deployment generated and keeps (encrypted) in INTERNAL.appconfigs.
+    {
+      const enc = (await import('./services/encryptionService.js')).default;
+      const { source } = await bootstrapSecrets.ensureSessionSecret(mdb.INTERNAL.appConfig, enc);
+      logger.info(`[startup] SESSION_SECRET source: ${source}`);
+    }
 
     // Managed configuration lives in Mongo, so it can only be read now. It is
     // applied to process.env here, before anything that reads configuration is
     // mounted — the ~14 keys read at module import are already past, which is
     // exactly what configRegistry marks `restart: true`.
-    {
-      const configStore = (await import('./services/configStoreService.js')).default;
-      await configStore.load();
-      configStore.logMigrationState();
-    }
+    const configStore = (await import('./services/configStoreService.js')).default;
+    await configStore.load();
+    configStore.logMigrationState();
 
     // Company changes to the overview hierarchy (overviewConfig) on top of the
     // code defaults. A failure leaves the defaults in place.
@@ -373,31 +377,6 @@ const main = async () => {
       if (renamed > 0) logger.info(`[migration] Renamed ${renamed} legacy notification kind row(s)`);
     } catch (migrationErr) {
       logger.error('[migration] Notification kind rename failed', { error: migrationErr.message });
-    }
-
-    // Bootstrap: create first admin from setup wizard credentials (app-config.json only)
-    try {
-      const bootstrap = configService.get('_bootstrapAdmin');
-      if (bootstrap) {
-        const parsed = typeof bootstrap === 'string' ? JSON.parse(bootstrap) : bootstrap;
-        const existingCount = await mdb.INTERNAL.user.countDocuments();
-        if (existingCount === 0 && parsed.username && parsed.password) {
-          const hashedPassword = await bcrypt.hash(parsed.password, 10);
-          await mdb.INTERNAL.user.create({
-            uuid: crypto.randomUUID(),
-            username: parsed.username,
-            email: parsed.email || '',
-            password: hashedPassword,
-            role: 'admin',
-            emailVerified: true,
-          });
-          logger.info(`[bootstrap] Created first admin user: ${parsed.username}`);
-        }
-        // Clear bootstrap credentials from the file regardless
-        configService.remove(['_bootstrapAdmin']);
-      }
-    } catch (bootstrapErr) {
-      logger.error('[bootstrap] Failed to create admin user: ' + bootstrapErr.message);
     }
 
     // Seed payroll tax rates for known tax years (insert-only — admin edits
@@ -461,12 +440,20 @@ const main = async () => {
     // body sanitiser, which must run after the body parsers.
     appRouter.use(xssSanitize);
     appRouter.use(__flashService);
+    // First run: while INTERNAL.user is empty every request goes to /setup,
+    // which creates the first admin and seeds the Organisation settings in the
+    // database. Sits before the auth guard (there is nobody to authenticate)
+    // and after session/CSRF/flash, which its form uses.
+    appRouter.use(firstRunService.firstRunGate(() => mdb.INTERNAL.user, __firstRunRoutes));
     // Drop any carried-over reset password the moment the browser navigates
     // outside the password reset flow. Mounted after the /resources static
     // handler so the reset page's own assets never look like leaving.
     appRouter.use(__passwordResetDraft.dropOnLeave);
     appRouter.use(authService.ensureAuthenticated);
     appRouter.use(authService.ensureRouteAccess);
+    // BASE_URL, if nobody has set it, is how the first authenticated user
+    // reached the app. CSP's own-origin entries derive from it.
+    appRouter.use(firstRunService.seedBaseUrl(configStore));
     // Bind the authenticated actor to async-local storage so the DB audit plugin
     // can attribute writes (must run after auth populates req.session.user).
     appRouter.use(__auditContextService.middleware);
@@ -583,13 +570,6 @@ const main = async () => {
     // Holiday block page
     appRouter.use(holidayController.checkHoliday);
 
-    // Encryption key dev hint
-    if (process.env.NODE_ENV === 'development' && !process.env.ENCRYPTION_KEY) {
-      const newKey = crypto.randomBytes(32).toString('hex');
-      const hex = Buffer.from(newKey, 'hex');
-      logger.info('Generated ENCRYPTION_KEY (hex): ' + hex.toString('hex'));
-    }
-
     // CRUD/list routes generate handlers by iterating mdb.REST/INTERNAL models,
     // so they must be imported after mdb.connect() — a static top-level import
     // would evaluate them against empty namespaces and register no routes.
@@ -665,6 +645,19 @@ const main = async () => {
     // Server keeps running; maintenanceService will show 503 for every request
     // because mdb connections remain in non-ready state.
   }
+  };
+
+  if (wizardActive) {
+    wizardStack.use('/setup', createSetupRouter(async () => {
+      wizardActive = false;
+      await mountFullApp();
+    }));
+    wizardStack.use((req, res) => res.redirect('/setup'));
+    logger.info('[startup] Database wizard ready at /setup — the app will continue in this process once a database is saved');
+    return;
+  }
+
+  await mountFullApp();
 };
 
 main();

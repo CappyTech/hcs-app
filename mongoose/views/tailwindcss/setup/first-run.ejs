@@ -1,0 +1,120 @@
+<%- include('./_header.ejs', { subtitle: 'First run — nothing to edit, nothing to restart' }) %>
+
+<% if (error) { %>
+  <div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-sm border border-red-200 dark:border-red-700">
+    <%= error %>
+  </div>
+<% } %>
+
+<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+  The database is connected and has no users yet. Create the first administrator and name the
+  company. Everything here is saved straight to the database and can be changed later under
+  <strong>Admin &rarr; Configuration</strong>.
+</p>
+
+<form action="/setup" method="POST" class="space-y-5" autocomplete="off">
+  <%- include('../partials/csrfHidden.ejs') %>
+
+  <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Administrator</h2>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+        Username <span class="text-red-500">*</span>
+      </label>
+      <input type="text" name="adminUsername" required minlength="3" maxlength="64"
+        pattern="[a-z0-9._-]+" placeholder="jane.smith" value="<%= values.adminUsername || '' %>"
+        autocomplete="username"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+      <p class="mt-1 text-xs text-gray-400">Lowercase, no spaces.</p>
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+        Email <span class="text-red-500">*</span>
+      </label>
+      <input type="email" name="adminEmail" required
+        placeholder="you@example.com" value="<%= values.adminEmail || '' %>"
+        autocomplete="email"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+        Password <span class="text-red-500">*</span>
+      </label>
+      <input type="password" name="adminPassword" required minlength="12"
+        autocomplete="new-password"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+      <p class="mt-1 text-xs text-gray-400">At least 12 characters.</p>
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+        Confirm password <span class="text-red-500">*</span>
+      </label>
+      <input type="password" name="adminPasswordConfirm" required minlength="12"
+        autocomplete="new-password"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+    </div>
+  </div>
+
+  <hr class="border-gray-200 dark:border-gray-700">
+
+  <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Organisation <span class="normal-case font-normal">(optional, editable later)</span></h2>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Company name</label>
+      <input type="text" name="companyName" placeholder="Example Construction LTD" value="<%= values.companyName || '' %>"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Short name</label>
+      <input type="text" name="companyShortName" placeholder="Example" value="<%= values.companyShortName || '' %>"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+    </div>
+  </div>
+
+  <div>
+    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Postal address</label>
+    <input type="text" name="companyAddress" placeholder="1 Example Street, Town, AB1 2CD" value="<%= values.companyAddress || '' %>"
+      class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="sm:col-span-2">
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Contact email</label>
+      <input type="email" name="supportEmail" placeholder="office@example.com" value="<%= values.supportEmail || '' %>"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Incorporated</label>
+      <input type="number" name="incorporationYear" min="1800" max="2100" placeholder="2015" value="<%= values.incorporationYear || '' %>"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Website</label>
+      <input type="text" name="companyWebsite" placeholder="https://www.example.com" value="<%= values.companyWebsite || '' %>"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">This app's public URL</label>
+      <input type="text" name="baseUrl" value="<%= values.baseUrl || suggestedBaseUrl || '' %>"
+        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
+      <p class="mt-1 text-xs text-gray-400">Pre-filled from how you reached this page. Used for links in emails and the security policy.</p>
+    </div>
+  </div>
+
+  <div class="pt-2 flex justify-end">
+    <button type="submit"
+      class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
+      Create administrator &amp; continue
+    </button>
+  </div>
+</form>
+
+<%- include('./_footer.ejs', { showDraftControls: false }) %>

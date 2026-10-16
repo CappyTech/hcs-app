@@ -83,8 +83,40 @@ function xssSanitize(req, _res, next) {
 
 const isDev = process.env.NODE_ENV === "development";
 
+/**
+ * The app's own public origin, from the managed BASE_URL — never a hard-coded
+ * hostname, because hcs-app is deployed per company. Read per request (via the
+ * directive functions below) so a BASE_URL saved at /admin/config, or seeded
+ * from the first authenticated request, takes effect without a restart.
+ * Returns null when BASE_URL is unset or not an http(s) URL.
+ */
+function appOrigin() {
+  const raw = (process.env.BASE_URL || "").trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+/** The WebSocket form of appOrigin(): wss:// for https, ws:// for http. */
+function appWsOrigin() {
+  const origin = appOrigin();
+  return origin ? origin.replace(/^http/, "ws") : null;
+}
+
+// Directive entries are functions so helmet evaluates them per response. When
+// BASE_URL is unset they collapse to 'self', which is what the own-origin
+// entry means anyway; the explicit origin matters only when the page is reached
+// through a hostname other than the canonical one.
+const ownOrigin = () => appOrigin() || "'self'";
+const ownWsOrigin = () => appWsOrigin() || "'self'";
+
 const cspDirectives = {
-  defaultSrc: ["'self'", "https://app.heroncs.co.uk"],
+  defaultSrc: ["'self'", ownOrigin],
   baseUri: ["'self'"],
   objectSrc: ["'none'"],
   frameAncestors: ["'self'"],
@@ -113,7 +145,7 @@ const cspDirectives = {
     "otpauth:",
     "https://i.creativecommons.org",
     "https://licensebuttons.net",
-    "https://sms.heroncs.co.uk",
+    ownOrigin,
     "https://a.tile.openstreetmap.org",
     "https://b.tile.openstreetmap.org",
     "https://c.tile.openstreetmap.org",
@@ -123,7 +155,7 @@ const cspDirectives = {
   ],
   connectSrc: [
     "'self'",
-    "https://app.heroncs.co.uk",
+    ownOrigin,
     "https://nominatim.openstreetmap.org",
     "https://api.openstreetmap.org",
     "https://challenges.cloudflare.com",
@@ -133,11 +165,12 @@ const cspDirectives = {
   reportUri: ["/csp-report"],
 };
 
-// WebSocket allowances
+// WebSocket allowances: the live log viewer and notifications connect back to
+// the app's own origin over wss (ws in development).
 if (isDev) {
   cspDirectives.connectSrc.push("ws://localhost:*");
 } else {
-  cspDirectives.connectSrc.push("wss://app.heroncs.co.uk");
+  cspDirectives.connectSrc.push(ownWsOrigin);
 }
 
 // Enable HSTS only in production by default; allow explicit override via ENABLE_HSTS
@@ -248,5 +281,5 @@ const securityHeaders = [
 
 const securityService = [...securityHeaders, xssSanitize];
 
-export { trustEdgeTls, PERMISSIONS_POLICY, securityHeaders, xssSanitize };
+export { trustEdgeTls, PERMISSIONS_POLICY, securityHeaders, xssSanitize, appOrigin, appWsOrigin };
 export default securityService;

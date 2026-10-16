@@ -1,7 +1,8 @@
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import securityService, { trustEdgeTls, PERMISSIONS_POLICY, securityHeaders, xssSanitize } from '../services/securityService.js';
+import fs from 'node:fs';
+import securityService, { trustEdgeTls, PERMISSIONS_POLICY, securityHeaders, xssSanitize, appOrigin, appWsOrigin } from '../services/securityService.js';
 
 /**
  * A securityheaders.com scan of https://app.heroncs.co.uk (2026-08-20) found the
@@ -111,5 +112,78 @@ describe('headers on responses that never reach the router', () => {
     // appRouter — while headers only get less useful the later they mount.
     assert.ok(!securityHeaders.includes(xssSanitize), 'xssSanitize must not be mounted with the headers');
     assert.equal(securityService[securityService.length - 1], xssSanitize);
+  });
+});
+
+/**
+ * hcs-app is deployed per company, so the policy's own-origin entries come from
+ * the managed BASE_URL rather than a hostname in the source. They are read per
+ * response, so a BASE_URL saved at /admin/config applies without a restart.
+ */
+describe('CSP own-origin entries derive from BASE_URL', () => {
+  let server;
+  let origin;
+  const saved = process.env.BASE_URL;
+
+  before(async () => {
+    const app = express();
+    app.use(securityHeaders);
+    app.use((_req, res) => res.type('text/plain').send('ok'));
+    server = app.listen(0, '127.0.0.1');
+    await new Promise((resolve) => server.once('listening', resolve));
+    origin = `http://127.0.0.1:${server.address().port}`;
+  });
+
+  after(() => {
+    if (saved === undefined) delete process.env.BASE_URL; else process.env.BASE_URL = saved;
+    return new Promise((resolve) => server.close(resolve));
+  });
+
+  const csp = async () => (await fetch(`${origin}/`)).headers.get('content-security-policy');
+  const directive = (policy, name) => policy.split(';').map((d) => d.trim()).find((d) => d.startsWith(name + ' ')) || '';
+
+  it('names no company hostname in the source', () => {
+    const src = fs.readFileSync(new URL('../services/securityService.js', import.meta.url), 'utf8');
+    assert.ok(!/heroncs\.co\.uk/.test(src), 'securityService must not hard-code a deployment hostname');
+  });
+
+  it('uses the BASE_URL origin for default-src, connect-src, img-src and the WebSocket', async () => {
+    process.env.BASE_URL = 'https://app.example.test/';
+    const policy = await csp();
+    assert.ok(directive(policy, 'default-src').includes('https://app.example.test'), policy);
+    assert.ok(directive(policy, 'connect-src').includes('https://app.example.test'), policy);
+    assert.ok(directive(policy, 'img-src').includes('https://app.example.test'), policy);
+    if (process.env.NODE_ENV !== 'development') {
+      assert.ok(directive(policy, 'connect-src').includes('wss://app.example.test'), policy);
+    }
+    assert.equal(appOrigin(), 'https://app.example.test');
+    assert.equal(appWsOrigin(), 'wss://app.example.test');
+  });
+
+  it('follows a change to BASE_URL without a restart', async () => {
+    process.env.BASE_URL = 'https://one.example.test';
+    assert.ok((await csp()).includes('https://one.example.test'));
+    process.env.BASE_URL = 'https://two.example.test';
+    const policy = await csp();
+    assert.ok(policy.includes('https://two.example.test'));
+    assert.ok(!policy.includes('one.example.test'));
+  });
+
+  it("collapses to 'self' when BASE_URL is unset or not a URL, and still allows the third parties", async () => {
+    delete process.env.BASE_URL;
+    let policy = await csp();
+    assert.ok(!/https:\/\/[a-z]+\.example\.test/.test(policy), policy);
+    assert.ok(directive(policy, 'default-src').includes("'self'"));
+    assert.ok(directive(policy, 'connect-src').includes('https://nominatim.openstreetmap.org'));
+    assert.ok(directive(policy, 'img-src').includes('https://i.creativecommons.org'));
+    assert.ok(directive(policy, 'script-src').includes('https://challenges.cloudflare.com'));
+    assert.equal(appOrigin(), null);
+
+    process.env.BASE_URL = 'not a url';
+    assert.equal(appOrigin(), null);
+    process.env.BASE_URL = 'ftp://files.example.test';
+    assert.equal(appOrigin(), null);
+    policy = await csp();
+    assert.ok(!policy.includes('ftp://'), policy);
   });
 });

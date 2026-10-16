@@ -57,7 +57,7 @@ docker-entrypoint.sh    # Container entrypoint
 
 assets/                 # Source Tailwind CSS
 public/                 # Built CSS, JS, images, favicon, robots.txt, manifest
-config/                 # Runtime app-config.json (written by the setup wizard)
+config/                 # Legacy app-config.json (read if present; nothing writes it any more)
 
 mongoose/
   routes/               # Express route modules (one per feature — all mounted in app.js)
@@ -86,7 +86,7 @@ e2e/                    # Playwright end-to-end tests
 
 [`app.js`](app.js) is a wiring diagram, not business logic. It boots in two phases so the app is never hard-down:
 
-1. **Phase 1 — listen immediately.** Starts the HTTP server with only static assets, `/healthz`, the CSP-report collector, and a request blocklist. An empty `appRouter` is mounted; everything else falls through to `maintenanceService`, which returns a friendly `503 + Retry-After` while the database comes up. If the app isn't configured yet, it instead mounts the **first-run setup wizard** at `/setup`.
+1. **Phase 1 — listen immediately.** Starts the HTTP server with only static assets, `/healthz`, the CSP-report collector, and a request blocklist. An empty `appRouter` is mounted; everything else falls through to `maintenanceService`, which returns a friendly `503 + Retry-After` while the database comes up. If nothing names a reachable MongoDB, it also mounts the **database wizard** at `/setup`; saving a connection there continues startup in the same process.
 2. **Phase 2 — connect & mount.** After `mdb.connect()` succeeds, it runs one-time migrations, bootstraps the first admin (from wizard credentials), loads CIS nominal-code mappings, then mounts the full middleware stack (sessions, CSRF, security headers, RBAC auth, rate limiting, logging) and all feature routes. Finally it starts Socket.IO and the background-job scheduler.
 
 If MongoDB never connects, the process stays alive serving maintenance pages rather than crash-looping.
@@ -103,12 +103,12 @@ Each feature is described from three angles: **Dev** (how it's built), **User** 
 - **Business Owner.** Graceful degradation — deploys look seamless and transient DB blips don't trigger a flood of "it's broken" reports.
 
 ### 2 — First-Run Setup Wizard
-- **Dev.** When required config is missing, only `/setup` is mounted (throwaway in-memory session). On completion the process restarts and the first admin is created from `_bootstrapAdmin`, then those credentials are wiped.
+- **Dev.** Nothing has to be typed into a file. `ENCRYPTION_KEY` is generated into `FILE_STORAGE_DIR/.bootstrap/encryption.key` and `SESSION_SECRET` (encrypted) into Mongo when the environment leaves them unset; with no `MONGO_HOST` the app probes `hcs-mongo`, `mongodb` and `localhost` and otherwise asks at `/setup`. While the user collection is empty every request lands on `/setup`, which creates the first admin and seeds the Organisation settings directly in the database. See `services/bootstrapSecretsService.js` and `services/firstRunService.js`.
 - **User.** A non-technical person can stand the app up through a browser form.
 - **Business Owner.** Deployment/migration no longer needs a developer hand-editing config files.
 
 ### 3 — Configuration & Connection Settings
-- **Dev.** `configService` layers `config/app-config.json` under OS/Docker env vars (env wins). Admin pages at `/admin/connections/*` manage KashFlow, SMTP, Paperless, SMS, each with a live "Test" endpoint.
+- **Dev.** `configService` layers the managed store (Mongo) over OS/Docker env vars over a legacy, read-only `config/app-config.json`. Admin pages at `/admin/connections/*` manage KashFlow, SMTP, Paperless, SMS, each with a live "Test" endpoint.
 - **User.** Admins can re-point email / API keys from a settings page and verify them — no redeploy.
 - **Business Owner.** Operational independence: rotating a credential or swapping a mail provider is a 2-minute admin task.
 
@@ -201,7 +201,7 @@ npm install
 npm run dev                # runs the server (nodemon) + Tailwind CSS watch concurrently
 ```
 
-The app listens on `PORT` (default `3000` locally). If `SESSION_SECRET`, `ENCRYPTION_KEY`, and a Mongo connection aren't configured, it boots into the setup wizard at `/setup`.
+The app listens on `PORT` (default `3000` locally). `SESSION_SECRET` and `ENCRYPTION_KEY` are optional (generated and kept by the app); if no Mongo connection is configured or reachable, it boots into the database wizard at `/setup`.
 
 ### Option B — Local Docker stack (includes MongoDB)
 
@@ -209,7 +209,7 @@ The app listens on `PORT` (default `3000` locally). If `SESSION_SECRET`, `ENCRYP
 docker compose -f docker-compose.local.yml up -d --build
 ```
 
-This brings up Tailscale, the app, and a `mongo:8` container. The app is reachable at **http://localhost:3000**. `ENABLE_HSTS=false` and `COOKIE_SECURE=false` are set so plain HTTP works. On first run, complete the wizard at `/setup`; it writes `config/app-config.json` (mounted as a volume), then restart the container to launch the full app.
+This brings up Tailscale, the app, and a `mongo:8` container. The app is reachable at **http://localhost:3000**. `ENABLE_HSTS=false` and `COOKIE_SECURE=false` are set so plain HTTP works. On first run, open the app: it finds the bundled `mongodb` container on its own and `/setup` creates the first admin straight in the database. No file is written under `/app/config` and no restart is needed.
 
 ---
 

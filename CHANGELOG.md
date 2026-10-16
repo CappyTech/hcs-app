@@ -2,6 +2,30 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.72.0] - 2026-10-16
+
+### Added
+- Zero-file bootstrap. A deployment is `docker compose up` and a browser: no file has to be edited by hand and nothing is written under `/app/config`. When the environment leaves them unset, `ENCRYPTION_KEY` is generated once into `FILE_STORAGE_DIR/.bootstrap/encryption.key` (mode 0600, on the storage volume; the log says where it is and that losing it loses every stored secret) and `SESSION_SECRET` is generated once and kept encrypted in `INTERNAL.appconfigs`. A value set in the environment still wins for both (`services/bootstrapSecretsService.js`).
+- First-run page. While the user collection is empty every request is sent to `/setup`, which creates the first administrator directly in the database (bcrypt) and seeds the Organisation settings and `BASE_URL` through the managed store. No restart (`services/firstRunService.js`, `mongoose/controllers/firstRunController.js`).
+- With neither `MONGO_URI` nor `MONGO_HOST` set, the app tries `hcs-mongo`, `mongodb` and `localhost` before asking.
+- `BASE_URL` is seeded from the first signed-in request's origin when it has no value anywhere.
+- Maintenance mode and the unsubscribe-link rotation toggle are managed settings (Maintenance group and Email (SMTP) group at `/admin/config`).
+
+### Changed
+- The Content-Security-Policy's own-origin entries (default-src, connect-src, img-src and the WebSocket origin) derive from the managed `BASE_URL`, read per response, instead of hard-coded hostnames. The third-party origins (Cloudflare Turnstile, OpenStreetMap, Creative Commons) are unchanged.
+- `BASE_URL` moved from the Email (SMTP) group to Organisation at `/admin/config`.
+- The setup wizard is now only the database step, and only when nothing names a reachable MongoDB. It saves the connection to `FILE_STORAGE_DIR/.bootstrap/bootstrap.json` on the storage volume and continues startup in the same process instead of exiting. Company details and the first admin moved to the first-run page.
+- `config/app-config.json` is read as a legacy fallback but nothing writes it any more; `configService.save`/`remove` are gone. The maintenance and rotation toggles write to the managed store instead.
+- `docker-compose.yml` and `docker-compose.local.yml` mount `./storage` at `/app/storage` so the generated key survives an image pull; `compose.env.example`, the README and Help → First Login & Setup describe the new flow.
+
+### Removed
+- The `_bootstrapAdmin` path, which kept the first admin's password in plaintext in `config/app-config.json` until the next restart.
+- The wizard's `config/wizard-draft.json` and its constant session secret.
+
+### Security
+- The first admin's password never touches disk; it is hashed and stored in the database from the form.
+- The generated encryption key is owner-only on disk and written atomically.
+
 ## [6.71.2] - 2026-10-16
 
 ### Changed
