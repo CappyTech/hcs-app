@@ -1,0 +1,5 @@
+# Shell scripts run inside Linux containers; a CRLF shebang makes the kernel
+# look for "/bin/sh\r" and the container restarts forever with
+# "No such file or directory". Keep them LF on every platform.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf

@@ -25,7 +25,9 @@
       </p>
       <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-xl px-5 py-4 mb-4 space-y-1">
         <p><strong><%= companyName || 'the company' %></strong></p>
-        <p>Company No: 09276951 &nbsp;|&nbsp; VAT No: 252295994</p>
+        <% if (locals.companyNumber || locals.companyVatNumber) { %>
+        <p><% if (locals.companyNumber) { %>Company No: <%= companyNumber %><% } %><% if (locals.companyNumber && locals.companyVatNumber) { %> &nbsp;|&nbsp; <% } %><% if (locals.companyVatNumber) { %>VAT No: <%= companyVatNumber %><% } %></p>
+        <% } %>
         <p>
           ICO Registration:
           <% if (icoNumber && !icoNumber.includes('[')) { %>

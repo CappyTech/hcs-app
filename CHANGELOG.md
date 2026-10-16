@@ -2,6 +2,20 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.73.0] - 2026-10-16
+
+### Added
+- `docker-compose.yml` is now the whole stack and the deployment template: the app plus a bundled `mongo:8`, bind-mounted `./storage` (documents and the generated encryption key), `./uploads` and `./logs`, an optional `compose.env` (`required: false`), a health-gated start, and variables for the host port, image, pull policy, Tailscale key and mailsiem mount. `BUNDLED_MONGO=0` scales the bundled database to zero for an external MongoDB. Verified end to end from an empty directory: `docker compose up -d` → `/setup` creates the first administrator → login → `/admin/config`, with the encryption key and session secret surviving a container recreate.
+- Cloudflare Turnstile keys are managed settings (Security group, `services/turnstileService.js`). The login and registration CAPTCHA is enforced only when both keys are set; a fresh deployment has neither and could not log its first administrator in ("CAPTCHA token missing"). `SKIP_TURNSTILE=true` remains the explicit development bypass.
+- `COMPANY_NUMBER` and `COMPANY_VAT_NUMBER` in the Organisation group. The footer and the privacy policy read them (and hide the line when blank) instead of carrying one company's registration numbers in the templates.
+- `.gitattributes` keeps shell scripts LF: an image built from a Windows checkout had a CRLF shebang in `docker-entrypoint.sh` and restarted forever with "No such file or directory". The Dockerfile also strips CR from the entrypoint for checkouts that predate the attribute.
+
+### Changed
+- `.dockerignore` excludes `config/app-config.json`, `compose.env`, `storage/`, `uploads/`, `logs/` and `mailsiem/`, so an image built from a working checkout never carries that deployment's database connection, secrets or key file.
+
+### Removed
+- `docker-compose.local.yml` and the Tailscale sidecar container: the single compose file covers local and production, and Tailscale runs inside the app container when `TS_AUTHKEY` is set (`docker-entrypoint.sh`).
+
 ## [6.72.0] - 2026-10-16
 
 ### Added

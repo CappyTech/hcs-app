@@ -38,7 +38,9 @@ COPY . .
 COPY --from=builder /app/public/css/tailwind.css ./public/css/tailwind.css
 COPY --from=builder /app/public/vendor ./public/vendor
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Strip CR so an image built from a Windows checkout (CRLF) still has a valid
+# shebang; .gitattributes keeps the file LF, this covers a checkout that predates it.
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=5000

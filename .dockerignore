@@ -12,3 +12,12 @@ coverage
 .tmp
 *.local
 .env
+# Never bake a deployment's own state or secrets into an image built from a
+# working checkout: the legacy wizard file, the runtime env, and the storage
+# volume (which holds the generated encryption key).
+config/app-config.json
+compose.env
+storage
+uploads
+logs
+mailsiem
