@@ -52,73 +52,25 @@ function normalizeIp(raw) {
   return value;
 }
 
-function isTrustedProxyIp(ip) {
-  if (!ip) return false;
-
-  // IPv4 loopback
-  if (ip === "127.0.0.1") return true;
-  if (ip.startsWith("127.")) return true;
-
-  // IPv6 loopback
-  if (ip === "::1") return true;
-
-  // IPv4 private ranges
-  if (ip.startsWith("10.")) return true;
-  if (ip.startsWith("192.168.")) return true;
-
-  // 172.16.0.0/12
-  if (ip.startsWith("172.")) {
-    const parts = ip.split(".");
-    const second = Number(parts[1]);
-    if (!Number.isNaN(second) && second >= 16 && second <= 31) return true;
-  }
-
-  // IPv6 unique-local (fc00::/7)
-  const lo = ip.toLowerCase();
-  if (lo.startsWith("fc") || lo.startsWith("fd")) return true;
-
-  return false;
-}
-
-function parseForwardedFor(headerValue) {
-  // RFC 7239: Forwarded: for=192.0.2.43, for="[2001:db8:cafe::17]:4711"
-  try {
-    const v = String(headerValue || "");
-    if (!v) return "";
-    const first = v.split(",")[0].trim();
-    const m = first.match(/for=([^;]+)/i);
-    return m && m[1] ? String(m[1]).trim() : "";
-  } catch (_) {
-    return "";
-  }
-}
-
+/**
+ * The client IP for rate limiting, lockout audit and request logs.
+ *
+ * Express already resolves the client address into `req.ip` from the
+ * `trust proxy` setting in app.js (loopback and 172.16.0.0/12 by default, or
+ * TRUST_PROXY): it walks X-Forwarded-For from the right and stops at the
+ * first hop that is not a trusted proxy. That is the only forwarded value
+ * honoured here. Headers such as CF-Connecting-IP, X-Real-IP and Forwarded
+ * are never consulted: nothing in front of this app sets or strips them, so
+ * a client could pick its own value and give every request a fresh
+ * rate-limit bucket.
+ */
 function getClientIp(req) {
-  const remoteAddress = normalizeIp(
-    req && req.socket && req.socket.remoteAddress,
-  );
-
-  // If the direct peer is a trusted proxy, prefer explicit forwarded headers.
-  if (net.isIP(remoteAddress) && isTrustedProxyIp(remoteAddress)) {
-    const headers = (req && req.headers) || {};
-
-    const candidates = [
-      headers["cf-connecting-ip"],
-      headers["x-real-ip"],
-      headers["x-forwarded-for"],
-      parseForwardedFor(headers["forwarded"]),
-    ];
-
-    for (const c of candidates) {
-      const ip = normalizeIp(c);
-      if (net.isIP(ip)) return ip;
-    }
-  }
-
-  // Otherwise rely on Express's computed IP first, then fall back to remoteAddress.
   const ip = normalizeIp(req && req.ip);
   if (net.isIP(ip)) return ip;
 
+  const remoteAddress = normalizeIp(
+    req && req.socket && req.socket.remoteAddress,
+  );
   if (net.isIP(remoteAddress)) return remoteAddress;
 
   // Last resort: return something stable-ish so downstream code doesn't throw.

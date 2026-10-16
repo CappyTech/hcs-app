@@ -18,6 +18,57 @@ const vehicleLabel = (vehicle) => {
   return makeModel ? `${reg} – ${makeModel}` : reg;
 };
 
+/**
+ * Generic POST /attendance for a non-admin: the record is the caller's own.
+ *
+ * The self-service form (attendanceController.submitAttendance) forces the
+ * owner to the logged-in user's linked employee or subcontractor and leaves
+ * approval to an admin. The generic CRUD create route reaches the same
+ * collection, so it applies the same rules: the owner field is the caller's
+ * linked record (a different one is refused), the status is pending, and the
+ * rate fields an admin sets on approval (payRate, overtimeHours, overtimeRate)
+ * are dropped. Employees may give hoursWorked; anyone may give dayRate, as on
+ * the self-service form. Admins are untouched.
+ *
+ * Throws an error with `statusCode` 403 so the generic error handler renders
+ * a Forbidden page rather than a 500.
+ */
+const ATTENDANCE_OWNER_FIELD = { employee: 'employeeId', subcontractor: 'subcontractorId' };
+const ATTENDANCE_ADMIN_ONLY_FIELDS = ['payRate', 'overtimeHours', 'overtimeRate'];
+
+const forbidden = (message) => Object.assign(new Error(message), { statusCode: 403, name: 'ForbiddenError' });
+
+export function scopeAttendanceCreateToCaller(cleanedData, req) {
+  const role = req?.user?.role;
+  if (role === 'admin') return cleanedData;
+
+  const ownerField = ATTENDANCE_OWNER_FIELD[role];
+  if (!ownerField) throw forbidden('You do not have permission to create attendance records.');
+
+  const ownerId = req.user[ownerField];
+  if (!ownerId) {
+    throw forbidden(`Your account is not linked to ${role === 'employee' ? 'an employee' : 'a subcontractor'} record.`);
+  }
+
+  const submitted = cleanedData[ownerField];
+  if (submitted !== undefined && submitted !== null && String(submitted) !== String(ownerId)) {
+    throw forbidden('You can only create attendance records for yourself.');
+  }
+  for (const field of Object.values(ATTENDANCE_OWNER_FIELD)) {
+    if (field !== ownerField && cleanedData[field] !== undefined && cleanedData[field] !== null) {
+      throw forbidden('You can only create attendance records for yourself.');
+    }
+    delete cleanedData[field];
+  }
+  cleanedData[ownerField] = ownerId;
+
+  cleanedData.status = 'pending';
+  for (const field of ATTENDANCE_ADMIN_ONLY_FIELDS) delete cleanedData[field];
+  if (role !== 'employee') delete cleanedData.hoursWorked;
+
+  return cleanedData;
+}
+
 export default {
   purchase: {
     middleware: {
@@ -42,9 +93,11 @@ export default {
     title: 'Attendance',
     readOnly: ['uuid', 'createdAt'],
     hideFields: ['_id', '__v'],
-    // Payroll lock: non-admins cannot create records inside a locked/submitted run
+    // Non-admins: own record only, pending, no admin-set pay fields; and no
+    // records inside a locked/submitted payroll run
     beforeCreate: async (cleanedData, req) => {
       if (req.user?.role === 'admin') return;
+      scopeAttendanceCreateToCaller(cleanedData, req);
       const { getLockedRunForDate } = __attendanceService;
       const lockedRun = await getLockedRunForDate(cleanedData.date);
       if (lockedRun) {

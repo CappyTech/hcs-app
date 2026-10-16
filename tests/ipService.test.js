@@ -67,7 +67,7 @@ describe('normalizeIp', () => {
 // ── getClientIp ──────────────────────────────────────────────────────────────
 
 describe('getClientIp', () => {
-  /** Build a minimal mock req */
+  /** Build a minimal mock req. `ip` is what Express derived under `trust proxy`. */
   function mockReq({ remoteAddress, headers = {}, ip } = {}) {
     return {
       socket: { remoteAddress },
@@ -76,41 +76,43 @@ describe('getClientIp', () => {
     };
   }
 
-  it('returns remote address for direct connection', () => {
+  it('uses the address Express resolved under trust proxy', () => {
+    const req = mockReq({ remoteAddress: '172.17.0.1', ip: '82.20.87.8' });
+    assert.equal(getClientIp(req), '82.20.87.8');
+  });
+
+  it('returns remote address for a direct connection with no req.ip', () => {
     const req = mockReq({ remoteAddress: '82.20.87.8' });
     assert.equal(getClientIp(req), '82.20.87.8');
   });
 
-  it('prefers cf-connecting-ip when behind trusted proxy', () => {
-    const req = mockReq({
-      remoteAddress: '127.0.0.1',
-      headers: { 'cf-connecting-ip': '203.0.113.50' },
+  // The rate limiter, lockout audit and request log are keyed on this value.
+  // A client-supplied header must never pick the key, even when the direct
+  // peer is a trusted proxy: nothing upstream sets or strips these headers.
+  for (const header of ['cf-connecting-ip', 'x-real-ip', 'x-forwarded-for', 'forwarded']) {
+    it(`ignores ${header} behind a trusted proxy`, () => {
+      const value = header === 'forwarded' ? 'for=203.0.113.50' : '203.0.113.50';
+      const req = mockReq({
+        remoteAddress: '172.17.0.1',
+        ip: '172.17.0.1',
+        headers: { [header]: value },
+      });
+      assert.equal(getClientIp(req), '172.17.0.1');
     });
-    assert.equal(getClientIp(req), '203.0.113.50');
-  });
 
-  it('prefers x-real-ip when behind trusted proxy', () => {
-    const req = mockReq({
-      remoteAddress: '10.0.0.1',
-      headers: { 'x-real-ip': '198.51.100.1' },
+    it(`ignores ${header} from a non-proxy peer`, () => {
+      const value = header === 'forwarded' ? 'for=1.1.1.1' : '1.1.1.1';
+      const req = mockReq({
+        remoteAddress: '82.20.87.8',
+        ip: '82.20.87.8',
+        headers: { [header]: value },
+      });
+      assert.equal(getClientIp(req), '82.20.87.8');
     });
-    assert.equal(getClientIp(req), '198.51.100.1');
-  });
+  }
 
-  it('reads x-forwarded-for when behind trusted proxy', () => {
-    const req = mockReq({
-      remoteAddress: '192.168.1.1',
-      headers: { 'x-forwarded-for': '82.20.87.8, 10.0.0.1' },
-    });
-    assert.equal(getClientIp(req), '82.20.87.8');
-  });
-
-  it('does not trust forwarded headers from non-proxy IP', () => {
-    const req = mockReq({
-      remoteAddress: '82.20.87.8',
-      headers: { 'x-forwarded-for': '1.1.1.1' },
-    });
-    // Should return remote address, not the header
+  it('normalizes an IPv4-mapped IPv6 req.ip', () => {
+    const req = mockReq({ remoteAddress: '::ffff:10.0.0.1', ip: '::ffff:82.20.87.8' });
     assert.equal(getClientIp(req), '82.20.87.8');
   });
 
@@ -119,29 +121,12 @@ describe('getClientIp', () => {
     assert.equal(getClientIp(req), '10.0.0.1');
   });
 
-  it('falls back to req.ip', () => {
-    const req = mockReq({ ip: '82.20.87.8' });
-    assert.equal(getClientIp(req), '82.20.87.8');
+  it('falls back to remote address when req.ip is not an IP', () => {
+    const req = mockReq({ remoteAddress: '10.0.0.1', ip: 'not-an-ip' });
+    assert.equal(getClientIp(req), '10.0.0.1');
   });
 
   it('returns "unknown" for null req', () => {
     assert.equal(getClientIp(null), 'unknown');
-  });
-
-  it('handles 172.16.x.x trusted proxy', () => {
-    const req = mockReq({
-      remoteAddress: '172.17.0.1',
-      headers: { 'x-real-ip': '203.0.113.1' },
-    });
-    assert.equal(getClientIp(req), '203.0.113.1');
-  });
-
-  it('rejects 172.32.x.x as non-trusted', () => {
-    const req = mockReq({
-      remoteAddress: '172.32.0.1',
-      headers: { 'x-forwarded-for': '1.1.1.1' },
-    });
-    // 172.32 is outside 172.16-31 range, not trusted
-    assert.equal(getClientIp(req), '172.32.0.1');
   });
 });
