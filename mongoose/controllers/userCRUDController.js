@@ -14,6 +14,8 @@ import hibpService from '../../services/hibpService.js';
 import totpService from '../../services/totpService.js';
 import passwordResetDraft from '../../services/passwordResetDraft.js';
 import { allSessionCookieNames, sessionCookieName } from '../../services/cookieNameService.js';
+import { plainString } from '../../services/plainStringInput.js';
+import mongoose from 'mongoose';
 
 function hasCookie(req, cookieName) {
   try {
@@ -183,7 +185,9 @@ export const renderLoginForm = (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const next = getSafeNext(req.body?.next || req.query?.next);
-    const { usernameOrEmail, password } = req.body;
+    // A bracketed body field parses to an object; only a string may name an account.
+    const usernameOrEmail = plainString(req.body.usernameOrEmail);
+    const { password } = req.body;
     const token = req.body["cf-turnstile-response"];
     const ip = getClientIp(req);
     const agent = req.useragent || {};
@@ -231,9 +235,11 @@ export const loginUser = async (req, res) => {
       );
     }
 
-    const user = await mdb.INTERNAL.user.findOne({
-      $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
-    });
+    const user = await mdb.INTERNAL.user.findOne(
+      { $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }] },
+      null,
+      { sanitizeFilter: true },
+    );
 
     // Account lockout check
     const MAX_ATTEMPTS = Number(process.env.LOGIN_MAX_ATTEMPTS) || 5;
@@ -462,16 +468,20 @@ export const logoutUser = (req, res) => {
 // ── Email verification ───────────────────────────────────────────────
 export const verifyEmail = async (req, res) => {
   try {
-    const { token } = req.query;
+    const token = plainString(req.query.token);
     if (!token) {
       req.flash("error", "Invalid verification link.");
       return res.redirect("/user/login");
     }
 
-    const user = await mdb.INTERNAL.user.findOne({
-      emailVerificationToken: token,
-      emailVerificationExpires: { $gt: new Date() },
-    });
+    const user = await mdb.INTERNAL.user.findOne(
+      {
+        emailVerificationToken: token,
+        emailVerificationExpires: mongoose.trusted({ $gt: new Date() }),
+      },
+      null,
+      { sanitizeFilter: true },
+    );
 
     if (!user) {
       req.flash("error", "Verification link is invalid or has expired.");
@@ -571,7 +581,7 @@ export const renderForgotPasswordForm = (req, res) => {
 
 // ── Forgot password — look up user, route to choice or send email ────
 export const sendPasswordReset = async (req, res) => {
-  const identifier = (req.body.usernameOrEmail || "").trim();
+  const identifier = plainString(req.body.usernameOrEmail);
   const genericMsg =
     "If that account is registered, you will receive reset instructions shortly.";
 
@@ -581,9 +591,11 @@ export const sendPasswordReset = async (req, res) => {
       return res.redirect("/user/forgot-password");
     }
 
-    const user = await mdb.INTERNAL.user.findOne({
-      $or: [{ username: identifier }, { email: identifier.toLowerCase() }],
-    });
+    const user = await mdb.INTERNAL.user.findOne(
+      { $or: [{ username: identifier }, { email: identifier.toLowerCase() }] },
+      null,
+      { sanitizeFilter: true },
+    );
 
     if (user && user.phoneNumber) {
       // Store pending reset in session and redirect to method-choice page
@@ -734,17 +746,21 @@ export const dispatchResetMethod = async (req, res) => {
 
 // ── Reset password — render form ─────────────────────────────────────
 export const renderResetPasswordForm = async (req, res) => {
-  const { token } = req.query;
+  const token = plainString(req.query.token);
 
   if (!token) {
     req.flash("error", "Invalid or missing reset link.");
     return res.redirect("/user/login");
   }
 
-  const user = await mdb.INTERNAL.user.findOne({
-    passwordResetToken: token,
-    passwordResetExpires: { $gt: new Date() },
-  });
+  const user = await mdb.INTERNAL.user.findOne(
+    {
+      passwordResetToken: token,
+      passwordResetExpires: mongoose.trusted({ $gt: new Date() }),
+    },
+    null,
+    { sanitizeFilter: true },
+  );
 
   if (!user) {
     req.flash("error", "Password reset link is invalid or has expired.");
@@ -759,7 +775,8 @@ export const renderResetPasswordForm = async (req, res) => {
 
 // ── Reset password — update password ─────────────────────────────────
 export const resetPassword = async (req, res) => {
-  const { token, password, confirmPassword } = req.body;
+  const token = plainString(req.body.token);
+  const { password, confirmPassword } = req.body;
 
   if (!token) {
     req.flash("error", "Invalid or missing reset link.");
@@ -781,10 +798,14 @@ export const resetPassword = async (req, res) => {
   }
 
   try {
-    const user = await mdb.INTERNAL.user.findOne({
-      passwordResetToken: token,
-      passwordResetExpires: { $gt: new Date() },
-    });
+    const user = await mdb.INTERNAL.user.findOne(
+      {
+        passwordResetToken: token,
+        passwordResetExpires: mongoose.trusted({ $gt: new Date() }),
+      },
+      null,
+      { sanitizeFilter: true },
+    );
 
     if (!user) {
       req.flash("error", "Password reset link is invalid or has expired.");

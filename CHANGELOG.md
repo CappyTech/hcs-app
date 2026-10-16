@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.71.1] - 2026-10-16
+
+### Security
+- The password-reset, email-verification, login and forgot-password lookups only accept a plain string for the token or username. A bracketed form field, which the body parser turns into an object, is now treated as missing instead of reaching the database query, and those lookups run with Mongoose's filter sanitising on.
+- The client IP used for rate limiting, account-lockout audit and request logs is the one Express resolves from the `trust proxy` setting. The `CF-Connecting-IP`, `X-Real-IP` and `Forwarded` headers are no longer read, so a caller can no longer pick their own rate-limit bucket.
+- Employees and subcontractors using the generic attendance create route can only file a record against their own linked employee or subcontractor, it is always saved as pending, and the pay rate, overtime hours and overtime rate are left for an admin to set, matching the self-service submit form. Naming someone else is refused with a 403.
+
 ## [6.71.0] - 2026-10-16
 
 ### Added
