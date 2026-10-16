@@ -1,0 +1,35 @@
+<%#
+  Nav style 'two-tier': a slim utility bar (brand, Jump to, Create, Help,
+  theme, account pill) over a second row of text area tabs. The active tab has
+  a green underline. The tab row scrolls horizontally at every width, so
+  labels stay visible on a phone.
+%>
+<% const _nav = locals.nav || { items: [], home: { href: '/', active: false }, help: { href: '/help', active: false } }; %>
+<% const _tab = (active) => 'inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap shrink-0 border-b-2 -mb-px transition ' + (active
+     ? 'border-green-600 dark:border-green-400 text-green-600 dark:text-green-400 font-medium'
+     : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:border-gray-300 dark:hover:border-gray-600'); %>
+<% const _tabs = [_nav.home, ..._nav.items.filter((i) => i.special !== 'create' && i.slug !== 'user')]; %>
+<nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden" aria-label="Main navigation" data-nav-style="two-tier">
+  <%# Tier 1: utility bar %>
+  <div class="border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-7xl mx-auto flex items-center gap-2 px-2 sm:px-4 h-11">
+      <%- include('./_shared.ejs', { part: 'brand' }) %>
+      <div class="hidden sm:block flex-1 min-w-0 max-w-md mx-auto">
+        <%- include('./_shared.ejs', { part: 'jump', jumpClass: 'w-full' }) %>
+      </div>
+      <div class="flex items-center gap-1 ml-auto shrink-0">
+        <%- include('./_shared.ejs', { part: 'create', createLabelClass: 'hidden sm:inline' }) %>
+        <%- include('./_shared.ejs', { part: 'utility' }) %>
+      </div>
+    </div>
+  </div>
+  <%# Tier 2: area tabs %>
+  <div class="max-w-7xl mx-auto flex items-center gap-1 px-2 sm:px-4 overflow-x-auto h-11" role="list" aria-label="Areas">
+    <% _tabs.forEach((item) => { %>
+    <a href="<%= item.href %>" class="<%= _tab(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
+      <i class="bi <%= item.icon %> text-base" aria-hidden="true"></i>
+      <span><%= item.label %></span>
+    </a>
+    <% }) %>
+  </div>
+</nav>

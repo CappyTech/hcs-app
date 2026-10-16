@@ -49,6 +49,167 @@ document.addEventListener('alpine:init', function () {
   });
 
   /**
+   * navMenu – a dropdown or drawer in the navigation (partials/nav/*.ejs).
+   * Usage:  <div x-data="navMenu">
+   *           <button x-bind="trigger" aria-expanded="false">…</button>
+   *           <div x-bind="panel" x-cloak>…links…</div>        (dropdown)
+   *           <aside x-bind="drawer" class="-translate-x-full lg:translate-x-0">… (sidebar drawer)
+   *           <div x-bind="backdrop" x-cloak>…</div>
+   *         </div>
+   *
+   * Keyboard: Escape closes and returns focus to the trigger; ArrowDown on the
+   * trigger opens and focuses the first link; ArrowUp/ArrowDown move between
+   * the links. Clicking outside closes. aria-expanded follows the state.
+   */
+  Alpine.data('navMenu', function () {
+    return {
+      open: false,
+
+      links: function () {
+        return Array.prototype.slice.call(this.$root.querySelectorAll('[x-bind="panel"] a, [x-bind="drawer"] a'));
+      },
+      focusLink: function (index) {
+        var links = this.links();
+        if (!links.length) return;
+        links[(index + links.length) % links.length].focus();
+      },
+      toggle: function () { this.open = !this.open; },
+      close: function (refocus) {
+        if (!this.open) return;
+        this.open = false;
+        if (refocus) {
+          var trigger = this.$root.querySelector('[x-bind="trigger"]');
+          if (trigger) trigger.focus();
+        }
+      },
+      next: function () { this.focusLink(this.links().indexOf(document.activeElement) + 1); },
+      prev: function () { this.focusLink(this.links().indexOf(document.activeElement) - 1); },
+
+      trigger: {
+        ['@click']: function () { this.toggle(); },
+        // Escape anywhere on the page closes an open menu (focus is usually on
+        // the trigger itself, which is outside the panel).
+        ['@keydown.escape.window']: function () { this.close(true); },
+        ['@keydown.arrow-down.prevent']: function () {
+          var self = this;
+          this.open = true;
+          this.$nextTick(function () { self.focusLink(0); });
+        },
+        [':aria-expanded']: function () { return this.open ? 'true' : 'false'; }
+      },
+      panel: {
+        ['x-show']: function () { return this.open; },
+        ['@click.outside']: function () { this.close(false); },
+        ['@keydown.escape.prevent.stop']: function () { this.close(true); },
+        ['@keydown.arrow-down.prevent']: function () { this.next(); },
+        ['@keydown.arrow-up.prevent']: function () { this.prev(); }
+      },
+      // The sidebar drawer stays in the DOM (lg+ always shows it) and only
+      // slides in and out below lg, so it toggles a class instead of x-show.
+      drawer: {
+        // Object form, so the markup's static -translate-x-full is removed on
+        // open (a string binding only ever adds classes, leaving both in place).
+        [':class']: function () { return { 'translate-x-0': this.open, '-translate-x-full': !this.open }; },
+        // Unlike a hidden panel, the drawer always has a size, so Alpine reports
+        // the opening click on the toggle as "outside": ignore that one.
+        ['@click.outside']: function (e) {
+          if (e.target && e.target.closest && e.target.closest('[x-bind="trigger"]')) return;
+          this.close(false);
+        },
+        ['@keydown.escape.prevent.stop']: function () { this.close(true); },
+        ['@keydown.arrow-down.prevent']: function () { this.next(); },
+        ['@keydown.arrow-up.prevent']: function () { this.prev(); }
+      },
+      backdrop: {
+        ['x-show']: function () { return this.open; },
+        ['@click']: function () { this.close(false); }
+      }
+    };
+  });
+
+  /**
+   * navJump – the "Jump to" box in the navigation: filters the nav's own links
+   * client-side as you type (no server round-trip), Enter opens the first
+   * match, Escape clears, Ctrl+K (or Cmd+K) focuses the box from anywhere.
+   * Usage:  <div x-data="navJump">
+   *           <input x-bind="input" role="combobox">
+   *           <ul x-bind="results">
+   *             <li data-jump-item data-jump-text="…" class="hidden"><a>…</a></li>…
+   *             <li data-jump-empty class="hidden">Nothing matches.</li>
+   *           </ul>
+   *         </div>
+   */
+  Alpine.data('navJump', function () {
+    return {
+      q: '',
+      open: false,
+
+      init: function () {
+        var self = this;
+        document.addEventListener('keydown', function (e) {
+          if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && String(e.key).toLowerCase() === 'k') {
+            var input = self.$root.querySelector('input');
+            if (!input || input.offsetParent === null) return; // hidden at this width
+            e.preventDefault();
+            input.focus();
+            input.select();
+          }
+        });
+      },
+      visibleLinks: function () {
+        return Array.prototype.slice.call(this.$root.querySelectorAll('[data-jump-item]:not(.hidden) a'));
+      },
+      filter: function () {
+        var q = this.q.toLowerCase().trim();
+        var count = 0;
+        this.$root.querySelectorAll('[data-jump-item]').forEach(function (li) {
+          var hit = !!q && (li.getAttribute('data-jump-text') || '').indexOf(q) !== -1;
+          li.classList.toggle('hidden', !hit);
+          if (hit) count++;
+        });
+        var empty = this.$root.querySelector('[data-jump-empty]');
+        if (empty) empty.classList.toggle('hidden', !q || count > 0);
+        this.open = !!q;
+      },
+      clear: function () {
+        this.q = '';
+        var input = this.$root.querySelector('input');
+        if (input) input.value = '';
+        this.filter();
+      },
+      move: function (step) {
+        var links = this.visibleLinks();
+        if (!links.length) return;
+        var i = links.indexOf(document.activeElement);
+        links[(i + step + links.length) % links.length].focus();
+      },
+
+      input: {
+        ['@input']: function (e) { this.q = e.target.value; this.filter(); },
+        ['@focus']: function () { if (this.q) this.open = true; },
+        ['@keydown.escape.prevent']: function (e) { this.clear(); e.target.blur(); },
+        ['@keydown.enter.prevent']: function () {
+          var first = this.visibleLinks()[0];
+          if (first) window.location.href = first.getAttribute('href');
+        },
+        ['@keydown.arrow-down.prevent']: function () { this.move(1); },
+        [':aria-expanded']: function () { return this.open ? 'true' : 'false'; }
+      },
+      results: {
+        ['x-show']: function () { return this.open; },
+        ['@click.outside']: function () { this.open = false; },
+        ['@keydown.escape.prevent']: function () {
+          this.open = false;
+          var input = this.$root.querySelector('input');
+          if (input) input.focus();
+        },
+        ['@keydown.arrow-down.prevent']: function () { this.move(1); },
+        ['@keydown.arrow-up.prevent']: function () { this.move(-1); }
+      }
+    };
+  });
+
+  /**
    * emailPicker – settings field of type 'email' (configGroup.ejs): a dropdown
    * of user emails plus "Other…", which reveals and requires a typed address.
    * Usage:  <div x-data="emailPicker">

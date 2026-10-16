@@ -8,7 +8,8 @@
  *  - rolePermissionsConfig.js  → derives roleDepartments + dashboard routeAccess
  *  - indexController.js        → generic renderDepartment(slug)
  *  - indexRoutes.js            → generates one GET route per department
- *  - layout.ejs (via app.js res.locals.departmentsConfig) → top nav
+ *  - services/navigationService.js → res.locals.nav, which every header
+ *    style in views/tailwindcss/partials/nav/ draws from
  *
  * Fields:
  *  - title       dashboard page heading
@@ -17,6 +18,8 @@
  *  - roles       roles that may open the dashboard; ['public'] = any
  *                authenticated user (passthrough guard)
  *  - path        route override (default '/<slug>')
+ *  - group       people | money | work | system: how the grouped, command and
+ *                sidebar navigation styles cluster it (services/navigationService)
  *  - hasDashboard  false = nav link only, page served elsewhere
  *  - special     'create' = tiles come from getCreateModels, not departments
  *
@@ -28,30 +31,35 @@ export default {
     title: 'Admin',
     navLabel: 'Admin',
     icon: 'bi-shield-lock',
+    group: 'system',
     roles: ['admin'],
   },
   'construction-industry-scheme': {
     title: 'Construction Industry Scheme',
     navLabel: 'CIS',
     icon: 'bi-building',
+    group: 'money',
     roles: ['admin', 'accountant', 'hmrc', 'subcontractor'],
   },
   management: {
     title: 'Management',
     navLabel: 'Management',
     icon: 'bi-folder2-open',
+    group: 'work',
     roles: ['admin'],
   },
   maintenance: {
     title: 'Maintenance',
     navLabel: 'Maintenance',
     icon: 'bi-tools',
+    group: 'system',
     roles: ['admin'],
   },
   payroll: {
     title: 'Payroll',
     navLabel: 'Payroll',
     icon: 'bi-cash-coin',
+    group: 'money',
     // union of the old roleDepartments (accountant had 'payroll') and the
     // old admin-only route guard — accountant already saw the nav link,
     // and /payroll/dashboard already allowed accountant
@@ -61,6 +69,7 @@ export default {
     title: 'Human Resources',
     navLabel: 'HR',
     icon: 'bi-people',
+    group: 'people',
     roles: ['admin'],
   },
   documents: {
@@ -69,6 +78,7 @@ export default {
     title: 'Documents',
     navLabel: 'Documents',
     icon: 'bi-file-earmark-text',
+    group: 'work',
     roles: ['admin'],
   },
   finance: {
@@ -77,6 +87,7 @@ export default {
     title: 'Finance',
     navLabel: 'Finance',
     icon: 'bi-wallet2',
+    group: 'money',
     roles: ['admin', 'accountant'],
   },
   'accountant-portal': {
@@ -95,6 +106,7 @@ export default {
     title: 'Accountant',
     navLabel: 'Accountant',
     icon: 'bi-clipboard-check',
+    group: 'money',
     path: '/accountant',
     hasDashboard: false,
     roles: ['admin', 'accountant', 'auditor'],
@@ -103,6 +115,7 @@ export default {
     title: 'Attendance',
     navLabel: 'Attendance',
     icon: 'bi-calendar-check',
+    group: 'people',
     roles: ['admin', 'employee', 'subcontractor'],
   },
   website: {
@@ -114,12 +127,14 @@ export default {
     title: 'Website',
     navLabel: 'Website',
     icon: 'bi-globe',
+    group: 'system',
     roles: ['admin'],
   },
   create: {
     title: 'Create',
     navLabel: 'Create',
     icon: 'bi-plus-circle',
+    group: 'system',
     roles: ['admin'],
     special: 'create',
   },
@@ -127,6 +142,7 @@ export default {
     title: 'User',
     navLabel: 'User',
     icon: 'bi-person-circle',
+    group: 'people',
     roles: ['public'],
   },
 };

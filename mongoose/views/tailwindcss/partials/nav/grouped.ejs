@@ -1,0 +1,77 @@
+<%#
+  Nav style 'grouped': brand on the left; Home and one text menu per group
+  (People, Money, Work, System) in the middle; Create, Jump to, Help, theme
+  and the account avatar on the right. Below md the menus collapse into one
+  menu button that opens a panel listing every area by group.
+
+  Menus use navMenu (alpine-components.js): aria-expanded, Escape closes,
+  click outside closes, arrow keys move between the entries.
+%>
+<% const _nav = locals.nav || { items: [], groups: [], home: { href: '/', active: false }, help: { href: '/help', active: false } }; %>
+<% const _topCls = (active) => 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ' + (active
+     ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30'
+     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400'); %>
+<% const _entryCls = (active) => 'flex items-center gap-2 px-3 py-2 text-sm rounded-lg ' + (active
+     ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 font-medium'
+     : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400'); %>
+<nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden" aria-label="Main navigation" data-nav-style="grouped">
+  <div class="max-w-7xl mx-auto flex items-center gap-2 px-2 sm:px-4 h-14">
+    <%- include('./_shared.ejs', { part: 'brand' }) %>
+
+    <%# Desktop: Home + one menu per group %>
+    <div class="hidden md:flex items-center gap-1 ml-2 flex-1 min-w-0" role="menubar" aria-label="Areas">
+      <a href="/" class="<%= _topCls(_nav.home.active) %>" <%- _nav.home.active ? 'aria-current="page"' : '' %> role="menuitem">Home</a>
+      <% _nav.groups.forEach((g) => { %>
+      <div x-data="navMenu" class="relative" role="none">
+        <button type="button" x-bind="trigger" id="nav-menu-<%= g.key %>" aria-haspopup="true" aria-expanded="false" aria-controls="nav-menu-<%= g.key %>-panel"
+          class="<%= _topCls(g.active) %>">
+          <%= g.label %>
+          <i class="bi bi-chevron-down text-[10px]" aria-hidden="true"></i>
+        </button>
+        <div x-bind="panel" x-cloak id="nav-menu-<%= g.key %>-panel" role="menu" aria-labelledby="nav-menu-<%= g.key %>"
+          class="absolute left-0 top-full mt-1 min-w-[12rem] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-1 z-50">
+          <% g.items.forEach((item) => { %>
+          <a href="<%= item.href %>" role="menuitem" class="<%= _entryCls(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
+            <i class="bi <%= item.icon %> text-base w-5 text-center" aria-hidden="true"></i>
+            <span><%= item.label %></span>
+          </a>
+          <% }) %>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+
+    <div class="flex items-center gap-1 ml-auto shrink-0">
+      <%- include('./_shared.ejs', { part: 'create', createLabelClass: 'hidden sm:inline' }) %>
+      <div class="hidden lg:block w-48 xl:w-56">
+        <%- include('./_shared.ejs', { part: 'jump', jumpClass: 'w-full' }) %>
+      </div>
+      <%- include('./_shared.ejs', { part: 'utility' }) %>
+
+      <%# Phone/tablet: one menu button holding every area, grouped %>
+      <div x-data="navMenu" class="relative md:hidden">
+        <button type="button" x-bind="trigger" id="nav-menu-all" aria-haspopup="true" aria-expanded="false" aria-controls="nav-menu-all-panel" aria-label="Open menu"
+          class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <i class="bi bi-list text-xl" aria-hidden="true"></i>
+        </button>
+        <div x-bind="panel" x-cloak id="nav-menu-all-panel" role="menu" aria-labelledby="nav-menu-all"
+          class="fixed left-2 right-2 top-16 max-h-[calc(100vh-5rem)] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-2 z-50">
+          <a href="/" role="menuitem" class="<%= _entryCls(_nav.home.active) %>" <%- _nav.home.active ? 'aria-current="page"' : '' %>>
+            <i class="bi bi-house text-base w-5 text-center" aria-hidden="true"></i><span>Home</span>
+          </a>
+          <% _nav.groups.forEach((g) => { %>
+          <div class="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= g.label %></div>
+          <% g.items.forEach((item) => { %>
+          <a href="<%= item.href %>" role="menuitem" class="<%= _entryCls(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
+            <i class="bi <%= item.icon %> text-base w-5 text-center" aria-hidden="true"></i><span><%= item.label %></span>
+          </a>
+          <% }) %>
+          <% }) %>
+          <a href="/help" role="menuitem" class="<%= _entryCls(_nav.help.active) %> mt-2 border-t border-gray-100 dark:border-gray-800 rounded-t-none" <%- _nav.help.active ? 'aria-current="page"' : '' %>>
+            <i class="bi bi-question-circle text-base w-5 text-center" aria-hidden="true"></i><span>Help</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
