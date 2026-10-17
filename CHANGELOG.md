@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.75.1] - 2026-10-17
+
+### Fixed
+- Sidebar navigation style: the main area's left offset was exactly the sidebar's width, so the page gutter vanished and pages that go full-bleed by cancelling that gutter (Help and the API reference) pulled their own topic list 32px underneath the sidebar, clipping its first letters and search box. The offset now includes the gutter.
+
 ## [6.75.0] - 2026-10-17
 
 ### Added
