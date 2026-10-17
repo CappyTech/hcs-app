@@ -21,12 +21,29 @@
         <i class="bi bi-list text-xl" aria-hidden="true"></i>
       </button>
       <%- include('./_shared.ejs', { part: 'brand' }) %>
-      <%# Breadcrumb: the active area, then the page title %>
-      <% if (_nav.active && !_nav.home.active) { %>
+      <%# Breadcrumb. Pages that know their place in the overview hierarchy pass
+          crumbs (list pages as overviewCrumbs, overview pages on page.crumbs); the
+          header shows that trail, then the page title, so it matches the one on the
+          page. Pages without crumbs fall back to the active area, then the title. %>
+      <%
+        const _rawCrumbs = locals.overviewCrumbs || (locals.page && locals.page.crumbs) || locals.crumbs || null;
+        const _hdrCrumbs = Array.isArray(_rawCrumbs)
+          ? _rawCrumbs.filter((c) => c && c.label && c.href !== '/' && c.label !== 'Home')
+          : (_nav.active && !_nav.home.active ? [{ label: _nav.active.label, href: _nav.active.href }] : []);
+        const _hdrLast = _hdrCrumbs.length ? _hdrCrumbs[_hdrCrumbs.length - 1] : null;
+        // Page crumbs always get the title after them (the page's own trail does the same,
+        // e.g. the Subcontractors overview then the Subcontractors list); only the area
+        // fallback drops a title that merely repeats the area.
+        const _hdrDupTitle = Array.isArray(_rawCrumbs) || !_nav.active ? [] : [_nav.active.title, _nav.active.label];
+        const _hdrTitle = locals.title && !_hdrDupTitle.includes(locals.title) ? locals.title : null;
+      %>
+      <% if (_hdrCrumbs.length || _hdrTitle) { %>
       <ol class="hidden md:flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 min-w-0" aria-label="Breadcrumb">
-        <li class="flex items-center gap-1.5"><i class="bi bi-chevron-right text-[10px]" aria-hidden="true"></i><%= _nav.active.label %></li>
-        <% if (locals.title && locals.title !== _nav.active.title && locals.title !== _nav.active.label) { %>
-        <li class="flex items-center gap-1.5 min-w-0"><i class="bi bi-chevron-right text-[10px]" aria-hidden="true"></i><span class="truncate text-gray-700 dark:text-gray-200"><%= locals.title %></span></li>
+        <% _hdrCrumbs.forEach((c) => { %>
+        <li class="flex items-center gap-1.5 min-w-0"><i class="bi bi-chevron-right text-[10px]" aria-hidden="true"></i><% if (c.href) { %><a href="<%= c.href %>" class="truncate hover:text-green-600 dark:hover:text-green-400"><%= c.label %></a><% } else { %><span class="truncate"><%= c.label %></span><% } %></li>
+        <% }) %>
+        <% if (_hdrTitle) { %>
+        <li class="flex items-center gap-1.5 min-w-0" aria-current="page"><i class="bi bi-chevron-right text-[10px]" aria-hidden="true"></i><span class="truncate text-gray-700 dark:text-gray-200"><%= _hdrTitle %></span></li>
         <% } %>
       </ol>
       <% } %>

@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.75.2] - 2026-10-17
+
+### Fixed
+- Sidebar navigation style: the header breadcrumb showed only the active area (e.g. "CIS") and dropped the trail the page itself shows. It now uses the page's own overview crumbs when the page has them (list and overview pages), linking each step, followed by the page title; pages without crumbs keep the area → title fallback.
+
 ## [6.75.1] - 2026-10-17
 
 ### Fixed
