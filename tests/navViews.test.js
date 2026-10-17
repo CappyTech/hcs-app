@@ -98,7 +98,7 @@ describe('every nav style', () => {
         const main = html.match(/<main id="main-content" class="([^"]+)"/)[1];
         if (style === 'two-tier') assert.match(main, /\bpt-24\b/);
         else assert.match(main, /\bpt-16\b/);
-        if (style === 'sidebar') assert.match(main, /lg:pl-\[232px\]/);
+        if (style === 'sidebar') assert.match(main, /lg:pl-\[264px\]/);
         else assert.ok(!/lg:pl-/.test(main));
       });
     });
