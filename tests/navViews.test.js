@@ -180,6 +180,32 @@ describe('phone and desktop markup', () => {
     assert.match(html, /id="nav-jump"/);
   });
 
+  it('sidebar header breadcrumb follows the page crumbs, else the active area, then the title', async () => {
+    // A list page under the overview hierarchy passes overviewCrumbs: the header
+    // shows that trail (linked), then the title; Home is left to the brand link.
+    const withCrumbs = await renderPartial('sidebar', {
+      ...locals('sidebar', '/subcontractors'),
+      title: 'Subcontractors',
+      overviewCrumbs: [{ label: 'Home', href: '/' }, { label: 'Subcontractors', href: '/overview/subcontractors' }],
+    });
+    const crumb = withCrumbs.match(/<ol[^>]*aria-label="Breadcrumb"[\s\S]*?<\/ol>/)[0];
+    assert.match(crumb, /href="\/overview\/subcontractors"[^>]*>Subcrumb|href="\/overview\/subcontractors"/);
+    assert.ok(!/>Home</.test(crumb));
+    assert.match(crumb, /aria-current="page"[\s\S]*Subcontractors/);
+    assert.equal((crumb.match(/Subcontractors/g) || []).length, 2);
+
+    // An overview page passes page.crumbs; a page without crumbs falls back to the area.
+    const fallback = await renderPartial('sidebar', { ...locals('sidebar', '/finance/invoices'), title: 'Invoices' });
+    const fb = fallback.match(/<ol[^>]*aria-label="Breadcrumb"[\s\S]*?<\/ol>/)[0];
+    assert.match(fb, /Finance/);
+    assert.match(fb, /aria-current="page"[\s\S]*Invoices/);
+
+    // Title equal to the last crumb is not repeated.
+    const dup = await renderPartial('sidebar', { ...locals('sidebar', '/finance'), title: 'Finance' });
+    const d = dup.match(/<ol[^>]*aria-label="Breadcrumb"[\s\S]*?<\/ol>/)[0];
+    assert.equal((d.match(/Finance/g) || []).length, 1);
+  });
+
   it('Jump to lists every reachable link for client-side filtering', async () => {
     for (const style of ['grouped', 'two-tier', 'command', 'sidebar']) {
       const l = locals(style);
