@@ -103,7 +103,10 @@
   %>
   <% const _navStyles = ['tabs', 'grouped', 'two-tier', 'command', 'sidebar']; %>
   <% const _navStyle = isAuthenticated && _navStyles.includes(locals.navStyle) ? locals.navStyle : 'tabs'; %>
-  <% const _mainPad = { tabs: 'pt-16', grouped: 'pt-16', 'two-tier': 'pt-24', command: 'pt-16', sidebar: 'pt-16 lg:pl-[232px]' }[_navStyle]; %>
+  <% const _mainPad = { tabs: 'pt-16', grouped: 'pt-16', 'two-tier': 'pt-24', command: 'pt-16', sidebar: 'pt-16 lg:pl-[264px]' }[_navStyle]; %>
+  <%# The sidebar offset is its 232px width plus the 2rem gutter lg:px-8 would give, because
+     pl-[…] overrides px-8. Pages that go full-bleed with -mx-8 (Help, API docs) rely on that
+     gutter existing; without it they pull 32px underneath the sidebar. %>
   <% if (isAuthenticated) { %>
     <%- include('./partials/nav/' + _navStyle + '.ejs') %>
   <% } %>
