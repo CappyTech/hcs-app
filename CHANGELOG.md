@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.75.6] - 2026-10-23
+
+### Fixed
+- Paperless data entry: the "Click a value on the document to fill …" banner floats over the top of the document viewer, and in dark mode its background was 30% translucent, so the white page showed through and the blue text sat on it unreadably. The banner now has a solid dark-blue background, light text and a visible border in dark mode, on both the entry and supplier-reading pages (`paperless/entry.ejs`, `paperless/supplierReading.ejs`). Light mode is unchanged.
+
 ## [6.75.5] - 2026-10-23
 
 ### Changed
