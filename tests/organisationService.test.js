@@ -1,15 +1,29 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
+import { describe, it, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import org from '../services/organisationService.js';
 import registry from '../services/configRegistry.js';
+import configService from '../services/configService.js';
 
 const KEYS = ['COMPANY_NAME', 'COMPANY_SHORT_NAME', 'COMPANY_ADDRESS', 'SUPPORTEMAIL', 'COMPANY_WEBSITE_URL', 'NOTIFY_SENDER_NAME',
   'NOTIFY_INVOICE_RECIPIENT_NAME', 'NOTIFY_INVOICE_EMAIL', 'NOTIFY_STATEMENT_RECIPIENT_NAME', 'NOTIFY_STATEMENT_EMAIL', 'NOTIFY_CREDIT_NOTE_RECIPIENT_NAME', 'NOTIFY_CREDIT_NOTE_EMAIL'];
 let saved;
-beforeEach(() => { saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]])); for (const k of KEYS) delete process.env[k]; });
-afterEach(() => { for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } });
+beforeEach(() => {
+  saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
+  for (const k of KEYS) delete process.env[k];
+  // configService falls through env → config/app-config.json → default. A
+  // developer's local app-config.json (git-ignored) would otherwise leak its
+  // company name into "nothing is set", so read only this test's environment.
+  mock.method(configService, 'get', (key, defaultValue = undefined) => {
+    const v = process.env[key];
+    return v !== undefined && v !== '' ? v : defaultValue;
+  });
+});
+afterEach(() => {
+  mock.restoreAll();
+  for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+});
 
 describe('organisationService', () => {
   it('every company value is a registered configuration key, so an admin can set it', () => {
