@@ -485,14 +485,27 @@
               <% } %>
             </div>
           </div>
-          <% if (hasActions) { %>
-            <div class="shrink-0 self-center flex gap-1 pl-2">
-              <% actions.forEach(a => { %>
+          <%# Only the assignee can complete a task (taskService.completeTask matches
+              on userId), so the button shows on the viewer's own open tasks. The
+              Assignee column is already resolved to a username by fieldTransforms. %>
+          <% const _mine = !_completed && row.uuid && typeof currentUsername !== 'undefined' && currentUsername && row.userId === currentUsername; %>
+          <% if (_mine || hasActions) { %>
+            <div class="shrink-0 self-center flex items-center gap-1 pl-2">
+              <% if (_mine) { %>
+                <form action="/task/<%= row.uuid %>/complete" method="POST">
+                  <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+                  <button type="submit" title="Mark this task as done"
+                          class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-green-600 text-green-700 dark:text-green-400 dark:border-green-500 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white dark:hover:bg-green-600 dark:hover:text-white shadow-sm font-medium transition">
+                    <i class="bi bi-check2"></i> Mark done
+                  </button>
+                </form>
+              <% } %>
+              <% if (hasActions) { actions.forEach(a => { %>
                 <a href="<%= typeof a.href === 'function' ? a.href(row) : a.href.replace(':uuid', row.uuid || '') %>"
                    class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg <%= a.class || 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300' %> transition">
                   <% if (a.icon) { %><i class="<%= a.icon %>"></i><% } %><%= a.label %>
                 </a>
-              <% }); %>
+              <% }); } %>
             </div>
           <% } %>
         </article>

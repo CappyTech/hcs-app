@@ -6,14 +6,7 @@
   <ul class="divide-y divide-gray-200 dark:divide-gray-700">
     <% if (tasks.length) { %>
       <% tasks.forEach(t => { %>
-        <li class="px-4 py-3 flex items-start gap-2">
-          <form action="/task/<%= t.uuid %>/complete" method="POST" class="shrink-0 mt-0.5">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <button type="submit" title="Mark complete"
-                    class="w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 transition flex items-center justify-center text-transparent hover:text-green-600 dark:hover:text-green-400">
-              <i class="bi bi-check text-xs"></i>
-            </button>
-          </form>
+        <li class="px-4 py-3 flex items-start gap-3">
           <div class="min-w-0 flex-grow">
             <div class="flex items-center gap-2 flex-wrap">
               <%# The task detail page is admin-only; everyone else just sees the title. %>
@@ -46,6 +39,14 @@
               <div class="mt-1 text-gray-700 dark:text-gray-300 text-sm"><%= t.description %></div>
             <% } %>
           </div>
+          <%# A labelled button rather than a bare tick: it reads as an action and is harder to hit by accident. %>
+          <form action="/task/<%= t.uuid %>/complete" method="POST" class="shrink-0 self-center">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" title="Mark this task as done"
+                    class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-green-600 text-green-700 dark:text-green-400 dark:border-green-500 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white dark:hover:bg-green-600 dark:hover:text-white shadow-sm font-medium transition">
+              <i class="bi bi-check2"></i> Mark done
+            </button>
+          </form>
         </li>
       <% }) %>
     <% } else { %>
