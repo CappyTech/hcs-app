@@ -1,13 +1,14 @@
 <style nonce="<%= locals.cspNonce %>">
   .print-footer { display: none; }
   @page {
-    margin-bottom: 24mm;
+    margin-bottom: 26mm;
     @bottom-left {
       content: var(--hcs-footer, "<%- String(locals.companyName || '').replace(/"/g, '\\"') %>");
       white-space: pre-line;
       vertical-align: top;
       border-top: 0.5pt solid #bbb;
       padding-top: 4pt;
+      padding-bottom: 8mm;
       font-family: ui-sans-serif, system-ui, "Segoe UI", Arial, sans-serif;
       font-size: 7pt;
       line-height: 1.45;
@@ -18,6 +19,7 @@
       vertical-align: top;
       border-top: 0.5pt solid #bbb;
       padding-top: 4pt;
+      padding-bottom: 8mm;
       font-family: ui-sans-serif, system-ui, "Segoe UI", Arial, sans-serif;
       font-size: 7pt;
       line-height: 1.45;

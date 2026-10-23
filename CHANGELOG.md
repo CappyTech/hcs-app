@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.75.4] - 2026-10-23
+
+### Fixed
+- CIS print footer: the third line (company name and address) fell inside the printer's unprintable strip and was cut off on paper. Chromium centres a margin box's content vertically whatever its alignment, so the footer sat lower than intended. The bottom-left and bottom-right boxes now carry 8mm of bottom padding and the page's bottom margin is 26mm, which puts the lowest line about 15mm from the paper edge (`cis/partials/_printStyles.ejs`).
+
 ## [6.75.3] - 2026-10-23
 
 ### Changed
