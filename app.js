@@ -498,6 +498,9 @@ const main = async () => {
       res.locals.isAuthenticated = !!req.user;
       res.locals.role = req.user && req.user.role || null;
       res.locals.isAdmin = req.user && req.user.role === 'admin';
+      // Lets list views tell the viewer's own rows apart (e.g. the Tasks list
+      // shows Mark done only on tasks assigned to the viewer).
+      res.locals.currentUsername = req.user?.username || null;
 
       // RBAC: expose departments the user's role can access
       const _customPerms = req.user?.customPermissions || {};

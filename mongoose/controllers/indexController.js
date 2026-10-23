@@ -225,6 +225,20 @@ export const quickAddTask = async (req, res, next) => {
 };
 
 // Complete a task from home page
+// Same-origin referer path for a post-POST redirect; falls back when the
+// referer is missing or points at another host.
+function backTo(req, fallback) {
+  const ref = req.get("referer");
+  if (!ref) return fallback;
+  try {
+    const url = new URL(ref, `${req.protocol}://${req.get("host")}`);
+    if (url.host !== req.get("host")) return fallback;
+    return url.pathname + url.search;
+  } catch {
+    return fallback;
+  }
+}
+
 export const completeTask = async (req, res, next) => {
   try {
     const result = await taskService.completeTask(
@@ -232,11 +246,12 @@ export const completeTask = async (req, res, next) => {
       req.user._id,
     );
     if (result) {
-      req.flash("success", "Task completed.");
+      req.flash("success", `Task completed: ${result.title}`);
     } else {
       req.flash("error", "Task not found.");
     }
-    res.redirect("/");
+    // Back to the page the button was on (dashboard or /tasks), not always home.
+    res.redirect(backTo(req, "/"));
   } catch (err) {
     next(err);
   }

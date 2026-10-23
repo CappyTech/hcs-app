@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.75.5] - 2026-10-23
+
+### Changed
+- Tasks: completing a task is now a labelled **Mark done** button (outline green, filling on hover) instead of a bare bordered square whose tick only appeared on hover. The dashboard task cards show it on the right of each row (`partials/taskCard.ejs`), and the Tasks list page gains the same button on the viewer's own open tasks, which it could not complete before (`partials/listTable.ejs`; `res.locals.currentUsername` tells the view which rows are the viewer's). Completing a task returns to the page the button was on (dashboard or `/tasks`) rather than always the home page, and the success toast names the task (`indexController.completeTask`).
+
 ## [6.75.4] - 2026-10-23
 
 ### Fixed
