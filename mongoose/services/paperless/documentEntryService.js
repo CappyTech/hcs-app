@@ -307,9 +307,49 @@ export async function ensureClassified(OcrDocument, paperlessId) {
   return classifyDocument(OcrDocument, paperlessId);
 }
 
-/** Save the entry. Refused once the invoice is in KashFlow. */
+const ENTRY_FIELD_LABELS = {
+  invoiceNumber: 'invoice number', invoiceDate: 'invoice date', dueDate: 'due date',
+  totalGoods: 'total goods', totalVat: 'total VAT', invoiceTotal: 'invoice total',
+};
+const BANK_FIELD_LABELS = {
+  accountId: 'bank account', periodStart: 'period start', periodEnd: 'period end',
+  openingBalance: 'opening balance', closingBalance: 'closing balance',
+};
+const sameValue = (a, b) => {
+  const norm = (v) => (v instanceof Date ? v.getTime() : v == null ? null : v);
+  return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
+};
+
+/**
+ * What a save changed, in words, for the audit log: ["invoice number", "line 2",
+ * "line 3 removed"]. Pure. An empty list means nothing changed.
+ */
+export function entryChanges(before, after) {
+  const changed = [];
+  const b = before || {};
+  const a = after || {};
+  const labels = a.bank || b.bank ? BANK_FIELD_LABELS : ENTRY_FIELD_LABELS;
+  const bFields = labels === BANK_FIELD_LABELS ? (b.bank || {}) : b;
+  const aFields = labels === BANK_FIELD_LABELS ? (a.bank || {}) : a;
+  for (const [key, label] of Object.entries(labels)) {
+    if (!sameValue(bFields[key], aFields[key])) changed.push(label);
+  }
+  const bLines = b.lines || [];
+  const aLines = a.lines || [];
+  const n = Math.max(bLines.length, aLines.length);
+  for (let i = 0; i < n; i++) {
+    const was = bLines[i];
+    const is = aLines[i];
+    if (was && !is) changed.push(`line ${i + 1} removed`);
+    else if (!was && is) changed.push(`line ${i + 1} added`);
+    else if (!sameValue(was, is)) changed.push(`line ${i + 1}`);
+  }
+  return changed;
+}
+
+/** Save the entry. Refused once the invoice is in KashFlow. Each save that changes something is in processingHistory. */
 export async function saveEntry(OcrDocument, paperlessId, entry, actor, { now = new Date() } = {}) {
-  const doc = await OcrDocument.findOne({ paperlessId }).select('documentType processingState').lean();
+  const doc = await OcrDocument.findOne({ paperlessId }).select('documentType processingState entry').lean();
   if (!doc) return { ok: false, reason: 'not-found', message: 'Document not found.' };
   if (!entryKind(doc) || entryKind(doc) === 'statement') {
     return { ok: false, reason: 'no-form', message: 'This type of document has no fields to enter.' };
@@ -317,13 +357,78 @@ export async function saveEntry(OcrDocument, paperlessId, entry, actor, { now = 
   if (doc.processingState === 'sent') {
     return { ok: false, reason: 'locked', message: 'This invoice is already in KashFlow. Unlink it before changing what was entered.' };
   }
+  const changed = entryChanges(doc.entry?.savedAt ? doc.entry : null, entry);
+  const update = { $set: { entry: { ...entry, savedAt: now, savedBy: storedActor(actor) } } };
+  if (changed.length) {
+    const note = doc.entry?.savedAt ? `Changed ${changed.join(', ')}` : `First save: ${changed.join(', ')}`;
+    update.$push = { processingHistory: { field: 'entry', from: null, to: null, action: 'save_entry', at: now, by: storedActor(actor), note } };
+  }
   const updated = await OcrDocument.findOneAndUpdate(
     { paperlessId, processingState: { $ne: 'sent' } },
-    { $set: { entry: { ...entry, savedAt: now, savedBy: storedActor(actor) } } },
+    update,
     { new: true },
   ).lean();
   if (!updated) return { ok: false, reason: 'conflict', message: 'The document changed while you were working on it. Reload and try again.' };
   return { ok: true, doc: updated };
+}
+
+// ── Audit log ─────────────────────────────────────────────────────────
+
+const STATE_WORDS = {
+  null: 'no state', awaiting_entry: 'Needs data entry', entered: 'Ready for KashFlow', sent: 'In KashFlow', manual_kashflow: 'Credit note, keyed by hand',
+};
+const EXCLUDED_WORDS = { null: 'in its queue', original_multiple: 'original of several invoices', manually_added: 'keyed into KashFlow by hand', not_for_kashflow: 'not for KashFlow' };
+const ACTION_WORDS = {
+  initialise: 'Classified', complete_entry: 'Entry completed', mark_sent: 'Sent to KashFlow', unlink: 'Unlinked from KashFlow',
+  unlink_unentered: 'Unlinked from KashFlow', reopen_entry: 'Entry reopened', flag_credit_note: 'Marked as a credit note',
+  unflag_credit_note: 'Credit note flag removed', backfill: 'Backfilled from Paperless', follow_paperless: 'Followed a Paperless change',
+  mark_reviewed: 'Marked reviewed', set_excluded: 'Queue exclusion changed', save_entry: 'Entry saved', change_type: 'Type changed',
+};
+const NOTIFICATION_WORDS = {
+  new_doc: 'New document posted', invoice: 'Invoice emailed', invoice_resend: 'Invoice email re-sent', kashflow: 'Added to KashFlow posted',
+  statement: 'Statement emailed', credit_note: 'Credit note emailed',
+};
+const word = (table, v) => table[v == null ? 'null' : v] ?? String(v);
+
+/**
+ * Everything that happened to a document, newest first, for the admin Audit
+ * log tab: state and flag changes, entry saves, server readings, type checks
+ * and notifications. Pure. Each row is { at, who, what, detail, kind }.
+ */
+export function auditTimeline(doc, notifications = []) {
+  const rows = [];
+  const whoOf = (by) => by?.name || (by === undefined ? '' : 'system');
+  for (const h of doc?.processingHistory || []) {
+    let detail = h.note || '';
+    if (h.field === 'processingState') detail = `${word(STATE_WORDS, h.from)} → ${word(STATE_WORDS, h.to)}${h.note ? `. ${h.note}` : ''}`;
+    else if (h.field === 'excludedReason') detail = `${word(EXCLUDED_WORDS, h.from)} → ${word(EXCLUDED_WORDS, h.to)}${h.note ? `. ${h.note}` : ''}`;
+    else if (h.field === 'statementReviewed') detail = h.to ? 'Reviewed' : 'Not reviewed';
+    else if (h.field === 'creditNote') detail = h.to ? 'Credit note' : 'Not a credit note';
+    else if (h.field === 'documentType') detail = `${h.from?.name ?? h.from ?? '—'} → ${h.to?.name ?? h.to ?? '—'}`;
+    rows.push({ at: h.at, who: whoOf(h.by), what: ACTION_WORDS[h.action] || h.action || h.field, detail, kind: h.field === 'entry' ? 'entry' : 'state' });
+  }
+  if (doc?.reading?.at) {
+    rows.push({
+      at: doc.reading.at, who: 'hcs-app', what: doc.reading.error ? "Couldn't read the PDF" : 'Read from the PDF',
+      detail: doc.reading.error || (doc.reading.hasText === false ? 'No text in the PDF' : `${doc.reading.usedLayout ? "Using this supplier's layout, " : ''}found ${doc.reading.score ?? 0} of 3 header fields${doc.reading.lineCount ? `, ${doc.reading.lineCount} lines` : ''}`),
+      kind: 'read',
+    });
+  }
+  if (doc?.statement?.at) {
+    rows.push({ at: doc.statement.at, who: 'hcs-app', what: 'Set against KashFlow', detail: doc.statement.error || doc.statement.summaryText || '', kind: 'read' });
+  }
+  if (doc?.typeCheck?.confirmed?.at) {
+    rows.push({ at: doc.typeCheck.confirmed.at, who: whoOf(doc.typeCheck.confirmed.by), what: 'Type confirmed', detail: doc.typeCheck.confirmed.code || '', kind: 'state' });
+  }
+  for (const n of notifications || []) {
+    const failed = (n.channels || []).filter((c) => c.status === 'failed').map((c) => `${c.channel}: ${c.error}`);
+    const status = { shadow: 'would send', recorded: 'recorded from Paperless', sent: 'sent', failed: 'failed', claimed: 'sending' }[n.status] || n.status || '';
+    const who = n.triggeredBy?.name || (n.source === 'paperless' ? 'Paperless' : n.source === 'backfill' ? 'backfill' : 'hcs-app');
+    rows.push({ at: n.createdAt, who, what: NOTIFICATION_WORDS[n.kind] || n.kind, detail: [status, ...failed].filter(Boolean).join('; '), kind: 'notify' });
+  }
+  return rows
+    .filter((r) => r.at)
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
 }
 
 async function tellPaperless(label, fn, manual) {
@@ -564,6 +669,8 @@ export default {
   formValues,
   entryAsCustomFields,
   ensureClassified,
+  entryChanges,
+  auditTimeline,
   saveEntry,
   completeEntry,
   setCreditNote,

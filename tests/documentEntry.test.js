@@ -20,7 +20,7 @@ const ejs = require('ejs');
 
 const {
   parseMoneyInput, parseDateInput, entryKind, parseEntryForm, completionErrors, consistencyWarnings,
-  formValues, saveEntry, completeEntry, setCreditNote, reopenEntry,
+  formValues, saveEntry, completeEntry, setCreditNote, reopenEntry, entryChanges, auditTimeline,
 } = entrySvc;
 const { makeMockClient, resetMockPaperless, mockPaperlessState } = mockPaperless;
 
@@ -284,6 +284,27 @@ describe('saveEntry', () => {
     assert.equal(M.rows[0].entry.savedBy.name, 'bev');
   });
 
+  it('records what each save changed in processingHistory, and nothing for a save that changed nothing', async () => {
+    const M = fakeOcrDocument([{ paperlessId: 1, documentType: PI, processingState: 'awaiting_entry' }]);
+    await saveEntry(M, 1, { invoiceNumber: 'A1', lines: [{ description: 'Cement', total: 10 }] }, user, { now: new Date('2026-10-03T10:00:00Z') });
+    assert.equal(M.rows[0].processingHistory.length, 1);
+    assert.deepEqual(M.rows[0].processingHistory[0], {
+      field: 'entry', from: null, to: null, action: 'save_entry', at: new Date('2026-10-03T10:00:00Z'),
+      by: { userId: user.userId, name: 'bev' }, note: 'First save: invoice number, line 1 added',
+    });
+    await saveEntry(M, 1, { invoiceNumber: 'A1', lines: [{ description: 'Cement', total: 10 }] }, user);
+    assert.equal(M.rows[0].processingHistory.length, 1, 'nothing changed, nothing logged');
+    await saveEntry(M, 1, { invoiceNumber: 'A2', totalVat: 2, lines: [{ description: 'Cement', total: 12 }, { description: 'Sand', total: 3 }] }, user);
+    assert.equal(M.rows[0].processingHistory[1].note, 'Changed invoice number, total VAT, line 1, line 2 added');
+    await saveEntry(M, 1, { invoiceNumber: 'A2', totalVat: 2, lines: [{ description: 'Cement', total: 12 }] }, user);
+    assert.equal(M.rows[0].processingHistory[2].note, 'Changed line 2 removed');
+  });
+
+  it('entryChanges names bank statement fields too', () => {
+    assert.deepEqual(entryChanges(null, { bank: { accountId: 1, periodStart: new Date('2026-09-01') } }), ['bank account', 'period start']);
+    assert.deepEqual(entryChanges({ bank: { accountId: 1 } }, { bank: { accountId: 1 } }), []);
+  });
+
   it('refuses once the invoice is in KashFlow, and for documents with no form', async () => {
     const M = fakeOcrDocument([
       { paperlessId: 1, documentType: PI, processingState: 'sent' },
@@ -293,6 +314,34 @@ describe('saveEntry', () => {
     assert.equal((await saveEntry(M, 1, {}, user)).reason, 'locked');
     assert.equal((await saveEntry(M, 2, {}, user)).reason, 'no-form');
     assert.equal((await saveEntry(M, 3, {}, user)).reason, 'no-form');
+  });
+});
+
+describe('auditTimeline (the admin Audit log tab)', () => {
+  it('merges state changes, entry saves, readings and notifications, newest first, in words', () => {
+    const doc = {
+      processingHistory: [
+        { field: 'processingState', from: null, to: 'awaiting_entry', action: 'initialise', at: new Date('2026-10-01T09:00:00Z'), by: { name: 'system' } },
+        { field: 'entry', action: 'save_entry', at: new Date('2026-10-02T09:00:00Z'), by: { name: 'bev' }, note: 'First save: invoice number' },
+        { field: 'processingState', from: 'awaiting_entry', to: 'entered', action: 'complete_entry', at: new Date('2026-10-03T09:00:00Z'), by: { name: 'bev' } },
+        { field: 'excludedReason', from: null, to: 'not_for_kashflow', action: 'set_excluded', at: new Date('2026-10-04T09:00:00Z'), by: { name: 'jack' }, note: 'Paid with credit' },
+      ],
+      reading: { at: new Date('2026-10-01T10:00:00Z'), score: 3, lineCount: 2, usedLayout: true },
+    };
+    const rows = auditTimeline(doc, [
+      { kind: 'invoice', status: 'shadow', createdAt: new Date('2026-10-03T09:00:01Z'), triggeredBy: { name: 'bev' } },
+      { kind: 'new_doc', status: 'recorded', source: 'paperless', createdAt: new Date('2026-10-01T08:00:00Z'), channels: [{ channel: 'discord', status: 'failed', error: 'timeout' }] },
+    ]);
+    assert.deepEqual(rows.map((r) => [r.who, r.what, r.detail, r.kind]), [
+      ['jack', 'Queue exclusion changed', 'in its queue → not for KashFlow. Paid with credit', 'state'],
+      ['bev', 'Invoice emailed', 'would send', 'notify'],
+      ['bev', 'Entry completed', 'Needs data entry → Ready for KashFlow', 'state'],
+      ['bev', 'Entry saved', 'First save: invoice number', 'entry'],
+      ['hcs-app', 'Read from the PDF', "Using this supplier's layout, found 3 of 3 header fields, 2 lines", 'read'],
+      ['system', 'Classified', 'no state → Needs data entry', 'state'],
+      ['Paperless', 'New document posted', 'recorded from Paperless; discord: timeout', 'notify'],
+    ]);
+    assert.deepEqual(auditTimeline({}, []), []);
   });
 });
 
@@ -468,6 +517,23 @@ describe('entry view', () => {
     const cn = { paperlessId: 2, documentType: PI, processingState: 'manual_kashflow', creditNote: true, customFields: [] };
     assert.match(await render(cn, { isAdmin: true }), /Not a credit note \(admin\)/);
     assert.ok(!(await render(cn)).includes('Not a credit note'));
+  });
+
+  it('shows the Audit log tab to admins only, and the rail to everyone', async () => {
+    const doc = { paperlessId: 1, documentType: PI, processingState: 'entered', customFields: [] };
+    const audit = [{ at: new Date('2026-10-03T09:00:00Z'), who: 'bev', what: 'Entry completed', detail: 'Needs data entry → Ready for KashFlow', kind: 'state' }];
+    const plain = await render(doc);
+    assert.ok(!plain.includes('x-data="profileTabs"'));
+    assert.ok(!plain.includes('data-audit-log'));
+    assert.match(plain, /data-rail/);
+    assert.match(plain, /data-step="done"[\s\S]*Needs data entry[\s\S]*data-step="now"[\s\S]*Ready for KashFlow[\s\S]*data-step="todo"[\s\S]*In KashFlow/);
+    const admin = await render(doc, { isAdmin: true, audit });
+    assert.match(admin, /x-data="profileTabs"/);
+    assert.match(admin, /data-tab="audit" x-bind="tab\('audit'\)"/);
+    assert.match(admin, /x-bind="panel\('entry'\)"/);
+    assert.match(admin, /data-audit-kind="state"[\s\S]*Entry completed[\s\S]*Needs data entry → Ready for KashFlow/);
+    const empty = await render(doc, { isAdmin: true, audit: [] });
+    assert.match(empty, /Nothing recorded yet/);
   });
 
   it('gives a bank statement its five fields, and a remittance none', async () => {
