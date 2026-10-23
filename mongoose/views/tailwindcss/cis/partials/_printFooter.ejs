@@ -1,14 +1,29 @@
+<%#
+  Print footer for the CIS reports. Every printed page repeats it so a loose
+  page still says what it is: line one is the report type, line two the
+  subject (subcontractor, period, tax year) and when it was printed, line
+  three the company details from configuration. _printStyles places it in
+  the bottom-left @page margin box; the page count sits bottom-right.
+
+  Include with: { footerTitle: 'CIS Yearly Return', footerParts: [supplier.Name, 'Tax year 2026/27'] }
+%>
 <%
-  const _cssLine = (footerTitle || '')
-    .replace(/&mdash;/g, '\u2014')
-    .replace(/&bull;/g, '\u2022')
+  const _cssEsc = (s) => String(s ?? '')
+    .replace(/&mdash;/g, '—')
+    .replace(/&bull;/g, '•')
     .replace(/&amp;/g, '&')
     .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"');
-  // _cssLine is already escaped above; the company values are escaped here
-  const _cssEsc = (s) => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  const _cssFooter = [_cssLine, ...[locals.companyName, locals.companyAddress, locals.contactEmail].filter(Boolean).map(_cssEsc)]
-    .filter(Boolean)
-    .join(' \u2022 ');
+    .replace(/"/g, '\\"')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const _sep = ' · ';
+  const _printedAt = new Date().toLocaleString('en-GB', {
+    timeZone: 'Europe/London', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+  const _title = _cssEsc(footerTitle).toUpperCase();
+  const _detail = [...(locals.footerParts || []), 'Printed ' + _printedAt].filter(Boolean).map(_cssEsc).join(_sep);
+  const _company = [locals.companyName, locals.companyAddress, locals.contactEmail].filter(Boolean).map(_cssEsc).join(_sep);
+  /* "\A" is a CSS newline; _printStyles renders the box with white-space: pre-line. */
+  const _cssFooter = [_title, _detail, _company].filter(Boolean).join('\\A ');
 %>
 <style nonce="<%= locals.cspNonce %>">:root { --hcs-footer: "<%- _cssFooter %>"; }</style>

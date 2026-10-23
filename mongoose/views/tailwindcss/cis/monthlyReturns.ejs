@@ -100,7 +100,7 @@
   </table>
 </div>
 
-<% var footerTitle = 'CIS Monthly Return  ' + supplier.Name + ' ' + monthName + '  Tax Year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2) + '  Printed ' + new Date().toLocaleDateString('en-GB'); %>
-<%- include('./partials/_printFooter', { footerTitle }) %>
+<% var taxYearLabel = 'Tax year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2); %>
+<%- include('./partials/_printFooter', { footerTitle: 'CIS Monthly Return', footerParts: [supplier.Name, monthName, taxYearLabel] }) %>
 
 <%- include('./partials/_printStyles') %>

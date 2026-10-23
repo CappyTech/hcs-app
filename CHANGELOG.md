@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.75.3] - 2026-10-23
+
+### Changed
+- CIS print footer: the monthly and yearly return reports (one subcontractor and all) printed one long centred line squeezed beside the page count, so the subcontractor, tax year and company address ran together and wrapped. The footer is now three left-aligned lines under a hairline, repeated on every page so a loose page still identifies itself: the report type in capitals, then the subcontractor (or All subcontractors), period, tax year and the print date and time, then the company name, address and contact email from Admin → Configuration → Organisation. The page count stays bottom-right and the bottom page margin grows from 18mm to 24mm (`cis/partials/_printFooter.ejs`, `cis/partials/_printStyles.ejs`). The partial now takes `footerTitle` and `footerParts` instead of one preformatted string.
+
 ## [6.75.2] - 2026-10-17
 
 ### Fixed
