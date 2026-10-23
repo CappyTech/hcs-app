@@ -50,6 +50,8 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
   const v = values || entry.formValues(doc);
   const lineCount = Math.max((v.lines || []).length, 1) + extraLines;
   const hints = kind === 'invoice' ? await readingSvc.hintsFor(doc).catch(() => null) : null;
+  const isAdmin = req.user?.role === 'admin';
+  const notifications = await notifySvc.historyFor(mdb.PAPERLESS?.NotificationLog, doc.paperlessId).catch(() => []);
   res.status(status).render(path.join('tailwindcss', 'paperless', 'entry'), {
     title: doc.title || `Document #${doc.paperlessId}`,
     reading: doc.reading || null,
@@ -62,12 +64,14 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     lineCount,
     errors,
     warnings: kind === 'invoice' ? entry.consistencyWarnings(doc.entry) : [],
-    isAdmin: req.user?.role === 'admin',
+    isAdmin,
     // Tagged in Paperless as not for entry: shown, but nothing to enter
     excluded: notForEntryMessage(doc),
     locked: doc.processingState === 'sent' || !!notForEntryMessage(doc),
     paperlessUiBase: paperlessUiBase(),
-    notifications: await notifySvc.historyFor(mdb.PAPERLESS?.NotificationLog, doc.paperlessId).catch(() => []),
+    notifications,
+    // The Audit log tab, admins only
+    audit: isAdmin ? entry.auditTimeline(doc, notifications) : null,
     notifyMode: notifySvc.notifyMode(),
     documentTypes: await documentTypeOptions().catch(() => []),
   });

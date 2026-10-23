@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.76.0] - 2026-10-23
+
+### Changed
+- Document entry screen: rebuilt as three columns so nothing sits below the fold. A status rail on the left shows where the document is on its way to KashFlow (received, read from the PDF, needs data entry, ready, in KashFlow, with the current step marked and each step's time), the supplier and type, every check in one place (validation errors, totals that don't add up, no text in the PDF, kept out of the queues, locked in KashFlow), the rarely used actions (credit note, not for KashFlow, resend, reopen) as compact disclosures, and the notifications as a short list. The document takes the centre and stays pinned while the form on the right scrolls; the OCR text folds under it. Statements get a wider right column for the reconciliation. An excluded invoice's strip ends at the exclusion reason rather than a queue it isn't in (`paperless/entry.ejs`).
+
+### Added
+- Document entry screen: admins get an **Audit log** tab beside Entry listing everything that happened to the document, newest first: state and flag changes, saves on the entry screen, server readings, type checks and notifications, each with who and when (`auditTimeline` in `documentEntryService.js`). Each save that changes something now adds an `entry` row to `processingHistory` saying which fields and lines changed, so the log shows the keying history and not only the last save (`entryChanges`, `saveEntry`; `OcrDocument` history `field` enum gains `entry`).
+
 ## [6.75.6] - 2026-10-23
 
 ### Fixed

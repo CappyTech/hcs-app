@@ -20,6 +20,7 @@ const BADGES = {
   amber: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
   blue:  'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
   green: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
+  red:   'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
   slate: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
 };
 const badge = (colour) => `text-[11px] px-2 py-0.5 rounded-full border ${BADGES[colour] || BADGES.slate}`;
@@ -28,12 +29,89 @@ const err = (name) => errors && errors[name];
 const val = (v) => (v == null ? '' : v);
 const inputCls = (name) => `w-full text-sm border ${err(name) ? 'border-red-400 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-60`;
 const labelCls = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1';
+const smallBtn = 'inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition';
+const railHead = 'text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2';
 const disabled = locked ? 'disabled' : '';
 const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 'statement' ? 'statements' : 'needs-entry';
+const when = (d, opts) => (d ? new Date(d).toLocaleString('en-GB', { timeZone: 'Europe/London', ...(opts || {}) }) : '');
+const day = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }) : '—');
+const nfk = doc.excludedReason === 'not_for_kashflow';
+const rd = kind === 'invoice' ? locals.reading : null;
+const hasAudit = !!(locals.isAdmin && locals.audit);
+// Tab panels only when there are tabs; without x-data the x-bind would hide the page
+const panelAttr = (name) => (hasAudit ? `x-bind="panel('${name}')"` : '');
+
+// ── Progress strip: where the document is on its way to KashFlow ──
+// Each step: { label, status: done | now | todo, at, note }
+const history = doc.processingHistory || [];
+const reachedAt = (field, to) => {
+  const rows = history.filter((h) => h.field === field && h.to === to);
+  return rows.length ? rows[rows.length - 1].at : null;
+};
+const ORDER = { awaiting_entry: 0, entered: 1, sent: 2 };
+const steps = [{ label: 'Received', status: 'done', at: doc.added || doc.created || doc.createdAt }];
+if (kind === 'invoice') {
+  steps.push(!rd ? { label: 'Read from the PDF', status: 'todo', note: 'Not read on the server yet' }
+    : rd.error ? { label: 'Read from the PDF', status: 'todo', note: "Couldn't read it last time" }
+    : { label: 'Read from the PDF', status: 'done', at: rd.at, note: rd.usedLayout ? "Using this supplier's layout" : null });
+  if (state === 'manual_kashflow') {
+    steps.push({ label: 'Credit note', status: 'now', at: doc.processingStateChanged?.at, note: 'Keyed into KashFlow by hand' });
+  } else if (excludedLabel) {
+    // Not on the queue path at all (#252): the reason is the last step, not the queue it would be in
+    steps.push({ label: excludedLabel, status: 'now', at: doc.excludedReasonChanged?.at, note: 'Not in any queue' });
+  } else {
+    const pos = ORDER[state] ?? -1;
+    [['Needs data entry', 'awaiting_entry'], ['Ready for KashFlow', 'entered'], ['In KashFlow', 'sent']].forEach(([label, s], i) => {
+      steps.push({
+        label,
+        status: i < pos ? 'done' : i === pos ? 'now' : 'todo',
+        at: i === pos ? doc.processingStateChanged?.at : i < pos ? reachedAt('processingState', s) : null,
+      });
+    });
+  }
+} else if (kind === 'statement') {
+  const st = doc.statement || null;
+  steps.push(!st ? { label: 'Set against KashFlow', status: 'todo', note: 'Not checked yet' }
+    : st.error ? { label: 'Set against KashFlow', status: 'todo', note: "Couldn't read it" }
+    : { label: 'Set against KashFlow', status: 'done', at: st.at });
+  steps.push(doc.statementReviewed
+    ? { label: 'Reviewed', status: 'done', at: doc.statementReviewedChanged?.at }
+    : { label: 'Reviewed', status: 'now', note: 'Waiting for review' });
+}
+const STEP_DOT = {
+  done: 'bg-green-500 border-green-500 text-white',
+  now:  'border-blue-500 ring-2 ring-blue-500/30 bg-white dark:bg-gray-900',
+  todo: 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900',
+};
+
+// ── Column widths: statements get a wider right column for the reconciliation ──
+const COLS = kind === 'statement'
+  ? { doc: 'lg:col-span-4 xl:col-span-5', form: 'lg:col-span-5' }
+  : { doc: 'lg:col-span-5 xl:col-span-6', form: 'lg:col-span-4' };
+
+// ── Checks: what needs attention, gathered in one place ──
+const checks = [];
+if (Object.keys(errors || {}).length) checks.push({ tone: 'red', title: 'Please fix the following', items: Object.values(errors) });
+if (warnings && warnings.length) checks.push({ tone: 'amber', title: "Totals don't add up", items: warnings });
+if (rd && !rd.error && rd.hasText === false) checks.push({ tone: 'amber', title: 'No text in the PDF', text: 'Nothing can be read from it or selected. It was probably scanned without OCR.', reprocess: true });
+if (locals.excluded) checks.push({ tone: 'amber', title: `Kept out of the queues. ${excluded} ${doc.excludedReason === 'not_for_kashflow' ? 'An admin can undo it below.' : "Remove the tag in Paperless if that's wrong."}` });
+if (locked && !locals.excluded) checks.push({ tone: 'green', title: 'In KashFlow', locked: true });
+const CHECK_CARD = {
+  red:   'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300',
+  amber: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300',
+  green: 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 text-gray-700 dark:text-gray-300',
+};
+
+// ── Notifications (H6) ──
+const KIND_LABELS = { new_doc: 'New document (Discord)', invoice: 'Invoice emailed', invoice_resend: 'Invoice email re-sent', kashflow: 'Added to KashFlow (Discord)', statement: 'Statement emailed', credit_note: 'Credit note emailed' };
+const STATUS_LABEL = { shadow: 'would send', recorded: 'from Paperless', claimed: 'sending' };
+const STATUS_COLOUR = { sent: 'green', shadow: 'slate', failed: 'red', claimed: 'amber', recorded: 'blue' };
+const notifyList = locals.notifications || [];
+const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate-400', notify: 'bg-amber-500' };
 %>
 <link rel="stylesheet" href="/resources/vendor/pdfjs/pdf_viewer.css">
-<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <div class="flex flex-wrap items-center gap-3 mb-6">
+<div class="max-w-screen-2xl mx-auto py-6 px-4 sm:px-6 lg:px-8" <%- hasAudit ? 'x-data="profileTabs"' : '' %>>
+  <div class="flex flex-wrap items-center gap-3 mb-4">
     <a href="/paperless/queues<%= queueBack ? `/${queueBack}` : '' %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Queues</a>
     <span class="text-gray-400">/</span>
     <h1 class="text-xl font-bold break-all"><%= title %></h1>
@@ -50,9 +128,192 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
     </div>
   </div>
 
-  <div class="grid lg:grid-cols-5 gap-6">
+  <% if (hasAudit) { %>
+    <nav class="flex gap-1 border-b border-gray-200 dark:border-gray-700 mb-4" role="tablist" aria-label="Document views">
+      <button type="button" data-tab="entry" x-bind="tab('entry')" role="tab" class="px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors focus:outline-none">Entry</button>
+      <button type="button" data-tab="audit" x-bind="tab('audit')" role="tab" class="px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors focus:outline-none">Audit log <span class="ml-1 text-[11px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300"><%= audit.length %></span></button>
+    </nav>
+  <% } %>
+
+  <div <%- panelAttr('entry') %> class="grid gap-4 lg:grid-cols-12 items-start">
+    <%# ── Rail: where it is, who it's from, what needs attention ── %>
+    <aside class="lg:col-span-3 xl:col-span-2 lg:sticky lg:top-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm divide-y divide-gray-100 dark:divide-gray-700 text-sm text-gray-700 dark:text-gray-300" data-rail>
+      <section class="p-4">
+        <h2 class="<%= railHead %>">Progress</h2>
+        <ol class="space-y-2">
+          <% steps.forEach((s) => { %>
+            <li class="flex items-start gap-2 <%= s.status === 'todo' ? 'text-gray-400 dark:text-gray-500' : '' %>" data-step="<%= s.status %>">
+              <span class="mt-1 w-3.5 h-3.5 rounded-full border-2 flex-none inline-flex items-center justify-center text-[9px] <%= STEP_DOT[s.status] %>"><% if (s.status === 'done') { %><i class="bi bi-check"></i><% } %></span>
+              <span class="min-w-0">
+                <span class="<%= s.status === 'now' ? 'font-semibold text-gray-900 dark:text-white' : '' %>"><%= s.label %></span>
+                <% if (s.at) { %><span class="block text-xs text-gray-400"><%= when(s.at, { dateStyle: 'short', timeStyle: 'short' }) %></span><% } %>
+                <% if (s.note) { %><span class="block text-xs text-gray-400"><%= s.note %></span><% } %>
+              </span>
+            </li>
+          <% }) %>
+        </ol>
+      </section>
+
+      <section class="p-4 space-y-1.5">
+        <h2 class="<%= railHead %>">Supplier</h2>
+        <div class="font-medium text-gray-900 dark:text-white break-words"><%= doc.correspondent?.name || '—' %></div>
+        <% if (kind === 'invoice' && doc.correspondent?.id != null) { %>
+          <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline" title="What hcs-app has learned about this supplier's invoices, and teaching it">How it's read</a>
+        <% } %>
+        <div class="text-xs"><%- include('../partials/_documentType', { doc, documentTypes: locals.documentTypes, back: 'entry' }) %></div>
+        <% if (doc.entry?.savedAt) { %>
+          <div class="text-xs text-gray-400">Last saved <%= when(doc.entry.savedAt) %><%= doc.entry.savedBy?.name ? ` by ${doc.entry.savedBy.name}` : '' %></div>
+        <% } %>
+        <% if (kind === 'invoice') { %>
+          <div class="flex flex-wrap items-center gap-x-2 text-xs text-gray-400">
+            <span><i class="bi bi-file-earmark-text"></i>
+              <% if (!rd) { %>Not read on the server yet.
+              <% } else if (rd.error) { %>Couldn't read the PDF last time.
+              <% } else { %>Read from the PDF <%= when(rd.at) %><%= rd.usedLayout ? ", using this supplier's layout" : '' %>.<% } %>
+            </span>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/read" class="inline">
+              <%- include('../partials/csrfHidden') %>
+              <button type="submit" class="text-green-700 dark:text-green-400 hover:underline">Read again</button>
+            </form>
+          </div>
+        <% } %>
+      </section>
+
+      <section class="p-4 space-y-2" data-checks>
+        <h2 class="<%= railHead %>">Checks</h2>
+        <% if (!checks.length) { %>
+          <p class="text-xs text-gray-400"><i class="bi bi-check2-circle text-green-600"></i> Nothing flagged.</p>
+        <% } %>
+        <% checks.forEach((c) => { %>
+          <div class="border rounded-xl p-3 text-xs space-y-1 <%= CHECK_CARD[c.tone] %>">
+            <p class="font-medium"><i class="bi <%= c.tone === 'green' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill' %>"></i> <%= c.title %></p>
+            <% if (c.items) { %><ul class="list-disc ml-4"><% c.items.forEach((m) => { %><li><%= m %></li><% }) %></ul><% } %>
+            <% if (c.text) { %><p><%= c.text %></p><% } %>
+            <% if (c.locked) { %>
+              <p>This invoice is in KashFlow, so what was entered can't be changed. If it needs correcting, or isn't really that purchase, <a href="/paperless/ocr/<%= doc.paperlessId %>" class="underline font-medium">unlink it from KashFlow on the Details page</a> first.</p>
+            <% } %>
+            <% if (c.reprocess) { %>
+              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reprocess">
+                <%- include('../partials/csrfHidden') %>
+                <button type="submit" class="px-2.5 py-1 rounded-lg border border-current font-medium hover:bg-white/60 dark:hover:bg-black/20">Ask Paperless to OCR it again</button>
+              </form>
+            <% } %>
+          </div>
+        <% }) %>
+      </section>
+
+      <% if (kind === 'invoice') { %>
+        <section class="p-4 space-y-3 text-xs" data-more-actions>
+          <h2 class="<%= railHead %>">Also</h2>
+
+          <%# Credit note (PB-9, PB-12) %>
+          <% if (doc.creditNote || state === 'manual_kashflow') { %>
+            <div class="space-y-1">
+              <p class="text-gray-700 dark:text-gray-300"><i class="bi bi-check-square-fill text-green-600"></i> This is a credit note. It's in neither invoice queue and is keyed into KashFlow by hand.</p>
+              <% if (isAdmin && state === 'manual_kashflow') { %>
+                <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note">
+                  <%- include('../partials/csrfHidden') %>
+                  <input type="hidden" name="flag" value="off">
+                  <button type="submit" class="<%= smallBtn %>">Not a credit note (admin)</button>
+                </form>
+                <p class="text-gray-400">Sends it back to Needs Data Entry. The credit note email isn't sent again.</p>
+              <% } %>
+            </div>
+          <% } else if (state === 'awaiting_entry' || state === 'entered') { %>
+            <details class="group">
+              <summary class="cursor-pointer text-green-700 dark:text-green-400 hover:underline list-none"><i class="bi bi-chevron-right group-open:rotate-90 inline-block transition-transform"></i> Mark as credit note</summary>
+              <div class="mt-2 pl-4 space-y-2">
+                <p class="text-gray-400">Takes it out of both invoice queues and sets Credit Note in Paperless, which sends the credit note email.</p>
+                <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note">
+                  <%- include('../partials/csrfHidden') %>
+                  <input type="hidden" name="flag" value="on">
+                  <button type="submit" class="<%= smallBtn %>"><i class="bi bi-square"></i> Mark as credit note</button>
+                </form>
+              </div>
+            </details>
+          <% } else if (state === 'sent') { %>
+            <p class="text-gray-400">Already in KashFlow as a purchase. Unlink it before marking it as a credit note.</p>
+          <% } %>
+
+          <%# Not for KashFlow: a real invoice that's never entered (e.g. paid with refund credit, #252) %>
+          <% if (nfk) { %>
+            <div class="space-y-1" data-not-for-kashflow>
+              <p class="text-gray-700 dark:text-gray-300"><i class="bi bi-slash-circle text-gray-500"></i> Marked not for KashFlow. It's in neither queue and won't be entered or sent.</p>
+              <p class="text-gray-700 dark:text-gray-300"><span class="font-medium">Reason:</span> <%= doc.excludedNote || '(tagged in Paperless, no reason given)' %></p>
+              <% if (doc.excludedReasonChanged?.at) { %>
+                <p class="text-gray-400"><%= when(doc.excludedReasonChanged.at) %><%= doc.excludedReasonChanged.by?.name ? ` by ${doc.excludedReasonChanged.by.name}` : '' %></p>
+              <% } %>
+              <% if (isAdmin) { %>
+                <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/not-for-kashflow">
+                  <%- include('../partials/csrfHidden') %>
+                  <input type="hidden" name="flag" value="off">
+                  <button type="submit" class="<%= smallBtn %>">Undo (admin)</button>
+                </form>
+                <p class="text-gray-400">Puts it back in its queue and removes the <em>not for kashflow</em> tag in Paperless.</p>
+              <% } %>
+            </div>
+          <% } else if ((state === 'awaiting_entry' || state === 'entered') && !doc.excludedReason && !doc.creditNote) { %>
+            <details class="group" data-not-for-kashflow>
+              <summary class="cursor-pointer text-green-700 dark:text-green-400 hover:underline list-none"><i class="bi bi-chevron-right group-open:rotate-90 inline-block transition-transform"></i> Mark not for KashFlow…</summary>
+              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/not-for-kashflow" class="mt-2 pl-4 space-y-2">
+                <%- include('../partials/csrfHidden') %>
+                <input type="hidden" name="flag" value="on">
+                <p class="text-gray-400">For a real invoice that mustn't go in KashFlow. It leaves both queues, keeps this reason, and is tagged <em>not for kashflow</em> in Paperless.</p>
+                <label for="nfk-note" class="block text-gray-700 dark:text-gray-300">Why isn't it for KashFlow?</label>
+                <input id="nfk-note" name="note" type="text" required minlength="3" maxlength="300"
+                  placeholder="e.g. Paid with refund credit; nets to nothing"
+                  class="w-full px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <button type="submit" class="<%= smallBtn %>"><i class="bi bi-slash-circle"></i> Mark not for KashFlow</button>
+              </form>
+            </details>
+          <% } %>
+
+          <% if (/purchase/i.test(doc.documentType?.name || '') && (state === 'entered' || state === 'sent')) { %>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/resend-invoice" class="space-y-1">
+              <%- include('../partials/csrfHidden') %>
+              <button type="submit" class="<%= smallBtn %>"><i class="bi bi-envelope"></i> Resend invoice email</button>
+              <p class="text-gray-400">Sends the invoice email again, every time it's clicked.</p>
+            </form>
+          <% } %>
+
+          <% if (isAdmin && state === 'entered') { %>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reopen" class="space-y-1">
+              <%- include('../partials/csrfHidden') %>
+              <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 bg-white dark:bg-gray-900 hover:bg-amber-50 dark:hover:bg-gray-800 font-medium transition">Reopen entry (admin)</button>
+              <p class="text-gray-400">Back to Needs Data Entry, and removes <em>data entry done</em> in Paperless.</p>
+            </form>
+          <% } %>
+        </section>
+      <% } %>
+
+      <section class="p-4" data-notifications>
+        <h2 class="<%= railHead %>">Notifications</h2>
+        <% if ((locals.notifyMode || 'shadow') === 'shadow') { %>
+          <p class="text-xs text-gray-400 mb-2">Shadow mode: hcs-app records what it would send, and Paperless still does the sending.<% if (locals.isAdmin) { %> <a href="/admin/config/document-notifications" class="underline hover:no-underline">Configure</a><% } %></p>
+        <% } %>
+        <% if (!notifyList.length) { %>
+          <p class="text-xs text-gray-400">None yet.</p>
+        <% } else { %>
+          <ul class="space-y-2 text-xs">
+            <% notifyList.forEach(n => { %>
+              <li>
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span class="text-gray-700 dark:text-gray-300"><%= KIND_LABELS[n.kind] || n.kind %></span>
+                  <span class="<%= badge(STATUS_COLOUR[n.status] || 'slate') %>"><%= STATUS_LABEL[n.status] || n.status %></span>
+                </div>
+                <div class="text-gray-400"><%= n.createdAt ? when(n.createdAt, { dateStyle: 'short', timeStyle: 'short' }) : '' %><% if (n.source === 'paperless') { %> · after a Paperless change<% } %></div>
+                <% (n.channels || []).filter(c => c.status === 'failed').forEach(c => { %>
+                  <div class="text-red-700 dark:text-red-400"><%= c.channel %>: <%= c.error %></div>
+                <% }) %>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </section>
+    </aside>
+
     <%# ── Document ── %>
-    <div class="lg:col-span-3 space-y-4">
+    <div class="<%= COLS.doc %> lg:sticky lg:top-20 space-y-3">
       <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
         <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-700">
           <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto">Document</h2>
@@ -65,7 +326,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
         <%# Floats over the top of the document, so the page doesn't move under the pointer %>
         <div class="relative">
           <div id="pdf-pick-status" hidden role="status" class="absolute inset-x-0 top-0 z-10 shadow-sm flex items-center gap-2 px-4 py-1.5 text-xs bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-100 border-b border-blue-100 dark:border-blue-700"></div>
-          <div id="pdf-viewer" data-src="/paperless/ocr/<%= doc.paperlessId %>/file" class="bg-gray-100 dark:bg-gray-800 rounded-b-2xl p-3 h-screen overflow-auto">
+          <div id="pdf-viewer" data-src="/paperless/ocr/<%= doc.paperlessId %>/file" class="bg-gray-100 dark:bg-gray-800 rounded-b-2xl p-3 h-[70vh] lg:h-[calc(100vh-9rem)] overflow-auto">
             <p id="pdf-status" class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">Loading document…</p>
             <div id="pdf-pages"></div>
           </div>
@@ -73,10 +334,10 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
       </div>
 
       <details class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
-        <summary class="cursor-pointer px-4 py-3 font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">OCR text</summary>
+        <summary class="cursor-pointer px-4 py-2 font-semibold text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">OCR text</summary>
         <div class="px-4 pb-4">
           <% if (doc.ocrText) { %>
-            <pre class="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-300 max-h-96 overflow-auto"><%= doc.ocrText %></pre>
+            <pre class="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-300 max-h-80 overflow-auto"><%= doc.ocrText %></pre>
           <% } else { %>
             <p class="text-sm text-gray-400">Paperless has no OCR text for this document.</p>
           <% } %>
@@ -85,66 +346,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
     </div>
 
     <%# ── Entry ── %>
-    <div class="lg:col-span-2 space-y-4">
-      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm text-gray-700 dark:text-gray-300 space-y-1">
-        <div><span class="text-gray-500 dark:text-gray-400">Supplier:</span> <%= doc.correspondent?.name || '—' %>
-          <% if (kind === 'invoice' && doc.correspondent?.id != null) { %>
-            <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>" class="ml-2 text-xs text-green-700 dark:text-green-400 hover:underline" title="What hcs-app has learned about this supplier's invoices, and teaching it">How it's read</a>
-          <% } %>
-        </div>
-        <%- include('../partials/_documentType', { doc, documentTypes: locals.documentTypes, back: 'entry' }) %>
-        <% if (locals.excluded) { %>
-          <div class="text-amber-700 dark:text-amber-400"><i class="bi bi-exclamation-triangle-fill"></i>
-            Kept out of the queues. <%= excluded %> <%= doc.excludedReason === 'not_for_kashflow' ? 'An admin can undo it below.' : "Remove the tag in Paperless if that's wrong." %>
-          </div>
-        <% } %>
-        <% if (doc.entry?.savedAt) { %>
-          <div class="text-xs text-gray-400">Last saved <%= new Date(doc.entry.savedAt).toLocaleString('en-GB') %><%= doc.entry.savedBy?.name ? ` by ${doc.entry.savedBy.name}` : '' %></div>
-        <% } %>
-        <% if (kind === 'invoice') { const rd = locals.reading; %>
-          <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400 pt-1">
-            <span><i class="bi bi-file-earmark-text"></i>
-              <% if (!rd) { %>Not read on the server yet.
-              <% } else if (rd.error) { %>Couldn't read the PDF last time.
-              <% } else { %>Read from the PDF <%= new Date(rd.at).toLocaleString('en-GB') %><%= rd.usedLayout ? ", using this supplier's layout" : '' %>.<% } %>
-            </span>
-            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/read" class="inline">
-              <%- include('../partials/csrfHidden') %>
-              <button type="submit" class="text-green-700 dark:text-green-400 hover:underline">Read again</button>
-            </form>
-          </div>
-          <% if (rd && !rd.error && rd.hasText === false) { %>
-            <div class="mt-2 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 space-y-2">
-              <p><i class="bi bi-exclamation-triangle-fill"></i> This PDF has no text in it, so nothing can be read from it or selected. It was probably scanned without OCR.</p>
-              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reprocess">
-                <%- include('../partials/csrfHidden') %>
-                <button type="submit" class="px-2.5 py-1 rounded-lg border border-current font-medium hover:bg-white/60 dark:hover:bg-black/20">Ask Paperless to OCR it again</button>
-              </form>
-            </div>
-          <% } %>
-        <% } %>
-      </div>
-
-      <% if (Object.keys(errors || {}).length) { %>
-        <div class="border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-sm text-red-700 dark:text-red-400">
-          <p class="font-medium mb-1">Please fix the following:</p>
-          <ul class="list-disc ml-5"><% Object.values(errors).forEach(m => { %><li><%= m %></li><% }) %></ul>
-        </div>
-      <% } %>
-
-      <% if (warnings && warnings.length) { %>
-        <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-400">
-          <p class="font-medium mb-1"><i class="bi bi-exclamation-triangle-fill"></i> Totals don't add up</p>
-          <ul class="list-disc ml-5"><% warnings.forEach(w => { %><li><%= w %></li><% }) %></ul>
-        </div>
-      <% } %>
-
-      <% if (locked && !locals.excluded) { %>
-        <div class="border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300">
-          This invoice is in KashFlow, so what was entered can't be changed. If it needs correcting, or isn't really that purchase, <a href="/paperless/ocr/<%= doc.paperlessId %>" class="underline font-medium">unlink it from KashFlow on the Details page</a> first.
-        </div>
-      <% } %>
-
+    <div class="<%= COLS.form %> space-y-4">
       <% if (kind === 'invoice') { %>
         <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" data-suggest-form data-values-source="<%= values.source || '' %>" data-paperless-id="<%= doc.paperlessId %>" data-layout="<%= JSON.stringify(locals.readerLayout || {}) %>" data-labels="<%= JSON.stringify(locals.labels || {}) %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
           <%- include('../partials/csrfHidden') %>
@@ -220,7 +422,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
           </div>
 
           <% if (!locked) { %>
-            <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <div class="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
               <button type="submit" name="action" value="save" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
               <button type="submit" name="action" value="addLine" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm"><i class="bi bi-plus-lg"></i> Add line</button>
               <% if (state === 'awaiting_entry') { %>
@@ -232,81 +434,6 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
             <% } %>
           <% } %>
         </form>
-
-        <%# Credit note (PB-9, PB-12) and reopen %>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-3 text-sm">
-          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Credit note</h2>
-          <% if (doc.creditNote || state === 'manual_kashflow') { %>
-            <p class="text-gray-700 dark:text-gray-300"><i class="bi bi-check-square-fill text-green-600"></i> This is a credit note. It's in neither invoice queue and is keyed into KashFlow by hand.</p>
-            <% if (isAdmin && state === 'manual_kashflow') { %>
-              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note">
-                <%- include('../partials/csrfHidden') %>
-                <input type="hidden" name="flag" value="off">
-                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition">Not a credit note (admin)</button>
-              </form>
-              <p class="text-xs text-gray-400">Sends it back to Needs Data Entry. The credit note email isn't sent again.</p>
-            <% } %>
-          <% } else if (state === 'awaiting_entry' || state === 'entered') { %>
-            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note" class="flex items-center gap-3">
-              <%- include('../partials/csrfHidden') %>
-              <input type="hidden" name="flag" value="on">
-              <button type="submit" class="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-square"></i> Mark as credit note</button>
-            </form>
-            <p class="text-xs text-gray-400">Takes it out of both invoice queues and sets Credit Note in Paperless, which sends the credit note email.</p>
-          <% } else if (state === 'sent') { %>
-            <p class="text-gray-500 dark:text-gray-400">Already in KashFlow as a purchase. Unlink it before marking it as a credit note.</p>
-          <% } %>
-
-          <% if (/purchase/i.test(doc.documentType?.name || '') && (state === 'entered' || state === 'sent')) { %>
-            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/resend-invoice" class="pt-3 border-t border-gray-100 dark:border-gray-700">
-              <%- include('../partials/csrfHidden') %>
-              <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-envelope"></i> Resend invoice email</button>
-              <p class="text-xs text-gray-400 mt-1">Sends the invoice email again, every time it's clicked.</p>
-            </form>
-          <% } %>
-
-          <% if (isAdmin && state === 'entered') { %>
-            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reopen" class="pt-3 border-t border-gray-100 dark:border-gray-700">
-              <%- include('../partials/csrfHidden') %>
-              <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 bg-white dark:bg-gray-900 hover:bg-amber-50 dark:hover:bg-gray-800 font-medium transition">Reopen entry (admin)</button>
-              <p class="text-xs text-gray-400 mt-1">Back to Needs Data Entry, and removes <em>data entry done</em> in Paperless.</p>
-            </form>
-          <% } %>
-        </div>
-
-        <%# Not for KashFlow: a real invoice that's never entered (e.g. paid with refund credit, #252) %>
-        <% const nfk = doc.excludedReason === 'not_for_kashflow'; %>
-        <% if (nfk || ((state === 'awaiting_entry' || state === 'entered') && !doc.excludedReason && !doc.creditNote)) { %>
-          <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-3 text-sm" data-not-for-kashflow>
-            <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Not for KashFlow</h2>
-            <% if (nfk) { %>
-              <p class="text-gray-700 dark:text-gray-300"><i class="bi bi-slash-circle text-gray-500"></i> Marked not for KashFlow. It's in neither queue and won't be entered or sent.</p>
-              <p class="text-gray-700 dark:text-gray-300"><span class="font-medium">Reason:</span> <%= doc.excludedNote || '(tagged in Paperless, no reason given)' %></p>
-              <% if (doc.excludedReasonChanged?.at) { %>
-                <p class="text-xs text-gray-500 dark:text-gray-400"><%= new Date(doc.excludedReasonChanged.at).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %><%= doc.excludedReasonChanged.by?.name ? ` by ${doc.excludedReasonChanged.by.name}` : '' %></p>
-              <% } %>
-              <% if (isAdmin) { %>
-                <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/not-for-kashflow">
-                  <%- include('../partials/csrfHidden') %>
-                  <input type="hidden" name="flag" value="off">
-                  <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition">Undo (admin)</button>
-                </form>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Puts it back in its queue and removes the <em>not for kashflow</em> tag in Paperless.</p>
-              <% } %>
-            <% } else { %>
-              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/not-for-kashflow" class="space-y-2">
-                <%- include('../partials/csrfHidden') %>
-                <input type="hidden" name="flag" value="on">
-                <label for="nfk-note" class="block text-gray-700 dark:text-gray-300">Why isn't it for KashFlow?</label>
-                <input id="nfk-note" name="note" type="text" required minlength="3" maxlength="300"
-                  placeholder="e.g. Paid with refund credit from AR271334616; nets to nothing"
-                  class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                <button type="submit" class="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition"><i class="bi bi-slash-circle"></i> Mark not for KashFlow</button>
-              </form>
-              <p class="text-xs text-gray-500 dark:text-gray-400">For a real invoice that mustn't go in KashFlow. It leaves both queues, keeps this reason, and is tagged <em>not for kashflow</em> in Paperless.</p>
-            <% } %>
-          </div>
-        <% } %>
 
       <% } else if (kind === 'bank') { const b = values.bank || {}; %>
         <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
@@ -344,7 +471,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm text-gray-700 dark:text-gray-300 space-y-3">
           <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Supplier statement</h2>
           <% if (doc.statementReviewed) { %>
-            <p><i class="bi bi-check-circle-fill text-green-600"></i> Reviewed<%= doc.statementReviewedChanged?.at ? ` on ${new Date(doc.statementReviewedChanged.at).toLocaleDateString('en-GB')}` : '' %><%= doc.statementReviewedChanged?.by?.name ? ` by ${doc.statementReviewedChanged.by.name}` : '' %>.</p>
+            <p><i class="bi bi-check-circle-fill text-green-600"></i> Reviewed<%= doc.statementReviewedChanged?.at ? ` on ${day(doc.statementReviewedChanged.at)}` : '' %><%= doc.statementReviewedChanged?.by?.name ? ` by ${doc.statementReviewedChanged.by.name}` : '' %>.</p>
           <% } else { %>
             <p>Statements have no fields to enter. Check it against KashFlow below, then mark it reviewed: that takes it out of Statements to Review, sends the statement email and records how it stood.</p>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reviewed">
@@ -360,7 +487,6 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
           const rec = st?.reconciliation || null;
           const sum = rec?.summary || null;
           const money = (v) => v == null ? '—' : `£${Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-          const day = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
           const stLine = (i) => (st?.lines || [])[i] || {};
           const tone = !st ? 'slate' : st.error || !st.hasText || !st.supplier ? 'amber' : sum?.status === 'reconciled' ? 'green' : sum?.status === 'no-lines' ? 'amber' : 'red';
           const CARD = {
@@ -375,7 +501,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
         <div class="border rounded-2xl shadow-sm p-4 text-sm text-gray-700 dark:text-gray-300 space-y-3 <%= CARD[tone] %>" data-statement-check="<%= sum?.status || (st ? 'unread' : 'none') %>">
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto">Against KashFlow</h2>
-            <% if (st?.at) { %><span class="text-xs text-gray-500 dark:text-gray-400">checked <%= new Date(st.at).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %></span><% } %>
+            <% if (st?.at) { %><span class="text-xs text-gray-500 dark:text-gray-400">checked <%= when(st.at) %></span><% } %>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/statement-check">
               <%- include('../partials/csrfHidden') %>
               <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition shadow-sm"><i class="bi bi-arrow-repeat"></i> Check again</button>
@@ -423,6 +549,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
               <details open class="rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-900">
                 <summary class="cursor-pointer px-3 py-2 font-medium text-red-800 dark:text-red-300">On the statement, not in KashFlow (<%= rec.onStatementOnly.length %>)</summary>
                 <div class="px-3 pb-2 text-xs text-gray-500 dark:text-gray-400">Invoices the supplier lists that have no purchase in KashFlow. Look for the invoice in Paperless and enter it, or ask the supplier for a copy.</div>
+                <div class="overflow-x-auto">
                 <table class="min-w-full text-xs">
                   <thead><tr class="text-left text-gray-500 dark:text-gray-400"><th class="px-3 py-1">Date</th><th class="px-3 py-1">Reference</th><th class="px-3 py-1 text-right">Amount</th><th class="px-3 py-1">As printed</th></tr></thead>
                   <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -431,6 +558,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
                     <% }) %>
                   </tbody>
                 </table>
+                </div>
                 <% if (rec.onStatementOnly.length > SHOW) { %><div class="px-3 py-2 text-xs text-gray-500">and <%= rec.onStatementOnly.length - SHOW %> more</div><% } %>
               </details>
             <% } %>
@@ -439,6 +567,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
               <details open class="rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900">
                 <summary class="cursor-pointer px-3 py-2 font-medium text-amber-800 dark:text-amber-300">In KashFlow, not on the statement (<%= rec.inKashflowOnly.length %>)</summary>
                 <div class="px-3 pb-2 text-xs text-gray-500 dark:text-gray-400"><%= rec.period?.source === 'printed' ? 'Purchases dated inside the statement period that the supplier doesn\'t list.' : 'Purchases still unpaid in KashFlow that the supplier doesn\'t list. They may be paid on the supplier\'s side, or entered twice.' %></div>
+                <div class="overflow-x-auto">
                 <table class="min-w-full text-xs">
                   <thead><tr class="text-left text-gray-500 dark:text-gray-400"><th class="px-3 py-1">Purchase</th><th class="px-3 py-1">Reference</th><th class="px-3 py-1">Date</th><th class="px-3 py-1 text-right">Gross</th><th class="px-3 py-1 text-right">Unpaid</th></tr></thead>
                   <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -451,12 +580,14 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
                     <% }) %>
                   </tbody>
                 </table>
+                </div>
               </details>
             <% } %>
 
             <% if (rec.matched.length) { %>
               <details class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                 <summary class="cursor-pointer px-3 py-2 font-medium">Matched (<%= rec.matched.length %>)<%= sum.amountDiffers ? `, ${sum.amountDiffers} with a different amount` : '' %></summary>
+                <div class="overflow-x-auto">
                 <table class="min-w-full text-xs">
                   <thead><tr class="text-left text-gray-500 dark:text-gray-400"><th class="px-3 py-1">Statement</th><th class="px-3 py-1 text-right">Amount</th><th class="px-3 py-1">Purchase</th><th class="px-3 py-1 text-right">Gross</th><th class="px-3 py-1">Matched by</th></tr></thead>
                   <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -471,6 +602,7 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
                     <% }) %>
                   </tbody>
                 </table>
+                </div>
                 <% if (rec.matched.length > SHOW) { %><div class="px-3 py-2 text-xs text-gray-500">and <%= rec.matched.length - SHOW %> more</div><% } %>
               </details>
             <% } %>
@@ -484,45 +616,49 @@ const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 
           This type of document has no fields to enter.
         </div>
       <% } %>
-
-      <%# Notifications (H6) %>
-      <%
-        const KIND_LABELS = { new_doc: 'New document (Discord)', invoice: 'Invoice emailed', invoice_resend: 'Invoice email re-sent', kashflow: 'Added to KashFlow (Discord)', statement: 'Statement emailed', credit_note: 'Credit note emailed' };
-        const STATUS_BADGE = {
-          sent:     'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
-          shadow:   'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
-          failed:   'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
-          claimed:  'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
-          recorded: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
-        };
-        const STATUS_LABEL = { shadow: 'would send', recorded: 'from Paperless' };
-        const notifyList = locals.notifications || [];
-      %>
-      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 text-sm">
-        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Notifications</h2>
-        <% if ((locals.notifyMode || 'shadow') === 'shadow') { %>
-          <p class="text-xs text-gray-400 mb-2">Shadow mode: hcs-app records what it would send, and Paperless still does the sending.<% if (locals.isAdmin) { %> <a href="/admin/config/document-notifications" class="underline hover:no-underline">Configure</a><% } %></p>
-        <% } %>
-        <% if (!notifyList.length) { %>
-          <p class="text-gray-400">None yet.</p>
-        <% } else { %>
-          <ul class="divide-y divide-gray-100 dark:divide-gray-700">
-            <% notifyList.forEach(n => { %>
-              <li class="py-2 flex flex-wrap items-center gap-2">
-                <span class="text-gray-700 dark:text-gray-300"><%= KIND_LABELS[n.kind] || n.kind %></span>
-                <span class="text-[11px] px-2 py-0.5 rounded-full border <%= STATUS_BADGE[n.status] || STATUS_BADGE.shadow %>"><%= STATUS_LABEL[n.status] || n.status %></span>
-                <% if (n.source === 'paperless') { %><span class="text-[11px] text-gray-400">after a Paperless change</span><% } %>
-                <span class="ml-auto text-xs text-gray-400"><%= n.createdAt ? new Date(n.createdAt).toLocaleString('en-GB') : '' %></span>
-                <% (n.channels || []).filter(c => c.status === 'failed').forEach(c => { %>
-                  <div class="w-full text-xs text-red-700 dark:text-red-400"><%= c.channel %>: <%= c.error %></div>
-                <% }) %>
-              </li>
-            <% }) %>
-          </ul>
-        <% } %>
-      </div>
     </div>
   </div>
+
+  <% if (hasAudit) { %>
+    <%# ── Audit log (admin): everything that happened to this document, newest first ── %>
+    <div <%- panelAttr('audit') %> x-cloak class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm" data-audit-log>
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3">
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto">Audit log</h2>
+        <span class="text-xs text-gray-400 flex items-center gap-3">
+          <span><i class="inline-block w-2 h-2 rounded-full bg-blue-500"></i> state and flags</span>
+          <span><i class="inline-block w-2 h-2 rounded-full bg-green-500"></i> entry saves</span>
+          <span><i class="inline-block w-2 h-2 rounded-full bg-slate-400"></i> read by hcs-app</span>
+          <span><i class="inline-block w-2 h-2 rounded-full bg-amber-500"></i> notifications</span>
+        </span>
+      </div>
+      <% if (!audit.length) { %>
+        <p class="text-sm text-gray-400 dark:text-gray-500 p-6 text-center">Nothing recorded yet. State changes, saves on this screen, server readings and notifications appear here.</p>
+      <% } else { %>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">When</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Who</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">What</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Detail</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% audit.forEach((r) => { %>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition" data-audit-kind="<%= r.kind %>">
+                  <td class="px-4 py-2 whitespace-nowrap text-gray-500 dark:text-gray-400 text-xs"><%= when(r.at) %></td>
+                  <td class="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300"><%= r.who || '—' %></td>
+                  <td class="px-4 py-2 whitespace-nowrap text-gray-900 dark:text-white"><i class="inline-block w-2 h-2 rounded-full mr-1.5 <%= AUDIT_DOT[r.kind] || AUDIT_DOT.state %>"></i><%= r.what %></td>
+                  <td class="px-4 py-2 text-gray-600 dark:text-gray-400 break-words"><%= r.detail || '' %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
 </div>
 <script type="module" src="/resources/js/document-suggestions.js"></script>
 <script type="module" src="/resources/js/document-viewer.js"></script>
