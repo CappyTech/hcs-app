@@ -19,6 +19,9 @@ const { makeMockClient, resetMockPaperless, mockPaperlessState } = mockPaperless
 /** H6: notifications (PAPERLESS-MIGRATION.md H6, section 3a; PB-1, 5, 6, 8, 9, 10). */
 
 const PI = { id: 1, name: 'Purchase Invoice' };
+// handleDocumentAdded reads the document in the background with the real services (and a real
+// MongoDB connection) unless told otherwise; the tests only check classification.
+const noReads = { readSoon: async () => {}, readStatementSoon: async () => {} };
 const SI = { id: 3, name: 'Subcontractor Invoice' };
 const STATEMENT = { id: 2, name: 'Supplier Statement' };
 const BANK = { id: 4, name: 'Bank Statement' };
@@ -356,7 +359,7 @@ describe('each PB notification fires exactly once', () => {
   it('PB-1 new document: once, however many times the webhook is delivered', async () => {
     const h = harness([]);
     const ingestOne = async (id) => { if (!h.OcrDocument.rows.some((r) => r.paperlessId === id)) h.OcrDocument.rows.push({ ...invoice({ paperlessId: id }), processingState: null, tags: [], customFields: [], classifiedAt: null, statementReviewed: false }); };
-    for (let i = 0; i < 3; i++) await handleDocumentAdded(9100, { OcrDocument: h.OcrDocument, ingestOne, connect: null, notify: wire(h) });
+    for (let i = 0; i < 3; i++) await handleDocumentAdded(9100, { OcrDocument: h.OcrDocument, ingestOne, connect: null, notify: wire(h), ...noReads });
     assert.equal(count(h, 'new_doc'), 1);
     assert.equal(h.sent.discord.filter((p) => p.content.startsWith('New document:')).length, 1);
   });

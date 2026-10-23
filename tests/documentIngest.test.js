@@ -16,6 +16,9 @@ const { makeMockClient, resetMockPaperless, mockPaperlessState } = mockPaperless
 /** H3: ingest trigger — webhook, reconciliation, first state from tags (PAPERLESS-MIGRATION.md H3, 0a). */
 
 const PI = { id: 1, name: 'Purchase Invoice' };
+// handleDocumentAdded reads the document in the background with the real services (and a real
+// MongoDB connection) unless told otherwise; the tests only check classification.
+const noReads = { readSoon: async () => {}, readStatementSoon: async () => {} };
 const SI = { id: 3, name: 'Subcontractor Invoice' };
 const STATEMENT = { id: 2, name: 'Supplier Statement' };
 const BANK = { id: 4, name: 'Bank Statement' };
@@ -252,7 +255,7 @@ describe('handleDocumentAdded (webhook path, mock Paperless)', () => {
   it('creates the record once and classifies it, however many times it is delivered', async () => {
     const M = fakeOcrDocument();
     const ingestOne = fakeIngest(M);
-    const deps = { OcrDocument: M, ingestOne, connect: null };
+    const deps = { OcrDocument: M, ingestOne, connect: null, ...noReads };
 
     const first = await handleDocumentAdded(9001, deps);
     assert.deepEqual([first.classified, first.state.processingState], [true, 'awaiting_entry']);
@@ -266,7 +269,7 @@ describe('handleDocumentAdded (webhook path, mock Paperless)', () => {
 
   it('derives the state of fixture documents from their tags', async () => {
     const M = fakeOcrDocument();
-    const deps = { OcrDocument: M, ingestOne: fakeIngest(M), connect: null };
+    const deps = { OcrDocument: M, ingestOne: fakeIngest(M), connect: null, ...noReads };
     for (const id of [9001, 9002, 9003, 9004, 9005, 9006]) await handleDocumentAdded(id, deps);
     const byId = Object.fromEntries(M.rows.map((r) => [r.paperlessId, r]));
     assert.equal(byId[9001].processingState, 'awaiting_entry');
@@ -281,7 +284,7 @@ describe('handleDocumentAdded (webhook path, mock Paperless)', () => {
 
   it('sends nothing to Paperless beyond reads', async () => {
     const M = fakeOcrDocument();
-    await handleDocumentAdded(9001, { OcrDocument: M, ingestOne: fakeIngest(M), connect: null });
+    await handleDocumentAdded(9001, { OcrDocument: M, ingestOne: fakeIngest(M), connect: null, ...noReads });
     assert.deepEqual(mockPaperlessState().calls.filter((c) => c.method !== 'GET'), []);
   });
 });
