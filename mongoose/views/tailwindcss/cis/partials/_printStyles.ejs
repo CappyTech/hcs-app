@@ -1,15 +1,26 @@
 <style nonce="<%= locals.cspNonce %>">
   .print-footer { display: none; }
   @page {
-    margin-bottom: 18mm;
-    @bottom-center {
-      content: var(--hcs-footer, "<%= String(locals.companyName || '').replace(/"/g, '\\"') %>");
+    margin-bottom: 24mm;
+    @bottom-left {
+      content: var(--hcs-footer, "<%- String(locals.companyName || '').replace(/"/g, '\\"') %>");
+      white-space: pre-line;
+      vertical-align: top;
+      border-top: 0.5pt solid #bbb;
+      padding-top: 4pt;
+      font-family: ui-sans-serif, system-ui, "Segoe UI", Arial, sans-serif;
       font-size: 7pt;
+      line-height: 1.45;
       color: #555;
     }
     @bottom-right {
       content: "Page " counter(page) " of " counter(pages);
+      vertical-align: top;
+      border-top: 0.5pt solid #bbb;
+      padding-top: 4pt;
+      font-family: ui-sans-serif, system-ui, "Segoe UI", Arial, sans-serif;
       font-size: 7pt;
+      line-height: 1.45;
       color: #999;
     }
   }

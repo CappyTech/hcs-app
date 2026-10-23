@@ -90,7 +90,7 @@
   <% }); %>
 </div>
 
-<% var footerTitle = 'CIS Yearly Return All Subcontractors Tax Year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2) + ' Printed ' + new Date().toLocaleDateString('en-GB'); %>
-<%- include('./partials/_printFooter', { footerTitle }) %>
+<% var taxYearLabel = 'Tax year ' + year + '/' + (parseInt(year) + 1).toString().slice(-2); %>
+<%- include('./partials/_printFooter', { footerTitle: 'CIS Yearly Return', footerParts: ['All subcontractors', taxYearLabel] }) %>
 
 <%- include('./partials/_printStyles') %>
