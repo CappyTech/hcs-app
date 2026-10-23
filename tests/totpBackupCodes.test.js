@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 if (!process.env.ENCRYPTION_KEY) {
   process.env.ENCRYPTION_KEY = 'test-key-for-totp-service-unit-tests-32ch';
 }
+// bcrypt's minimum cost: these tests check the codes' shape and matching, not their strength
+process.env.BCRYPT_ROUNDS = '4';
 
 // Dynamic import so the env assignment above runs first (static imports hoist).
 const __totpService = (await import('../services/totpService.js')).default;

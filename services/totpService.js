@@ -81,7 +81,8 @@ const generateBackupCodes = async (count = 10) => {
     const hex = crypto.randomBytes(5).toString("hex").toUpperCase();
     return `${hex.slice(0, 5)}-${hex.slice(5)}`;
   });
-  const hashed = await Promise.all(plain.map((c) => bcrypt.hash(normalizeBackupCode(c), 10)));
+  const rounds = Number(process.env.BCRYPT_ROUNDS) || 10;
+  const hashed = await Promise.all(plain.map((c) => bcrypt.hash(normalizeBackupCode(c), rounds)));
   return { plain, hashed };
 };
 

@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 
@@ -12,23 +12,41 @@ import { processImage, normaliseFilename, fileFilter, MAX_BYTES, MAX_EDGE } from
  * mocked encoder would assert only that the code calls the functions it calls.
  */
 
-/** A noisy image, so the encoder cannot cheat the size limit on flat colour. */
-async function noisyJpeg(width, height) {
-  const px = Buffer.alloc(width * height * 3);
-  for (let i = 0; i < px.length; i += 1) px[i] = (i * 2654435761) % 256;
-  return sharp(px, { raw: { width, height, channels: 3 } }).jpeg({ quality: 100 }).toBuffer();
+/**
+ * A noisy image, so the encoder cannot cheat the size limit on flat colour.
+ * Built once per size: encoding noise at quality 100 is the slow part of this file.
+ */
+const fixtures = new Map();
+function noisyJpeg(width, height) {
+  const key = `${width}x${height}`;
+  if (!fixtures.has(key)) {
+    const px = Buffer.alloc(width * height * 3);
+    for (let i = 0; i < px.length; i += 1) px[i] = (i * 2654435761) % 256;
+    fixtures.set(key, sharp(px, { raw: { width, height, channels: 3 } }).jpeg({ quality: 100 }).toBuffer());
+  }
+  return fixtures.get(key);
 }
 
+// Just over MAX_EDGE on the long side, 3:2, so the cap and the ratio are both exercised
+// without decoding a 6-megapixel source for every test.
+const LARGE = [MAX_EDGE + 100, Math.round((MAX_EDGE + 100) / 1.5)];
+
 describe('webMediaService.processImage', () => {
-  it('brings a large photograph under the brief\'s 300KB ceiling', async () => {
-    const src = await noisyJpeg(3000, 2000);
+  // Noise barely compresses, so the large photograph walks most of the quality
+  // ladder (over a second). Process it once and check the ceilings separately.
+  let large;
+  before(async () => {
+    const src = await noisyJpeg(...LARGE);
     assert.ok(src.length > MAX_BYTES, 'the fixture is not large enough to be a real test');
-    const out = await processImage(src, 'DSC_0001.JPG');
-    assert.ok(out.size <= MAX_BYTES, `output is ${out.size} bytes, over the ${MAX_BYTES} ceiling`);
+    large = await processImage(src, 'DSC_0001.JPG');
   });
 
-  it('caps the longest edge without distorting the image', async () => {
-    const out = await processImage(await noisyJpeg(3000, 2000), 'wide.jpg');
+  it('brings a large photograph under the brief\'s 300KB ceiling', () => {
+    assert.ok(large.size <= MAX_BYTES, `output is ${large.size} bytes, over the ${MAX_BYTES} ceiling`);
+  });
+
+  it('caps the longest edge without distorting the image', () => {
+    const out = large;
     assert.ok(out.width <= MAX_EDGE && out.height <= MAX_EDGE);
     // 3:2 in, 3:2 out.
     assert.ok(Math.abs(out.width / out.height - 1.5) < 0.01, 'aspect ratio changed');
