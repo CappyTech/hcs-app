@@ -30,6 +30,27 @@ const monthNames = [
 
 // Note: Month name mapping handled by CIS dashboard utilities; not needed here.
 
+// Header breadcrumb trail for the CIS returns pages. The nav's CIS area lives
+// at /construction-industry-scheme, so /CIS/returns/... never matches it and the
+// header would otherwise show only the page title. Subcontractors may view their
+// own returns but not the returns form or supplier pages, so those links are
+// left out for them.
+const CIS_HUB = { label: 'CIS', href: '/construction-industry-scheme' };
+const RETURNS_FORM = { label: 'Monthly Returns', href: '/CIS/returns/form' };
+const isSubcontractor = (req) => !!(req.user && req.user.role === 'subcontractor');
+const returnsCrumbs = (req, ...rest) =>
+  isSubcontractor(req) ? [CIS_HUB, ...rest.map((c) => (c.subOk ? c : { label: c.label }))] : [CIS_HUB, RETURNS_FORM, ...rest];
+const supplierCrumb = (supplier) => ({ label: supplier.Name, href: `/supplier/read/${supplier.uuid}` });
+const yearCrumb = (supplier, year) => ({
+  label: `${year}-${(Number(year) + 1).toString().slice(-2)}`,
+  href: `/CIS/returns/${supplier.uuid}/yearly/${year}`,
+  subOk: true,
+});
+const allYearCrumb = (year) => ({
+  label: `${year}-${(Number(year) + 1).toString().slice(-2)}`,
+  href: `/CIS/returns/all/${year}`,
+});
+
 export const renderMonthlyReturnsForm = async (req, res, next) => {
   try {
     // A supplier appears in CIS reports only if they have a valid HMRC
@@ -112,6 +133,7 @@ export const renderMonthlyReturnsForm = async (req, res, next) => {
 
     return res.render(path.join("tailwindcss", "cis", "cisList"), {
       title: "Monthly Returns",
+      crumbs: [CIS_HUB],
       suppliersWithMonths,
       monthNames,
       whtRateLabel,
@@ -226,6 +248,7 @@ export const renderMonthlyReturns = async (req, res, next) => {
       path.join("tailwindcss", "cis", "monthlyReturns"),
       {
         title: dynamicTitleM,
+        crumbs: returnsCrumbs(req, supplierCrumb(supplier), yearCrumb(supplier, year)),
         supplier,
         year: +year,
         month: +month,
@@ -352,6 +375,7 @@ export const renderYearlyReturns = async (req, res, next) => {
     const dynamicTitle = `${supplier.Name} | ${org.companyName()} | ${year}-${nextYearShort} CIS Returns`;
     return res.render(path.join("tailwindcss", "cis", "yearlyReturns"), {
       title: dynamicTitle,
+      crumbs: returnsCrumbs(req, supplierCrumb(supplier)),
       year: +year,
       supplier,
       receiptsByMonth,
@@ -493,6 +517,7 @@ export const renderYearlyReturnsForAll = async (req, res, next) => {
     const nextYearShort = (Number(year) + 1).toString().slice(-2);
     return res.render(path.join("tailwindcss", "cis", "yearlyReturnsForAll"), {
       title: `CIS Yearly Returns ${year}-${nextYearShort} | All Subcontractors`,
+      crumbs: returnsCrumbs(req),
       year: +year,
       subcontractors,
       slimDateTime,
@@ -547,6 +572,7 @@ export const renderMonthlyReturnsForAll = async (req, res, next) => {
     const nextYearShort = (Number(year) + 1).toString().slice(-2);
     return res.render(path.join("tailwindcss", "cis", "monthlyReturnsForAll"), {
       title: `CIS Monthly Returns ${year}-${nextYearShort} — ${monthName} | All Subcontractors`,
+      crumbs: returnsCrumbs(req, allYearCrumb(year)),
       year: +year,
       month: +month,
       monthName,
