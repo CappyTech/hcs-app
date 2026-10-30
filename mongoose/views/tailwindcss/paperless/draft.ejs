@@ -170,10 +170,11 @@
 									<% /* Nominal default: explicit per-line code wins. The labour/materials split only
 									      applies to the synthetic 2-row fallback expansion; enumerated subcontractor lines
 									      are labour and default to the sub-contractors nominal, NOT the supplier default
-									      (which may be materials — that mis-nominal'd 8 of 9 lines on purchase #14522). */ %>
+									      (which may be materials — that mis-nominal'd 8 of 9 lines on purchase #14522).
+									      A line that says it's materials (the entry screen's Materials box) gets materials. */ %>
 									<% const __rowCode = (typeof li.NominalCode === 'number') ? li.NominalCode
 										: _fallbackExpanded ? ((idx === 0 ? _subcontrNomCode : _materialsNomCode) ?? supplierDefaultNominal ?? null)
-										: isSubcontractor ? (_subcontrNomCode ?? supplierDefaultNominal ?? null)
+										: isSubcontractor ? ((/material/i.test(li.Description || '') ? _materialsNomCode : _subcontrNomCode) ?? supplierDefaultNominal ?? null)
 										: (supplierDefaultNominal ?? null); %>
 									<% const __nomInfo = (__rowCode != null && nominalMap) ? nominalMap[__rowCode] : null; %>
 									<% const __descFromNominal = __nomInfo ? (__nomInfo.Description || __nomInfo.Name || null) : null; %>

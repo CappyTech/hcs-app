@@ -463,6 +463,85 @@ describe('PDF file proxy and fixture PDFs', () => {
   });
 });
 
+describe('subcontractor invoices: labour and materials', () => {
+  const { isSubcontractorEntry, cisDeduction } = entrySvc;
+  const sub = { subcontractor: true };
+
+  it('is a subcontractor entry only for a Subcontractor Invoice', () => {
+    assert.equal(isSubcontractorEntry({ documentType: SI }), true);
+    assert.equal(isSubcontractorEntry({ documentType: PI }), false);
+    assert.equal(isSubcontractorEntry({ documentType: STATEMENT }), false);
+  });
+
+  it('makes Labour and Materials the first lines and works out total goods', () => {
+    const { entry, errors } = parseEntryForm({
+      invoiceNumber: 'SUB-1', invoiceDate: '2026-10-28', labour: '1,000', materials: '200', totalVat: '240', invoiceTotal: '1440',
+      lines: [{ description: '', total: '' }],
+    }, 'invoice', sub);
+    assert.deepEqual(errors, {});
+    assert.deepEqual([entry.labour, entry.materials, entry.totalGoods], [1000, 200, 1200]);
+    assert.deepEqual(entry.lines, [
+      { description: 'Labour', quantity: 1, price: 1000, total: 1000, vatRate: 20, role: 'labour' },
+      { description: 'Materials', quantity: 1, price: 200, total: 200, vatRate: 20, role: 'materials' },
+    ]);
+    assert.deepEqual(completionErrors(entry, sub), {});
+    assert.deepEqual(consistencyWarnings(entry), []);
+  });
+
+  it('keeps lines added by hand after them, in total goods and out of the labour VAT rate', () => {
+    const { entry } = parseEntryForm({
+      labour: '500', totalVat: '10', lines: [{ description: 'Skip hire', total: '50', vatRate: '20' }],
+    }, 'invoice', sub);
+    assert.deepEqual(entry.lines.map((l) => [l.description, l.role ?? null, l.vatRate]), [['Labour', 'labour', 0], ['Skip hire', null, 20]]);
+    assert.equal(entry.totalGoods, 550);
+  });
+
+  it('leaves the VAT rate blank when it does not come out at a rate, and skips an empty box', () => {
+    const { entry } = parseEntryForm({ labour: '100', materials: '', totalVat: '7' }, 'invoice', sub);
+    assert.deepEqual(entry.lines, [{ description: 'Labour', quantity: 1, price: 100, total: 100, vatRate: null, role: 'labour' }]);
+    assert.equal(entry.materials, null);
+  });
+
+  it('asks for labour or materials before Complete entry, and rejects a bad amount', () => {
+    const { entry } = parseEntryForm({ invoiceNumber: '1', invoiceDate: '2026-10-01', invoiceTotal: '5' }, 'invoice', sub);
+    assert.equal(entry.totalGoods, null);
+    assert.deepEqual(Object.keys(completionErrors(entry, sub)), ['labour']);
+    assert.ok(parseEntryForm({ labour: 'lots' }, 'invoice', sub).errors.labour);
+  });
+
+  it('shows the saved split, with only the hand-added lines as lines', () => {
+    const { entry } = parseEntryForm({ labour: '500', materials: '20', lines: [{ description: 'Skip hire', total: '50' }] }, 'invoice', sub);
+    const v = formValues({ documentType: SI, entry: { ...entry, savedAt: new Date() } });
+    assert.deepEqual([v.labour, v.materials], [500, 20]);
+    assert.deepEqual(v.lines.map((l) => l.description), ['Skip hire']);
+  });
+
+  it('splits values that were never split by description, or keeps them as lines when a total is missing', () => {
+    const lines = [{ description: 'Labour wk 43', total: 800 }, { description: 'Materials', total: 120 }, { description: 'Labour wk 44', total: 200 }];
+    const v = formValues({ documentType: SI, entry: { invoiceNumber: '9', totalGoods: 1120, lines, savedAt: new Date() } });
+    assert.deepEqual([v.labour, v.materials, v.lines.length], [1000, 120, 0]);
+    const kept = formValues({ documentType: SI, entry: { lines: [{ description: 'Labour', total: null }], savedAt: new Date() } });
+    assert.deepEqual([kept.labour, kept.lines.length], [null, 1]);
+    const goodsOnly = formValues({ documentType: SI, customFields: [{ fieldName: 'Total Goods', value: 'GBP300.00' }] });
+    assert.deepEqual([goodsOnly.labour, goodsOnly.materials], [300, null]);
+  });
+
+  it('works out the CIS deduction on labour from the supplier rate', () => {
+    assert.deepEqual(cisDeduction({ labour: 1000, invoiceTotal: 1440 }, 20), { ratePct: 20, deduction: 200, payable: 1240 });
+    assert.deepEqual(cisDeduction({ labour: '1,000.00', invoiceTotal: '' }, 0.3), { ratePct: 30, deduction: 300, payable: null });
+    assert.deepEqual(cisDeduction({ labour: 1000 }, 0), { ratePct: 0, deduction: 0, payable: null });
+    assert.equal(cisDeduction({ labour: null }, 20), null);
+    assert.equal(cisDeduction({ labour: 100 }, null), null);
+  });
+
+  it('sends Labour and Materials to the KashFlow draft as lines', () => {
+    const { entry } = parseEntryForm({ invoiceNumber: 'SUB-1', labour: '1000', materials: '200', totalVat: '0', invoiceTotal: '1200' }, 'invoice', sub);
+    const cf = customFieldsWithEntry({ customFields: [], entry: { ...entry, savedAt: new Date() } });
+    const get = (n) => cf.find((f) => f.fieldName === n)?.value;
+    assert.deepEqual([get('Description_Line1'), get('Total_Line1'), get('Description_Line2'), get('Total_Line2'), get('Total Goods')], ['Labour', 1000, 'Materials', 200, 1200]);
+  });
+});
+
 describe('entry view', () => {
   const view = path.resolve('mongoose/views/tailwindcss/paperless/entry.ejs');
   const base = {
@@ -485,6 +564,20 @@ describe('entry view', () => {
     assert.match(html, /value="complete"/);
     assert.match(html, /Mark as credit note/);
     assert.match(html, /name="_csrf"/);
+  });
+
+  it('gives a subcontractor invoice Labour and Materials instead of total goods, with the CIS deduction', async () => {
+    const doc = { paperlessId: 9100, documentType: SI, processingState: 'awaiting_entry', correspondent: { id: 1, name: 'A Sub' }, customFields: [] };
+    const html = await render(doc, { subcontractor: true, lineCount: 0, cis: { supplier: 'A Sub', ratePct: 20, deduction: 200, payable: 1000 } });
+    assert.match(html, /Subcontractor invoice/);
+    for (const name of ['labour', 'materials', 'totalVat', 'invoiceTotal']) assert.ok(html.includes(`name="${name}"`), `missing ${name}`);
+    assert.ok(!html.includes('name="totalGoods"'));
+    assert.ok(!html.includes('name="lines[0][description]"'), 'no empty other line by default');
+    assert.match(html, /Other lines/);
+    assert.match(html, /CIS at 20% on labour/);
+    assert.match(html, /£1,000\.00/);
+    const unmatched = await render(doc, { subcontractor: true, lineCount: 0, cis: { supplier: null } });
+    assert.match(unmatched, /doesn&#39;t match a KashFlow supplier/);
   });
 
   it('locks the form for an invoice already in KashFlow', async () => {
