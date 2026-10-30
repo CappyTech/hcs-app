@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.81.0] - 2026-10-30
+
+### Added
+- Subcontractor Invoices: the CIS deduction worked out here (the KashFlow supplier's rate on the labour lines entered) is kept on the document when it's sent to KashFlow (`cisAtSend`), and set against the CIS lines added by hand to the purchase in KashFlow once hcs-sync brings it back (`cisCheck`: matches, differs, missing, not synced). Checked hourly for every sent invoice not yet known to match (`paperless-cis-check` job), and again whenever the document is opened (`cisCheckService.js`). HMRC sets no rounding for fractions of a penny (the CIS300 only asks for pounds and pence), so KashFlow's figure matches when it's ours (to the nearest penny) or the same rounded down, as many subcontractors' invoices do.
+- **CIS to check** document queue: sent subcontractor invoices whose deduction hasn't been added in KashFlow yet, or doesn't match, with ours, KashFlow's and the difference.
+- Entry screen: a sent subcontractor invoice shows the deduction it was sent with and whether KashFlow has the same.
+- CIS dashboard: a **Worked out** column per subcontractor (the deductions kept at send, for the purchases sent from a document; red when KashFlow's CIS lines on those purchases differ), and a warning on each purchase whose deduction is missing or different in KashFlow.
+
 ## [6.80.2] - 2026-10-30
 
 ### Fixed

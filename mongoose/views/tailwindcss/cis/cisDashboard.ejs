@@ -103,13 +103,14 @@
                 <th class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right">Labour</th>
                 <th class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right">Materials</th>
                 <th class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right">CIS</th>
+                <th class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right" title="The CIS deduction worked out when each invoice was sent from its document, for the purchases sent that way. Red when KashFlow's CIS lines on those purchases come to something else.">Worked out</th>
                 <th class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right">Reverse Charge</th>
               </tr>
             </thead>
             <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
               <% if (suppliers.length === 0) { %>
               <tr>
-                <td colspan="6" class="border border-gray-200 dark:border-gray-700 text-center py-6">No purchases that cover <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>.</td>
+                <td colspan="7" class="border border-gray-200 dark:border-gray-700 text-center py-6">No purchases that cover <%= slimDateTime(currentMonthlyReturn.periodStart, ['displayFormat']) %> - <%= slimDateTime(currentMonthlyReturn.periodEnd, ['displayFormat']) %>.</td>
               </tr>
               <% } else { %>
                 <% suppliers.forEach(supplier => { %>
@@ -123,6 +124,13 @@
                   <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency(supplierTotals[String(supplier.Id)].materialsCost) %></td>
                   <% const st = supplierTotals[String(supplier.Id)]; %>
                   <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency((st.cisDeductions && st.cisDeductions !== 0) ? st.cisDeductions : st.calculatedCISDeduction) %></td>
+                  <% const docOff = st.documentCount && Math.round((st.documentCIS || 0) * 100) !== Math.round((st.documentCISKashflow || 0) * 100); %>
+                  <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right <%= docOff ? 'text-red-700 dark:text-red-400 font-bold' : '' %>" data-document-cis="<%= st.documentCount ? (docOff ? 'differs' : 'matches') : 'none' %>">
+                    <% if (st.documentCount) { %>
+                      <%= formatCurrency(st.documentCIS) %>
+                      <small class="block text-xs font-normal text-gray-500 dark:text-gray-400"><%= st.documentCount %> invoice<%= st.documentCount === 1 ? '' : 's' %><%= docOff ? ` · KashFlow ${formatCurrency(st.documentCISKashflow)}` : '' %></small>
+                    <% } else { %>—<% } %>
+                  </td>
                   <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right"><%= formatCurrency(supplierTotals[String(supplier.Id)].reverseChargeVAT) %></td>
                   <% } else { %>
                   <td colspan="6" class="border border-gray-200 dark:border-gray-700 text-center py-6">No Data</td>
@@ -133,7 +141,7 @@
             </tbody>
             <tfoot class="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-semibold">
               <%
-                let totGross = 0, totLabour = 0, totMaterials = 0, totCIS = 0, totRC = 0;
+                let totGross = 0, totLabour = 0, totMaterials = 0, totCIS = 0, totRC = 0, totDocCIS = 0;
                 suppliers.forEach(s => {
                   const st = supplierTotals[String(s.Id)];
                   if (!st) return;
@@ -141,6 +149,7 @@
                   totLabour += st.labourCost || 0;
                   totMaterials += st.materialsCost || 0;
                   totCIS += (st.cisDeductions && st.cisDeductions !== 0) ? st.cisDeductions : (st.calculatedCISDeduction || 0);
+                  totDocCIS += st.documentCIS || 0;
                   totRC += st.reverseChargeVAT || 0;
                 });
               %>
@@ -150,6 +159,7 @@
                 <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right"><%= formatCurrency(totLabour) %></td>
                 <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency(totMaterials) %></td>
                 <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right font-bold"><%= formatCurrency(totCIS) %></td>
+                <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right"><%= formatCurrency(totDocCIS) %></td>
                 <td class="border border-gray-200 dark:border-gray-700 px-4 py-2 text-right"><%= formatCurrency(totRC) %></td>
               </tr>
             </tfoot>
@@ -186,6 +196,12 @@
                             &nbsp;• Due: <%= purchase.dueDateStr %>
                           <% } %>
                         </small>
+                        <% const cc = purchase.cisCheck; if (cc && (cc.status === 'missing' || cc.status === 'differs')) { %>
+                          <small class="block text-xs <%= cc.status === 'missing' ? 'text-amber-700 dark:text-amber-400' : 'text-red-700 dark:text-red-400' %>" data-purchase-cis="<%= cc.status %>">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <%= cc.status === 'missing' ? `No CIS deduction in KashFlow; worked out ${formatCurrency(cc.ours)}` : `CIS ${formatCurrency(cc.kashflow)} in KashFlow; worked out ${formatCurrency(cc.ours)}` %>
+                          </small>
+                        <% } %>
                       </span>
                     </a>
                   </li>

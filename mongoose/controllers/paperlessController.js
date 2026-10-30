@@ -47,6 +47,8 @@ import kfVat from '../../services/kashflowVatService.js';
 import __paperlessClient_ from '../services/paperless/paperlessClient.js';
 import __ocrOrphanService from '../services/ocrOrphanService.js';
 import documentEntry from '../services/paperless/documentEntryService.js';
+import cisCheckSvc from '../services/paperless/cisCheckService.js';
+import readingSvc from '../services/paperless/documentReadingService.js';
 import { actorFromUser, isInvoiceDocument, notForEntryMessage } from '../services/paperless/documentStateService.js';
 import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
 import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
@@ -876,6 +878,22 @@ export const sendDraftToKashflow = async (req, res, next) => {
         }
       }
     }
+    // Subcontractor invoices: our CIS deduction, kept with the send so it can
+    // be set against the one added by hand in KashFlow (cisCheckService)
+    let cisSnapshot = null;
+    if (isSubcontractor && !dryRun) {
+      try {
+        const cisDoc = await OcrDocumentSend.findOne({ paperlessId }).select('-ocrText').lean();
+        const Supplier = mdb.REST && mdb.REST.supplier;
+        const cisSupplier = !Supplier ? null : draft.SupplierCode
+          ? await Supplier.findOne({ Code: draft.SupplierCode }).select('Code WithholdingTaxRate').lean()
+          : await readingSvc.supplierFor(Supplier, cisDoc?.correspondent?.name);
+        cisSnapshot = cisCheckSvc.cisAtSend(cisDoc, cisSupplier);
+      } catch (e) {
+        logger.warn(`[paperless] CIS deduction for ${paperlessId} not kept: ${e.message}`);
+      }
+    }
+    const cisFields = cisSnapshot ? { cisAtSend: cisSnapshot } : {};
     // Duplicate detection: block (unless overridden) when a purchase with the
     // same supplier + supplier reference already exists in the synced data —
     // catches the same invoice arriving twice via different documents.
@@ -1276,7 +1294,9 @@ export const sendDraftToKashflow = async (req, res, next) => {
                 lastSendMode: "direct",
                 lastSendStatus: resp.status,
                 modifiedAtLastSend: modifiedAtSendTime,
+                ...cisFields,
               },
+              $unset: { cisCheck: 1 },
               $inc: { sendCount: 1 },
             },
           );
@@ -1400,7 +1420,9 @@ export const sendDraftToKashflow = async (req, res, next) => {
                   lastSendMode: "webhook",
                   lastSendStatus: resp.status,
                   modifiedAtLastSend: modifiedAtSendTime,
+                  ...cisFields,
                 },
+                $unset: { cisCheck: 1 },
                 $inc: { sendCount: 1 },
               },
             );
