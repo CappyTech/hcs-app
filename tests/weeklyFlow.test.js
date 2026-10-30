@@ -135,3 +135,53 @@ describe('buildWeekFlow', () => {
     assert.deepEqual(flow.checks.find((c) => c.key === 'closedContract').items.map((i) => i.label), ['Leftover (Done job)']);
   });
 });
+
+describe('buildWeekFlow holidays', () => {
+  // Emp One has approved annual leave Wednesday to Thursday
+  const leave = [{ uuid: 'h1', employeeId: E1, leaveType: 'annual', startDate: at('2026-10-28'), endDate: at('2026-10-29') }];
+  const cellsFor = (flow, who) => flow.assignments[0].grid.find((g) => g.person.key === personKey('employee', who)).cells;
+  const cell = (cells, day) => cells.find((c) => c.day === day);
+
+  it('blocks work on approved holiday and labels the day', () => {
+    const flow = buildWeekFlow(fixture({ leave }));
+    const wed = cell(cellsFor(flow, E1), '2026-10-28');
+    assert.equal(wed.canFill, false);
+    assert.equal(wed.suggest, false);
+    assert.deepEqual(wed.leave, { label: 'On holiday', uuid: 'h1' });
+    // Friday is outside the request, and Emp Two has none
+    assert.equal(cell(cellsFor(flow, E1), '2026-10-30').suggest, true);
+    assert.equal(cell(cellsFor(flow, E2), '2026-10-28').canFill, true);
+  });
+
+  it('leaves bank holidays unticked but still fillable', () => {
+    const flow = buildWeekFlow(fixture({ closures: new Map([['2026-10-26', 'Bank holiday']]) }));
+    const mon = cell(cellsFor(flow, E2), '2026-10-26');
+    assert.equal(mon.canFill, true);
+    assert.equal(mon.suggest, false);
+    assert.equal(mon.closure, 'Bank holiday');
+  });
+
+  it('counts approved holiday as accounted for', () => {
+    const allWeek = [{ uuid: 'h2', employeeId: E2, leaveType: 'annual', startDate: at('2026-10-26'), endDate: at('2026-10-30') }];
+    const flow = buildWeekFlow(fixture({ leave: allWeek }));
+    const missing = flow.checks.find((c) => c.key === 'assignedNoAttendance').items.map((i) => i.label);
+    assert.deepEqual(missing, ['Sub One']);
+  });
+
+  it('flags work recorded on an approved holiday', () => {
+    const f = fixture({ leave: [{ uuid: 'h3', employeeId: E1, leaveType: 'annual', startDate: at('2026-10-26'), endDate: at('2026-10-26') }] });
+    const flow = buildWeekFlow(f);
+    assert.deepEqual(flow.checks.find((c) => c.key === 'workOnLeave').items.map((i) => i.label), ['Emp One, 2026-10-26']);
+  });
+
+  it('does not ask for an assignment for holiday, sick or off days', () => {
+    const E3 = '0000000000000000000000e3';
+    const f = fixture();
+    f.employeesById.set(E3, { _id: E3, uuid: 'e3', name: 'Emp Three' });
+    f.attendance.push({ uuid: 'r5', date: at('2026-10-28'), type: 'holiday', status: 'approved', employeeId: E3 });
+    f.attendance.push({ uuid: 'r6', date: at('2026-10-29'), type: 'sick', status: 'pending', employeeId: E3 });
+    const flow = buildWeekFlow(f);
+    assert.deepEqual(flow.checks.find((c) => c.key === 'notAssigned').items, []);
+    assert.deepEqual(flow.unassignedPeople, []);
+  });
+});

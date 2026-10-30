@@ -7,6 +7,11 @@
 //
 // The /weekly grid stays the place for one-off edits (sick, holiday, pay
 // rates); this page walks the week from plan to approved attendance.
+//
+// Holidays: approved holiday requests are the record of leave (approving one
+// adds to the employee's taken days), so the flow never writes holiday
+// attendance. It reads the requests and blocks work on those days instead.
+// Bank and company holidays are shown and start unticked, but can be worked.
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import mongoose from 'mongoose';
 import logger from '../../services/loggerService.js';
@@ -54,6 +59,30 @@ function defaultDailyHours(employee) {
 
 const personKey = (kind, mongoId) => `${kind === 'employee' ? 'e' : 's'}:${mongoId}`;
 
+const LEAVE_LABELS = { annual: 'On holiday', unpaid: 'Unpaid leave', other: 'On leave' };
+const WORK_TYPES = ['work', 'training'];
+const isWorkType = (rec) => WORK_TYPES.includes(rec.type || 'work');
+
+/**
+ * Days of `days` covered by approved holiday requests, per employee:
+ * employee _id -> Map(day -> { label, uuid }).
+ */
+function leaveDaysByEmployee(days, requests = []) {
+  const out = new Map();
+  for (const r of requests) {
+    const empId = id(r.employeeId);
+    if (!empId || !r.startDate || !r.endDate) continue;
+    const from = ymd(r.startDate);
+    const to = ymd(r.endDate);
+    for (const day of days) {
+      if (day < from || day > to) continue;
+      if (!out.has(empId)) out.set(empId, new Map());
+      out.get(empId).set(day, { label: LEAVE_LABELS[r.leaveType] || LEAVE_LABELS.other, uuid: r.uuid || null });
+    }
+  }
+  return out;
+}
+
 /**
  * Turn one week's raw records into the four steps. Pure: everything it needs is
  * passed in, so the checks can be tested without a database.
@@ -66,12 +95,15 @@ const personKey = (kind, mongoId) => `${kind === 'employee' ? 'e' : 's'}:${mongo
  * @param {object[]} p.attendance      this week's attendance (lean, ids not populated)
  * @param {Map}      p.employeesById   employee _id → { _id, uuid, name, contract }
  * @param {Map}      p.suppliersById   supplier _id → { _id, uuid, Name }
+ * @param {object[]} [p.leave]         approved holiday requests overlapping the week
+ * @param {Map}      [p.closures]      day → title, for bank and company holidays
  */
-function buildWeekFlow({ days, contracts, projectsById, assignments, attendance, employeesById, suppliersById }) {
+function buildWeekFlow({ days, contracts, projectsById, assignments, attendance, employeesById, suppliersById, leave = [], closures = new Map() }) {
   const weekStart = days[0];
   const weekEnd = days[days.length - 1];
 
   // ── People and the records they have this week ──
+  const leaveByEmployee = leaveDaysByEmployee(days, leave);
   const people = new Map();
   const person = (kind, mongoId) => {
     const key = personKey(kind, mongoId);
@@ -85,6 +117,7 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
         name: (kind === 'employee' ? doc?.name : doc?.Name) || '(removed)',
         defaultHours: kind === 'employee' ? defaultDailyHours(doc) : null,
         recordsByDay: {},
+        leaveByDay: kind === 'employee' ? leaveByEmployee.get(mongoId) || new Map() : new Map(),
         assignmentUuids: [],
       });
     }
@@ -102,7 +135,7 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
     (p.recordsByDay[day] ||= []).push(rec);
     counts.total++;
     counts[rec.status || 'pending'] = (counts[rec.status || 'pending'] || 0) + 1;
-    if (['work', 'training'].includes(rec.type || 'work') && !rec.contractId) recordsWithoutContract.push({ person: p, day, rec });
+    if (isWorkType(rec) && !rec.contractId) recordsWithoutContract.push({ person: p, day, rec });
   }
 
   // ── Step 1: contracts running this week ──
@@ -137,16 +170,27 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
     contractRowById.get(id(a.contractId))?.assignments.push(row);
   }
 
-  // A cell can be filled when it has no record yet: the flow never overwrites
+  // A cell can be filled when it has no record yet (the flow never overwrites)
+  // and the person isn't on approved leave. Weekdays start ticked, except bank
+  // and company holidays.
   const gridFor = (p) => days.map((day) => {
     const records = p.recordsByDay[day] || [];
-    return { day, records, weekday: isWeekday(day), canFill: records.length === 0 };
+    const leaveDay = p.leaveByDay.get(day) || null;
+    const closure = closures.get(day) || null;
+    const canFill = records.length === 0 && !leaveDay;
+    return { day, records, weekday: isWeekday(day), leave: leaveDay, closure, canFill, suggest: canFill && isWeekday(day) && !closure };
   });
   for (const row of assignmentRows) row.grid = row.members.map((m) => ({ person: m, cells: gridFor(m) }));
 
   // ── Step 4: checks ──
   const assigned = [...people.values()].filter((p) => p.assignmentUuids.length);
   const weekdays = days.filter(isWeekday);
+  const workOnLeave = [];
+  for (const p of people.values()) {
+    for (const [day, recs] of Object.entries(p.recordsByDay)) {
+      if (p.leaveByDay.has(day) && recs.some(isWorkType)) workOnLeave.push({ person: p, day });
+    }
+  }
   const checks = [
     {
       key: 'noProject',
@@ -166,19 +210,26 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
       key: 'assignedNoAttendance',
       severity: 'critical',
       label: 'Assigned but no attendance on any weekday',
-      hint: 'Record the days they worked, or sick, holiday or off on the weekly grid.',
+      hint: 'Record the days they worked, or sick or off on the weekly grid. Approved holiday counts.',
       items: assigned
-        .filter((p) => !weekdays.some((d) => (p.recordsByDay[d] || []).length))
+        .filter((p) => !weekdays.some((d) => (p.recordsByDay[d] || []).length || p.leaveByDay.has(d)))
         .map((p) => ({ label: p.name })),
     },
     {
       key: 'notAssigned',
       severity: 'warning',
       label: 'Attendance from people not on any assignment',
-      hint: 'Add them to the assignment they worked on so the hours land on the right job.',
+      hint: 'Add them to the assignment they worked on so the hours land on the right job. Holiday, sick and off days need no assignment.',
       items: [...people.values()]
-        .filter((p) => !p.assignmentUuids.length && Object.keys(p.recordsByDay).length)
+        .filter((p) => !p.assignmentUuids.length && Object.values(p.recordsByDay).flat().some(isWorkType))
         .map((p) => ({ label: p.name })),
+    },
+    {
+      key: 'workOnLeave',
+      severity: 'critical',
+      label: 'Work recorded on an approved holiday',
+      hint: 'Delete the work on the weekly grid, or cancel the holiday request if they came in.',
+      items: workOnLeave.map(({ person: p, day }) => ({ label: `${p.name}, ${day}` })),
     },
     {
       key: 'noContract',
@@ -211,7 +262,8 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
   return {
     contracts: contractRows,
     assignments: assignmentRows,
-    unassignedPeople: [...people.values()].filter((p) => !p.assignmentUuids.length && Object.keys(p.recordsByDay).length),
+    unassignedPeople: [...people.values()].filter((p) => !p.assignmentUuids.length && Object.values(p.recordsByDay).flat().some(isWorkType)),
+    closures,
     checks,
     openChecks,
     counts,
@@ -229,6 +281,25 @@ function fetchWeekAssignments(days) {
     .lean();
 }
 
+/** Approved holiday requests that touch any day of the week. */
+function fetchApprovedLeave(days) {
+  return mdb.INTERNAL.holidayRequest
+    .find({ status: 'approved', startDate: { $lte: dayEnd(days[6]) }, endDate: { $gte: dayStart(days[0]) } })
+    .select('uuid employeeId startDate endDate leaveType').lean();
+}
+
+/** Bank holidays (England and Wales, as elsewhere in the app) and company holidays: day → title. */
+async function fetchClosures(days) {
+  const [bank, company] = await Promise.all([
+    mdb.INTERNAL.holiday.find({ division: 'england-and-wales', date: { $gte: days[0], $lte: days[6] } }).select('date title').lean(),
+    mdb.INTERNAL.holidayCustom.find({ date: { $gte: dayStart(days[0]), $lte: dayEnd(days[6]) } }).select('date title').lean(),
+  ]);
+  const out = new Map();
+  for (const h of bank) out.set(h.date, h.title);
+  for (const h of company) if (!out.has(ymd(h.date))) out.set(ymd(h.date), h.title);
+  return out;
+}
+
 /** Everything the flow page shows for one payroll week. */
 async function loadWeek(yearParam, weekParam) {
   const week = attendanceService.resolvePayrollWeek(yearParam, weekParam);
@@ -243,6 +314,7 @@ async function loadWeek(yearParam, weekParam) {
     mdb.INTERNAL.employee.find({ status: 'active' }).select('_id uuid name contract').sort({ name: 1 }).lean(),
     attendanceService.getLockedRunForDate(week.payrollWeekStart),
   ]);
+  const [leave, closures] = await Promise.all([fetchApprovedLeave(days), fetchClosures(days)]);
 
   // Contracts referenced by assignments may be completed: fetch those too so names resolve
   const extraContractIds = [...new Set(assignments.map((a) => id(a.contractId)))]
@@ -282,6 +354,8 @@ async function loadWeek(yearParam, weekParam) {
     attendance,
     employeesById,
     suppliersById: new Map(suppliers.map((s) => [id(s), s])),
+    leave,
+    closures,
   });
 
   return { week, flow, lockedRun, employees, subcontractors: subcontractorChoices };
@@ -374,6 +448,9 @@ async function recordAttendance(yearParam, weekParam, { assignmentUuid, days = {
     ...(assignment.assignedSubcontractors || []).map((s) => [personKey('subcontractor', id(s)), { subcontractorId: s }]),
   ]);
 
+  // Approved holiday: never record work over it
+  const leaveByEmployee = leaveDaysByEmployee(week.days, await fetchApprovedLeave(week.days));
+
   const docs = [];
   const skipped = [];
   for (const [key, ticked] of Object.entries(days || {})) {
@@ -388,6 +465,7 @@ async function recordAttendance(yearParam, weekParam, { assignmentUuid, days = {
       date: { $gte: dayStart(week.days[0]), $lte: dayEnd(week.days[6]) },
     }).select('date').lean();
     const taken = new Set(existing.map((r) => ymd(r.date)));
+    if (who.employeeId) for (const day of leaveByEmployee.get(id(who.employeeId))?.keys() || []) taken.add(day);
 
     const h = Number(hours?.[key]);
     for (const day of dayKeys) {
