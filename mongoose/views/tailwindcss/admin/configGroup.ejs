@@ -46,6 +46,27 @@ function sourcePill(f) {
         <% } %>
       </div>
 
+      <% if (locals.mailRules) { const mr = locals.mailRules; %>
+        <div class="mb-5 rounded-xl border px-4 py-3 <%= !mr.live ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20' : mr.warnings.length ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20' : 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' %>">
+          <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Mail rules</h2>
+          <% if (!mr.live) { %>
+            <p class="text-sm text-gray-700 dark:text-gray-300"><i class="bi bi-info-circle"></i> Couldn't read the mail rules from Paperless just now, so they haven't been checked.</p>
+          <% } else if (!mr.warnings.length) { %>
+            <p class="text-sm text-green-700 dark:text-green-400"><i class="bi bi-check-circle"></i> Every document type and tag hcs-app picks up has an enabled mail rule.</p>
+          <% } else { %>
+            <ul class="space-y-1">
+              <% mr.warnings.forEach(function (w) { %>
+                <li class="text-sm <%= w.level === 'error' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400' %>">
+                  <i class="bi <%= w.level === 'error' ? 'bi-x-circle' : 'bi-exclamation-triangle' %>"></i> <%= w.message %>
+                </li>
+              <% }) %>
+            </ul>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Fix these in Paperless under Mail → Mail rules. hcs-app only reads them.</p>
+          <% } %>
+          <p class="text-xs mt-2"><a href="/paperless/mail-rules" class="text-green-700 dark:text-green-400 hover:underline">Where to send documents, and how the rules have changed →</a></p>
+        </div>
+      <% } %>
+
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3">
         <i class="bi bi-info-circle"></i>
         Leave a field <strong>blank</strong> to keep its current value — clearing one is <em>Revert</em>, which is deliberate and separate.

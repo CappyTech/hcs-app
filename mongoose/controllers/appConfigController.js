@@ -37,6 +37,8 @@ async function runAfterSave(group) {
     } else if (group.afterSave === 'paperless') {
       const paperlessClient = (await import('../services/paperless/paperlessClient.js')).default;
       paperlessClient.invalidateCfCache?.();
+      const mailRules = (await import('../services/paperless/mailRuleService.js')).default;
+      mailRules.invalidateMailRulesCache();
     } else if (group.afterSave === 'mail') {
       const emailService = (await import('../../services/emailService.js')).default;
       emailService.resetTransporter?.();
@@ -122,10 +124,15 @@ export const getGroup = async (req, res, next) => {
     const group = registry.findGroup(req.params.group);
     if (!group) return res.status(404).render(path.join('tailwindcss', 'error'), { title: '404 - Not Found', error: { title: '404 - Not Found', message: 'No such settings group.' } });
     const needsUsers = group.keys.some((k) => k.type === 'email');
+    // The Paperless page also checks the mail rules hcs-app relies on
+    const mailRules = group.id === 'paperless'
+      ? await (await import('../services/paperless/mailRuleService.js')).default.getOverview().catch(() => null)
+      : null;
     res.render(path.join('tailwindcss', 'admin', 'configGroup'), {
       title: group.label,
       group: groupView(group),
       userEmails: needsUsers ? await userEmailOptions().catch(() => []) : [],
+      mailRules,
     });
   } catch (err) {
     logger.error(`[appConfig] group error: ${err.message}`);

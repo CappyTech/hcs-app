@@ -20,9 +20,16 @@
       From Paperless
     </h2>
     <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
-      Statements emailed to the bank statements mailbox
+      <% const bankTo = locals.bankAddresses || []; %>
+      <% if (bankTo.length) { %>
+        Statements emailed to
+        <% bankTo.forEach(function (a, i) { %><%= i ? (i === bankTo.length - 1 ? ' or ' : ', ') : '' %><span class="font-mono text-xs"><%= a %></span><% }) %>
+      <% } else { %>
+        Statements emailed to the bank statements address
+      <% } %>
       are filed in Paperless and tagged <span class="font-mono text-xs">bank-statement</span>.
       This reads them and writes the outcome back as a tag. It also runs on its own every six hours.
+      <a href="/paperless/mail-rules" class="text-green-700 dark:text-green-400 hover:underline">Where to send documents</a>
     </p>
     <form method="POST" action="/bank/statements/grab">
       <%- include('../partials/csrfHidden') %>

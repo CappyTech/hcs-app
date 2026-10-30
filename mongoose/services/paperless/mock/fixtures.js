@@ -165,4 +165,52 @@ export const DOCUMENTS = [
   },
 ];
 
-export default { TAGS, DOCUMENT_TYPES, CORRESPONDENTS, CUSTOM_FIELDS, DOCUMENTS };
+// Mail rules, in the shape of GET /api/mail_rules/. One account, split by To
+// address as live (PAPERLESS-MIGRATION.md section 3, "Mail rules"), with the
+// type and tag ids above. Addresses are example.test placeholders.
+// consumption_scope: 1 = attachments only, 2 = the email itself as .eml,
+// 3 = both. attachment_type: 1 = attachments only, 2 = inline files too.
+export const MAIL_ACCOUNTS = [
+  { id: 1, name: 'Documents mailbox', imap_server: 'imap.example.test', username: 'documents@example.test' },
+];
+
+const mailRule = (id, name, to, documentType, tag, extra = {}) => ({
+  id,
+  name,
+  account: 1,
+  enabled: true,
+  folder: 'INBOX',
+  order: id,
+  filter_from: null,
+  filter_to: to,
+  filter_subject: null,
+  filter_body: null,
+  filter_attachment_filename_include: '*.pdf',
+  filter_attachment_filename_exclude: null,
+  maximum_age: 30,
+  action: 3,
+  action_parameter: 'ProcessedByPaperless',
+  assign_title_from: 1,
+  assign_tags: [tag],
+  assign_document_type: documentType,
+  assign_correspondent_from: 1,
+  assign_correspondent: null,
+  assign_owner_from_rule: true,
+  attachment_type: 1,
+  consumption_scope: 1,
+  ...extra,
+});
+
+export const MAIL_RULES = [
+  // Purchase invoices also arrive as the email body itself (scope 3, no filename filter).
+  mailRule(1, 'Purchase invoices', 'purchase@example.test', 1, 16, {
+    consumption_scope: 3,
+    filter_attachment_filename_include: null,
+  }),
+  mailRule(2, 'Bank statements', 'bank@example.test', 4, 12),
+  mailRule(3, 'Supplier statements', 'statement@example.test', 2, 5),
+  mailRule(4, 'Remittance advice', 'remittance@example.test', 5, 18),
+  mailRule(5, 'Subcontractor invoices', 'subcontractor@example.test', 3, 17),
+];
+
+export default { TAGS, DOCUMENT_TYPES, CORRESPONDENTS, CUSTOM_FIELDS, DOCUMENTS, MAIL_ACCOUNTS, MAIL_RULES };

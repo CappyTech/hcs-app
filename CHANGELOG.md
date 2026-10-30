@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.82.0] - 2026-10-30
+
+### Added
+- **Where to send documents** (`/paperless/mail-rules`, admins and accountants): one line per document type with the address to email it to and what that address takes (PDF attachments only, or the email body too), read live from the Paperless mail rules. Paperless stays the only place the addresses are set; there is no hcs-app setting for them. The read is cached for 5 minutes (`PAPERLESS_MAIL_RULES_CACHE_MS`); when Paperless can't be reached the page says so calmly and shows the addresses as last seen. Linked from the document queues and the bank statements page (`mailRuleService.js`).
+- Mail rule history under the guide: a dated entry whenever a rule's address, document type, tags, scope, attachment filter or enabled flag changes, or a rule is added or removed (e.g. "bank@ rule disabled"). Saved in the new `MailRuleSnapshot` model (PAPERLESS namespace) only when something changed, with rule settings only, never document contents. Checked by the new `paperless-mail-rules` job every 6 hours and on page view.
+- Paperless settings page: a **Mail rules** check listing any document type or tag hcs-app picks up that no enabled rule assigns, disabled rules, and rules pointing at a type or tag id that no longer exists.
+- Paperless client: `listMailRules` and `listMailAccounts` (`GET /api/mail_rules/`, `/api/mail_accounts/`), with five example.test rules in the mock fixtures.
+
+### Changed
+- The bank statements page names the live bank statements address instead of "the bank statements mailbox".
+
 ## [6.81.2] - 2026-10-30
 
 ### Fixed

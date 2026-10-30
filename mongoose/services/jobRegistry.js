@@ -25,6 +25,7 @@ import __documentIngestService from './paperless/documentIngestService.js';
 import __documentTypeCheck from './paperless/documentTypeCheck.js';
 import __documentNotifyService from './paperless/documentNotifyService.js';
 import __shadowReportService from './paperless/shadowReportService.js';
+import __mailRuleService from './paperless/mailRuleService.js';
 import __documentReadingService from './paperless/documentReadingService.js';
 import __statementReadingService from './paperless/statementReadingService.js';
 import __mdbForJobs from './mongooseDatabaseService.js';
@@ -242,6 +243,16 @@ function registerAll() {
       const { OcrDocument, NotificationLog, ShadowReport } = __mdbForJobs.PAPERLESS;
       return __shadowReportService.saveDailyReport({ OcrDocument, NotificationLog, ShadowReport });
     },
+  });
+
+  scheduler.register('paperless-mail-rules', {
+    description:
+      'Read the Paperless mail rules (which address files as which document type and tag) and save '
+      + 'a dated entry when an address, type, tag, scope or enabled flag has changed, for the history on '
+      + '/paperless/mail-rules. Saves rule settings only, never documents. Also runs on page view.',
+    intervalMs: 6 * HOUR,
+    initialDelayMs: 150_000,
+    run: () => __mailRuleService.runSnapshotJob(),
   });
 
   scheduler.register('paperless-correspondent-sync', {

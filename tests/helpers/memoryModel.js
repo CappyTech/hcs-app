@@ -69,6 +69,7 @@ export function memoryModel(rows = []) {
       });
     },
     findOne(filter) { return new Query(() => copy(docs.find((d) => matches(d, filter)))); },
+    async create(doc) { docs.push(structuredClone(doc)); return copy(doc); },
     async updateOne(filter, update, { upsert = false } = {}) {
       let doc = docs.find((d) => matches(d, filter));
       if (!doc) {

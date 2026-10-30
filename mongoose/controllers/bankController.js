@@ -7,6 +7,7 @@ import recon from '../services/bankReconciliationService.js';
 import statements from '../services/statementImportService.js';
 import statementIngest from '../services/bankStatementIngestService.js';
 import ruleService from '../services/bankRuleService.js';
+import mailRules from '../services/paperless/mailRuleService.js';
 import transferService from '../services/bankTransferService.js';
 import threeWay from '../services/bankThreeWayService.js';
 import { resolveBankLine, signedAmount, bankLineKey, claimedLines } from '../services/bankLinkService.js';
@@ -451,15 +452,18 @@ export const getStatements = async (req, res, next) => {
   try {
     await mdb.connect();
     const accountId = req.query.accountId ? Number(req.query.accountId) : null;
-    const [imports, accounts] = await Promise.all([
+    const [imports, accounts, mailRuleOverview] = await Promise.all([
       statements.listImports({ accountId }),
       worklist.listAccounts(),
+      mailRules.getOverview().catch(() => null),
     ]);
 
     res.render(VIEW('statements'), {
       title: 'Bank statements',
       imports,
       accounts,
+      // Where statements are emailed, from the Paperless mail rules (cached)
+      bankAddresses: mailRules.bankStatementAddresses(mailRuleOverview),
       layouts: statements.CSV_LAYOUTS,
       selectedAccountId: accountId,
     });
