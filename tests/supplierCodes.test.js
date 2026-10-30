@@ -6,7 +6,7 @@ process.env.PAPERLESS_URL = 'mock';
 import { correspondentLabel, parseCorrespondentName } from '../mongoose/services/paperless/correspondentName.js';
 import syncSvc from '../mongoose/services/paperless/supplierCorrespondentSyncService.js';
 import { assignSupplier, supplierOptions } from '../mongoose/services/paperless/documentSupplierService.js';
-import { supplierFor } from '../mongoose/services/paperless/documentReadingService.js';
+import { supplierFor, supplierMatch } from '../mongoose/services/paperless/documentReadingService.js';
 import entrySvc from '../mongoose/services/paperless/documentEntryService.js';
 import { findLines, findDayLines } from '../public/js/invoice-line-finder.js';
 import { groupRows, findFields, findCisDeductions } from '../public/js/invoice-field-finder.js';
@@ -69,6 +69,30 @@ describe('correspondents named "<Name> (<Code>)"', () => {
     assert.equal((await supplierFor(Supplier, 'Northern Plant Hire')).Code, 'NPH01', 'a hand-made name still matches');
     assert.equal((await supplierFor(Supplier, 'Northern Plant Hire (UNKNOWN)')).Code, 'NPH01', 'brackets that are not a code fall back to the name');
     assert.equal(await supplierFor(Supplier, 'Nobody'), null);
+  });
+
+  it('asks rather than guesses when two suppliers share the name', async () => {
+    const Supplier = fakeModel([
+      { Code: 'TYR02', Name: 'Valley Tyres' },
+      { Code: 'TYR01', Name: 'Valley Tyres' },
+      { Code: 'ACM01', Name: 'Acme Builders Ltd' },
+    ]);
+    const m = await supplierMatch(Supplier, 'Valley Tyres');
+    assert.equal(m.supplier, null);
+    assert.deepEqual(m.choices.map((s) => s.Code), ['TYR01', 'TYR02'], 'both offered, in code order');
+    assert.equal(await supplierFor(Supplier, 'Valley Tyres'), null, 'never the first one the database returns');
+    assert.equal((await supplierFor(Supplier, 'Valley Tyres (TYR02)')).Code, 'TYR02', 'a code settles it');
+    assert.deepEqual((await supplierMatch(Supplier, 'Acme Builders Ltd')).choices, [], 'one match asks nothing');
+  });
+
+  it('takes the only active one when the other is archived', async () => {
+    const Supplier = fakeModel([
+      { Code: 'TYR01', Name: 'Valley Tyres', IsArchived: true },
+      { Code: 'TYR02', Name: 'Valley Tyres' },
+    ]);
+    const m = await supplierMatch(Supplier, 'Valley Tyres');
+    assert.equal(m.supplier.Code, 'TYR02');
+    assert.deepEqual(m.choices, []);
   });
 });
 

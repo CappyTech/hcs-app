@@ -248,6 +248,7 @@ describe('reading a statement document', () => {
   it('a failure is stored as an error, not thrown', async () => {
     const m = models();
     m.Supplier.findOne = () => { throw new Error('REST down'); };
+    m.Supplier.find = () => { throw new Error('REST down'); };
     const st = await svc.readStatement(9005, deps(m));
     assert.equal(st.error, 'REST down');
     assert.match(st.summaryText, /Couldn't read/);

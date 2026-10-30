@@ -487,12 +487,16 @@ export const getPurchaseDraft = async (req, res, next) => {
         // exact case-insensitive match preference
         const nameLower = qName.toLowerCase();
         if (selectedSupplier && !suppliers.some((s) => s.Code === selectedSupplier.Code)) suppliers.unshift(selectedSupplier);
+        // Two suppliers with the same name (one entered twice in KashFlow):
+        // pre-select neither, so the sender has to choose
+        const exact = suppliers.filter(
+          (s) =>
+            (s.Name || "").toLowerCase() === nameLower ||
+            (s.Code || "").toLowerCase() === nameLower,
+        );
+        const activeExact = exact.filter((s) => !s.IsArchived);
         selectedSupplier = selectedSupplier ||
-          suppliers.find(
-            (s) =>
-              (s.Name || "").toLowerCase() === nameLower ||
-              (s.Code || "").toLowerCase() === nameLower,
-          ) || null;
+          (exact.length === 1 ? exact[0] : activeExact.length === 1 ? activeExact[0] : null);
       } else {
         suppliers = await Supplier.find({})
           .select("uuid Id Code Name IsArchived DefaultNominalCode")
@@ -876,6 +880,18 @@ export const sendDraftToKashflow = async (req, res, next) => {
             draft.DefaultNominalCode = s.DefaultNominalCode;
           }
         }
+      }
+    }
+    // No supplier picked and the name fits two KashFlow suppliers: refuse
+    // rather than let KashFlow choose
+    if (!draft.SupplierCode && !draft.SupplierId) {
+      const { OcrDocument: OcrDocumentName } = mdb.PAPERLESS;
+      const nameDoc = await OcrDocumentName.findOne({ paperlessId }).select('correspondent').lean();
+      const match = await readingSvc.supplierMatch(mdb.REST && mdb.REST.supplier, nameDoc?.correspondent?.name).catch(() => null);
+      if (match?.choices?.length) {
+        req.flash('error', `${match.choices.length} KashFlow suppliers are called "${nameDoc.correspondent.name}" (${match.choices.map((s) => s.Code).join(', ')}). Pick which one before sending.`);
+        await releaseSendClaim();
+        return res.redirect(`/paperless/ocr/${paperlessId}/draft`);
       }
     }
     // Subcontractor invoices: our CIS deduction, kept with the send so it can
