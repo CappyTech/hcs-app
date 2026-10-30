@@ -9,6 +9,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - Days covered by an approved request show as "On holiday", "Unpaid leave" or "On leave" (linking to the request) and can't be recorded as work. Recording also skips them on the server.
   - Bank holidays (England and Wales) and company holidays start unticked and are labelled, but can still be ticked for people who worked them.
   - New check: **Work recorded on an approved holiday**.
+- **Weekly attendance home tile.** The weekly attendance overview was only a card inside Projects and Human Resources, so it never appeared among the home page's overview tiles. It is now a top-level tile (admin and accountant) that opens `/overview/weekly`. This works through a new area option, `opens: '<nodeId>'`: a tile for a node's generated overview, with no area page of its own. Saved home layouts keep their own tiles, so tick it under **Customise home** to add it.
 
 ### Fixed
 - An employee on approved holiday all week was flagged as "Assigned but no attendance on any weekday".

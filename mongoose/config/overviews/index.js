@@ -158,6 +158,11 @@ function validate(candidate = state) {
     if (!getFigure(full, lookup)) problems.push(`${nodeId}: unknown figure '${ref}'`);
   };
   for (const area of candidate.allAreas) {
+    if (area.opens) {
+      const target = lookup(area.opens);
+      if (!target?.overview) problems.push(`area ${area.id}: opens '${area.opens}', which has no overview`);
+      else if (target.overviewPath !== area.path) problems.push(`area ${area.id}: path must be ${target.overviewPath}, the overview it opens`);
+    }
     for (const child of area.children || []) {
       const node = lookup(child);
       if (!node) problems.push(`area ${area.id}: unknown child '${child}'`);

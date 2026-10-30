@@ -9,6 +9,8 @@
  * same route rule. Holiday isn't here: it's reached through Human Resources.
  * Areas marked `bespoke: true` still have a hand-built page (their own route);
  * they're listed so home has one source while they wait to be converted.
+ * An area with `opens: '<nodeId>'` is a home tile for that node's generated
+ * overview (its `path` is the node's overviewPath); it has no page of its own.
  *
  * See docs/OVERVIEW-HIERARCHY.md for the design.
  */
@@ -46,6 +48,11 @@ export default [
     children: ['contract', 'assignment', 'weekly', 'project'],
     // Shown only to those who can open the route (rolePermissionsConfig)
     actions: [{ label: 'Do weekly attendance', href: '/weekly-flow', route: '/weekly-flow', icon: 'bi-calendar-check' }],
+  },
+  {
+    id: 'weeklyAttendance', path: '/overview/weekly', bespoke: true, opens: 'weekly',
+    label: 'Weekly attendance', icon: 'bi-calendar-check',
+    description: 'This payroll week: contracts, assignments, days worked and approval.',
   },
   {
     id: 'subcontractors',

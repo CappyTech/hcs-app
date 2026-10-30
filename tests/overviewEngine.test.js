@@ -353,14 +353,14 @@ describe('home tiles', () => {
   it('lists the top-level areas in order, without Holiday', () => {
     const tiles = engine.homeTiles(admin).map((t) => t.href);
     assert.deepStrictEqual(tiles, [
-      '/overview/human', '/overview/fleet', '/overview/finance', '/overview/projects', '/overview/subcontractors',
+      '/overview/human', '/overview/fleet', '/overview/finance', '/overview/projects', '/overview/weekly', '/overview/subcontractors',
       '/overview/payroll', '/overview/documents', '/overview/policies', '/overview/admin',
     ]);
     assert.ok(!tiles.includes('/overview/holiday'));
   });
 
   it('only shows a role the areas it can open', () => {
-    assert.deepStrictEqual(engine.homeTiles(as('accountant')).map((t) => t.label), ['Finance', 'Subcontractors', 'Payroll']);
+    assert.deepStrictEqual(engine.homeTiles(as('accountant')).map((t) => t.label), ['Finance', 'Weekly attendance', 'Subcontractors', 'Payroll']);
     assert.deepStrictEqual(engine.homeTiles(as('hmrc')).map((t) => t.label), ['Subcontractors']);
     assert.deepStrictEqual(engine.homeTiles(as('employee')), []);
   });
@@ -513,5 +513,25 @@ describe('weekly attendance overview', () => {
 
   it('leads the flow page breadcrumbs back through the overview', () => {
     assert.deepStrictEqual(engine.breadcrumbs(admin, 'weekly').map((c) => c.href), ['/', '/overview/projects', '/overview/weekly']);
+  });
+});
+
+describe('weekly attendance home tile', () => {
+  const accountant = { user: { role: 'accountant', customPermissions: {} }, query: {} };
+
+  it('is a home tile that opens the weekly overview, for those who can open it', () => {
+    const tile = (req) => engine.homeTiles(req).find((t) => t.href === '/overview/weekly');
+    assert.equal(tile(admin).label, 'Weekly attendance');
+    assert.ok(tile(accountant));
+    assert.equal(tile(employeeUser), undefined);
+  });
+
+  it('has no area page of its own', async () => {
+    assert.equal(await engine.buildArea(admin, 'weeklyAttendance'), null);
+  });
+
+  it('must sit on the path of the overview it opens', () => {
+    const state = registry.buildState([{ kind: 'area', key: 'weeklyAttendance', override: { path: '/overview/elsewhere' } }]);
+    assert.ok(registry.validate(state).some((p) => p.includes('path must be /overview/weekly')));
   });
 });
