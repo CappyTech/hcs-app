@@ -93,6 +93,8 @@ const COLS = kind === 'statement'
 const checks = [];
 if (Object.keys(errors || {}).length) checks.push({ tone: 'red', title: 'Please fix the following', items: Object.values(errors) });
 if (warnings && warnings.length) checks.push({ tone: 'amber', title: "Totals don't add up", items: warnings });
+// Subcontractor invoices: not VAT-registered, reverse charge, or charged normally (vatCase)
+if (locals.vat) checks.push({ tone: vat.tone, title: vat.title, text: vat.text, items: vat.items.length ? vat.items : null });
 if (rd && !rd.error && rd.hasText === false) checks.push({ tone: 'amber', title: 'No text in the PDF', text: 'Nothing can be read from it or selected. It was probably scanned without OCR.', reprocess: true });
 if (locals.excluded) checks.push({ tone: 'amber', title: `Kept out of the queues. ${excluded} ${doc.excludedReason === 'not_for_kashflow' ? 'An admin can undo it below.' : "Remove the tag in Paperless if that's wrong."}` });
 if (locked && !locals.excluded) checks.push({ tone: 'green', title: 'In KashFlow', locked: true });

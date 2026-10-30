@@ -220,6 +220,67 @@ export function cisDeduction({ labour, invoiceTotal } = {}, whtRate) {
   };
 }
 
+// Why VAT may still be right on a VAT-registered subcontractor's invoice
+const VAT_EXCEPTIONS = "That's only right if we're the end user of the work, it's zero-rated (most new-build housing, at 0%), it's labour from an employment business, or it isn't construction work (goods only, or plant without an operator).";
+
+/**
+ * Which of the three VAT cases a subcontractor invoice is, from what each
+ * step knows: the VAT numbers read off the document and its OCR text
+ * (Paperless), the VAT entered here, and the supplier synced from KashFlow.
+ *
+ *   not_registered  no VAT number anywhere: no VAT can be charged
+ *   reverse_charge  VAT-registered, no VAT charged: we account for the VAT
+ *   charged         VAT-registered and VAT charged: only right in the exceptions
+ *   unknown         nothing entered yet
+ *
+ * `supplier` is the matched KashFlow supplier, or null. Pure.
+ * @returns {{case: string, tone: 'green'|'amber'|'red', title: string, text: string, items: string[]}}
+ */
+export function vatCase({ supplier = null, docVatNumbers = [], ocrText = '', totalVat = null, lines = [] } = {}) {
+  const vat = parseMoneyInput(totalVat);
+  const lineVat = (lines || []).some((l) => Number(l?.vatRate) > 0);
+  const entered = (vat != null && vat !== INVALID) || (lines || []).some((l) => l?.vatRate != null && l.vatRate !== '');
+  const charged = (vat !== INVALID && vat > 0) || lineVat;
+  const kashflowVat = String(supplier?.VatNumber || '').trim();
+  const onDocument = (docVatNumbers || []).length > 0;
+  const saysReverse = /reverse[\s-]*charge/i.test(ocrText || '');
+  const registered = !!kashflowVat || onDocument || saysReverse;
+  const items = [];
+  if (!supplier) items.push("The supplier isn't matched in KashFlow, so this is from the invoice alone.");
+
+  if (!entered) {
+    return { case: 'unknown', tone: 'amber', title: 'VAT: enter it to check', text: registered ? 'The subcontractor looks VAT-registered: expect no VAT on the invoice (reverse charge).' : 'No VAT number found: expect no VAT on the invoice.', items };
+  }
+
+  if (!registered) {
+    if (!charged) return { case: 'not_registered', tone: 'green', title: 'VAT: not VAT-registered', text: 'No VAT number on the invoice or in KashFlow, and no VAT charged.', items };
+    return { case: 'not_registered', tone: 'red', title: 'VAT: charged without a VAT number', text: "VAT is entered, but there's no VAT number on the invoice or in KashFlow. A subcontractor that isn't VAT-registered can't charge VAT: find their VAT number, or enter VAT as 0.", items };
+  }
+
+  if (!charged) {
+    if (!saysReverse) items.push(`The invoice doesn't say "reverse charge". A reverse-charge invoice has to, so ask for it to be reissued, unless the work is zero-rated.`);
+    if (supplier && supplier.IsCISReverseCharge !== true) items.push("KashFlow doesn't have this supplier set as CIS reverse charge.");
+    const vatNo = (s) => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^GB/, '');
+    if (onDocument && kashflowVat && !docVatNumbers.some((n) => vatNo(n) === vatNo(kashflowVat))) {
+      items.push("The VAT number on the invoice isn't the one KashFlow has for this supplier.");
+    }
+    return {
+      case: 'reverse_charge', tone: items.some((m) => !m.startsWith("The supplier isn't matched")) ? 'amber' : 'green',
+      title: 'VAT: reverse charge',
+      text: 'VAT-registered and no VAT charged: the domestic reverse charge. We account for the VAT on our own return instead.', items,
+    };
+  }
+
+  if (saysReverse) {
+    return { case: 'charged', tone: 'red', title: 'VAT: says reverse charge, but VAT entered', text: "The invoice says reverse charge, so there's no VAT for us to pay. Enter VAT as 0.", items };
+  }
+  if (supplier?.IsCISReverseCharge === true) items.push('KashFlow has this supplier set as CIS reverse charge.');
+  return {
+    case: 'charged', tone: 'amber', title: 'VAT: charged normally',
+    text: `A VAT-registered subcontractor has charged VAT. CIS work between VAT-registered businesses is normally reverse charged, with no VAT on the invoice. ${VAT_EXCEPTIONS}`, items,
+  };
+}
+
 const money = (n) => (n == null ? '—' : Number(n).toFixed(2));
 const off = (a, b) => Math.abs(a - b) > 0.01;
 
@@ -728,6 +789,7 @@ export default {
   parseEntryForm,
   completionErrors,
   cisDeduction,
+  vatCase,
   consistencyWarnings,
   formValues,
   entryAsCustomFields,
