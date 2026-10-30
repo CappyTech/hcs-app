@@ -602,6 +602,21 @@ describe('entry view', () => {
     assert.match(html, /name="_csrf"/);
   });
 
+  it('offers the KashFlow supplier picker, and warns about a bad invoice', async () => {
+    const doc = { paperlessId: 9001, documentType: PI, processingState: 'awaiting_entry', correspondent: { id: 2, name: 'Northern Plant Hire' }, customFields: [] };
+    const html = await render(doc, {
+      supplierOptions: [{ code: 'NPH01', label: 'Northern Plant Hire (NPH01)' }],
+      legal: ['No invoice date on it.'],
+    });
+    assert.match(html, /action="\/paperless\/ocr\/9001\/supplier"/);
+    assert.match(html, /<option value="Northern Plant Hire \(NPH01\)">/);
+    assert.match(html, /Change supplier/);
+    assert.match(html, /This may not be a valid invoice/);
+    assert.match(html, /No invoice date on it\./);
+    const locked = await render({ ...doc, processingState: 'sent' }, { locked: true, supplierOptions: [{ code: 'NPH01', label: 'Northern Plant Hire (NPH01)' }] });
+    assert.ok(!locked.includes('/supplier"'), 'no picker once it is in KashFlow');
+  });
+
   it('shows the VAT case in Checks', async () => {
     const doc = { paperlessId: 9100, documentType: SI, processingState: 'awaiting_entry', customFields: [] };
     const vat = entrySvc.vatCase({ supplier: { Name: 'A Sub', VatNumber: 'GB123456789' }, totalVat: '200' });

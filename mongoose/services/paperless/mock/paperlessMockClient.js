@@ -180,6 +180,24 @@ export function makeMockClient() {
       state.correspondents.push(c);
       return clone(c);
     },
+    async updateCorrespondent(id, { name } = {}) {
+      if (!id || !name) throw new Error('updateCorrespondent requires id and name');
+      const c = state.correspondents.find((x) => x.id === Number(id));
+      if (!c) throw notFound(`/correspondents/${id}/`);
+      record('PATCH', `/correspondents/${id}/`, { name });
+      c.name = name;
+      return clone(c);
+    },
+    async updateDocumentCorrespondent(documentId, correspondentId) {
+      if (!documentId) throw new Error('updateDocumentCorrespondent requires documentId');
+      const doc = findDoc(documentId);
+      const id = correspondentId == null ? null : Number(correspondentId);
+      if (id != null && !state.correspondents.some((c) => c.id === id)) throw notFound(`/correspondents/${id}/`);
+      record('PATCH', `/documents/${documentId}/`, { correspondent: id });
+      doc.correspondent = id;
+      touch(doc);
+      return clone(doc);
+    },
     async getDocumentType(id) {
       if (!id) return null;
       const t = state.documentTypes.find((x) => x.id === Number(id));

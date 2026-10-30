@@ -11,6 +11,7 @@
  *   POST /paperless/ocr/:paperlessId/resend-invoice  re-send the invoice email (H6)
  *   POST /paperless/ocr/:paperlessId/reviewed     mark a supplier statement reviewed (H6)
  *   POST /paperless/ocr/:paperlessId/statement-check  set a supplier statement against KashFlow again
+ *   POST /paperless/ocr/:paperlessId/supplier     set the KashFlow supplier (the Paperless correspondent)
  *   GET  /paperless/ocr/:paperlessId/file         the PDF, streamed from Paperless
  */
 
@@ -24,7 +25,11 @@ import notifySvc from '../services/paperless/documentNotifyService.js';
 import readingSvc from '../services/paperless/documentReadingService.js';
 import statementSvc from '../services/paperless/statementReadingService.js';
 import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
+import supplierSvc from '../services/paperless/documentSupplierService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
+import { parseCorrespondentName } from '../services/paperless/correspondentName.js';
+import { normaliseVatNumber } from '../../public/js/invoice-line-finder.js';
+import * as organisation from '../../services/organisationService.js';
 import logger from '../../services/loggerService.js';
 
 const notFound = (res, message = 'Document not found.') => res.status(404).render(path.join('tailwindcss', 'error'), {
@@ -51,24 +56,34 @@ async function loadDoc(paperlessId) {
  * Null for other documents; { supplier: null } when there's no match.
  */
 async function kashflowSupplier(doc) {
-  const Supplier = mdb.REST && mdb.REST.supplier;
-  const name = (doc.correspondent?.name || '').trim();
-  if (!Supplier || !name) return null;
-  const exact = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-  return Supplier.findOne({ $or: [{ Name: exact }, { Code: exact }] })
-    .select('Name WithholdingTaxRate VatNumber IsCISReverseCharge').lean().catch(() => null);
+  return readingSvc.supplierFor(mdb.REST && mdb.REST.supplier, doc.correspondent?.name).catch(() => null);
 }
 
 /**
  * For a subcontractor invoice: the CIS deduction at the KashFlow supplier's
  * rate, and which VAT case it is (vatCase). Null for other documents.
  */
+/** VAT numbers read off the document, leaving out our own (printed as the customer's). */
+function supplierVatNumbers(doc) {
+  const own = normaliseVatNumber(organisation.companyVatNumber());
+  return [...new Set((doc.reading?.vatNumbers || []).map((v) => normaliseVatNumber(v.number)).filter((n) => n && n !== own))];
+}
+
+/** Us, as an invoice should name us: from Admin → Configuration → Organisation. */
+function companyForChecks() {
+  const configured = organisation.companyName() !== 'This company';
+  return {
+    names: configured ? [...new Set([organisation.companyName(), organisation.companyShortName()])] : [],
+    address: organisation.companyAddress(),
+  };
+}
+
 async function subcontractorChecks(doc, values) {
   if (!entry.isSubcontractorEntry(doc)) return { cis: null, vat: null };
   const s = await kashflowSupplier(doc);
   const vat = entry.vatCase({
     supplier: s,
-    docVatNumbers: (doc.reading?.vatNumbers || []).map((v) => v.number),
+    docVatNumbers: supplierVatNumbers(doc),
     ocrText: doc.ocrText,
     totalVat: values.totalVat,
     lines: values.lines,
@@ -99,6 +114,10 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     lineCount,
     errors,
     warnings: kind === 'invoice' ? entry.consistencyWarnings(doc.entry) : [],
+    // What an invoice legally needs that this one doesn't seem to show
+    legal: kind === 'invoice' ? entry.invoiceProblems({
+      ocrText: doc.ocrText, reading: doc.reading, docVatNumbers: supplierVatNumbers(doc), values: v, company: companyForChecks(),
+    }) : [],
     isAdmin,
     // Tagged in Paperless as not for entry: shown, but nothing to enter
     excluded: notForEntryMessage(doc),
@@ -109,6 +128,10 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     audit: isAdmin ? entry.auditTimeline(doc, notifications) : null,
     notifyMode: notifySvc.notifyMode(),
     documentTypes: await documentTypeOptions().catch(() => []),
+    // The KashFlow supplier picker, for anything with a supplier
+    supplierOptions: kind === 'invoice' || kind === 'statement'
+      ? await supplierSvc.supplierOptions(mdb.REST && mdb.REST.supplier).catch(() => [])
+      : [],
   });
 }
 
@@ -285,6 +308,27 @@ export const postResendInvoice = async (req, res, next) => {
   }
 };
 
+/** POST /paperless/ocr/:paperlessId/supplier  supplier="<Name> (<Code>)" from the picker */
+export const postSupplier = async (req, res, next) => {
+  try {
+    const id = idParam(req);
+    if (!id) return notFound(res);
+    await mdb.connect();
+    const { code } = parseCorrespondentName(req.body.supplier);
+    const r = await supplierSvc.assignSupplier(
+      { OcrDocument: mdb.PAPERLESS.OcrDocument, Supplier: mdb.REST && mdb.REST.supplier },
+      id, code || req.body.supplier, actorFromUser(req.user),
+    );
+    if (!r.ok) req.flash('error', r.message);
+    else if (r.changed) req.flash('success', `Supplier set to ${r.to}, here and in Paperless.`);
+    return res.redirect(entryUrl(id));
+  } catch (err) {
+    logger.error(`[documentEntry] supplier ${req.params.paperlessId}: ${err.message}`);
+    req.flash('error', `Couldn't set the supplier in Paperless: ${err.message}`);
+    return res.redirect(entryUrl(Number(req.params.paperlessId) || ''));
+  }
+};
+
 export const postStatementCheck = async (req, res, next) => {
   try {
     const id = idParam(req);
@@ -352,4 +396,4 @@ export function makeGetFile(deps = {}) {
 
 export const getFile = makeGetFile();
 
-export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendInvoice, postReviewed, postStatementCheck, getFile, makeGetFile };
+export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendInvoice, postReviewed, postStatementCheck, postSupplier, getFile, makeGetFile };

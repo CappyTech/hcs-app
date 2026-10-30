@@ -344,6 +344,7 @@ const routeAccess = {
   '/paperless/ocr/:paperlessId/resend-invoice': ['admin'],
   '/paperless/ocr/:paperlessId/reviewed':    ['admin'],
   '/paperless/ocr/:paperlessId/type':        ['admin'],
+  '/paperless/ocr/:paperlessId/supplier':    ['admin'],
   '/paperless/ocr/:paperlessId/type-confirmed': ['admin'],
   '/paperless/ocr/:paperlessId/file':        ['admin'],
   '/paperless/ocr/:paperlessId/insights':        ['admin'],

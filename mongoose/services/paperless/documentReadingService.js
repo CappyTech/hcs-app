@@ -24,6 +24,7 @@ import __paperlessClient from './paperlessClient.js';
 import configService from '../../../services/configService.js';
 import logger from '../../../services/loggerService.js';
 import { refreshTypeCheck } from './documentTypeCheck.js';
+import { parseCorrespondentName } from './correspondentName.js';
 import {
   findFields, locateValue, normalise, toItems, FIELDS,
 } from '../../../public/js/invoice-field-finder.js';
@@ -198,13 +199,23 @@ export function compareReading(reading, entry) {
 const normRef = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** The KashFlow supplier a correspondent stands for: exact name or code, any case. */
+const SUPPLIER_FIELDS = 'Id Code Name VatNumber IsArchived WithholdingTaxRate IsCISReverseCharge';
+
+/**
+ * The KashFlow supplier a correspondent stands for: by the code in a
+ * "<Name> (<Code>)" correspondent first, then exact name or code, any case.
+ */
 export async function supplierFor(Supplier, correspondentName) {
-  const name = String(correspondentName || '').trim();
-  if (!Supplier || !name) return null;
-  const re = new RegExp(`^${escapeRe(name)}$`, 'i');
-  return Supplier.findOne({ $or: [{ Name: re }, { Code: re }] })
-    .select('Id Code Name VatNumber IsArchived')
+  const full = String(correspondentName || '').trim();
+  if (!Supplier || !full) return null;
+  const { name, code } = parseCorrespondentName(full);
+  if (code) {
+    const byCode = await Supplier.findOne({ Code: new RegExp(`^${escapeRe(code)}$`, 'i') }).select(SUPPLIER_FIELDS).lean();
+    if (byCode) return byCode;
+  }
+  const names = [...new Set([full, name])].map((n) => new RegExp(`^${escapeRe(n)}$`, 'i'));
+  return Supplier.findOne({ $or: names.flatMap((re) => [{ Name: re }, { Code: re }]) })
+    .select(SUPPLIER_FIELDS)
     .lean();
 }
 
