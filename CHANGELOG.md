@@ -7,6 +7,9 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ### Fixed
 - A correspondent with no code whose name fits two KashFlow suppliers (one entered twice) no longer matches whichever the database returns first. The entry screen asks which supplier it is, with a button for each code, and the CIS deduction and supplier statement say why there's no supplier. The KashFlow draft pre-selects neither, and the send refuses until one is picked. If only one of them is still active in KashFlow, that one is used (`supplierMatch` in `documentReadingService.js`).
 
+### Changed
+- `bankStatementIngestService` no longer names the bank statements email address, which was out of date. hcs-app finds statements by their Paperless tag, so the address is only set in the Paperless mail rule.
+
 ## [6.81.0] - 2026-10-30
 
 ### Added
