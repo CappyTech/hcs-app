@@ -45,6 +45,27 @@ describe('line items', () => {
     assert.deepEqual([lines[1].pricePer, lines[1].quotedPrice], [1000, 794.51]);
   });
 
+  it('headings carrying the currency ("Unit Price (£)", "Subtotal (£)"), and a reverse charge note under the lines', () => {
+    const lines = findLines(page([
+      ['Quantity', 40, 600, 40, 9], ['Details', 110, 600, 32, 9], ['Unit Price (£)', 400, 600, 62, 9], ['Subtotal (£)', 505, 600, 55, 9],
+      ['Service', 40, 585, 30, 9], ['Date: 01/06/2026 and 02/06/2026', 110, 585, 140, 9], ['1,250.00', 425, 585, 37, 9], ['1,250.00', 523, 585, 37, 9],
+      ['Location: Example Street, Townsville', 110, 575, 160, 9],
+      ['Works Description: Kerbs and paving', 110, 565, 155, 9],
+      ['Reverse VAT - 20%', 110, 550, 80, 9],
+      ['Customer to account to HMRC for the reverse charge', 110, 540, 220, 9],
+      ['GBP Total', 410, 520, 45, 10], ['£1,250.00', 515, 520, 45, 10],
+    ]));
+    assert.deepEqual(brief(lines), [
+      ['Date: 01/06/2026 and 02/06/2026 Location: Example Street, Townsville Works Description: Kerbs and paving', null, 1250, 1250, null],
+    ]);
+    // The same with the currency set apart, and in brackets
+    const apart = findLines(page([
+      ['Details', 110, 600, 32, 9], ['Unit', 400, 600, 20, 9], ['Price', 423, 600, 24, 9], ['[GBP]', 450, 600, 25, 9], ['Subtotal', 505, 600, 38, 9], ['(£)', 546, 600, 14, 9],
+      ['Kerbs', 110, 585, 30, 9], ['10.00', 425, 585, 25, 9], ['10.00', 530, 585, 25, 9],
+    ]));
+    assert.deepEqual(brief(apart), [['Kerbs', null, 10, 10, null]]);
+  });
+
   it('a per-hundred price with no unit column is worked out from the figures, and only then', () => {
     const head = [['Description', 40, 600, 50, 10], ['Qty', 300, 600, 15, 10], ['Price', 360, 600, 23, 10], ['Amount', 460, 600, 30, 10]];
     const lines = findLines(page([

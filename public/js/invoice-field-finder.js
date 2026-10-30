@@ -92,7 +92,8 @@ export const FIELDS = [
   {
     field: 'dueDate', label: 'Due date', type: 'date',
     labels: [
-      { re: /(payment\s*)?due(\s*date)?\b/iy, below: true },
+      // "Payment due by 29 August 2026", "Due on 01/09/2026"
+      { re: /(payment\s*)?due(\s*date)?(\s*(by|on))?\b/iy, below: true },
       { re: /pay(ment)?\s*by\b/iy, below: true },
       // Beers: "Invoice due for payment by 31Jan26"
       { re: /invoice\s*due(\s*for\s*payment)?(\s*by)?\b/iy, below: false },
