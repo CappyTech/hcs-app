@@ -29,7 +29,7 @@ import __kfSendClaim from './kashflowSendClaimService.js';
 import __paperlessClient from './paperlessClient.js';
 import logger from '../../../services/loggerService.js';
 import { entryAsCustomFields } from './entryOverlay.js';
-import { parseVatRate, vatRateProblem } from '../../../public/js/entry-checks.js';
+import { parseVatRate, vatRateProblem, cisChecks } from '../../../public/js/entry-checks.js';
 import { normalizeWhtRate } from '../../../services/cisService.js';
 
 export { entryAsCustomFields };
@@ -336,10 +336,15 @@ export function vatCase({ supplier = null, docVatNumbers = [], ocrText = '', tot
 const money = (n) => (n == null ? '—' : Number(n).toFixed(2));
 const off = (a, b) => Math.abs(a - b) > 0.01;
 
-/** Totals that don't add up. Shown as warnings; the KashFlow send checks again. */
-export function consistencyWarnings(entry) {
+/**
+ * Totals that don't add up. Shown as warnings; the KashFlow send checks again.
+ * `cisPct` (a subcontractor's CIS rate) explains a CIS deduction typed as VAT
+ * or taken off the total, instead of reporting the totals as not adding up.
+ */
+export function consistencyWarnings(entry, { cisPct = null } = {}) {
   if (!entry) return [];
-  const out = [];
+  const cis = cisChecks(entry, entry.labour, cisPct);
+  const out = [...cis.messages];
   const lines = entry.lines || [];
   lines.forEach((l, i) => {
     // Saved before VAT % was limited to the rates
@@ -357,14 +362,14 @@ export function consistencyWarnings(entry) {
     out.push(`Line totals add up to ${money(lineSum)}, but total goods is ${money(entry.totalGoods)}.`);
   }
   const priced = lines.filter((l) => l.total != null);
-  if (entry.totalVat != null && priced.length && priced.every((l) => l.vatRate != null && !Number.isNaN(parseVatRate(l.vatRate)))) {
+  if (entry.totalVat != null && !cis.vatIsCis && priced.length && priced.every((l) => l.vatRate != null && !Number.isNaN(parseVatRate(l.vatRate)))) {
     const lineVat = priced.reduce((s, l) => s + (l.total * l.vatRate) / 100, 0);
     // Suppliers round VAT per line or on the total, so allow a penny a line
     if (Math.abs(lineVat - entry.totalVat) > Math.max(0.02, 0.01 * priced.length) + 1e-9) {
       out.push(`VAT at the line rates comes to ${money(lineVat)}, but total VAT is ${money(entry.totalVat)}.`);
     }
   }
-  if (entry.totalGoods != null && entry.totalVat != null && entry.invoiceTotal != null
+  if (entry.totalGoods != null && entry.totalVat != null && entry.invoiceTotal != null && !cis.vatIsCis && !cis.totalAfterCis
       && off(entry.totalGoods + entry.totalVat, entry.invoiceTotal)) {
     out.push(`Goods ${money(entry.totalGoods)} + VAT ${money(entry.totalVat)} is ${money(entry.totalGoods + entry.totalVat)}, not the invoice total ${money(entry.invoiceTotal)}.`);
   }

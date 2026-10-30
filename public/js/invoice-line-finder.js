@@ -193,8 +193,12 @@ export function findDayLines(rows) {
       day.amounts += 1;
       continue;
     }
-    // Where the work was: the rows between the date and its first amount
+    // Where the work was: the rows between the date and its first amount.
+    // Anything else after the amounts ends the day, so the invoice's own
+    // summary ("Invoice number 60", then "Labour - £6,835.09" for the month)
+    // isn't taken for another of the last day's lines.
     if (!day.amounts) day.site.push(text);
+    else day = null;
   }
   return lines;
 }

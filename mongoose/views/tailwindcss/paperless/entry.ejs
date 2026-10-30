@@ -369,7 +369,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
     <%# ── Entry ── %>
     <div class="<%= COLS.form %> space-y-4">
       <% if (kind === 'invoice') { %>
-        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" data-suggest-form data-values-source="<%= values.source || '' %>" data-paperless-id="<%= doc.paperlessId %>" data-layout="<%= JSON.stringify(locals.readerLayout || {}) %>" data-labels="<%= JSON.stringify(locals.labels || {}) %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
+        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" data-suggest-form data-values-source="<%= values.source || '' %>" data-cis-rate="<%= locals.cis?.ratePct ?? '' %>" data-paperless-id="<%= doc.paperlessId %>" data-layout="<%= JSON.stringify(locals.readerLayout || {}) %>" data-labels="<%= JSON.stringify(locals.labels || {}) %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
           <%- include('../partials/csrfHidden') %>
           <div class="flex items-center gap-2">
             <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto"><%= locals.subcontractor ? 'Subcontractor invoice' : 'Invoice' %></h2>

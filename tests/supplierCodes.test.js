@@ -9,7 +9,8 @@ import { assignSupplier, supplierOptions } from '../mongoose/services/paperless/
 import { supplierFor } from '../mongoose/services/paperless/documentReadingService.js';
 import entrySvc from '../mongoose/services/paperless/documentEntryService.js';
 import { findLines, findDayLines } from '../public/js/invoice-line-finder.js';
-import { groupRows } from '../public/js/invoice-field-finder.js';
+import { groupRows, findFields, findCisDeductions } from '../public/js/invoice-field-finder.js';
+import { liveChecks, cisChecks } from '../public/js/entry-checks.js';
 import mockPaperless from '../mongoose/services/paperless/mock/paperlessMockClient.js';
 
 const { planCorrespondents } = syncSvc;
@@ -160,6 +161,50 @@ describe('assignSupplier (entry screen → Paperless correspondent)', () => {
   });
 });
 
+describe('a subcontractor invoice\'s CIS deduction', () => {
+  // Labour 1,000 + materials 50 = gross 1,050; CIS 20% of the labour = 200; left to pay 850
+  const rows = [
+    ['Invoice number 7'],
+    ['Gross =', '£ 1050.00', '(Labour before tax deductions + Materials)'],
+    ['Total materials - £50.00'],
+    ['CIS Deductions @ 20% = £200.00'],
+    ['Invoice Total - £850.00'],
+  ];
+  const items = rows.flatMap((cells, i) => {
+    let x = 40;
+    return cells.map((str) => { const it = { str, x, y: 700 - i * 14, w: str.length * 5, h: 10, page: 1 }; x += str.length * 5 + 20; return it; });
+  });
+
+  it('is found, but not in a "before deductions" note', () => {
+    assert.deepEqual([...findCisDeductions(items)], ['200.00']);
+  });
+
+  it('is never VAT, and the invoice total is the gross before it', () => {
+    const f = findFields(items);
+    assert.equal(f.invoiceTotal.value, '1050.00');
+    assert.equal(f.totalVat, null);
+  });
+
+  it('is explained when typed as VAT or taken off the total, instead of "doesn\'t add up"', () => {
+    const asVat = liveChecks({ totalGoods: '1050', totalVat: '200', invoiceTotal: '1050' }, [{ description: 'Labour', total: '1000', vatRate: '20' }, { description: 'Materials', total: '50', vatRate: '20' }], { labour: 1000, cisPct: 20 });
+    assert.equal(asVat.length, 1);
+    assert.match(asVat[0], /is the CIS deduction \(20% of the labour\). CIS isn't VAT/);
+    const after = liveChecks({ totalGoods: '1050', totalVat: '', invoiceTotal: '850' }, [], { labour: 1000, cisPct: 20 });
+    assert.deepEqual(after, ["The invoice total £850.00 is what's left after the £200.00 CIS deduction. Enter the gross, £1,050.00: the CIS comes off when it's paid."]);
+    // Both at once, as on the screen that prompted this
+    assert.equal(cisChecks({ totalGoods: '1050', totalVat: '200', invoiceTotal: '850' }, 1000, 20).messages.length, 2);
+    // Without a CIS rate it's the plain check
+    assert.match(liveChecks({ totalGoods: '1050', totalVat: '0', invoiceTotal: '850' }, [])[0], /not the invoice total/);
+  });
+
+  it('is explained on the server too', () => {
+    const entry = { labour: 1000, totalGoods: 1050, totalVat: 200, invoiceTotal: 850, lines: [{ total: 1000, vatRate: 20, role: 'labour' }, { total: 50, vatRate: 20, role: 'materials' }] };
+    const w = entrySvc.consistencyWarnings(entry, { cisPct: 20 });
+    assert.equal(w.length, 2);
+    assert.ok(!w.some((m) => /line rates|not the invoice total/.test(m)));
+  });
+});
+
 describe('invoiceProblems (what an invoice legally needs)', () => {
   const company = { names: ['Example Construction LTD', 'Example CS'], address: '1 Main Street, Sampletown, ST1 2AB' };
   const good = 'Northern Plant Hire, 5 Yard Lane, Othertown OT9 8ZZ\nInvoice No NPH-778\nTo: Example Construction Ltd, 1 Main Street, ST1 2AB\nVAT Reg 123 4567 89';
@@ -223,6 +268,20 @@ describe('day-by-day subcontractor invoices', () => {
 
   it('is what findLines gives when there is no table', () => {
     assert.equal(findLines(invoice).length, 4);
+  });
+
+  // The month's summary under the last day, as these invoices print it
+  const withSummary = [
+    ...invoice.slice(0, -1),
+    { str: 'th', x: 44, y: 600, w: 8, h: 6, page: 1 }, // a superscript "th" lands on a row of its own
+    ...page(['Invoice number 7', 'Labour - £1,510.50', 'Gross =', 'Total materials - £12.00', 'CIS Deductions @ 20% = £302.10', 'Invoice Total - £1,220.40'])
+      .map((it) => ({ ...it, y: it.y - 230 })),
+  ];
+
+  it('stops at the invoice\'s summary, so its labour total is not another line', () => {
+    const lines = findDayLines(groupRows(withSummary));
+    assert.equal(lines.length, 4);
+    assert.ok(!lines.some((l) => l.total === 1510.5));
   });
 
   it('reads nothing without a date heading, so ordinary text is left alone', () => {
