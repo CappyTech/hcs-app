@@ -11,7 +11,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
  * H1 (PAPERLESS-MIGRATION.md 5.1, 5.2): sending to KashFlow used to replace a
  * document's Paperless tags with just `added`, wiping notified/*, credit/refund,
  * inbox, the type tags and the queue-exclusion tags. It now adds `added` and
- * removes `data entry done` through bulk_edit modify_tags, and the draft
+ * removes `data entry done` and `inbox` through bulk_edit modify_tags, and the draft
  * screen's "already sent" lock uses the same test as claimSend.
  */
 describe('send-to-KashFlow tag change (mock Paperless)', () => {
@@ -31,6 +31,13 @@ describe('send-to-KashFlow tag change (mock Paperless)', () => {
   it('keeps every other tag on the document', async () => {
     // 9002: data entry done, notified, purchase-invoice, notified/john
     await modifyPaperlessDocumentTags(9002, { add: ['added'], remove: ['dataEntryDone'] });
+    assert.deepEqual([...tagsOf(9002)].sort((a, b) => a - b), [2, 9, 16, 19]);
+  });
+
+  it('takes a sent document out of the Paperless inbox', async () => {
+    const doc = mock.mockPaperlessState().documents.find((d) => d.id === 9002);
+    doc.tags.push(3); // still in the inbox: nobody saved it in Paperless
+    await modifyPaperlessDocumentTags(9002, { add: ['added'], remove: ['dataEntryDone', 'inbox'] });
     assert.deepEqual([...tagsOf(9002)].sort((a, b) => a - b), [2, 9, 16, 19]);
   });
 
@@ -66,7 +73,7 @@ describe('send-to-KashFlow tag change (mock Paperless)', () => {
     assert.ok(!/updatePaperlessDocumentTags\(/.test(src), 'the controller must not replace tags');
     assert.match(
       src,
-      /modifyPaperlessDocumentTags\(paperlessId,\s*\{\s*add:\s*\["added"\],\s*remove:\s*\["dataEntryDone"\],?\s*\}\)/,
+      /modifyPaperlessDocumentTags\(paperlessId,\s*\{\s*add:\s*\["added"\],\s*remove:\s*\["dataEntryDone",\s*"inbox"\],?\s*\}\)/,
     );
   });
 });

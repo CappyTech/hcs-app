@@ -350,13 +350,13 @@ describe('actions against the mock Paperless', () => {
   const tagsOf = (id) => mockPaperlessState().documents.find((d) => d.id === id).tags;
   const cfOf = (id, fid) => mockPaperlessState().documents.find((d) => d.id === id).custom_fields.find((e) => e.field === fid)?.value;
 
-  it('Complete entry moves to entered and adds "data entry done" without touching other tags (PB-5)', async () => {
+  it('Complete entry moves to entered, adds "data entry done" and takes it out of the inbox, leaving other tags (PB-5)', async () => {
     const M = fakeOcrDocument([{ paperlessId: 9001, documentType: PI, processingState: 'awaiting_entry', entry: fullEntry() }]);
     const r = await completeEntry(M, 9001, user);
     assert.equal(r.ok, true);
     assert.equal(r.paperlessWarning, null);
     assert.equal(M.rows[0].processingState, 'entered');
-    assert.deepEqual(tagsOf(9001).sort((a, b) => a - b), [1, 3, 16]);
+    assert.deepEqual(tagsOf(9001).sort((a, b) => a - b), [1, 16]);
     assert.equal((await completeEntry(M, 9001, user)).reason, 'invalid-state', 'completing twice does nothing');
   });
 

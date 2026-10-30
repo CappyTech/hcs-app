@@ -59,6 +59,15 @@ export const PAPERLESS_TAGS = {
     id: envId('PAPERLESS_TAG_DATA_ENTRY_DONE_ID', 1),
     names: ['data entry done', 'data-entry-done', 'data_entry_done'],
   },
+  /**
+   * Paperless's inbox tag, put on every new document. Paperless only drops it
+   * when someone saves the document in its web UI, which no longer happens now
+   * that entry is in hcs-app, so Complete entry and the send remove it.
+   */
+  inbox: {
+    id: envId('PAPERLESS_TAG_INBOX_ID', 3),
+    names: ['inbox'],
+  },
   /** Manual re-send of the invoice email (WF9). Added by hcs-app's Resend button until cutover. */
   notify: {
     id: envId('PAPERLESS_TAG_NOTIFY_ID', 10),
