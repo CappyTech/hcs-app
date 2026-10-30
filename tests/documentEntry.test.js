@@ -644,6 +644,22 @@ describe('entry view', () => {
     assert.ok(!(await render({ ...doc, documentType: PI })).includes('[role]'));
   });
 
+  it("shows a sent subcontractor invoice's CIS deduction against KashFlow's", async () => {
+    const doc = {
+      paperlessId: 9100, documentType: SI, processingState: 'sent', kashflowPurchaseNumber: 501, customFields: [],
+      entry: { lines: [{ description: 'Groundworks', total: 1000, role: 'labour' }], savedAt: new Date() },
+      cisAtSend: { ratePct: 20, labour: 1000, deduction: 200 },
+    };
+    const locals = { subcontractor: true, locked: true, cis: { supplier: 'A Sub', ratePct: 20, deduction: 200, payable: 800 } };
+    const status = async (cisCheck) => render({ ...doc, cisCheck }, locals);
+    assert.match(await status({ status: 'matches', kashflow: 200 }), /KashFlow has the same CIS deduction\./);
+    assert.match(await status({ status: 'differs', kashflow: 180, difference: -20 }), /KashFlow has £180\.00, £20\.00 less than worked out here/);
+    assert.match(await status({ status: 'missing' }), /No CIS deduction on purchase 501 in KashFlow yet/);
+    assert.match(await status({ status: 'not-synced' }), /The purchase isn't in the synced KashFlow data yet/);
+    assert.match(await status(undefined), /Sent with CIS at 20% on £1,000\.00/);
+    assert.ok(!(await render({ ...doc, cisAtSend: undefined }, locals)).includes('data-cis-check'), 'nothing kept, nothing shown');
+  });
+
   it('locks the form for an invoice already in KashFlow', async () => {
     const doc = { paperlessId: 1, documentType: PI, processingState: 'sent', customFields: [] };
     const html = await render(doc, { locked: true });

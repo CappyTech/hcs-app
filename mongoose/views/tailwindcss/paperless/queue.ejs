@@ -7,6 +7,7 @@ const sortQs = order === 'read' ? '&sort=read' : '';
 const showRead = key === 'needs-entry' || key === 'ready';
 const showConcern = key === 'check-type';
 const showStatement = key === 'statements';
+const showCis = key === 'cis-check';
 const statementTone = (s) => !s ? 'slate' : s.error ? 'amber' : s.reconciliation?.summary?.status === 'reconciled' ? 'green' : s.reconciliation?.summary?.status === 'differences' ? 'red' : 'amber';
 const PILL = {
   slate: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
@@ -90,6 +91,7 @@ const waitClass = (days) => days == null ? 'text-gray-400'
               <% if (showRead) { %><th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400" title="What hcs-app read off the PDF. Only a suggestion until someone enters it.">Read from PDF</th><% } %>
               <% if (showConcern) { %><th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Why</th><% } %>
               <% if (showStatement) { %><th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400" title="The statement's lines set against the supplier's purchases in KashFlow">Against KashFlow</th><% } %>
+              <% if (showCis) { %><th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400" title="Worked out here when the invoice was sent, against the CIS lines on the purchase in KashFlow">CIS deduction</th><% } %>
               <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Open</th>
             </tr>
           </thead>
@@ -129,6 +131,17 @@ const waitClass = (days) => days == null ? 'text-gray-400'
                   <td class="px-4 py-3 text-xs" data-statement-status="<%= s?.reconciliation?.summary?.status || (s ? 'unread' : 'none') %>">
                     <% if (!s) { %><span class="text-gray-400">Not checked yet</span>
                     <% } else { %><span class="text-[11px] px-2 py-0.5 rounded-full border <%= PILL[statementTone(s)] %>"><%= s.summaryText || (s.error ? "Couldn't read" : '—') %></span><% } %>
+                  </td>
+                <% } %>
+                <% if (showCis) { const c = d.cisCheck || {}; const ours = d.cisAtSend || {}; %>
+                  <td class="px-4 py-3 text-xs whitespace-nowrap" data-cis-status="<%= c.status || '' %>">
+                    <div class="text-gray-700 dark:text-gray-300">Ours <%= money(ours.deduction) || '—' %> <span class="text-gray-400">(<%= ours.ratePct %>% of <%= money(ours.labour) %>)</span></div>
+                    <% if (c.status === 'missing') { %>
+                      <span class="text-[11px] px-2 py-0.5 rounded-full border <%= PILL.amber %>">Not added in KashFlow</span>
+                    <% } else { %>
+                      <span class="text-[11px] px-2 py-0.5 rounded-full border <%= PILL.red %>">KashFlow <%= money(c.kashflow) %> · <%= c.difference > 0 ? '+' : '−' %><%= money(Math.abs(c.difference)) %></span>
+                    <% } %>
+                    <% if (d.kashflowPurchaseNumber != null) { %><div class="text-gray-400 mt-0.5">Purchase <%= d.kashflowPurchaseNumber %></div><% } %>
                   </td>
                 <% } %>
                 <td class="px-4 py-3 text-right whitespace-nowrap">

@@ -9,6 +9,7 @@
  *   ready        view 4   state entered, no exclusion reason                (PB-7)
  *   statements   view 13  Supplier Statement, not yet reviewed              (PB-10)
  *   check-type   —        no type, or doesn't look like its type (documentTypeCheck)
+ *   cis-check    —        sent subcontractor invoices whose CIS deduction isn't in KashFlow, or differs (cisCheckService)
  *
  * A credit note (manual_kashflow) is in neither invoice queue (PB-12), and a
  * document deleted in Paperless is in no queue. All queues are oldest first.
@@ -52,6 +53,13 @@ export const QUEUES = {
     empty: 'Every document looks like its type.',
     filter: () => ({ 'typeCheck.open': true, ...NOT_DELETED }),
   },
+  'cis-check': {
+    label: 'CIS to check',
+    icon: 'bi-percent',
+    description: "Subcontractor invoices sent to KashFlow whose CIS deduction hasn't been added there yet, or doesn't match the one worked out here. Add or correct it in KashFlow; the check runs hourly after each sync.",
+    empty: 'Every sent subcontractor invoice has the CIS deduction we worked out.',
+    filter: () => ({ 'cisCheck.status': { $in: ['missing', 'differs'] }, ...NOT_DELETED }),
+  },
 };
 
 export const QUEUE_KEYS = Object.keys(QUEUES);
@@ -82,6 +90,8 @@ const LIST_FIELDS = 'paperlessId title correspondent documentType added created 
   // What the invoice reader found on the PDF (documentReadingService)
   + ' reading.fields.invoiceNumber.value reading.fields.invoiceTotal.value reading.hasText reading.score reading.lineCount reading.linesAddUp reading.error'
   + ' typeCheck.concern typeCheck.open'
+  // Our CIS deduction against KashFlow's (cisCheckService)
+  + ' cisAtSend cisCheck lastSentAt'
   // The statement set against KashFlow (statementReadingService)
   + ' statement.summaryText statement.error statement.reconciliation.summary.status';
 

@@ -433,6 +433,20 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
                 <% } %>
                 <p class="text-xs text-gray-400">Rate from <%= c.supplier %> in KashFlow. Worked out from what was last saved.</p>
               <% } %>
+              <% if (doc.cisAtSend) { const sent = doc.cisAtSend; const chk = doc.cisCheck || {}; %>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2 space-y-1" data-cis-check="<%= chk.status || '' %>">
+                  <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Sent with CIS at <%= sent.ratePct %>% on <%= gbp(sent.labour) %></span><span>−<%= gbp(sent.deduction) %></span></div>
+                  <% if (chk.status === 'matches') { %>
+                    <p class="text-xs text-green-700 dark:text-green-400"><i class="bi bi-check2-circle"></i> KashFlow has the same CIS deduction<%= chk.kashflow == null ? ' (none)' : '' %>.</p>
+                  <% } else if (chk.status === 'differs') { %>
+                    <p class="text-xs text-red-700 dark:text-red-400"><i class="bi bi-exclamation-triangle-fill"></i> KashFlow has <%= gbp(chk.kashflow) %>, <%= gbp(Math.abs(chk.difference)) %> <%= chk.difference > 0 ? 'more' : 'less' %> than worked out here.</p>
+                  <% } else if (chk.status === 'missing') { %>
+                    <p class="text-xs text-amber-700 dark:text-amber-400"><i class="bi bi-exclamation-triangle"></i> No CIS deduction on purchase <%= doc.kashflowPurchaseNumber ?? '' %> in KashFlow yet. Add it there; this updates after the next sync.</p>
+                  <% } else if (chk.status === 'not-synced') { %>
+                    <p class="text-xs text-gray-500 dark:text-gray-400"><i class="bi bi-hourglass-split"></i> The purchase isn't in the synced KashFlow data yet, so its CIS deduction can't be checked.</p>
+                  <% } %>
+                </div>
+              <% } %>
             </div>
           <% } %>
 

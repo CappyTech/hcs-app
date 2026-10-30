@@ -29,6 +29,7 @@ import __documentReadingService from './paperless/documentReadingService.js';
 import __statementReadingService from './paperless/statementReadingService.js';
 import __mdbForJobs from './mongooseDatabaseService.js';
 import __documentEntryService from './paperless/documentEntryService.js';
+import __cisCheckService from './paperless/cisCheckService.js';
 
 /**
  * Single place where all background jobs are registered.
@@ -177,6 +178,19 @@ function registerAll() {
     run: async () => {
       await __mdbForJobs.connect();
       return __documentEntryService.repairUnmarkedSends(__mdbForJobs.PAPERLESS.OcrDocument);
+    },
+  });
+
+  scheduler.register('paperless-cis-check', {
+    description:
+      'Set the CIS deduction worked out when each subcontractor invoice was sent against the CIS lines '
+      + 'added by hand to its purchase in KashFlow, and list the ones still missing or different in the '
+      + 'CIS to check queue. Checks every sent invoice not yet known to match; changes nothing in KashFlow.',
+    intervalMs: HOUR,
+    initialDelayMs: 4 * MINUTE,
+    run: async () => {
+      await __mdbForJobs.connect();
+      return __cisCheckService.checkSentCis(__mdbForJobs.PAPERLESS.OcrDocument, __mdbForJobs.REST?.purchase);
     },
   });
 

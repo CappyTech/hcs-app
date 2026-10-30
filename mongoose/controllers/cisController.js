@@ -21,6 +21,7 @@ const parseLondonString = (s) => {
 };
 import cisMappings from '../config/cisMappings.js';
 import { normalizeWhtRate, HMRC_VERIFICATION_REGEX } from '../../services/cisService.js';
+import cisCheckSvc from '../services/paperless/cisCheckService.js';
 
 export const renderCISDashboardMongo = async (req, res, next) => {
   try {
@@ -429,6 +430,27 @@ export const renderCISDashboardMongo = async (req, res, next) => {
       totals.calculatedCISDeduction = rate ? totals.labourCost * rate : 0;
     }
 
+    // The CIS deduction worked out when each invoice was sent from its
+    // document, against KashFlow's CIS lines on the same purchases
+    // (cisCheckService). Purchases not sent from a document aren't counted.
+    const cisAtSendById = await cisCheckSvc
+      .cisAtSendByPurchaseId(mdb.PAPERLESS?.OcrDocument, filteredPurchases.map((p) => p.Id))
+      .catch((e) => {
+        logger.warn(`[CIS] document CIS deductions not loaded: ${e.message}`);
+        return new Map();
+      });
+    const cisCheckById = new Map();
+    for (const purchase of filteredPurchases) {
+      const ours = cisAtSendById.get(String(purchase.Id));
+      if (!ours) continue;
+      const check = cisCheckSvc.compareCis(ours, purchase);
+      cisCheckById.set(String(purchase.Id), { ...check, ours: ours.deduction, paperlessId: ours.paperlessId });
+      const totals = supplierTotals[String(resolveSupplier(purchase).Id)];
+      totals.documentCount = (totals.documentCount || 0) + 1;
+      totals.documentCIS = (totals.documentCIS || 0) + ours.deduction;
+      totals.documentCISKashflow = (totals.documentCISKashflow || 0) + (check.kashflow || 0);
+    }
+
     // Submission flags based on purchases
     const allPurchasesSubmitted =
       filteredPurchases.length > 0 &&
@@ -476,6 +498,7 @@ export const renderCISDashboardMongo = async (req, res, next) => {
         displayDate: displayDateRaw ? formatInTimeZone(displayDateRaw, LONDON_TZ, "do MMM yyyy") : "",
         timeZoneTag: displayDateRaw ? (getTimezoneOffset(LONDON_TZ, displayDateRaw) !== 0 ? "BST" : "GMT") : "",
         dueDateStr: due ? formatInTimeZone(due, LONDON_TZ, "do MMM yyyy") : "",
+        cisCheck: cisCheckById.get(String(p.Id)) || null,
       };
     });
 

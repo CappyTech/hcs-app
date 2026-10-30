@@ -26,6 +26,7 @@ import readingSvc from '../services/paperless/documentReadingService.js';
 import statementSvc from '../services/paperless/statementReadingService.js';
 import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
 import supplierSvc from '../services/paperless/documentSupplierService.js';
+import cisCheckSvc from '../services/paperless/cisCheckService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import { parseCorrespondentName } from '../services/paperless/correspondentName.js';
 import { normaliseVatNumber } from '../../public/js/invoice-line-finder.js';
@@ -156,6 +157,11 @@ export const getEntry = async (req, res, next) => {
     if (entry.entryKind(doc) === 'statement' && statementSvc.needsReading(doc) && !doc.deletedInPaperlessAt) {
       const statement = await statementSvc.readStatementSoon(id);
       if (statement) doc = { ...doc, statement };
+    }
+    // A sent subcontractor invoice: our CIS deduction against KashFlow's, as it is now
+    if (doc.cisAtSend && doc.kashflowPurchaseId != null) {
+      const cisCheck = await cisCheckSvc.refreshCisCheck(OcrDocument, mdb.REST?.purchase, doc).catch(() => null);
+      if (cisCheck) doc = { ...doc, cisCheck };
     }
     await render(req, res, doc, { extraLines: req.query.extraLines === '1' ? 1 : 0 });
   } catch (err) {

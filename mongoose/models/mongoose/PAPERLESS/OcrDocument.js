@@ -29,6 +29,8 @@ const DraftExtraLineSchema = new mongoose.Schema({
 // Transitions and their rules live in services/paperless/documentStateService.js.
 export const PROCESSING_STATES = ['awaiting_entry', 'entered', 'sent', 'manual_kashflow'];
 export const EXCLUDED_REASONS = ['original_multiple', 'manually_added', 'not_for_kashflow'];
+// Our CIS deduction against KashFlow's (services/paperless/cisCheckService.js)
+export const CIS_CHECK_STATUSES = ['matches', 'differs', 'missing', 'not-synced'];
 
 const ActorSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, default: null },
@@ -147,6 +149,33 @@ const OcrDocumentSchema = new mongoose.Schema({
   classifiedAt:             { type: Date, default: null },
   entry:                    { type: EntrySchema, default: undefined },
 
+  // ── CIS deduction against KashFlow's (cisCheckService) ──
+  // What we worked out when the subcontractor invoice was sent: the
+  // supplier's rate on the labour entered. The deduction itself is added by
+  // hand in KashFlow afterwards.
+  cisAtSend: {
+    type: new mongoose.Schema({
+      supplierCode: { type: String, default: null },
+      ratePct:      Number,
+      labour:       Number,
+      deduction:    Number,
+      payable:      { type: Number, default: null },
+      at:           Date,
+    }, { _id: false }),
+    default: undefined,
+  },
+  // That set against the CIS lines on the synced purchase; open ones
+  // (missing, differs) are the "CIS to check" queue
+  cisCheck: {
+    type: new mongoose.Schema({
+      status:     { type: String, enum: CIS_CHECK_STATUSES },
+      kashflow:   { type: Number, default: null },
+      difference: { type: Number, default: null },
+      checkedAt:  Date,
+    }, { _id: false }),
+    default: undefined,
+  },
+
   // ── Read off the PDF (documentReadingService) ──
   // What the invoice reader found: { version, at, hasText, pages, score,
   // fields: { invoiceNumber: {value, page, box}, … }, lines: […], lineCount,
@@ -171,6 +200,7 @@ const OcrDocumentSchema = new mongoose.Schema({
 
 OcrDocumentSchema.index({ 'reading.score': -1 });
 OcrDocumentSchema.index({ 'typeCheck.open': 1 });
+OcrDocumentSchema.index({ 'cisCheck.status': 1 });
 
 export default {
   modelName: 'OcrDocument',
