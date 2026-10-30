@@ -11,9 +11,8 @@ import statements from './statementImportService.js';
  * Pulls bank statements out of Paperless and parses them.
  *
  * Paperless is the delivery channel and the archive: statements are emailed to
- * the bank statements address, a Paperless mail rule tags them `bank-statement`,
- * and this reads the OCR text. The address lives only in that mail rule; nothing
- * here depends on it. That gives retention, full-text search, the existing
+ * bank.statements@heroncs.co.uk, a mail rule tags them `bank-statement`, and
+ * this reads the OCR text. That gives retention, full-text search, the existing
  * viewer, and inclusion in the nightly paperless-backup export — none of which
  * a bespoke uploader would.
  *
