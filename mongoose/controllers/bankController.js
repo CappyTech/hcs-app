@@ -8,6 +8,7 @@ import statements from '../services/statementImportService.js';
 import statementIngest from '../services/bankStatementIngestService.js';
 import ruleService from '../services/bankRuleService.js';
 import mailRules from '../services/paperless/mailRuleService.js';
+import { canOpenGuide } from './mailRuleController.js';
 import transferService from '../services/bankTransferService.js';
 import threeWay from '../services/bankThreeWayService.js';
 import { resolveBankLine, signedAmount, bankLineKey, claimedLines } from '../services/bankLinkService.js';
@@ -464,6 +465,7 @@ export const getStatements = async (req, res, next) => {
       accounts,
       // Where statements are emailed, from the Paperless mail rules (cached)
       bankAddresses: mailRules.bankStatementAddresses(mailRuleOverview),
+      showMailRulesLink: canOpenGuide(req.user),
       layouts: statements.CSV_LAYOUTS,
       selectedAccountId: accountId,
     });

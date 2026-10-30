@@ -357,8 +357,7 @@ const routeAccess = {
   '/paperless/reading/supplier/:correspondentId/forget': ['admin'],
   '/paperless/reading/supplier/:correspondentId/labels': ['admin'],
   '/paperless/shadow-report':          ['admin'],
-  // Where to email each kind of document: also linked from /bank/statements
-  '/paperless/mail-rules':             ['admin', 'accountant'],
+  '/paperless/mail-rules':             ['admin'],
   '/paperless/queues':                 ['admin'],
   '/paperless/queues/:queue':          ['admin'],
 
