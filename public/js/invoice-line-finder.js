@@ -34,6 +34,8 @@ const bareHeading = (text) => text.trim().replace(/\s*[([]\s*(£|gbp)\s*[)\]]$/i
 const columnType = (text) => (COLUMN_TYPES.find(([, re]) => re.test(bareHeading(text))) || [null])[0];
 
 const VAT_CODES = { S: 20, Z: 0, E: 0, X: 0, R: 5, L: 5 };
+// Two money figures the same, allowing for rounding
+const sameMoney = (a, b) => Math.abs(a - b) <= Math.max(0.011, Math.abs(b) * 0.005);
 const STANDARD_RATES = [0, 5, 20];
 
 /** "6.00 EA" → 6, "£1,234.50" → 1234.5, "20%" → 20; null if not a number. */
@@ -255,7 +257,14 @@ function readTable(rows, start, head) {
       //      (entry form, KashFlow payload)
       //   4. make consistencyWarnings (documentEntryService) and liveChecks accept it
       const per = pricedPer(quantity, quoted, net, p.cells.uom);
-      const price = per > 1 ? Math.round((quoted / per) * 10000) / 10000 : quoted;
+      let price = per > 1 ? Math.round((quoted / per) * 10000) / 10000 : quoted;
+      // A unit price that includes VAT, next to a Net column (Screwfix: Unit
+      // Price 26.99, Sub Total 26.99, Gross 26.99, Net 22.49). The entry form and
+      // KashFlow take net prices, so the price is the net total per unit.
+      const grossCells = [p.cells.gross, p.cells.net].map((c) => (c != null ? parseNumber(c) : null)).filter((v) => v != null);
+      const incVat = per === 1 && quantity > 0 && quoted > 0 && !sameMoney(quantity * quoted, net)
+        && grossCells.some((g) => sameMoney(g, quantity * quoted) && g > net);
+      if (incVat) price = Math.round((net / quantity) * 10000) / 10000;
       const before = pending;
       pending = null;
       const description = p.text || before?.text || p.code || before?.code || '';
