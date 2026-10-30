@@ -19,7 +19,7 @@ export default [
     label: 'Human Resources',
     icon: 'bi-people',
     description: 'People, holiday, attendance and tasks.',
-    children: ['employee', 'leave', 'attendance', 'task'],
+    children: ['employee', 'leave', 'attendance', 'weekly', 'task'],
   },
   {
     id: 'fleet',
@@ -43,7 +43,7 @@ export default [
     label: 'Projects',
     icon: 'bi-clipboard-check',
     description: 'Contracts, weekly assignments and KashFlow projects.',
-    children: ['contract', 'assignment', 'project'],
+    children: ['contract', 'assignment', 'weekly', 'project'],
     // Shown only to those who can open the route (rolePermissionsConfig)
     actions: [{ label: 'Do weekly attendance', href: '/weekly-flow', route: '/weekly-flow', icon: 'bi-calendar-check' }],
   },

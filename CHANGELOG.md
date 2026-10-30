@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.84.0] - 2026-10-30
+
+### Added
+- **Weekly attendance overview** (`/overview/weekly`, admin and accountant, the same as the flow): a card in both Projects and Human Resources. It shows this payroll week step by step (contracts, assignments, attendance, review), each step linking straight to its place in the flow, and a "Needs fixing this week" list of the flow's open checks. It also has the attendance-awaiting-approval and this-week's-assignments figures, and a **Do weekly attendance** button. Both lists can be pinned to the home page.
+
+### Changed
+- The weekly attendance flow's breadcrumbs follow the overview hierarchy (Home › Projects › Weekly attendance › Tax week N).
+
 ## [6.83.0] - 2026-10-30
 
 ### Added
