@@ -342,9 +342,12 @@ function columnTotals(rows) {
     for (const it of row.items.slice(1)) {
       const value = parseMoney(it.str);
       if (value == null) continue;
-      // Headings: text above this figure's column, within a few lines
+      // Headings: text above this figure's column, within a few lines. Far
+      // enough for a heading over two rows above two lines (Screwfix's "VAT"
+      // over "Applied"), so the VAT column is found and goods + VAT = total
+      // can pick Net over a gross "Sub total".
       const words = [];
-      for (let r = ri - 1; r >= 0 && rows[r].page === row.page && rows[r].y - row.y < row.h * 6; r--) {
+      for (let r = ri - 1; r >= 0 && rows[r].page === row.page && rows[r].y - row.y < row.h * 9; r--) {
         for (const h of rows[r].items) {
           if (h.x < it.x + it.w && h.x + h.w > it.x && parseMoney(h.str) == null) words.unshift(h.str);
         }
