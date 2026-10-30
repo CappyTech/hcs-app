@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.83.0] - 2026-10-30
+
+### Added
+- **Weekly attendance flow** (`/weekly-flow/:year?/:week?`, admin and accountant): one payroll week (Saturday to Friday) done in four steps, with a tick on each step once it's complete.
+  1. **Contracts** running this week (Planned or In Progress, dates covering the week), each with its linked KashFlow project. Flags contracts with no project, still Planned after their start date, or ending mid-week.
+  2. **Assignments**: who is on which contract this week. Add an assignment per contract (employees, CIS-verified subcontractors) or **copy last week's assignments** for contracts still running (skipping any already copied).
+  3. **Days worked**: a day grid per assignment. Tick the days each person worked and record them as pending `work` attendance against the assignment, its contract, the contract's KashFlow project and location. Weekdays are ticked by default; employees' hours per day default from their contract terms (hours per week ÷ working days). Days that already have a record are shown, never overwritten. Locked payroll periods are skipped for non-admins.
+  4. **Review and approve**: checks for contracts without a project or without anyone assigned, assigned people with no weekday attendance, attendance from people not on an assignment, work with no contract, and assignments on contracts not running this week; then **Approve all pending** (admin, the existing bulk approve).
+- Projects overview: a **Do weekly attendance** button, shown to those who can open the flow. Area pages can now carry actions, gated by the route rule like node actions.
+
+### Changed
+- `attendanceService.resolvePayrollWeek()` holds the payroll week maths the weekly grid used inline, so the grid and the flow agree on week numbers and dates.
+
 ## [6.82.0] - 2026-10-30
 
 ### Added
