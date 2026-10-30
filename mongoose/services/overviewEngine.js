@@ -586,7 +586,7 @@ async function buildArea(req, areaId, now = new Date()) {
     icon: area.icon || null,
     crumbs: breadcrumbs(req, area.id).slice(0, -1),
     cards,
-    actions: [],
+    actions: actionsFor(req, area),
   };
 }
 

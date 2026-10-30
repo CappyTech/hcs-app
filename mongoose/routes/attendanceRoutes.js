@@ -2,6 +2,7 @@ import express from 'express';
 const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/attendanceController.js';
+import flow from '../controllers/weeklyFlowController.js';
 
 // Daily / weekly views — admin and accountant see all; employee/subcontractor
 // see their own (scoped in controller). The accountant is here because payroll
@@ -25,6 +26,29 @@ router.get(
     req.isManagementView = true;
     ctrl.getWeeklyAttendance(req, res, next);
   },
+);
+
+// Weekly attendance flow: contracts → assignments → attendance → approve.
+// Same roles as the inline editors it stands in for; approving stays admin-only.
+router.get(
+  "/weekly-flow/:year?/:week?",
+  authService.ensureRoles("admin", "accountant"),
+  flow.getWeekFlow,
+);
+router.post(
+  "/weekly-flow/:year/:week/assignments",
+  authService.ensureRoles("admin", "accountant"),
+  flow.postAssignment,
+);
+router.post(
+  "/weekly-flow/:year/:week/copy-previous",
+  authService.ensureRoles("admin", "accountant"),
+  flow.postCopyPrevious,
+);
+router.post(
+  "/weekly-flow/:year/:week/record",
+  authService.ensureRoles("admin", "accountant"),
+  flow.postRecord,
 );
 
 // Self-service attendance submission (employee / subcontractor)

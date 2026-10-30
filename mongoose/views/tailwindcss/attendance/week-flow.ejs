@@ -1,0 +1,335 @@
+<%#
+  Weekly attendance flow: one payroll week, done in four steps.
+  Locals: week, flow, lockedRun, employees, subcontractors, dayLabels, canApprove, personKey
+%>
+<%
+  const base = `/weekly-flow/${week.year}/${week.week}`;
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '';
+  const fmtDay = (key) => key.split('-').reverse().join('/');
+  const statusPill = {
+    pending: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
+    approved: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
+    rejected: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
+  };
+  const severityCard = {
+    critical: 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20',
+    warning: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20',
+  };
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
+  const h2 = 'font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
+  const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const input = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const num = (v) => v == null ? null : Number(v.$numberDecimal ?? v.toString());
+  const recordLabel = (r) => {
+    const hours = num(r.hoursWorked);
+    const rate = num(r.dayRate);
+    return r.type + (hours ? ` ${hours}h` : '') + (rate ? ` £${rate.toFixed(2)}` : '');
+  };
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs: [{ label: 'Home', href: '/' }, { label: 'Projects', href: '/overview/projects' }], current: 'Weekly attendance' }) %>
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-calendar-check text-green-600 dark:text-green-400" aria-hidden="true"></i>
+        Weekly attendance
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Tax week <%= week.week %>, <%= week.year %>/<%= String(week.year + 1).slice(-2) %> &middot;
+        Saturday <%= fmtDay(week.days[0]) %> to Friday <%= fmtDay(week.days[6]) %>
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 print:hidden">
+      <a href="/weekly-flow/<%= week.previousYear %>/<%= week.previousWeek %>" class="<%= secondaryBtn %>"><i class="bi bi-chevron-left"></i> Previous week</a>
+      <a href="/weekly-flow" class="<%= secondaryBtn %>">This week</a>
+      <a href="/weekly-flow/<%= week.nextYear %>/<%= week.nextWeek %>" class="<%= secondaryBtn %>">Next week <i class="bi bi-chevron-right"></i></a>
+      <a href="/weekly/<%= week.year %>/<%= week.week %>" class="<%= secondaryBtn %>"><i class="bi bi-table"></i> Full grid</a>
+    </div>
+  </div>
+
+  <% if (lockedRun) { %>
+    <div class="mb-6 border rounded-2xl p-4 text-sm <%= severityCard.warning %>">
+      <i class="bi bi-lock-fill text-amber-600"></i>
+      This week is in a <strong><%= lockedRun.status %></strong> payroll run. Only an admin can still add attendance.
+    </div>
+  <% } %>
+
+  <!-- Steps -->
+  <ol class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+    <% flow.steps.forEach((s) => { %>
+      <li>
+        <a href="#step-<%= s.n %>" class="flex items-start gap-3 p-3 rounded-xl border transition hover:shadow-sm <%= s.done ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900' %>">
+          <span class="flex-none w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold <%= s.done ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300' %>">
+            <% if (s.done) { %><i class="bi bi-check-lg"></i><% } else { %><%= s.n %><% } %>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-sm font-semibold text-gray-900 dark:text-gray-100"><%= s.label %></span>
+            <span class="block text-xs text-gray-500 dark:text-gray-400"><%= s.summary %></span>
+          </span>
+        </a>
+      </li>
+    <% }) %>
+  </ol>
+
+  <!-- Step 1: Contracts -->
+  <section id="step-1" class="mb-10 scroll-mt-24">
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <div>
+        <h2 class="<%= h2 %>">1. Contracts running this week</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Planned or in progress, with dates covering this week. Each should be linked to its KashFlow project so time is costed to the job.</p>
+      </div>
+      <a href="/contract/create" class="<%= secondaryBtn %> flex-none"><i class="bi bi-plus-lg"></i> New contract</a>
+    </div>
+    <% if (!flow.contracts.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        No contracts are running this week. Create one, or set an existing contract to Planned or In Progress.
+      </div>
+    <% } else { %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <% ['Contract', 'Site', 'KashFlow project', 'Dates', 'Status', ''].forEach((h) => { %>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= h %></th>
+              <% }) %>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% flow.contracts.forEach(({ contract: c, project, warnings }) => { %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition align-top">
+                <td class="px-4 py-3">
+                  <a href="/contract/read/<%= c.uuid %>" class="font-medium text-green-700 dark:text-green-400 hover:underline"><%= c.title %></a>
+                  <% warnings.forEach((w) => { %>
+                    <div class="text-xs text-amber-700 dark:text-amber-400 mt-1"><i class="bi bi-exclamation-triangle-fill"></i> <%= w %></div>
+                  <% }) %>
+                </td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= c.location %></td>
+                <td class="px-4 py-3">
+                  <% if (project) { %>
+                    <a href="/project/read/<%= project.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><span class="font-mono text-xs"><%= project.Number %></span> <%= project.Name %></a>
+                  <% } else { %>
+                    <span class="text-amber-700 dark:text-amber-400">Not linked</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap"><%= fmt(c.startDate) || '—' %> – <%= fmt(c.endDate) || 'open' %></td>
+                <td class="px-4 py-3 text-gray-700 dark:text-gray-300"><%= c.status %></td>
+                <td class="px-4 py-3 text-right"><a href="/contract/update/<%= c.uuid %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Edit</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <!-- Step 2: Assignments -->
+  <section id="step-2" class="mb-10 scroll-mt-24">
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <div>
+        <h2 class="<%= h2 %>">2. Who is on which contract</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">One or more assignments per contract, naming the employees and subcontractors working on it this week.</p>
+      </div>
+      <form method="POST" action="<%= base %>/copy-previous" class="flex-none">
+        <%- include('../partials/csrfHidden') %>
+        <button type="submit" class="<%= secondaryBtn %>"><i class="bi bi-copy"></i> Copy last week's assignments</button>
+      </form>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <% flow.contracts.forEach(({ contract: c, assignments }) => { %>
+        <div class="<%= card %> p-4">
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <h3 class="font-semibold text-gray-900 dark:text-gray-100"><%= c.title %></h3>
+            <span class="text-xs text-gray-500 dark:text-gray-400"><%= assignments.length %> this week</span>
+          </div>
+
+          <% if (!assignments.length) { %>
+            <p class="text-sm text-amber-700 dark:text-amber-400 mb-3"><i class="bi bi-exclamation-triangle-fill"></i> Nobody assigned this week.</p>
+          <% } %>
+          <% assignments.forEach(({ assignment: a, members }) => { %>
+            <div class="border-t border-gray-100 dark:border-gray-700 py-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sm font-medium text-gray-800 dark:text-gray-200"><%= a.title %></span>
+                <span class="flex items-center gap-2">
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700"><%= a.status %></span>
+                  <a href="/assignment/update/<%= a.uuid %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Edit</a>
+                </span>
+              </div>
+              <div class="flex flex-wrap gap-1 mt-1">
+                <% if (!members.length) { %><span class="text-xs text-amber-700 dark:text-amber-400">No people on this assignment</span><% } %>
+                <% members.forEach((m) => { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full border <%= m.kind === 'employee' ? 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700' %>"><%= m.name %></span>
+                <% }) %>
+              </div>
+            </div>
+          <% }) %>
+
+          <details class="mt-2 group">
+            <summary class="cursor-pointer text-sm text-green-700 dark:text-green-400 hover:underline list-none"><i class="bi bi-plus-lg"></i> Add assignment</summary>
+            <form method="POST" action="<%= base %>/assignments" class="mt-3 space-y-3">
+              <%- include('../partials/csrfHidden') %>
+              <input type="hidden" name="contractUuid" value="<%= c.uuid %>">
+              <div class="flex gap-2">
+                <input name="title" placeholder="<%= c.title %>" class="<%= input %> flex-1 min-w-0" aria-label="Assignment title">
+                <input name="estimatedHours" type="number" min="0" step="0.5" placeholder="Est. hours" class="<%= input %> w-28" aria-label="Estimated hours">
+              </div>
+              <fieldset>
+                <legend class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Employees</legend>
+                <div class="flex flex-wrap gap-x-4 gap-y-1">
+                  <% employees.forEach((e) => { %>
+                    <label class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1"><input type="checkbox" name="employees" value="<%= e._id %>" class="rounded text-green-600"> <%= e.name %></label>
+                  <% }) %>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Subcontractors (CIS verified)</legend>
+                <div class="max-h-40 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+                  <% subcontractors.forEach((s) => { %>
+                    <label class="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1 min-w-0"><input type="checkbox" name="subcontractors" value="<%= s._id %>" class="rounded text-green-600"> <span class="truncate"><%= s.Name %></span></label>
+                  <% }) %>
+                </div>
+              </fieldset>
+              <button type="submit" class="<%= primaryBtn %>">Add assignment</button>
+            </form>
+          </details>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <!-- Step 3: Attendance -->
+  <section id="step-3" class="mb-10 scroll-mt-24">
+    <div class="mb-3">
+      <h2 class="<%= h2 %>">3. Days worked</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Tick the days each person worked and record them. They're saved as pending work against the contract and its KashFlow project.
+        Days already recorded are shown and never overwritten. For sick, holiday, day rates or a different contract, use the
+        <a href="/weekly/<%= week.year %>/<%= week.week %>" class="text-green-700 dark:text-green-400 hover:underline">full grid</a>.
+      </p>
+    </div>
+
+    <% const staffed = flow.assignments.filter((r) => r.members.length); %>
+    <% if (!staffed.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+        No one is assigned this week yet. Start with step 2.
+      </div>
+    <% } %>
+    <div class="space-y-4">
+      <% staffed.forEach(({ assignment: a, contract: c, grid }) => { %>
+        <form method="POST" action="<%= base %>/record" class="<%= card %> overflow-hidden">
+          <%- include('../partials/csrfHidden') %>
+          <input type="hidden" name="assignmentUuid" value="<%= a.uuid %>">
+          <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <div class="text-sm"><span class="font-semibold text-gray-900 dark:text-gray-100"><%= c ? c.title : 'Removed contract' %></span> <span class="text-gray-400">/</span> <span class="text-gray-700 dark:text-gray-300"><%= a.title %></span></div>
+            <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">Record ticked days</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Person</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Hours / day</th>
+                  <% dayLabels.forEach((label, i) => { %>
+                    <th class="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide <%= [0, 1].includes(i) ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400' %>"><%= label %></th>
+                  <% }) %>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <% grid.forEach(({ person: p, cells }) => { %>
+                  <tr>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                      <a href="/<%= p.kind === 'employee' ? 'employee' : 'supplier' %>/read/<%= p.uuid %>" class="text-gray-900 dark:text-gray-100 hover:underline"><%= p.name %></a>
+                      <span class="ml-1 text-[11px] text-gray-400"><%= p.kind === 'employee' ? 'employee' : 'subcontractor' %></span>
+                    </td>
+                    <td class="px-2 py-2">
+                      <% if (p.kind === 'employee') { %>
+                        <input type="number" name="hours[<%= p.key %>]" min="0" max="24" step="0.25" value="<%= p.defaultHours ?? '' %>" placeholder="hrs" class="<%= input %> w-20 py-1" aria-label="Hours per day for <%= p.name %>">
+                      <% } else { %>
+                        <span class="text-xs text-gray-400">paid by invoice</span>
+                      <% } %>
+                    </td>
+                    <% cells.forEach((cell) => { %>
+                      <td class="px-2 py-2 text-center">
+                        <% if (cell.canFill) { %>
+                          <input type="checkbox" name="days[<%= p.key %>]" value="<%= cell.day %>" <%= cell.weekday && !lockedRun ? 'checked' : '' %> class="rounded text-green-600" aria-label="<%= p.name %> worked <%= fmtDay(cell.day) %>">
+                        <% } else { %>
+                          <% cell.records.forEach((r) => { %>
+                            <span class="block text-[11px] px-1.5 py-0.5 rounded border <%= statusPill[r.status] || statusPill.pending %>" title="<%= r.status %>"><%= recordLabel(r) %></span>
+                          <% }) %>
+                        <% } %>
+                      </td>
+                    <% }) %>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </form>
+      <% }) %>
+    </div>
+
+    <% if (flow.unassignedPeople.length) { %>
+      <div class="mt-4 border rounded-2xl p-4 text-sm <%= severityCard.warning %>">
+        <p class="font-medium text-amber-800 dark:text-amber-300 mb-1">Also recorded this week, but not on an assignment</p>
+        <ul class="list-disc ml-5 text-gray-700 dark:text-gray-300">
+          <% flow.unassignedPeople.forEach((p) => { %>
+            <li><%= p.name %>: <%= Object.keys(p.recordsByDay).sort().map(fmtDay).join(', ') %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+  </section>
+
+  <!-- Step 4: Review & approve -->
+  <section id="step-4" class="mb-10 scroll-mt-24">
+    <h2 class="<%= h2 %> mb-3">4. Review and approve</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <% if (!flow.openChecks.length) { %>
+          <div class="border rounded-2xl p-4 text-sm border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300">
+            <i class="bi bi-check-circle-fill"></i> Every contract is linked and staffed, and everyone assigned has attendance.
+          </div>
+        <% } %>
+        <% flow.openChecks.forEach((check) => { %>
+          <div class="border rounded-2xl p-4 text-sm <%= severityCard[check.severity] %>">
+            <p class="font-semibold text-gray-900 dark:text-gray-100"><%= check.label %> <span class="font-normal text-gray-500">(<%= check.items.length %>)</span></p>
+            <p class="text-xs text-gray-600 dark:text-gray-400 mb-2"><%= check.hint %></p>
+            <ul class="list-disc ml-5 text-gray-700 dark:text-gray-300">
+              <% check.items.slice(0, 15).forEach((item) => { %>
+                <li><% if (item.href) { %><a href="<%= item.href %>" class="hover:underline"><%= item.label %></a><% } else { %><%= item.label %><% } %></li>
+              <% }) %>
+              <% if (check.items.length > 15) { %><li class="list-none text-gray-500">and <%= check.items.length - 15 %> more</li><% } %>
+            </ul>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="<%= card %> p-4">
+        <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">This week's records</h3>
+        <dl class="grid grid-cols-3 gap-2 text-center mb-4">
+          <div><dt class="text-xs text-gray-500">Pending</dt><dd class="text-xl font-semibold text-amber-700 dark:text-amber-400"><%= flow.counts.pending %></dd></div>
+          <div><dt class="text-xs text-gray-500">Approved</dt><dd class="text-xl font-semibold text-green-700 dark:text-green-400"><%= flow.counts.approved %></dd></div>
+          <div><dt class="text-xs text-gray-500">Rejected</dt><dd class="text-xl font-semibold text-red-700 dark:text-red-400"><%= flow.counts.rejected %></dd></div>
+        </dl>
+        <% if (canApprove) { %>
+          <form method="POST" action="/attendance/bulk-approve">
+            <%- include('../partials/csrfHidden') %>
+            <input type="hidden" name="weekStart" value="<%= week.days[0] %>">
+            <input type="hidden" name="weekEnd" value="<%= week.days[6] %>">
+            <% if (flow.counts.pending) { %>
+              <button type="submit" class="<%= primaryBtn %> w-full">Approve all <%= flow.counts.pending %> pending</button>
+            <% } else { %>
+              <button type="button" disabled class="w-full text-sm px-3 py-2 rounded-lg border border-green-400 text-green-700 dark:text-green-400 bg-white dark:bg-gray-900 cursor-default opacity-60">Nothing pending</button>
+            <% } %>
+          </form>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Approving counts the days towards holiday accrual and payroll. To reject a single day, open it on the full grid.</p>
+        <% } else { %>
+          <p class="text-sm text-gray-500 dark:text-gray-400">An admin approves the week once the checks are clear.</p>
+        <% } %>
+      </div>
+    </div>
+  </section>
+</div>
