@@ -50,16 +50,31 @@ async function loadDoc(paperlessId) {
  * code as the draft does, and the deduction on the labour shown.
  * Null for other documents; { supplier: null } when there's no match.
  */
-async function cisFor(doc, values) {
-  if (!entry.isSubcontractorEntry(doc)) return null;
+async function kashflowSupplier(doc) {
   const Supplier = mdb.REST && mdb.REST.supplier;
   const name = (doc.correspondent?.name || '').trim();
-  if (!Supplier || !name) return { supplier: null };
+  if (!Supplier || !name) return null;
   const exact = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-  const s = await Supplier.findOne({ $or: [{ Name: exact }, { Code: exact }] })
-    .select('Name WithholdingTaxRate').lean().catch(() => null);
-  if (!s) return { supplier: null };
-  return { supplier: s.Name, ...(entry.cisDeduction(values, s.WithholdingTaxRate) || {}) };
+  return Supplier.findOne({ $or: [{ Name: exact }, { Code: exact }] })
+    .select('Name WithholdingTaxRate VatNumber IsCISReverseCharge').lean().catch(() => null);
+}
+
+/**
+ * For a subcontractor invoice: the CIS deduction at the KashFlow supplier's
+ * rate, and which VAT case it is (vatCase). Null for other documents.
+ */
+async function subcontractorChecks(doc, values) {
+  if (!entry.isSubcontractorEntry(doc)) return { cis: null, vat: null };
+  const s = await kashflowSupplier(doc);
+  const vat = entry.vatCase({
+    supplier: s,
+    docVatNumbers: (doc.reading?.vatNumbers || []).map((v) => v.number),
+    ocrText: doc.ocrText,
+    totalVat: values.totalVat,
+    lines: values.lines,
+  });
+  if (!s) return { cis: { supplier: null }, vat };
+  return { cis: { supplier: s.Name, ...(entry.cisDeduction(values, s.WithholdingTaxRate) || {}) }, vat };
 }
 
 async function render(req, res, doc, { values = null, errors = {}, status = 200, extraLines = 0 } = {}) {
@@ -79,7 +94,7 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     doc,
     kind,
     subcontractor,
-    cis: await cisFor(doc, v),
+    ...(await subcontractorChecks(doc, v)),
     values: v,
     lineCount,
     errors,

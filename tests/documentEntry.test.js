@@ -533,6 +533,51 @@ describe('subcontractor invoices: labour and materials lines', () => {
   });
 });
 
+describe('subcontractor invoices: the three VAT cases', () => {
+  const { vatCase } = entrySvc;
+  const registered = { Name: 'A Sub', VatNumber: 'GB123456789', IsCISReverseCharge: true };
+  const unregistered = { Name: 'A Sub', VatNumber: '', IsCISReverseCharge: false };
+  const rcText = 'Reverse charge: customer to account for VAT to HMRC';
+
+  it('1. not VAT-registered: no VAT number anywhere and no VAT is right; VAT entered is wrong', () => {
+    const ok = vatCase({ supplier: unregistered, totalVat: '0', lines: [{ total: 300, vatRate: 0 }] });
+    assert.deepEqual([ok.case, ok.tone], ['not_registered', 'green']);
+    const bad = vatCase({ supplier: unregistered, totalVat: '60' });
+    assert.deepEqual([bad.case, bad.tone], ['not_registered', 'red']);
+    assert.equal(vatCase({ supplier: unregistered, lines: [{ total: 100, vatRate: 20 }] }).tone, 'red', 'a line VAT % counts as charged');
+  });
+
+  it('2. reverse charge: VAT-registered, no VAT, says so, and KashFlow agrees', () => {
+    const ok = vatCase({ supplier: registered, docVatNumbers: ['123 4567 89'], ocrText: rcText, totalVat: 0 });
+    assert.deepEqual([ok.case, ok.tone, ok.items], ['reverse_charge', 'green', []]);
+    // A VAT number on the document alone is enough to know they're registered
+    assert.equal(vatCase({ supplier: null, docVatNumbers: ['987654321'], ocrText: rcText, totalVat: 0 }).case, 'reverse_charge');
+  });
+
+  it('2. reverse charge: flags missing wording, KashFlow not set, and a VAT number that differs', () => {
+    const r = vatCase({ supplier: { ...registered, IsCISReverseCharge: false }, docVatNumbers: ['111111111'], totalVat: 0 });
+    assert.deepEqual([r.case, r.tone], ['reverse_charge', 'amber']);
+    assert.equal(r.items.length, 3);
+    assert.match(r.items.join(' '), /doesn't say "reverse charge"/);
+    assert.match(r.items.join(' '), /isn't the one KashFlow has/);
+  });
+
+  it('3. charged normally: VAT-registered and VAT charged is a warning naming the exceptions', () => {
+    const r = vatCase({ supplier: registered, totalVat: '200' });
+    assert.deepEqual([r.case, r.tone], ['charged', 'amber']);
+    assert.match(r.text, /end user/);
+    assert.match(r.items.join(' '), /KashFlow has this supplier set as CIS reverse charge/);
+    const contradicts = vatCase({ supplier: registered, ocrText: rcText, totalVat: '200' });
+    assert.deepEqual([contradicts.case, contradicts.tone], ['charged', 'red']);
+  });
+
+  it('waits for VAT to be entered, and says when the supplier is not matched', () => {
+    const r = vatCase({ supplier: null });
+    assert.equal(r.case, 'unknown');
+    assert.match(r.items[0], /isn't matched in KashFlow/);
+  });
+});
+
 describe('entry view', () => {
   const view = path.resolve('mongoose/views/tailwindcss/paperless/entry.ejs');
   const base = {
@@ -555,6 +600,15 @@ describe('entry view', () => {
     assert.match(html, /value="complete"/);
     assert.match(html, /Mark as credit note/);
     assert.match(html, /name="_csrf"/);
+  });
+
+  it('shows the VAT case in Checks', async () => {
+    const doc = { paperlessId: 9100, documentType: SI, processingState: 'awaiting_entry', customFields: [] };
+    const vat = entrySvc.vatCase({ supplier: { Name: 'A Sub', VatNumber: 'GB123456789' }, totalVat: '200' });
+    const html = await render(doc, { subcontractor: true, cis: { supplier: 'A Sub' }, vat });
+    assert.match(html, /VAT: charged normally/);
+    assert.match(html, /normally reverse charged/);
+    assert.ok(!(await render(doc)).includes('VAT: '), 'no VAT check without one');
   });
 
   it('gives each subcontractor line a Labour / Materials choice, with the CIS deduction', async () => {

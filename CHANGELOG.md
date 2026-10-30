@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.79.0] - 2026-10-30
+
+### Added
+- Document entry screen, Subcontractor Invoices: a VAT check in Checks says which of the three cases the invoice is, from what each step already knows: the VAT numbers read off the document and its OCR text (Paperless), the VAT entered here, and the supplier's `VatNumber` and `IsCISReverseCharge` synced from KashFlow. **Not VAT-registered** (no VAT number anywhere): green with no VAT, red if VAT is entered. **Reverse charge** (VAT-registered, no VAT): green, or amber when the invoice doesn't say "reverse charge", KashFlow doesn't have the supplier as CIS reverse charge, or the VAT number on the invoice isn't KashFlow's. **Charged normally** (VAT-registered, VAT charged): amber, naming when that's right (end user, zero-rated, employment business, not construction work), and red if the invoice also says reverse charge. Nothing is sent to KashFlow differently (`vatCase` in `documentEntryService.js`; `subcontractorChecks` in `documentEntryController.js`; `paperless/entry.ejs`).
+
 ## [6.78.0] - 2026-10-30
 
 ### Changed
