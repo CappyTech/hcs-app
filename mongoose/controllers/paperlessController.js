@@ -51,6 +51,7 @@ import { actorFromUser, isInvoiceDocument, notForEntryMessage } from '../service
 import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
 import { paperlessUiBase } from '../services/paperless/documentQueueService.js';
 import { purchaseHeldElsewhere } from '../services/grabServicePaperless.js';
+import { parseCorrespondentName } from '../services/paperless/correspondentName.js';
 
 // Only purchase and subcontractor invoices become a KashFlow purchase. A
 // supplier statement (or any other document) is reviewed, never drafted or sent.
@@ -458,11 +459,18 @@ export const getPurchaseDraft = async (req, res, next) => {
     let suppliers = [];
     let selectedSupplier = null;
     if (Supplier) {
+      // A "<Name> (<Code>)" correspondent names its KashFlow supplier by code
+      const coded = parseCorrespondentName(doc?.correspondent?.name);
       const qName = (
         draft.SupplierName ||
-        doc?.correspondent?.name ||
+        coded.name ||
         ""
       ).trim();
+      if (coded.code) {
+        selectedSupplier = await Supplier.findOne({ Code: coded.code })
+          .select("uuid Id Code Name IsArchived DefaultNominalCode")
+          .lean();
+      }
       if (qName) {
         const safe = qName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         suppliers = await Supplier.find({
@@ -476,7 +484,8 @@ export const getPurchaseDraft = async (req, res, next) => {
           .lean();
         // exact case-insensitive match preference
         const nameLower = qName.toLowerCase();
-        selectedSupplier =
+        if (selectedSupplier && !suppliers.some((s) => s.Code === selectedSupplier.Code)) suppliers.unshift(selectedSupplier);
+        selectedSupplier = selectedSupplier ||
           suppliers.find(
             (s) =>
               (s.Name || "").toLowerCase() === nameLower ||

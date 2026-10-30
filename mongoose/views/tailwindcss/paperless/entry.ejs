@@ -93,6 +93,8 @@ const COLS = kind === 'statement'
 const checks = [];
 if (Object.keys(errors || {}).length) checks.push({ tone: 'red', title: 'Please fix the following', items: Object.values(errors) });
 if (warnings && warnings.length) checks.push({ tone: 'amber', title: "Totals don't add up", items: warnings });
+// Purchase and Subcontractor Invoices: what an invoice legally needs that this one doesn't seem to show (invoiceProblems)
+if (locals.legal && legal.length) checks.push({ tone: 'amber', title: "This may not be a valid invoice", items: legal });
 // Subcontractor invoices: not VAT-registered, reverse charge, or charged normally (vatCase)
 if (locals.vat) checks.push({ tone: vat.tone, title: vat.title, text: vat.text, items: vat.items.length ? vat.items : null });
 if (rd && !rd.error && rd.hasText === false) checks.push({ tone: 'amber', title: 'No text in the PDF', text: 'Nothing can be read from it or selected. It was probably scanned without OCR.', reprocess: true });
@@ -161,6 +163,23 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
         <div class="font-medium text-gray-900 dark:text-white break-words"><%= doc.correspondent?.name || '—' %></div>
         <% if (kind === 'invoice' && doc.correspondent?.id != null) { %>
           <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline" title="What hcs-app has learned about this supplier's invoices, and teaching it">How it's read</a>
+        <% } %>
+        <% if ((locals.supplierOptions || []).length && !locked) { %>
+          <%# The KashFlow supplier is the Paperless correspondent, named "<Name> (<Code>)" %>
+          <details class="group text-xs" data-supplier-picker>
+            <summary class="cursor-pointer text-green-700 dark:text-green-400 hover:underline list-none"><i class="bi bi-chevron-right group-open:rotate-90 inline-block transition-transform"></i> <%= doc.correspondent?.name ? 'Change supplier' : 'Set supplier' %></summary>
+            <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/supplier" class="mt-2 pl-4 space-y-2">
+              <%- include('../partials/csrfHidden') %>
+              <label for="supplier-pick" class="block text-gray-500 dark:text-gray-400">KashFlow supplier</label>
+              <input id="supplier-pick" name="supplier" list="supplier-options" required autocomplete="off" placeholder="Start typing a name or code"
+                class="w-full px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+              <datalist id="supplier-options">
+                <% supplierOptions.forEach((s) => { %><option value="<%= s.label %>"></option><% }) %>
+              </datalist>
+              <button type="submit" class="<%= smallBtn %>"><i class="bi bi-person-check"></i> Set supplier</button>
+              <p class="text-gray-400">Sets the correspondent in Paperless too, as <em>Name (Code)</em>.</p>
+            </form>
+          </details>
         <% } %>
         <div class="text-xs"><%- include('../partials/_documentType', { doc, documentTypes: locals.documentTypes, back: 'entry' }) %></div>
         <% if (doc.entry?.savedAt) { %>

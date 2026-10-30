@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.80.0] - 2026-10-30
+
+### Added
+- Document entry screen, Purchase and Subcontractor Invoices: **This may not be a valid invoice** in Checks lists what an invoice legally has to show that this one doesn't seem to: its own number (and the number entered actually on it), a date, the supplier's address, us as the customer by name and address, and a VAT number when VAT is charged (otherwise the VAT can't be reclaimed). Read from the OCR text and what the reader found; our own name, short name, address and VAT number come from Configuration → Organisation (`invoiceProblems` in `documentEntryService.js`).
+- Document entry screen: **Set / Change supplier** picks a KashFlow supplier and sets it as the document's correspondent in Paperless too, named `<Name> (<Code>)`: the supplier's coded correspondent if there is one, otherwise the one hand-made correspondent with exactly that name renamed to carry the code, otherwise a new one. Refused once the invoice is in KashFlow. Recorded in the audit log (`documentSupplierService.js`, `POST /paperless/ocr/:paperlessId/supplier`; history `field` gains `correspondent`).
+- "Fill lines from the document" reads an invoice set out day by day instead of as a table (a date, the site, then `Labour - £…` and perhaps `Materials - what - £…`): each day is a line, and a day with labour and materials is two, already marked Labour or Materials (`findDayLines` in `invoice-line-finder.js`).
+- `scripts/paperless-correspondent-codes.js`: renames existing hand-made correspondents that match a KashFlow supplier to `<Name> (<Code>)`. Dry run by default; `--apply` renames, creates any missing, and updates the name on hcs-app's copy of their documents. A correspondent two suppliers could both claim is listed and left alone.
+
+### Changed
+- Paperless correspondents for KashFlow suppliers are named `<Name> (<Code>)`, so a correspondent without a code is one made by hand. The `paperless-correspondent-sync` job creates new ones that way and renames coded ones when the supplier is renamed in KashFlow; it still never deletes, and leaves hand-made and non-supplier correspondents to the script above (`planCorrespondents` in `supplierCorrespondentSyncService.js`; `correspondentName.js`; `updateCorrespondent`, `updateDocumentCorrespondent` on the Paperless client and its mock).
+- Matching a correspondent to its KashFlow supplier uses the code in brackets first, then the name as before: the draft's supplier, the VAT-number and duplicate checks, statement reading, and the entry screen's CIS and VAT checks. The draft's supplier name leaves the code off (`supplierFor` in `documentReadingService.js`, `paperlessController.js`, `purchaseDraftService.js`).
+- Our own VAT number printed on an invoice (as the customer's) no longer counts as the supplier's in the subcontractor VAT check.
+
 ## [6.79.0] - 2026-10-30
 
 ### Added

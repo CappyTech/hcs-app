@@ -374,6 +374,20 @@ function makeClient() {
       const { data } = await api.post("/correspondents/", payload);
       return data;
     },
+    /** Rename a correspondent. Its documents keep it, so they follow. */
+    async updateCorrespondent(id, { name } = {}) {
+      if (!id || !name) throw new Error("updateCorrespondent requires id and name");
+      const api = await createApi();
+      const { data } = await api.patch(`/correspondents/${id}/`, { name });
+      return data;
+    },
+    /** Set a document's correspondent. */
+    async updateDocumentCorrespondent(documentId, correspondentId) {
+      if (!documentId) throw new Error("updateDocumentCorrespondent requires documentId");
+      const api = await createApi();
+      const { data } = await api.patch(`/documents/${documentId}/`, { correspondent: correspondentId == null ? null : Number(correspondentId) });
+      return data;
+    },
     async getDocumentType(id) {
       if (!id) return null;
       const api = await createApi();

@@ -232,13 +232,16 @@ function registerAll() {
 
   scheduler.register('paperless-correspondent-sync', {
     description:
-      'Mirror active KashFlow suppliers into Paperless as correspondents so every '
-      + 'supplier name is available to pick when filing an invoice, spelled exactly '
-      + 'as KashFlow holds it. Additive and idempotent — only creates missing '
-      + 'correspondents; never renames, deletes, or touches non-supplier ones.',
+      'Mirror active KashFlow suppliers into Paperless as correspondents named '
+      + '"<Name> (<Code>)", so every supplier is there to pick and the code shows it '
+      + 'came from KashFlow. Creates missing ones and renames coded ones when the '
+      + 'supplier is renamed in KashFlow; never deletes, and leaves hand-made and '
+      + 'non-supplier correspondents alone (scripts/paperless-correspondent-codes.js '
+      + 'renames matching hand-made ones, after a dry run).',
     intervalMs: 12 * HOUR,
     initialDelayMs: 60_000,
-    run: () => __supplierCorrespondentSyncService.syncSuppliersToCorrespondents(),
+    // The plan lists every name; the job history keeps the counts
+    run: () => __supplierCorrespondentSyncService.syncSuppliersToCorrespondents().then(({ plan, ...counts }) => counts),
   });
 
   scheduler.register('vehicle-compliance', {

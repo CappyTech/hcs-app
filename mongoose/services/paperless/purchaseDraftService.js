@@ -4,6 +4,7 @@
 
 import mdb from '../mongooseDatabaseService.js';
 import { customFieldsWithEntry } from './entryOverlay.js';
+import { parseCorrespondentName } from './correspondentName.js';
 
 // Default name-based mapping from custom field names to target purchase fields
 const defaultMap = {
@@ -126,7 +127,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
 
   const supplierName = coalesce(
     findCustomField(cf, mapping.SupplierName),
-    ocr.correspondent && ocr.correspondent.name,
+    ocr.correspondent && parseCorrespondentName(ocr.correspondent.name).name,
   );
   const supplierCode = findCustomField(cf, mapping.SupplierCode);
   // Supplier reference: prefer explicit invoice number; robust fallback if blank

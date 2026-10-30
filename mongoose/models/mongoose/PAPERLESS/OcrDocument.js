@@ -43,7 +43,7 @@ const ChangeStampSchema = new mongoose.Schema({
 
 const ProcessingHistorySchema = new mongoose.Schema({
   // 'entry' rows record a save on the entry screen: from/to are null and the note says what changed
-  field: { type: String, enum: ['processingState', 'statementReviewed', 'creditNote', 'excludedReason', 'documentType', 'entry'] },
+  field: { type: String, enum: ['processingState', 'statementReviewed', 'creditNote', 'excludedReason', 'documentType', 'entry', 'correspondent'] },
   from: mongoose.Schema.Types.Mixed,
   to: mongoose.Schema.Types.Mixed,
   action: String, // e.g. complete_entry, unlink, reopen_entry, backfill

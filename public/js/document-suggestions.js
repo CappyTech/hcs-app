@@ -290,9 +290,9 @@ function fillLines() {
     setValue(lineInput(b, 'price'), l ? cell(l.price) : '');
     setValue(lineInput(b, 'total'), l ? cell(l.total, 2) : '');
     setValue(lineInput(b, 'vatRate'), l ? cell(l.vatRate) : '');
-    // Guessed as the server does: materials if it says so, otherwise labour
+    // As the reader marked it (day-by-day invoices), else guessed as the server does
     const role = b.querySelector('[data-line-role]');
-    if (role && l) role.value = /material/i.test(l.description || '') ? 'materials' : 'labour';
+    if (role && l) role.value = l.role || (/material/i.test(l.description || '') ? 'materials' : 'labour');
   });
   renderLinesButton();
 }

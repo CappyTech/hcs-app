@@ -139,6 +139,63 @@ export function findLines(items) {
     lines.push(...table.lines);
     ri = Math.max(ri, table.end - 1);
   }
+  // No table: a subcontractor's invoice may be set out day by day instead
+  return lines.length ? lines : findDayLines(rows);
+}
+
+// "28th September 2026", "7th, 8th, 9th October 2026", "13th and 14th October"
+const MONTHS = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+const DAY = '\\d{1,2}(?:st|nd|rd|th)?';
+const DAY_ROW = new RegExp(`^(?:(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?,?\\s+)?${DAY}(?:\\s*(?:,|&|and|-|to)\\s*${DAY})*\\s*,?\\s+(?:${MONTHS})\\.?(?:,?\\s+\\d{4})?$`, 'i');
+// "Labour - £306.46", "Labour £309.86", "Materials - Sand, Paving flags - £54.00"
+const DAY_AMOUNT = /^(labou?r|materials?)\b\s*[-–—:]?\s*(.*?)\s*[-–—:]?\s*(£?\s*-?\d[\d,]*\.\d{2})$/i;
+
+/**
+ * Lines from an invoice set out as days rather than a table: a date, where
+ * the work was, then "Labour - £…" and perhaps "Materials - what - £…". Each
+ * amount is a line, so a day with labour and materials is two, marked with
+ * their role (labour or materials) for a subcontractor invoice. The date and
+ * the site make the labour line's description; a materials line says what
+ * the materials were. Needs at least one date followed by an amount.
+ * @returns {Array<{description, code, quantity, price, total, vatRate, role, page, box}>}
+ */
+export function findDayLines(rows) {
+  const lines = [];
+  let day = null; // { date, site: [], amounts }
+  for (const row of rows) {
+    const text = cleanText(row.items.map((it) => it.str).join(' '));
+    if (!text) continue;
+    if (DAY_ROW.test(text)) {
+      day = { date: text.replace(/\s+,/g, ','), site: [], amounts: 0 };
+      continue;
+    }
+    if (!day) continue;
+    const m = DAY_AMOUNT.exec(text);
+    if (m) {
+      const total = parseNumber(m[3].replace(/\s/g, ''));
+      if (total == null) continue;
+      const materials = /^mat/i.test(m[1]);
+      const what = m[2].replace(/^[-–—:\s]+|[-–—:\s]+$/g, '');
+      const where = day.site.join(', ');
+      lines.push({
+        description: materials
+          ? `${day.date} – Materials${what ? `: ${what}` : ''}`
+          : `${day.date} – ${[where, what].filter(Boolean).join(', ') || 'Labour'}`,
+        code: null,
+        quantity: 1,
+        price: total,
+        total,
+        vatRate: null,
+        role: materials ? 'materials' : 'labour',
+        page: row.page,
+        box: unionBox(row.items.map((it) => charBox(it))),
+      });
+      day.amounts += 1;
+      continue;
+    }
+    // Where the work was: the rows between the date and its first amount
+    if (!day.amounts) day.site.push(text);
+  }
   return lines;
 }
 
@@ -340,4 +397,4 @@ export function findVatNumbers(items) {
   return out;
 }
 
-export default { findLines, fillMissingRates, findPaymentTerms, findVatNumbers, normaliseVatNumber, parseNumber };
+export default { findLines, findDayLines, fillMissingRates, findPaymentTerms, findVatNumbers, normaliseVatNumber, parseNumber };

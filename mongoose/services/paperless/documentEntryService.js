@@ -220,6 +220,58 @@ export function cisDeduction({ labour, invoiceTotal } = {}, whtRate) {
   };
 }
 
+// UK postcodes, for telling whose addresses an invoice shows
+const POSTCODE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/g;
+const postcodesIn = (s) => [...String(s || '').toUpperCase().matchAll(POSTCODE)].map((m) => `${m[1]} ${m[2]}`);
+// A company name as it might be printed: "&", "Ltd" and punctuation folded
+const foldName = (s) => ` ${String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/\b(ltd|limited|llp|plc)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim()} `;
+const flatRef = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/**
+ * What an invoice legally has to show that this one doesn't seem to, for
+ * Purchase and Subcontractor Invoices alike: its number and date, the
+ * supplier's address, us as the customer (name and address), and a VAT
+ * number when VAT is charged. Read from the document's OCR text and what the
+ * reader found; a scan with no text gets nothing here (another check covers
+ * it). Warnings only: a missing postcode can be an OCR miss. Pure.
+ *
+ * @param {object} o
+ * @param {string} o.ocrText
+ * @param {object} [o.reading]        OcrDocument.reading (fields found)
+ * @param {string[]} [o.docVatNumbers] VAT numbers on the document, ours left out
+ * @param {object} [o.values]         the form's values
+ * @param {{names?: string[], address?: string}} [o.company] us, from Organisation settings
+ * @returns {string[]}
+ */
+export function invoiceProblems({ ocrText = '', reading = null, docVatNumbers = [], values = {}, company = {} } = {}) {
+  const text = String(ocrText || '');
+  if (!text.trim()) return [];
+  const out = [];
+  const read = reading?.fields || {};
+
+  const number = String(values.invoiceNumber || '').trim();
+  if (!number && !read.invoiceNumber?.value) {
+    out.push('No invoice number on it. An invoice needs its own unique number.');
+  } else if (number && flatRef(number) && !flatRef(text).includes(flatRef(number))) {
+    out.push(`The invoice number entered (${number}) isn't on the document. An invoice has to show its own number.`);
+  }
+  if (!values.invoiceDate && !read.invoiceDate?.value) out.push('No invoice date on it.');
+
+  const ours = postcodesIn(company.address);
+  const found = postcodesIn(text);
+  if (!found.some((p) => !ours.includes(p))) out.push("No supplier address on it (no postcode other than ours). An invoice has to show the supplier's name and address.");
+  const names = (company.names || []).map(foldName).filter((n) => n.trim());
+  if (names.length && !names.some((n) => foldName(text).includes(n))) out.push("It doesn't name us as the customer.");
+  if (ours.length && !found.some((p) => ours.includes(p))) out.push("It doesn't show our address as the customer.");
+
+  const vat = parseMoneyInput(values.totalVat);
+  const charged = (vat !== INVALID && vat > 0) || (values.lines || []).some((l) => Number(l?.vatRate) > 0);
+  if (charged && !(docVatNumbers || []).length) {
+    out.push("VAT is charged but there's no VAT number on it, so it isn't a valid VAT invoice: the VAT can't be reclaimed until the supplier sends one that shows it.");
+  }
+  return out;
+}
+
 // Why VAT may still be right on a VAT-registered subcontractor's invoice
 const VAT_EXCEPTIONS = "That's only right if we're the end user of the work, it's zero-rated (most new-build housing, at 0%), it's labour from an employment business, or it isn't construction work (goods only, or plant without an operator).";
 
@@ -504,6 +556,7 @@ const ACTION_WORDS = {
   unlink_unentered: 'Unlinked from KashFlow', reopen_entry: 'Entry reopened', flag_credit_note: 'Marked as a credit note',
   unflag_credit_note: 'Credit note flag removed', backfill: 'Backfilled from Paperless', follow_paperless: 'Followed a Paperless change',
   mark_reviewed: 'Marked reviewed', set_excluded: 'Queue exclusion changed', save_entry: 'Entry saved', change_type: 'Type changed',
+  set_supplier: 'Supplier set',
 };
 const NOTIFICATION_WORDS = {
   new_doc: 'New document posted', invoice: 'Invoice emailed', invoice_resend: 'Invoice email re-sent', kashflow: 'Added to KashFlow posted',
@@ -525,7 +578,7 @@ export function auditTimeline(doc, notifications = []) {
     else if (h.field === 'excludedReason') detail = `${word(EXCLUDED_WORDS, h.from)} → ${word(EXCLUDED_WORDS, h.to)}${h.note ? `. ${h.note}` : ''}`;
     else if (h.field === 'statementReviewed') detail = h.to ? 'Reviewed' : 'Not reviewed';
     else if (h.field === 'creditNote') detail = h.to ? 'Credit note' : 'Not a credit note';
-    else if (h.field === 'documentType') detail = `${h.from?.name ?? h.from ?? '—'} → ${h.to?.name ?? h.to ?? '—'}`;
+    else if (h.field === 'documentType' || h.field === 'correspondent') detail = `${h.from?.name ?? h.from ?? '—'} → ${h.to?.name ?? h.to ?? '—'}`;
     rows.push({ at: h.at, who: whoOf(h.by), what: ACTION_WORDS[h.action] || h.action || h.field, detail, kind: h.field === 'entry' ? 'entry' : 'state' });
   }
   if (doc?.reading?.at) {
@@ -790,6 +843,7 @@ export default {
   completionErrors,
   cisDeduction,
   vatCase,
+  invoiceProblems,
   consistencyWarnings,
   formValues,
   entryAsCustomFields,
