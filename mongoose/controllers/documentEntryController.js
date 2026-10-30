@@ -45,10 +45,29 @@ async function loadDoc(paperlessId) {
   return { OcrDocument, doc: await OcrDocument.findOne({ paperlessId }).lean() };
 }
 
+/**
+ * The supplier's CIS rate for a subcontractor invoice, matched by name or
+ * code as the draft does, and the deduction on the labour shown.
+ * Null for other documents; { supplier: null } when there's no match.
+ */
+async function cisFor(doc, values) {
+  if (!entry.isSubcontractorEntry(doc)) return null;
+  const Supplier = mdb.REST && mdb.REST.supplier;
+  const name = (doc.correspondent?.name || '').trim();
+  if (!Supplier || !name) return { supplier: null };
+  const exact = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+  const s = await Supplier.findOne({ $or: [{ Name: exact }, { Code: exact }] })
+    .select('Name WithholdingTaxRate').lean().catch(() => null);
+  if (!s) return { supplier: null };
+  return { supplier: s.Name, ...(entry.cisDeduction(values, s.WithholdingTaxRate) || {}) };
+}
+
 async function render(req, res, doc, { values = null, errors = {}, status = 200, extraLines = 0 } = {}) {
   const kind = entry.entryKind(doc);
+  const subcontractor = entry.isSubcontractorEntry(doc);
   const v = values || entry.formValues(doc);
-  const lineCount = Math.max((v.lines || []).length, 1) + extraLines;
+  // A subcontractor invoice's labour and materials have their own boxes, so it may have no other lines
+  const lineCount = Math.max((v.lines || []).length, subcontractor ? 0 : 1) + extraLines;
   const hints = kind === 'invoice' ? await readingSvc.hintsFor(doc).catch(() => null) : null;
   const isAdmin = req.user?.role === 'admin';
   const notifications = await notifySvc.historyFor(mdb.PAPERLESS?.NotificationLog, doc.paperlessId).catch(() => []);
@@ -60,6 +79,8 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     labels: hints?.labels || null,
     doc,
     kind,
+    subcontractor,
+    cis: await cisFor(doc, v),
     values: v,
     lineCount,
     errors,
@@ -119,7 +140,7 @@ export const postEntry = async (req, res, next) => {
     const action = ['save', 'addLine', 'complete'].includes(req.body.action) ? req.body.action : 'save';
     const actor = actorFromUser(req.user);
 
-    const { entry: parsed, errors } = entry.parseEntryForm(req.body, kind);
+    const { entry: parsed, errors } = entry.parseEntryForm(req.body, kind, { subcontractor: entry.isSubcontractorEntry(doc) });
     if (Object.keys(errors).length) {
       // Show the form again with what was typed, not what was saved
       const values = kind === 'bank'

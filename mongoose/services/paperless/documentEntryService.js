@@ -29,7 +29,8 @@ import __kfSendClaim from './kashflowSendClaimService.js';
 import __paperlessClient from './paperlessClient.js';
 import logger from '../../../services/loggerService.js';
 import { entryAsCustomFields } from './entryOverlay.js';
-import { parseVatRate, vatRateProblem } from '../../../public/js/entry-checks.js';
+import { parseVatRate, vatRateProblem, VAT_RATES } from '../../../public/js/entry-checks.js';
+import { normalizeWhtRate } from '../../../services/cisService.js';
 
 export { entryAsCustomFields };
 
@@ -100,11 +101,32 @@ export function entryKind(doc) {
   return null;
 }
 
+/** A Subcontractor Invoice: entered as labour and materials rather than total goods. */
+export function isSubcontractorEntry(doc) {
+  return entryKind(doc) === 'invoice' && isDocumentType(doc?.documentType, 'subcontractorInvoice');
+}
+
 /**
- * Parse a submitted entry form. Never throws.
+ * The VAT rate on the labour and materials lines, worked out from total VAT
+ * less the VAT on any lines added by hand. Null unless it comes out at one
+ * of the rates.
+ */
+function splitVatRate(labour, materials, totalVat, extras) {
+  const base = (labour ?? 0) + (materials ?? 0);
+  if (totalVat == null || !base) return null;
+  if (extras.some((l) => l.total != null && l.vatRate == null)) return null;
+  const extraVat = extras.reduce((s, l) => s + ((l.total ?? 0) * (l.vatRate ?? 0)) / 100, 0);
+  const pct = ((totalVat - extraVat) / base) * 100;
+  return VAT_RATES.find((r) => Math.abs(r - pct) < 0.5) ?? null;
+}
+
+/**
+ * Parse a submitted entry form. Never throws. A subcontractor invoice's
+ * Labour and Materials become its first lines (with a role), ahead of any
+ * lines added by hand, and total goods is worked out from all of them.
  * @returns {{entry: object, errors: Record<string,string>}}
  */
-export function parseEntryForm(body = {}, kind) {
+export function parseEntryForm(body = {}, kind, { subcontractor = false } = {}) {
   const errors = {};
   const take = (field, value, label) => {
     if (value === INVALID) { errors[field] = `${label} isn't valid.`; return null; }
@@ -158,11 +180,25 @@ export function parseEntryForm(body = {}, kind) {
     entry.lines.push(line);
   });
 
+  if (subcontractor) {
+    entry.labour = take('labour', parseMoneyInput(body.labour), 'Labour');
+    entry.materials = take('materials', parseMoneyInput(body.materials), 'Materials');
+    const extras = entry.lines;
+    const rate = splitVatRate(entry.labour, entry.materials, entry.totalVat, extras);
+    const made = [];
+    if (entry.labour) made.push({ description: 'Labour', quantity: 1, price: entry.labour, total: entry.labour, vatRate: rate, role: 'labour' });
+    if (entry.materials) made.push({ description: 'Materials', quantity: 1, price: entry.materials, total: entry.materials, vatRate: rate, role: 'materials' });
+    entry.lines = [...made, ...extras];
+    entry.totalGoods = entry.labour == null && entry.materials == null
+      ? null
+      : roundTo((entry.labour ?? 0) + (entry.materials ?? 0) + extras.reduce((s, l) => s + (l.total ?? 0), 0), 2);
+  }
+
   return { entry, errors };
 }
 
 /** What must be filled in before Complete entry (PB-5). */
-export function completionErrors(entry) {
+export function completionErrors(entry, { subcontractor = false } = {}) {
   const errors = {};
   if (!entry) return { form: 'Nothing has been entered yet.' };
   if (!entry.invoiceNumber) errors.invoiceNumber = 'Invoice number is required.';
@@ -170,9 +206,28 @@ export function completionErrors(entry) {
   if (entry.invoiceTotal == null) errors.invoiceTotal = 'Invoice total is required.';
   const lines = entry.lines || [];
   if (!lines.some((l) => l.description && l.total != null)) {
-    errors.lines = 'At least one line needs a description and a total.';
+    if (subcontractor) errors.labour = 'Enter the labour or materials amount.';
+    else errors.lines = 'At least one line needs a description and a total.';
   }
   return errors;
+}
+
+/**
+ * The CIS deduction on a subcontractor invoice: the supplier's rate on the
+ * labour, and what is left to pay. Null when the rate or labour is unknown.
+ * `whtRate` is the supplier's WithholdingTaxRate (20 or 0.2 both work).
+ */
+export function cisDeduction({ labour, invoiceTotal } = {}, whtRate) {
+  const rate = normalizeWhtRate(whtRate);
+  const lab = parseMoneyInput(labour);
+  if (rate == null || rate === -1 || lab == null || lab === INVALID) return null;
+  const deduction = roundTo(lab * rate, 2);
+  const total = parseMoneyInput(invoiceTotal);
+  return {
+    ratePct: roundTo(rate * 100, 0),
+    deduction,
+    payable: total == null || total === INVALID ? null : roundTo(total - deduction, 2),
+  };
 }
 
 const money = (n) => (n == null ? '—' : Number(n).toFixed(2));
@@ -255,7 +310,29 @@ export function formValues(doc) {
     };
   }
   if (kind !== 'invoice') return { source: null };
+  const v = invoiceFormValues(doc, e);
+  return isSubcontractorEntry(doc) ? subcontractorFormValues(v) : v;
+}
 
+/**
+ * A subcontractor invoice's form: Labour and Materials boxes, with only the
+ * lines added by hand listed below. Values not split yet (the Paperless
+ * fields, or a save on the plain invoice form) are split by description,
+ * when every line has a total; otherwise their lines are kept as they are.
+ */
+function subcontractorFormValues(v) {
+  const lines = v.lines || [];
+  if (v.labour != null || v.materials != null || lines.some((l) => l.role)) {
+    return { ...v, lines: lines.filter((l) => !l.role) };
+  }
+  if (!lines.length) return { ...v, labour: v.totalGoods ?? null, materials: null, lines: [] };
+  if (lines.some((l) => l.total == null)) return { ...v, labour: null, materials: null };
+  const sum = (ls) => (ls.length ? roundTo(ls.reduce((s, l) => s + l.total, 0), 2) : null);
+  const isMaterials = (l) => /material/i.test(l.description || '');
+  return { ...v, labour: sum(lines.filter((l) => !isMaterials(l))), materials: sum(lines.filter(isMaterials)), lines: [] };
+}
+
+function invoiceFormValues(doc, e) {
   if (e && e.savedAt) {
     return {
       source: 'hcs-app',
@@ -310,6 +387,7 @@ export async function ensureClassified(OcrDocument, paperlessId) {
 const ENTRY_FIELD_LABELS = {
   invoiceNumber: 'invoice number', invoiceDate: 'invoice date', dueDate: 'due date',
   totalGoods: 'total goods', totalVat: 'total VAT', invoiceTotal: 'invoice total',
+  labour: 'labour', materials: 'materials',
 };
 const BANK_FIELD_LABELS = {
   accountId: 'bank account', periodStart: 'period start', periodEnd: 'period end',
@@ -448,7 +526,7 @@ export async function completeEntry(OcrDocument, paperlessId, actor, deps = {}) 
   if (!doc) return { ok: false, reason: 'not-found', message: 'Document not found.' };
   const excluded = notForEntryMessage(doc);
   if (excluded) return { ok: false, reason: 'excluded', message: excluded };
-  const errors = completionErrors(doc.entry?.savedAt ? doc.entry : null);
+  const errors = completionErrors(doc.entry?.savedAt ? doc.entry : null, { subcontractor: isSubcontractorEntry(doc) });
   if (Object.keys(errors).length) {
     return { ok: false, reason: 'incomplete', errors, message: Object.values(errors).join(' ') };
   }
@@ -663,8 +741,10 @@ export default {
   parseMoneyInput,
   parseDateInput,
   entryKind,
+  isSubcontractorEntry,
   parseEntryForm,
   completionErrors,
+  cisDeduction,
   consistencyWarnings,
   formValues,
   entryAsCustomFields,

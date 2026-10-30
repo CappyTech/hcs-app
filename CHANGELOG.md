@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.77.0] - 2026-10-30
+
+### Added
+- Document entry screen: a Subcontractor Invoice gets its own form. **Labour £** and **Materials £** replace Total goods, which is worked out from them and any other lines. Each becomes a line (with a `role` on the entry) ahead of any lines added by hand under **Other lines**, so the KashFlow draft gets a Labour and a Materials line. Their VAT rate is worked out from Total VAT when it comes out at 0, 5 or 20%. Below the totals the form shows the CIS deduction at the supplier's KashFlow rate on the labour, and what is left to pay. Complete entry asks for labour or materials rather than a line. Values not split yet (the Paperless fields, or a save on the plain invoice form) are split by line description. Purchase Invoices are unchanged (`isSubcontractorEntry`, `cisDeduction`, `parseEntryForm` and `formValues` in `documentEntryService.js`; `OcrDocument.entry` gains `labour`, `materials` and line `role`; `paperless/entry.ejs`).
+
+### Changed
+- Subcontractor draft: a line whose description says materials defaults to the materials nominal rather than the subcontract one (`paperless/draft.ejs`).
+
 ## [6.76.0] - 2026-10-23
 
 ### Changed

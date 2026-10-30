@@ -62,6 +62,9 @@ const EntryLineSchema = new mongoose.Schema({
   price:       { type: Number, default: null },
   total:       { type: Number, default: null }, // net line total, as Total_LineN
   vatRate:     { type: Number, default: null }, // percent, as VAT_LineN
+  // Subcontractor invoices: the line made from the Labour or Materials box.
+  // Lines without a role were added by hand.
+  role:        { type: String, enum: ['labour', 'materials', null], default: null },
 }, { _id: false });
 
 const EntrySchema = new mongoose.Schema({
@@ -73,6 +76,10 @@ const EntrySchema = new mongoose.Schema({
   totalVat:      { type: Number, default: null },
   invoiceTotal:  { type: Number, default: null },
   lines:         { type: [EntryLineSchema], default: undefined },
+  // Subcontractor invoices: entered instead of total goods, which is worked
+  // out from them; each becomes a line with a role
+  labour:        { type: Number, default: null },
+  materials:     { type: Number, default: null },
   // Bank statement (Paperless fields 53–57)
   bank: {
     type: new mongoose.Schema({
