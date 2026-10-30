@@ -28,7 +28,7 @@ import { documentTypeOptions } from '../services/paperless/documentTypeService.j
 import supplierSvc from '../services/paperless/documentSupplierService.js';
 import cisCheckSvc from '../services/paperless/cisCheckService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
-import { parseCorrespondentName } from '../services/paperless/correspondentName.js';
+import { parseCorrespondentName, correspondentLabel } from '../services/paperless/correspondentName.js';
 import { normaliseVatNumber } from '../../public/js/invoice-line-finder.js';
 import * as organisation from '../../services/organisationService.js';
 import logger from '../../services/loggerService.js';
@@ -134,6 +134,11 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     // The KashFlow supplier picker, for anything with a supplier
     supplierOptions: kind === 'invoice' || kind === 'statement'
       ? await supplierSvc.supplierOptions(mdb.REST && mdb.REST.supplier).catch(() => [])
+      : [],
+    // Two or more KashFlow suppliers share the correspondent's name: ask which
+    supplierChoices: kind === 'invoice' || kind === 'statement'
+      ? (await readingSvc.supplierMatch(mdb.REST && mdb.REST.supplier, doc.correspondent?.name).catch(() => null))?.choices
+        .map((s) => ({ code: s.Code, label: correspondentLabel(s), archived: !!s.IsArchived })) || []
       : [],
   });
 }

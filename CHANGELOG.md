@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.81.1] - 2026-10-30
+
+### Fixed
+- A correspondent with no code whose name fits two KashFlow suppliers (one entered twice) no longer matches whichever the database returns first. The entry screen asks which supplier it is, with a button for each code, and the CIS deduction and supplier statement say why there's no supplier. The KashFlow draft pre-selects neither, and the send refuses until one is picked. If only one of them is still active in KashFlow, that one is used (`supplierMatch` in `documentReadingService.js`).
+
 ## [6.81.0] - 2026-10-30
 
 ### Added

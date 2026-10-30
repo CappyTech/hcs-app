@@ -206,17 +206,34 @@ const SUPPLIER_FIELDS = 'Id Code Name VatNumber IsArchived WithholdingTaxRate Is
  * "<Name> (<Code>)" correspondent first, then exact name or code, any case.
  */
 export async function supplierFor(Supplier, correspondentName) {
+  return (await supplierMatch(Supplier, correspondentName)).supplier;
+}
+
+/**
+ * supplierFor, saying when the name alone can't decide. KashFlow can hold two
+ * suppliers with the same name (one entered twice), and a correspondent with
+ * no code then matches both. Rather than take whichever the database returns
+ * first, `supplier` is null and `choices` lists them for a person to pick.
+ * If only one of them is still active in KashFlow, that one is the match.
+ * @returns {Promise<{supplier: object|null, choices: object[]}>}
+ */
+export async function supplierMatch(Supplier, correspondentName) {
   const full = String(correspondentName || '').trim();
-  if (!Supplier || !full) return null;
+  if (!Supplier || !full) return { supplier: null, choices: [] };
   const { name, code } = parseCorrespondentName(full);
   if (code) {
     const byCode = await Supplier.findOne({ Code: new RegExp(`^${escapeRe(code)}$`, 'i') }).select(SUPPLIER_FIELDS).lean();
-    if (byCode) return byCode;
+    if (byCode) return { supplier: byCode, choices: [] };
   }
   const names = [...new Set([full, name])].map((n) => new RegExp(`^${escapeRe(n)}$`, 'i'));
-  return Supplier.findOne({ $or: names.flatMap((re) => [{ Name: re }, { Code: re }]) })
+  const rows = await Supplier.find({ $or: names.flatMap((re) => [{ Name: re }, { Code: re }]) })
     .select(SUPPLIER_FIELDS)
     .lean();
+  const found = [...new Map((rows || []).map((s) => [s.Code ?? s.Id, s])).values()];
+  if (found.length <= 1) return { supplier: found[0] || null, choices: [] };
+  const active = found.filter((s) => !s.IsArchived);
+  if (active.length === 1) return { supplier: active[0], choices: [] };
+  return { supplier: null, choices: (active.length ? active : found).sort((a, b) => String(a.Code).localeCompare(String(b.Code))) };
 }
 
 /**
@@ -666,7 +683,7 @@ export async function reprocess(paperlessId, deps = {}) {
 export default {
   READER_VERSION, HEADER_FIELDS, extractItems, summarise, packItem, unpackItem,
   layoutFromSpots, mergeSpots, savedValues, compareReading,
-  supplierFor, vatCheck, duplicatesOf,
+  supplierFor, supplierMatch, vatCheck, duplicatesOf,
   readDocument, readSoon, readMissing, learnFromSave, layoutFor, hintsFor, insights, accuracyReport, fixtureFor, reprocess,
   cleanLabels, teachSpots, supplierDetail, teach, forget, setLabels,
 };
