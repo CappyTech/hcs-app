@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.81.2] - 2026-10-30
+
+### Fixed
+- Invoice line reader: a table whose headings carry the currency ("Unit Price (£)", "Subtotal (£)", "Price [GBP]") gave no lines, because no column was taken for the amount. The currency is now ignored when naming a column (`columnType` in `invoice-line-finder.js`).
+- A reverse charge note printed under the lines ("Reverse VAT - 20%", "Customer to account to HMRC…") ends the table instead of being added to the last line's description.
+- Due date: "Payment due by 29 August 2026" (or "Due on …") wasn't read, because the label stopped at "due" and "by 29 August 2026" isn't a date (`FIELDS` in `invoice-field-finder.js`). Stored readings are redone (`READER_VERSION` 6).
+- Picking a date off the document: clicking a phrase with a date in it ("Payment due by 29 August 2026") said "That isn't a Due date"; the date inside it is now taken (`pickValue` in `entry-checks.js`).
+
 ## [6.81.1] - 2026-10-30
 
 ### Fixed

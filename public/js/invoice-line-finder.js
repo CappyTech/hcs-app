@@ -29,7 +29,9 @@ const COLUMN_TYPES = [
   ['date', /^(date|date\s*(from|to)|from|to|period)$/i],
   ['desc', /^(description|details|particulars|product|parts|items?|service|narrative|labou?r|materials|hire|charges)$/i],
 ];
-const columnType = (text) => (COLUMN_TYPES.find(([, re]) => re.test(text.trim())) || [null])[0];
+// "Unit Price (£)", "Subtotal (GBP)": the currency is only a label
+const bareHeading = (text) => text.trim().replace(/\s*[([]\s*(£|gbp)\s*[)\]]$/i, '');
+const columnType = (text) => (COLUMN_TYPES.find(([, re]) => re.test(bareHeading(text))) || [null])[0];
 
 const VAT_CODES = { S: 20, Z: 0, E: 0, X: 0, R: 5, L: 5 };
 const STANDARD_RATES = [0, 5, 20];
@@ -218,6 +220,9 @@ function readTable(rows, start, head) {
     if (row.page !== rows[start - 1].page) break;
     if (lastY - row.y > Math.max(head.h, row.h) * 4.5) break;
     if (startsLabel(row.items[0].str) || /^\s*(sub[\s-]?total|totals?|carriage|vat\s*summary|total\s*(goods|net))\b/i.test(row.items[0].str)) break;
+    // The reverse charge note under the lines ("Reverse VAT - 20%", then
+    // "Customer to account to HMRC…") isn't more of the last line's description
+    if (/^\s*reverse\s*(vat|charge)\b/i.test(row.items[0].str)) break;
     lastY = row.y;
     const cells = {};
     const text = [];

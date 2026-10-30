@@ -130,9 +130,20 @@ export function sameLines(typed, found) {
   });
 }
 
+// A date inside a phrase: "Payment due by 29 August 2026", "Due on 29/08/2026"
+const DATE_IN = /\b\d{1,2}(?:st|nd|rd|th)?[\s-]+[a-z]{3,9}\.?,?[\s-]+\d{2,4}\b|\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{4}-\d{1,2}-\d{1,2}\b/gi;
+const dateIn = (text) => {
+  for (const m of text.matchAll(DATE_IN)) {
+    const d = parseDate(m[0]);
+    if (d) return d;
+  }
+  return null;
+};
+
 /**
  * The value for a field from text clicked on the PDF: the whole text, or else
- * the word under the pointer. Null when neither fits the field.
+ * the word under the pointer, or for a date one inside the text. Null when
+ * none fits the field.
  * @param {string} field  a header field ("invoiceTotal") or "line.<name>"
  */
 export function pickValue(field, text, word) {
@@ -159,7 +170,7 @@ export function pickValue(field, text, word) {
       return t.replace(/\.{3,}/g, ' ').replace(/\s+/g, ' ');
     }
   }
-  return null;
+  return type === 'date' && text ? dateIn(text) : null;
 }
 
 export default { liveChecks, pickValue, parseVatRate, vatRateProblem, sameLines, VAT_RATES };

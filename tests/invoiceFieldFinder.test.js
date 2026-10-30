@@ -140,6 +140,16 @@ describe('invoice field finder', () => {
     assert.deepEqual([f.totalGoods.value, f.totalVat.value, f.invoiceTotal.value], ['38.18', '7.64', '45.82']);
   });
 
+  it('"Payment due by 12 March 2026" under the invoice date is the due date', () => {
+    const items = page([
+      [455, 700, 90, 'INVOICE 1234'],
+      [455, 686, 60, '10 February 2026'],
+      [455, 674, 150, 'Payment due by 12 March 2026'],
+    ]);
+    assert.equal(findFields(items).dueDate?.value, '2026-03-12');
+    assert.equal(findFields(page([[40, 600, 130, 'Due on 05/04/2026']])).dueDate?.value, '2026-04-05');
+  });
+
   it('a hire invoice: "Total Charge", "VAT @ 20.0 %", "TOTAL:"', () => {
     const items = page([
       [443, 396, 50, 'Total Charge:'], [542, 396, 35, '£186.25'],
