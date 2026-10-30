@@ -617,21 +617,6 @@ describe('entry view', () => {
     assert.ok(!locked.includes('/supplier"'), 'no picker once it is in KashFlow');
   });
 
-  it('asks which supplier when two share the name', async () => {
-    const doc = { paperlessId: 9001, documentType: PI, processingState: 'awaiting_entry', correspondent: { id: 3, name: 'Valley Tyres' }, customFields: [] };
-    const supplierChoices = [
-      { code: 'TYR01', label: 'Valley Tyres (TYR01)', archived: false },
-      { code: 'TYR02', label: 'Valley Tyres (TYR02)', archived: false },
-    ];
-    const html = await render(doc, { supplierChoices, subcontractor: true, cis: { supplier: null } });
-    assert.match(html, /2 KashFlow suppliers are called <strong>Valley Tyres<\/strong>/);
-    assert.match(html, /name="supplier" value="Valley Tyres \(TYR01\)"/);
-    assert.match(html, /name="supplier" value="Valley Tyres \(TYR02\)"/);
-    assert.match(html, /pick which KashFlow supplier this is under Supplier/, 'CIS says why, not "doesn\'t match"');
-    const locked = await render({ ...doc, processingState: 'sent' }, { locked: true, supplierChoices });
-    assert.ok(!locked.includes('value="Valley Tyres (TYR01)"'), 'no buttons once it is in KashFlow');
-  });
-
   it('shows the VAT case in Checks', async () => {
     const doc = { paperlessId: 9100, documentType: SI, processingState: 'awaiting_entry', customFields: [] };
     const vat = entrySvc.vatCase({ supplier: { Name: 'A Sub', VatNumber: 'GB123456789' }, totalVat: '200' });

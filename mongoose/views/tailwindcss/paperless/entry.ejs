@@ -164,21 +164,6 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
         <% if (kind === 'invoice' && doc.correspondent?.id != null) { %>
           <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline" title="What hcs-app has learned about this supplier's invoices, and teaching it">How it's read</a>
         <% } %>
-        <% const choices = locals.supplierChoices || []; %>
-        <% if (choices.length) { %>
-          <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-xs space-y-2" data-supplier-choices>
-            <p class="text-amber-700 dark:text-amber-400"><i class="bi bi-exclamation-triangle-fill text-amber-600"></i> <%= choices.length %> KashFlow suppliers are called <strong><%= doc.correspondent?.name %></strong>. Which one is this for?</p>
-            <% if (!locked) { %>
-              <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/supplier" class="flex flex-wrap gap-2">
-                <%- include('../partials/csrfHidden') %>
-                <% choices.filter((s) => !s.archived).forEach((s) => { %>
-                  <button type="submit" name="supplier" value="<%= s.label %>" class="<%= smallBtn %>"><i class="bi bi-person-check"></i> <%= s.code %></button>
-                <% }) %>
-              </form>
-              <% if (choices.every((s) => s.archived)) { %><p class="text-gray-500 dark:text-gray-400">All of them are archived in KashFlow. Unarchive the right one there first.</p><% } %>
-            <% } %>
-          </div>
-        <% } %>
         <% if ((locals.supplierOptions || []).length && !locked) { %>
           <%# The KashFlow supplier is the Paperless correspondent, named "<Name> (<Code>)" %>
           <details class="group text-xs" data-supplier-picker>
@@ -438,7 +423,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
                 <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Materials lines</span><span><%= values.materials != null ? gbp(values.materials) : '—' %></span></div>
               <% } %>
               <% if (!c.supplier) { %>
-                <p class="text-xs text-gray-500 dark:text-gray-400"><i class="bi bi-info-circle"></i> CIS deduction not shown: <%= (locals.supplierChoices || []).length ? 'pick which KashFlow supplier this is under Supplier.' : doc.correspondent?.name ? `"${doc.correspondent.name}" doesn't match a KashFlow supplier by name.` : 'no supplier is set on this document.' %></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400"><i class="bi bi-info-circle"></i> CIS deduction not shown: <%= doc.correspondent?.name ? `"${doc.correspondent.name}" doesn't match a KashFlow supplier by name.` : 'no supplier is set on this document.' %></p>
               <% } else if (c.ratePct == null) { %>
                 <p class="text-xs text-gray-500 dark:text-gray-400"><i class="bi bi-info-circle"></i> CIS deduction: mark a line as Labour and save to see it.</p>
               <% } else { %>
@@ -594,8 +579,6 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
             <p><i class="bi bi-exclamation-triangle-fill text-amber-600"></i> Couldn't read the statement: <%= st.error %></p>
           <% } else if (!st.hasText) { %>
             <p><i class="bi bi-exclamation-triangle-fill text-amber-600"></i> The document has no OCR text to read. Ask Paperless to OCR it again, then Check again.</p>
-          <% } else if (!st.supplier && (locals.supplierChoices || []).length) { %>
-            <p><i class="bi bi-exclamation-triangle-fill text-amber-600"></i> More than one KashFlow supplier is called <strong><%= doc.correspondent?.name %></strong>. Pick which one under Supplier, then Check again.</p>
           <% } else if (!st.supplier) { %>
             <p><i class="bi bi-exclamation-triangle-fill text-amber-600"></i> No KashFlow supplier is named <strong><%= doc.correspondent?.name || '(no correspondent)' %></strong>, so there's nothing to set the statement against. Rename the correspondent in Paperless to the supplier's KashFlow name or code, or add the supplier to KashFlow.</p>
           <% } else { %>
