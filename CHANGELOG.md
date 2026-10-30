@@ -10,6 +10,9 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 ### Changed
 - Subcontractor draft: a line whose description says materials defaults to the materials nominal rather than the subcontract one (`paperless/draft.ejs`).
 
+### Security
+- `npm audit fix` (lockfile only): body-parser 1.20.9 (GHSA-27r3-jxmh-p828), multer 2.5.0 (GHSA-q7qp-rjg7-q26m), nodemailer 10.3.1 (GHSA-8c8m-p3m8-cjg8, GHSA-m943-m63m-w62w, GHSA-85x2-q946-cp5h) and qs 6.16.2 (GHSA-6pq8-jhm2-2vcw). CI's `npm audit --audit-level=high` failed on the first two.
+
 ## [6.76.0] - 2026-10-23
 
 ### Changed
