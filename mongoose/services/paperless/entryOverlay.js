@@ -32,6 +32,8 @@ export function entryAsCustomFields(entry) {
     put(`Price_Line${n}`, l.price);
     put(`Total_Line${n}`, l.total);
     put(`VAT_Line${n}`, l.vatRate);
+    // Subcontractor lines: labour or materials, for the draft's nominal (not a Paperless field)
+    put(`Role_Line${n}`, l.role);
   });
   return { fields: out, replacesLines: lines.length > 0 };
 }

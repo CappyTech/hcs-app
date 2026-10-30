@@ -378,24 +378,12 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
               <input id="dueDate" name="dueDate" type="date" value="<%= val(values.dueDate) %>" class="<%= inputCls('dueDate') %>" data-suggest-field="dueDate" <%= disabled %>>
               <p data-suggest-for="dueDate" hidden></p>
             </div>
-            <% if (locals.subcontractor) { %>
-              <%# Total goods is worked out from these and any other lines %>
-              <div>
-                <label class="<%= labelCls %>" for="labour">Labour £</label>
-                <input id="labour" name="labour" inputmode="decimal" value="<%= val(values.labour) %>" class="<%= inputCls('labour') %>" <%= disabled %>>
-              </div>
-              <div>
-                <label class="<%= labelCls %>" for="materials">Materials £</label>
-                <input id="materials" name="materials" inputmode="decimal" value="<%= val(values.materials) %>" class="<%= inputCls('materials') %>" <%= disabled %>>
-              </div>
-            <% } else { %>
             <div>
               <label class="<%= labelCls %>" for="totalGoods">Total goods £</label>
               <input id="totalGoods" name="totalGoods" inputmode="decimal" value="<%= val(values.totalGoods) %>" class="<%= inputCls('totalGoods') %>" data-suggest-field="totalGoods" <%= disabled %>>
               <p data-suggest-for="totalGoods" hidden></p>
             </div>
-            <% } %>
-            <div class="<%= locals.subcontractor ? 'col-span-2' : '' %>">
+            <div>
               <label class="<%= labelCls %>" for="totalVat">Total VAT £</label>
               <input id="totalVat" name="totalVat" inputmode="decimal" value="<%= val(values.totalVat) %>" class="<%= inputCls('totalVat') %>" data-suggest-field="totalVat" <%= disabled %>>
               <p data-suggest-for="totalVat" hidden></p>
@@ -409,10 +397,14 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
 
           <% if (locals.subcontractor) { const c = locals.cis || {}; const gbp = (n) => `£${Number(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; %>
             <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3 text-sm space-y-1" data-cis>
+              <% if (values.labour != null || values.materials != null) { %>
+                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Labour lines</span><span><%= values.labour != null ? gbp(values.labour) : '—' %></span></div>
+                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Materials lines</span><span><%= values.materials != null ? gbp(values.materials) : '—' %></span></div>
+              <% } %>
               <% if (!c.supplier) { %>
                 <p class="text-xs text-gray-500 dark:text-gray-400"><i class="bi bi-info-circle"></i> CIS deduction not shown: <%= doc.correspondent?.name ? `"${doc.correspondent.name}" doesn't match a KashFlow supplier by name.` : 'no supplier is set on this document.' %></p>
               <% } else if (c.ratePct == null) { %>
-                <p class="text-xs text-gray-500 dark:text-gray-400"><i class="bi bi-info-circle"></i> CIS deduction: enter the labour and save to see it.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400"><i class="bi bi-info-circle"></i> CIS deduction: mark a line as Labour and save to see it.</p>
               <% } else { %>
                 <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">CIS at <%= c.ratePct %>% on labour</span><span>−<%= gbp(c.deduction) %></span></div>
                 <% if (c.payable != null) { %>
@@ -425,21 +417,27 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
 
           <div id="lines">
             <div class="flex items-center gap-2 mb-1">
-              <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mr-auto"><%= locals.subcontractor ? 'Other lines' : 'Lines' %></h3>
+              <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mr-auto">Lines</h3>
               <% if (!locked) { %>
                 <button type="button" id="suggest-fill-lines" hidden class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-xs font-medium transition"><i class="bi bi-stars"></i> <span data-label></span></button>
               <% } %>
             </div>
             <% if (err('lines')) { %><p class="text-xs text-red-700 dark:text-red-400 mb-1"><%= err('lines') %></p><% } %>
-            <% if (locals.subcontractor) { %>
-              <p class="text-xs text-gray-400 mb-2">Only for anything that isn't labour or materials<%= lineCount ? '. Clear every box on a line to remove it' : ': use Add line' %>.</p>
-            <% } else { %>
-            <p class="text-xs text-gray-400 mb-2">Clear every box on a line to remove it. Total is worked out from quantity × price if left blank.</p>
-            <% } %>
+            <p class="text-xs text-gray-400 mb-2">Clear every box on a line to remove it. Total is worked out from quantity × price if left blank.<%= locals.subcontractor ? ' Mark each line Labour or Materials: CIS is taken off the labour.' : '' %></p>
             <div class="space-y-3" data-lines>
               <% for (let i = 0; i < lineCount; i++) { const l = (values.lines || [])[i] || {}; %>
                 <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2" data-line="<%= i %>">
+                  <% if (locals.subcontractor) { const role = l.role || 'labour'; %>
+                    <div class="flex items-center gap-2">
+                      <div class="text-xs text-gray-400 mr-auto" data-line-label>Line <%= i + 1 %></div>
+                      <select name="lines[<%= i %>][role]" aria-label="Line <%= i + 1 %> labour or materials" data-line-role class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" <%= disabled %>>
+                        <option value="labour" <%= role === 'labour' ? 'selected' : '' %>>Labour</option>
+                        <option value="materials" <%= role === 'materials' ? 'selected' : '' %>>Materials</option>
+                      </select>
+                    </div>
+                  <% } else { %>
                   <div class="text-xs text-gray-400" data-line-label>Line <%= i + 1 %></div>
+                  <% } %>
                   <input name="lines[<%= i %>][description]" value="<%= val(l.description) %>" placeholder="Description" aria-label="Line <%= i + 1 %> description" class="<%= inputCls(`lines.${i}.description`) %>" <%= disabled %>>
                   <div class="grid grid-cols-4 gap-2">
                     <input name="lines[<%= i %>][quantity]" value="<%= val(l.quantity) %>" placeholder="Qty" inputmode="decimal" aria-label="Line <%= i + 1 %> quantity" class="<%= inputCls(`lines.${i}.quantity`) %>" <%= disabled %>>

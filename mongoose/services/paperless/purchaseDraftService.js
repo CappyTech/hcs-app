@@ -302,6 +302,9 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     } else if (base === "nominal" || base === "nominalcode") {
       const n = num(c.value);
       entry.NominalCode = Number.isFinite(n) ? Number(n) : undefined;
+    } else if (base === "role" && (c.value === "labour" || c.value === "materials")) {
+      // Subcontractor line from the entry screen; picks the draft's default nominal, never sent
+      entry.Role = c.value;
     }
   }
   if (lineGroups.size > 0) {
@@ -485,6 +488,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
           VATLevel: li.VATLevel != null ? li.VATLevel : undefined,
           GrossAmount: li.GrossAmount != null ? li.GrossAmount : undefined,
           NominalCode: li.NominalCode != null ? li.NominalCode : undefined,
+          ...(li.Role ? { Role: li.Role } : {}),
         });
       }
     }
