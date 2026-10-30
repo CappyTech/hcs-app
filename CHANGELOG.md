@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.86.1] - 2026-10-30
+
+### Fixed
+- The document reader got invoices whose unit prices include VAT wrong (Screwfix layout: Unit Price, Sub Total and Gross include VAT, Net is the real line total).
+  - Line prices are now net (Net ÷ quantity), so quantity × price is the line total, which is what the entry checks and KashFlow expect. Before, the line had the VAT-inclusive price and the net total.
+  - Total goods comes from the Net column on the totals row, not the gross "Sub total". The VAT column's heading sits over two rows, and its top row ("VAT" over "Applied") was out of reach, so no VAT figure was found and the goods + VAT = total check couldn't run.
+  - `READER_VERSION` 7, so stored readings are read again.
+
 ## [6.86.0] - 2026-10-30
 
 ### Added

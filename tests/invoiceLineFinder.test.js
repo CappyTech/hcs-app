@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { toItems } from '../public/js/invoice-field-finder.js';
+import { toItems, findFields } from '../public/js/invoice-field-finder.js';
 import lineFinder from '../public/js/invoice-line-finder.js';
 
 const { findLines, fillMissingRates, findPaymentTerms, findVatNumbers, normaliseVatNumber, parseNumber } = lineFinder;
@@ -125,7 +125,7 @@ describe('line items', () => {
     ]);
   });
 
-  it('Screwfix: a heading over three rows, net taken from "Net", not the gross "Sub Total"', () => {
+  it('Screwfix: a heading over three rows, net taken from "Net", not the gross "Sub Total", and a net price', () => {
     const lines = findLines(page([
       ['Product', 29.4, 566, 22.7, 6], ['Description', 126.4, 566, 33, 6], ['Qty', 237.5, 566, 10, 6], ['Unit', 270.7, 569, 11.7, 6], ['Price', 269.2, 563, 14.7, 6],
       ['Sub', 312.8, 569, 11.3, 6], ['Total', 311.3, 563, 14.3, 6], ['Discount', 344.9, 569, 25.7, 6], ['%', 355.1, 563, 5.3, 6], ['Discount', 384.2, 569, 25.7, 6], ['Value', 389.1, 563, 16, 6],
@@ -137,7 +137,7 @@ describe('line items', () => {
     assert.equal(lines.length, 1);
     assert.equal(lines[0].total, 19.99);
     assert.equal(lines[0].quantity, 1);
-    assert.equal(lines[0].price, 23.99);
+    assert.equal(lines[0].price, 19.99); // the printed 23.99 includes VAT
     assert.equal(lines[0].vatRate, 20);
     assert.match(lines[0].description, /FIRECHIEF 1KG ABC EXTINGUISHER/);
   });
@@ -220,5 +220,41 @@ describe('VAT numbers', () => {
   });
   it('parses cell numbers', () => {
     assert.deepEqual(['6.00 EA', '£1,234.50', '20%', 'S', '-3'].map(parseNumber), [6, 1234.5, 20, null, -3]);
+  });
+});
+
+// Screwfix's layout with two lines and its totals boxes (made-up figures):
+// prices include VAT, "Sub total" is gross, Net and VAT Applied are the real split
+describe('VAT-inclusive prices (Screwfix layout, two lines)', () => {
+  const items = page([
+    ['Product', 29.4, 566, 22.7, 6], ['Description', 126.4, 566, 33, 6], ['Qty', 237.5, 566, 10, 6], ['Unit', 270.7, 569, 11.7, 6], ['Price', 269.2, 563, 14.7, 6],
+    ['Sub', 312.8, 569, 11.3, 6], ['Total', 311.3, 563, 14.3, 6], ['Discount', 344.9, 569, 25.7, 6], ['%', 355.1, 563, 5.3, 6], ['Discount', 384.2, 569, 25.7, 6], ['Value', 389.1, 563, 16, 6],
+    ['Gross', 430.3, 566, 17.3, 6], ['Net', 476.1, 566, 9.7, 6], ['VAT', 516.8, 569, 12, 6], ['Applied', 511.8, 563, 22, 6], ['VAT', 550.9, 569, 12, 6], ['%', 554.2, 563, 5.3, 6],
+    ['11111', 31.9, 553, 17.7, 6], ['WIDGET A', 59.4, 553, 60, 6], ['2', 240.8, 553, 3.3, 6], ['15.00', 279.5, 553, 15, 6], ['30.00', 321.4, 553, 15, 6],
+    ['0.00', 361.4, 553, 11.7, 6], ['0.00', 403.4, 553, 11.7, 6], ['30.00', 441.9, 553, 15, 6], ['25.00', 483.9, 553, 15, 6], ['5.00', 529.1, 553, 11.7, 6], ['20.0', 555.3, 553, 11.7, 6],
+    ['22222', 31.9, 545, 17.7, 6], ['WIDGET B', 59.4, 545, 60, 6], ['1', 240.8, 545, 3.3, 6], ['12.00', 279.5, 545, 15, 6], ['12.00', 321.4, 545, 15, 6],
+    ['0.00', 361.4, 545, 11.7, 6], ['0.00', 403.4, 545, 11.7, 6], ['12.00', 441.9, 545, 15, 6], ['10.00', 483.9, 545, 15, 6], ['2.00', 529.1, 545, 11.7, 6], ['20.0', 555.3, 545, 11.7, 6],
+    ['Sub total', 263.7, 532, 25.7, 6], ['42.00', 321.4, 532, 15, 6], ['0.00', 403.4, 532, 11.7, 6], ['£42.00', 438, 532, 18.3, 6], ['£35.00', 480.5, 532, 18.3, 6], ['£7.00', 526, 532, 15, 6],
+    ['Total Paid:', 400, 515, 30, 6], ['£42.00', 535, 515, 18.3, 6],
+  ]);
+
+  it('gives each line a net price, so quantity × price is the net total', () => {
+    assert.deepEqual(brief(findLines(items)), [
+      ['11111 WIDGET A', 2, 12.5, 25, 20],
+      ['22222 WIDGET B', 1, 10, 10, 20],
+    ]);
+  });
+
+  it('takes total goods from Net, not the gross "Sub total"', () => {
+    const f = findFields(items);
+    assert.deepEqual([f.totalGoods?.value, f.totalVat?.value, f.invoiceTotal?.value], ['35.00', '7.00', '42.00']);
+  });
+
+  it('leaves a price alone when quantity × price is already the total', () => {
+    const plain = page([
+      ['Description', 100, 566, 40, 6], ['Qty', 240, 566, 10, 6], ['Price', 280, 566, 15, 6], ['Net', 480, 566, 10, 6], ['Gross', 430, 566, 17, 6],
+      ['WIDGET C', 100, 553, 40, 6], ['2', 241, 553, 3, 6], ['5.00', 280, 553, 15, 6], ['12.00', 432, 553, 15, 6], ['10.00', 481, 553, 15, 6],
+    ]);
+    assert.deepEqual(brief(findLines(plain)), [['WIDGET C', 2, 5, 10, null]]);
   });
 });
