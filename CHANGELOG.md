@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.82.1] - 2026-10-30
+
+### Fixed
+- Documents stayed in the Paperless `inbox` after being entered and sent to KashFlow. Paperless only drops `inbox` when a document is saved in its web interface, and the old send wiped every tag, so nothing removed it once entry moved to hcs-app. Complete entry and the KashFlow send now remove `inbox` in the same `modify_tags` call (new `inbox` key in `paperlessTagsConfig.js`, id 3, `PAPERLESS_TAG_INBOX_ID`). Documents already sent keep the tag until it is bulk-removed in Paperless.
+
 ## [6.82.0] - 2026-10-30
 
 ### Added

@@ -1336,12 +1336,12 @@ export const sendDraftToKashflow = async (req, res, next) => {
           );
         }
 
-        // Add `added` and remove `data entry done` in one atomic bulk_edit.
-        // Never replace the tag set: that wiped notified/*, credit/refund,
-        // inbox, the type tags and the queue-exclusion tags on every send.
+        // Add `added` and remove `data entry done` and `inbox` in one atomic
+        // bulk_edit. Never replace the tag set: that wiped notified/*,
+        // credit/refund, the type tags and the queue-exclusion tags on every send.
         await modifyPaperlessDocumentTags(paperlessId, {
           add: ["added"],
-          remove: ["dataEntryDone"],
+          remove: ["dataEntryDone", "inbox"],
         }).catch((e) => {
           logger.warn(
             `modifyPaperlessDocumentTags failed for paperlessId=${paperlessId}: ${e.message}`,

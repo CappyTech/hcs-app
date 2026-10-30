@@ -635,7 +635,8 @@ export async function completeEntry(OcrDocument, paperlessId, actor, deps = {}) 
   if (!res.ok) return res;
   const paperlessWarning = await tellPaperless(
     `Adding "data entry done" to ${paperlessId}`,
-    () => d.modifyTags(paperlessId, { add: ['dataEntryDone'] }),
+    // Out of the Paperless inbox too: saving in Paperless used to do that
+    () => d.modifyTags(paperlessId, { add: ['dataEntryDone'], remove: ['inbox'] }),
     'Add the "data entry done" tag in Paperless so the invoice email is sent.',
   );
   const notification = await d.notify('invoice', paperlessId, { actor });
