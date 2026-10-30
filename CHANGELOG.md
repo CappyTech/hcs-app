@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.85.0] - 2026-10-30
+
+### Added
+- Weekly attendance flow reads **approved holiday requests** and **bank and company holidays**. Holiday requests stay the record of leave (approving one already adds to the employee's taken days), so the flow never writes holiday attendance.
+  - Days covered by an approved request show as "On holiday", "Unpaid leave" or "On leave" (linking to the request) and can't be recorded as work. Recording also skips them on the server.
+  - Bank holidays (England and Wales) and company holidays start unticked and are labelled, but can still be ticked for people who worked them.
+  - New check: **Work recorded on an approved holiday**.
+
+### Fixed
+- An employee on approved holiday all week was flagged as "Assigned but no attendance on any weekday".
+- People with only holiday, sick or off days were flagged as "Attendance from people not on any assignment"; only work and training need an assignment.
+
 ## [6.84.0] - 2026-10-30
 
 ### Added

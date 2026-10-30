@@ -206,7 +206,8 @@
       <h2 class="<%= h2 %>">3. Days worked</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400">
         Tick the days each person worked and record them. They're saved as pending work against the contract and its KashFlow project.
-        Days already recorded are shown and never overwritten. For sick, holiday, day rates or a different contract, use the
+        Days already recorded are shown and never overwritten. Approved holiday requests block the day; bank and company holidays start unticked.
+        For sick, day rates or a different contract, use the
         <a href="/weekly/<%= week.year %>/<%= week.week %>" class="text-green-700 dark:text-green-400 hover:underline">full grid</a>.
       </p>
     </div>
@@ -254,7 +255,10 @@
                     <% cells.forEach((cell) => { %>
                       <td class="px-2 py-2 text-center">
                         <% if (cell.canFill) { %>
-                          <input type="checkbox" name="days[<%= p.key %>]" value="<%= cell.day %>" <%= cell.weekday && !lockedRun ? 'checked' : '' %> class="rounded text-green-600" aria-label="<%= p.name %> worked <%= fmtDay(cell.day) %>">
+                          <input type="checkbox" name="days[<%= p.key %>]" value="<%= cell.day %>" <%= cell.suggest && !lockedRun ? 'checked' : '' %> class="rounded text-green-600" aria-label="<%= p.name %> worked <%= fmtDay(cell.day) %>">
+                          <% if (cell.closure) { %><span class="block text-[11px] text-gray-400 dark:text-gray-500" title="<%= cell.closure %>">Bank hol.</span><% } %>
+                        <% } else if (!cell.records.length && cell.leave) { %>
+                          <a href="<%= cell.leave.uuid ? `/holidayRequest/read/${cell.leave.uuid}` : '#' %>" class="block text-[11px] px-1.5 py-0.5 rounded border bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-700 hover:underline"><%= cell.leave.label %></a>
                         <% } else { %>
                           <% cell.records.forEach((r) => { %>
                             <span class="block text-[11px] px-1.5 py-0.5 rounded border <%= statusPill[r.status] || statusPill.pending %>" title="<%= r.status %>"><%= recordLabel(r) %></span>
