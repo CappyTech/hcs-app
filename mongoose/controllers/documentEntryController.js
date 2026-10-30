@@ -97,6 +97,8 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
   const subcontractor = entry.isSubcontractorEntry(doc);
   const v = values || entry.formValues(doc);
   const lineCount = Math.max((v.lines || []).length, 1) + extraLines;
+  // Subcontractor invoices: the CIS deduction and the VAT case
+  const sub = await subcontractorChecks(doc, v);
   const hints = kind === 'invoice' ? await readingSvc.hintsFor(doc).catch(() => null) : null;
   const isAdmin = req.user?.role === 'admin';
   const notifications = await notifySvc.historyFor(mdb.PAPERLESS?.NotificationLog, doc.paperlessId).catch(() => []);
@@ -109,11 +111,11 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     doc,
     kind,
     subcontractor,
-    ...(await subcontractorChecks(doc, v)),
+    ...sub,
     values: v,
     lineCount,
     errors,
-    warnings: kind === 'invoice' ? entry.consistencyWarnings(doc.entry) : [],
+    warnings: kind === 'invoice' ? entry.consistencyWarnings(doc.entry, { cisPct: sub.cis?.ratePct }) : [],
     // What an invoice legally needs that this one doesn't seem to show
     legal: kind === 'invoice' ? entry.invoiceProblems({
       ocrText: doc.ocrText, reading: doc.reading, docVatNumbers: supplierVatNumbers(doc), values: v, company: companyForChecks(),

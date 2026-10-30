@@ -118,6 +118,9 @@ export const FIELDS = [
     field: 'invoiceTotal', label: 'Invoice total', type: 'money',
     labels: [
       { re: /(total\s*due|inv(oice|\.)?\s*total|amount\s*due|balance\s*due|grand\s*total|total\s*\(?\s*inc(l(uding)?)?\.?\s*(vat|tax)\)?|total\s*payable|amount\s*payable|total\s*amount|total\s*paid)(?=\W|$)/iy, below: true },
+      // "Gross = £6,901.09": a subcontractor's total before the CIS deduction,
+      // which findFields prefers when the "Invoice Total" is after it
+      { re: /gross(\s*(total|amount|value))?(?=\W|$)/iy, below: false, rank: 2 },
       // Bare "Total" (or "Total Charge"), but not the goods or VAT subtotals
       { re: /total\b(?!\s*\(?\s*(goods|vat|net|ex|excl|excluding|before|tax|qty|quantity|weight|items?|discount|units?)\b)/iy, below: false, rank: 3 },
     ],
@@ -461,8 +464,34 @@ function valueAtSpot(items, def, spot) {
  * @param {object} [opts] { pageWidth, layout: { field: {page, x, y, w, h} } } —
  *   layout is where this supplier's earlier invoices had each field
  */
+// "CIS Deductions @ 20% = £1,367.01", "Less CIS deduction 300.00", "Deduction 300.00",
+// but not "Gross = £6,901.09 (Labour before tax deductions + Materials)"
+const isCisRow = (text) => !/\bbefore\b/i.test(text)
+  && (/\bc\.?\s?i\.?\s?s\b/i.test(text) || /^\s*(less\s+)?deduct(ed|ion|ions)?\b/i.test(text));
+
+/**
+ * The CIS deductions printed on a subcontractor's invoice. A deduction is
+ * neither VAT nor a total, and an "Invoice Total" printed after it is what's
+ * left to pay, not what the invoice is for.
+ */
+export function findCisDeductions(items) {
+  const out = new Set();
+  for (const row of groupRows(items)) {
+    if (!isCisRow(row.items.map((it) => it.str).join(' '))) continue;
+    for (const it of row.items) {
+      for (const word of it.str.split(/[\s=]+/)) {
+        const v = parseMoney(word);
+        if (v != null && Number(v) > 0) out.add(v);
+      }
+    }
+  }
+  return out;
+}
+
 export function findFields(items, opts = {}) {
   const cands = findCandidates(items, opts);
+  const cis = findCisDeductions(items);
+  const notCis = (c) => !cis.has(c.value);
   const layout = opts.layout || {};
   for (const def of FIELDS) {
     const spot = layout[def.field];
@@ -475,6 +504,14 @@ export function findFields(items, opts = {}) {
       if (at && !list.some((c) => c.value === at.value)) list.push(at);
     }
     list.sort((p, q) => p.score - q.score);
+  }
+  if (cis.size) {
+    for (const f of ['totalGoods', 'totalVat', 'invoiceTotal']) cands[f] = cands[f].filter(notCis);
+    // A total that is another total less a CIS deduction is what's left to pay:
+    // the invoice is for the larger one, before the deduction
+    const [first] = cands.invoiceTotal;
+    const gross = first && cands.invoiceTotal.find((c) => [...cis].some((d) => near(Number(first.value) + Number(d), c.value)));
+    if (gross) cands.invoiceTotal = [gross, ...cands.invoiceTotal.filter((c) => c !== gross)];
   }
   const pick = Object.fromEntries(Object.entries(cands).map(([k, v]) => [k, v[0] || null]));
   const fits = (g, v, t) => g && v && t && g !== t && near(Number(g.value) + Number(v.value), t.value);

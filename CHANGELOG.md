@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.80.1] - 2026-10-30
+
+### Fixed
+- Day-by-day subcontractor invoices: the invoice's own summary under the last day ("Invoice number …", then the month's labour total) was read as another line for that day. A day now ends at the first other row after its amounts (`findDayLines`).
+- A subcontractor's CIS deduction ("CIS Deductions @ 20% = £…") is never read as the VAT, goods or invoice total, and when the printed "Invoice Total" is what's left after the deduction, the reader takes the gross before it ("Gross = £…", now a total label) (`findCisDeductions`, `findFields` in `invoice-field-finder.js`). Stored readings are redone (`READER_VERSION` 5).
+- Entry screen, Subcontractor Invoices: a CIS deduction typed as the VAT, or an invoice total entered after the deduction, is explained ("CIS isn't VAT", "enter the gross") instead of three "doesn't add up" warnings, live and in Checks, using the supplier's CIS rate and the labour lines (`cisChecks` in `entry-checks.js`; `liveChecks`, `consistencyWarnings`).
+
 ## [6.80.0] - 2026-10-30
 
 ### Added

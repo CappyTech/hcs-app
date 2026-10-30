@@ -37,11 +37,51 @@ const isBlank = (l) => ['description', 'quantity', 'price', 'total', 'vatRate'].
  * @param {object} header  { totalGoods, totalVat, invoiceTotal } as typed
  * @param {Array} lines    [{ description, quantity, price, total, vatRate }] as typed
  */
-export function liveChecks(header, lines) {
+/**
+ * A subcontractor invoice's CIS deduction in the wrong place: typed as the
+ * VAT, or taken off the invoice total (the total for KashFlow is the gross;
+ * the CIS comes off when it's paid). Shared by the live check and the server.
+ * @param {{totalGoods, totalVat, invoiceTotal}} header
+ * @param {number|string|null} labour  the labour lines' total
+ * @param {number|string|null} cisPct  the supplier's CIS rate, in percent
+ * @returns {{messages: string[], vatIsCis: boolean, totalAfterCis: boolean}}
+ */
+export function cisChecks(header, labour, cisPct) {
+  const res = { messages: [], vatIsCis: false, totalAfterCis: false };
+  const lab = num(labour);
+  const pct = Number(cisPct);
+  if (lab == null || !(lab > 0) || !(pct > 0)) return res;
+  // Suppliers work it out on the labour as printed, so allow a couple of pence
+  const deduction = Math.round(lab * pct) / 100;
+  const near = (a, b) => Math.abs(a - b) <= 0.02 + 1e-9;
+  const goods = num(header.totalGoods);
+  const vat = num(header.totalVat);
+  const total = num(header.invoiceTotal);
+  if (vat != null && vat > 0 && near(vat, deduction)) {
+    res.vatIsCis = true;
+    res.messages.push(`Total VAT ${money(vat)} is the CIS deduction (${pct}% of the labour). CIS isn't VAT: enter VAT as 0, unless the invoice charges VAT as well.`);
+  }
+  if (goods != null && total != null) {
+    const gross = goods + (res.vatIsCis ? 0 : vat ?? 0);
+    if (near(gross - deduction, total)) {
+      res.totalAfterCis = true;
+      res.messages.push(`The invoice total ${money(total)} is what's left after the ${money(deduction)} CIS deduction. Enter the gross, ${money(gross)}: the CIS comes off when it's paid.`);
+    }
+  }
+  return res;
+}
+
+/**
+ * @param {object} [cis] { labour, cisPct } on a subcontractor invoice, so the
+ *   CIS deduction is explained rather than reported as totals not adding up
+ */
+export function liveChecks(header, lines, { labour = null, cisPct = null } = {}) {
   const out = [];
   const goods = num(header.totalGoods);
   const vat = num(header.totalVat);
   const total = num(header.invoiceTotal);
+  const cis = cisChecks(header, labour, cisPct);
+  out.push(...cis.messages);
   lines.forEach((l, i) => {
     const problem = isBlank(l) ? null : vatRateProblem(l.vatRate, i + 1);
     if (problem) out.push(problem);
@@ -59,14 +99,14 @@ export function liveChecks(header, lines) {
     const sum = withTotals.reduce((s, l) => s + l.t, 0);
     if (off(sum, goods)) out.push(`Lines add up to ${money(sum)}, but total goods is ${money(goods)}.`);
   }
-  if (vat != null && withTotals.length && withTotals.every((l) => l.rate != null)) {
+  if (vat != null && !cis.vatIsCis && withTotals.length && withTotals.every((l) => l.rate != null)) {
     const lineVat = withTotals.reduce((s, l) => s + (l.t * l.rate) / 100, 0);
     // Suppliers round VAT per line or on the total, so allow a penny a line
     if (off(lineVat, vat, Math.max(0.02, 0.01 * withTotals.length))) {
       out.push(`VAT at the line rates comes to ${money(lineVat)}, but total VAT is ${money(vat)}.`);
     }
   }
-  if (goods != null && vat != null && total != null && off(goods + vat, total)) {
+  if (goods != null && vat != null && total != null && !cis.vatIsCis && !cis.totalAfterCis && off(goods + vat, total)) {
     out.push(`Goods ${money(goods)} + VAT ${money(vat)} is ${money(goods + vat)}, not the invoice total ${money(total)}.`);
   }
   return out;

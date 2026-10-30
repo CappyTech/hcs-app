@@ -311,7 +311,14 @@ function renderLinesButton() {
 function renderChecks() {
   if (!checksBox) return;
   const header = Object.fromEntries(Object.entries(inputs).map(([f, i]) => [f, i.value.trim()]));
-  const problems = liveChecks(header, formLines());
+  // A subcontractor invoice: the labour lines' total and the supplier's CIS rate
+  const cisPct = form?.dataset.cisRate || null;
+  const labour = cisPct ? lineBlocks().reduce((s, b) => {
+    if (b.querySelector('[data-line-role]')?.value !== 'labour') return s;
+    const t = Number(String(lineInput(b, 'total')?.value || '').replace(/[£,\s]/g, ''));
+    return Number.isFinite(t) ? s + t : s;
+  }, 0) : null;
+  const problems = liveChecks(header, formLines(), { labour, cisPct });
   checksBox.replaceChildren();
   checksBox.hidden = !problems.length;
   if (!problems.length) return;
