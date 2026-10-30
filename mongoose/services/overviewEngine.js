@@ -9,6 +9,7 @@ import payrollOverviewService from './payrollOverviewService.js';
 import currencyService from '../../services/currencyService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
 import taxService from '../../services/taxService.js';
+import weeklyFlowService from './weeklyFlowService.js';
 
 /**
  * Overview engine: turns the definitions in config/overviews into page data.
@@ -423,6 +424,47 @@ customPanels.contractsWithoutAssignments = async (req) => {
   };
 };
 
+// This payroll week's flow (weeklyFlowService), loaded once per request for
+// both weekly panels. Same access as the flow page itself.
+function currentWeekFlow(req) {
+  if (!canOpenPath(req, '/weekly-flow')) return null;
+  if (!req._weekFlow) req._weekFlow = weeklyFlowService.loadWeek();
+  return req._weekFlow;
+}
+const shortDay = (key) => key.split('-').reverse().slice(0, 2).join('/');
+
+customPanels.weeklyAttendanceSteps = async (req) => {
+  const loading = currentWeekFlow(req);
+  if (!loading) return null;
+  const { week, flow } = await loading;
+  const base = `/weekly-flow/${week.year}/${week.week}`;
+  const todo = flow.steps.filter((s) => !s.done).length;
+  return {
+    title: `Tax week ${week.week} (${shortDay(week.days[0])} to ${shortDay(week.days[6])})${todo ? `: ${todo} of 4 steps to do` : ': done'}`,
+    severity: todo ? 'warning' : null,
+    columns: ['Step', 'Done', 'Where it stands'],
+    rows: flow.steps.map((s) => ({ href: `${base}#step-${s.n}`, cells: [`${s.n}. ${s.label}`, s.done ? 'Yes' : 'No', s.summary] })),
+    total: flow.steps.length,
+    href: base,
+    linkLabel: 'Open this week',
+  };
+};
+
+customPanels.weeklyAttendanceChecks = async (req) => {
+  const loading = currentWeekFlow(req);
+  if (!loading) return null;
+  const { week, flow } = await loading;
+  return {
+    title: 'Needs fixing this week',
+    severity: flow.openChecks.some((c) => c.severity === 'critical') ? 'critical' : 'warning',
+    columns: ['Check', 'Count'],
+    rows: flow.openChecks.map((c) => ({ href: `/weekly-flow/${week.year}/${week.week}#step-4`, cells: [c.label, String(c.items.length)] })),
+    total: flow.openChecks.length,
+    href: `/weekly-flow/${week.year}/${week.week}#step-4`,
+    linkLabel: 'Review this week',
+  };
+};
+
 // KashFlow project financial health with its two actions (Run Financial Check,
 // Mark Complete). Rendered by its own partial: it has forms and modals the
 // generic list shape can't express. The POST routes stay in overviewRoutes.
@@ -551,6 +593,8 @@ const pinnablePanels = {
   unassignedEmployees: 'Active employees with no current assignment',
   subcontractorRecentPurchases: 'Subcontractor purchases in the last 30 days',
   contractsWithoutAssignments: 'Contracts in progress with no current assignments',
+  weeklyAttendanceSteps: "This week's attendance, step by step",
+  weeklyAttendanceChecks: 'Weekly attendance: needs fixing',
   holidayBalances: 'Holiday balances',
   upcomingHolidays: 'Holidays in the next 60 days',
   activeSessions: 'Signed-in sessions',

@@ -1,6 +1,6 @@
 <%#
   Weekly attendance flow: one payroll week, done in four steps.
-  Locals: week, flow, lockedRun, employees, subcontractors, dayLabels, canApprove, personKey
+  Locals: week, flow, lockedRun, employees, subcontractors, dayLabels, canApprove, personKey, crumbs
 %>
 <%
   const base = `/weekly-flow/${week.year}/${week.week}`;
@@ -28,7 +28,7 @@
   };
 %>
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <%- include('../partials/breadcrumbs', { crumbs: [{ label: 'Home', href: '/' }, { label: 'Projects', href: '/overview/projects' }], current: 'Weekly attendance' }) %>
+  <%- include('../partials/breadcrumbs', { crumbs, current: `Tax week ${week.week}` }) %>
 
   <!-- Header -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

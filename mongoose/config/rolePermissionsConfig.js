@@ -258,6 +258,7 @@ const routeAccess = {
   '/overview/vehicle':        ['admin'],
   '/overview/vehicleFuelLog': ['admin'],
   '/overview/vehicleMileageLog': ['admin'],
+  '/overview/weekly':         ['admin', 'accountant'], // same as /weekly-flow
   '/overview/vehicleService': ['admin'],
 
   // Subcontractor administration

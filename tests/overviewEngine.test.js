@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
 import registry from '../mongoose/config/overviews/index.js';
 import engine from '../mongoose/services/overviewEngine.js';
+import weeklyFlowService from '../mongoose/services/weeklyFlowService.js';
 
 const admin = { user: { role: 'admin', customPermissions: {} }, query: {} };
 const employeeUser = { user: { role: 'employee', customPermissions: {} }, query: {} };
@@ -122,7 +123,7 @@ describe('buildArea', () => {
 
   it('shows each child with its summary figures, each linking one level down', async () => {
     const page = await engine.buildArea(admin, 'human');
-    assert.deepStrictEqual(page.cards.map((c) => c.id), ['employee', 'leave', 'attendance', 'task']);
+    assert.deepStrictEqual(page.cards.map((c) => c.id), ['employee', 'leave', 'attendance', 'weekly', 'task']);
     const leave = page.cards.find((c) => c.id === 'leave');
     assert.equal(leave.href, '/overview/holiday'); // Holiday opens its overview, not a list
     assert.equal(leave.figures[0].href, '/holidayRequests?view=holidayRequest.pending');
@@ -272,7 +273,7 @@ describe('projects', () => {
 
   it('builds the Projects area from contracts, assignments and KashFlow projects', async () => {
     const page = await engine.buildArea(admin, 'projects');
-    assert.deepStrictEqual(page.cards.map((c) => c.id), ['contract', 'assignment', 'project']);
+    assert.deepStrictEqual(page.cards.map((c) => c.id), ['contract', 'assignment', 'weekly', 'project']);
   });
 
   it('passes $expr through untouched for income-against-target figures', () => {
@@ -461,5 +462,56 @@ describe('payroll, policies and admin', () => {
     assert.equal(sessions.href, null);
     assert.deepStrictEqual((await engine.buildArea(accountant, 'admin')).cards, []);
     assert.deepStrictEqual((await engine.buildArea(accountant, 'policies')).cards, []);
+  });
+});
+
+describe('weekly attendance overview', () => {
+  const accountant = { user: { role: 'accountant', customPermissions: {} }, query: {} };
+  const step = (n, done) => ({ n, key: `s${n}`, label: `Step ${n}`, done, summary: `summary ${n}` });
+  let loads;
+  beforeEach(() => {
+    patchModels();
+    loads = 0;
+    weeklyFlowService.loadWeek = async () => {
+      loads += 1;
+      return {
+        week: { year: 2026, week: 30, days: ['2026-10-24', '2026-10-25', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30'] },
+        flow: {
+          steps: [step(1, true), step(2, true), step(3, false), step(4, false)],
+          openChecks: [{ key: 'assignedNoAttendance', severity: 'critical', label: 'Assigned but no attendance', items: [{}, {}] }],
+        },
+      };
+    };
+  });
+
+  it('is a card in Projects and Human Resources', async () => {
+    for (const areaId of ['projects', 'human']) {
+      const area = await engine.buildArea(admin, areaId);
+      assert.ok(area.cards.some((c) => c.id === 'weekly' && c.href.startsWith('/overview/weekly')), areaId);
+    }
+  });
+
+  it('shows this week step by step and what needs fixing, from one load', async () => {
+    const page = await engine.buildNodeOverview(admin, 'weekly');
+    const steps = page.lists.find((l) => l.columns[0] === 'Step');
+    assert.match(steps.title, /Tax week 30 \(24\/10 to 30\/10\): 2 of 4 steps to do/);
+    assert.equal(steps.rows[2].href, '/weekly-flow/2026/30#step-3');
+    assert.deepStrictEqual(steps.rows[2].cells, ['3. Step 3', 'No', 'summary 3']);
+    const checks = page.lists.find((l) => l.title === 'Needs fixing this week');
+    assert.equal(checks.severity, 'critical');
+    assert.deepStrictEqual(checks.rows[0].cells, ['Assigned but no attendance', '2']);
+    assert.equal(loads, 1);
+    assert.equal(page.actions[0].href, '/weekly-flow');
+  });
+
+  it('opens for accountants, like the flow page, and not for employees', async () => {
+    assert.equal(engine.canOpenPath(accountant, '/overview/weekly'), true);
+    assert.equal(engine.canOpenPath(employeeUser, '/overview/weekly'), false);
+    assert.equal(await engine.customPanels.weeklyAttendanceSteps(employeeUser), null);
+    assert.equal(loads, 0);
+  });
+
+  it('leads the flow page breadcrumbs back through the overview', () => {
+    assert.deepStrictEqual(engine.breadcrumbs(admin, 'weekly').map((c) => c.href), ['/', '/overview/projects', '/overview/weekly']);
   });
 });
