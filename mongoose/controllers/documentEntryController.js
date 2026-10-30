@@ -66,8 +66,7 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
   const kind = entry.entryKind(doc);
   const subcontractor = entry.isSubcontractorEntry(doc);
   const v = values || entry.formValues(doc);
-  // A subcontractor invoice's labour and materials have their own boxes, so it may have no other lines
-  const lineCount = Math.max((v.lines || []).length, subcontractor ? 0 : 1) + extraLines;
+  const lineCount = Math.max((v.lines || []).length, 1) + extraLines;
   const hints = kind === 'invoice' ? await readingSvc.hintsFor(doc).catch(() => null) : null;
   const isAdmin = req.user?.role === 'admin';
   const notifications = await notifySvc.historyFor(mdb.PAPERLESS?.NotificationLog, doc.paperlessId).catch(() => []);
