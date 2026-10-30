@@ -1,0 +1,101 @@
+<%
+const fmtDate = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }) : '—';
+const lines = overview.lines || [];
+const problems = (overview.warnings || []).length;
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="flex items-center gap-3 mb-2">
+    <% if (isAdmin) { %>
+      <a href="/documents" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Documents</a>
+    <% } else { %>
+      <a href="/bank/statements" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Bank statements</a>
+    <% } %>
+    <span class="text-gray-400">/</span>
+    <h1 class="text-xl font-bold">Where to send documents</h1>
+  </div>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+    Email each kind of document to its own address and it is filed in Paperless and picked up here.
+    The addresses are set in Paperless's mail rules, so this page always shows what Paperless is doing now.
+  </p>
+
+  <% if (!overview.live) { %>
+    <div class="border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 mb-6">
+      <p class="text-sm text-gray-700 dark:text-gray-300">
+        <i class="bi bi-info-circle"></i>
+        Paperless can't be reached just now.
+        <% if (overview.seenAt) { %>
+          These are the addresses as last seen on <%= fmtDate(overview.seenAt) %>; they rarely change.
+        <% } else { %>
+          The addresses will show here once it is back. Try again in a few minutes.
+        <% } %>
+      </p>
+    </div>
+  <% } %>
+
+  <% if (isAdmin && problems) { %>
+    <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 mb-6">
+      <p class="text-sm text-amber-700 dark:text-amber-400">
+        <i class="bi bi-exclamation-triangle"></i>
+        <%= problems %> problem<%= problems === 1 ? '' : 's' %> with the mail rules hcs-app relies on.
+        <a href="/admin/config/paperless" class="underline">See the Paperless settings</a>.
+      </p>
+    </div>
+  <% } %>
+
+  <% if (lines.length) { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 mb-6">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Where to send it</h2>
+      <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+        <% lines.forEach(function (line) { %>
+          <li class="py-3 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 text-sm text-gray-700 dark:text-gray-300">
+            <span class="font-medium sm:w-56 shrink-0"><%= line.label %></span>
+            <% if (line.addresses.length) { %>
+              <span class="flex flex-col gap-1">
+                <% line.addresses.forEach(function (a) { %>
+                  <span>
+                    <i class="bi bi-arrow-right text-gray-400"></i>
+                    <% if (a.to) { %>
+                      <span class="font-mono text-xs break-all"><%= a.to %></span>
+                    <% } else { %>
+                      <span>any address on the documents mailbox</span>
+                    <% } %>
+                    <span class="text-gray-500 dark:text-gray-400">(<%= a.accepts %>)</span>
+                  </span>
+                <% }) %>
+              </span>
+            <% } else { %>
+              <span class="text-amber-700 dark:text-amber-400">
+                <i class="bi bi-exclamation-triangle"></i> No address is set up for these in Paperless at the moment. Ask an admin before sending any.
+              </span>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+        Send one document per email where you can. Anything sent to the wrong address is filed as the wrong type and won't appear in the right queue.
+      </p>
+    </div>
+  <% } %>
+
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">How this has changed</h2>
+    <% if (!history.length) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Nothing recorded yet. Changes to the mail rules in Paperless are recorded here from the first time they are read.</p>
+    <% } else { %>
+      <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+        <% history.forEach(function (h) { %>
+          <li class="py-3 flex flex-col sm:flex-row gap-1 sm:gap-3 text-sm text-gray-700 dark:text-gray-300">
+            <span class="text-gray-500 dark:text-gray-400 sm:w-56 shrink-0 font-mono text-xs pt-0.5"><%= fmtDate(h.takenAt) %></span>
+            <% if (h.baseline) { %>
+              <span>First recorded: <%= h.ruleCount %> mail rule<%= h.ruleCount === 1 ? '' : 's' %>.</span>
+            <% } else { %>
+              <ul class="space-y-1">
+                <% h.changes.forEach(function (c) { %><li><%= c.summary %></li><% }) %>
+              </ul>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+</div>

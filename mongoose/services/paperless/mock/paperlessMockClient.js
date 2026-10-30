@@ -35,6 +35,8 @@ export function resetMockPaperless() {
     correspondents: clone(fixtures.CORRESPONDENTS),
     customFields: clone(fixtures.CUSTOM_FIELDS),
     documents: clone(fixtures.DOCUMENTS),
+    mailAccounts: clone(fixtures.MAIL_ACCOUNTS),
+    mailRules: clone(fixtures.MAIL_RULES),
     calls: [],
     // Client method names whose next call should throw, e.g. to exercise a
     // fallback: state.failNext.add('setDocumentCustomFields'). Cleared once used.
@@ -206,6 +208,16 @@ export function makeMockClient() {
     },
     async listDocumentTypes() {
       return clone([...state.documentTypes].sort((a, b) => a.name.localeCompare(b.name)));
+    },
+    async listMailRules() {
+      maybeFail('listMailRules');
+      record('GET', '/mail_rules/');
+      return clone([...state.mailRules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id));
+    },
+    async listMailAccounts() {
+      maybeFail('listMailAccounts');
+      record('GET', '/mail_accounts/');
+      return clone(state.mailAccounts);
     },
     async updateDocumentType(documentId, documentTypeId) {
       if (!documentId) throw new Error('updateDocumentType requires documentId');

@@ -404,6 +404,28 @@ function makeClient() {
       }
       return out;
     },
+    /** Every mail rule: the to-address filters that file incoming email. Read-only. */
+    async listMailRules() {
+      const api = await createApi();
+      const out = [];
+      for (let page = 1; page <= 20; page++) {
+        const { data } = await api.get('/mail_rules/', { params: { page, page_size: 100, ordering: 'order' } });
+        out.push(...(data.results || []));
+        if (!data.next) break;
+      }
+      return out;
+    },
+    /** Every mail account the rules read from. Read-only. */
+    async listMailAccounts() {
+      const api = await createApi();
+      const out = [];
+      for (let page = 1; page <= 20; page++) {
+        const { data } = await api.get('/mail_accounts/', { params: { page, page_size: 100 } });
+        out.push(...(data.results || []));
+        if (!data.next) break;
+      }
+      return out;
+    },
     /** Set a document's type. */
     async updateDocumentType(documentId, documentTypeId) {
       if (!documentId) throw new Error('updateDocumentType requires documentId');

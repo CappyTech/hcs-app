@@ -134,6 +134,7 @@ export const GROUPS = [
       { key: 'PAPERLESS_WEBHOOK_SECRET', label: 'Webhook secret', type: 'secret', help: 'Shared secret the Paperless "Document added" workflow sends to `POST /api/paperless/webhook`, as `Authorization: Bearer …` or `X-Webhook-Secret`. Unset turns the webhook off (503).' },
       { key: 'PAPERLESS_FOLLOW_TAGS', label: 'Follow Paperless tags', type: 'boolean', help: 'Until cutover, move a document forward when its Paperless tags say it has progressed (data entry done, added, credit note, statement emailed). Default on. Turn off at cutover (H8).' },
       { key: 'PAPERLESS_RECONCILE_LOOKBACK_HOURS', label: 'Reconcile lookback (hours)', type: 'number', help: 'How far back the ingest reconciliation job looks for documents a webhook may have missed. Default 48.' },
+      { key: 'PAPERLESS_MAIL_RULES_CACHE_MS', label: 'Mail rules cache (ms)', type: 'number', help: 'How long the mail rules read from Paperless (for Where to send documents and the check on this page) are reused. Default 300000 (5 minutes).' },
       { key: 'PAPERLESS_PAGE_SIZE', label: 'Page size', type: 'number', help: 'Documents fetched per page during a grab. Default 50.' },
       { key: 'PAPERLESS_CONCURRENCY', label: 'Concurrency', type: 'number', help: 'Documents processed in parallel during a grab. Default 5.' },
       { key: 'PAPERLESS_AUTOINGEST_DEBOUNCE_MS', label: 'List-page grab debounce (ms)', type: 'number', help: 'Opening the OCR list only triggers a grab if the last one finished longer ago than this. Default 600000 (10 minutes).' },
