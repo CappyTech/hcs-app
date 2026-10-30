@@ -79,6 +79,17 @@ describe('PWA wiring', () => {
     assert.match(sw, /response\.type === 'basic'/);
   });
 
+  it('fetches code from the network first, so a deploy shows on the next load', () => {
+    // Serving the cached copy first ran the previous release's scripts on the first
+    // load after every deploy (an entry screen kept reading lines the old way).
+    const sw = read('public/service-worker.js');
+    const code = sw.match(/const CODE_PREFIXES = \[([^\]]+)\]/)?.[1] || '';
+    for (const prefix of ['/resources/css/', '/resources/js/', '/resources/vendor/']) {
+      assert.ok(code.includes(`'${prefix}'`), `${prefix} should be network-first`);
+    }
+    assert.match(sw, /if \(isCode\(url\)\) \{\s*event\.respondWith\(\s*caches\.open\(STATIC_CACHE\)\.then\(\(cache\) => fetch\(request\)/);
+  });
+
   it('precaches every asset the offline page embeds', () => {
     // Opportunistic caching is not enough: an offline device that never happened to
     // fetch the logo would render the fallback page with a broken image.

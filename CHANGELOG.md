@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.80.2] - 2026-10-30
+
+### Fixed
+- The first page load after a deploy ran the previous release's scripts: the service worker served cached JS and CSS first and only fetched the new files in the background, so a fix (such as 6.80.1's line reading) only showed on the second load. Code (`/resources/js/`, `/resources/css/`, `/resources/vendor/`) is now fetched from the network first, with the cached copy used only when offline; the server's `max-age=0` and ETag make an unchanged file a 304. Images are still served from the cache. The cache version is bumped to `v3`, so the old cache is dropped (`public/service-worker.js`).
+
 ## [6.80.1] - 2026-10-30
 
 ### Fixed
