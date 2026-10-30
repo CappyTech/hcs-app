@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.86.0] - 2026-10-30
+
+### Added
+- **Weekly attendance home tile.** The weekly attendance overview was only a card inside Projects and Human Resources, so it never appeared among the home page's overview tiles. It is now a top-level tile (admin and accountant) that opens `/overview/weekly`. This works through a new area option, `opens: '<nodeId>'`: a tile for a node's generated overview, with no area page of its own. Saved home layouts keep their own tiles, so tick it under **Customise home** to add it.
+
 ## [6.85.0] - 2026-10-30
 
 ### Added

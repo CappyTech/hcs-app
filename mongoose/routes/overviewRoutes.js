@@ -29,7 +29,9 @@ router.get('/overview/documents',
 // Looked up per request, so areas and overviews added or hidden from the
 // database work without a restart. Hand-built pages above take precedence.
 router.get('/overview/:id', async (req, res, next) => {
-  const area = overviews.getAreaByPath(req.path);
+  let area = overviews.getAreaByPath(req.path);
+  // A home tile that opens a node's overview (`opens`) serves that overview
+  if (area?.opens) area = null;
   const node = area ? null : overviews.getNodeByOverviewPath(req.path);
   if ((area && area.bespoke) || (!area && !node)) return next();
   return routeGuard(req, res, (err) => {
