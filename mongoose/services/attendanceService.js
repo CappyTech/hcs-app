@@ -446,9 +446,10 @@ const groupAttendanceByPerson = (
 
 
 /**
- * High-level week fetcher
+ * Payroll week (Saturday to Friday) for a tax year and week number. Either may
+ * be NaN: the current tax year, and the week containing today.
  */
-const getAttendanceForWeek = async (yearParam, weekParam) => {
+const resolvePayrollWeek = (yearParam, weekParam) => {
   const year = !isNaN(yearParam) ? yearParam : taxService.getCurrentTaxYear();
   const { start: startOfTaxYear, end: endOfTaxYear } = taxService.getTaxYearStartEnd(year);
 
@@ -477,6 +478,34 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
   const previousYear = requestedWeekNumber === 1 ? year - 1 : year;
   const nextWeek = requestedWeekNumber === totalWeeksInYear ? 1 : requestedWeekNumber + 1;
   const nextYear = requestedWeekNumber === totalWeeksInYear ? year + 1 : year;
+
+  return {
+    year,
+    week: requestedWeekNumber,
+    payrollWeekStart,
+    endDate,
+    previousYear,
+    previousWeek,
+    nextYear,
+    nextWeek,
+    days: Array.from({ length: 7 }, (_, i) => londonYMD(addLondonDays(payrollWeekStart, i))),
+  };
+};
+
+/**
+ * High-level week fetcher
+ */
+const getAttendanceForWeek = async (yearParam, weekParam) => {
+  const {
+    year,
+    week: requestedWeekNumber,
+    payrollWeekStart,
+    endDate,
+    previousYear,
+    previousWeek,
+    nextYear,
+    nextWeek,
+  } = resolvePayrollWeek(yearParam, weekParam);
 
   const {
     attendanceRecords,
@@ -762,6 +791,7 @@ const getLockedRunForDate = async (date) => {
 
 export default {
   getAttendanceForDay,
+  resolvePayrollWeek,
   fetchAttendanceForWeek,
   getAttendanceForWeek,
   groupAttendanceByPerson,
@@ -771,4 +801,4 @@ export default {
   getLockedRunForDate
 };
 
-export { getAttendanceForDay, fetchAttendanceForWeek, getAttendanceForWeek, groupAttendanceByPerson, fetchStatementsForWeek, fetchAssignmentsForWeek, fetchVehicleDeploymentsForWeek, getLockedRunForDate };
+export { getAttendanceForDay, resolvePayrollWeek, fetchAttendanceForWeek, getAttendanceForWeek, groupAttendanceByPerson, fetchStatementsForWeek, fetchAssignmentsForWeek, fetchVehicleDeploymentsForWeek, getLockedRunForDate };

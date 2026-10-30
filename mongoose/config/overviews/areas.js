@@ -44,6 +44,8 @@ export default [
     icon: 'bi-clipboard-check',
     description: 'Contracts, weekly assignments and KashFlow projects.',
     children: ['contract', 'assignment', 'project'],
+    // Shown only to those who can open the route (rolePermissionsConfig)
+    actions: [{ label: 'Do weekly attendance', href: '/weekly-flow', route: '/weekly-flow', icon: 'bi-calendar-check' }],
   },
   {
     id: 'subcontractors',

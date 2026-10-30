@@ -161,6 +161,7 @@ const routeAccess = {
   '/daily':               ['admin', 'accountant', 'employee', 'subcontractor'],
   '/weekly':              ['admin', 'accountant', 'employee', 'subcontractor'],
   '/weekly-management':   ['admin'],
+  '/weekly-flow':         ['admin', 'accountant'],
   '/attendance/submit':   ['employee', 'subcontractor'],
   '/attendance/approve':  ['admin'],
   '/attendance/reject':   ['admin'],
