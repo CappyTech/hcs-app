@@ -43,9 +43,9 @@ const paperlessGuard = [
 router.post("/api/paperless/webhook", webhookLimiter, webhookCtrl.documentAdded);
 
 router.get("/paperless/shadow-report", ...paperlessGuard, shadowCtrl.getShadowReport);
-// Where to email each kind of document. Wider than the other Paperless pages:
-// the bank statements page links here too. Keep in step with rolePermissionsConfig.
-router.get("/paperless/mail-rules", authService.ensureAuthenticated, authService.ensureRoles("admin", "accountant"), mailRuleCtrl.getGuide);
+// Where to email each kind of document. Same access as the other Paperless
+// pages; canOpenGuide in mailRuleController mirrors this guard for links to it.
+router.get("/paperless/mail-rules", ...paperlessGuard, mailRuleCtrl.getGuide);
 router.get("/paperless/queues", ...paperlessGuard, queueCtrl.getQueueHub);
 router.get("/paperless/queues/:queue", ...paperlessGuard, queueCtrl.getQueue);
 

@@ -9,6 +9,7 @@ process.env.PAPERLESS_URL = 'mock';
 import mailRules from '../mongoose/services/paperless/mailRuleService.js';
 import mockPaperless from '../mongoose/services/paperless/mock/paperlessMockClient.js';
 import { memoryModel } from './helpers/memoryModel.js';
+import { canOpenGuide } from '../mongoose/controllers/mailRuleController.js';
 
 const { readLive, normaliseRules, buildGuide, bankStatementAddresses, diffRules, recordSnapshot, loadHistory, loadOverview } = mailRules;
 const { makeMockClient, resetMockPaperless, mockPaperlessState } = mockPaperless;
@@ -181,13 +182,30 @@ describe('mail rule overview', () => {
 describe('mail rule wiring', () => {
   const read = (p) => fs.readFileSync(path.resolve(p), 'utf8');
 
-  it('is a scheduled job, a route open to admins and accountants, and linked from the queues and bank statements', () => {
+  it('is a scheduled job, a route with the Paperless pages\' access, and linked from the queues and bank statements', () => {
     assert.match(read('mongoose/services/jobRegistry.js'), /scheduler\.register\('paperless-mail-rules'/);
-    assert.match(read('mongoose/routes/paperlessRoutes.js'), /"\/paperless\/mail-rules", authService\.ensureAuthenticated, authService\.ensureRoles\("admin", "accountant"\)/);
-    assert.match(read('mongoose/config/rolePermissionsConfig.js'), /'\/paperless\/mail-rules':\s+\['admin', 'accountant'\]/);
+    assert.match(read('mongoose/routes/paperlessRoutes.js'), /"\/paperless\/mail-rules", \.\.\.paperlessGuard, mailRuleCtrl\.getGuide/);
+    assert.match(read('mongoose/config/rolePermissionsConfig.js'), /'\/paperless\/mail-rules':\s+\['admin'\]/);
     assert.match(read('mongoose/views/tailwindcss/paperless/queue.ejs'), /href="\/paperless\/mail-rules"/);
     const bank = read('mongoose/views/tailwindcss/bank/statements.ejs');
-    assert.match(bank, /href="\/paperless\/mail-rules"/);
+    assert.match(bank, /showMailRulesLink[\s\S]*href="\/paperless\/mail-rules"/);
     assert.ok(!/bank statements mailbox/.test(bank));
+  });
+
+  it('shows links to the guide only to people who can open it', () => {
+    assert.equal(canOpenGuide({ role: 'admin' }), true);
+    assert.equal(canOpenGuide({ role: 'accountant' }), false);
+    assert.equal(canOpenGuide({ role: 'accountant', customPermissions: { routes: ['/paperless/mail-rules'] } }), false, 'the documents department is needed too');
+    assert.equal(canOpenGuide({ role: 'accountant', customPermissions: { routes: ['/paperless/mail-rules'], departments: ['documents'] } }), true);
+    assert.equal(canOpenGuide(null), false);
+  });
+
+  it('shows the bank page its address, with the link only when allowed', async () => {
+    const render = (locals) => ejs.renderFile(path.resolve('mongoose/views/tailwindcss/bank/statements.ejs'),
+      { imports: [], accounts: [], layouts: [], selectedAccountId: null, csrfToken: 't', ...locals });
+    const hidden = await render({ bankAddresses: ['bank@example.test'], showMailRulesLink: false });
+    assert.match(hidden, /Statements emailed to\s*<span class="font-mono text-xs">bank@example\.test<\/span>/);
+    assert.ok(!/href="\/paperless\/mail-rules"/.test(hidden));
+    assert.match(await render({ bankAddresses: [], showMailRulesLink: true }), /href="\/paperless\/mail-rules"/);
   });
 });

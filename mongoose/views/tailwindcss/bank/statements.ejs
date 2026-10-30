@@ -29,7 +29,9 @@
       <% } %>
       are filed in Paperless and tagged <span class="font-mono text-xs">bank-statement</span>.
       This reads them and writes the outcome back as a tag. It also runs on its own every six hours.
-      <a href="/paperless/mail-rules" class="text-green-700 dark:text-green-400 hover:underline">Where to send documents</a>
+      <% if (locals.showMailRulesLink) { %>
+        <a href="/paperless/mail-rules" class="text-green-700 dark:text-green-400 hover:underline">Where to send documents</a>
+      <% } %>
     </p>
     <form method="POST" action="/bank/statements/grab">
       <%- include('../partials/csrfHidden') %>

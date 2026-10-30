@@ -7,7 +7,26 @@
 import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
 import mailRules from '../services/paperless/mailRuleService.js';
+import rbac from '../config/rolePermissionsConfig.js';
 import logger from '../../services/loggerService.js';
+
+export const GUIDE_PATH = '/paperless/mail-rules';
+
+/**
+ * True when this user gets past the guide's guards: the global route check,
+ * then paperlessGuard (admin or a custom grant for the route, plus the
+ * documents department). Used to show links to the guide only to people who
+ * can open it.
+ */
+export function canOpenGuide(user) {
+  if (!user) return false;
+  const perms = user.customPermissions || {};
+  const pattern = rbac.matchRoutePattern(GUIDE_PATH);
+  const roleOk = user.role === 'admin' || (perms.routes || []).includes(pattern);
+  return roleOk
+    && rbac.canAccessRoute(user.role, pattern, perms)
+    && rbac.canAccessDepartment(user.role, 'documents', perms);
+}
 
 export const getGuide = async (req, res, next) => {
   try {
@@ -32,4 +51,4 @@ export const getGuide = async (req, res, next) => {
   }
 };
 
-export default { getGuide };
+export default { GUIDE_PATH, canOpenGuide, getGuide };
