@@ -171,10 +171,11 @@
 									      applies to the synthetic 2-row fallback expansion; enumerated subcontractor lines
 									      are labour and default to the sub-contractors nominal, NOT the supplier default
 									      (which may be materials — that mis-nominal'd 8 of 9 lines on purchase #14522).
-									      A line that says it's materials (the entry screen's Materials box) gets materials. */ %>
+									      A line marked Materials on the entry screen (or, with no mark, saying so) gets materials. */ %>
+									<% const __isMaterials = li.Role ? li.Role === 'materials' : /material/i.test(li.Description || ''); %>
 									<% const __rowCode = (typeof li.NominalCode === 'number') ? li.NominalCode
 										: _fallbackExpanded ? ((idx === 0 ? _subcontrNomCode : _materialsNomCode) ?? supplierDefaultNominal ?? null)
-										: isSubcontractor ? ((/material/i.test(li.Description || '') ? _materialsNomCode : _subcontrNomCode) ?? supplierDefaultNominal ?? null)
+										: isSubcontractor ? ((__isMaterials ? _materialsNomCode : _subcontrNomCode) ?? supplierDefaultNominal ?? null)
 										: (supplierDefaultNominal ?? null); %>
 									<% const __nomInfo = (__rowCode != null && nominalMap) ? nominalMap[__rowCode] : null; %>
 									<% const __descFromNominal = __nomInfo ? (__nomInfo.Description || __nomInfo.Name || null) : null; %>

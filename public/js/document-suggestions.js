@@ -266,6 +266,13 @@ function addLineBlock() {
     // A copied error highlight would point at the wrong line
     input.className = input.className.replace('border-red-400 dark:border-red-600', 'border-gray-300 dark:border-gray-600');
   }
+  // A subcontractor line's Labour / Materials picker
+  const role = copy.querySelector('[data-line-role]');
+  if (role) {
+    role.name = role.name.replace(/^lines\[\d+\]/, `lines[${i}]`);
+    role.setAttribute('aria-label', (role.getAttribute('aria-label') || '').replace(/^Line \d+/, `Line ${i + 1}`));
+    role.value = 'labour';
+  }
   last.after(copy);
   wireLineBlock(copy);
   return copy;
@@ -283,6 +290,9 @@ function fillLines() {
     setValue(lineInput(b, 'price'), l ? cell(l.price) : '');
     setValue(lineInput(b, 'total'), l ? cell(l.total, 2) : '');
     setValue(lineInput(b, 'vatRate'), l ? cell(l.vatRate) : '');
+    // Guessed as the server does: materials if it says so, otherwise labour
+    const role = b.querySelector('[data-line-role]');
+    if (role && l) role.value = /material/i.test(l.description || '') ? 'materials' : 'labour';
   });
   renderLinesButton();
 }
@@ -323,8 +333,7 @@ let armed = null; // { input, field, label } waiting for a click on the PDF
 let refocusing = false;
 
 function describeInput(input) {
-  if (input.dataset.suggestField) return { field: input.dataset.suggestField, label: LABEL[input.dataset.suggestField] };
-  const m = input.name.match(/^lines\[(\d+)\]\[(\w+)\]$/);
+  if (input.dataset.suggestField) return { field: input.dataset.suggestField, label: LABEL[input.dataset.suggestField] };  const m = input.name.match(/^lines\[(\d+)\]\[(\w+)\]$/);
   if (m) return { field: `line.${m[2]}`, label: `line ${Number(m[1]) + 1} ${LINE_LABEL[m[2]] || m[2]}` };
   return null;
 }

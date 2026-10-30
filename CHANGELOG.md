@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.78.0] - 2026-10-30
+
+### Changed
+- Document entry screen, Subcontractor Invoices: 6.77.0's separate Labour and Materials boxes are gone, because subcontractor invoices list real lines (a day with both labour and materials is two lines). Total goods is a normal box again, and each line is marked **Labour** or **Materials** with a picker beside its line number. A line with no mark yet (from Paperless, an earlier save, or filled from the document) is guessed from its description: materials if it says so, otherwise labour. The CIS box now adds up the labour and materials lines, and takes the deduction off the labour lines. Complete entry needs a line again, as for purchases (`lineRole`, `parseEntryForm`, `formValues`, `completionErrors` in `documentEntryService.js`; `paperless/entry.ejs`, `document-suggestions.js`).
+- Subcontractor draft: each line's mark reaches the draft (`Role_LineN` from `entryOverlay.js`, `Role` on the draft's line items, never sent to KashFlow), so a Materials line defaults to the materials nominal; an unmarked line that says materials still does (`purchaseDraftService.js`, `paperless/draft.ejs`).
+
 ## [6.77.0] - 2026-10-30
 
 ### Added
