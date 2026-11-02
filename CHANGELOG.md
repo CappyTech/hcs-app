@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.86.2] - 2026-11-02
+
+### Fixed
+- Setting a supplier statement against KashFlow gave false differences on statements laid out with a nil opening balance and an ageing table.
+  - Lines sharing a reference that one purchase answers are one invoice printed in parts. Their sum is compared with the purchase, instead of one part showing as a different amount and the other as missing from KashFlow.
+  - "KashFlow unpaid" read £0.00 because it trusted `DueAmount`, which the sync leaves at 0 on unpaid purchases. It's now gross minus paid, as it stood on the statement date. "In KashFlow, not on the statement" uses the same figure, so unpaid purchases the supplier leaves out now show there.
+  - A statement date printed as "Date …" beside the address is read, and the closing balance is read from the row below an ageing table's "Amount Due" heading, which used to count as an unread line.
+  - A statement with no printed period that starts from nothing no longer counts payments on purchases older than its first line. Anything brought forward, or a printed period, still counts them all.
+  - `STATEMENT_READER_VERSION` 2, so stored readings are read again.
+
 ## [6.86.1] - 2026-10-30
 
 ### Fixed

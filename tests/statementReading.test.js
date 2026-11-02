@@ -108,6 +108,34 @@ describe('reading the text of a statement', () => {
     assert.equal(p.unread, 1, 'an amount with nothing to tie it to is counted, not dropped');
   });
 
+  it('reads a date beside the address, and a closing balance below an ageing table\'s headings', () => {
+    const p = svc.parseStatement(`STATEMENT
+Example Customer Ltd Date 31/10/2026
+Account Ref EXA001
+Date Ref Details Debit Credit Balance
+01/09/2026 SI-4401 Sand 10.00 10.00
+30/10/2026 BACS CR Payment on Account 4.00 6.00
+Current Period 1 Period 2 Older Amount Due
+£ -4.00 £ 10.00 £ 0.00 £ 0.00 £ 6.00`);
+    assert.equal(p.header.statementDate, '2026-10-31');
+    assert.equal(p.header.closingBalance, 6);
+    assert.equal(p.header.periodEnd, '2026-10-31', 'runs to the statement date');
+    assert.equal(p.unread, 0, 'the ageing figures are not an unread line');
+    assert.equal(p.lines.length, 2);
+  });
+
+  it('a due date or a dated line is not the statement date', () => {
+    assert.equal(svc.parseStatement('Due Date 30/11/2026').header.statementDate, null);
+    assert.equal(svc.parseStatement('Invoice date: 30/11/2026').header.statementDate, null);
+    assert.equal(svc.parseStatement('01/09/2026 SI-4401 10.00\nDate 31/10/2026').header.statementDate, null, 'only ahead of the first line');
+  });
+
+  it('an amount-due heading with no figures below it takes nothing from the next line', () => {
+    const p = svc.parseStatement('Amount Due\n01/09/2026 SI-4401 10.00 10.00');
+    assert.equal(p.header.closingBalance, null);
+    assert.equal(p.lines.length, 1);
+  });
+
   it('takes the period from the dated lines when none is printed', () => {
     const p = svc.parseStatement('Statement 30/09/2026\n02/09/2026 A-1 10.00\n20/09/2026 A-2 20.00');
     assert.equal(p.header.periodStart, '2026-09-02');
@@ -187,6 +215,62 @@ describe('setting a statement against purchases', () => {
     assert.deepEqual(r.matched.map((m) => [m.by, m.purchase.number]), [['payment', 9]]);
     assert.equal(r.summary.paymentsMatched, 1);
     assert.equal(r.summary.matched, 0);
+  });
+
+  it('adds up lines that print one invoice in parts, and counts them as one purchase', () => {
+    const parsed = svc.parseStatement('02/09/2026 SI-4401 Screws 1.50 1.50\n02/09/2026 SI-4401 Delivery 8.50 10.00\n05/09/2026 SI-4402 20.00 30.00');
+    const r = svc.reconcile(parsed, [purchase(1, '4401A', '2026-09-02', 10), purchase(2, 'SI-4402', '2026-09-05', 20)]);
+    assert.deepEqual(r.onStatementOnly, [0, 1], 'a short reference is not enough');
+
+    const parts = svc.reconcile(parsed, [purchase(1, 'SI-4401', '2026-09-02', 10), purchase(2, 'SI-4402', '2026-09-05', 20)]);
+    assert.deepEqual(parts.onStatementOnly, []);
+    assert.deepEqual(parts.matched.map((m) => [m.line, m.amountAgrees, m.parts, m.partsTotal]), [[0, true, 2, 10], [1, true, 2, 10], [2, true, undefined, undefined]]);
+    assert.equal(parts.summary.status, 'reconciled');
+
+    const wrong = svc.reconcile(parsed, [purchase(1, 'SI-4401', '2026-09-02', 12), purchase(2, 'SI-4402', '2026-09-05', 20)]);
+    assert.equal(wrong.summary.amountDiffers, 1, 'one purchase, however many lines');
+    assert.equal(wrong.summary.differences, 1);
+  });
+
+  it('two purchases with one reference still take a line each', () => {
+    const parsed = svc.parseStatement('02/09/2026 SI-4401 5.00 5.00\n03/09/2026 SI-4401 7.00 12.00');
+    const r = svc.reconcile(parsed, [purchase(1, 'SI-4401', '2026-09-02', 5), purchase(2, 'SI-4401', '2026-09-03', 7)]);
+    assert.deepEqual(r.matched.map((m) => [m.line, m.purchase.number, m.parts]), [[0, 1, undefined], [1, 2, undefined]]);
+    assert.equal(r.summary.amountDiffers, 0);
+  });
+
+  it('what is owed comes from gross and paid, as it stood on the statement date, not from DueAmount', () => {
+    const synced = (n, ref, date, gross, extra = {}) => purchase(n, ref, date, gross, { DueAmount: 0, ...extra });
+    const paidLater = { Status: 'Paid', TotalPaidAmount: 30, PaymentLines: [{ Date: new Date('2026-10-02'), Amount: 30 }] };
+    assert.equal(svc.stillOwed(synced(1, 'A', '2026-09-01', 50)), 50);
+    assert.equal(svc.stillOwed(synced(1, 'A', '2026-09-01', 50, { TotalPaidAmount: 20 })), 30);
+    assert.equal(svc.stillOwed(synced(1, 'A', '2026-09-01', 30, paidLater)), 0);
+    assert.equal(svc.stillOwed(synced(1, 'A', '2026-09-01', 30, paidLater), '2026-09-30'), 30, 'not paid yet on that date');
+    assert.equal(svc.stillOwed(synced(1, 'A', '2026-09-01', 30, { Status: 'Cancelled' })), 0);
+
+    const parsed = svc.parseStatement('Statement 30/09/2026\n02/09/2026 A-1001 50.00 50.00\n03/09/2026 A-1002 30.00 80.00\nAmount Due 80.00');
+    const r = svc.reconcile(parsed, [synced(1, 'A-1001', '2026-09-02', 50), synced(2, 'A-1002', '2026-09-03', 30, paidLater), synced(3, 'A-0990', '2026-08-01', 40)]);
+    assert.equal(r.balance.statement, 80);
+    assert.equal(r.balance.kashflow, 120);
+    assert.deepEqual(r.inKashflowOnly.map((p) => [p.number, p.due]), [[3, 40]]);
+  });
+
+  it('payments on older purchases are left out only when the statement starts from nothing', () => {
+    const older = purchase(8, 'A-0900', '2026-08-01', 70, { Status: 'Paid', TotalPaidAmount: 70, PaymentLines: [{ Date: new Date('2026-09-04'), Amount: 70 }] });
+    const onIt = purchase(1, 'A-1001', '2026-09-02', 50, { Status: 'Paid', TotalPaidAmount: 50, PaymentLines: [{ Date: new Date('2026-09-20'), Amount: 50 }] });
+
+    const fromNothing = svc.parseStatement('Statement 30/09/2026\n02/09/2026 A-1001 50.00 50.00\n20/09/2026 BACS Payment 50.00 0.00');
+    assert.deepEqual(svc.reconcile(fromNothing, [onIt, older]).payments, { statement: 50, kashflow: 50, agree: true });
+
+    const runningOn = svc.parseStatement('Statement 30/09/2026\n02/09/2026 A-1001 50.00 170.00\n04/09/2026 BACS Payment 70.00 100.00\n20/09/2026 BACS Payment 50.00 50.00');
+    assert.equal(svc.reconcile(runningOn, [onIt, older]).payments.kashflow, 120, 'the first balance shows something was carried in');
+
+    const opening = svc.parseStatement('Statement 30/09/2026\nOpening Balance 70.00\n02/09/2026 A-1001 50.00\n04/09/2026 BACS Payment 70.00\n20/09/2026 BACS Payment 50.00');
+    assert.equal(opening.header.openingBalance, 70);
+    assert.equal(svc.reconcile(opening, [onIt, older]).payments.kashflow, 120);
+
+    const printed = svc.parseStatement('Period 01/09/2026 to 30/09/2026\n02/09/2026 A-1001 50.00 50.00\n04/09/2026 BACS Payment 70.00 0.00');
+    assert.equal(svc.reconcile(printed, [onIt, older]).payments.kashflow, 120, 'a printed period is taken at its word');
   });
 
   it('says it in one line', () => {
@@ -319,6 +403,13 @@ describe('the views', () => {
     assert.match(html, /In KashFlow, not on the statement \(1\)/);
     assert.match(html, /href="\/purchase\/read\/u5"/);
     assert.match(html, /Matched \(1\)/);
+    assert.doesNotMatch(html, /lines make/);
+    const inParts = svc.parseStatement('02/09/2026 SI-4401 Screws 1.50 1.50\n02/09/2026 SI-4401 Delivery 8.50 10.00');
+    const partsHtml = await ejs.renderFile(view, {
+      title: 'Statement.pdf', csrfToken: 'tok', errors: {}, warnings: [], isAdmin: false, locked: false, paperlessUiBase: '', lineCount: 1,
+      doc: { ...doc, statement: { ...doc.statement, lines: inParts.lines, reconciliation: svc.reconcile(inParts, [purchase(1, 'SI-4401', '2026-09-02', 10)]) } }, kind: entryKind(doc), values: formValues(doc),
+    });
+    assert.match(partsHtml, /2 lines make £10\.00/);
     assert.match(html, /action="\/paperless\/ocr\/9005\/statement-check"/);
     assert.match(html, /action="\/paperless\/ocr\/9005\/reviewed"/);
     assert.match(html, /Statement says <strong>£135\.49<\/strong>/);

@@ -24,7 +24,7 @@ import { isDocumentType, documentTypeQuery } from '../../config/paperlessTypesCo
 import { supplierFor } from './documentReadingService.js';
 
 // Bump when the parser or matcher changes enough that stored readings should be redone
-export const STATEMENT_READER_VERSION = 1;
+export const STATEMENT_READER_VERSION = 2;
 /** Days either side of a statement line's date that a purchase may be issued and still match on amount. */
 export const DATE_TOLERANCE_DAYS = 5;
 const MAX_LINES = 400;
@@ -111,27 +111,49 @@ export function findRefs(line, { dates = findDates(line), money = findMoney(line
 
 const slimRaw = (s) => (s.length > RAW_KEEP ? `${s.slice(0, RAW_KEEP - 1)}…` : s);
 
+const CLOSING_WORDS = 'closing balance|balance due|amount due|total due|total outstanding|balance outstanding|amount outstanding|balance now due';
+const CLOSING_RE = new RegExp(`\\b(${CLOSING_WORDS})\\b`);
+const CLOSING_COLUMN_RE = new RegExp(`\\b(${CLOSING_WORDS})\\s*$`);
+const OPENING_RE = /\b(previous balance|opening balance|brought forward|b\/f)\b/;
+
+/** "Date 31/10/2026" on its own, as a header beside the address prints it. Not a due or invoice date. */
+const isDateLabel = (raw, date) => {
+  const before = raw.slice(0, date.index).toLowerCase();
+  return /\bdate\s*:?\s*$/.test(before) && !/\b(due|invoice|payment|printed)\s+date\s*:?\s*$/.test(before);
+};
+
 /**
  * Read the OCR text of a statement.
  * @param {string} text
  * @returns {{header: object, lines: Array, unread: number, hasText: boolean}}
- *   header: { statementDate, periodStart, periodEnd, closingBalance, paymentsTotal }
+ *   header: { statementDate, periodStart, periodEnd, openingBalance, closingBalance, paymentsTotal }
  *   lines:  [{ raw, kind, date, ref, refs, amount, balance }], amount signed as printed
  *   unread: lines with a date or an amount that couldn't be read as a statement line
  */
 export function parseStatement(text) {
   const rows = String(text || '').split(/\r?\n/).map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
-  const header = { statementDate: null, periodStart: null, periodEnd: null, closingBalance: null, paymentsTotal: null };
+  const header = { statementDate: null, periodStart: null, periodEnd: null, openingBalance: null, closingBalance: null, paymentsTotal: null };
   const lines = [];
   let unread = 0;
+  let closingColumnAbove = false;
 
   for (const raw of rows) {
     const dates = findDates(raw);
     const money = findMoney(raw);
     const lower = raw.toLowerCase();
 
+    // An ageing table: the headings end "Amount Due" and the figures sit on the
+    // row below, so the last figure is the closing balance
+    const figuresForClosing = closingColumnAbove && money.length && !dates.length;
+    closingColumnAbove = !money.length && CLOSING_COLUMN_RE.test(lower);
+    if (figuresForClosing) {
+      if (header.closingBalance == null) header.closingBalance = money.at(-1).value;
+      continue;
+    }
+
     // Header figures. The first mention wins; a statement repeats its header on every page.
-    if (header.statementDate == null && /statement\s*(date|of account)?\b/.test(lower) && dates.length && !money.length) {
+    const labelledDate = !lines.length && dates.length === 1 && isDateLabel(raw, dates[0]);
+    if (header.statementDate == null && (/statement\s*(date|of account)?\b/.test(lower) || labelledDate) && dates.length && !money.length) {
       header.statementDate = dates[0].value;
     }
     if (header.periodStart == null && /\b(period|from)\b/.test(lower) && dates.length >= 2) {
@@ -139,9 +161,12 @@ export function parseStatement(text) {
       header.periodEnd = dates[1].value;
       continue;
     }
-    if (header.closingBalance == null && /\b(closing balance|balance due|amount due|total due|total outstanding|balance outstanding|amount outstanding|balance now due)\b/.test(lower) && money.length) {
+    if (header.closingBalance == null && CLOSING_RE.test(lower) && money.length) {
       header.closingBalance = money.at(-1).value;
       continue;
+    }
+    if (header.openingBalance == null && OPENING_RE.test(lower) && money.length) {
+      header.openingBalance = money.at(-1).value;
     }
     if (header.paymentsTotal == null && /^(total )?(payments?|receipts?)( received)?\b/.test(lower) && money.length && !dates.length) {
       header.paymentsTotal = Math.abs(money.at(-1).value);
@@ -200,6 +225,22 @@ const daysApart = (a, b) => Math.abs(Date.parse(a) - Date.parse(b)) / 86_400_000
 const sameMoney = (a, b) => a != null && b != null && Math.abs(Math.abs(a) - Math.abs(b)) < 0.011;
 const round2 = (n) => Math.round(n * 100) / 100;
 
+/**
+ * What was still owed on a purchase at a date (or now, with no date). The sync
+ * leaves DueAmount at 0 on unpaid purchases, so this is gross minus paid, with
+ * anything paid after the date added back: a statement shows what was owed on
+ * its own date, not what's owed today.
+ */
+export function stillOwed(p, upTo = null) {
+  if (p.Status === 'Cancelled') return 0;
+  const now = p.Status === 'Paid' ? 0 : (Number(p.GrossAmount) || 0) - (Number(p.TotalPaidAmount) || 0);
+  const paidSince = upTo
+    ? (p.PaymentLines || []).filter((pl) => { const d = toIso(pl.Date || pl.PayDate); return d && d > upTo; })
+      .reduce((s, pl) => s + Math.abs(Number(pl.Amount) || 0), 0)
+    : 0;
+  return round2(now + paidSince);
+}
+
 /** The purchase as kept on the reading: enough to show and link, nothing more. */
 export const slimPurchase = (p) => ({
   uuid: p.uuid || null,
@@ -208,7 +249,7 @@ export const slimPurchase = (p) => ({
   date: toIso(p.IssuedDate),
   gross: p.GrossAmount ?? null,
   paid: p.TotalPaidAmount ?? null,
-  due: p.DueAmount ?? null,
+  due: stillOwed(p),
   status: p.Status || null,
 });
 
@@ -227,8 +268,10 @@ export function refsMatch(a, b) {
  * Set the statement's lines against the supplier's purchases.
  *
  * Pass 1 matches on the supplier's reference (what KashFlow holds in
- * SupplierReference). Pass 2 matches what's left on amount and a date within
- * DATE_TOLERANCE_DAYS. Each purchase matches once.
+ * SupplierReference). Lines sharing a reference that only one purchase answers
+ * are one invoice printed in parts, so their sum is what's compared. Pass 2
+ * matches what's left on amount and a date within DATE_TOLERANCE_DAYS. Each
+ * purchase matches once.
  *
  * @param {{header, lines}} parsed  from parseStatement
  * @param {Array} purchases         REST purchases for this supplier
@@ -243,10 +286,26 @@ export function reconcile(parsed, purchases = [], { toleranceDays = DATE_TOLERAN
 
   // Pass 1: by reference
   const left = [];
+  const done = new Set();
   for (const c of candidates) {
-    const hit = c.l.refs.length
-      ? pool.find((x) => !x.used && x.ref && c.l.refs.some((r) => refsMatch(r, x.ref)))
-      : null;
+    if (done.has(c.i)) continue;
+    done.add(c.i);
+    const hits = c.l.refs.length
+      ? pool.filter((x) => !x.used && x.ref && c.l.refs.some((r) => refsMatch(r, x.ref)))
+      : [];
+    const parts = c.l.ref ? candidates.filter((o) => (o.i === c.i || !done.has(o.i)) && o.l.kind === c.l.kind && normRef(o.l.ref) === normRef(c.l.ref)) : [c];
+    if (parts.length > 1 && hits.length === 1) {
+      const [only] = hits;
+      only.used = true;
+      const partsTotal = round2(parts.reduce((s, o) => s + o.l.amount, 0));
+      const purchase = slimPurchase(only.p);
+      for (const o of parts) {
+        done.add(o.i);
+        matched.push({ line: o.i, by: 'reference', amountAgrees: sameMoney(partsTotal, only.gross), parts: parts.length, partsTotal, purchase });
+      }
+      continue;
+    }
+    const [hit] = hits;
     if (hit) {
       hit.used = true;
       matched.push({ line: c.i, by: 'reference', amountAgrees: sameMoney(c.l.amount, hit.gross), purchase: slimPurchase(hit.p) });
@@ -284,27 +343,39 @@ export function reconcile(parsed, purchases = [], { toleranceDays = DATE_TOLERAN
   const upTo = periodEnd || header.statementDate || null;
   const inKashflowOnly = (periodStart && periodEnd && header.periodSource === 'printed'
     ? pool.filter((x) => !x.used && x.date && x.date >= periodStart && x.date <= periodEnd)
-    : pool.filter((x) => !x.used && (Number(x.p.DueAmount) || 0) > 0.005 && (!upTo || (x.date && x.date <= upTo)))
+    : pool.filter((x) => !x.used && stillOwed(x.p, upTo) > 0.005 && (!upTo || (x.date && x.date <= upTo)))
   ).map((x) => slimPurchase(x.p));
 
-  // Payments: what the statement says it received against KashFlow's payment lines in the period
+  // Payments: what the statement says it received against KashFlow's payment lines in the period.
+  // A statement that prints no period and starts from nothing doesn't cover what
+  // was already settled, so payments on purchases older than its first line aren't
+  // on it. Anything brought forward means they could be, so they all count.
   const paymentLinesOnStatement = lines.filter((l) => l.kind === 'payment');
   const statementPayments = header.paymentsTotal ?? (paymentLinesOnStatement.length
     ? round2(paymentLinesOnStatement.reduce((s, l) => s + Math.abs(l.amount), 0))
     : null);
+  const first = lines[0];
+  const broughtForward = Boolean(header.openingBalance) || (first?.balance != null && !sameMoney(first.balance, first.amount));
+  const coveredByStatement = (p) => {
+    if (header.periodSource !== 'lines' || broughtForward) return true;
+    const issued = toIso(p.IssuedDate);
+    return Boolean(issued) && issued >= periodStart;
+  };
   const kashflowPayments = periodStart && periodEnd
-    ? round2(purchases.flatMap((p) => p.PaymentLines || [])
+    ? round2(purchases.filter(coveredByStatement).flatMap((p) => p.PaymentLines || [])
       .filter((pl) => { const d = toIso(pl.Date || pl.PayDate); return d && d >= periodStart && d <= periodEnd; })
       .reduce((s, pl) => s + Math.abs(Number(pl.Amount) || 0), 0))
     : null;
 
-  // Balance: what the statement says is owed against what KashFlow has outstanding up to the period end
+  // Balance: what the statement says is owed against what KashFlow had outstanding up to the period end
   const kashflowOutstanding = upTo
     ? round2(purchases.filter((p) => { const d = toIso(p.IssuedDate); return d && d <= upTo; })
-      .reduce((s, p) => s + (Number(p.DueAmount) || 0), 0))
+      .reduce((s, p) => s + stillOwed(p, upTo), 0))
     : null;
 
-  const differences = onStatementOnly.length + inKashflowOnly.length + matched.filter((m) => !m.amountAgrees).length;
+  // A purchase printed in parts is one difference, however many lines it took
+  const amountDiffers = new Set(matched.filter((m) => !m.amountAgrees).map((m) => m.purchase)).size;
+  const differences = onStatementOnly.length + inKashflowOnly.length + amountDiffers;
   const payments = { statement: statementPayments, kashflow: kashflowPayments, agree: statementPayments != null && kashflowPayments != null ? sameMoney(statementPayments, kashflowPayments) : null };
   const balance = { statement: header.closingBalance, kashflow: kashflowOutstanding, agree: header.closingBalance != null && kashflowOutstanding != null ? sameMoney(header.closingBalance, kashflowOutstanding) : null };
 
@@ -321,7 +392,7 @@ export function reconcile(parsed, purchases = [], { toleranceDays = DATE_TOLERAN
       paymentsMatched: matched.filter((m) => m.by === 'payment').length,
       onStatementOnly: onStatementOnly.length,
       inKashflowOnly: inKashflowOnly.length,
-      amountDiffers: matched.filter((m) => !m.amountAgrees).length,
+      amountDiffers,
       differences,
       status: !candidates.length && !paymentLinesOnStatement.length ? 'no-lines' : differences === 0 && payments.agree !== false ? 'reconciled' : 'differences',
     },
@@ -445,6 +516,6 @@ export async function readMissing({ limit = 20 } = {}, deps = {}) {
 export default {
   STATEMENT_READER_VERSION, DATE_TOLERANCE_DAYS,
   findDates, findMoney, findRefs, lineKind, normRef, parseStatement,
-  refsMatch, reconcile, slimPurchase, summaryText,
+  refsMatch, reconcile, slimPurchase, stillOwed, summaryText,
   purchasesFor, readStatement, readStatementSoon, readMissing, needsReading,
 };

@@ -679,7 +679,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
                         <td class="px-3 py-1 text-right whitespace-nowrap"><%= money(l.amount) %></td>
                         <td class="px-3 py-1"><% if (purchaseLink(p)) { %><a href="<%= purchaseLink(p) %>" class="text-green-700 dark:text-green-400 hover:underline">#<%= p.number %></a><% } else { %>#<%= p.number %><% } %> <span class="font-mono text-gray-500 dark:text-gray-400"><%= p.reference || '' %></span></td>
                         <td class="px-3 py-1 text-right whitespace-nowrap"><%= money(p.gross) %><%= m.amountAgrees ? '' : ' ≠' %></td>
-                        <td class="px-3 py-1 text-gray-500 dark:text-gray-400"><%= m.by === 'reference' ? 'reference' : 'amount and date' %></td>
+                        <td class="px-3 py-1 text-gray-500 dark:text-gray-400"><%= m.by === 'reference' ? 'reference' : 'amount and date' %><%= m.parts ? `, ${m.parts} lines make ${money(m.partsTotal)}` : '' %></td>
                       </tr>
                     <% }) %>
                   </tbody>
