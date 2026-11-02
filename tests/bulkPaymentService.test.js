@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
  * so we mutate that SAME object's .get/.post rather than reassigning it.
  */
 import kfSession from '../services/kashflowSessionService.js';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
 import bulkPay, { outstandingAmount } from '../mongoose/services/bulkPaymentService.js';
 
 // withKfAuth just needs to hand the callback a token.
@@ -26,8 +27,57 @@ function stubLivePurchases(byNumber) {
   });
 }
 
+// Just enough of Mongo's query language to run OUTSTANDING_QUERY over plain docs.
+function evalExpr(e, doc) {
+  if (typeof e === 'string' && e.startsWith('$')) return doc[e.slice(1)];
+  if (e === null || typeof e !== 'object') return e;
+  const [[op, args]] = Object.entries(e);
+  const v = args.map((a) => evalExpr(a, doc));
+  switch (op) {
+    case '$gt': return v[0] > v[1];
+    case '$or': return v.some(Boolean);
+    case '$ifNull': return v[0] ?? v[1];
+    case '$subtract': return v[0] - v[1];
+    default: throw new Error(`evalExpr: unsupported ${op}`);
+  }
+}
+function matches(query, doc) {
+  return Object.entries(query).every(([key, want]) => {
+    if (key === '$expr') return evalExpr(want, doc);
+    if (key === '$and') return want.every((q) => matches(q, doc));
+    if (want === null) return doc[key] == null;
+    if (want?.$nin) return !want.$nin.includes(doc[key]);
+    return doc[key] === want;
+  });
+}
+function fakePurchases(docs) {
+  const found = (q) => docs.filter((d) => matches(q, d));
+  const chain = (rows) => ({
+    select: () => chain(rows), sort: () => chain(rows), skip: () => chain(rows), limit: () => chain(rows), lean: async () => rows,
+  });
+  return {
+    countDocuments: async (q) => found(q).length,
+    find: (q) => chain(found(q)),
+    aggregate: async ([{ $match }]) => {
+      const rows = found($match);
+      return rows.length ? [{ _id: { id: rows[0].SupplierId, name: rows[0].SupplierName, code: rows[0].SupplierCode }, count: rows.length }] : [];
+    },
+  };
+}
+
 describe('bulkPaymentService', () => {
   describe('outstandingAmount', () => {
+    it('does not believe a DueAmount of 0 on an unpaid purchase', () => {
+      assert.equal(outstandingAmount({ DueAmount: 0, GrossAmount: 200, TotalPaidAmount: 0, Status: 'Unpaid' }), 200);
+    });
+    it('takes off part payments when DueAmount is 0', () => {
+      assert.equal(outstandingAmount({ DueAmount: 0, GrossAmount: 200, TotalPaidAmount: 75, Status: 'Unpaid' }), 125);
+    });
+    it('is zero once paid or cancelled, whatever the amounts say', () => {
+      assert.equal(outstandingAmount({ DueAmount: 0, GrossAmount: 200, TotalPaidAmount: 0, Status: 'Paid' }), 0);
+      assert.equal(outstandingAmount({ DueAmount: 50, GrossAmount: 200, TotalPaidAmount: 150, Status: 'Paid' }), 0);
+      assert.equal(outstandingAmount({ DueAmount: 0, GrossAmount: 200, TotalPaidAmount: 0, Status: 'Cancelled' }), 0);
+    });
     it('prefers DueAmount when present', () => {
       assert.equal(outstandingAmount({ DueAmount: 120.5, GrossAmount: 200, TotalPaidAmount: 50 }), 120.5);
     });
@@ -39,12 +89,45 @@ describe('bulkPaymentService', () => {
     });
   });
 
+  describe('listOutstanding', () => {
+    const base = { SupplierId: 9, SupplierName: 'Acme', SupplierCode: 'ACM', GrossAmount: 200, TotalPaidAmount: 0, DueAmount: 0, Status: 'Unpaid' };
+    const docs = [
+      { ...base, Number: 201 },                                      // the bug: unpaid, DueAmount 0
+      { ...base, Number: 202, TotalPaidAmount: 50 },                 // part paid, DueAmount 0
+      { ...base, Number: 203, DueAmount: 120 },                      // DueAmount filled in
+      { ...base, Number: 204, DueAmount: undefined },                // predates DueAmount
+      { ...base, Number: 205, TotalPaidAmount: 200 },                // paid in full, status lagging
+      { ...base, Number: 206, Status: 'Paid' },                      // paid, amounts not filled in
+      { ...base, Number: 207, Status: 'Cancelled' },
+      { ...base, Number: 208, GrossAmount: -30 },                    // credit note
+      { ...base, Number: 209, deletedAt: new Date('2026-01-01') },   // gone from KashFlow
+    ];
+
+    beforeEach(() => { mdb.REST = { purchase: fakePurchases(docs) }; });
+
+    it('lists unpaid purchases whose DueAmount is 0, and nothing settled', async () => {
+      const r = await bulkPay.listOutstanding();
+      assert.deepEqual(r.rows.map((d) => [d.Number, d.outstanding]), [[201, 200], [202, 150], [203, 120], [204, 200]]);
+      assert.equal(r.total, 4);
+    });
+
+    it('offers suppliers whose only unpaid purchases have a DueAmount of 0', async () => {
+      mdb.REST = { purchase: fakePurchases([{ ...base, Number: 201 }]) };
+      const [s] = await bulkPay.listOutstandingSuppliers();
+      assert.equal(s?.SupplierCode, 'ACM');
+      assert.equal(s?.count, 1);
+    });
+  });
+
   describe('reverify', () => {
     beforeEach(() => {
       stubLivePurchases({
         101: { Id: 1, Number: 101, DueAmount: 300, GrossAmount: 300, Status: 'Unpaid', SupplierName: 'Acme', SupplierId: 9, SupplierCode: 'ACM' },
         102: { Id: 2, Number: 102, DueAmount: 0, GrossAmount: 500, Status: 'Paid', SupplierName: 'Beta' },
         103: { Id: 3, Number: 103, DueAmount: 40, GrossAmount: 40, Status: 'Unpaid', SupplierName: 'Gamma' },
+        104: { Id: 4, Number: 104, DueAmount: 0, GrossAmount: 250, TotalPaidAmount: 0, Status: 'Unpaid', SupplierName: 'Delta' },
+        105: { Id: 5, Number: 105, DueAmount: 0, GrossAmount: 250, TotalPaidAmount: 200, Status: 'Unpaid', SupplierName: 'Delta' },
+        106: { Id: 6, Number: 106, DueAmount: 0, GrossAmount: 250, TotalPaidAmount: 250, Status: 'Unpaid', SupplierName: 'Delta' },
       });
     });
 
@@ -62,6 +145,25 @@ describe('bulkPaymentService', () => {
       assert.match(r.lines[0].problem, /already settled/i);
       assert.equal(r.blocking, 1);
       assert.equal(r.total, 0);
+    });
+
+    it('lets an unpaid purchase through when KashFlow says DueAmount 0', async () => {
+      const r = await bulkPay.reverify([{ number: 104, amount: 250 }]);
+      assert.equal(r.ok, true);
+      assert.equal(r.lines[0].liveDueAmount, 250);
+      assert.equal(r.total, 250);
+    });
+
+    it('still caps a part-paid purchase at what is left when DueAmount is 0', async () => {
+      const r = await bulkPay.reverify([{ number: 105, amount: 60 }]);
+      assert.equal(r.lines[0].ok, false);
+      assert.match(r.lines[0].problem, /exceeds the 50\.00/);
+    });
+
+    it('still blocks a purchase paid in full when DueAmount is 0', async () => {
+      const r = await bulkPay.reverify([{ number: 106, amount: 10 }]);
+      assert.equal(r.lines[0].ok, false);
+      assert.match(r.lines[0].problem, /already settled/i);
     });
 
     it('blocks an amount over what is now due', async () => {

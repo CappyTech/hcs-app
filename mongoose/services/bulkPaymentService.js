@@ -50,29 +50,28 @@ function BankAccountModel() {
 }
 
 /**
- * A purchase is outstanding when KashFlow still shows an amount due. `DueAmount`
- * is the authoritative field; some historical docs predate it, so fall back to
- * GrossAmount − TotalPaidAmount and, failing that, a non-"Paid" status with a
- * positive gross.
+ * A purchase is outstanding when it isn't paid or cancelled and money is still
+ * owed on it. DueAmount can't settle that alone: it reads 0 on unpaid purchases
+ * (hcs-sync stores it as KashFlow returns it), so a 0 or missing DueAmount falls
+ * back to GrossAmount − TotalPaidAmount. A positive DueAmount is still taken as
+ * read.
  */
+const SETTLED_STATUSES = ['Paid', 'Cancelled'];
 const OUTSTANDING_QUERY = {
+  Status: { $nin: SETTLED_STATUSES },
+  deletedAt: null,
   $expr: {
-    $gt: [
-      {
-        $ifNull: [
-          '$DueAmount',
-          { $subtract: [{ $ifNull: ['$GrossAmount', 0] }, { $ifNull: ['$TotalPaidAmount', 0] }] },
-        ],
-      },
-      0,
+    $or: [
+      { $gt: ['$DueAmount', 0] },
+      { $gt: [{ $subtract: [{ $ifNull: ['$GrossAmount', 0] }, { $ifNull: ['$TotalPaidAmount', 0] }] }, 0] },
     ],
   },
 };
 
-/** Amount still owed on a synced purchase doc, mirroring OUTSTANDING_QUERY. */
+/** Amount still owed on a purchase (synced doc or live KashFlow read), mirroring OUTSTANDING_QUERY. */
 export function outstandingAmount(p) {
-  if (p == null) return 0;
-  if (Number.isFinite(Number(p.DueAmount))) return money(p.DueAmount);
+  if (p == null || SETTLED_STATUSES.includes(p.Status)) return 0;
+  if (Number(p.DueAmount) > 0) return money(p.DueAmount);
   return money(Number(p.GrossAmount || 0) - Number(p.TotalPaidAmount || 0));
 }
 
@@ -298,11 +297,7 @@ export async function reverify(items = []) {
       continue;
     }
 
-    const due = money(
-      Number.isFinite(Number(live.DueAmount))
-        ? live.DueAmount
-        : Number(live.GrossAmount || 0) - Number(live.TotalPaidAmount || 0),
-    );
+    const due = outstandingAmount(live);
     line.Id = live.Id ?? null;
     line.supplierName = live.SupplierName || '';
     line.supplierId = live.SupplierId ?? null;

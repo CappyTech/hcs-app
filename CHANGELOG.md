@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.93.1] - 2026-11-06
+
+### Fixed
+- Bulk supplier payments left out unpaid purchases. The screen trusted `DueAmount`, which reads 0 on unpaid purchases, so they were missing from the list and the supplier filter, and the live check before paying would have refused them as "already settled".
+  - A purchase now counts as outstanding unless it's Paid or Cancelled and nothing is left owing. A 0 or missing `DueAmount` falls back to gross minus paid; a positive `DueAmount` is still used as it stands.
+  - The list and the live check share one calculation, so part-paid purchases are capped at what's left and purchases paid in full stay blocked.
+  - Purchases soft-deleted by the sync no longer appear in the list.
+
 ## [6.93.0] - 2026-11-06
 
 ### Added
