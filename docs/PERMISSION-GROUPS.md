@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0). The rest of phase 2 and phases 3–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0). The rest of phase 2 and phases 3–5 are planned below.
 
 ## Why
 
@@ -159,7 +159,7 @@ A route has two layers: its own guard and the global `ensureRouteAccess`
 check, driven by `routeAccess`. When a guard is opened to a group, that
 group's `routes` must list the path too, or the global check still refuses it.
 `tests/permissionGroups.test.js` checks every `ensureGroup` guard in
-`attendanceRoutes.js` against the global check, for every job role.
+`mongoose/routes/` against the global check, for every job role.
 
 ### Pay data
 
@@ -179,9 +179,9 @@ These gaps are deliberate. They are the plan for the next phases.
   scoping (`dataScopingService`, `filterAttendanceForUser`) already reads every
   role: a Contracts Manager whose primary role is `employee` sees every week on
   `/weekly`, because Site Ops grants attendance unscoped.
-- **Admin-only pages** (`/paperless/*`, `/company-docs/*`, payroll screens,
-  CIS and returns pages, `/website`, `/audit`) stay with the roles their guards
-  name, even where a group lists them, until phase 2 opens each one.
+- **Admin-only pages** (`/paperless/*`, `/company-docs/*`, `/website`,
+  `/audit`) stay with the roles their guards name, even where a group lists
+  them, until phase 2 opens each one.
 - **Project scope.** Site Manager and Supervisor can't be assigned yet.
 - **Bank and payments** stay with `admin` and `accountant` (decision 3 below).
 - **Pay figures** outside the weekly attendance view are still hidden by
@@ -200,8 +200,13 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
    - **2a, Site Ops** *(6.90.0, built)*: daily, weekly and management weekly
      views; weekly flow; inline attendance, assignment and vehicle deployment
      edits; attendance approve, reject and bulk approve; pay on the weekly view.
-   - **2b, Payroll and CIS**: payroll screens, CIS dashboard and returns,
-     subcontractor assign, supplier change.
+   - **2b, Payroll and CIS** *(6.91.0, built)*. Payroll view: dashboard,
+     runs, submissions log, FPS/EPS/pension downloads. Edit: create and
+     calculate runs, override an entry, employee pay. Approve: lock a run.
+     CIS approve: dashboard and returns. At **manage**, so admin-only for
+     now: unlock a run, post the payroll journal, submit FPS/EPS/pension,
+     assign a subcontractor, change a purchase's supplier. Payroll settings
+     and tax rates are System settings and stay admin-only.
    - **2c, Documents and Website**: `/paperless/*`, `/company-docs/*`,
      `/overview/documents`, `/website`, mail rules.
    - **2d, the rest**: `/audit` and security events for System view, GDPR
@@ -247,6 +252,9 @@ Decisions 1 and 2 are made. Decision 3 has a default applied in phase 1; settle 
    "Two-stage week approval" in phase 3.
 3. **Self-approval.** When one person holds roles that let them both raise and
    approve the same item (for example entering a purchase and paying it), should
-   the app block it or only log it? *Default for now: neither is needed, because
-   bank reconciliation and payments are not granted to any job role.* Decide this
-   before opening them up.
+   the app block it or only log it? *Default for now: nothing that leaves the
+   app is granted to a job role.* Bank reconciliation, payments, HMRC and
+   pension submissions, the payroll journal and unlocking a run all sit at a
+   `manage` level no job role holds. A Payroll / HR Officer can calculate and
+   lock the same run, the same as admin can today. Decide this before opening
+   any `manage` level.

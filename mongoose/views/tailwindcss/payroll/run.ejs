@@ -54,32 +54,40 @@
       <!-- Action buttons -->
       <div class="flex flex-wrap gap-2">
         <% if (run.status === 'draft') { %>
+          <% if (canGroup('payroll', 'edit')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/calculate">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
               <i class="bi bi-calculator"></i> Calculate
             </button>
           </form>
+          <% } %>
+          <% if (canGroup('payroll', 'approve')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/lock">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
               <i class="bi bi-lock"></i> Lock
             </button>
           </form>
+          <% } %>
         <% } else if (run.status === 'locked') { %>
+          <% if (canGroup('payroll', 'manage')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/unlock">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="inline-flex items-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
               <i class="bi bi-unlock"></i> Unlock
             </button>
           </form>
+          <% } %>
           <% if (!run.kashflowJournalRef) { %>
+          <% if (canGroup('payroll', 'manage')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/post-journal">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
               <i class="bi bi-journal-check"></i> Post Journal
             </button>
           </form>
+          <% } %>
           <% } else { %>
           <span class="inline-flex items-center gap-1.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 px-4 py-2 rounded-lg text-sm font-medium">
             <i class="bi bi-check-circle-fill"></i> Journal Posted (<%= run.kashflowJournalRef %>)
@@ -89,22 +97,26 @@
             class="inline-flex items-center gap-1.5 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
             <i class="bi bi-download"></i> Download FPS
           </a>
+          <% if (canGroup('payroll', 'manage')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/fps/submit">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
               <i class="bi bi-send"></i> Submit FPS to HMRC
             </button>
           </form>
+          <% } %>
           <a href="/payroll/run/<%= run.uuid %>/pension/csv"
             class="inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
             <i class="bi bi-file-earmark-spreadsheet"></i> Pension CSV
           </a>
+          <% if (canGroup('payroll', 'manage')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/pension/submit">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button type="submit" class="inline-flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
               <i class="bi bi-cloud-upload"></i> Submit Pension
             </button>
           </form>
+          <% } %>
         <% } %>
       </div>
     </div>
