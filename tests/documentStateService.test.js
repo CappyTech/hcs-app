@@ -215,10 +215,13 @@ describe('setExcludedReason', () => {
 });
 
 describe('actorFromUser', () => {
-  it('maps req.user, keeping admin as a flag only', () => {
+  it('maps req.user, keeping admin and Documents approve as flags only', () => {
     const _id = new mongoose.Types.ObjectId();
-    assert.deepEqual(actorFromUser({ _id, username: 'jack', role: 'admin' }), { userId: _id, name: 'jack', isAdmin: true });
+    assert.deepEqual(actorFromUser({ _id, username: 'jack', role: 'admin' }), { userId: _id, name: 'jack', isAdmin: true, canApprove: true });
     assert.equal(actorFromUser({ _id: 'not-an-objectid', username: 'x', role: 'user' }).userId, null);
-    assert.deepEqual(actorFromUser(null), { userId: null, name: 'system', isAdmin: false });
+    assert.deepEqual(actorFromUser(null), { userId: null, name: 'system', isAdmin: false, canApprove: false });
+    // A Director holds Documents approve; an Office Manager holds edit.
+    assert.equal(actorFromUser({ _id, role: 'employee', roles: ['director'] }).canApprove, true);
+    assert.equal(actorFromUser({ _id, role: 'employee', roles: ['officeManager'] }).canApprove, false);
   });
 });

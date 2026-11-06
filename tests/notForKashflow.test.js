@@ -131,7 +131,7 @@ describe('Not for KashFlow', () => {
 
   it('is wired: route, admin permission, entry and details screens', () => {
     const read = (p) => fs.readFileSync(path.resolve(p), 'utf8');
-    assert.match(read('mongoose/routes/paperlessRoutes.js'), /post\("\/paperless\/ocr\/:paperlessId\/not-for-kashflow", \.\.\.paperlessGuard, entryCtrl\.postNotForKashflow\)/);
+    assert.match(read('mongoose/routes/paperlessRoutes.js'), /post\("\/paperless\/ocr\/:paperlessId\/not-for-kashflow", \.\.\.docs\("edit"\), entryCtrl\.postNotForKashflow\)/);
     assert.match(read('mongoose/config/rolePermissionsConfig.js'), /'\/paperless\/ocr\/:paperlessId\/not-for-kashflow': \['admin'\]/);
     assert.match(read('mongoose/views/tailwindcss/paperless/entry.ejs'), /action="\/paperless\/ocr\/<%= doc\.paperlessId %>\/not-for-kashflow"/);
     assert.match(read('mongoose/views/tailwindcss/paperless/read.ejs'), /data-not-for-kashflow/);

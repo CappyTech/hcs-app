@@ -276,8 +276,8 @@ describe('H4 wiring', () => {
   const read = (p) => fs.readFileSync(path.resolve(p), 'utf8');
   it('routes sit behind the Paperless guard and are in the RBAC table', () => {
     const routes = read('mongoose/routes/paperlessRoutes.js');
-    assert.match(routes, /router\.get\("\/paperless\/queues", \.\.\.paperlessGuard, queueCtrl\.getQueueHub\)/);
-    assert.match(routes, /router\.get\("\/paperless\/queues\/:queue", \.\.\.paperlessGuard, queueCtrl\.getQueue\)/);
+    assert.match(routes, /router\.get\("\/paperless\/queues", \.\.\.docs\("view"\), queueCtrl\.getQueueHub\)/);
+    assert.match(routes, /router\.get\("\/paperless\/queues\/:queue", \.\.\.docs\("view"\), queueCtrl\.getQueue\)/);
     const rbac = read('mongoose/config/rolePermissionsConfig.js');
     assert.match(rbac, /'\/paperless\/queues\/:queue':\s+\['admin'\]/);
   });

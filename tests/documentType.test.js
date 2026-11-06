@@ -290,8 +290,8 @@ describe('type picker and concern on the pages', () => {
 describe('wiring', () => {
   it('routes are admin-only and go back where they came from', () => {
     const routes = fs.readFileSync(path.resolve('mongoose/routes/paperlessRoutes.js'), 'utf8');
-    assert.match(routes, /router\.post\("\/paperless\/ocr\/:paperlessId\/type", \.\.\.paperlessGuard, typeCtrl\.postType\)/);
-    assert.match(routes, /router\.post\("\/paperless\/ocr\/:paperlessId\/type-confirmed", \.\.\.paperlessGuard, typeCtrl\.postTypeConfirmed\)/);
+    assert.match(routes, /router\.post\("\/paperless\/ocr\/:paperlessId\/type", \.\.\.docs\("edit"\), typeCtrl\.postType\)/);
+    assert.match(routes, /router\.post\("\/paperless\/ocr\/:paperlessId\/type-confirmed", \.\.\.docs\("edit"\), typeCtrl\.postTypeConfirmed\)/);
     const src = fs.readFileSync(path.resolve('mongoose/config/rolePermissionsConfig.js'), 'utf8');
     assert.match(src, /'\/paperless\/ocr\/:paperlessId\/type':\s+\['admin'\]/);
     assert.match(src, /'\/paperless\/ocr\/:paperlessId\/type-confirmed': \['admin'\]/);

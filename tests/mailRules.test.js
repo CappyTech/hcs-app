@@ -184,7 +184,7 @@ describe('mail rule wiring', () => {
 
   it('is a scheduled job, a route with the Paperless pages\' access, and linked from the queues and bank statements', () => {
     assert.match(read('mongoose/services/jobRegistry.js'), /scheduler\.register\('paperless-mail-rules'/);
-    assert.match(read('mongoose/routes/paperlessRoutes.js'), /"\/paperless\/mail-rules", \.\.\.paperlessGuard, mailRuleCtrl\.getGuide/);
+    assert.match(read('mongoose/routes/paperlessRoutes.js'), /"\/paperless\/mail-rules", \.\.\.docs\("view"\), mailRuleCtrl\.getGuide/);
     assert.match(read('mongoose/config/rolePermissionsConfig.js'), /'\/paperless\/mail-rules':\s+\['admin'\]/);
     assert.match(read('mongoose/views/tailwindcss/paperless/queue.ejs'), /href="\/paperless\/mail-rules"/);
     const bank = read('mongoose/views/tailwindcss/bank/statements.ejs');
@@ -198,6 +198,9 @@ describe('mail rule wiring', () => {
     assert.equal(canOpenGuide({ role: 'accountant', customPermissions: { routes: ['/paperless/mail-rules'] } }), false, 'the documents department is needed too');
     assert.equal(canOpenGuide({ role: 'accountant', customPermissions: { routes: ['/paperless/mail-rules'], departments: ['documents'] } }), true);
     assert.equal(canOpenGuide(null), false);
+    // Job roles: Documents view and the documents department come together
+    assert.equal(canOpenGuide({ role: 'employee', roles: ['officeManager'] }), true);
+    assert.equal(canOpenGuide({ role: 'employee', roles: ['contractsManager'] }), false);
   });
 
   it('shows the bank page its address, with the link only when allowed', async () => {

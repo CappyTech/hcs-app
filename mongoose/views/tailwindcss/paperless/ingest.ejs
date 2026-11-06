@@ -17,6 +17,7 @@
     <button class="h-[34px] text-sm bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition shadow-sm font-medium">Filter</button>
   </form>
 
+  <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
   <form method="post" action="/paperless/ingest/trigger" class="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
     <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
     <h2 class="font-semibold mb-2">Trigger grab</h2>
@@ -42,6 +43,7 @@
       <button class="text-sm bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition shadow-sm font-medium">Run grab</button>
     </div>
   </form>
+  <% } %>
 
   <div class="text-sm text-gray-600 dark:text-gray-300 mb-2">Total: <%= total %></div>
 

@@ -527,8 +527,8 @@ describe('H6 wiring', () => {
   const read = (p) => fs.readFileSync(path.resolve(p), 'utf8');
   it('routes, RBAC, retry job and settings are registered', () => {
     const routes = read('mongoose/routes/paperlessRoutes.js');
-    assert.ok(routes.includes('router.post("/paperless/ocr/:paperlessId/resend-invoice", ...paperlessGuard, entryCtrl.postResendInvoice)'));
-    assert.ok(routes.includes('router.post("/paperless/ocr/:paperlessId/reviewed", ...paperlessGuard, entryCtrl.postReviewed)'));
+    assert.ok(routes.includes('router.post("/paperless/ocr/:paperlessId/resend-invoice", ...docs("manage"), entryCtrl.postResendInvoice)'));
+    assert.ok(routes.includes('router.post("/paperless/ocr/:paperlessId/reviewed", ...docs("edit"), entryCtrl.postReviewed)'));
     const rbac = read('mongoose/config/rolePermissionsConfig.js');
     assert.match(rbac, /'\/paperless\/ocr\/:paperlessId\/resend-invoice':\s+\['admin'\]/);
     assert.match(rbac, /'\/paperless\/ocr\/:paperlessId\/reviewed':\s+\['admin'\]/);

@@ -22,7 +22,7 @@ router.post('/overview/projects/:number/complete',
   ctrl.postProjectMarkComplete);
 
 router.get('/overview/documents',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('documents', 'view'),
   ctrl.getDocumentsOverview);
 
 // ── Generated overviews (config/overviews + database changes) ──────────

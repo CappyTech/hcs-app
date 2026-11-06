@@ -68,6 +68,8 @@ describe('a document marked In KashFlow with no purchase', () => {
   const render = (doc) => ejs.renderFile(file, {
     hasTag, title: 't', ingest: null, hasDrift: false, cfKashflowPurchaseId: null, hashDuplicate: null,
     slimDateTime: () => '', formatCurrency: () => '', csrfToken: 't',
+    // Unlink is a Documents manage action (admin)
+    canGroup: (group, level) => group === 'documents' && level === 'manage',
     doc: { paperlessId: 1178, tags: [], customFields: [], documentType: { name: 'Purchase Invoice' }, ...doc },
   });
 

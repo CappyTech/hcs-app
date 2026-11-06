@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.92.0] - 2026-11-06
+
+### Added
+- Permission groups, phase 2c: Documents and Website. Documents view opens the document queues, documents, files, reading reports, the mail rules guide, the ingest tracker and the documents overview. Documents edit opens data entry, and setting a document's type, supplier and flags, plus letterhead and policies. Documents approve opens reopening a finished entry, undoing a credit note or Not for KashFlow, linking a document to a KashFlow purchase, and deleting a policy. In practice, an Office Manager can now do data entry, and a Director can sign off.
+- Website edit opens drafting content and media. Website approve opens publishing, unpublishing and deleting. In practice, a Director can now publish to the website.
+
+### Changed
+- Anything that writes to KashFlow (sending a purchase, creating a supplier), sends email (re-sending an invoice), or repairs, re-ingests, unlinks, reassigns or deletes a document is now guarded at Documents manage. Website settings are at Website manage. No job role holds manage, so all of these stay admin-only, and data entry and sending to KashFlow stay with different people.
+- Reopening an entry and undoing a credit note need Documents approve, both at the route and in the document state rules. Before, the state rules allowed admin only.
+- Document pages only show the actions the viewer can use: unlink, re-ingest, sync, remove, reassign, the reading fixture, the repair tools and re-sending an invoice show at manage only.
+- Links to the mail rules guide follow every role a user holds.
+
 ## [6.91.0] - 2026-11-06
 
 ### Added
