@@ -71,9 +71,12 @@ describe('accountant attendance access', () => {
     for (const r of ['accountant', 'employee', 'subcontractor']) {
       assert.ok(roles[1].includes(`"${r}"`), `SITE_VIEW_ROLES omits ${r}`);
     }
+    // Both guards end with ...SITE_VIEW_ROLES (/daily also admits project-scoped Site Ops view)
     for (const p of ['/daily/:date?', '/weekly/:year?/:week?']) {
-      const re = new RegExp(`"${p.replace(/[?/]/g, (c) => `\\${c}`)}",\\s*authService\\.ensureGroup\\("siteOps", "view", \\.\\.\\.SITE_VIEW_ROLES\\)`);
-      assert.match(routesSrc, re, `${p} guard does not use SITE_VIEW_ROLES`);
+      const at = routesSrc.indexOf(`"${p}"`);
+      assert.ok(at > -1, p);
+      const guard = routesSrc.slice(at, routesSrc.indexOf('ctrl.', at));
+      assert.match(guard, /authService\.ensureGroup\([\s\S]*\.\.\.SITE_VIEW_ROLES\)/, `${p} guard does not use SITE_VIEW_ROLES`);
     }
   });
 

@@ -20,7 +20,7 @@
             <span class="min-w-0">
               <span class="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 <%= opt.label %>
-                <% if (!opt.available) { %><span class="ml-1 text-xs font-normal text-amber-600 dark:text-amber-400">Not available yet: needs project scoping</span><% } %>
+                <% if (!opt.available) { %><span class="ml-1 text-xs font-normal text-amber-600 dark:text-amber-400">Not available yet</span><% } %>
               </span>
               <span class="block text-sm text-gray-500 dark:text-gray-400"><%= opt.description %></span>
               <span class="block text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -87,7 +87,7 @@
                       <span class="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">
                         <strong><%= m.model %></strong>
                         <% m.operations.forEach(op => { %>
-                          <span class="<%= op.ownOnly ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400' %>"><%= op.label %><%= op.ownOnly ? '*' : '' %></span>
+                          <span class="<%= (op.ownOnly || op.sitesOnly) ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400' %>"><%= op.label %><%= op.ownOnly ? '*' : op.sitesOnly ? '†' : '' %></span>
                         <% }) %>
                       </span>
                     <% }) %>
@@ -107,7 +107,7 @@
           </details>
         <% }) %>
       </div>
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">* = own records only</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">* = own records only · † = their sites only (contracts that name them)</p>
     </div>
   </div>
 </div>

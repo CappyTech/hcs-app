@@ -55,7 +55,7 @@ export const getProfilePage = async (req, res, next) => {
             const [code, scope] = op.split(":");
             const chars =
               code.length > 1 && [...code].every((c) => labels[c]) ? [...code] : [code];
-            return chars.map((c) => ({ label: labels[c] || c, ownOnly: scope === "own" }));
+            return chars.map((c) => ({ label: labels[c] || c, ownOnly: scope === "own", sitesOnly: scope === "project" }));
           }),
         };
       }),

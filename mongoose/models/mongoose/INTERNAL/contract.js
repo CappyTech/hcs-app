@@ -49,6 +49,14 @@ const contractSchema = new mongoose.Schema({
     ref: 'location'
   },
 
+  // The Site Managers and Supervisors who run this contract. A project-scoped
+  // job role sees a contract's records only while it names them here and
+  // isn't Completed (projectScopeService).
+  siteManagers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'user'
+  }],
+
 }, {
   timestamps: true
 });

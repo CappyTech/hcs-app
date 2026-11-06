@@ -3,7 +3,7 @@ import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 import listControllerConfig from '../config/listControllerConfig.js';
 import CRUDControllerConfig from '../config/CRUDControllerConfig.js';
-import { scopeQuery } from '../../services/dataScopingService.js';
+import { scopeQuery, matchesFilter } from '../../services/dataScopingService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
@@ -275,12 +275,9 @@ for (const namespace of ["REST", "INTERNAL"]) {
               const filter = await scopeQuery(req, modelName, "r");
               if (!filter)
                 return res.status(403).render(path.join("tailwindcss", "error"), { title: '403 - Forbidden', error: { title: '403 - Forbidden', message: 'You do not have permission to view this record.' } });
-              // Verify the fetched item matches ownership filter
-              const ownerMatch = Object.entries(filter).every(([k, v]) => {
-                const itemVal = item[k];
-                return itemVal && String(itemVal) === String(v);
-              });
-              if (!ownerMatch)
+              // Verify the fetched item matches the scope filter (own records
+              // and/or the user's sites; may use $in and $or)
+              if (!matchesFilter(item, filter))
                 return res.status(403).render(path.join("tailwindcss", "error"), { title: '403 - Forbidden', error: { title: '403 - Forbidden', message: 'You do not have permission to view this record.' } });
             }
           }

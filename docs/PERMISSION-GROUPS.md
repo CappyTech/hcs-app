@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2. Phases 3–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0). Phases 3b–5 are planned below.
 
 ## Why
 
@@ -59,7 +59,31 @@ level** (`READ_ONLY_MODELS`).
 | Scope | Meaning | State |
 |---|---|---|
 | all | every record | enforced |
-| project | only records on projects the user is assigned to | **phase 3**. A grant with this scope compiles to nothing for now, and a role that depends on one is shown but can't be ticked |
+| project | only records on the user's sites: contracts that name them in **Site managers / supervisors** (`contract.siteManagers`) and aren't Completed | enforced for **read and list** (3a); writes wait for 3b |
+
+**How project scope works** (3a, 6.95.0):
+
+- `projectScopeService.resolve(user)` finds the contracts that name the user
+  and aren't Completed, and from them the sets each model filters on:
+  contract ids, project ids and KashFlow project Numbers, quote ids,
+  location ids. It's cached per request and fails closed (empty sets) on a
+  database error.
+- `accessGroupsConfig.PROJECT_SCOPE_FIELDS` says how each model is limited:
+  contract, project, location and quote by `_id`; assignment and vehicle
+  deployment by `contractId`; attendance by `contractId` or `projectId`;
+  purchase by `ProjectNumber`. A model not listed (customer, supplier,
+  vehicle) can't be granted at project scope.
+- A project-scoped grant compiles to `r:project,l:project`, whatever its
+  level (`PROJECT_SCOPE_MAX_LEVEL = 'view'`). The generic update and delete
+  routes don't check a record's scope, so no write is granted at project
+  scope until a route that checks it exists (3b).
+- It reaches only routes whose data is filtered per record
+  (`PROJECT_SCOPE_ROUTES`, today `/daily`), and no department dashboards:
+  the weekly views, overviews and dashboards show whole-set figures.
+- `scopeQuery` returns the site filter, or `{ $or: [own, sites] }` when the
+  user also has own-records access. An unscoped grant from any role still
+  lifts all scoping. Code that filters records in memory uses
+  `matchesFilter(record, filter)`.
 
 ### Job roles
 
@@ -178,7 +202,8 @@ These gaps are deliberate. They are the plan for the next phases.
   scoping (`dataScopingService`, `filterAttendanceForUser`) already reads every
   role: a Contracts Manager whose primary role is `employee` sees every week on
   `/weekly`, because Site Ops grants attendance unscoped.
-- **Project scope.** Site Manager and Supervisor can't be assigned yet.
+- **Writes on site.** Site Manager and Supervisor read and list their sites
+  only. Recording and approving attendance comes in phase 3b.
 - **Bank and payments** stay with `admin` and `accountant` (decision 3 below).
 - **Health & Safety** has no models yet.
 
@@ -236,9 +261,14 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
 
    No other pay-hiding checks compare roles directly: pay visibility goes
    through `rbac.canSeeValues(user)`.
-3. **Project scope.** Add a `:project` scope resolved from `assignment` (the
-   user's employee or subcontractor on the assignment, then its contract and
-   project). Enable Site Manager and Supervisor.
+3. **Project scope.**
+   - **3a** *(6.95.0, built)*: a contract names its site managers and
+     supervisors (decided over deriving it from weekly assignments: explicit,
+     and a manager needn't be on a labour assignment). Project-scoped grants
+     give read and list on those contracts' records; Site Manager and
+     Supervisor are assignable. See "How project scope works" above.
+   - **3b**: two-stage week approval, below, with scope-checked routes for
+     recording and approving attendance on the user's sites.
 
    **Two-stage week approval** (decision 2). Attendance today goes `pending` →
    `approved` / `rejected` in one admin step. Phase 3 adds a middle state:
