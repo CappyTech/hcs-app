@@ -107,6 +107,16 @@ export const GROUPS = [
         ],
         help: 'The header layout people see until they pick their own on Account Settings. Unset means Icon tabs.',
       },
+      {
+        key: 'CONTENT_WIDTH_DEFAULT', label: 'Page width', type: 'select',
+        options: [
+          { value: 'narrow', label: 'Narrow: pages stop at about 1024px' },
+          { value: 'standard', label: 'Standard: each page at its designed width, up to about 1280px' },
+          { value: 'wide', label: 'Wide: pages run up to about 1536px' },
+          { value: 'full', label: 'Full width: pages fill the window' },
+        ],
+        help: 'How wide the main content runs for people who have not picked their own on Account Settings. Unset means Standard.',
+      },
     ],
   },
   {

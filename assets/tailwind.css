@@ -106,3 +106,25 @@
     display: none;
   }
 }
+
+/*
+  Page width (Account Settings → Layout, layoutPreferenceService). layout.ejs
+  sets data-content-width on <main>; these resize the page-level containers
+  (max-w-5xl to max-w-7xl) inside it. Narrower containers such as forms and
+  dialogs keep their own width. 'standard' changes nothing.
+*/
+main[data-content-width="narrow"] .max-w-7xl,
+main[data-content-width="narrow"] .max-w-6xl {
+  max-width: 64rem;
+}
+main[data-content-width="wide"] .max-w-7xl,
+main[data-content-width="wide"] .max-w-6xl,
+main[data-content-width="wide"] .max-w-5xl {
+  max-width: 96rem;
+}
+main[data-content-width="full"] .max-w-7xl,
+main[data-content-width="full"] .max-w-6xl,
+main[data-content-width="full"] .max-w-5xl,
+main[data-content-width="full"] .max-w-screen-2xl {
+  max-width: none;
+}
