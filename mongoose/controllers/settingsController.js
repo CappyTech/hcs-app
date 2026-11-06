@@ -37,7 +37,7 @@ export const getProfilePage = async (req, res, next) => {
     // Build a structured permissions object for the template
     const permissions = {
       role,
-      jobRoles: rbac.jobRolesOf(user).map((r) => accessGroups.jobRoles[r]?.label || r),
+      jobRoles: rbac.jobRolesOf(user).map((r) => accessGroups.jobRoles[accessGroups.baseRole(r)]?.label || r),
       departments,
       models: Object.entries(modelAccess).map(([model, perms]) => {
         const ops = perms.split(",").map((e) => e.trim());

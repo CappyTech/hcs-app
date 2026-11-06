@@ -396,14 +396,25 @@ function compileJobRoles() {
     if (!current.includes(slug)) routeAccess[key] = [...current, slug];
   };
 
+  // A 'flag' role compiles twice: without its values grants, and as
+  // `<slug>+values` with them (see accessGroupsConfig VALUES_SUFFIX).
+  const compiled = [];
   for (const [slug, def] of Object.entries(jobRoles)) {
     if (roleModelAccess[slug] || ownershipFields[slug]) {
       throw new Error(`Job role "${slug}" collides with a hand-written role`);
     }
+    if (!['always', 'never', 'flag'].includes(def.values)) {
+      throw new Error(`Job role "${slug}" needs values: 'always' | 'never' | 'flag'`);
+    }
+    compiled.push([slug, def.values === 'always' ? def.grants : def.grants.filter((g) => !g.values)]);
+    if (def.values === 'flag') compiled.push([slug + accessGroups.VALUES_SUFFIX, def.grants]);
+  }
+
+  for (const [slug, grants] of compiled) {
     const departments = new Set();
     const modelOps = {};   // model -> Set of ops
 
-    for (const grant of def.grants) {
+    for (const grant of grants) {
       // 'project' scope is not enforced yet (phase 3): grant nothing rather
       // than something wider than intended.
       if ((grant.scope || 'all') !== 'all') continue;
@@ -446,23 +457,47 @@ compileJobRoles();
 const JOB_ROLES = new Set(accessGroups.JOB_ROLE_SLUGS.filter(accessGroups.isJobRoleAvailable));
 
 /**
- * Every role a user holds: the primary `role` plus any available job roles in
- * `roles[]`. Anything in `roles[]` that is not an available job role
- * (including a legacy role such as 'admin') is ignored, so the secondary list
- * can never be used to grant a primary role.
+ * Every role a user holds, as compiled role names: the primary `role` plus
+ * any available job roles in `roles[]`. Anything in `roles[]` that is not an
+ * available job role (including a legacy role such as 'admin') is ignored, so
+ * the secondary list can never be used to grant a primary role.
+ *
+ * A 'flag' job role (Site Manager, Supervisor) resolves to `<slug>+values`
+ * when the user's canSeeValues is ticked, so its money-bearing grants apply.
  * @param {Object} user  req.user
  * @returns {string[]}
  */
 function rolesOf(user) {
   if (!user) return [];
   const primary = user.role || 'none';
-  const extra = Array.isArray(user.roles) ? user.roles.filter((r) => JOB_ROLES.has(r)) : [];
+  const extra = (Array.isArray(user.roles) ? user.roles : [])
+    .filter((r) => JOB_ROLES.has(r))
+    .map((r) => (accessGroups.jobRoles[r].values === 'flag' && user.canSeeValues === true
+      ? r + accessGroups.VALUES_SUFFIX
+      : r));
   return [...new Set([primary, ...extra])];
 }
 
-/** The job roles (not the primary role) a user holds. */
+/** The job roles (not the primary role) a user holds, as compiled names. */
 function jobRolesOf(user) {
-  return rolesOf(user).filter((r) => JOB_ROLES.has(r));
+  return rolesOf(user).filter((r) => JOB_ROLES.has(accessGroups.baseRole(r)));
+}
+
+/**
+ * May this user see money: pay and day rates, costs, purchase and project
+ * values? Admin and accountant always; a job role by its `values` rule; a
+ * 'flag' role (Site Manager, Supervisor) only when canSeeValues is ticked.
+ *
+ * Phase 2 moves the checks that hide pay figures onto this, in place of
+ * comparing the role to 'admin' / 'accountant'.
+ * @param {Object} user  req.user
+ * @returns {boolean}
+ */
+function canSeeValues(user) {
+  if (!user) return false;
+  if (user.role === 'admin' || user.role === 'accountant') return true;
+  return jobRolesOf(user).some((r) => r.endsWith(accessGroups.VALUES_SUFFIX)
+    || accessGroups.jobRoles[accessGroups.baseRole(r)]?.values === 'always');
 }
 
 /**
@@ -712,8 +747,9 @@ export default {
   getListableModels,
   rolesOf,
   jobRolesOf,
+  canSeeValues,
   mergedModelAccess,
   JOB_ROLES,
 };
 
-export { roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels, rolesOf, jobRolesOf, mergedModelAccess, JOB_ROLES };
+export { roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels, rolesOf, jobRolesOf, canSeeValues, mergedModelAccess, JOB_ROLES };

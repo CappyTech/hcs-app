@@ -20,6 +20,12 @@ export function parseRoles(raw) {
   return [...new Set(list.map((r) => String(r).trim()))].filter((r) => rbac.JOB_ROLES.has(r));
 }
 
+/** A checkbox posts 'on' (or 'true') when ticked and nothing when not. */
+export function parseFlag(raw) {
+  const v = Array.isArray(raw) ? raw[raw.length - 1] : raw;
+  return v === 'on' || v === 'true' || v === true;
+}
+
 export const postUserRoles = async (req, res, next) => {
   try {
     const { uuid } = req.params;
@@ -30,17 +36,28 @@ export const postUserRoles = async (req, res, next) => {
 
     const next_ = parseRoles(req.body.roles);
     const previous = [...(user.roles || [])];
+    const prevValues = user.canSeeValues === true;
+    const nextValues = parseFlag(req.body.canSeeValues);
     user.roles = next_;
+    user.canSeeValues = nextValues;
     await user.save();
 
-    const changed = previous.length !== next_.length || previous.some((r) => !next_.includes(r));
-    if (changed) {
+    const rolesChanged = previous.length !== next_.length || previous.some((r) => !next_.includes(r));
+    if (rolesChanged) {
       auditLog.record('role_changed', req, {
         userId: user._id,
         username: user.username,
         meta: { field: 'roles', from: previous, to: next_ },
       });
     }
+    if (prevValues !== nextValues) {
+      auditLog.record('role_changed', req, {
+        userId: user._id,
+        username: user.username,
+        meta: { field: 'canSeeValues', from: prevValues, to: nextValues },
+      });
+    }
+    const changed = rolesChanged || prevValues !== nextValues;
 
     if (typeof req.flash === 'function') {
       req.flash('success', changed ? 'Job roles updated.' : 'Job roles unchanged.');
@@ -51,4 +68,4 @@ export const postUserRoles = async (req, res, next) => {
   }
 };
 
-export default { postUserRoles, parseRoles };
+export default { postUserRoles, parseRoles, parseFlag };
