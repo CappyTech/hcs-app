@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.88.0] - 2026-11-06
+
+### Added
+- Signed-out pages have a header: the company name (home), Theme, Create account and Log In. Before, they had no navigation, only a fixed bottom bar holding the theme button and footer.
+
+### Changed
+- The signed-out home page is two panes across the full width: sign-in on the left (stays in view), and the feature list on the right, in balanced columns (up to 4 from 1280px, 5 from 1536px), so the whole list fits on one laptop screen.
+- Feature cards are more compact, with the icon beside the title.
+- Signed-out pages no longer leave an empty band at the top for a header that wasn't drawn, and the footer sits at the bottom of the page instead of a fixed bar over the content.
+
 ## [6.87.0] - 2026-11-06
 
 ### Added

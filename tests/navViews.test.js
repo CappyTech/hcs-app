@@ -104,12 +104,19 @@ describe('every nav style', () => {
     });
   }
 
-  it('falls back to tabs for an unknown style and shows no header when signed out', async () => {
+  it('falls back to tabs for an unknown style and shows the public header when signed out', async () => {
     const html = await renderLayout({ ...locals('carousel') });
     assert.match(html, /data-nav-style="tabs"/);
     const out = await renderLayout({ ...locals('sidebar'), isAuthenticated: false, nav: nav.build({ path: '/', user: null }) });
-    assert.ok(!/data-nav-style=/.test(out));
-    assert.match(out, /pt-16/);
+    // A signed-out visitor never gets a person's style, only the public header:
+    // home, theme, create account, log in, and no department links.
+    assert.equal((out.match(/data-nav-style="/g) || []).length, 1);
+    assert.match(out, /data-nav-style="public"/);
+    assert.match(out, /href="\/user\/login"/);
+    assert.match(out, /href="\/user\/register"/);
+    assert.equal((out.match(/id="theme-toggle"/g) || []).length, 1, 'exactly one theme toggle');
+    // The public header is sticky (in the flow), so the page needs no top offset for it
+    assert.ok(!/id="main-content" class="[^"]*pt-16/.test(out));
   });
 });
 

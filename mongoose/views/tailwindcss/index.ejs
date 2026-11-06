@@ -1,4 +1,5 @@
-<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+<% /* Signed in: one readable column. Signed out: two panes across the full width (sign-in left, features right). */ %>
+<div class="<%= isAuthenticated ? 'max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6' : 'w-full' %>">
 
   <% if (isAuthenticated) { %>
 
@@ -155,65 +156,74 @@
 
   <% } else { %>
 
-    <!-- Public Hero -->
-    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-      <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
-      <div class="p-8 sm:p-12">
-        <div class="flex flex-col lg:flex-row items-center gap-8">
-          <div class="lg:w-1/2 text-left">
-            <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100"><%= (locals.companyName ? companyName + ' ' : '') %>Management System</h1>
-            <% if (locals.companyName) { %>
-            <p class="text-lg text-gray-500 dark:text-gray-400 mt-2">
-              The internal platform of
-              <% if (locals.websiteUrl) { %><a href="<%= websiteUrl %>" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium"><%= companyName %></a><% } else { %><span class="font-medium"><%= companyName %></span><% } %>
-            </p>
-            <% } %>
-            <p class="text-base text-gray-600 dark:text-gray-300 mt-4">
-              One internal platform for running the business, all in one place.<% if (typeof publicFeatures !== 'undefined' && publicFeatures.length) { %> What it does is listed below.<% } %>
-            </p>
-            <a href="/user/login" class="inline-flex items-center gap-1.5 mt-6 px-6 py-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
-              <i class="bi bi-box-arrow-in-right"></i> Log In
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+    <%
+      const _features = typeof publicFeatures !== 'undefined' ? publicFeatures : [];
+      // Groups flow into balanced columns (a group never splits), so the whole list fits
+      // on one laptop screen: 2 columns on tablets, up to 4 from 1280px, up to 5 from 1536px.
+      // Never more columns than groups, so hiding modules leaves no empty column.
+      // Literal class names, so the Tailwind build finds them.
+      const _n = _features.length;
+      const _cols = [
+        _n >= 2 ? 'sm:columns-2' : '',
+        ['', 'xl:columns-1', 'xl:columns-2', 'xl:columns-3', 'xl:columns-4'][Math.min(_n, 4)],
+        ['', '2xl:columns-1', '2xl:columns-2', '2xl:columns-3', '2xl:columns-4', '2xl:columns-5'][Math.min(_n, 5)],
+      ].join(' ');
+    %>
+    <div class="grid gap-6 items-start <%= _features.length ? 'lg:grid-cols-[minmax(18rem,22rem)_1fr]' : 'max-w-xl mx-auto' %>">
 
-    <!-- Everything this company uses, from publicFeaturesConfig (filtered by publicFeaturesService) -->
-    <% const _features = typeof publicFeatures !== 'undefined' ? publicFeatures : []; %>
-    <% if (_features.length) { %>
-    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-      <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
-        <i class="bi bi-grid text-green-600 dark:text-green-400"></i> What's inside
-      </div>
-      <div class="p-6 space-y-8">
-        <% _features.forEach((g) => { %>
-        <section>
-          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-            <i class="bi <%= g.icon %>" aria-hidden="true"></i> <%= g.group %>
-          </h2>
-          <%
-            // Four or two cards fill rows evenly; anything else uses three columns
-            const _cols = g.items.length === 4 ? 'lg:grid-cols-4' : g.items.length <= 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3';
-          %>
-          <div class="grid grid-cols-1 sm:grid-cols-2 <%= _cols %> gap-3">
-            <% g.items.forEach((f) => { %>
-            <div class="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4">
-              <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 shrink-0">
-                <i class="bi <%= f.icon %> text-lg" aria-hidden="true"></i>
-              </span>
-              <span class="min-w-0">
-                <span class="block font-semibold text-sm text-gray-900 dark:text-gray-100"><%= f.title %></span>
-                <span class="block text-sm text-gray-600 dark:text-gray-400 mt-0.5"><%= f.text %></span>
-              </span>
-            </div>
-            <% }) %>
+      <!-- Left pane: who this is for, and sign in. Stays in view while the features scroll. -->
+      <aside class="lg:sticky lg:top-6 bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+        <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+        <div class="p-6 sm:p-8">
+          <h1 class="text-3xl font-bold leading-tight text-gray-900 dark:text-gray-100"><%= (locals.companyName ? companyName + ' ' : '') %>Management System</h1>
+          <% if (locals.companyName) { %>
+          <p class="text-base text-gray-500 dark:text-gray-400 mt-2">
+            The internal platform of
+            <% if (locals.websiteUrl) { %><a href="<%= websiteUrl %>" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium"><%= companyName %></a><% } else { %><span class="font-medium"><%= companyName %></span><% } %>
+          </p>
+          <% } %>
+          <p class="text-sm text-gray-600 dark:text-gray-300 mt-4">
+            One internal platform for running the business, all in one place.<% if (_features.length) { %> <span class="lg:hidden">What it does is listed below.</span><span class="hidden lg:inline">What it does is listed alongside.</span><% } %>
+          </p>
+          <a href="/user/login" class="flex w-full items-center justify-center gap-1.5 mt-6 px-6 py-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
+            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Log In
+          </a>
+          <p class="mt-3 text-xs text-gray-500 dark:text-gray-400 text-center">New here? <a href="/user/register" class="text-green-700 dark:text-green-400 hover:underline">Create an account</a>. An administrator then gives you access.</p>
+        </div>
+      </aside>
+
+      <% if (_features.length) { %>
+      <!-- Right pane: everything this company uses (publicFeaturesConfig, filtered by publicFeaturesService) -->
+      <section aria-labelledby="whats-inside" class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <i class="bi bi-grid text-green-600 dark:text-green-400" aria-hidden="true"></i> <span id="whats-inside">What's inside</span>
+        </div>
+        <div class="p-4 sm:p-5 gap-5 <%= _cols %>">
+          <% _features.forEach((g) => { %>
+          <div class="break-inside-avoid mb-5 last:mb-0">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+              <i class="bi <%= g.icon %>" aria-hidden="true"></i> <%= g.group %>
+            </h2>
+            <ul class="space-y-2">
+              <% g.items.forEach((f) => { %>
+              <li class="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2.5">
+                <span class="flex items-center gap-2 font-semibold text-sm text-gray-900 dark:text-gray-100">
+                  <span class="flex items-center justify-center w-6 h-6 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 shrink-0 text-xs">
+                    <i class="bi <%= f.icon %>" aria-hidden="true"></i>
+                  </span>
+                  <%= f.title %>
+                </span>
+                <span class="block text-xs text-gray-600 dark:text-gray-400 mt-1 leading-snug"><%= f.text %></span>
+              </li>
+              <% }) %>
+            </ul>
           </div>
-        </section>
-        <% }) %>
-      </div>
+          <% }) %>
+        </div>
+      </section>
+      <% } %>
+
     </div>
-    <% } %>
 
   <% } %>
 </div>

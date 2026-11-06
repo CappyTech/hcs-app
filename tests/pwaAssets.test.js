@@ -151,7 +151,9 @@ describe('mobile navigation', () => {
     assert.match(tabs, /aria-label="Main navigation"/);
     assert.match(tabs, /aria-label="Toggle light or dark theme"/);
     assert.match(tabs, /aria-hidden="true"/);
-    assert.match(layout, /aria-label="Toggle light or dark theme"/, 'the signed-out bottom bar too');
+    const publicNav = read('mongoose/views/tailwindcss/partials/nav/public.ejs');
+    assert.match(publicNav, /aria-label="Toggle light or dark theme"/, 'the signed-out header too');
+    assert.match(publicNav, /aria-label="Main navigation"/);
   });
 
   it('emits aria-current unescaped so it is a real attribute', () => {
