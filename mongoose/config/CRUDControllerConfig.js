@@ -458,12 +458,13 @@ export default {
         });
       }
     },
-    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models.$*', 'customPermissions.routes',
+    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models', 'customPermissions.models.$*', 'customPermissions.routes',
       // Job roles change only through POST /admin/users/:uuid/roles (userRolesController)
       'roles', 'canSeeValues'],
     // …and the generic update must not write them either (create already
-    // strips hideFields).
-    bodyDeny: ['roles', 'canSeeValues'],
+    // strips hideFields). customPermissions is edited on its own admin screen;
+    // a stray value posted here would overwrite (or fail to cast) the whole set.
+    bodyDeny: ['roles', 'canSeeValues', 'customPermissions'],
     fieldOrder: [
       'username', 'email', 'phoneNumber', 'emailVerified', 'role',
       'employeeId', 'subcontractorId', 'clientId',

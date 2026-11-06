@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.94.1] - 2026-11-06
+
+### Fixed
+- Saving a user from the edit page (`/user/:uuid`) no longer fails with a 500 "Iterator value [ is not an entry object". The form was showing the user's custom model permissions as a text box and posting it back as text, which could not be saved. Generic forms now skip map-type fields, and the user form no longer reads or writes custom permissions.
+
 ## [6.94.0] - 2026-11-06
 
 ### Added
