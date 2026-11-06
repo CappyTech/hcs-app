@@ -3,90 +3,101 @@ const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/payrollController.js';
 
+// Permission groups (accessGroupsConfig), Payroll:
+//   view    — dashboard, runs, submissions log, FPS/EPS/pension downloads
+//             (also the accountant, as before)
+//   edit    — create and calculate runs, override an entry, employee pay
+//   approve — lock a run
+//   manage  — anything that leaves the app or undoes a sign-off: unlock,
+//             post the KashFlow journal, submit FPS/EPS to HMRC, submit to
+//             the pension provider. No job role holds manage, so these stay
+//             admin-only until the separation-of-duties decision is made.
+// Payroll settings and tax rates are System settings and stay admin-only.
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 router.get('/payroll/dashboard',
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
   ctrl.renderDashboard
 );
 
 // ── Run list ──────────────────────────────────────────────────────────────────
 router.get('/payroll/runs',
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
   ctrl.renderRunList
 );
 
 // ── Create new run ────────────────────────────────────────────────────────────
 router.post('/payroll/runs/create',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'edit'),
   ctrl.createRun
 );
 
 // ── Run detail ────────────────────────────────────────────────────────────────
 router.get('/payroll/run/:uuid',
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
   ctrl.renderRunDetail
 );
 
 // ── Calculate / recalculate ───────────────────────────────────────────────────
 router.post('/payroll/run/:uuid/calculate',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'edit'),
   ctrl.calculateRun
 );
 
 // ── Override a single entry field ─────────────────────────────────────────────
 router.patch('/payroll/run/:uuid/entry/:entryUuid',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'edit'),
   ctrl.overrideEntry
 );
 
 // ── Lock / unlock ─────────────────────────────────────────────────────────────
 router.post('/payroll/run/:uuid/lock',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'approve'),
   ctrl.lockRun
 );
 router.post('/payroll/run/:uuid/unlock',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'manage'),
   ctrl.unlockRun
 );
 
 // ── KashFlow journal posting ──────────────────────────────────────────────────
 router.post('/payroll/run/:uuid/post-journal',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'manage'),
   ctrl.postJournal
 );
 
 // ── HMRC RTI ──────────────────────────────────────────────────────────────────
 router.get('/payroll/run/:uuid/fps/download',
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
   ctrl.downloadFPS
 );
 router.post('/payroll/run/:uuid/fps/submit',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'manage'),
   ctrl.submitFPS
 );
 
 router.get('/payroll/hmrc/eps/:year/:month/download',
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
   ctrl.downloadEPS
 );
 router.post('/payroll/hmrc/eps/:year/:month/submit',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'manage'),
   ctrl.submitEPS
 );
 
 // ── HMRC submissions log ──────────────────────────────────────────────────────
 router.get('/payroll/submissions',
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
   ctrl.renderSubmissions
 );
 
 // ── People's Pension ──────────────────────────────────────────────────────────
 router.get('/payroll/run/:uuid/pension/csv',
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('payroll', 'view', 'admin', 'accountant'),
   ctrl.downloadPensionCSV
 );
 router.post('/payroll/run/:uuid/pension/submit',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'manage'),
   ctrl.submitPension
 );
 
@@ -115,11 +126,11 @@ router.post('/settings/payroll/tax-rates/:year',
 
 // ── Employee payroll settings ─────────────────────────────────────────────────
 router.get('/payroll/employee/:uuid',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'edit'),
   ctrl.renderEmployeePayroll
 );
 router.post('/payroll/employee/:uuid',
-  authService.ensureRole('admin'),
+  authService.ensureGroup('payroll', 'edit'),
   ctrl.saveEmployeePayroll
 );
 

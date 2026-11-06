@@ -7,22 +7,22 @@ import controller from '../controllers/subcontractorController.js';
 // Admin only — previously had NO auth middleware
 router.get(
   "/subcontractor/assign",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("cis", "manage"),
   controller.renderAssignForm,
 );
 router.post(
   "/subcontractor/assign",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("cis", "manage"),
   controller.assignSubcontractor,
 );
 router.get(
   "/supplier/change/:uuid",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("cis", "manage"),
   controller.renderChangeSupplierForm,
 );
 router.post(
   "/supplier/change/:uuid",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("cis", "manage"),
   controller.changeSupplier,
 );
 

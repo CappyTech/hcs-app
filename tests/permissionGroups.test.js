@@ -316,23 +316,35 @@ describe('ensureGroup', () => {
   });
 });
 
-describe('attendance routes: group guards agree with the global route check', async () => {
+describe('ensureGroup guards agree with the global route check', async () => {
   const fs = await import('node:fs');
-  const src = fs.readFileSync(new URL('../mongoose/routes/attendanceRoutes.js', import.meta.url), 'utf8');
+  const routesDir = new URL('../mongoose/routes/', import.meta.url);
   const SITE_VIEW_ROLES = ['admin', 'accountant', 'employee', 'subcontractor'];
   const routes = [];
-  const re = /"(\/[^"]+)",\s*authService\.ensureGroup\(([^)]*)\)/g;
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    // eslint-disable-next-line no-new-func
-    const args = new Function('SITE_VIEW_ROLES', `return [${m[2]}];`)(SITE_VIEW_ROLES);
-    routes.push({ path: m[1], args });
+  // router.<method>('<path>', authService.ensureGroup(<args>) — either quote style.
+  const re = /router\.(?:get|post|put|patch|delete)\(\s*(['"])(\/[^'"]+)\1,\s*authService\.ensureGroup\(([^)]*)\)/g;
+  for (const file of fs.readdirSync(routesDir).filter((f) => f.endsWith('.js'))) {
+    const src = fs.readFileSync(new URL(file, routesDir), 'utf8');
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      // eslint-disable-next-line no-new-func
+      const args = new Function('SITE_VIEW_ROLES', `return [${m[3]}];`)(SITE_VIEW_ROLES);
+      routes.push({ file, path: m[2], args });
+    }
   }
-  const concrete = (p) => p.replace(/\/:[a-zA-Z]+\?/g, '').replace(/:[a-zA-Z]+/g, 'x');
+  const concrete = (p) => p.replace(/\/:[a-zA-Z]+\?/g, '').replace(/:[a-zA-Z]+/g, 'x').replace(/\/$/, '');
+  const guardFor = (p) => {
+    const r = routes.find((x) => x.path === p);
+    assert.ok(r, `no ensureGroup guard on ${p}`);
+    return authService.ensureGroup(...r.args);
+  };
 
-  it('finds the Site Ops guards', () => {
-    assert.ok(routes.length >= 15, `only ${routes.length}`);
-    for (const p of ['/attendance/:uuid/approve', '/attendance/bulk-approve', '/weekly-flow/:year?/:week?', '/weekly-management/:year?/:week?']) {
+  it('finds the Site Ops, Payroll and CIS guards', () => {
+    for (const p of [
+      '/attendance/:uuid/approve', '/attendance/bulk-approve', '/weekly-flow/:year?/:week?',
+      '/weekly-management/:year?/:week?', '/payroll/run/:uuid/lock', '/payroll/run/:uuid/fps/submit',
+      '/CIS/Dashboard/:year/:month', '/CIS/returns/all/:year', '/subcontractor/assign',
+    ]) {
       assert.ok(routes.some((r) => r.path === p), `missing ${p}`);
     }
   });
@@ -350,10 +362,46 @@ describe('attendance routes: group guards agree with the global route check', as
   });
 
   it('a Contracts Manager can approve attendance; an Office Manager cannot', async () => {
-    const approve = routes.find((r) => r.path === '/attendance/:uuid/approve');
-    const mw = authService.ensureGroup(...approve.args);
+    const mw = guardFor('/attendance/:uuid/approve');
     assert.equal(await run(mw, { role: 'employee', roles: ['contractsManager'] }), undefined);
     assert.equal((await run(mw, { role: 'employee', roles: ['officeManager'] }))?.statusCode, 403);
     assert.equal((await run(mw, { role: 'employee' }))?.statusCode, 403);
+  });
+
+  const asJob = (slug) => ({ role: 'employee', roles: [slug] });
+  const allowed = async (p, user) => (await run(guardFor(p), user, concrete(p))) === undefined
+    && (await run(authService.ensureRouteAccess, user, concrete(p))) === undefined;
+
+  it('Payroll: view reads runs, edit calculates, approve locks; the accountant keeps its reads', async () => {
+    assert.equal(await allowed('/payroll/runs', asJob('payrollHr')), true);
+    assert.equal(await allowed('/payroll/run/:uuid', asJob('payrollHr')), true);
+    assert.equal(await allowed('/payroll/run/:uuid/calculate', asJob('payrollHr')), true);
+    assert.equal(await allowed('/payroll/run/:uuid/lock', asJob('payrollHr')), true);
+    assert.equal(await allowed('/payroll/employee/:uuid', asJob('payrollHr')), true);
+    assert.equal(await allowed('/payroll/runs', { role: 'accountant' }), true);
+    assert.equal(await allowed('/payroll/run/:uuid/lock', { role: 'accountant' }), false);
+    // HR alone and Contracts Manager hold no Payroll grant.
+    assert.equal(await allowed('/payroll/runs', asJob('officeManager')), false);
+    assert.equal(await allowed('/payroll/runs', asJob('contractsManager')), false);
+  });
+
+  it('Payroll: nothing that leaves the app or undoes a lock is open to a job role', async () => {
+    for (const p of [
+      '/payroll/run/:uuid/unlock', '/payroll/run/:uuid/post-journal', '/payroll/run/:uuid/fps/submit',
+      '/payroll/hmrc/eps/:year/:month/submit', '/payroll/run/:uuid/pension/submit',
+    ]) {
+      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(p, asJob(slug)), false, `${slug} reaches ${p}`);
+      assert.equal(await allowed(p, { role: 'admin' }), true, `admin loses ${p}`);
+    }
+  });
+
+  it('CIS: returns and the dashboard need approve; assign and supplier change stay admin', async () => {
+    assert.equal(await allowed('/CIS/returns/all/:year', asJob('director')), true);
+    assert.equal(await allowed('/CIS/Dashboard/:year/:month', asJob('director')), true);
+    assert.equal(await allowed('/CIS/returns/all/:year', asJob('contractsManager')), false, 'CIS view must not see returns');
+    assert.equal(await allowed('/CIS/returns/all/:year', { role: 'hmrc' }), true);
+    for (const p of ['/subcontractor/assign', '/supplier/change/:uuid']) {
+      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(p, asJob(slug)), false, `${slug} reaches ${p}`);
+    }
   });
 });

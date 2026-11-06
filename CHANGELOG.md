@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.91.0] - 2026-11-06
+
+### Added
+- Permission groups, phase 2b: Payroll and CIS. Payroll view opens the payroll dashboard, runs, submissions log and the FPS, EPS and pension downloads. Payroll edit opens creating and calculating runs, overriding an entry, and the employee pay form. Payroll approve opens locking a run. In practice, a Payroll / HR Officer can now run payroll up to the lock, and a Director can too.
+- CIS approve opens the CIS dashboard and the monthly and yearly returns, for a Director.
+
+### Changed
+- These stay admin-only: unlocking a run, posting the payroll journal to KashFlow, and submitting the FPS, EPS or pension file, along with assigning a subcontractor and changing a purchase's supplier. Each is now guarded at its group's manage level, which no job role holds, until the separation-of-duties decision is made.
+- The payroll run, dashboard, runs and submissions pages only show the buttons the viewer can use. Before, an accountant saw Calculate, Lock, Unlock, Post Journal and Submit buttons that returned 403. The payroll settings link only shows to admin.
+
 ## [6.90.0] - 2026-11-06
 
 ### Added
