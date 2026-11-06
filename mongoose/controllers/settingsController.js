@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import encryptionService from '../../services/encryptionService.js';
 import totpService from '../../services/totpService.js';
 import rbac from '../config/rolePermissionsConfig.js';
+import accessGroups from '../config/accessGroupsConfig.js';
 import crypto from 'crypto';
 import emailService from '../../services/emailService.js';
 import auditLog from '../../services/auditLogService.js';
@@ -27,14 +28,16 @@ export const getProfilePage = async (req, res, next) => {
       ? await mdb.REST.customer.findById(user.clientId)
       : null;
 
-    // Build permissions summary for the user's role
+    // Build permissions summary for the user's role plus any job roles
     const role = user.role || "none";
-    const departments = rbac.getDepartmentsForRole(role);
-    const modelAccess = rbac.roleModelAccess[role] || {};
+    const heldRoles = rbac.rolesOf(user);
+    const departments = rbac.getDepartmentsForRole(heldRoles);
+    const modelAccess = rbac.mergedModelAccess(heldRoles);
 
     // Build a structured permissions object for the template
     const permissions = {
       role,
+      jobRoles: rbac.jobRolesOf(user).map((r) => accessGroups.jobRoles[r]?.label || r),
       departments,
       models: Object.entries(modelAccess).map(([model, perms]) => {
         const ops = perms.split(",").map((e) => e.trim());
@@ -61,7 +64,7 @@ export const getProfilePage = async (req, res, next) => {
       customRoutes: Object.entries(rbac.routeAccess)
         .filter(
           ([, roles]) =>
-            roles === "*" || (Array.isArray(roles) && roles.includes(role)),
+            roles === "*" || (Array.isArray(roles) && heldRoles.some((r) => roles.includes(r))),
         )
         .map(([route]) => route)
         .filter((route) => !route.includes(":"))

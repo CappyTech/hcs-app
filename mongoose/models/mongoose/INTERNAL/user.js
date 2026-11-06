@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import encryptionService from '../../../../services/encryptionService.js';
 import crypto from 'crypto';
+import { JOB_ROLE_SLUGS } from '../../../config/accessGroupsConfig.js';
 
 const userSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -34,6 +35,14 @@ const userSchema = new mongoose.Schema({
         // 'auditor' is an external accountant: read-only, portal only.
         enum: ['none', 'subcontractor', 'employee', 'accountant', 'hmrc', 'admin', 'client', 'auditor'],
         default: 'none'
+    },
+    // Job roles held on top of the primary `role` (director, contractsManager,
+    // …), defined as permission-group grants in accessGroupsConfig.js. Only
+    // job role slugs are accepted, so this list can never hold 'admin' or any
+    // other primary role. Access is the union of `role` and every entry here.
+    roles: {
+        type: [{ type: String, enum: JOB_ROLE_SLUGS }],
+        default: []
     },
     subcontractorId: {
         type: mongoose.Schema.Types.ObjectId,

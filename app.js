@@ -505,12 +505,12 @@ const main = async () => {
       // RBAC: expose departments the user's role can access
       const _customPerms = req.user?.customPermissions || {};
       res.locals.userDepartments = req.user
-        ? rbac.getDepartmentsForRole(req.user.role, _customPerms)
+        ? rbac.getDepartmentsForRole(rbac.rolesOf(req.user), _customPerms)
         : [];
       // Helper: check if user can access a department (usable in templates)
-      res.locals.canDept = (dept) => req.user ? rbac.canAccessDepartment(req.user.role, dept, _customPerms) : false;
+      res.locals.canDept = (dept) => req.user ? rbac.canAccessDepartment(rbac.rolesOf(req.user), dept, _customPerms) : false;
       // Helper: check a controlled route (rolePermissionsConfig.routeAccess), the same rule the route enforces
-      res.locals.canRoute = (routePath) => req.user ? rbac.canAccessRoute(req.user.role, routePath, _customPerms) : false;
+      res.locals.canRoute = (routePath) => req.user ? rbac.canAccessRoute(rbac.rolesOf(req.user), routePath, _customPerms) : false;
       // Canonical department registry — still exposed for views that list departments
       res.locals.departmentsConfig = departmentsConfig;
       // The header: every nav style (partials/nav/*.ejs) draws from this one
@@ -519,7 +519,7 @@ const main = async () => {
       res.locals.navStyle = __navigationService.DEFAULT_STYLE;
       res.locals.nav = __navigationService.build({ path: req.path, user: req.user });
       // Helper: check CRUD access on a model
-      res.locals.canModel = (model, op) => req.user ? rbac.canAccess(req.user.role, model, op, _customPerms).allowed : false;
+      res.locals.canModel = (model, op) => req.user ? rbac.canAccess(rbac.rolesOf(req.user), model, op, _customPerms).allowed : false;
       // Expose role flags for template convenience
       res.locals.isEmployee = req.user && req.user.role === 'employee';
       res.locals.isSubcontractor = req.user && req.user.role === 'subcontractor';

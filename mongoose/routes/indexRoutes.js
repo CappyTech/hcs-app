@@ -13,7 +13,8 @@ Object.entries(departments)
   .forEach(([slug, dept]) => {
     const guard = dept.roles.includes("public")
       ? authService.ensureRole("public")
-      : authService.ensureRoles(...dept.roles);
+      // Job roles reach a dashboard through their groups' departments.
+      : authService.ensureRolesOrGrant(dept.roles, { department: slug });
     router.get(dept.path || `/${slug}`, guard, index.renderDepartment(slug));
   });
 

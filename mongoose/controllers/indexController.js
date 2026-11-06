@@ -31,7 +31,7 @@ const denyGuard = (config, op) =>
  * external links (nothing to match), and internal paths with no entry.
  */
 const canUseTile = (tile, userRole) => {
-  if (userRole === 'admin') return true;
+  if (userRole === 'admin' || (Array.isArray(userRole) && userRole.includes('admin'))) return true;
   const link = String(tile?.link || '');
   if (!link.startsWith('/')) return true; // external link
 
@@ -54,7 +54,7 @@ const getDashboardModels = async (department, userRole) => {
         // { allowed, ownOnly }, and an object is always truthy — so this
         // filter passed for every role and every model, showing a
         // department's whole tile list to anyone who could open it.
-        (userRole === "admin" || rbac.canAccess(userRole, model, "l").allowed),
+        rbac.canAccess(userRole, model, "l").allowed,
     )
     .map(([model, config]) => {
       const desc =
@@ -117,7 +117,7 @@ const getCreateModels = (userRole) => {
         // Same bug as getDashboardModels above. Currently masked because the
         // 'create' department is admin-only and admin short-circuits, but it
         // would open the moment that department is opened up.
-        (userRole === "admin" || rbac.canAccess(userRole, model, "c").allowed),
+        rbac.canAccess(userRole, model, "c").allowed,
     )
     .map(([model, config]) => {
       const title = config.title || model.charAt(0).toUpperCase() + model.slice(1);
@@ -265,7 +265,8 @@ export const renderDepartment = (slug) => {
   const dept = departments[slug];
   return async (req, res, next) => {
     try {
-      const userRole = req.user?.role || "subcontractor";
+      // Every role held (primary + job roles); canAccess treats admin as all.
+      const userRole = req.user ? rbac.rolesOf(req.user) : ["subcontractor"];
       const models =
         dept.special === "create"
           ? getCreateModels(userRole)
