@@ -109,9 +109,11 @@
      gutter existing; without it they pull 32px underneath the sidebar. %>
   <% if (isAuthenticated) { %>
     <%- include('./partials/nav/' + _navStyle + '.ejs') %>
+  <% } else { %>
+    <%- include('./partials/nav/public.ejs') %>
   <% } %>
 
-      <main id="main-content" class="flex-grow w-full <%= isAuthenticated ? _mainPad : 'pt-16' %> pb-6 px-4 sm:px-6 lg:px-8">
+      <main id="main-content" class="flex-grow w-full <%= isAuthenticated ? _mainPad : 'pt-6' %> pb-6 px-4 sm:px-6 lg:px-8">
         <% if (typeof maintenanceActive !== 'undefined' && maintenanceActive && isAuthenticated) { %>
         <!-- Maintenance active: only admins can see pages, remind them it's on -->
         <div class="max-w-7xl mx-auto mb-4 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 flex items-center gap-3 print:hidden">
@@ -133,23 +135,10 @@
         <%- body %>
       </main>
 
-      <% if (isAuthenticated) { %>
-        <!-- Footer -->
-        <div class="w-full print:hidden <%= _navStyle === 'sidebar' ? 'lg:pl-[232px]' : '' %>">
-          <%- include('./partials/footer.ejs') %>
-        </div>
-      <% } else { %>
-          <!-- Bottom Nav -->
-          <nav class="fixed bottom-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 z-50 print:hidden">
-            <div class="max-w-7xl mx-auto flex items-center justify-center px-2 py-1.5">
-              <button id="theme-toggle" type="button" aria-label="Toggle light or dark theme" class="inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition cursor-pointer">
-                <i id="theme-icon" class="bi bi-moon-stars text-base" aria-hidden="true"></i>
-                <span>Theme</span>
-              </button>
-            </div>
-            <%- include('./partials/footer.ejs') %>
-          </nav>
-        <% } %>
+      <!-- Footer (the signed-out header carries the theme toggle) -->
+      <div class="w-full print:hidden <%= isAuthenticated && _navStyle === 'sidebar' ? 'lg:pl-[232px]' : '' %>">
+        <%- include('./partials/footer.ejs') %>
+      </div>
 
           <!-- JS: Theme Toggle (replace data-bs-theme logic if needed) -->
           <!-- Dark Mode Toggle with Tailwind -->
