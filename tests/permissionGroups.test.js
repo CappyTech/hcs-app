@@ -196,3 +196,52 @@ describe('userRolesController.parseRoles', () => {
     assert.deepEqual(parseRoles(undefined), []);
   });
 });
+
+describe('canSeeValues', () => {
+  it('admin and accountant always see values; a bare employee does not', () => {
+    assert.equal(rbac.canSeeValues({ role: 'admin' }), true);
+    assert.equal(rbac.canSeeValues({ role: 'accountant' }), true);
+    assert.equal(rbac.canSeeValues({ role: 'employee' }), false);
+    assert.equal(rbac.canSeeValues(null), false);
+  });
+
+  it("follows each job role's fixed rule, ignoring the flag", () => {
+    assert.equal(rbac.canSeeValues({ role: 'employee', roles: ['contractsManager'] }), true);
+    assert.equal(rbac.canSeeValues({ role: 'employee', roles: ['officeManager'], canSeeValues: true }), false);
+  });
+
+  it("every job role declares a values rule; only Site Manager and Supervisor use the flag", () => {
+    const flag = Object.entries(accessGroups.jobRoles).filter(([, d]) => d.values === 'flag').map(([s]) => s);
+    assert.deepEqual(flag.sort(), ['siteManager', 'supervisor']);
+  });
+
+  it('a flag role resolves to its +values build only when ticked', () => {
+    // Site Manager isn't assignable until project scoping lands; make it so
+    // for this test only.
+    rbac.JOB_ROLES.add('siteManager');
+    try {
+      assert.deepEqual(rbac.rolesOf({ role: 'employee', roles: ['siteManager'] }), ['employee', 'siteManager']);
+      assert.deepEqual(rbac.rolesOf({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), ['employee', 'siteManager+values']);
+      assert.equal(rbac.canSeeValues({ role: 'employee', roles: ['siteManager'] }), false);
+      assert.equal(rbac.canSeeValues({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), true);
+      assert.deepEqual(rbac.jobRolesOf({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), ['siteManager+values']);
+    } finally {
+      rbac.JOB_ROLES.delete('siteManager');
+    }
+  });
+
+  it("values grants are left out of the plain build and kept in the +values build", () => {
+    const g = accessGroups.jobRoles.siteManager.grants;
+    assert.ok(g.some((x) => x.values), 'site manager has a values grant');
+    assert.ok(rbac.roleModelAccess['siteManager+values']);
+    assert.ok(rbac.roleModelAccess['supervisor+values']);
+    assert.ok(!rbac.roleModelAccess['contractsManager+values'], 'only flag roles get a +values build');
+  });
+
+  it('parseFlag reads a ticked checkbox', async () => {
+    const { parseFlag } = await import('../mongoose/controllers/userRolesController.js');
+    assert.equal(parseFlag('on'), true);
+    assert.equal(parseFlag(undefined), false);
+    assert.equal(parseFlag('off'), false);
+  });
+});
