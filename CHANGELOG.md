@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.94.0] - 2026-11-06
+
+### Added
+- Permission groups, phase 2d: System view opens the audit trail and the security events log, read-only. In practice, a Director can now read both.
+
+### Changed
+- Changing a receipt's submission or a purchase is guarded at Finance manage. No job role holds it, so it stays admin-only.
+- Creating attendance through the generic form: someone with Site Ops edit (a Director or Contracts Manager) can record it for anyone, not only themselves. The pay fields are kept only if they can see values, and the payroll lock still applies. Before, a job role whose primary role was employee was forced to their own record.
+- A holiday request is no longer forced to the requester when they hold HR edit (Office Manager, Payroll / HR Officer), so they can raise one for someone else.
+- Search finds records a job role can read, the same as the CRUD pages it links to. Before, search looked at the primary role only.
+- Help articles follow every role a user holds.
+- A purchase links to its Paperless document for anyone with Documents view, not only admin.
+- The account page's "2FA required" notice follows every role held, the same rule login uses.
+
+### Fixed
+- 2FA would not have applied to a Site Manager or Supervisor with **Can see values** ticked, once those roles can be assigned: their role resolves to `<slug>+values`, which wasn't on the 2FA list.
+
 ## [6.93.1] - 2026-11-06
 
 ### Fixed

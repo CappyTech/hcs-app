@@ -204,7 +204,7 @@ export const getAccountPage = async (req, res, next) => {
       });
     }
 
-    const { rolesRequiring2FA } = __authService;
+    const { roleRequiring2FA } = __authService;
     res.render(path.join("tailwindcss", "user", "account"), {
       title: "Account Settings",
       qrCodeUrl,
@@ -212,7 +212,8 @@ export const getAccountPage = async (req, res, next) => {
       user,
       sessions: activeSessions,
       currentSessionId: currentSid,
-      twoFARequired: rolesRequiring2FA().includes(user.role),
+      // Any role held that requires 2FA, job roles included (the same rule as login)
+      twoFARequired: !!roleRequiring2FA(user),
       // Navigation style section: the five styles, this person's current one
       // and where it came from, plus what they may pin to the command rail.
       navStyles: navPreferenceService.STYLES,

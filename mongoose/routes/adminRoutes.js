@@ -46,9 +46,10 @@ router.get(
   ctrl.getJobs,
 );
 
+// Read-only: admin, and System view (a Director)
 router.get(
   "/admin/security-events",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("system", "view"),
   ctrl.getSecurityEvents,
 );
 

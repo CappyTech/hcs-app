@@ -1,3 +1,4 @@
+import rbac from '../config/rolePermissionsConfig.js';
 import apiDocs from '../config/apiDocsConfig.js';
 
 const helpContent = [
@@ -1303,6 +1304,8 @@ const helpContent = [
 
 export const getHelp = function (req, res) {
   const role = req.user && req.user.role;
+  // Every role held (primary + job roles)
+  const roles = rbac.rolesOf(req.user);
 
   // Map badge strings → which roles may read that article.
   // 'All roles' is visible to everyone with an account.
@@ -1329,7 +1332,7 @@ export const getHelp = function (req, res) {
         const allowed = badgeRoles[art.badge];
         // If we don't recognise the badge, show to admin only.
         if (!allowed) return role === 'admin';
-        return allowed.includes(role);
+        return roles.some((r) => allowed.includes(r));
       }),
     }))
     .filter(cat => cat.articles.length > 0);
