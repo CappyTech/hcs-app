@@ -65,11 +65,15 @@ describe('accountant attendance access', () => {
     for (const p of ['/daily', '/weekly']) {
       assert.equal(rbac.canAccessRoute('accountant', p), true, `routeAccess omits accountant for ${p}`);
     }
-    const guards = routesSrc.match(/ensureRoles\([^)]*\)/g) || [];
-    const attendanceViews = guards.filter(g => g.includes('employee') && g.includes('subcontractor'));
-    assert.ok(attendanceViews.length >= 2, 'expected the daily and weekly guards');
-    for (const g of attendanceViews.slice(0, 2)) {
-      assert.ok(g.includes('accountant'), `route guard omits accountant: ${g}`);
+    // The daily and weekly guards share SITE_VIEW_ROLES (plus Site Ops view).
+    const roles = routesSrc.match(/const SITE_VIEW_ROLES = \[([^\]]*)\]/);
+    assert.ok(roles, 'expected SITE_VIEW_ROLES in attendanceRoutes.js');
+    for (const r of ['accountant', 'employee', 'subcontractor']) {
+      assert.ok(roles[1].includes(`"${r}"`), `SITE_VIEW_ROLES omits ${r}`);
+    }
+    for (const p of ['/daily/:date?', '/weekly/:year?/:week?']) {
+      const re = new RegExp(`"${p.replace(/[?/]/g, (c) => `\\${c}`)}",\\s*authService\\.ensureGroup\\("siteOps", "view", \\.\\.\\.SITE_VIEW_ROLES\\)`);
+      assert.match(routesSrc, re, `${p} guard does not use SITE_VIEW_ROLES`);
     }
   });
 

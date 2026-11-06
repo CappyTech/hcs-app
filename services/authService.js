@@ -199,6 +199,9 @@ function jobRoleGranted(req, roles, grant) {
   if (grant && grant.department) {
     return rbac.canAccessDepartment(jobRoles, grant.department);
   }
+  if (grant && grant.groups) {
+    return grant.groups.some(({ group, level }) => rbac.hasGroup(req.user, group, level));
+  }
   if (roles.length === 1 && roles[0] === "admin") return false;
   const matched = rbac.matchRoutePattern(req.path);
   return !!matched && rbac.canAccessRoute(jobRoles, matched);
@@ -233,6 +236,25 @@ function ensureRolesOrGrant(roles, grant) {
       message: "You do not have permission to access this page.",
     });
   };
+}
+
+// ── Group guard: a permission-group level, plus named legacy roles ────
+// ensureGroup('siteOps', 'approve')                       admin + any job role with Site Ops approve
+// ensureGroup('siteOps', 'edit', 'admin', 'accountant')   ...and accountant too
+// ensureGroup([{ group: 'siteOps', level: 'edit' }, { group: 'payroll', level: 'view' }], null, 'admin')
+//
+// This is how a route guarded by legacy roles alone (often admin only) is
+// opened to job roles: deliberately, one route at a time. The longest-prefix
+// routeAccess fallback in ensureRoles never opens an admin-only guard.
+function ensureGroup(groupOrGrants, level, ...roles) {
+  const groups = Array.isArray(groupOrGrants)
+    ? groupOrGrants
+    : [{ group: groupOrGrants, level }];
+  // Fail at startup, not at request time, on a typo.
+  for (const g of groups) rbac.hasGroup(null, g.group, g.level);
+  const legacy = roles.length ? [...roles] : ["admin"];
+  if (!legacy.includes("admin")) legacy.push("admin");
+  return ensureRolesOrGrant(legacy, { groups });
 }
 
 // ── Shortcut — defaults to 'admin'. 'public' = passthrough. ────────
@@ -383,6 +405,7 @@ export default {
   rolesRequiring2FA,
   roleRequiring2FA,
   ensureRolesOrGrant,
+  ensureGroup,
   ensureRoles,
   ensureRole,
   ensureAnyRole,
@@ -391,7 +414,7 @@ export default {
   ensureDepartment,
 };
 
-export { ensureAuthenticated, ensureRouteAccess, rolesRequiring2FA, roleRequiring2FA, ensureRolesOrGrant, ensureRoles, ensureRole, ensureAnyRole, ensureModelAccess, ensureOwnership, ensureDepartment };
+export { ensureAuthenticated, ensureRouteAccess, rolesRequiring2FA, roleRequiring2FA, ensureRolesOrGrant, ensureGroup, ensureRoles, ensureRole, ensureAnyRole, ensureModelAccess, ensureOwnership, ensureDepartment };
 
 // Exposed for tests only — a blanket "/resources/" entry here silently disables the
 // auth guard on the static mount, so it is worth asserting against.

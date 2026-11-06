@@ -520,6 +520,10 @@ const main = async () => {
       res.locals.nav = __navigationService.build({ path: req.path, user: req.user });
       // Helper: check CRUD access on a model
       res.locals.canModel = (model, op) => req.user ? rbac.canAccess(rbac.rolesOf(req.user), model, op, _customPerms).allowed : false;
+      // Helper: does the user hold a permission group at a level (admin always does)
+      res.locals.canGroup = (group, level) => rbac.hasGroup(req.user, group, level);
+      // May the viewer see money: rates, costs, purchase and project values
+      res.locals.viewerSeesValues = rbac.canSeeValues(req.user);
       // Expose role flags for template convenience
       res.locals.isEmployee = req.user && req.user.role === 'employee';
       res.locals.isSubcontractor = req.user && req.user.role === 'subcontractor';

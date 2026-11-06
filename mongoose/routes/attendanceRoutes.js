@@ -4,24 +4,30 @@ import authService from '../../services/authService.js';
 import ctrl from '../controllers/attendanceController.js';
 import flow from '../controllers/weeklyFlowController.js';
 
+// Permission groups (accessGroupsConfig): Site Ops view reads the daily and
+// weekly views, edit records attendance and assignments, approve signs them
+// off. Each guard also names the legacy roles that had the route before.
+
 // Daily / weekly views — admin and accountant see all; employee/subcontractor
 // see their own (scoped in controller). The accountant is here because payroll
 // is a periodic run over the period's attendance, and Payroll is an
 // admin+accountant department that previously linked to a page its own users
 // could not open.
+const SITE_VIEW_ROLES = ["admin", "accountant", "employee", "subcontractor"];
 router.get(
   "/daily/:date?",
-  authService.ensureRoles("admin", "accountant", "employee", "subcontractor"),
+  authService.ensureGroup("siteOps", "view", ...SITE_VIEW_ROLES),
   ctrl.getDailyAttendance,
 );
 router.get(
   "/weekly/:year?/:week?",
-  authService.ensureRoles("admin", "accountant", "employee", "subcontractor"),
+  authService.ensureGroup("siteOps", "view", ...SITE_VIEW_ROLES),
   ctrl.getWeeklyAttendance,
 );
+// The management view shows what was paid, so it sits with approve.
 router.get(
   "/weekly-management/:year?/:week?",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("siteOps", "approve"),
   (req, res, next) => {
     req.isManagementView = true;
     ctrl.getWeeklyAttendance(req, res, next);
@@ -29,25 +35,29 @@ router.get(
 );
 
 // Weekly attendance flow: contracts → assignments → attendance → approve.
-// Same roles as the inline editors it stands in for; approving stays admin-only.
+// Payroll view reads it (it feeds the pay run); Site Ops edit works it. The
+// approve step on the page needs Site Ops approve (weeklyFlowController).
 router.get(
   "/weekly-flow/:year?/:week?",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup(
+    [{ group: "siteOps", level: "edit" }, { group: "payroll", level: "view" }],
+    null, "admin", "accountant",
+  ),
   flow.getWeekFlow,
 );
 router.post(
   "/weekly-flow/:year/:week/assignments",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   flow.postAssignment,
 );
 router.post(
   "/weekly-flow/:year/:week/copy-previous",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   flow.postCopyPrevious,
 );
 router.post(
   "/weekly-flow/:year/:week/record",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   flow.postRecord,
 );
 
@@ -63,32 +73,33 @@ router.post(
   ctrl.submitAttendance,
 );
 
-// Inline editing API — admin/accountant only (must come before /:uuid wildcard routes)
+// Inline editing API — admin/accountant + Site Ops edit (must come before /:uuid wildcard routes)
 router.post(
   "/attendance/inline",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   ctrl.inlineCreateAttendance,
 );
 router.patch(
   "/attendance/:uuid",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   ctrl.updateAttendance,
 );
 
-// Approval workflow — admin only
+// Approval workflow — admin + Site Ops approve. One step for now; phase 3
+// splits it into Site Manager then Contracts Manager (docs/PERMISSION-GROUPS.md).
 router.post(
   "/attendance/bulk-approve",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("siteOps", "approve"),
   ctrl.bulkApproveAttendance,
 );
 router.post(
   "/attendance/:uuid/approve",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("siteOps", "approve"),
   ctrl.approveAttendance,
 );
 router.post(
   "/attendance/:uuid/reject",
-  authService.ensureRole("admin"),
+  authService.ensureGroup("siteOps", "approve"),
   ctrl.rejectAttendance,
 );
 
@@ -104,27 +115,27 @@ router.post(
   ctrl.removeStatementPurchase,
 );
 
-// Inline assignment editing — admin/accountant only
+// Inline assignment editing — admin/accountant + Site Ops edit
 router.post(
   "/assignment/inline",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   ctrl.inlineCreateAssignment,
 );
 router.patch(
   "/assignment/:uuid",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   ctrl.updateAssignment,
 );
 
-// Inline vehicle deployment editing — admin/accountant only
+// Inline vehicle deployment editing — admin/accountant + Site Ops edit
 router.post(
   "/vehicle-deployment/inline",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   ctrl.inlineCreateVehicleDeployment,
 );
 router.patch(
   "/vehicle-deployment/:uuid",
-  authService.ensureRoles("admin", "accountant"),
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   ctrl.updateVehicleDeployment,
 );
 
