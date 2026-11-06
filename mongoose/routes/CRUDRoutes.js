@@ -41,6 +41,26 @@ const resolveMiddleware = (entry = "", grant = null) => {
 
 const ACTION_OPS = { create: "c", read: "r", update: "u", delete: "d" };
 
+// Guard for an action whose config lists no middleware: allow only what the
+// RBAC model matrix grants (admin always). The generic create/update/delete
+// handlers can't enforce record ownership, so an own-only grant is refused
+// for those; the read handler checks ownership itself.
+export const defaultModelGuard = (model, operation) => {
+  const matrix = authService.ensureModelAccess(model, operation);
+  return (req, res, next) =>
+    matrix(req, res, (err) => {
+      if (err) return next(err);
+      if (operation !== "r" && req.rbac?.ownOnly) {
+        return next({
+          statusCode: 403,
+          name: "ForbiddenError",
+          message: "You do not have permission to access this page.",
+        });
+      }
+      next();
+    });
+};
+
 for (const [key, handler] of Object.entries(crudController)) {
   const match = key.match(/^(create|read|update|delete)([A-Z][a-zA-Z]*)$/);
   if (!match) continue;
@@ -59,7 +79,13 @@ for (const [key, handler] of Object.entries(crudController)) {
   const middlewares = mergedConfig.middleware?.[action] || [];
 
   const grant = { model: originalModel, operation: ACTION_OPS[action] };
-  const resolvedMiddleware = middlewares.map((m) => resolveMiddleware(m, grant)).filter(Boolean);
+  let resolvedMiddleware = middlewares.map((m) => resolveMiddleware(m, grant)).filter(Boolean);
+  // Deny by default: a model or action with no guard in its config used to be
+  // open to every signed-in user (e.g. POST /appconfig, /payrollrun/read/:uuid).
+  // Fall back to the RBAC model matrix instead.
+  if (resolvedMiddleware.length === 0) {
+    resolvedMiddleware = [defaultModelGuard(originalModel, ACTION_OPS[action])];
+  }
 
   switch (action) {
     case "create":

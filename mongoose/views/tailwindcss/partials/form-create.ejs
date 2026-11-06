@@ -28,7 +28,9 @@
       xorGroups.forEach((group, i) => group.forEach(field => xorGroupMap[field] = i));
 
       const renderedFields = new Set();
-      const keys = Object.keys(schema);
+      // Read-only fields (uuid, system fields, config.readOnly) are set by the
+      // app, so a create form has nothing to show or send for them.
+      const keys = Object.keys(schema).filter(k => !schema[k]?.readOnly);
 
       // Pre-compute nested field groups (e.g., contract.termsType → group 'contract')
       const _nestedGroups = {};
@@ -55,7 +57,7 @@
         <div class="mb-6 border-2 border-cyan-300/40 bg-cyan-50/40 dark:border-cyan-700 dark:bg-cyan-900/20 p-4 rounded-xl">
           <p class="text-sm text-cyan-700 dark:text-cyan-300 italic mb-4">Select only one of the following:</p>
           <% groupFields.forEach(gKey => {
-            if (schema[gKey] && !renderedFields.has(gKey)) { %>
+            if (schema[gKey] && !schema[gKey].readOnly && !renderedFields.has(gKey)) { %>
               <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData, referenceData, readOnly: false, showTips: true, config, groupPrefix: null }) %>
           <%  renderedFields.add(gKey);
             }
