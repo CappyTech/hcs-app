@@ -77,7 +77,9 @@ describe('password reset — one-time code field ordering', () => {
   }
 
   it('login keeps the same order — password, then 2FA code', () => {
-    const html = read(path.join(VIEWS, 'login.ejs'));
+    // The form lives in a partial shared by the login page and the signed-out home page
+    const html = read(path.join(VIEWS, '..', 'partials', 'loginForm.ejs'));
+    assert.ok(read(path.join(VIEWS, 'login.ejs')).includes("include('../partials/loginForm.ejs'"), 'login page uses the shared form');
     assert.ok(
       html.indexOf('name="password"') < html.indexOf('name="totp"'),
       'login must ask for the password before the 2FA code',

@@ -4,6 +4,8 @@ import customTiles from '../config/dashboardTilesConfig.js';
 import taskService from '../services/taskService.js';
 import homeLayoutService from '../services/homeLayoutService.js';
 import publicFeaturesService from '../../services/publicFeaturesService.js';
+import turnstile from '../../services/turnstileService.js';
+import microsoftSsoService from '../../services/microsoftSsoService.js';
 import holidayService from '../services/holidayService.js';
 import { getFrequentPages } from '../services/sessionActivityService.js';
 import rbac from '../config/rolePermissionsConfig.js';
@@ -196,6 +198,8 @@ export const renderIndex = async (req, res, next) => {
       home: req.user ? await homeLayoutService.build(req) : null,
       isAuthenticated: !!req.user,
       publicFeatures: req.user ? [] : publicFeaturesService.visibleGroups(),
+      // Signed out, home is the sign-in page: the shared form needs what the login page gets
+      ...(req.user ? {} : { ...turnstile.viewLocals(), msSsoEnabled: microsoftSsoService.isEnabled(), next: null }),
       nextHoliday,
     });
   } catch (err) {
