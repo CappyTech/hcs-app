@@ -169,8 +169,8 @@
             </p>
             <% } %>
             <p class="text-base text-gray-600 dark:text-gray-300 mt-4">
-              One internal platform for construction operations — CIS compliance, HR,
-              attendance, fleet, holidays, document management and finance dashboards, all in one place.
+              One internal platform for construction operations — people, payroll, CIS, finance,
+              projects, fleet and documents, all in one place. Everything it does is listed below.
             </p>
             <a href="/user/login" class="inline-flex items-center gap-1.5 mt-6 px-6 py-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
               <i class="bi bi-box-arrow-in-right"></i> Log In
@@ -180,31 +180,66 @@
       </div>
     </div>
 
-    <!-- Public Feature Highlights -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
-        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1"><i class="bi bi-person-gear text-green-600 dark:text-green-400 mr-1"></i> CIS Compliance</h5>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Subcontractor verification, IR35, and monthly and yearly CIS returns.</p>
+    <!-- Everything in the app, grouped the way the navigation groups it -->
+    <%
+      const _features = [
+        { group: 'People', icon: 'bi-people', items: [
+          { icon: 'bi-person-badge', title: 'Human Resources', text: 'Employee records, right-to-work and contract dates, and reminders before anything lapses.' },
+          { icon: 'bi-calendar-check', title: 'Attendance', text: 'Daily and weekly attendance, a guided weekly flow for contracts and assignments, and sign-off.' },
+          { icon: 'bi-sun', title: 'Holiday', text: 'Accrual, carry-over, requests and approvals, with bank and company holidays built in.' },
+          { icon: 'bi-cash-coin', title: 'Payroll', text: 'Pay runs, year-to-date totals and Real Time Information submissions to HMRC.' },
+        ] },
+        { group: 'Money', icon: 'bi-wallet2', items: [
+          { icon: 'bi-building', title: 'Construction Industry Scheme', text: 'Subcontractor verification, deduction rates, and monthly and yearly CIS returns.' },
+          { icon: 'bi-receipt', title: 'Finance', text: 'Invoices, purchases, quotes, receipts, customers and suppliers, synced from the accounts.' },
+          { icon: 'bi-bank', title: 'Bank reconciliation', text: 'Statement matching, exceptions to review and bulk supplier payments.' },
+          { icon: 'bi-clipboard-data', title: 'Returns & accountant portal', text: 'CIS and VAT return summaries, and a read-only view for the external accountant.' },
+        ] },
+        { group: 'Work', icon: 'bi-briefcase', items: [
+          { icon: 'bi-clipboard-check', title: 'Projects', text: 'Contracts, weekly assignments and project financial checks.' },
+          { icon: 'bi-list-check', title: 'Tasks', text: 'Personal and shared tasks with due dates, recurring tasks and automatic reminders.' },
+          { icon: 'bi-truck', title: 'Fleet', text: 'Vehicles, MOT, insurance and tax dates, servicing, fuel and mileage logs.' },
+          { icon: 'bi-file-earmark-text', title: 'Documents', text: 'Invoices and statements read automatically, checked in queues and sent to the accounts.' },
+          { icon: 'bi-journal-text', title: 'Policies', text: 'Company policies, letterhead and review dates in one place.' },
+        ] },
+        { group: 'Everyday', icon: 'bi-house', items: [
+          { icon: 'bi-speedometer2', title: 'Your own home page', text: 'Overviews for every area, with the figures and lists you choose pinned to home.' },
+          { icon: 'bi-search', title: 'Search', text: 'One search across everything you are allowed to see.' },
+          { icon: 'bi-envelope', title: 'Email & notifications', text: 'Incoming mail filtering and the notifications you choose to receive.' },
+          { icon: 'bi-globe', title: 'Website', text: 'Case studies, blog posts, services and accreditations for the public website.' },
+        ] },
+        { group: 'Security & admin', icon: 'bi-shield-check', items: [
+          { icon: 'bi-shield-lock', title: 'Secure sign-in', text: 'Two-factor authentication, Microsoft sign-in and role-based access to every page.' },
+          { icon: 'bi-person-lock', title: 'Privacy', text: 'GDPR requests handled in the app, with an audit log of every change.' },
+          { icon: 'bi-gear', title: 'Administration', text: 'Users, roles, configuration, background jobs, system logs and maintenance mode.' },
+        ] },
+      ];
+    %>
+    <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+      <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-grid text-green-600 dark:text-green-400"></i> What's inside
       </div>
-      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
-        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1"><i class="bi bi-people text-green-600 dark:text-green-400 mr-1"></i> HR &amp; Attendance</h5>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Employees, attendance, and holiday accrual, requests and approvals.</p>
-      </div>
-      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
-        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1"><i class="bi bi-truck text-green-600 dark:text-green-400 mr-1"></i> Fleet &amp; Assets</h5>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Vehicles, compliance dates, and driver assignments in one register.</p>
-      </div>
-      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
-        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1"><i class="bi bi-file-earmark-text text-green-600 dark:text-green-400 mr-1"></i> Document Management</h5>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Centralised uploads with OCR capture and Paperless-ngx sync for invoices and evidence.</p>
-      </div>
-      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
-        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1"><i class="bi bi-wallet2 text-green-600 dark:text-green-400 mr-1"></i> Finance</h5>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Invoices, purchases, and overdue tracking across jobs and suppliers.</p>
-      </div>
-      <div class="bg-white dark:bg-gray-900 shadow rounded-xl p-6">
-        <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-1"><i class="bi bi-clipboard-check text-green-600 dark:text-green-400 mr-1"></i> Projects &amp; Tasks</h5>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Contracts, assignments and a shared task board to keep work on track.</p>
+      <div class="p-6 space-y-8">
+        <% _features.forEach((g) => { %>
+        <section>
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+            <i class="bi <%= g.icon %>" aria-hidden="true"></i> <%= g.group %>
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <% g.items.forEach((f) => { %>
+            <div class="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4">
+              <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 shrink-0">
+                <i class="bi <%= f.icon %> text-lg" aria-hidden="true"></i>
+              </span>
+              <span class="min-w-0">
+                <span class="block font-semibold text-sm text-gray-900 dark:text-gray-100"><%= f.title %></span>
+                <span class="block text-sm text-gray-600 dark:text-gray-400 mt-0.5"><%= f.text %></span>
+              </span>
+            </div>
+            <% }) %>
+          </div>
+        </section>
+        <% }) %>
       </div>
     </div>
 

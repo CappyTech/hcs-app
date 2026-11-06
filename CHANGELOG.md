@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.86.3] - 2026-11-06
+
+### Changed
+- The signed-out home page now lists everything the app does, grouped into People, Money, Work, Everyday and Security & admin, instead of six highlight cards that left out payroll, bank reconciliation, policies, the website, search and more.
+
 ## [6.86.2] - 2026-11-02
 
 ### Fixed
