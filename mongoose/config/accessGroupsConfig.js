@@ -36,10 +36,34 @@ export const LEVEL_OPS = {
 
 // Scopes a grant can carry.
 //   all     — every record
-//   project — only records on projects the user is assigned to. NOT YET
-//             ENFORCED (phase 3): a grant with this scope compiles to nothing,
-//             and a job role that relies on one is marked unavailable.
+//   project — only records on the user's sites: contracts that name them in
+//             `siteManagers` and aren't Completed (projectScopeService).
 export const SCOPES = ['all', 'project'];
+
+// How each model is limited to a user's sites. `set` names a list that
+// projectScopeService.resolve() builds. A model not listed here can't be
+// granted at project scope: the grant gives nothing for it.
+export const PROJECT_SCOPE_FIELDS = {
+  contract:          { field: '_id', set: 'contractIds' },
+  project:           { field: '_id', set: 'projectIds' },
+  assignment:        { field: 'contractId', set: 'contractIds' },
+  attendance:        [{ field: 'contractId', set: 'contractIds' }, { field: 'projectId', set: 'projectIds' }],
+  vehicleDeployment: { field: 'contractId', set: 'contractIds' },
+  location:          { field: '_id', set: 'locationIds' },
+  quote:             { field: '_id', set: 'quoteIds' },
+  purchase:          { field: 'ProjectNumber', set: 'projectNumbers' },
+};
+
+// Phase 3a: a project-scoped grant gives read and list only, whatever its
+// level. The generic update/delete routes don't check a record's scope, so
+// writes on site wait for scope-checked routes (phase 3b: record and approve
+// the week). Raise this only alongside those checks.
+export const PROJECT_SCOPE_MAX_LEVEL = 'view';
+
+// Routes a project-scoped grant reaches. Only pages whose data goes through
+// scopeQuery per record: /daily does; the weekly views, overviews and
+// department dashboards show whole-set figures, so they're left out.
+export const PROJECT_SCOPE_ROUTES = new Set(['/daily']);
 
 // Models no group may write through the generic CRUD routes, whatever the
 // level: the REST namespace is written by the sync adapter alone, and the
@@ -245,7 +269,7 @@ export const jobRoles = {
   },
   siteManager: {
     label: 'Site Manager',
-    description: 'Runs the sites they are assigned to day to day.',
+    description: 'Runs the sites they are assigned to day to day: the contracts that name them as a site manager.',
     values: 'flag',
     grants: [
       { group: 'siteOps', level: 'approve', scope: 'project' },
@@ -257,7 +281,7 @@ export const jobRoles = {
   },
   supervisor: {
     label: 'Supervisor / Foreman',
-    description: 'Runs a gang on site; records and signs off the day.',
+    description: 'Runs a gang on site: the contracts that name them as a site manager or supervisor.',
     values: 'flag',
     grants: [
       { group: 'siteOps', level: 'edit', scope: 'project' },
@@ -325,12 +349,15 @@ export function levelsUpTo(level) {
 
 /**
  * A job role is available (assignable) only when every grant it relies on
- * can be enforced today. Roles with a 'project'-scoped grant wait for phase 3.
+ * uses a scope that is enforced. Both are, since phase 3a.
  */
 export function isJobRoleAvailable(slug) {
   const def = jobRoles[slug];
   if (!def) return false;
-  return def.grants.every((g) => (g.scope || 'all') === 'all');
+  return def.grants.every((g) => SCOPES.includes(g.scope || 'all'));
 }
 
-export default { LEVELS, LEVEL_OPS, SCOPES, READ_ONLY_MODELS, groups, jobRoles, JOB_ROLE_SLUGS, VALUES_SUFFIX, baseRole, levelsUpTo, isJobRoleAvailable };
+export default {
+  LEVELS, LEVEL_OPS, SCOPES, PROJECT_SCOPE_FIELDS, PROJECT_SCOPE_MAX_LEVEL, PROJECT_SCOPE_ROUTES,
+  READ_ONLY_MODELS, groups, jobRoles, JOB_ROLE_SLUGS, VALUES_SUFFIX, baseRole, levelsUpTo, isJobRoleAvailable,
+};

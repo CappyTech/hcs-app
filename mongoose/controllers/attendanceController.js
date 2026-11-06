@@ -16,7 +16,7 @@ function parseYMDLocal(s) {
 }
 import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
-import { scopeQuery } from '../../services/dataScopingService.js';
+import { scopeQuery, matchesFilter } from '../../services/dataScopingService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import holidayAccrualService from '../services/holidayAccrualService.js';
 import __paperlessUpdateService from '../services/paperless/paperlessUpdateService.js';
@@ -38,12 +38,8 @@ async function filterAttendanceForUser(req, records) {
   // the moment one that did not was let in.
   if (filter === null) return [];
   if (Object.keys(filter).length === 0) return records;
-  return records.filter((rec) => {
-    return Object.entries(filter).every(([k, v]) => {
-      const val = rec[k]?._id || rec[k]; // handle populated refs
-      return val && String(val) === String(v);
-    });
-  });
+  // Own records and/or the viewer's sites (populated refs compare by _id)
+  return records.filter((rec) => matchesFilter(rec, filter));
 }
 
 export const getDailyAttendance = async (req, res, next) => {
@@ -104,7 +100,9 @@ export const getWeeklyAttendance = async (req, res, next) => {
     // ── Scope weekly data to own records for non-admin users ──
     let scopedGrouped = groupedAttendance;
     if (req.user && req.user.role !== "admin") {
-      const filter = await scopeQuery(req, "attendance", "r");
+      // The weekly view groups by person and can't filter per site, so it
+      // keeps own-records scoping only (project-scoped roles don't reach it).
+      const filter = await scopeQuery(req, "attendance", "r", { project: false });
       // Same null-means-denied distinction as filterAttendanceForUser above.
       if (filter === null) {
         scopedGrouped = {};

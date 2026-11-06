@@ -201,7 +201,7 @@ function jobRoleGranted(req, roles, grant) {
     return rbac.canAccessDepartment(jobRoles, grant.department);
   }
   if (grant && grant.groups) {
-    return grant.groups.some(({ group, level }) => rbac.hasGroup(req.user, group, level));
+    return grant.groups.some(({ group, level, project }) => rbac.hasGroup(req.user, group, level, { project: !!project }));
   }
   if (roles.length === 1 && roles[0] === "admin") return false;
   const matched = rbac.matchRoutePattern(req.path);

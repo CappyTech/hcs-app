@@ -51,11 +51,17 @@ describe('accessGroupsConfig', () => {
     }
   });
 
-  it('roles with a project-scoped grant are not available yet', () => {
-    assert.equal(accessGroups.isJobRoleAvailable('siteManager'), false);
-    assert.equal(accessGroups.isJobRoleAvailable('supervisor'), false);
-    assert.equal(accessGroups.isJobRoleAvailable('contractsManager'), true);
-    assert.ok(!rbac.JOB_ROLES.has('siteManager'));
+  it('every job role is assignable now project scope is enforced', () => {
+    for (const slug of accessGroups.JOB_ROLE_SLUGS) assert.equal(accessGroups.isJobRoleAvailable(slug), true, slug);
+    assert.ok(rbac.JOB_ROLES.has('siteManager'));
+    assert.ok(rbac.JOB_ROLES.has('supervisor'));
+  });
+
+  it('every project scope mapping names a set projectScopeService builds', () => {
+    const sets = ['contractIds', 'projectIds', 'projectNumbers', 'quoteIds', 'locationIds'];
+    for (const [model, spec] of Object.entries(accessGroups.PROJECT_SCOPE_FIELDS)) {
+      for (const { set } of (Array.isArray(spec) ? spec : [spec])) assert.ok(sets.includes(set), `${model} -> ${set}`);
+    }
   });
 });
 
@@ -81,9 +87,39 @@ describe('compiled job roles', () => {
     }
   });
 
-  it('project-scoped grants compile to nothing', () => {
-    assert.deepEqual(rbac.roleModelAccess.siteManager, {});
+  it('project-scoped grants compile to read/list at project scope, no dashboards', () => {
+    // Site Manager: Site Ops approve (project) -> read and list only (3a)
+    assert.equal(rbac.roleModelAccess.siteManager.attendance, 'r:project,l:project');
+    assert.equal(rbac.roleModelAccess.siteManager.assignment, 'r:project,l:project');
+    assert.equal(rbac.roleModelAccess.siteManager.vehicleDeployment, 'r:project,l:project');
+    // Commercial is a values grant: only the +values build has it
+    assert.equal(rbac.roleModelAccess.siteManager.project, undefined);
+    assert.equal(rbac.roleModelAccess['siteManager+values'].project, 'r:project,l:project');
+    assert.equal(rbac.roleModelAccess['siteManager+values'].purchase, 'r:project,l:project');
+    // Models with no site mapping get nothing
+    assert.equal(rbac.roleModelAccess['siteManager+values'].customer, undefined);
+    assert.equal(rbac.roleModelAccess['siteManager+values'].supplier, undefined);
+    // No write ops at project scope yet
+    for (const [slug, models] of Object.entries(rbac.roleModelAccess)) {
+      for (const [model, perms] of Object.entries(models)) {
+        for (const e of perms.split(',')) {
+          if (e.endsWith(':project')) assert.ok(['r:project', 'l:project'].includes(e), `${slug}.${model}: ${e}`);
+        }
+      }
+    }
     assert.deepEqual(rbac.roleDepartments.siteManager, ['user']);
+    // Routes: /daily only
+    assert.ok(rbac.routeAccess['/daily'].includes('siteManager'));
+    assert.ok(!rbac.routeAccess['/weekly'].includes('siteManager'));
+    assert.ok(!rbac.routeAccess['/attendance/approve'].includes('siteManager'));
+  });
+
+  it('canAccess: project scope is limited; an unscoped grant still wins', () => {
+    assert.deepEqual(rbac.canAccess(['siteManager'], 'attendance', 'r'), { allowed: true, ownOnly: true, projectScoped: true });
+    assert.deepEqual(rbac.canAccess(['employee', 'siteManager'], 'attendance', 'r'),
+      { allowed: true, ownOnly: true, ownRole: 'employee', projectScoped: true });
+    assert.deepEqual(rbac.canAccess(['siteManager', 'contractsManager'], 'attendance', 'r'), { allowed: true, ownOnly: false });
+    assert.equal(rbac.canAccess(['siteManager'], 'attendance', 'u').allowed, false);
   });
 
   it('no job role reaches bank, payments or the user admin', () => {
@@ -112,7 +148,7 @@ describe('rolesOf / multi-role helpers', () => {
   it('ignores legacy, unknown and unavailable roles in roles[]', () => {
     assert.deepEqual(
       rbac.rolesOf({ role: 'employee', roles: ['admin', 'contractsManager', 'siteManager', 'bogus'] }),
-      ['employee', 'contractsManager'],
+      ['employee', 'contractsManager', 'siteManager'],
     );
     assert.deepEqual(rbac.rolesOf({ role: 'employee' }), ['employee']);
     assert.deepEqual(rbac.rolesOf(null), []);
@@ -191,7 +227,7 @@ describe('authService with job roles', () => {
 
 describe('userRolesController.parseRoles', () => {
   it('keeps only available job roles', () => {
-    assert.deepEqual(parseRoles(['director', 'admin', 'siteManager', 'director']), ['director']);
+    assert.deepEqual(parseRoles(['director', 'admin', 'siteManager', 'bogus', 'director']), ['director', 'siteManager']);
     assert.deepEqual(parseRoles('fleetManager'), ['fleetManager']);
     assert.deepEqual(parseRoles(undefined), []);
   });
@@ -216,18 +252,11 @@ describe('canSeeValues', () => {
   });
 
   it('a flag role resolves to its +values build only when ticked', () => {
-    // Site Manager isn't assignable until project scoping lands; make it so
-    // for this test only.
-    rbac.JOB_ROLES.add('siteManager');
-    try {
-      assert.deepEqual(rbac.rolesOf({ role: 'employee', roles: ['siteManager'] }), ['employee', 'siteManager']);
-      assert.deepEqual(rbac.rolesOf({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), ['employee', 'siteManager+values']);
-      assert.equal(rbac.canSeeValues({ role: 'employee', roles: ['siteManager'] }), false);
-      assert.equal(rbac.canSeeValues({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), true);
-      assert.deepEqual(rbac.jobRolesOf({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), ['siteManager+values']);
-    } finally {
-      rbac.JOB_ROLES.delete('siteManager');
-    }
+    assert.deepEqual(rbac.rolesOf({ role: 'employee', roles: ['siteManager'] }), ['employee', 'siteManager']);
+    assert.deepEqual(rbac.rolesOf({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), ['employee', 'siteManager+values']);
+    assert.equal(rbac.canSeeValues({ role: 'employee', roles: ['siteManager'] }), false);
+    assert.equal(rbac.canSeeValues({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), true);
+    assert.deepEqual(rbac.jobRolesOf({ role: 'employee', roles: ['siteManager'], canSeeValues: true }), ['siteManager+values']);
   });
 
   it("values grants are left out of the plain build and kept in the +values build", () => {
@@ -265,16 +294,14 @@ describe('hasGroup', () => {
     assert.equal(rbac.hasGroup(office, 'siteOps', 'edit'), false);
   });
 
-  it('ignores project-scoped grants and, without the flag, values grants', () => {
-    rbac.JOB_ROLES.add('siteManager');
-    try {
-      const sm = { role: 'employee', roles: ['siteManager'], canSeeValues: true };
-      // Every Site Manager grant is project-scoped, so none counts yet.
-      assert.equal(rbac.hasGroup(sm, 'siteOps', 'view'), false);
-      assert.equal(rbac.hasGroup(sm, 'commercial', 'view'), false);
-    } finally {
-      rbac.JOB_ROLES.delete('siteManager');
-    }
+  it('counts a project-scoped grant only where asked, and only at view', () => {
+    const sm = { role: 'employee', roles: ['siteManager'], canSeeValues: true };
+    assert.equal(rbac.hasGroup(sm, 'siteOps', 'view'), false);
+    assert.equal(rbac.hasGroup(sm, 'siteOps', 'view', { project: true }), true);
+    assert.equal(rbac.hasGroup(sm, 'siteOps', 'approve', { project: true }), false, 'approve waits for 3b');
+    // The values grant (Commercial) needs the flag
+    assert.equal(rbac.hasGroup(sm, 'commercial', 'view', { project: true }), true);
+    assert.equal(rbac.hasGroup({ ...sm, canSeeValues: false }, 'commercial', 'view', { project: true }), false);
   });
 
   it('throws on an unknown group or level', () => {
@@ -502,14 +529,9 @@ describe('phase 2d', async () => {
   });
 
   it('2FA follows a flag role in its +values build', () => {
-    rbac.JOB_ROLES.add('siteManager');
-    try {
-      assert.equal(
-        authService.roleRequiring2FA({ role: 'employee', roles: ['siteManager'], canSeeValues: true }),
-        'siteManager+values',
-      );
-    } finally {
-      rbac.JOB_ROLES.delete('siteManager');
-    }
+    assert.equal(
+      authService.roleRequiring2FA({ role: 'employee', roles: ['siteManager'], canSeeValues: true }),
+      'siteManager+values',
+    );
   });
 });
