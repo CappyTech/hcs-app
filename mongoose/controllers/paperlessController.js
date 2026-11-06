@@ -97,6 +97,7 @@ export function sendBlockedMessage(doc) {
   return null;
 }
 import hcsSync from '../services/hcsSyncService.js';
+import { unlinkedFilter } from '../services/dashboardCountService.js';
 
 // Helpers
 
@@ -183,9 +184,12 @@ export const listOcr = async (req, res, next) => {
       filter.$and.push(tagCond);
     }
 
-    // Optional filter: only documents with no KashFlow link
+    // Optional filter: only purchase invoices with no KashFlow link — the same
+    // set the dashboard tile counts (statements, credit notes, excluded and
+    // original/multiple-invoice PDFs never get a link)
     if (onlyUnlinked) {
-      filter.kashflowPurchaseId = null;
+      filter.$and = filter.$and || [];
+      filter.$and.push(unlinkedFilter());
     }
 
     // Optional filter: only documents with no KashFlow purchase number recorded

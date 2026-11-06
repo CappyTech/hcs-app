@@ -18,6 +18,7 @@
 
 import { queueFilter } from './paperless/documentQueueService.js';
 import mdb from './mongooseDatabaseService.js';
+import { KF_ELIGIBLE_MATCH } from './documentsOverviewService.js';
 import logger from '../../services/loggerService.js';
 
 const TTL_MS = parseInt(process.env.DASHBOARD_COUNT_TTL_MS, 10) || 60_000;
@@ -55,6 +56,9 @@ function resolveModel(modelName) {
   return null;
 }
 
+// Documents the "unlinked" tile counts and its link (/paperless/ocr?unlinked=1) lists.
+export const unlinkedFilter = () => ({ kashflowPurchaseId: null, ...KF_ELIGIBLE_MATCH });
+
 // Bespoke providers keyed by tile key — an actionable number in place of a total.
 const providers = {
   // HR / Management — holiday requests awaiting a decision.
@@ -64,11 +68,13 @@ const providers = {
     const pending = await M.countDocuments({ status: 'pending' });
     return { value: pending, attention: pending, label: 'pending' };
   },
-  // Documents — OCR docs not yet linked to a KashFlow purchase.
+  // Documents — purchase invoices not yet linked to a KashFlow purchase. Same
+  // set as Unlinked on /overview/documents: statements, credit notes, excluded
+  // invoices and "original/multiple invoice one pdf" originals never get a link.
   OcrDocument: async () => {
     const M = mdb.PAPERLESS?.OcrDocument;
     if (!M) return null;
-    const unlinked = await M.countDocuments({ kashflowPurchaseId: null, deletedInPaperlessAt: null });
+    const unlinked = await M.countDocuments(unlinkedFilter());
     return { value: unlinked, attention: unlinked, label: 'unlinked' };
   },
   // Documents — invoices in the Needs Data Entry queue (H4).
