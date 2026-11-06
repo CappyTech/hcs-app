@@ -55,7 +55,7 @@
           <p class="text-sm text-cyan-700 dark:text-cyan-300 italic mb-4">Select only one of the following:</p>
           <% groupFields.forEach(gKey => {
             if (schema[gKey] && !renderedFields.has(gKey)) { %>
-              <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData, referenceData, readOnly: false, showTips: true, config, groupPrefix: null }) %>
+              <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData, referenceData, readOnly: !!schema[gKey].readOnly, showTips: true, config, groupPrefix: null }) %>
           <%  renderedFields.add(gKey);
             }
           }) %>
@@ -69,13 +69,13 @@
           <legend class="px-2 text-sm font-semibold text-gray-700 dark:text-gray-200"><%= _groupLabel(_prefix) %></legend>
           <% _nestedGroups[_prefix].forEach(gKey => {
             if (!renderedFields.has(gKey) && schema[gKey]) { %>
-              <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData, referenceData, readOnly: false, showTips: true, config, groupPrefix: _prefix }) %>
+              <%- include('../partials/_formField', { key: gKey, field: schema[gKey], formData, referenceData, readOnly: !!schema[gKey].readOnly, showTips: true, config, groupPrefix: _prefix }) %>
           <%  renderedFields.add(gKey);
             }
           }) %>
         </fieldset>
     <% } else { %>
-        <%- include('../partials/_formField', { key, field, formData, referenceData, readOnly: false, showTips: true, config, groupPrefix: null }) %>
+        <%- include('../partials/_formField', { key, field, formData, referenceData, readOnly: !!field.readOnly, showTips: true, config, groupPrefix: null }) %>
     <%  renderedFields.add(key);
       }
     }
