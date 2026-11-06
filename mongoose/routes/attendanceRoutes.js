@@ -14,9 +14,11 @@ import flow from '../controllers/weeklyFlowController.js';
 // admin+accountant department that previously linked to a page its own users
 // could not open.
 const SITE_VIEW_ROLES = ["admin", "accountant", "employee", "subcontractor"];
+// /daily filters each record by the viewer's scope, so a project-scoped
+// Site Ops grant (Site Manager, Supervisor) reaches it and sees its sites.
 router.get(
   "/daily/:date?",
-  authService.ensureGroup("siteOps", "view", ...SITE_VIEW_ROLES),
+  authService.ensureGroup([{ group: "siteOps", level: "view", project: true }], null, ...SITE_VIEW_ROLES),
   ctrl.getDailyAttendance,
 );
 router.get(

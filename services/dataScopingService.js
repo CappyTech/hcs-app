@@ -10,6 +10,7 @@
 import rbac from '../mongoose/config/rolePermissionsConfig.js';
 import logger from './loggerService.js';
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import projectScope from '../mongoose/services/projectScopeService.js';
 
 /**
  * Build a Mongoose filter object that scopes a query to the current user.
@@ -21,9 +22,13 @@ import mdb from '../mongoose/services/mongooseDatabaseService.js';
  * @param {Object}  req       Express request (must have req.user populated)
  * @param {string}  model     Model name as it appears in rolePermissionsConfig
  * @param {string}  [operation='r'] CRUD operation character
+ * @param {Object}  [opts]
+ * @param {boolean} [opts.project=true] apply project-scoped grants (the
+ *   user's sites). Pass false where the caller can't filter per record and
+ *   wants the pre-phase-3 own-records behaviour.
  * @returns {Object} Mongoose query filter (may be empty `{}`)
  */
-async function scopeQuery(req, model, operation = "r") {
+async function scopeQuery(req, model, operation = "r", { project = true } = {}) {
   if (!req.user) return null; // caller should 401
 
   const role = req.user.role;
@@ -34,7 +39,7 @@ async function scopeQuery(req, model, operation = "r") {
   const customPerms = req.user?.customPermissions || {};
   // Every role held: an unscoped grant from any of them (a job role, say)
   // lifts the scoping; otherwise the own-scoped role's filter applies.
-  const { allowed, ownOnly } = rbac.canAccess(
+  const { allowed, ownOnly, ownRole, projectScoped } = rbac.canAccess(
     rbac.rolesOf(req.user),
     model,
     operation,
@@ -45,6 +50,23 @@ async function scopeQuery(req, model, operation = "r") {
   // If not own-only, return unscoped
   if (!ownOnly) return {};
 
+  // Limited: own records (ownRole) and/or the user's sites (projectScoped).
+  // Either may be all there is; with both, a record matching either passes.
+  const ownPart = ownRole ? await ownFilter(req, model, role) : null;
+  let projectPart = null;
+  if (projectScoped && project) {
+    projectPart = projectScope.filterFor(model, await projectScope.forRequest(req));
+  }
+  if (ownPart && projectPart) return { $or: [ownPart, projectPart] };
+  return ownPart || projectPart || null;
+}
+
+/**
+ * The own-records filter for the user's primary role, extended for IR35
+ * dual-linked workers. Null when the role has no ownership mapping or the
+ * user isn't linked.
+ */
+async function ownFilter(req, model, role) {
   // Resolve ownership — build filter for the user's primary role, then
   // extend with a secondary role when both employeeId and subcontractorId
   // are set (IR35 off-payroll workers).
@@ -66,6 +88,30 @@ async function scopeQuery(req, model, operation = "r") {
   }
 
   return primaryFilter;
+}
+
+/**
+ * Does an in-memory record match a filter from scopeQuery? Supports what
+ * scopeQuery builds: field equality, { $in: [...] }, $or and $and. A
+ * populated reference ({ _id }) compares by its _id. Use this instead of
+ * comparing fields one by one, which breaks on $in and $or.
+ * @param {Object} record
+ * @param {Object|null} filter
+ * @returns {boolean}
+ */
+function matchesFilter(record, filter) {
+  if (filter === null || filter === undefined) return false;
+  const str = (v) => (v && typeof v === 'object' && v._id !== undefined ? String(v._id) : String(v));
+  return Object.entries(filter).every(([key, cond]) => {
+    if (key === '$or') return cond.some((f) => matchesFilter(record, f));
+    if (key === '$and') return cond.every((f) => matchesFilter(record, f));
+    const val = record?.[key];
+    if (val === undefined || val === null) return false;
+    if (cond && typeof cond === 'object' && Array.isArray(cond.$in)) {
+      return cond.$in.some((c) => str(c) === str(val));
+    }
+    return str(val) === str(cond);
+  });
 }
 
 /**
@@ -157,6 +203,7 @@ function scopeQueryOrError(req, model, operation = "r") {
 export default {
   scopeQuery,
   scopeQueryOrError,
+  matchesFilter,
 };
 
-export { scopeQuery, scopeQueryOrError };
+export { scopeQuery, scopeQueryOrError, matchesFilter };

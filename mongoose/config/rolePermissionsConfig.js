@@ -410,24 +410,44 @@ function compileJobRoles() {
     if (def.values === 'flag') compiled.push([slug + accessGroups.VALUES_SUFFIX, def.grants]);
   }
 
+  const { PROJECT_SCOPE_FIELDS, PROJECT_SCOPE_MAX_LEVEL, PROJECT_SCOPE_ROUTES } = accessGroups;
   for (const [slug, grants] of compiled) {
     const departments = new Set();
-    const modelOps = {};   // model -> Set of ops
+    const modelOps = {};   // model -> Map(op -> '' (all records) | 'project')
 
     for (const grant of grants) {
-      // 'project' scope is not enforced yet (phase 3): grant nothing rather
-      // than something wider than intended.
-      if ((grant.scope || 'all') !== 'all') continue;
+      const scope = grant.scope || 'all';
       const group = groups[grant.group];
       if (!group) throw new Error(`Job role "${slug}" grants unknown group "${grant.group}"`);
       const levels = levelsUpTo(grant.level);
       if (!levels.length) throw new Error(`Job role "${slug}" grants unknown level "${grant.level}"`);
 
+      if (scope === 'project') {
+        // Read and list only, on models that can be limited to a site, and
+        // only the routes whose data is scoped per record (see
+        // accessGroupsConfig PROJECT_SCOPE_*). No department dashboards.
+        const viewLevels = levelsUpTo(PROJECT_SCOPE_MAX_LEVEL).filter((l) => levels.includes(l));
+        const ops = LEVEL_OPS[viewLevels[viewLevels.length - 1]] || [];
+        for (const model of group.models) {
+          if (!PROJECT_SCOPE_FIELDS[model]) continue;
+          const m = modelOps[model] || (modelOps[model] = new Map());
+          for (const op of ops) if (!m.has(op)) m.set(op, 'project');
+        }
+        for (const level of viewLevels) {
+          for (const key of (group.routes && group.routes[level]) || []) {
+            for (const matched of expandRoute(key)) {
+              if (PROJECT_SCOPE_ROUTES.has(matched)) grantRoute(matched, slug);
+            }
+          }
+        }
+        continue;
+      }
+
       for (const d of group.departments) departments.add(d);
       for (const model of group.models) {
         const ops = READ_ONLY_MODELS.has(model) ? LEVEL_OPS.view : LEVEL_OPS[grant.level];
-        modelOps[model] = modelOps[model] || new Set();
-        for (const op of ops) modelOps[model].add(op);
+        const m = modelOps[model] || (modelOps[model] = new Map());
+        for (const op of ops) m.set(op, ''); // all records beats project
       }
       for (const level of levels) {
         for (const key of (group.routes && group.routes[level]) || []) {
@@ -448,7 +468,10 @@ function compileJobRoles() {
 
     const order = ['c', 'r', 'u', 'd', 'l'];
     roleModelAccess[slug] = Object.fromEntries(
-      Object.entries(modelOps).map(([m, ops]) => [m, order.filter((o) => ops.has(o)).join(',')]),
+      Object.entries(modelOps).map(([m, ops]) => [m, order
+        .filter((o) => ops.has(o))
+        .map((o) => (ops.get(o) ? `${o}:${ops.get(o)}` : o))
+        .join(',')]),
     );
   }
 }
@@ -513,20 +536,27 @@ function canSeeValues(user) {
  * @param {string} level  'view' | 'edit' | 'approve' | 'manage'
  * @returns {boolean}
  */
-function hasGroup(user, group, level) {
+function hasGroup(user, group, level, { project = false } = {}) {
   if (!accessGroups.groups[group]) throw new Error(`Unknown permission group "${group}"`);
   const need = accessGroups.LEVELS.indexOf(level);
   if (need < 0) throw new Error(`Unknown permission level "${level}"`);
   if (!user) return false;
   if (user.role === 'admin') return true;
+  // A project-scoped grant counts only where the caller scopes the data per
+  // record ({ project: true }), and only up to PROJECT_SCOPE_MAX_LEVEL.
+  const projectMax = accessGroups.LEVELS.indexOf(accessGroups.PROJECT_SCOPE_MAX_LEVEL);
   return jobRolesOf(user).some((compiled) => {
     const def = accessGroups.jobRoles[accessGroups.baseRole(compiled)];
     if (!def) return false;
     const seesValues = def.values === 'always' || compiled.endsWith(accessGroups.VALUES_SUFFIX);
-    return def.grants.some((g) => g.group === group
-      && (g.scope || 'all') === 'all'
-      && (seesValues || !g.values)
-      && accessGroups.LEVELS.indexOf(g.level) >= need);
+    return def.grants.some((g) => {
+      if (g.group !== group || !(seesValues || !g.values)) return false;
+      const scope = g.scope || 'all';
+      if (scope === 'project') {
+        return project && need <= projectMax && accessGroups.LEVELS.indexOf(g.level) >= need;
+      }
+      return accessGroups.LEVELS.indexOf(g.level) >= need;
+    });
   });
 }
 
@@ -606,20 +636,28 @@ function canAccess(role, model, operation, customPerms) {
 
   // 1) Role-level access, across every role held. Any unscoped grant wins;
   //    otherwise remember the first role that grants it own-scoped, so the
-  //    caller can build that role's ownership filter.
+  //    caller can build that role's ownership filter, and whether any role
+  //    grants it project-scoped (the user's sites; dataScopingService).
   let ownRole = null;
+  let projectScoped = false;
   for (const r of roles) {
     const perms = roleModelAccess[r] && roleModelAccess[r][model];
     if (!perms) continue;
     for (const { op, scope } of parsePerms(perms)) {
       if (op !== operation) continue;
-      if (scope !== 'own') return { allowed: true, ownOnly: false };
-      if (!ownRole) ownRole = r;
+      if (!scope) return { allowed: true, ownOnly: false };
+      if (scope === 'project') projectScoped = true;
+      else if (!ownRole) ownRole = r;
     }
   }
-  // An own-scoped role grant is returned before custom grants are looked at,
-  // as it always has been.
-  if (ownRole) return { allowed: true, ownOnly: true, ownRole };
+  // A scoped role grant is returned before custom grants are looked at, as
+  // it always has been. `ownOnly` means "limited", own records and/or sites.
+  if (ownRole || projectScoped) {
+    const out = { allowed: true, ownOnly: true };
+    if (ownRole) out.ownRole = ownRole;
+    if (projectScoped) out.projectScoped = true;
+    return out;
+  }
 
   // 2) Check user-level custom permissions (always additive)
   if (customPerms?.models) {

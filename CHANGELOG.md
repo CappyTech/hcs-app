@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.95.0] - 2026-11-06
+
+### Added
+- Permission groups, phase 3a: project scope. A contract can name its **Site managers / supervisors** (a new picker on the contract form, offering people who hold either role). A project-scoped job role sees only the records on contracts that name them and aren't Completed: the contracts themselves, their projects, quotes and locations, the weekly assignments, attendance, vehicle deployments, and purchases booked to the project.
+- Site Manager and Supervisor can now be assigned on the user's **Job roles** card. In this release they can read and list their sites, and use the daily attendance view filtered to their sites. Recording and approving attendance on site comes with the two-stage week approval (phase 3b). Contracts, projects, quotes and purchases carry money, so they show only to a Site Manager or Supervisor with **Can see values** ticked.
+- Profile and user pages mark site-limited permissions "(their sites)".
+
+### Changed
+- Scope filters can now be compound (own records OR sites), so the generic read check and the daily attendance filter use one matcher (`matchesFilter`) instead of comparing fields one by one. The weekly view keeps own-records scoping only, because it groups by person and can't filter per site; project-scoped roles don't reach it.
+
 ## [6.94.1] - 2026-11-06
 
 ### Fixed

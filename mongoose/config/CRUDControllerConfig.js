@@ -216,6 +216,13 @@ export default {
   },
   contract: {
     readOnly: ['uuid', 'createdAt'],
+    labelOverrides: {
+      siteManagers: 'Site managers / supervisors',
+    },
+    // The picker offers only people holding a site role.
+    referenceFilters: {
+      siteManagers: { roles: { $in: ['siteManager', 'supervisor'] } },
+    },
     validators: {
       title: value => typeof value === 'string' && value.length >= 3,
       status: value => ['Planned', 'In Progress', 'Completed'].includes(value),
@@ -512,7 +519,7 @@ export default {
             operations: ops.map(op => {
               const [code, scope] = op.split(':');
               const labels = { c: 'Create', r: 'Read', u: 'Update', d: 'Delete', l: 'List' };
-              return { label: labels[code] || code, ownOnly: scope === 'own' };
+              return { label: labels[code] || code, ownOnly: scope === 'own', sitesOnly: scope === 'project' };
             }),
           };
         });
@@ -567,7 +574,7 @@ export default {
             operations: ops.map(op => {
               const [code, scope] = op.split(':');
               const labels = { c: 'Create', r: 'Read', u: 'Update', d: 'Delete', l: 'List' };
-              return { label: labels[code] || code, ownOnly: scope === 'own' };
+              return { label: labels[code] || code, ownOnly: scope === 'own', sitesOnly: scope === 'project' };
             }),
           };
         }),
