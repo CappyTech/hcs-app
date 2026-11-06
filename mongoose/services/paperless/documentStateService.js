@@ -23,6 +23,7 @@
  * processingHistory with who and when.
  */
 
+import rbac from '../../config/rolePermissionsConfig.js';
 import mongoose from 'mongoose';
 import { isDocumentType } from '../../config/paperlessTypesConfig.js';
 import { EXCLUDED_REASONS } from '../../models/mongoose/PAPERLESS/OcrDocument.js';
@@ -35,9 +36,9 @@ export const TRANSITIONS = {
   mark_sent:          { from: ['entered'],                  to: 'sent' },
   unlink:             { from: ['sent'],                     to: 'entered' },
   unlink_unentered:   { from: ['sent'],                     to: 'awaiting_entry' },
-  reopen_entry:       { from: ['entered'],                  to: 'awaiting_entry', adminOnly: true },
+  reopen_entry:       { from: ['entered'],                  to: 'awaiting_entry', needsApprove: true },
   flag_credit_note:   { from: ['awaiting_entry', 'entered'], to: 'manual_kashflow', sets: { creditNote: true } },
-  unflag_credit_note: { from: ['manual_kashflow'],          to: 'awaiting_entry', adminOnly: true, sets: { creditNote: false } },
+  unflag_credit_note: { from: ['manual_kashflow'],          to: 'awaiting_entry', needsApprove: true, sets: { creditNote: false } },
 };
 
 /** Purchase or Subcontractor Invoice — the only documents with a state. */
@@ -47,16 +48,18 @@ export function isInvoiceDocument(doc) {
 }
 
 /**
- * Normalise req.user into an actor. `isAdmin` gates admin-only transitions
- * and is never stored.
+ * Normalise req.user into an actor. `isAdmin` and `canApprove` (Documents
+ * approve, accessGroupsConfig) gate the undo transitions marked needsApprove,
+ * and are never stored.
  */
 export function actorFromUser(user) {
-  if (!user) return { userId: null, name: 'system', isAdmin: false };
+  if (!user) return { userId: null, name: 'system', isAdmin: false, canApprove: false };
   const rawId = user._id ?? user.id ?? null;
   return {
     userId: rawId != null && mongoose.isValidObjectId(rawId) ? rawId : null,
     name: user.username || user.name || user.email || null,
     isAdmin: user.role === 'admin',
+    canApprove: rbac.hasGroup(user, 'documents', 'approve'),
   };
 }
 
@@ -81,8 +84,8 @@ export function planTransition(doc, action, actor) {
       message: `Can't ${action.replace(/_/g, ' ')} a document that is ${from ? from.replace(/_/g, ' ') : 'not yet classified'}.`,
     };
   }
-  if (rule.adminOnly && !actor?.isAdmin) {
-    return { ok: false, reason: 'forbidden', message: 'Only an admin can do this.' };
+  if (rule.needsApprove && !(actor?.isAdmin || actor?.canApprove)) {
+    return { ok: false, reason: 'forbidden', message: 'This needs Documents approve.' };
   }
   return { ok: true, action, from, to: rule.to, sets: rule.sets || {} };
 }

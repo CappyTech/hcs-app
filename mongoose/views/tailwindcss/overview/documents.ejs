@@ -117,10 +117,12 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
         <span class="text-sm text-purple-600 dark:text-purple-300 hidden sm:block">MongoDB / Paperless custom field mismatch</span>
       </div>
       <div class="flex items-center gap-3 shrink-0">
+        <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
         <form method="POST" action="/paperless/repair-drift" data-submit-once>
           <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
           <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Fix All</button>
         </form>
+        <% } %>
         <span class="text-purple-400 text-sm group-open:hidden">▼</span>
         <span class="text-purple-400 text-sm hidden group-open:inline">▲</span>
       </div>
@@ -180,10 +182,12 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
             <td class="py-1.5 pr-3 font-mono text-xs <%= d.kashflowPurchaseId ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400' %>"><%= d.kashflowPurchaseId ? ('#' + (d.kashflowPurchaseNumber ?? d.kashflowPurchaseId)) : '—' %></td>
             <td class="py-1.5 pr-3 text-xs text-gray-500"><%= d.deletedInPaperlessAt ? fmtDate(d.deletedInPaperlessAt, 'dd/MM/yyyy HH:mm') : '—' %></td>
             <td class="py-1.5 whitespace-nowrap text-xs">
+              <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
               <form method="POST" action="/paperless/ocr/<%= d.paperlessId %>/remove" data-submit-once class="inline">
                 <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
                 <button type="submit" data-submit-once-text="Removing…" data-confirm="Remove the MongoDB copy of document #<%= d.paperlessId %>? This cannot be undone." class="inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white rounded px-2 py-1 text-xs font-medium transition shadow-sm">Remove</button>
               </form>
+              <% } %>
             </td>
           </tr>
           <% } %>
@@ -347,10 +351,12 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
         <span class="block text-xs text-orange-600 dark:text-orange-300 mt-0.5">KashFlow purchase no longer exists. Use Clear Now to remove the stale links. Documents sent within the last 48 hours are held (marked below) to allow hcs-sync time to pick up the new purchase.</span>
       </div>
       <div class="flex items-center gap-3 shrink-0">
+        <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
         <form method="POST" action="/paperless/clear-orphans" data-submit-once>
           <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
           <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Clear Now</button>
         </form>
+        <% } %>
         <span class="text-orange-400 text-sm shrink-0 group-open:hidden">▼</span><span class="text-orange-400 text-sm shrink-0 hidden group-open:inline">▲</span>
       </div>
     </summary>
@@ -398,15 +404,19 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
       </div>
       <div class="flex items-center gap-3 shrink-0">
         <% if (hasNumberNoId > 0) { %>
+        <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
         <form method="POST" action="/paperless/resolve-numbers" data-submit-once>
           <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
           <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Resolve Numbers</button>
         </form>
         <% } %>
+        <% } %>
+        <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
         <form method="POST" action="/paperless/match-references" data-submit-once title="Cross-check unlinked documents against synced KashFlow purchases by supplier reference (invoice number), validated by amount or supplier name">
           <% if (csrfToken) { %><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% } %>
           <button type="submit" data-submit-once-text="Running…" class="inline-flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium transition shadow-sm">Match References</button>
         </form>
+        <% } %>
         <span class="text-yellow-400 text-sm group-open:hidden">▼</span><span class="text-yellow-400 text-sm hidden group-open:inline">▲</span>
       </div>
     </summary>

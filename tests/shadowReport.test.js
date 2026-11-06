@@ -187,7 +187,7 @@ describe('shadow report page', () => {
 describe('H8 wiring', () => {
   const read = (p) => fs.readFileSync(path.resolve(p), 'utf8');
   it('route, RBAC, daily job and the link from the queues', () => {
-    assert.ok(read('mongoose/routes/paperlessRoutes.js').includes('router.get("/paperless/shadow-report", ...paperlessGuard, shadowCtrl.getShadowReport)'));
+    assert.ok(read('mongoose/routes/paperlessRoutes.js').includes('router.get("/paperless/shadow-report", ...docs("view"), shadowCtrl.getShadowReport)'));
     assert.match(read('mongoose/config/rolePermissionsConfig.js'), /'\/paperless\/shadow-report':\s+\['admin'\]/);
     assert.match(read('mongoose/services/jobRegistry.js'), /scheduler\.register\('paperless-shadow-report'/);
     assert.match(read('mongoose/views/tailwindcss/paperless/queue.ejs'), /href="\/paperless\/shadow-report"/);

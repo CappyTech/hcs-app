@@ -322,22 +322,38 @@ describe('ensureGroup guards agree with the global route check', async () => {
   const SITE_VIEW_ROLES = ['admin', 'accountant', 'employee', 'subcontractor'];
   const routes = [];
   // router.<method>('<path>', authService.ensureGroup(<args>) — either quote style.
-  const re = /router\.(?:get|post|put|patch|delete)\(\s*(['"])(\/[^'"]+)\1,\s*authService\.ensureGroup\(([^)]*)\)/g;
+  const re = /router\.(get|post|put|patch|delete)\(\s*(['"])(\/[^'"]+)\2,\s*authService\.ensureGroup\(([^)]*)\)/g;
+  // Files that name their guards once and reuse them:
+  //   paperlessRoutes   ...docs("<level>")         → documents
+  //   companyDocsRoutes view | edit | approve        → documents
+  //   webRoutes         edit | approve | manage      → website
+  const helpers = {
+    'paperlessRoutes.js': { group: 'documents', re: /router\.(get|post|put|patch|delete)\(\s*(['"])(\/[^'"]+)\2,\s*\.\.\.docs\("(\w+)"\)/g },
+    'companyDocsRoutes.js': { group: 'documents', re: /router\.(get|post|put|patch|delete)\(\s*(['"])(\/[^'"]+)\2,\s*(view|edit|approve|manage),/g },
+    'webRoutes.js': { group: 'website', re: /router\.(get|post|put|patch|delete)\(\s*(['"])(\/[^'"]+)\2,\s*(view|edit|approve|manage),/g },
+  };
   for (const file of fs.readdirSync(routesDir).filter((f) => f.endsWith('.js'))) {
     const src = fs.readFileSync(new URL(file, routesDir), 'utf8');
     let m;
     while ((m = re.exec(src)) !== null) {
       // eslint-disable-next-line no-new-func
-      const args = new Function('SITE_VIEW_ROLES', `return [${m[3]}];`)(SITE_VIEW_ROLES);
-      routes.push({ file, path: m[2], args });
+      const args = new Function('SITE_VIEW_ROLES', `return [${m[4]}];`)(SITE_VIEW_ROLES);
+      routes.push({ file, method: m[1], path: m[3], args });
+    }
+    const h = helpers[file];
+    if (h) {
+      while ((m = h.re.exec(src)) !== null) routes.push({ file, method: m[1], path: m[3], args: [h.group, m[4]] });
     }
   }
   const concrete = (p) => p.replace(/\/:[a-zA-Z]+\?/g, '').replace(/:[a-zA-Z]+/g, 'x').replace(/\/$/, '');
-  const guardFor = (p) => {
-    const r = routes.find((x) => x.path === p);
-    assert.ok(r, `no ensureGroup guard on ${p}`);
-    return authService.ensureGroup(...r.args);
+  // guardFor('/path') or guardFor('POST /path') where GET and POST differ.
+  const guardFor = (spec) => {
+    const [method, p] = spec.includes(' ') ? spec.split(' ') : [null, spec];
+    const found = routes.filter((x) => x.path === p && (!method || x.method === method.toLowerCase()));
+    assert.ok(found.length, `no ensureGroup guard on ${spec}`);
+    return authService.ensureGroup(...found[0].args);
   };
+  const pathOf = (spec) => (spec.includes(' ') ? spec.split(' ')[1] : spec);
 
   it('finds the Site Ops, Payroll and CIS guards', () => {
     for (const p of [
@@ -369,8 +385,52 @@ describe('ensureGroup guards agree with the global route check', async () => {
   });
 
   const asJob = (slug) => ({ role: 'employee', roles: [slug] });
-  const allowed = async (p, user) => (await run(guardFor(p), user, concrete(p))) === undefined
-    && (await run(authService.ensureRouteAccess, user, concrete(p))) === undefined;
+  const allowed = async (spec, user) => {
+    const p = concrete(pathOf(spec));
+    if (await run(guardFor(spec), user, p)) return false;
+    if (await run(authService.ensureRouteAccess, user, p)) return false;
+    // paperlessRoutes also asks for the documents department.
+    if (p.startsWith('/paperless') && await run(authService.ensureDepartment('documents'), user, p)) return false;
+    return true;
+  };
+
+  it('Documents: the Office Manager enters data; sending to KashFlow and repairs stay admin', async () => {
+    const office = asJob('officeManager');
+    for (const p of [
+      '/paperless/queues', '/paperless/queues/:queue', 'GET /paperless/ocr/:paperlessId',
+      'GET /paperless/ocr/:paperlessId/entry', 'POST /paperless/ocr/:paperlessId/entry',
+      '/paperless/ocr/:paperlessId/type', '/paperless/ocr/:paperlessId/supplier',
+      '/overview/documents', '/company-docs/policies', 'POST /company-docs/policies',
+    ]) assert.equal(await allowed(p, office), true, `office manager can't reach ${p}`);
+    for (const p of [
+      '/paperless/ocr/:paperlessId/reopen', 'POST /paperless/ocr/:paperlessId/match',
+      '/company-docs/policies/:uuid/delete',
+    ]) assert.equal(await allowed(p, office), false, `office manager reaches ${p}`);
+    // Director holds approve.
+    assert.equal(await allowed('/paperless/ocr/:paperlessId/reopen', asJob('director')), true);
+    assert.equal(await allowed('POST /paperless/ocr/:paperlessId/match', asJob('director')), true);
+  });
+
+  it('Documents: nothing that writes to KashFlow, sends email, deletes or repairs is open to a job role', async () => {
+    const manage = routes.filter((r) => r.args[0] === 'documents' && r.args[1] === 'manage');
+    assert.ok(manage.length >= 15, `only ${manage.length} manage routes`);
+    for (const p of ['/paperless/ocr/:paperlessId/send', 'POST /paperless/suppliers', 'DELETE /paperless/ocr/:paperlessId', '/paperless/repair-drift']) {
+      assert.ok(manage.some((r) => r.path === pathOf(p)), `${p} is not at manage`);
+    }
+    for (const r of manage) {
+      const spec = `${r.method.toUpperCase()} ${r.path}`;
+      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(spec, asJob(slug)), false, `${slug} reaches ${spec}`);
+      assert.equal(await allowed(spec, { role: 'admin' }), true, `admin loses ${spec}`);
+    }
+  });
+
+  it('Website: a Director edits and publishes; settings stay admin', async () => {
+    assert.equal(await allowed('POST /website/:type', asJob('director')), true);
+    assert.equal(await allowed('/website/:type/:uuid/publish', asJob('director')), true);
+    assert.equal(await allowed('GET /website/settings', asJob('director')), false);
+    assert.equal(await allowed('POST /website/:type', asJob('officeManager')), false);
+    assert.equal(await allowed('GET /website/settings', { role: 'admin' }), true);
+  });
 
   it('Payroll: view reads runs, edit calculates, approve locks; the accountant keeps its reads', async () => {
     assert.equal(await allowed('/payroll/runs', asJob('payrollHr')), true);

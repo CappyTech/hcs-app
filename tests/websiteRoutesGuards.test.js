@@ -65,9 +65,23 @@ describe('website editor routes / permissions consistency', () => {
     }
   });
 
-  it('guards every editor route with adminOnly', () => {
+  it('guards every editor route with a Website permission-group level', () => {
+    // edit drafts, approve publishes/unpublishes/deletes, manage changes settings
+    for (const [name, level] of [['edit', 'edit'], ['approve', 'approve'], ['manage', 'manage']]) {
+      assert.ok(webRoutesSrc.includes(`const ${name} = authService.ensureGroup('website', '${level}');`), `${name} guard`);
+    }
+    const levelOf = (method, p) => routes.find((r) => r.method === method && r.path === p)?.guard;
     for (const r of routes) {
-      assert.equal(r.guard, 'adminOnly', `${r.method.toUpperCase()} ${r.path} is not admin-guarded`);
+      assert.ok(['edit', 'approve', 'manage'].includes(r.guard), `${r.method.toUpperCase()} ${r.path} is not group-guarded`);
+    }
+    assert.equal(levelOf('get', '/website/settings'), 'manage');
+    assert.equal(levelOf('post', '/website/settings'), 'manage');
+    for (const p of ['/website/:type/:uuid/publish', '/website/:type/:uuid/unpublish', '/website/:type/:uuid/delete', '/website/media/:uuid/delete']) {
+      assert.equal(levelOf('post', p), 'approve', p);
+    }
+    // No job role holds Website manage, so settings stay admin-only.
+    for (const slug of rbac.JOB_ROLES) {
+      assert.equal(rbac.hasGroup({ role: 'employee', roles: [slug] }, 'website', 'manage'), false, slug);
     }
   });
 

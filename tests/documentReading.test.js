@@ -212,14 +212,15 @@ describe('routes, permissions and views', async () => {
   it('every reading route is behind the Paperless guard and admin-only', () => {
     const routes = read('mongoose/routes/paperlessRoutes.js');
     const perms = read('mongoose/config/rolePermissionsConfig.js');
-    for (const [method, p, fn] of [
-      ['get', '/paperless/ocr/:paperlessId/insights', 'getInsights'],
-      ['post', '/paperless/ocr/:paperlessId/read', 'postRead'],
-      ['post', '/paperless/ocr/:paperlessId/reprocess', 'postReprocess'],
-      ['get', '/paperless/ocr/:paperlessId/reading-fixture', 'getFixture'],
-      ['get', '/paperless/reading', 'getReport'],
+    // Levels of the Documents permission group (paperlessRoutes `docs`)
+    for (const [method, p, fn, level] of [
+      ['get', '/paperless/ocr/:paperlessId/insights', 'getInsights', 'view'],
+      ['post', '/paperless/ocr/:paperlessId/read', 'postRead', 'edit'],
+      ['post', '/paperless/ocr/:paperlessId/reprocess', 'postReprocess', 'edit'],
+      ['get', '/paperless/ocr/:paperlessId/reading-fixture', 'getFixture', 'manage'],
+      ['get', '/paperless/reading', 'getReport', 'view'],
     ]) {
-      assert.ok(routes.includes(`router.${method}("${p}", ...paperlessGuard, readingCtrl.${fn})`), `${method} ${p}`);
+      assert.ok(routes.includes(`router.${method}("${p}", ...docs("${level}"), readingCtrl.${fn})`), `${method} ${p}`);
       const line = perms.split('\n').find((l) => l.includes(`'${p}':`));
       assert.ok(line && line.includes("['admin']"), p);
     }
@@ -275,6 +276,8 @@ describe('routes, permissions and views', async () => {
 
   it('the accuracy report renders rates and fixture links', async () => {
     const html = await ejs.renderFile(path.resolve('mongoose/views/tailwindcss/paperless/reading.ejs'), {
+      // The fixture link is a Documents manage action (admin).
+      canGroup: (group, level) => group === 'documents' && level === 'manage',
       fields: svc.HEADER_FIELDS,
       report: {
         documents: 2,

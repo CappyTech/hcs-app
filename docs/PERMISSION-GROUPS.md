@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0). The rest of phase 2 and phases 3–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0). The rest of phase 2 and phases 3–5 are planned below.
 
 ## Why
 
@@ -179,9 +179,8 @@ These gaps are deliberate. They are the plan for the next phases.
   scoping (`dataScopingService`, `filterAttendanceForUser`) already reads every
   role: a Contracts Manager whose primary role is `employee` sees every week on
   `/weekly`, because Site Ops grants attendance unscoped.
-- **Admin-only pages** (`/paperless/*`, `/company-docs/*`, `/website`,
-  `/audit`) stay with the roles their guards name, even where a group lists
-  them, until phase 2 opens each one.
+- **Admin-only pages** (`/audit`, security events, `/mail`) stay with the
+  roles their guards name, even where a group lists them, until phase 2d.
 - **Project scope.** Site Manager and Supervisor can't be assigned yet.
 - **Bank and payments** stay with `admin` and `accountant` (decision 3 below).
 - **Pay figures** outside the weekly attendance view are still hidden by
@@ -207,8 +206,20 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
      now: unlock a run, post the payroll journal, submit FPS/EPS/pension,
      assign a subcontractor, change a purchase's supplier. Payroll settings
      and tax rates are System settings and stay admin-only.
-   - **2c, Documents and Website**: `/paperless/*`, `/company-docs/*`,
-     `/overview/documents`, `/website`, mail rules.
+   - **2c, Documents and Website** *(6.92.0, built)*. Documents view: queues,
+     documents, files, reading reports, mail rules guide, ingest tracker,
+     documents overview, letterhead and policies. Edit: data entry, a
+     document's type, supplier and flags, letterhead, policies. Approve:
+     reopen an entry, undo a credit note or Not for KashFlow, link a document
+     to a KashFlow purchase, delete a policy. At **manage**, so admin-only for
+     now: send to KashFlow, create a supplier, re-send an invoice email,
+     unlink, reassign, re-ingest, sync fields, delete, remove, the repair
+     tools and the reading fixture. Website edit drafts, approve publishes,
+     unpublishes and deletes, manage changes settings.
+
+     Routes are guarded in two layers: `routeAccess` opens every `/paperless`,
+     `/company-docs` and `/website` page at the group's **view** level, and
+     each route's `ensureGroup` asks for the level that action needs.
    - **2d, the rest**: `/audit` and security events for System view, GDPR
      requests, help-page visibility, search, the websocket log feed, and
      any remaining pay-hiding checks.
@@ -256,5 +267,6 @@ Decisions 1 and 2 are made. Decision 3 has a default applied in phase 1; settle 
    app is granted to a job role.* Bank reconciliation, payments, HMRC and
    pension submissions, the payroll journal and unlocking a run all sit at a
    `manage` level no job role holds. A Payroll / HR Officer can calculate and
-   lock the same run, the same as admin can today. Decide this before opening
-   any `manage` level.
+   lock the same run, the same as admin can today. In Documents, data entry
+   (edit) and sending to KashFlow (manage) stay with different people. Decide
+   this before opening any `manage` level.

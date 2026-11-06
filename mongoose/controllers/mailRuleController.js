@@ -14,18 +14,19 @@ export const GUIDE_PATH = '/paperless/mail-rules';
 
 /**
  * True when this user gets past the guide's guards: the global route check,
- * then paperlessGuard (admin or a custom grant for the route, plus the
- * documents department). Used to show links to the guide only to people who
- * can open it.
+ * then paperlessRoutes' docs('view') (Documents view, admin, or a custom grant
+ * for the route, plus the documents department). Used to show links to the
+ * guide only to people who can open it.
  */
 export function canOpenGuide(user) {
   if (!user) return false;
   const perms = user.customPermissions || {};
+  const roles = rbac.rolesOf(user);
   const pattern = rbac.matchRoutePattern(GUIDE_PATH);
-  const roleOk = user.role === 'admin' || (perms.routes || []).includes(pattern);
+  const roleOk = rbac.hasGroup(user, 'documents', 'view') || (perms.routes || []).includes(pattern);
   return roleOk
-    && rbac.canAccessRoute(user.role, pattern, perms)
-    && rbac.canAccessDepartment(user.role, 'documents', perms);
+    && rbac.canAccessRoute(roles, pattern, perms)
+    && rbac.canAccessDepartment(roles, 'documents', perms);
 }
 
 export const getGuide = async (req, res, next) => {

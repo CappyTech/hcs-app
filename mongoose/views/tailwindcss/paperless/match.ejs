@@ -104,6 +104,7 @@
           <% if (doc.kashflowPurchaseNumber) { %>(purchase #<%= doc.kashflowPurchaseNumber %>) <% } %>onto the live copy.
           This document's record will then be removed.
         </p>
+        <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
         <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reassign" class="flex gap-2 flex-wrap items-center">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <input name="newPaperlessId" type="number" min="1" step="1" required placeholder="New Paperless ID"
@@ -116,6 +117,7 @@
             Reassign
           </button>
         </form>
+        <% } %>
       </div>
 
     </div>

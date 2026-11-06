@@ -27,6 +27,7 @@ import statementSvc from '../services/paperless/statementReadingService.js';
 import { documentTypeOptions } from '../services/paperless/documentTypeService.js';
 import supplierSvc from '../services/paperless/documentSupplierService.js';
 import cisCheckSvc from '../services/paperless/cisCheckService.js';
+import rbac from '../config/rolePermissionsConfig.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import { parseCorrespondentName, correspondentLabel } from '../services/paperless/correspondentName.js';
 import { normaliseVatNumber } from '../../public/js/invoice-line-finder.js';
@@ -122,6 +123,10 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
       ocrText: doc.ocrText, reading: doc.reading, docVatNumbers: supplierVatNumbers(doc), values: v, company: companyForChecks(),
     }) : [],
     isAdmin,
+    // Undo actions (reopen, not a credit note, undo Not for KashFlow)
+    canApprove: rbac.hasGroup(req.user, 'documents', 'approve'),
+    // Re-send the invoice email (leaves the app)
+    canManage: rbac.hasGroup(req.user, 'documents', 'manage'),
     // Tagged in Paperless as not for entry: shown, but nothing to enter
     excluded: notForEntryMessage(doc),
     locked: doc.processingState === 'sent' || !!notForEntryMessage(doc),
@@ -236,8 +241,14 @@ export const postCreditNote = async (req, res, next) => {
   try {
     const id = idParam(req);
     if (!id) return notFound(res);
-    await mdb.connect();
     const flag = req.body.flag === 'on';
+    // Marking is data entry; taking it back out is a sign-off (the same rule
+    // as Not for KashFlow below).
+    if (!flag && !rbac.hasGroup(req.user, 'documents', 'approve')) {
+      req.flash('error', 'Undoing a credit note needs Documents approve.');
+      return res.redirect(entryUrl(id));
+    }
+    await mdb.connect();
     const r = await entry.setCreditNote(mdb.PAPERLESS.OcrDocument, id, flag, actorFromUser(req.user));
     if (!r.ok) {
       req.flash('error', r.message);
@@ -260,8 +271,8 @@ export const postNotForKashflow = async (req, res, next) => {
     const id = idParam(req);
     if (!id) return notFound(res);
     const flag = req.body.flag === 'on';
-    if (!flag && req.user?.role !== 'admin') {
-      req.flash('error', 'Only an admin can undo Not for KashFlow.');
+    if (!flag && !rbac.hasGroup(req.user, 'documents', 'approve')) {
+      req.flash('error', 'Undoing Not for KashFlow needs Documents approve.');
       return res.redirect(entryUrl(id));
     }
     await mdb.connect();

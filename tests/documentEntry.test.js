@@ -581,7 +581,7 @@ describe('subcontractor invoices: the three VAT cases', () => {
 describe('entry view', () => {
   const view = path.resolve('mongoose/views/tailwindcss/paperless/entry.ejs');
   const base = {
-    title: 'INV-1001.pdf', csrfToken: 'tok', errors: {}, warnings: [], isAdmin: false, locked: false, paperlessUiBase: 'https://docs.example.test', lineCount: 2,
+    title: 'INV-1001.pdf', csrfToken: 'tok', errors: {}, warnings: [], isAdmin: false, canApprove: false, locked: false, paperlessUiBase: 'https://docs.example.test', lineCount: 2,
   };
   const render = (doc, locals = {}) => ejs.renderFile(view, {
     ...base, doc, kind: entryKind(doc), values: formValues(doc), ...locals,
@@ -698,12 +698,12 @@ describe('entry view', () => {
     assert.ok(!html.includes('/paperless/ocr/1/draft'));
   });
 
-  it('shows admin-only actions only to admins', async () => {
+  it('shows undo actions only to people with Documents approve', async () => {
     const doc = { paperlessId: 1, documentType: PI, processingState: 'entered', customFields: [] };
     assert.ok(!(await render(doc)).includes('Reopen entry'));
-    assert.match(await render(doc, { isAdmin: true }), /Reopen entry \(admin\)/);
+    assert.match(await render(doc, { canApprove: true }), /Reopen entry/);
     const cn = { paperlessId: 2, documentType: PI, processingState: 'manual_kashflow', creditNote: true, customFields: [] };
-    assert.match(await render(cn, { isAdmin: true }), /Not a credit note \(admin\)/);
+    assert.match(await render(cn, { canApprove: true }), /Not a credit note/);
     assert.ok(!(await render(cn)).includes('Not a credit note'));
   });
 
@@ -758,11 +758,12 @@ describe('H5 wiring', () => {
   const read = (p) => fs.readFileSync(path.resolve(p), 'utf8');
   it('routes are behind the Paperless guard and in the RBAC table', () => {
     const routes = read('mongoose/routes/paperlessRoutes.js');
-    for (const [method, p, fn] of [
-      ['get', 'entry', 'getEntry'], ['post', 'entry', 'postEntry'], ['post', 'credit-note', 'postCreditNote'],
-      ['post', 'reopen', 'postReopen'], ['get', 'file', 'getFile'],
+    // Levels of the Documents permission group (paperlessRoutes `docs`)
+    for (const [method, p, fn, level] of [
+      ['get', 'entry', 'getEntry', 'edit'], ['post', 'entry', 'postEntry', 'edit'], ['post', 'credit-note', 'postCreditNote', 'edit'],
+      ['post', 'reopen', 'postReopen', 'approve'], ['get', 'file', 'getFile', 'view'],
     ]) {
-      assert.ok(routes.includes(`router.${method}("/paperless/ocr/:paperlessId/${p}", ...paperlessGuard, entryCtrl.${fn})`), `${method} ${p}`);
+      assert.ok(routes.includes(`router.${method}("/paperless/ocr/:paperlessId/${p}", ...docs("${level}"), entryCtrl.${fn})`), `${method} ${p}`);
       assert.match(read('mongoose/config/rolePermissionsConfig.js'), new RegExp(`'/paperless/ocr/:paperlessId/${p}':\\s+\\['admin'\\]`));
     }
   });

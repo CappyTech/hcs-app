@@ -246,11 +246,11 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
           <% if (doc.creditNote || state === 'manual_kashflow') { %>
             <div class="space-y-1">
               <p class="text-gray-700 dark:text-gray-300"><i class="bi bi-check-square-fill text-green-600"></i> This is a credit note. It's in neither invoice queue and is keyed into KashFlow by hand.</p>
-              <% if (isAdmin && state === 'manual_kashflow') { %>
+              <% if (canApprove && state === 'manual_kashflow') { %>
                 <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/credit-note">
                   <%- include('../partials/csrfHidden') %>
                   <input type="hidden" name="flag" value="off">
-                  <button type="submit" class="<%= smallBtn %>">Not a credit note (admin)</button>
+                  <button type="submit" class="<%= smallBtn %>">Not a credit note</button>
                 </form>
                 <p class="text-gray-400">Sends it back to Needs Data Entry. The credit note email isn't sent again.</p>
               <% } %>
@@ -279,11 +279,11 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
               <% if (doc.excludedReasonChanged?.at) { %>
                 <p class="text-gray-400"><%= when(doc.excludedReasonChanged.at) %><%= doc.excludedReasonChanged.by?.name ? ` by ${doc.excludedReasonChanged.by.name}` : '' %></p>
               <% } %>
-              <% if (isAdmin) { %>
+              <% if (canApprove) { %>
                 <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/not-for-kashflow">
                   <%- include('../partials/csrfHidden') %>
                   <input type="hidden" name="flag" value="off">
-                  <button type="submit" class="<%= smallBtn %>">Undo (admin)</button>
+                  <button type="submit" class="<%= smallBtn %>">Undo</button>
                 </form>
                 <p class="text-gray-400">Puts it back in its queue and removes the <em>not for kashflow</em> tag in Paperless.</p>
               <% } %>
@@ -304,7 +304,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
             </details>
           <% } %>
 
-          <% if (/purchase/i.test(doc.documentType?.name || '') && (state === 'entered' || state === 'sent')) { %>
+          <% if (locals.canManage && /purchase/i.test(doc.documentType?.name || '') && (state === 'entered' || state === 'sent')) { %>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/resend-invoice" class="space-y-1">
               <%- include('../partials/csrfHidden') %>
               <button type="submit" class="<%= smallBtn %>"><i class="bi bi-envelope"></i> Resend invoice email</button>
@@ -312,10 +312,10 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
             </form>
           <% } %>
 
-          <% if (isAdmin && state === 'entered') { %>
+          <% if (canApprove && state === 'entered') { %>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reopen" class="space-y-1">
               <%- include('../partials/csrfHidden') %>
-              <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 bg-white dark:bg-gray-900 hover:bg-amber-50 dark:hover:bg-gray-800 font-medium transition">Reopen entry (admin)</button>
+              <button type="submit" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-amber-400 text-amber-700 dark:text-amber-400 bg-white dark:bg-gray-900 hover:bg-amber-50 dark:hover:bg-gray-800 font-medium transition">Reopen entry</button>
               <p class="text-gray-400">Back to Needs Data Entry, and removes <em>data entry done</em> in Paperless.</p>
             </form>
           <% } %>

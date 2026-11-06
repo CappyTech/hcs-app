@@ -74,7 +74,9 @@ const cellTitle = (c) => `${c.matched} kept, ${c.corrected} corrected, ${c.fille
               <a href="/paperless/ocr/<%= c.paperlessId %>/entry" class="text-green-700 dark:text-green-400 hover:underline"><%= c.title || `#${c.paperlessId}` %></a>
               <span class="text-gray-500 dark:text-gray-400"><%= c.supplier %></span>
               <span class="text-xs text-amber-700 dark:text-amber-400"><%= c.fields.map((f) => LABELS[f] || f).join(', ') %></span>
+              <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
               <a href="/paperless/ocr/<%= c.paperlessId %>/reading-fixture" class="ml-auto text-xs px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"><i class="bi bi-download"></i> Fixture</a>
+              <% } %>
             </li>
           <% }) %>
         </ul>

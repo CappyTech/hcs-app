@@ -24,11 +24,13 @@
         If the same invoice was re-uploaded under a new Paperless ID, use
         <a href="/paperless/ocr/<%= doc.paperlessId %>/match" class="underline font-medium hover:no-underline">Match &rarr; Replacement Document</a>
         to move it onto the live copy. Otherwise you can remove this record.</div>
+      <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
       <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/remove" class="mt-2"
             onsubmit="return confirm('Remove this deleted-in-Paperless record from the app?');">
         <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
         <button type="submit" class="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-medium">Remove record</button>
       </form>
+      <% } %>
     </div>
   <% } %>
 
@@ -68,6 +70,7 @@
           <div class="mt-2 p-3 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 text-sm" data-sent-unlinked>
             <div class="font-semibold">Marked In KashFlow, but not linked to any purchase</div>
             <div class="mt-1">If it isn't in KashFlow, move it back so it can be entered and sent. If it is, use Match Purchase to link it instead.</div>
+            <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/unlink" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
               <label class="inline-flex items-center gap-1 text-amber-900">
@@ -76,6 +79,7 @@
               </label>
               <button type="submit" class="px-2.5 py-1 rounded-lg border border-amber-500 text-amber-900 hover:bg-amber-100 font-medium">Back to Needs Data Entry</button>
             </form>
+            <% } %>
           </div>
         <% } %>
         <% if (doc.kashflowPurchaseNumber || doc.kashflowPermalink) { %>
@@ -92,6 +96,7 @@
             </div>
             <%# Removing the KashFlow fields in Paperless doesn't stick: hcs-app writes them back while it holds the link.
                 The green box stays light in dark mode, so the text keeps the box's dark greens (not dark: greys) %>
+            <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
             <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/unlink" class="mt-2 flex flex-wrap items-center gap-2 text-xs" data-unlink-form>
               <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
               <label class="inline-flex items-center gap-1 text-green-900">
@@ -101,6 +106,7 @@
               <button type="submit" class="px-2.5 py-1 rounded-lg border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 font-medium">Unlink from KashFlow</button>
               <span class="text-green-800 w-full">Removes the link here and in Paperless. Nothing is deleted in KashFlow. It goes back to Needs Data Entry, or to Ready for KashFlow if it was entered.</span>
             </form>
+            <% } %>
             <% if (doc.lastSentAt) { %>
               <% const _modifiedAfterSent = doc.modified && doc.modifiedAtLastSend && new Date(doc.modified) > new Date(doc.modifiedAtLastSend); %>
               <div class="text-xs text-green-700 mt-1">Last sent: <%= new Date(doc.lastSentAt).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %> via <%= doc.lastSendMode || '-' %> (status <%= doc.lastSendStatus ?? '-' %>)</div>
@@ -124,16 +130,20 @@
             </div>
             <% if (doc.kashflowPurchaseId != null) { %>
               <div class="mt-2 text-xs text-amber-700">The KashFlow Purchase Id was not written back to Paperless. Use the button below to sync it.</div>
+              <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
               <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/sync-fields" class="mt-2">
                 <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
                 <button type="submit" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium">Sync Paperless custom fields</button>
               </form>
+              <% } %>
             <% } else { %>
               <div class="mt-2 text-xs text-amber-700">Paperless has a KashFlow id but MongoDB does not. Re-ingest or check send logs.</div>
+              <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
               <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/ingest" class="mt-2">
                 <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
                 <button type="submit" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium">Re-ingest document</button>
               </form>
+              <% } %>
             <% } %>
           </div>
         <% } %>

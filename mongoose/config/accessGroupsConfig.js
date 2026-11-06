@@ -163,10 +163,11 @@ export const groups = {
     description: 'Document queues and data entry, letterhead and policies.',
     departments: ['documents'],
     models: ['OcrDocumentIngest'],
+    // routeAccess is the coarse layer: every /paperless and /company-docs
+    // page at view. Each route's ensureGroup guard then asks for the level
+    // that action needs (paperlessRoutes, companyDocsRoutes).
     routes: {
-      // '/overview/documents' is left out: its route is hand-guarded admin-only.
-      view: ['/overview/policies', '/overview/policyDocument'],
-      edit: ['/paperless*', '/company-docs*'],
+      view: ['/overview/policies', '/overview/policyDocument', '/overview/documents', '/paperless*', '/company-docs*'],
     },
   },
   website: {
@@ -174,7 +175,8 @@ export const groups = {
     description: 'Content for the public website.',
     departments: ['website'],
     models: [],
-    routes: { edit: ['/website'] },
+    // Each /website route's ensureGroup guard asks for edit, approve or manage.
+    routes: { view: ['/website'] },
   },
   system: {
     label: 'System',

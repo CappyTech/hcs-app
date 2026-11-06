@@ -96,13 +96,14 @@ describe('supplier reading page: routes and view', () => {
   it('every route is behind the Paperless guard and admin-only', () => {
     const routes = read('mongoose/routes/paperlessRoutes.js');
     const perms = read('mongoose/config/rolePermissionsConfig.js');
-    for (const [method, p, fn] of [
-      ['get', '/paperless/reading/supplier/:correspondentId', 'getSupplier'],
-      ['post', '/paperless/reading/supplier/:correspondentId/teach', 'postTeach'],
-      ['post', '/paperless/reading/supplier/:correspondentId/forget', 'postForget'],
-      ['post', '/paperless/reading/supplier/:correspondentId/labels', 'postLabels'],
+    // Levels of the Documents permission group (paperlessRoutes `docs`)
+    for (const [method, p, fn, level] of [
+      ['get', '/paperless/reading/supplier/:correspondentId', 'getSupplier', 'view'],
+      ['post', '/paperless/reading/supplier/:correspondentId/teach', 'postTeach', 'edit'],
+      ['post', '/paperless/reading/supplier/:correspondentId/forget', 'postForget', 'edit'],
+      ['post', '/paperless/reading/supplier/:correspondentId/labels', 'postLabels', 'edit'],
     ]) {
-      assert.ok(routes.includes(`router.${method}("${p}", ...paperlessGuard, readingCtrl.${fn})`), `${method} ${p}`);
+      assert.ok(routes.includes(`router.${method}("${p}", ...docs("${level}"), readingCtrl.${fn})`), `${method} ${p}`);
       const line = perms.split('\n').find((l) => l.includes(`'${p}':`));
       assert.ok(line && line.includes("['admin']"), p);
     }
