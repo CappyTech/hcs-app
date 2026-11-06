@@ -4,8 +4,14 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 
 ## [6.94.1] - 2026-11-06
 
+### Security
+- Generic create, read, edit and delete pages are no longer open to every signed-in account. A model or action with no guard in its config (36 models, 249 routes, among them app config, payroll runs and entries, audit and security logs, GDPR requests and bank rules) now allows only what the role permissions matrix grants: admins everywhere, and accountants on the bank, statement, assignment and vehicle deployment records they already have. Anyone else gets a 403.
+
 ### Fixed
 - Saving a user from the edit page (`/user/:uuid`) no longer fails with a 500 "Iterator value [ is not an entry object". The form was showing the user's custom model permissions as a text box and posting it back as text, which could not be saved. Generic forms now skip map-type fields, and the user form no longer reads or writes custom permissions.
+- Edit forms now honour each model's read-only fields, which they had been ignoring. UUID, created and updated times, KashFlow `Id`, `Permalink`, `CreatedDate`, `LastUpdatedDate` and sync stamps show as plain text on every model and are never saved from a form. Create forms leave them out.
+- Fields the app calculates are read-only: a user's login attempts and lock time (a lockout still expires on its own), holiday accrued, taken and bank-holiday totals and the carry-over stamp, and a vehicle's last mileage update. A user's unsubscribe token is no longer shown at all.
+- Sessions and sync records can no longer be created or edited through the generic form. Admins can still view and end sessions.
 
 ## [6.94.0] - 2026-11-06
 

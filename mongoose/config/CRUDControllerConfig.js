@@ -319,7 +319,9 @@ export default {
     }
   },
   meta: {
-    readOnly: ['uuid', 'createdAt'],
+    // Sync bookkeeping, written only by the sync run
+    deny: ['c', 'u'],
+    readOnly: ['uuid', 'createdAt', 'model', 'createdCount', 'updatedCount', 'checkedCount', 'lastFetchedAt'],
     validators: {
       key: value => typeof value === 'string' && value.length > 0,
       value: value => typeof value === 'string' && value.length > 0,
@@ -367,6 +369,8 @@ export default {
     },
   },
   session: {
+    // Written only by login and the session store; admins may view or end one
+    deny: ['c', 'u'],
     readOnly: ['id', 'createdAt'],
     validators: {
       userId: value => typeof value === 'string' && value.length > 0,
@@ -442,7 +446,8 @@ export default {
   },
   user: {
     title: 'User',
-    readOnly: ['uuid', 'createdAt'],
+    // Lockout counters are written by login only; a lockout expires on its own.
+    readOnly: ['uuid', 'createdAt', 'loginAttempts', 'lockedUntil'],
     // Security audit: record role/email changes made through the admin CRUD
     afterUpdate: async (updated, req, { previous }) => {
       if (previous && previous.role !== updated.role) {
@@ -459,6 +464,8 @@ export default {
       }
     },
     hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models', 'customPermissions.models.$*', 'customPermissions.routes',
+      // Opaque unsubscribe token: authorises notification changes, so never shown
+      'notificationToken',
       // Job roles change only through POST /admin/users/:uuid/roles (userRolesController)
       'roles', 'canSeeValues'],
     // …and the generic update must not write them either (create already
@@ -592,7 +599,9 @@ export default {
     },
   },
   employeeHoliday: {
-    readOnly: ['uuid', 'createdAt'],
+    // Accrued/taken totals are recalculated from attendance and holiday
+    // requests (holidayAccrualService); carry-over stamps by holidayCarryOverService
+    readOnly: ['uuid', 'createdAt', 'accruedDays', 'accruedHours', 'takenDays', 'takenHours', 'bankHolidaysCounted', 'carryOverAppliedAt'],
     validators: {
       employeeId: v => typeof v === 'string' && v.length > 0,
       periodStart: v => !isNaN(Date.parse(v)),
@@ -649,7 +658,8 @@ export default {
       __holidayRequestService.handleStatusChange(updated, previous, req),
   },
   vehicle: {
-    readOnly: ['uuid', 'createdAt'],
+    // Stamped when a mileage or fuel log moves currentMileage on
+    readOnly: ['uuid', 'createdAt', 'lastMileageUpdate'],
     validators: {
       registrationNumber: value => typeof value === 'string' && value.trim().length > 0,
       make: value => typeof value === 'string' && value.trim().length > 0,

@@ -104,13 +104,47 @@ const getMergedConfig = (modelName) => ({
   ...(CRUDControllerConfig[modelName] || {}),
 });
 
+// Fields the app and sync services own on every model. Generic forms show
+// them read-only and never write them, whatever a model's config says.
+export const SYSTEM_FIELDS = [
+  "_id", "__v", "uuid", "createdAt", "updatedAt",
+  // KashFlow keys and sync bookkeeping on REST records
+  "Id", "Permalink", "CreatedDate", "LastUpdatedDate", "syncedAt", "detailSyncedAt",
+];
+
+// Every field a generic create/update must drop from the submitted body.
+export const lockedFields = (config = {}) => [
+  ...SYSTEM_FIELDS,
+  ...(config.readOnly || []),
+  ...(config.hideFields || []),
+];
+
+// Remove dot-path keys (e.g. "contract.termsType") from a parsed form body,
+// which may hold them flat or nested from bracket-notation field names.
+export function stripFields(body, fields) {
+  if (!body || typeof body !== "object") return body;
+  for (const f of fields) {
+    if (f.endsWith(".$*")) continue;
+    delete body[f];
+    const parts = f.split(".");
+    if (parts.length < 2) continue;
+    let node = body;
+    for (const part of parts.slice(0, -1)) {
+      node = node?.[part];
+      if (!node || typeof node !== "object") break;
+    }
+    if (node && typeof node === "object") delete node[parts[parts.length - 1]];
+  }
+  return body;
+}
+
 // Extract schema from Mongoose model and config
 const extractSchema = (model, config = {}) => {
   const schema = {};
   const paths = model.schema.paths;
 
   Object.entries(paths).forEach(([field, path]) => {
-    if ((config.hideFields || []).includes(field) || field === "__v" || field === "createdAt" || field === "updatedAt") return;
+    if ((config.hideFields || []).includes(field) || field === "_id" || field === "__v" || field === "createdAt" || field === "updatedAt") return;
     // A Map can't be edited as a single form input: it would render as
     // "[object Object]" and post back a string Mongoose cannot cast to a Map
     // ("Iterator value [ is not an entry object"). Skip it and its `.$*` path.
@@ -127,7 +161,7 @@ const extractSchema = (model, config = {}) => {
           .replace(/([a-z])([A-Z])/g, "$1 $2")
           .replace(/_/g, " ")
           .replace(/\b\w/g, (c) => c.toUpperCase()),
-      readOnly: config.readOnly?.includes?.(field),
+      readOnly: SYSTEM_FIELDS.includes(field) || !!config.readOnly?.includes?.(field),
       ref:
         path.options?.ref?.toLowerCase() ||
         (Array.isArray(path.options?.type) &&
@@ -610,19 +644,9 @@ for (const namespace of ["REST", "INTERNAL"]) {
           // Clean up submitted data: convert empty strings to undefined (supports nested objects)
           const cleanedData = cleanBodyForCreate(req.body);
 
-          // Strip hidden fields so stray form data cannot reach Mongoose
-          if (config.hideFields) {
-            for (const hf of config.hideFields) {
-              const dot = hf.indexOf('.');
-              if (dot > -1) {
-                const parent = hf.substring(0, dot);
-                const child = hf.substring(dot + 1);
-                if (cleanedData[parent]) delete cleanedData[parent][child];
-              } else {
-                delete cleanedData[hf];
-              }
-            }
-          }
+          // Strip system, read-only and hidden fields so stray form data
+          // cannot reach Mongoose
+          stripFields(cleanedData, lockedFields(config));
 
           // Allow per-model pre-processing before document creation
           if (typeof config.beforeCreate === "function") {
@@ -748,7 +772,8 @@ for (const namespace of ["REST", "INTERNAL"]) {
           // which changes only through its own audited route.
           const body = { ...req.body };
           for (const key of config.bodyDeny || []) delete body[key];
-          const preClean = cleanBodyForUpdate(body);
+          // System, read-only and hidden fields are never written from a form
+          const preClean = stripFields(cleanBodyForUpdate(body), lockedFields(config));
           const cleaned = {};
           for (const [key, val] of Object.entries(preClean)) {
             // Nested objects (e.g., contract, holidayPolicy) pass through directly
