@@ -169,8 +169,7 @@
             </p>
             <% } %>
             <p class="text-base text-gray-600 dark:text-gray-300 mt-4">
-              One internal platform for construction operations — people, payroll, CIS, finance,
-              projects, fleet and documents, all in one place. Everything it does is listed below.
+              One internal platform for running the business, all in one place.<% if (typeof publicFeatures !== 'undefined' && publicFeatures.length) { %> What it does is listed below.<% } %>
             </p>
             <a href="/user/login" class="inline-flex items-center gap-1.5 mt-6 px-6 py-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
               <i class="bi bi-box-arrow-in-right"></i> Log In
@@ -180,41 +179,9 @@
       </div>
     </div>
 
-    <!-- Everything in the app, grouped the way the navigation groups it -->
-    <%
-      const _features = [
-        { group: 'People', icon: 'bi-people', items: [
-          { icon: 'bi-person-badge', title: 'Human Resources', text: 'Employee records, right-to-work and contract dates, and reminders before anything lapses.' },
-          { icon: 'bi-calendar-check', title: 'Attendance', text: 'Daily and weekly attendance, a guided weekly flow for contracts and assignments, and sign-off.' },
-          { icon: 'bi-sun', title: 'Holiday', text: 'Accrual, carry-over, requests and approvals, with bank and company holidays built in.' },
-          { icon: 'bi-cash-coin', title: 'Payroll', text: 'Pay runs, year-to-date totals and Real Time Information submissions to HMRC.' },
-        ] },
-        { group: 'Money', icon: 'bi-wallet2', items: [
-          { icon: 'bi-building', title: 'Construction Industry Scheme', text: 'Subcontractor verification, deduction rates, and monthly and yearly CIS returns.' },
-          { icon: 'bi-receipt', title: 'Finance', text: 'Invoices, purchases, quotes, receipts, customers and suppliers, synced from the accounts.' },
-          { icon: 'bi-bank', title: 'Bank reconciliation', text: 'Statement matching, exceptions to review and bulk supplier payments.' },
-          { icon: 'bi-clipboard-data', title: 'Returns & accountant portal', text: 'CIS and VAT return summaries, and a read-only view for the external accountant.' },
-        ] },
-        { group: 'Work', icon: 'bi-briefcase', items: [
-          { icon: 'bi-clipboard-check', title: 'Projects', text: 'Contracts, weekly assignments and project financial checks.' },
-          { icon: 'bi-list-check', title: 'Tasks', text: 'Personal and shared tasks with due dates, recurring tasks and automatic reminders.' },
-          { icon: 'bi-truck', title: 'Fleet', text: 'Vehicles, MOT, insurance and tax dates, servicing, fuel and mileage logs.' },
-          { icon: 'bi-file-earmark-text', title: 'Documents', text: 'Invoices and statements read automatically, checked in queues and sent to the accounts.' },
-          { icon: 'bi-journal-text', title: 'Policies', text: 'Company policies, letterhead and review dates in one place.' },
-        ] },
-        { group: 'Everyday', icon: 'bi-house', items: [
-          { icon: 'bi-speedometer2', title: 'Your own home page', text: 'Overviews for every area, with the figures and lists you choose pinned to home.' },
-          { icon: 'bi-search', title: 'Search', text: 'One search across everything you are allowed to see.' },
-          { icon: 'bi-envelope', title: 'Email & notifications', text: 'Incoming mail filtering and the notifications you choose to receive.' },
-          { icon: 'bi-globe', title: 'Website', text: 'Case studies, blog posts, services and accreditations for the public website.' },
-        ] },
-        { group: 'Security & admin', icon: 'bi-shield-check', items: [
-          { icon: 'bi-shield-lock', title: 'Secure sign-in', text: 'Two-factor authentication, Microsoft sign-in and role-based access to every page.' },
-          { icon: 'bi-person-lock', title: 'Privacy', text: 'GDPR requests handled in the app, with an audit log of every change.' },
-          { icon: 'bi-gear', title: 'Administration', text: 'Users, roles, configuration, background jobs, system logs and maintenance mode.' },
-        ] },
-      ];
-    %>
+    <!-- Everything this company uses, from publicFeaturesConfig (filtered by publicFeaturesService) -->
+    <% const _features = typeof publicFeatures !== 'undefined' ? publicFeatures : []; %>
+    <% if (_features.length) { %>
     <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
       <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
         <i class="bi bi-grid text-green-600 dark:text-green-400"></i> What's inside
@@ -225,7 +192,11 @@
           <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
             <i class="bi <%= g.icon %>" aria-hidden="true"></i> <%= g.group %>
           </h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <%
+            // Four or two cards fill rows evenly; anything else uses three columns
+            const _cols = g.items.length === 4 ? 'lg:grid-cols-4' : g.items.length <= 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3';
+          %>
+          <div class="grid grid-cols-1 sm:grid-cols-2 <%= _cols %> gap-3">
             <% g.items.forEach((f) => { %>
             <div class="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4">
               <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 shrink-0">
@@ -242,6 +213,7 @@
         <% }) %>
       </div>
     </div>
+    <% } %>
 
   <% } %>
 </div>
