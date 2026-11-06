@@ -104,6 +104,17 @@ describe('every nav style', () => {
     });
   }
 
+  describe('page width', () => {
+    it("puts the person's width on main, and standard for anything unknown", async () => {
+      const width = async (contentWidth) => (await renderLayout({ ...locals('tabs'), contentWidth }))
+        .match(/<main id="main-content"[^>]*data-content-width="([^"]+)"/)[1];
+      assert.equal(await width('wide'), 'wide');
+      assert.equal(await width('full'), 'full');
+      assert.equal(await width('enormous'), 'standard');
+      assert.equal(await width(undefined), 'standard');
+    });
+  });
+
   it('falls back to tabs for an unknown style and shows the public header when signed out', async () => {
     const html = await renderLayout({ ...locals('carousel') });
     assert.match(html, /data-nav-style="tabs"/);

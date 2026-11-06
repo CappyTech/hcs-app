@@ -56,6 +56,7 @@ import rbac from './mongoose/config/rolePermissionsConfig.js';
 import departmentsConfig from './mongoose/config/departmentsConfig.js';
 import __navigationService from './services/navigationService.js';
 import __navPreferenceService from './mongoose/services/navPreferenceService.js';
+import __layoutPreferenceService from './mongoose/services/layoutPreferenceService.js';
 import __dateService from './services/dateService.js';
 import __currencyService from './services/currencyService.js';
 import holidayController from './mongoose/controllers/holidayController.js';
@@ -517,6 +518,7 @@ const main = async () => {
       // list. Built here, synchronously, so even a page that errors before
       // the preference lookup below still gets a usable header.
       res.locals.navStyle = __navigationService.DEFAULT_STYLE;
+      res.locals.contentWidth = __layoutPreferenceService.DEFAULT_WIDTH;
       res.locals.nav = __navigationService.build({ path: req.path, user: req.user });
       // Helper: check CRUD access on a model
       res.locals.canModel = (model, op) => req.user ? rbac.canAccess(rbac.rolesOf(req.user), model, op, _customPerms).allowed : false;
@@ -564,8 +566,9 @@ const main = async () => {
       next();
     });
 
-    // This person's navigation style and pinned list (their own choice, else
-    // the company default). One indexed read per page; a failure keeps 'tabs'.
+    // This person's navigation style and pinned list, and their page width
+    // (their own choice, else the company default). One indexed read each per
+    // page; a failure keeps 'tabs' and 'standard'.
     appRouter.use(async (req, res, next) => {
       if (!req.user) return next();
       try {
@@ -574,6 +577,11 @@ const main = async () => {
         res.locals.nav = __navigationService.build({ path: req.path, user: req.user, pinned: pref.pinned });
       } catch (err) {
         logger.warn('[navPreference] resolve failed: ' + err.message);
+      }
+      try {
+        res.locals.contentWidth = (await __layoutPreferenceService.resolve(req.user)).width;
+      } catch (err) {
+        logger.warn('[layoutPreference] resolve failed: ' + err.message);
       }
       next();
     });

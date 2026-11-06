@@ -103,6 +103,8 @@
   %>
   <% const _navStyles = ['tabs', 'grouped', 'two-tier', 'command', 'sidebar']; %>
   <% const _navStyle = isAuthenticated && _navStyles.includes(locals.navStyle) ? locals.navStyle : 'tabs'; %>
+  <%# Page width (layoutPreferenceService): assets/tailwind.css resizes the page containers inside main. %>
+  <% const _contentWidth = isAuthenticated && ['narrow', 'standard', 'wide', 'full'].includes(locals.contentWidth) ? locals.contentWidth : 'standard'; %>
   <% const _mainPad = { tabs: 'pt-16', grouped: 'pt-16', 'two-tier': 'pt-24', command: 'pt-16', sidebar: 'pt-16 lg:pl-[264px]' }[_navStyle]; %>
   <%# The sidebar offset is its 232px width plus the 2rem gutter lg:px-8 would give, because
      pl-[…] overrides px-8. Pages that go full-bleed with -mx-8 (Help, API docs) rely on that
@@ -113,7 +115,7 @@
     <%- include('./partials/nav/public.ejs') %>
   <% } %>
 
-      <main id="main-content" class="flex-grow w-full <%= isAuthenticated ? _mainPad : 'pt-6' %> pb-6 px-4 sm:px-6 lg:px-8">
+      <main id="main-content" class="flex-grow w-full <%= isAuthenticated ? _mainPad : 'pt-6' %> pb-6 px-4 sm:px-6 lg:px-8" data-content-width="<%= _contentWidth %>">
         <% if (typeof maintenanceActive !== 'undefined' && maintenanceActive && isAuthenticated) { %>
         <!-- Maintenance active: only admins can see pages, remind them it's on -->
         <div class="max-w-7xl mx-auto mb-4 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 flex items-center gap-3 print:hidden">

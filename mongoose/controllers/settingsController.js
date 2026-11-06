@@ -13,6 +13,7 @@ import emailService from '../../services/emailService.js';
 import auditLog from '../../services/auditLogService.js';
 import hibpService from '../../services/hibpService.js';
 import navPreferenceService from '../services/navPreferenceService.js';
+import layoutPreferenceService from '../services/layoutPreferenceService.js';
 import { validationResult, body } from 'express-validator';
 
 export const getProfilePage = async (req, res, next) => {
@@ -217,6 +218,10 @@ export const getAccountPage = async (req, res, next) => {
       navStyles: navPreferenceService.STYLES,
       navPreference: await navPreferenceService.resolve(user),
       navCompanyDefault: navPreferenceService.companyDefault(),
+      // Layout section: the page widths, this person's current one and its source.
+      contentWidths: layoutPreferenceService.WIDTHS,
+      layoutPreference: await layoutPreferenceService.resolve(user),
+      layoutCompanyDefault: layoutPreferenceService.companyDefault(),
     });
   } catch (error) {
     logger.error(

@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.93.0] - 2026-11-06
+
+### Added
+- Layout section on Account Settings (`/user/account#layout`): choose how wide the main content runs. Narrow (about 1024px), Standard (each page as designed, up to about 1280px), Wide (about 1536px) or Full width. It applies from the next page load, and "Use the company default" clears your choice.
+- `CONTENT_WIDTH_DEFAULT` in the Appearance group at `/admin/config`, the page width everyone gets until they choose their own. Resolution is own choice → company default → Standard.
+- `INTERNAL.layoutPreference` holds each person's choice. Only page containers (`max-w-5xl` to `max-w-7xl`) inside main change width; forms, dialogs and other narrow containers keep theirs.
+
 ## [6.92.0] - 2026-11-06
 
 ### Added

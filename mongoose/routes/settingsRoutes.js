@@ -5,6 +5,7 @@ import settings from '../controllers/settingsController.js';
 import connSettings from '../controllers/connectionSettingsController.js';
 import appConfig from '../controllers/appConfigController.js';
 import navPreference from '../controllers/navPreferenceController.js';
+import layoutPreference from '../controllers/layoutPreferenceController.js';
 
 // ── Configuration (admin only) ────────────────────────────────────────────────
 // Every page is generated from configRegistry; there is no per-group route to
@@ -56,6 +57,17 @@ router.post(
   "/user/account/navigation/reset",
   authService.ensureAnyRole(),
   navPreference.postNavigationReset,
+);
+// Page width (Account Settings → Layout). Applies on the next page load.
+router.post(
+  "/user/account/layout",
+  authService.ensureAnyRole(),
+  layoutPreference.postLayout,
+);
+router.post(
+  "/user/account/layout/reset",
+  authService.ensureAnyRole(),
+  layoutPreference.postLayoutReset,
 );
 router.post(
   "/user/account/logout-session",
