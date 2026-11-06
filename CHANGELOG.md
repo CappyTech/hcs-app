@@ -8,13 +8,15 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - Permission groups and job roles, phase 1 (design in `docs/PERMISSION-GROUPS.md`). Eleven groups (Site Ops, Commercial, Finance, CIS, Payroll, HR, Fleet, Health & Safety, Documents, Website, System) are granted at a level (view, edit, approve, manage). Job roles are named sets of group grants: Director, Contracts Manager, Quantity Surveyor / Estimator, Office Manager, Payroll / HR Officer, Health & Safety Advisor and Fleet / Plant Manager. Site Manager and Supervisor are defined but can't be assigned until project scoping lands.
 - A user can hold several job roles on top of their primary role (`user.roles[]`), and gets the combined access of all of them. Admins tick them on the user's edit page, under **Job roles**. Each change is recorded in the security audit log.
 - Every job role requires two-factor authentication by default.
+- **Can see values** (`user.canSeeValues`) on the Job roles card decides, per person, whether a Site Manager or Supervisor sees day rates, costs, and purchase and project values. Every other job role has a fixed answer (Director, Contracts Manager, QS and Payroll/HR always do; Office Manager, H&S and Fleet never do). `rbac.canSeeValues(user)` gives the answer to code that hides figures.
 
 ### Changed
 - The RBAC helpers accept one role or a list, and access checks use every role a user holds. Nothing changes for a user with no job roles.
 - A job role never gets past a guard that names admin alone, unless that guard names a model or department grant. Bank reconciliation and bulk payments stay with admin and accountant.
 
 ### Security
-- `roles[]` only accepts job role names, so it can't be used to grant admin or any other primary role. The generic user form can't write it either; it changes only through its own audited route.
+- `roles[]` only accepts job role names, so it can't be used to grant admin or any other primary role. The generic user form can't write it or `canSeeValues`; both change only through their own audited route.
+
 ## [6.88.0] - 2026-11-06
 
 ### Added

@@ -191,12 +191,20 @@ export const groups = {
 // are NOT listed here: System Administrator = 'admin', Bookkeeper / Accounts
 // = 'accountant'. Employee and Subcontractor stay the legacy roles too.
 //
-// grants: [{ group, level, scope? }] — scope defaults to 'all'.
-// requires2FA: these roles reach business data, so they need TOTP like admin.
+// grants: [{ group, level, scope?, values? }] — scope defaults to 'all'.
+//   values: true marks a grant that exposes money (rates, costs, purchase and
+//   project values). Whether it applies depends on the role's `values` rule.
+// values — may this role see money?
+//   'always' — yes; values grants apply.
+//   'never'  — no; values grants are dropped.
+//   'flag'   — per user: only when that user's `canSeeValues` is ticked
+//              (Site Manager, Supervisor).
+// Every job role needs 2FA (authService.rolesRequiring2FA).
 export const jobRoles = {
   director: {
     label: 'Director',
     description: 'Runs the business. Approves across every business area; sees but does not administer the system.',
+    values: 'always',
     grants: [
       { group: 'siteOps', level: 'approve' },
       { group: 'commercial', level: 'approve' },
@@ -214,6 +222,7 @@ export const jobRoles = {
   contractsManager: {
     label: 'Contracts Manager',
     description: 'Runs several jobs from award to final account: programme, labour, subcontractors, cost.',
+    values: 'always',
     grants: [
       { group: 'siteOps', level: 'approve' },
       { group: 'commercial', level: 'approve' },
@@ -225,6 +234,7 @@ export const jobRoles = {
   quantitySurveyor: {
     label: 'Quantity Surveyor / Estimator',
     description: 'Prices tenders and quotes; valuations, variations and final accounts.',
+    values: 'always',
     grants: [
       { group: 'commercial', level: 'edit' },
       { group: 'cis', level: 'view' },
@@ -233,9 +243,11 @@ export const jobRoles = {
   siteManager: {
     label: 'Site Manager',
     description: 'Runs the sites they are assigned to day to day.',
+    values: 'flag',
     grants: [
       { group: 'siteOps', level: 'approve', scope: 'project' },
-      { group: 'commercial', level: 'view', scope: 'project' },
+      // Projects, quotes and purchases carry the job's money.
+      { group: 'commercial', level: 'view', scope: 'project', values: true },
       { group: 'fleet', level: 'view', scope: 'project' },
       { group: 'healthSafety', level: 'view', scope: 'project' },
     ],
@@ -243,13 +255,16 @@ export const jobRoles = {
   supervisor: {
     label: 'Supervisor / Foreman',
     description: 'Runs a gang on site; records and signs off the day.',
+    values: 'flag',
     grants: [
       { group: 'siteOps', level: 'edit', scope: 'project' },
+      { group: 'commercial', level: 'view', scope: 'project', values: true },
     ],
   },
   officeManager: {
     label: 'Office Manager',
     description: 'Runs the office: documents, HR admin (not pay), fleet paperwork.',
+    values: 'never',
     grants: [
       { group: 'documents', level: 'edit' },
       { group: 'hr', level: 'edit' },
@@ -260,6 +275,7 @@ export const jobRoles = {
   payrollHr: {
     label: 'Payroll / HR Officer',
     description: 'Pay runs, starters and leavers, right-to-work, absence.',
+    values: 'always',
     grants: [
       { group: 'payroll', level: 'approve' },
       { group: 'hr', level: 'approve' },
@@ -269,6 +285,7 @@ export const jobRoles = {
   healthSafetyAdvisor: {
     label: 'Health & Safety Advisor',
     description: 'RAMS, inductions, training and audits across every site.',
+    values: 'never',
     grants: [
       { group: 'healthSafety', level: 'edit' },
       { group: 'siteOps', level: 'view' },
@@ -277,14 +294,25 @@ export const jobRoles = {
   fleetManager: {
     label: 'Fleet / Plant Manager',
     description: 'Vans, plant and tools: MOT, insurance, servicing, fuel.',
+    values: 'never',
     grants: [
       { group: 'fleet', level: 'manage' },
     ],
   },
 };
 
-// Every job role requires 2FA by default (see authService.rolesRequiring2FA).
 export const JOB_ROLE_SLUGS = Object.keys(jobRoles);
+
+// A 'flag' role is compiled twice: `<slug>` without its values grants, and
+// `<slug>+values` with them. rolesOf() picks one per user from canSeeValues.
+export const VALUES_SUFFIX = '+values';
+
+/** 'siteManager+values' -> 'siteManager'. */
+export function baseRole(slug) {
+  return typeof slug === 'string' && slug.endsWith(VALUES_SUFFIX)
+    ? slug.slice(0, -VALUES_SUFFIX.length)
+    : slug;
+}
 
 /** Levels at or below `level`, e.g. 'approve' → ['view','edit','approve']. */
 export function levelsUpTo(level) {
@@ -302,4 +330,4 @@ export function isJobRoleAvailable(slug) {
   return def.grants.every((g) => (g.scope || 'all') === 'all');
 }
 
-export default { LEVELS, LEVEL_OPS, SCOPES, READ_ONLY_MODELS, groups, jobRoles, JOB_ROLE_SLUGS, levelsUpTo, isJobRoleAvailable };
+export default { LEVELS, LEVEL_OPS, SCOPES, READ_ONLY_MODELS, groups, jobRoles, JOB_ROLE_SLUGS, VALUES_SUFFIX, baseRole, levelsUpTo, isJobRoleAvailable };

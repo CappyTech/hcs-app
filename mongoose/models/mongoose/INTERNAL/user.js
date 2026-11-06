@@ -44,6 +44,14 @@ const userSchema = new mongoose.Schema({
         type: [{ type: String, enum: JOB_ROLE_SLUGS }],
         default: []
     },
+    // For job roles whose money visibility is per person (Site Manager,
+    // Supervisor — `values: 'flag'` in accessGroupsConfig): ticked, they see
+    // rates, costs and purchase/project values. Other roles ignore it.
+    // Changed only through POST /admin/users/:uuid/roles, like `roles`.
+    canSeeValues: {
+        type: Boolean,
+        default: false
+    },
     subcontractorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'supplier',

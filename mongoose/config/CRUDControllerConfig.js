@@ -452,10 +452,10 @@ export default {
     },
     hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models.$*', 'customPermissions.routes',
       // Job roles change only through POST /admin/users/:uuid/roles (userRolesController)
-      'roles'],
+      'roles', 'canSeeValues'],
     // …and the generic update must not write them either (create already
     // strips hideFields).
-    bodyDeny: ['roles'],
+    bodyDeny: ['roles', 'canSeeValues'],
     fieldOrder: [
       'username', 'email', 'phoneNumber', 'emailVerified', 'role',
       'employeeId', 'subcontractorId', 'clientId',
@@ -522,10 +522,16 @@ export default {
         description: def.description,
         available: rbac.JOB_ROLES.has(slug),
         checked: held.has(slug),
+        values: def.values,
         groups: def.grants.map((g) => `${accessGroups.groups[g.group]?.label || g.group} (${g.level}${g.scope && g.scope !== 'all' ? `, ${g.scope}` : ''})`),
       }));
 
-      return { roleDetails, allRoles, jobRoleOptions };
+      const canSeeValues = item?.canSeeValues === true;
+      // Who the flag applies to, for the label: the 'flag' roles by name.
+      const valuesFlagRoles = Object.values(accessGroups.jobRoles)
+        .filter((d) => d.values === 'flag').map((d) => d.label);
+
+      return { roleDetails, allRoles, jobRoleOptions, canSeeValues, valuesFlagRoles };
     },
     readView: path.join('tailwindcss', 'user', 'read'),
     readLocals: async (item) => {
@@ -539,7 +545,7 @@ export default {
       const heldRoles = rbac.rolesOf(item);
       const departments = rbac.getDepartmentsForRole(heldRoles);
       const modelAccess = rbac.mergedModelAccess(heldRoles);
-      const jobRoleLabels = rbac.jobRolesOf(item).map((r) => accessGroups.jobRoles[r]?.label || r);
+      const jobRoleLabels = rbac.jobRolesOf(item).map((r) => accessGroups.jobRoles[accessGroups.baseRole(r)]?.label || r);
 
       const permissions = {
         role,

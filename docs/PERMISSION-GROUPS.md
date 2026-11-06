@@ -82,6 +82,25 @@ level** (`READ_ONLY_MODELS`).
 Every job role requires two-factor authentication by default (it's added to the
 `REQUIRE_2FA_ROLES` default list).
 
+### Seeing values (money)
+
+Each job role has a `values` rule that says whether it sees money: day and pay
+rates, costs, and purchase and project values.
+
+| Rule | Roles | Meaning |
+|---|---|---|
+| always | Director, Contracts Manager, Quantity Surveyor, Payroll / HR | always see values |
+| never | Office Manager, H&S Advisor, Fleet Manager | never see values |
+| flag | **Site Manager, Supervisor** | per person: the user's **Can see values** checkbox (`user.canSeeValues`) |
+
+`admin` and `accountant` always see values.
+
+A grant marked `values: true` only applies when the role sees values. Site
+Manager's and Supervisor's Commercial grant is marked this way. A 'flag' role is
+compiled twice, as `siteManager` (no values grants) and `siteManager+values`
+(all grants). `rbac.rolesOf(user)` picks one from the checkbox.
+`rbac.canSeeValues(user)` gives the same answer for code that hides figures.
+
 ## How a user holds several roles
 
 - `user.role` stays the **primary role**, a single legacy value. For office and site
@@ -93,10 +112,11 @@ Every job role requires two-factor authentication by default (it's added to the
 - Access is the **union** of the primary role and every job role. Where one role
   grants an operation `:own` and another grants it unscoped, the unscoped grant wins.
 
-Job roles are assigned on the user's edit page (**Job roles** card), which posts to
-`POST /admin/users/:uuid/roles` (admin only). Each change is written to the
-security audit log as `role_changed` with `field: 'roles'`. The generic user form
-can't write `roles` (`hideFields` on create, `bodyDeny` on update).
+Job roles and **Can see values** are set on the user's edit page (**Job roles**
+card), which posts to `POST /admin/users/:uuid/roles` (admin only). Each change is
+written to the security audit log as `role_changed` with `field: 'roles'` or
+`field: 'canSeeValues'`. The generic user form can't write either field
+(`hideFields` on create, `bodyDeny` on update).
 
 ## How it is enforced
 
@@ -140,6 +160,8 @@ These gaps are deliberate. They are the plan for the next phases.
   where a group lists them.
 - **Project scope.** Site Manager and Supervisor can't be assigned yet.
 - **Bank and payments** stay with `admin` and `accountant` (decision 3 below).
+- **Pay figures on attendance pages** are still hidden by direct "admin or
+  accountant" checks. Phase 2 moves them to `rbac.canSeeValues(user)`.
 - **Health & Safety** has no models yet.
 
 ## Phases
@@ -165,10 +187,8 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
 
 Each of these has a default applied in phase 1. Confirm or change them before the phase that relies on them.
 
-1. **Money on site.** Should Site Managers and Supervisors see day rates and
-   purchase values? *Default: no.* Their Commercial grant is view-only and
-   project-scoped, and pay figures stay behind the direct "admin or accountant"
-   checks.
+1. **Money on site.** *Decided: per person.* Site Managers and Supervisors
+   have a **Can see values** checkbox, off by default. See "Seeing values" above.
 2. **Approval chain.** Supervisor signs off the day, then Site Manager approves
    the week. Does the Contracts Manager then approve before payroll? *Default:
    no extra step. A Contracts Manager can approve, but doesn't have to.* Phase 2
