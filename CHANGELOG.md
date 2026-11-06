@@ -2,10 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [6.86.3] - 2026-11-06
+## [6.87.0] - 2026-11-06
+
+### Added
+- The signed-out home page lists everything the app does, grouped into People, Money, Work, Everyday and Security & privacy, instead of six highlight cards that left out payroll, bank reconciliation, policies, the website, search and more.
+- The list lives in `publicFeaturesConfig.js`; a test fails if any department is missing from it.
+- New setting **Leave off the public home page** (`PUBLIC_HOME_HIDDEN`, Admin → Configuration → Organisation) hides modules a company doesn't use. Website only appears when a company website is set, and Microsoft sign-in is only mentioned when it is switched on.
 
 ### Changed
-- The signed-out home page now lists everything the app does, grouped into People, Money, Work, Everyday and Security & admin, instead of six highlight cards that left out payroll, bank reconciliation, policies, the website, search and more.
+- Public wording no longer names internal tooling (admin logs, background jobs, maintenance mode, the accounting integration).
 
 ## [6.86.2] - 2026-11-02
 

@@ -22,6 +22,10 @@
  *   test     (group level) id understood by the connection tester
  */
 
+import publicFeatures from '../mongoose/config/publicFeaturesConfig.js';
+
+const PUBLIC_FEATURE_IDS = publicFeatures.flatMap((g) => g.items.map((i) => i.id)).join(', ');
+
 /**
  * Keys that can never move into the store, because they are needed before
  * there is a database or a session to authenticate an admin against — and, for
@@ -72,6 +76,7 @@ export const GROUPS = [
       { key: 'COMPANY_VAT_NUMBER', label: 'VAT registration number', type: 'text', help: 'Shown in the footer and the privacy policy. Blank hides it.' },
       { key: 'ICO_NUMBER', label: 'ICO registration number', type: 'text', help: 'Shown in the privacy policy.' },
       { key: 'INCORPORATION_YEAR', label: 'Incorporation year', type: 'number', help: 'First year of the copyright range in the footer.' },
+      { key: 'PUBLIC_HOME_HIDDEN', label: 'Leave off the public home page', type: 'text', help: `Comma-separated features the signed-out home page should not mention, for modules this company doesn't use. Ids: ${PUBLIC_FEATURE_IDS}.` },
       { key: 'BASE_URL', label: 'This app\'s public URL', type: 'text', help: 'Where users reach this app, e.g. https://app.example.com. Absolute links in emails and the Content-Security-Policy\'s own-origin entries derive from it. Seeded from the first-run page, or from the first signed-in request when blank.' },
     ],
   },

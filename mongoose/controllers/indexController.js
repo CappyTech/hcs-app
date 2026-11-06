@@ -3,6 +3,7 @@ import listConfig from '../config/listControllerConfig.js';
 import customTiles from '../config/dashboardTilesConfig.js';
 import taskService from '../services/taskService.js';
 import homeLayoutService from '../services/homeLayoutService.js';
+import publicFeaturesService from '../../services/publicFeaturesService.js';
 import holidayService from '../services/holidayService.js';
 import { getFrequentPages } from '../services/sessionActivityService.js';
 import rbac from '../config/rolePermissionsConfig.js';
@@ -194,6 +195,7 @@ export const renderIndex = async (req, res, next) => {
       frequentPages,
       home: req.user ? await homeLayoutService.build(req) : null,
       isAuthenticated: !!req.user,
+      publicFeatures: req.user ? [] : publicFeaturesService.visibleGroups(),
       nextHoliday,
     });
   } catch (err) {
