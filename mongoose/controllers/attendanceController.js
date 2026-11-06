@@ -17,6 +17,7 @@ function parseYMDLocal(s) {
 import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
+import rbac from '../config/rolePermissionsConfig.js';
 import holidayAccrualService from '../services/holidayAccrualService.js';
 import __paperlessUpdateService from '../services/paperless/paperlessUpdateService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
@@ -121,9 +122,9 @@ export const getWeeklyAttendance = async (req, res, next) => {
       }
     }
 
-    // Strip payroll-sensitive data for non-admin/accountant in standard view too
-    const stripPay =
-      req.user && !["admin", "accountant"].includes(req.user.role);
+    // Strip payroll-sensitive data unless the viewer may see values
+    // (admin, accountant, or a job role that sees money).
+    const stripPay = !!req.user && !rbac.canSeeValues(req.user);
 
     // ── Filter purchase events by view type ──
     // Management view: show only paid events (actual cash flow)

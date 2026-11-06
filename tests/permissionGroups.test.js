@@ -245,3 +245,115 @@ describe('canSeeValues', () => {
     assert.equal(parseFlag('off'), false);
   });
 });
+
+describe('hasGroup', () => {
+  it('admin holds every group; legacy roles hold none', () => {
+    assert.equal(rbac.hasGroup({ role: 'admin' }, 'finance', 'manage'), true);
+    assert.equal(rbac.hasGroup({ role: 'accountant' }, 'siteOps', 'view'), false);
+    assert.equal(rbac.hasGroup({ role: 'employee' }, 'siteOps', 'view'), false);
+    assert.equal(rbac.hasGroup(null, 'siteOps', 'view'), false);
+  });
+
+  it('a level includes the ones below it, not above', () => {
+    const cm = { role: 'employee', roles: ['contractsManager'] };
+    assert.equal(rbac.hasGroup(cm, 'siteOps', 'view'), true);
+    assert.equal(rbac.hasGroup(cm, 'siteOps', 'approve'), true);
+    assert.equal(rbac.hasGroup(cm, 'siteOps', 'manage'), false);
+    assert.equal(rbac.hasGroup(cm, 'payroll', 'view'), false);
+    const office = { role: 'employee', roles: ['officeManager'] };
+    assert.equal(rbac.hasGroup(office, 'siteOps', 'view'), true);
+    assert.equal(rbac.hasGroup(office, 'siteOps', 'edit'), false);
+  });
+
+  it('ignores project-scoped grants and, without the flag, values grants', () => {
+    rbac.JOB_ROLES.add('siteManager');
+    try {
+      const sm = { role: 'employee', roles: ['siteManager'], canSeeValues: true };
+      // Every Site Manager grant is project-scoped, so none counts yet.
+      assert.equal(rbac.hasGroup(sm, 'siteOps', 'view'), false);
+      assert.equal(rbac.hasGroup(sm, 'commercial', 'view'), false);
+    } finally {
+      rbac.JOB_ROLES.delete('siteManager');
+    }
+  });
+
+  it('throws on an unknown group or level', () => {
+    assert.throws(() => rbac.hasGroup({ role: 'admin' }, 'nope', 'view'));
+    assert.throws(() => rbac.hasGroup({ role: 'admin' }, 'siteOps', 'own'));
+  });
+});
+
+describe('ensureGroup', () => {
+  it('admin always passes, plus the named legacy roles', async () => {
+    const mw = authService.ensureGroup('siteOps', 'edit', 'accountant');
+    assert.equal(await run(mw, { role: 'admin' }), undefined);
+    assert.equal(await run(mw, { role: 'accountant' }), undefined);
+    assert.equal((await run(mw, { role: 'employee' }))?.statusCode, 403);
+  });
+
+  it('passes a job role holding the level, refuses one below it', async () => {
+    const mw = authService.ensureGroup('siteOps', 'approve');
+    assert.equal(await run(mw, { role: 'employee', roles: ['contractsManager'] }), undefined);
+    assert.equal(await run(mw, { role: 'employee', roles: ['director'] }), undefined);
+    assert.equal((await run(mw, { role: 'employee', roles: ['officeManager'] }))?.statusCode, 403);
+    assert.equal((await run(mw, { role: 'employee', roles: ['payrollHr'] }))?.statusCode, 403);
+  });
+
+  it('accepts any of several grants', async () => {
+    const mw = authService.ensureGroup(
+      [{ group: 'siteOps', level: 'edit' }, { group: 'payroll', level: 'view' }], null);
+    assert.equal(await run(mw, { role: 'employee', roles: ['payrollHr'] }), undefined);
+    assert.equal(await run(mw, { role: 'employee', roles: ['contractsManager'] }), undefined);
+    assert.equal((await run(mw, { role: 'employee', roles: ['fleetManager'] }))?.statusCode, 403);
+  });
+
+  it('fails at definition time on a typo', () => {
+    assert.throws(() => authService.ensureGroup('siteOp', 'view'));
+  });
+
+  it('401 without a user', async () => {
+    assert.equal((await run(authService.ensureGroup('siteOps', 'view'), null))?.statusCode, 401);
+  });
+});
+
+describe('attendance routes: group guards agree with the global route check', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../mongoose/routes/attendanceRoutes.js', import.meta.url), 'utf8');
+  const SITE_VIEW_ROLES = ['admin', 'accountant', 'employee', 'subcontractor'];
+  const routes = [];
+  const re = /"(\/[^"]+)",\s*authService\.ensureGroup\(([^)]*)\)/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    // eslint-disable-next-line no-new-func
+    const args = new Function('SITE_VIEW_ROLES', `return [${m[2]}];`)(SITE_VIEW_ROLES);
+    routes.push({ path: m[1], args });
+  }
+  const concrete = (p) => p.replace(/\/:[a-zA-Z]+\?/g, '').replace(/:[a-zA-Z]+/g, 'x');
+
+  it('finds the Site Ops guards', () => {
+    assert.ok(routes.length >= 15, `only ${routes.length}`);
+    for (const p of ['/attendance/:uuid/approve', '/attendance/bulk-approve', '/weekly-flow/:year?/:week?', '/weekly-management/:year?/:week?']) {
+      assert.ok(routes.some((r) => r.path === p), `missing ${p}`);
+    }
+  });
+
+  it('every job role a guard lets in also passes ensureRouteAccess (no dead links)', async () => {
+    for (const r of routes) {
+      const mw = authService.ensureGroup(...r.args);
+      for (const slug of rbac.JOB_ROLES) {
+        const user = { role: 'employee', roles: [slug] };
+        if (await run(mw, user, concrete(r.path))) continue; // guard refused
+        const globalErr = await run(authService.ensureRouteAccess, user, concrete(r.path));
+        assert.equal(globalErr, undefined, `${slug} passes the guard on ${r.path} but ensureRouteAccess refuses it`);
+      }
+    }
+  });
+
+  it('a Contracts Manager can approve attendance; an Office Manager cannot', async () => {
+    const approve = routes.find((r) => r.path === '/attendance/:uuid/approve');
+    const mw = authService.ensureGroup(...approve.args);
+    assert.equal(await run(mw, { role: 'employee', roles: ['contractsManager'] }), undefined);
+    assert.equal((await run(mw, { role: 'employee', roles: ['officeManager'] }))?.statusCode, 403);
+    assert.equal((await run(mw, { role: 'employee' }))?.statusCode, 403);
+  });
+});

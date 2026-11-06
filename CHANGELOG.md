@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.90.0] - 2026-11-06
+
+### Added
+- Permission groups, phase 2a: Site Ops. Job roles now reach the attendance pages their groups list. Site Ops view opens the daily and weekly views. Site Ops edit opens the weekly attendance flow and inline attendance, assignment and vehicle deployment edits. Site Ops approve opens attendance approve, reject and bulk approve, and the management weekly view. In practice, Directors and Contracts Managers can now approve attendance, in one step for now (the two-stage approval comes with project scoping). Payroll view opens the weekly flow read-only.
+- `authService.ensureGroup(group, level, ...roles)`: a route guard that admits admin, the named legacy roles and any job role holding the group at that level. This is how an admin-only route is opened to job roles, one route at a time.
+- `rbac.hasGroup(user, group, level)`, and `canGroup(group, level)` and `viewerSeesValues` in every view.
+
+### Changed
+- Pay figures on the weekly attendance view are hidden by `rbac.canSeeValues(user)` instead of "admin or accountant". Admin and accountant see the same as before; a job role that sees values now sees them too.
+- Approve, reject and bulk approve buttons on the daily and weekly attendance views only show to people who can use them. Before, an employee or subcontractor saw buttons that returned 403.
+- The weekly flow's approve step shows to anyone with Site Ops approve, not only admin.
+
+### Fixed
+- The approve and reject buttons on the daily attendance view had no CSRF token, so strict CSRF refused them.
+
 ## [6.89.0] - 2026-11-06
 
 ### Added

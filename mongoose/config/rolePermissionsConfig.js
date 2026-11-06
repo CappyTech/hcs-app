@@ -501,6 +501,36 @@ function canSeeValues(user) {
 }
 
 /**
+ * Does this user hold `group` at `level` or above, through a job role?
+ * Admin always does. Legacy roles (accountant, employee, ...) hold no groups:
+ * a caller that also wants them names them itself, e.g.
+ * ensureGroup('siteOps', 'approve', 'admin').
+ *
+ * Only grants that are enforced today count: a 'project'-scoped grant does
+ * not (phase 3), and a values grant only counts where the role sees values.
+ * @param {Object} user   req.user
+ * @param {string} group  key in accessGroupsConfig.groups
+ * @param {string} level  'view' | 'edit' | 'approve' | 'manage'
+ * @returns {boolean}
+ */
+function hasGroup(user, group, level) {
+  if (!accessGroups.groups[group]) throw new Error(`Unknown permission group "${group}"`);
+  const need = accessGroups.LEVELS.indexOf(level);
+  if (need < 0) throw new Error(`Unknown permission level "${level}"`);
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  return jobRolesOf(user).some((compiled) => {
+    const def = accessGroups.jobRoles[accessGroups.baseRole(compiled)];
+    if (!def) return false;
+    const seesValues = def.values === 'always' || compiled.endsWith(accessGroups.VALUES_SUFFIX);
+    return def.grants.some((g) => g.group === group
+      && (g.scope || 'all') === 'all'
+      && (seesValues || !g.values)
+      && accessGroups.LEVELS.indexOf(g.level) >= need);
+  });
+}
+
+/**
  * Model access across several roles, for display: { model: 'c,r:own,...' }.
  * Where two roles grant the same operation, the unscoped grant wins over
  * ':own'. Admin's '_wildcard' passes through as-is.
@@ -748,8 +778,9 @@ export default {
   rolesOf,
   jobRolesOf,
   canSeeValues,
+  hasGroup,
   mergedModelAccess,
   JOB_ROLES,
 };
 
-export { roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels, rolesOf, jobRolesOf, canSeeValues, mergedModelAccess, JOB_ROLES };
+export { roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels, rolesOf, jobRolesOf, canSeeValues, hasGroup, mergedModelAccess, JOB_ROLES };

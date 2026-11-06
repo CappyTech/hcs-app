@@ -64,6 +64,7 @@ export const groups = {
     models: ['attendance', 'assignment', 'location', 'vehicleDeployment'],
     routes: {
       view:    ['/daily', '/weekly', '/overview/attendance', '/overview/assignment'],
+      edit:    ['/weekly-flow'],
       approve: ['/attendance/approve', '/attendance/reject', '/attendance/bulk-approve', '/weekly-management'],
     },
   },

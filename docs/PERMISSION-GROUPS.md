@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0). Phases 2–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0). The rest of phase 2 and phases 3–5 are planned below.
 
 ## Why
 
@@ -138,6 +138,29 @@ where its groups reach:
    beneath it. Moving an admin-only page into a group is a deliberate change made
    one route at a time (phase 2).
 
+### Group guards (phase 2)
+
+`authService.ensureGroup(group, level, ...roles)` is how a route is opened to
+job roles on purpose. It admits admin, the legacy roles it names, and any job
+role holding `group` at `level` or above:
+
+```js
+router.post('/attendance/:uuid/approve', authService.ensureGroup('siteOps', 'approve'), ...);
+router.post('/attendance/inline', authService.ensureGroup('siteOps', 'edit', 'admin', 'accountant'), ...);
+// any of several grants:
+authService.ensureGroup([{ group: 'siteOps', level: 'edit' }, { group: 'payroll', level: 'view' }], null, 'admin', 'accountant');
+```
+
+In code and views, `rbac.hasGroup(user, group, level)` answers the same
+question, and `canGroup(group, level)` is available in every view. Only grants
+enforced today count: a project-scoped grant doesn't until phase 3.
+
+A route has two layers: its own guard and the global `ensureRouteAccess`
+check, driven by `routeAccess`. When a guard is opened to a group, that
+group's `routes` must list the path too, or the global check still refuses it.
+`tests/permissionGroups.test.js` checks every `ensureGroup` guard in
+`attendanceRoutes.js` against the global check, for every job role.
+
 ### Pay data
 
 The employee record holds pay rates and the NI number, and there is no
@@ -149,19 +172,20 @@ candidate.
 
 These gaps are deliberate. They are the plan for the next phases.
 
-- **Direct role checks.** About 76 places in controllers, views and services
-  compare `req.user.role` directly (for example "strip pay figures unless admin or
-  accountant", "scope to own records if employee"). These still see only the
-  **primary** role. A Contracts Manager whose primary role is `employee` can open
-  `/weekly`, but that page still shows them only their own week. This fails
-  closed: a direct check can only show less, never more.
-- **Admin-only pages** (most `/overview/*` hand-built pages, `/paperless/*`,
-  `/company-docs/*`, payroll screens guarded `admin` only) stay admin-only even
-  where a group lists them.
+- **Direct role checks.** Places in controllers, views and services that
+  compare `req.user.role` directly still see only the **primary** role. This
+  fails closed: a direct check can only show less, never more. Phase 2a moved
+  the Site Ops ones; the rest are listed under phase 2 below. Ownership
+  scoping (`dataScopingService`, `filterAttendanceForUser`) already reads every
+  role: a Contracts Manager whose primary role is `employee` sees every week on
+  `/weekly`, because Site Ops grants attendance unscoped.
+- **Admin-only pages** (`/paperless/*`, `/company-docs/*`, payroll screens,
+  CIS and returns pages, `/website`, `/audit`) stay with the roles their guards
+  name, even where a group lists them, until phase 2 opens each one.
 - **Project scope.** Site Manager and Supervisor can't be assigned yet.
 - **Bank and payments** stay with `admin` and `accountant` (decision 3 below).
-- **Pay figures on attendance pages** are still hidden by direct "admin or
-  accountant" checks. Phase 2 moves them to `rbac.canSeeValues(user)`.
+- **Pay figures** outside the weekly attendance view are still hidden by
+  direct "admin or accountant" checks.
 - **Health & Safety** has no models yet.
 
 ## Phases
@@ -171,10 +195,22 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
 1. **Groups, job roles, `user.roles[]`, multi-role helpers.** *(this PR)*
    No change for any existing user. A user with no job roles gets exactly the
    access they had before.
-2. **Move direct role checks to group checks.** Go through the ~76 direct
-   `role ===` checks and move each one to a level check, for example "has Site Ops
-   approve" instead of `role === 'admin'`. Open the admin-only pages that groups
-   list. Consider a field-level split of the employee record.
+2. **Move direct role checks to group checks**, one area per PR, each using
+   `ensureGroup` / `hasGroup` / `canSeeValues`:
+   - **2a, Site Ops** *(6.90.0, built)*: daily, weekly and management weekly
+     views; weekly flow; inline attendance, assignment and vehicle deployment
+     edits; attendance approve, reject and bulk approve; pay on the weekly view.
+   - **2b, Payroll and CIS**: payroll screens, CIS dashboard and returns,
+     subcontractor assign, supplier change.
+   - **2c, Documents and Website**: `/paperless/*`, `/company-docs/*`,
+     `/overview/documents`, `/website`, mail rules.
+   - **2d, the rest**: `/audit` and security events for System view, GDPR
+     requests, help-page visibility, search, the websocket log feed, and
+     any remaining pay-hiding checks.
+   - Consider a field-level split of the employee record.
+
+   Still admin-only on purpose after 2a: editing attendance inside a locked
+   payroll period, and the weekly flow's "record as admin" path.
 3. **Project scope.** Add a `:project` scope resolved from `assignment` (the
    user's employee or subcontractor on the assignment, then its contract and
    project). Enable Site Manager and Supervisor.

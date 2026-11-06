@@ -374,6 +374,7 @@
           <h4 class="font-semibold text-amber-800 dark:text-amber-300"><%= pendingCount %> attendance record<%= pendingCount === 1 ? '' : 's' %> pending approval</h4>
           <p class="text-sm text-amber-600 dark:text-amber-400 mt-1">Review the highlighted rows below or approve all pending records for this week.</p>
         </div>
+        <% if (canGroup('siteOps', 'approve')) { %>
         <form action="/attendance/bulk-approve" method="POST" class="ml-4">
           <%- include('../partials/csrfHidden.ejs') %>
           <input type="hidden" name="weekStart" value="<%= startDate %>">
@@ -383,6 +384,7 @@
             <i class="bi bi-check-all"></i> Approve All (<%= pendingCount %>)
           </button>
         </form>
+        <% } %>
       </div>
     </div>
   <% } %>

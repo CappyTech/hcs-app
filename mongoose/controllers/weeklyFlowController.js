@@ -3,6 +3,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 import logger from '../../services/loggerService.js';
 import weeklyFlowService from '../services/weeklyFlowService.js';
 import overviewEngine from '../services/overviewEngine.js';
+import rbac from '../config/rolePermissionsConfig.js';
 
 const params = (req) => [parseInt(req.params.year), parseInt(req.params.week)];
 const back = (req, anchor) => `/weekly-flow/${parseInt(req.params.year)}/${parseInt(req.params.week)}${anchor ? `#${anchor}` : ''}`;
@@ -20,7 +21,7 @@ export const getWeekFlow = async (req, res, next) => {
       employees,
       subcontractors,
       dayLabels: week.days.map((d) => formatInTimeZone(new Date(`${d}T12:00:00Z`), 'Europe/London', 'EEE d')),
-      canApprove: req.user?.role === 'admin',
+      canApprove: rbac.hasGroup(req.user, 'siteOps', 'approve'),
       personKey: weeklyFlowService.personKey,
       // Home › Projects › Weekly attendance (the overview), following the hierarchy
       crumbs: overviewEngine.breadcrumbs(req, 'weekly'),
