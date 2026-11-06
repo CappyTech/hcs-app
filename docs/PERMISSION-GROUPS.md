@@ -178,6 +178,19 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
 3. **Project scope.** Add a `:project` scope resolved from `assignment` (the
    user's employee or subcontractor on the assignment, then its contract and
    project). Enable Site Manager and Supervisor.
+
+   **Two-stage week approval** (decision 2). Attendance today goes `pending` →
+   `approved` / `rejected` in one admin step. Phase 3 adds a middle state:
+   - `pending` → **`site-approved`**: Site Manager (Site Ops approve, project
+     scope) approves the week for their projects.
+   - `site-approved` → **`approved`**: Contracts Manager approves.
+   - Either can reject back to the person who submitted it.
+   - Each step records who approved and when.
+   - Payroll, the weekly flow and CIS read only `approved`.
+
+   The Contracts Manager step is required, so a week a Site Manager approved
+   doesn't reach payroll until a Contracts Manager approves it too. Admin can
+   still approve in one step, for cover.
 4. **Role editor.** Edit job roles and groups from the config store instead of
    code, in line with the single-tenant config direction. Each company sets its
    own roles.
@@ -185,14 +198,17 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
 
 ## Open decisions
 
-Each of these has a default applied in phase 1. Confirm or change them before the phase that relies on them.
+Decisions 1 and 2 are made. Decision 3 has a default applied in phase 1; settle it before bank and payments are opened to job roles.
 
 1. **Money on site.** *Decided: per person.* Site Managers and Supervisors
    have a **Can see values** checkbox, off by default. See "Seeing values" above.
-2. **Approval chain.** Supervisor signs off the day, then Site Manager approves
-   the week. Does the Contracts Manager then approve before payroll? *Default:
-   no extra step. A Contracts Manager can approve, but doesn't have to.* Phase 2
-   could make it a setting.
+2. **Approval chain.** *Decided: yes, the Contracts Manager approves the week
+   after the Site Manager.* The chain is Supervisor (signs off the day), then Site
+   Manager (approves the week, for their projects), then Contracts Manager
+   (approves the week), then payroll. Payroll only uses weeks the Contracts Manager
+   has approved. Built in phase 3, because the Site Manager step needs project
+   scope. Until then, approval is still the single admin step it is today. See
+   "Two-stage week approval" in phase 3.
 3. **Self-approval.** When one person holds roles that let them both raise and
    approve the same item (for example entering a purchase and paying it), should
    the app block it or only log it? *Default for now: neither is needed, because
