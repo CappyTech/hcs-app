@@ -9,7 +9,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - The signed-out home page is the sign-in page: the login form sits on it, so nobody is sent to a second page to log in. The form is one shared partial (`partials/loginForm.ejs`) used by the home page and `/user/login`.
 
 ### Changed
-- The signed-out home page is two matching cards across the full width (same accent bar, header row and padding): sign-in on the left (stays in view), and the feature list on the right in balanced columns (up to 4 from 1280px, 5 from 1536px). Headings are small now the form is on the page.
+- The signed-out home page is two matching cards across the full width (same accent bar, header row and padding): sign-in on the left (stays in view), and the feature list on the right in balanced columns (up to 4 from 1280px, 5 from 1536px). Headings are small now the form is on the page, and the company name appears once, in the header.
 - The login form: labels without colons, a full-width Log in button, and "Forgot your password?" and "Create an account" as links under the form instead of a large button. The header leaves its Log In button off on home and the login page, which already show the form.
 - Feature cards are more compact, with the icon beside the title.
 - Signed-out pages no longer leave an empty band at the top for a header that wasn't drawn, and the footer sits at the bottom of the page instead of a fixed bar over the content.
