@@ -87,7 +87,8 @@ function rolesRequiring2FA() {
 // The first role a user holds that requires 2FA, or null.
 function roleRequiring2FA(user) {
   const required = rolesRequiring2FA();
-  return rbac.rolesOf(user).find((r) => required.includes(r)) || null;
+  // A 'flag' job role resolves to '<slug>+values'; 2FA follows the slug.
+  return rbac.rolesOf(user).find((r) => required.includes(r) || required.includes(r.replace(/\+values$/, ''))) || null;
 }
 
 const TWOFA_SETUP_PATHS = new Set([

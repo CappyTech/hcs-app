@@ -95,10 +95,18 @@ export default {
     readOnly: ['uuid', 'createdAt'],
     hideFields: ['_id', '__v'],
     // Non-admins: own record only, pending, no admin-set pay fields; and no
-    // records inside a locked/submitted payroll run
+    // records inside a locked/submitted payroll run. Site Ops edit (a job role)
+    // records for anyone, keeping the pay fields only if it sees values; the
+    // payroll lock still applies.
     beforeCreate: async (cleanedData, req) => {
       if (req.user?.role === 'admin') return;
-      scopeAttendanceCreateToCaller(cleanedData, req);
+      if (rbac.hasGroup(req.user, 'siteOps', 'edit')) {
+        if (!rbac.canSeeValues(req.user)) {
+          for (const field of ATTENDANCE_ADMIN_ONLY_FIELDS) delete cleanedData[field];
+        }
+      } else {
+        scopeAttendanceCreateToCaller(cleanedData, req);
+      }
       const { getLockedRunForDate } = __attendanceService;
       const lockedRun = await getLockedRunForDate(cleanedData.date);
       if (lockedRun) {
@@ -626,9 +634,10 @@ export default {
     referenceFilters: {
       employeeId: { status: 'active' }
     },
-    // Employees may only submit for themselves, always starting as pending
+    // Employees may only submit for themselves, always starting as pending —
+    // unless a job role gives them HR edit, which raises requests for anyone
     beforeCreate: async (cleanedData, req) => {
-      if (req.user?.role === 'employee') {
+      if (req.user?.role === 'employee' && !rbac.hasGroup(req.user, 'hr', 'edit')) {
         cleanedData.employeeId = req.user.employeeId;
         cleanedData.status = 'pending';
       }

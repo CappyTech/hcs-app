@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0). The rest of phase 2 and phases 3–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2. Phases 3–5 are planned below.
 
 ## Why
 
@@ -172,19 +172,14 @@ candidate.
 
 These gaps are deliberate. They are the plan for the next phases.
 
-- **Direct role checks.** Places in controllers, views and services that
-  compare `req.user.role` directly still see only the **primary** role. This
-  fails closed: a direct check can only show less, never more. Phase 2a moved
-  the Site Ops ones; the rest are listed under phase 2 below. Ownership
+- **Direct role checks.** The ones left compare `req.user.role` on purpose
+  (see "Still admin-only on purpose" under phase 2). They fail closed: a
+  direct check can only show less, never more. Ownership
   scoping (`dataScopingService`, `filterAttendanceForUser`) already reads every
   role: a Contracts Manager whose primary role is `employee` sees every week on
   `/weekly`, because Site Ops grants attendance unscoped.
-- **Admin-only pages** (`/audit`, security events, `/mail`) stay with the
-  roles their guards name, even where a group lists them, until phase 2d.
 - **Project scope.** Site Manager and Supervisor can't be assigned yet.
 - **Bank and payments** stay with `admin` and `accountant` (decision 3 below).
-- **Pay figures** outside the weekly attendance view are still hidden by
-  direct "admin or accountant" checks.
 - **Health & Safety** has no models yet.
 
 ## Phases
@@ -220,13 +215,27 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
      Routes are guarded in two layers: `routeAccess` opens every `/paperless`,
      `/company-docs` and `/website` page at the group's **view** level, and
      each route's `ensureGroup` asks for the level that action needs.
-   - **2d, the rest**: `/audit` and security events for System view, GDPR
-     requests, help-page visibility, search, the websocket log feed, and
-     any remaining pay-hiding checks.
-   - Consider a field-level split of the employee record.
+   - **2d, the rest** *(6.94.0, built)*. System view: the audit trail and
+     security events (read-only). Finance manage: receipt and purchase
+     changes. Generic CRUD hooks: Site Ops edit records attendance for
+     anyone (pay fields only if it sees values; the payroll lock still
+     applies), and HR edit raises holiday requests for anyone. Search, help,
+     the purchase → Paperless link and the account page's 2FA notice follow
+     every role held.
+   - Later: consider a field-level split of the employee record.
 
-   Still admin-only on purpose after 2a: editing attendance inside a locked
-   payroll period, and the weekly flow's "record as admin" path.
+   **Still admin-only on purpose** (each is a `manage` level or a System
+   setting, held by no job role):
+   - editing attendance inside a locked payroll period, and the weekly
+     flow's "record as admin" path;
+   - bank auto-confirm and reversing a sign-off;
+   - the company mailbox (`/mail`), the live log feed, logs, settings,
+     integrations, users and the signed-in sessions panel;
+   - handling other people's GDPR requests;
+   - the Paperless audit timeline on a document.
+
+   No other pay-hiding checks compare roles directly: pay visibility goes
+   through `rbac.canSeeValues(user)`.
 3. **Project scope.** Add a `:project` scope resolved from `assignment` (the
    user's employee or subcontractor on the assignment, then its contract and
    project). Enable Site Manager and Supervisor.

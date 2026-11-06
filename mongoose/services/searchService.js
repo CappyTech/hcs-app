@@ -176,14 +176,19 @@ export function createSearch({
     const role = req.user && req.user.role;
     if (!role) return [];
     const customPerms = (req.user && req.user.customPermissions) || {};
+    // Every role held. A job role's model grant gets past a CRUD route guard
+    // the same way CRUDRoutes lets it (ensureRolesOrGrant).
+    const roles = typeof access.rolesOf === 'function' ? access.rolesOf(req.user) : [role];
+    const jobRoles = typeof access.jobRolesOf === 'function' ? access.jobRolesOf(req.user) : [];
     const out = [];
     for (const e of entities) {
       const rbacModel = e.rbacModel || e.model;
       const model = db[e.ns] && db[e.ns][e.model];
       if (!model || typeof model.find !== 'function') continue;
-      if (e.gate && e.gate.department && !access.canAccessDepartment(role, e.gate.department, customPerms)) continue;
-      if (!e.gate && role !== 'admin' && !routeAllows(role, middlewareFor(e.model))) continue;
-      const { allowed } = access.canAccess(role, rbacModel, 'l', customPerms);
+      if (e.gate && e.gate.department && !access.canAccessDepartment(roles, e.gate.department, customPerms)) continue;
+      const jobGrant = jobRoles.length > 0 && access.canAccess(jobRoles, e.model, 'r').allowed;
+      if (!e.gate && role !== 'admin' && !jobGrant && !routeAllows(role, middlewareFor(e.model))) continue;
+      const { allowed } = access.canAccess(roles, rbacModel, 'l', customPerms);
       if (!allowed) continue;
       let scope;
       try { scope = await scopeQuery(req, rbacModel, 'r'); } catch (err) {

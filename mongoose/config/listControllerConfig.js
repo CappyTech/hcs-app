@@ -1,3 +1,4 @@
+import rbac from './rolePermissionsConfig.js';
 import __path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
@@ -745,9 +746,9 @@ export default {
         ? await mdb.REST.supplier.findOne({ Id: item.SupplierId }).select('uuid Name Code WithholdingTaxRate').lean()
         : null;
       // Paperless document that was sent to KashFlow as this purchase (PICP linkage).
-      // The /paperless/ocr detail view is admin-only, so only surface the link to admins.
+      // Only surface the link to people who can open /paperless/ocr (Documents view).
       let paperlessDoc = null;
-      if (req?.user?.role === 'admin' && mdb.PAPERLESS?.OcrDocument) {
+      if (rbac.hasGroup(req?.user, 'documents', 'view') && mdb.PAPERLESS?.OcrDocument) {
         const or = [];
         if (item.Id != null) or.push({ kashflowPurchaseId: item.Id });
         if (item.Number != null) or.push({ kashflowPurchaseNumber: item.Number });

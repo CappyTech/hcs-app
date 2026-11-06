@@ -465,3 +465,51 @@ describe('ensureGroup guards agree with the global route check', async () => {
     }
   });
 });
+
+describe('phase 2d', async () => {
+  const fs = await import('node:fs');
+  const src = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+  const asJob = (slug) => ({ role: 'employee', roles: [slug] });
+  const passes = async (mw, user, p) => (await run(mw, user, p)) === undefined
+    && (await run(authService.ensureRouteAccess, user, p)) === undefined;
+
+  it('System view opens the audit trail and security events to a Director only', async () => {
+    assert.match(src('mongoose/routes/auditRoutes.js'), /router\.get\('\/audit', authService\.ensureGroup\('system', 'view'\)/);
+    assert.match(src('mongoose/routes/adminRoutes.js'), /"\/admin\/security-events",\s*authService\.ensureGroup\("system", "view"\)/);
+    const mw = authService.ensureGroup('system', 'view');
+    for (const p of ['/audit', '/admin/security-events']) {
+      assert.equal(await passes(mw, asJob('director'), p), true, p);
+      assert.equal(await passes(mw, asJob('contractsManager'), p), false, p);
+      assert.equal(await passes(mw, { role: 'accountant' }, p), false, p);
+    }
+  });
+
+  it('receipt and purchase changes sit at Finance manage (admin only)', () => {
+    const s = src('mongoose/routes/submissionRoutes.js');
+    assert.equal((s.match(/authService\.ensureGroup\("finance", "manage"\)/g) || []).length, 2);
+    for (const slug of rbac.JOB_ROLES) assert.equal(rbac.hasGroup(asJob(slug), 'finance', 'manage'), false, slug);
+  });
+
+  it('a holiday request is forced to the requester unless they hold HR edit', async () => {
+    const cfg = (await import('../mongoose/config/CRUDControllerConfig.js')).default;
+    const hook = cfg.holidayRequest.beforeCreate;
+    const own = { employeeId: 'someone-else', status: 'approved' };
+    await hook(own, { user: { role: 'employee', employeeId: 'me' } });
+    assert.deepEqual(own, { employeeId: 'me', status: 'pending' });
+    const hr = { employeeId: 'someone-else', status: 'pending' };
+    await hook(hr, { user: { role: 'employee', employeeId: 'me', roles: ['officeManager'] } });
+    assert.equal(hr.employeeId, 'someone-else');
+  });
+
+  it('2FA follows a flag role in its +values build', () => {
+    rbac.JOB_ROLES.add('siteManager');
+    try {
+      assert.equal(
+        authService.roleRequiring2FA({ role: 'employee', roles: ['siteManager'], canSeeValues: true }),
+        'siteManager+values',
+      );
+    } finally {
+      rbac.JOB_ROLES.delete('siteManager');
+    }
+  });
+});
