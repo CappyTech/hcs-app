@@ -109,11 +109,13 @@ describe('every nav style', () => {
     assert.match(html, /data-nav-style="tabs"/);
     const out = await renderLayout({ ...locals('sidebar'), isAuthenticated: false, nav: nav.build({ path: '/', user: null }) });
     // A signed-out visitor never gets a person's style, only the public header:
-    // home, theme, create account, log in, and no department links.
+    // home, theme and log in, and no department links.
     assert.equal((out.match(/data-nav-style="/g) || []).length, 1);
     assert.match(out, /data-nav-style="public"/);
     assert.match(out, /href="\/user\/login"/);
-    assert.match(out, /href="\/user\/register"/);
+    // On home the page is the sign-in form, so the header leaves its Log In button off
+    const home = await renderLayout({ ...locals('tabs', '/'), isAuthenticated: false, currentPath: '/', nav: nav.build({ path: '/', user: null }) });
+    assert.ok(!/href="\/user\/login"/.test(home));
     assert.equal((out.match(/id="theme-toggle"/g) || []).length, 1, 'exactly one theme toggle');
     // The public header is sticky (in the flow), so the page needs no top offset for it
     assert.ok(!/id="main-content" class="[^"]*pt-16/.test(out));

@@ -169,40 +169,47 @@
         ['', '2xl:columns-1', '2xl:columns-2', '2xl:columns-3', '2xl:columns-4', '2xl:columns-5'][Math.min(_n, 5)],
       ].join(' ');
     %>
-    <div class="grid gap-6 items-start <%= _features.length ? 'lg:grid-cols-[minmax(18rem,22rem)_1fr]' : 'max-w-xl mx-auto' %>">
+    <div class="grid gap-6 items-start <%= _features.length ? 'lg:grid-cols-[minmax(19rem,22rem)_1fr]' : 'max-w-xl mx-auto' %>">
 
-      <!-- Left pane: who this is for, and sign in. Stays in view while the features scroll. -->
-      <aside class="lg:sticky lg:top-6 bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-        <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
-        <div class="p-6 sm:p-8">
-          <h1 class="text-3xl font-bold leading-tight text-gray-900 dark:text-gray-100"><%= (locals.companyName ? companyName + ' ' : '') %>Management System</h1>
-          <% if (locals.companyName) { %>
-          <p class="text-base text-gray-500 dark:text-gray-400 mt-2">
-            The internal platform of
-            <% if (locals.websiteUrl) { %><a href="<%= websiteUrl %>" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium"><%= companyName %></a><% } else { %><span class="font-medium"><%= companyName %></span><% } %>
-          </p>
-          <% } %>
-          <p class="text-sm text-gray-600 dark:text-gray-300 mt-4">
-            One internal platform for running the business, all in one place.
-          </p>
-          <a href="/user/login" class="flex w-full items-center justify-center gap-1.5 mt-6 px-6 py-3 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition shadow-sm">
-            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Log In
-          </a>
+      <%#
+        Both panes are the same card: accent bar, a small header row (icon + title),
+        then the body. Signed out, home is the sign-in page, so nobody is sent elsewhere
+        to log in; the form is the one the login page uses.
+      %>
+      <% const _card = 'bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden'; %>
+      <% const _bar = 'h-1.5 bg-gradient-to-r from-green-500 to-emerald-400'; %>
+      <% const _head = 'border-b border-gray-200 dark:border-gray-700 px-5 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2'; %>
+
+      <!-- Left pane: sign in. Stays in view while the features scroll. -->
+      <section aria-labelledby="sign-in" class="lg:sticky lg:top-6 <%= _card %>">
+        <div class="<%= _bar %>"></div>
+        <div class="<%= _head %>">
+          <i class="bi bi-box-arrow-in-right text-green-600 dark:text-green-400" aria-hidden="true"></i>
+          <h1 id="sign-in">Log in</h1>
         </div>
-      </aside>
+        <div class="p-5">
+          <p class="text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug">
+            <% if (locals.companyName && locals.websiteUrl) { %><a href="<%= websiteUrl %>" class="hover:text-green-700 dark:hover:text-green-400"><%= companyName %></a><% } else { %><%= locals.companyName || 'Management System' %><% } %>
+          </p>
+          <% if (locals.companyName) { %><p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Management System</p><% } else { %><div class="mb-5"></div><% } %>
+          <%- include('partials/loginForm.ejs') %>
+        </div>
+      </section>
 
       <% if (_features.length) { %>
       <!-- Right pane: everything this company uses (publicFeaturesConfig, filtered by publicFeaturesService) -->
-      <section aria-labelledby="whats-inside" class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
-        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <i class="bi bi-grid text-green-600 dark:text-green-400" aria-hidden="true"></i> <span id="whats-inside">What's inside</span>
+      <section aria-labelledby="whats-inside" class="<%= _card %>">
+        <div class="<%= _bar %>"></div>
+        <div class="<%= _head %>">
+          <i class="bi bi-grid text-green-600 dark:text-green-400" aria-hidden="true"></i>
+          <h2 id="whats-inside">What's inside</h2>
         </div>
-        <div class="p-4 sm:p-5 gap-5 <%= _cols %>">
+        <div class="p-5 gap-5 <%= _cols %>">
           <% _features.forEach((g) => { %>
           <div class="break-inside-avoid mb-5 last:mb-0">
-            <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <i class="bi <%= g.icon %>" aria-hidden="true"></i> <%= g.group %>
-            </h2>
+            </h3>
             <ul class="space-y-2">
               <% g.items.forEach((f) => { %>
               <li class="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2.5">

@@ -1,13 +1,11 @@
 <%#
   Header for people who are not signed in: the company name (home), the theme
-  toggle, and the two ways in. Sticky rather than fixed, so it takes its own
+  toggle, and Log In (left off on home and the login page, which both show the sign-in form;
+  registration is linked from under the form). Sticky rather than fixed, so it takes its own
   space and pages need no top offset for it. Department links are not shown:
   every one of them needs a sign-in.
 %>
 <% const _p = locals.currentPath || ''; %>
-<% const _pubLink = (href) => _p === href
-     ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 font-medium'
-     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400'; %>
 <header class="sticky top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden">
   <nav class="flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-2" aria-label="Main navigation" data-nav-style="public">
     <a href="/" class="inline-flex items-center gap-2 min-w-0 font-semibold text-sm text-gray-900 dark:text-gray-100 hover:text-green-600 dark:hover:text-green-400" <%- _p === '/' ? 'aria-current="page"' : '' %>>
@@ -19,14 +17,12 @@
         <i id="theme-icon" class="bi bi-moon-stars text-base" aria-hidden="true"></i>
         <span class="hidden sm:inline">Theme</span>
       </button>
-      <a href="/user/register" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition <%= _pubLink('/user/register') %>" <%- _p === '/user/register' ? 'aria-current="page"' : '' %>>
-        <i class="bi bi-person-plus text-base" aria-hidden="true"></i>
-        <span>Create account</span>
-      </a>
-      <a href="/user/login" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-700 transition" <%- _p === '/user/login' ? 'aria-current="page"' : '' %>>
+      <% if (_p !== '/' && _p !== '/user/login') { %>
+      <a href="/user/login" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-700 transition">
         <i class="bi bi-box-arrow-in-right text-base" aria-hidden="true"></i>
         <span>Log In</span>
       </a>
+      <% } %>
     </div>
   </nav>
 </header>
