@@ -266,7 +266,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
           if (req.user && req.user.role !== "admin") {
             const customPerms = req.user?.customPermissions || {};
             const { allowed, ownOnly } = rbac.canAccess(
-              req.user.role,
+              rbac.rolesOf(req.user),
               modelName,
               "r",
               customPerms,
@@ -485,10 +485,10 @@ for (const namespace of ["REST", "INTERNAL"]) {
           const _cp = req.user?.customPermissions || {};
           const canUpdate =
             req.user?.role === "admin" ||
-            rbac.canAccess(req.user?.role, modelName, "u", _cp).allowed;
+            rbac.canAccess(rbac.rolesOf(req.user), modelName, "u", _cp).allowed;
           const canDelete =
             req.user?.role === "admin" ||
-            rbac.canAccess(req.user?.role, modelName, "d", _cp).allowed;
+            rbac.canAccess(rbac.rolesOf(req.user), modelName, "d", _cp).allowed;
 
           // Allow per-model custom read view + extra locals
           const viewPath =
@@ -740,7 +740,11 @@ for (const namespace of ["REST", "INTERNAL"]) {
           const schema = extractSchema(Model, config);
 
           // 2) clean + map (supports nested objects from bracket-notation form fields)
-          const preClean = cleanBodyForUpdate(req.body);
+          // Fields this form may never write (config.bodyDeny) — e.g. user.roles,
+          // which changes only through its own audited route.
+          const body = { ...req.body };
+          for (const key of config.bodyDeny || []) delete body[key];
+          const preClean = cleanBodyForUpdate(body);
           const cleaned = {};
           for (const [key, val] of Object.entries(preClean)) {
             // Nested objects (e.g., contract, holidayPolicy) pass through directly

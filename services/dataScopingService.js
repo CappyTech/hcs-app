@@ -32,8 +32,10 @@ async function scopeQuery(req, model, operation = "r") {
   if (role === "admin") return {};
 
   const customPerms = req.user?.customPermissions || {};
+  // Every role held: an unscoped grant from any of them (a job role, say)
+  // lifts the scoping; otherwise the own-scoped role's filter applies.
   const { allowed, ownOnly } = rbac.canAccess(
-    role,
+    rbac.rolesOf(req.user),
     model,
     operation,
     customPerms,

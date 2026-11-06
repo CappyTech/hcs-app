@@ -44,9 +44,14 @@ for (const [functionName, handler] of Object.entries(listController)) {
     if (!entry.includes(":")) return authService[entry];
     const [fn, ...rest] = entry.split(":");
     const arg = rest.join(":");
+    // A job role gets in where its permission groups grant listing this model.
+    const grant = { model: originalModel, operation: "l" };
     if (fn === "ensureRoles") {
       const roles = arg.split(",").map((r) => r.trim());
-      return authService.ensureRoles(...roles);
+      return authService.ensureRolesOrGrant(roles, grant);
+    }
+    if (fn === "ensureRole" && arg && arg !== "public") {
+      return authService.ensureRolesOrGrant([arg], grant);
     }
     return authService[fn]?.(arg);
   };

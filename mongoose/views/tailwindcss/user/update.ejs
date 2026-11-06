@@ -1,5 +1,44 @@
 <%- include('../partials/form-update') %>
 
+<% if (typeof jobRoleOptions !== 'undefined' && formData && formData.uuid) { %>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-6 sm:p-8">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">Job roles</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        Held on top of the role above. Access is everything the role and every ticked job role grant together.
+        Every job role requires two-factor authentication.
+      </p>
+      <form method="POST" action="/admin/users/<%= encodeURIComponent(formData.uuid) %>/roles" class="space-y-3">
+        <%- include('../partials/csrfHidden') %>
+        <% jobRoleOptions.forEach(opt => { %>
+          <label class="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 <%= opt.available ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : 'opacity-60 cursor-not-allowed' %>">
+            <input type="checkbox" name="roles" value="<%= opt.slug %>"
+              class="mt-1 rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
+              <%= opt.checked ? 'checked' : '' %> <%= opt.available ? '' : 'disabled' %>>
+            <span class="min-w-0">
+              <span class="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <%= opt.label %>
+                <% if (!opt.available) { %><span class="ml-1 text-xs font-normal text-amber-600 dark:text-amber-400">Not available yet: needs project scoping</span><% } %>
+              </span>
+              <span class="block text-sm text-gray-500 dark:text-gray-400"><%= opt.description %></span>
+              <span class="block text-xs text-gray-400 dark:text-gray-500 mt-1"><%= opt.groups.join(' · ') %></span>
+            </span>
+          </label>
+        <% }) %>
+        <div class="pt-2">
+          <button type="submit"
+            class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
+            Save job roles
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <% if (typeof roleDetails !== 'undefined' && typeof allRoles !== 'undefined') { %>
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">

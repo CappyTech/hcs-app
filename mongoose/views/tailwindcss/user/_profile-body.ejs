@@ -56,6 +56,11 @@
                 <i class="bi bi-person-check"></i> <%= permissions.role.charAt(0).toUpperCase() + permissions.role.slice(1) %>
               </span>
             <% } %>
+            <% (permissions.jobRoles || []).forEach(label => { %>
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                <i class="bi bi-briefcase"></i> <%= label %>
+              </span>
+            <% }) %>
 
             <!-- 2FA badge -->
             <% if (user.totpEnabled) { %>

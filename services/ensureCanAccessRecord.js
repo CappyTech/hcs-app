@@ -32,7 +32,7 @@ export default function ensureCanAccessRecord(operation = 'r') {
     const customPerms = req.user.customPermissions || {};
 
     const { allowed, ownOnly } = rbac.canAccess(
-      req.user.role,
+      rbac.rolesOf(req.user),
       modelName,
       operation,
       customPerms,

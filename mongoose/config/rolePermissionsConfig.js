@@ -6,9 +6,16 @@
  *
  * Roles: none | admin | accountant | employee | subcontractor | client | hmrc
  *        | auditor (external, read-only)
+ *
+ * Job roles (director, contractsManager, ...) are defined as permission-group
+ * grants in accessGroupsConfig.js and compiled into the same tables below --
+ * see compileJobRoles(). A user holds one primary `role` plus any number of
+ * job roles in `roles[]`; every helper here accepts either a single role or
+ * an array (use rolesOf(user)), and grants are the union.
  */
 
 import departmentsConfig from './departmentsConfig.js';
+import accessGroups from './accessGroupsConfig.js';
 
 // ── Departments each role may access ──────────────────────────────────
 // Derived from departmentsConfig roles: ['public'] departments go to every
@@ -372,6 +379,121 @@ const routeAccess = {
   '/company-docs/policies/:uuid/print':             ['admin'],
 };
 
+// ── Job roles: compiled from permission groups ───────────────────────
+// Every job role in accessGroupsConfig becomes ordinary entries in
+// roleDepartments, roleModelAccess and routeAccess, so nothing downstream
+// needs to know groups exist. Route lists are copied before a job role is
+// added, so departmentsConfig's own `roles` arrays are never mutated.
+function compileJobRoles() {
+  const { groups, jobRoles, LEVEL_OPS, READ_ONLY_MODELS, levelsUpTo } = accessGroups;
+  const routeKeys = Object.keys(routeAccess);
+  const expandRoute = (key) => (key.endsWith('*')
+    ? routeKeys.filter((k) => k.startsWith(key.slice(0, -1)))
+    : routeKeys.filter((k) => k === key));
+  const grantRoute = (key, slug) => {
+    const current = routeAccess[key];
+    if (current === '*' || !Array.isArray(current)) return;
+    if (!current.includes(slug)) routeAccess[key] = [...current, slug];
+  };
+
+  for (const [slug, def] of Object.entries(jobRoles)) {
+    if (roleModelAccess[slug] || ownershipFields[slug]) {
+      throw new Error(`Job role "${slug}" collides with a hand-written role`);
+    }
+    const departments = new Set();
+    const modelOps = {};   // model -> Set of ops
+
+    for (const grant of def.grants) {
+      // 'project' scope is not enforced yet (phase 3): grant nothing rather
+      // than something wider than intended.
+      if ((grant.scope || 'all') !== 'all') continue;
+      const group = groups[grant.group];
+      if (!group) throw new Error(`Job role "${slug}" grants unknown group "${grant.group}"`);
+      const levels = levelsUpTo(grant.level);
+      if (!levels.length) throw new Error(`Job role "${slug}" grants unknown level "${grant.level}"`);
+
+      for (const d of group.departments) departments.add(d);
+      for (const model of group.models) {
+        const ops = READ_ONLY_MODELS.has(model) ? LEVEL_OPS.view : LEVEL_OPS[grant.level];
+        modelOps[model] = modelOps[model] || new Set();
+        for (const op of ops) modelOps[model].add(op);
+      }
+      for (const level of levels) {
+        for (const key of (group.routes && group.routes[level]) || []) {
+          for (const matched of expandRoute(key)) grantRoute(matched, slug);
+        }
+      }
+    }
+
+    // Department dashboards ('public' ones come with every role).
+    for (const [deptSlug, dept] of Object.entries(departmentsConfig)) {
+      if (dept.roles.includes('public')) departments.add(deptSlug);
+    }
+    roleDepartments[slug] = Object.keys(departmentsConfig).filter((d) => departments.has(d));
+    for (const d of roleDepartments[slug]) {
+      const dept = departmentsConfig[d];
+      if (dept.hasDashboard !== false && !dept.roles.includes('public')) grantRoute(dept.path || `/${d}`, slug);
+    }
+
+    const order = ['c', 'r', 'u', 'd', 'l'];
+    roleModelAccess[slug] = Object.fromEntries(
+      Object.entries(modelOps).map(([m, ops]) => [m, order.filter((o) => ops.has(o)).join(',')]),
+    );
+  }
+}
+compileJobRoles();
+
+const JOB_ROLES = new Set(accessGroups.JOB_ROLE_SLUGS.filter(accessGroups.isJobRoleAvailable));
+
+/**
+ * Every role a user holds: the primary `role` plus any available job roles in
+ * `roles[]`. Anything in `roles[]` that is not an available job role
+ * (including a legacy role such as 'admin') is ignored, so the secondary list
+ * can never be used to grant a primary role.
+ * @param {Object} user  req.user
+ * @returns {string[]}
+ */
+function rolesOf(user) {
+  if (!user) return [];
+  const primary = user.role || 'none';
+  const extra = Array.isArray(user.roles) ? user.roles.filter((r) => JOB_ROLES.has(r)) : [];
+  return [...new Set([primary, ...extra])];
+}
+
+/** The job roles (not the primary role) a user holds. */
+function jobRolesOf(user) {
+  return rolesOf(user).filter((r) => JOB_ROLES.has(r));
+}
+
+/**
+ * Model access across several roles, for display: { model: 'c,r:own,...' }.
+ * Where two roles grant the same operation, the unscoped grant wins over
+ * ':own'. Admin's '_wildcard' passes through as-is.
+ * @param {string|string[]} roleOrRoles
+ * @returns {Object<string,string>}
+ */
+function mergedModelAccess(roleOrRoles) {
+  const byModel = {};
+  for (const r of toRoles(roleOrRoles)) {
+    for (const [model, perms] of Object.entries(roleModelAccess[r] || {})) {
+      const ops = byModel[model] || (byModel[model] = new Map());
+      for (const { op, scope } of parsePerms(perms)) {
+        if (!ops.has(op) || scope !== 'own') ops.set(op, scope);
+      }
+    }
+  }
+  return Object.fromEntries(Object.entries(byModel).map(([model, ops]) => [
+    model,
+    [...ops].map(([op, scope]) => (scope ? `${op}:${scope}` : op)).join(','),
+  ]));
+}
+
+/** Normalise a role-or-roles argument to an array. */
+function toRoles(roleOrRoles) {
+  if (Array.isArray(roleOrRoles)) return roleOrRoles.filter(Boolean);
+  return roleOrRoles ? [roleOrRoles] : [];
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /**
@@ -395,7 +517,10 @@ function parsePerms(perms) {
  * @returns {string[]}
  */
 function getDepartmentsForRole(role, customPerms) {
-  const base = roleDepartments[role] || [];
+  const roles = toRoles(role);
+  const base = roles.length === 1
+    ? (roleDepartments[roles[0]] || [])
+    : [...new Set(roles.flatMap((r) => roleDepartments[r] || []))];
   const extra = customPerms?.departments || [];
   if (!extra.length) return base;
   return [...new Set([...base, ...extra])];
@@ -411,20 +536,25 @@ function getDepartmentsForRole(role, customPerms) {
  * @returns {{ allowed: boolean, ownOnly: boolean }}
  */
 function canAccess(role, model, operation, customPerms) {
-  if (role === 'admin') return { allowed: true, ownOnly: false };
+  const roles = toRoles(role);
+  if (roles.includes('admin')) return { allowed: true, ownOnly: false };
 
-  // 1) Check role-level access
-  const access = roleModelAccess[role];
-  if (access) {
-    const perms = access[model];
-    if (perms) {
-      for (const { op, scope } of parsePerms(perms)) {
-        if (op === operation) {
-          return { allowed: true, ownOnly: scope === 'own' };
-        }
-      }
+  // 1) Role-level access, across every role held. Any unscoped grant wins;
+  //    otherwise remember the first role that grants it own-scoped, so the
+  //    caller can build that role's ownership filter.
+  let ownRole = null;
+  for (const r of roles) {
+    const perms = roleModelAccess[r] && roleModelAccess[r][model];
+    if (!perms) continue;
+    for (const { op, scope } of parsePerms(perms)) {
+      if (op !== operation) continue;
+      if (scope !== 'own') return { allowed: true, ownOnly: false };
+      if (!ownRole) ownRole = r;
     }
   }
+  // An own-scoped role grant is returned before custom grants are looked at,
+  // as it always has been.
+  if (ownRole) return { allowed: true, ownOnly: true, ownRole };
 
   // 2) Check user-level custom permissions (always additive)
   if (customPerms?.models) {
@@ -432,7 +562,7 @@ function canAccess(role, model, operation, customPerms) {
       ? customPerms.models.get(model)
       : customPerms.models[model];
     if (customModelPerms) {
-      for (const { op, scope } of parsePerms(customModelPerms)) {
+      for (const { op } of parsePerms(customModelPerms)) {
         if (op === operation) {
           // Custom per-user model access is never own-scoped (admin granted it)
           return { allowed: true, ownOnly: false };
@@ -451,6 +581,13 @@ function canAccess(role, model, operation, customPerms) {
  * @returns {{ userField: string, modelField: string } | null}
  */
 function getOwnershipConfig(role, model) {
+  if (Array.isArray(role)) {
+    for (const r of role) {
+      const found = getOwnershipConfig(r, model);
+      if (found) return found;
+    }
+    return null;
+  }
   const cfg = ownershipFields[role];
   if (!cfg) return null;
   const modelField = cfg.modelFields[model];
@@ -498,10 +635,11 @@ function matchRoutePattern(reqPath) {
  * @returns {boolean}
  */
 function canAccessRoute(role, routePattern, customPerms) {
-  if (role === 'admin') return true;
+  const roles = toRoles(role);
+  if (roles.includes('admin')) return true;
   const allowed = routeAccess[routePattern];
   if (allowed === '*') return true;
-  if (Array.isArray(allowed) && allowed.includes(role)) return true;
+  if (Array.isArray(allowed) && roles.some((r) => allowed.includes(r))) return true;
   if (customPerms?.routes?.includes(routePattern)) return true;
   return false;
 }
@@ -514,8 +652,9 @@ function canAccessRoute(role, routePattern, customPerms) {
  * @returns {boolean}
  */
 function canAccessDepartment(role, department, customPerms) {
-  if (role === 'admin') return true;
-  if ((roleDepartments[role] || []).includes(department)) return true;
+  const roles = toRoles(role);
+  if (roles.includes('admin')) return true;
+  if (roles.some((r) => (roleDepartments[r] || []).includes(department))) return true;
   if (customPerms?.departments?.includes(department)) return true;
   return false;
 }
@@ -527,16 +666,17 @@ function canAccessDepartment(role, department, customPerms) {
  * @returns {{ model: string, ownOnly: boolean }[]}
  */
 function getListableModels(role, customPerms) {
-  if (role === 'admin') return [{ model: '_wildcard', ownOnly: false }];
+  const roles = toRoles(role);
+  if (roles.includes('admin')) return [{ model: '_wildcard', ownOnly: false }];
 
   const result = [];
   const seen = new Set();
 
-  // Role-level
-  const access = roleModelAccess[role];
-  if (access) {
-    for (const [model, perms] of Object.entries(access)) {
-      const { allowed, ownOnly } = canAccess(role, model, 'l');
+  // Role-level, across every role held
+  for (const r of roles) {
+    for (const model of Object.keys(roleModelAccess[r] || {})) {
+      if (seen.has(model)) continue;
+      const { allowed, ownOnly } = canAccess(roles, model, 'l');
       if (allowed) { result.push({ model, ownOnly }); seen.add(model); }
     }
   }
@@ -570,6 +710,10 @@ export default {
   getAllowedRolesForRoute,
   canAccessDepartment,
   getListableModels,
+  rolesOf,
+  jobRolesOf,
+  mergedModelAccess,
+  JOB_ROLES,
 };
 
-export { roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels };
+export { roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels, rolesOf, jobRolesOf, mergedModelAccess, JOB_ROLES };
