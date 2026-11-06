@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.95.2] - 2026-11-06
+
+### Fixed
+- The OCR Documents tile's "unlinked" badge counts only purchase invoices that still need a KashFlow link. It had been counting every document without one, including supplier statements, credit notes, excluded invoices and "original/multiple invoice one pdf" originals, which never get a link. It now matches Unlinked on `/overview/documents`, and the Review link (`/paperless/ocr?unlinked=1`) lists the same documents.
+
 ## [6.95.1] - 2026-11-06
 
 ### Security
