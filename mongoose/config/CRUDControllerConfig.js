@@ -5,6 +5,7 @@ import __attendanceService from '../services/attendanceService.js';
 import auditLog from '../../services/auditLogService.js';
 import crypto from 'crypto';
 import rbac from './rolePermissionsConfig.js';
+import accessGroups from './accessGroupsConfig.js';
 import mdb from '../services/mongooseDatabaseService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
 import __taskService from '../services/taskService.js';
@@ -449,7 +450,12 @@ export default {
         });
       }
     },
-    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models.$*', 'customPermissions.routes'],
+    hideFields: ['_id', '__v', 'password', 'totpSecret', 'totpEnabled', 'totpBackupCodes', 'emailVerificationToken', 'emailVerificationExpires', 'passwordResetToken', 'passwordResetExpires', 'smsResetOtp', 'smsResetExpires', 'customPermissions.departments', 'customPermissions.models.$*', 'customPermissions.routes',
+      // Job roles change only through POST /admin/users/:uuid/roles (userRolesController)
+      'roles'],
+    // …and the generic update must not write them either (create already
+    // strips hideFields).
+    bodyDeny: ['roles'],
     fieldOrder: [
       'username', 'email', 'phoneNumber', 'emailVerified', 'role',
       'employeeId', 'subcontractorId', 'clientId',
@@ -507,7 +513,19 @@ export default {
         roleDetails[r] = { departments, models, customRoutes };
       }
 
-      return { roleDetails, allRoles };
+      // Job roles: the checkboxes under the form. Only available roles are
+      // offered; one waiting on project scoping is listed but disabled.
+      const held = new Set(item?.roles || []);
+      const jobRoleOptions = Object.entries(accessGroups.jobRoles).map(([slug, def]) => ({
+        slug,
+        label: def.label,
+        description: def.description,
+        available: rbac.JOB_ROLES.has(slug),
+        checked: held.has(slug),
+        groups: def.grants.map((g) => `${accessGroups.groups[g.group]?.label || g.group} (${g.level}${g.scope && g.scope !== 'all' ? `, ${g.scope}` : ''})`),
+      }));
+
+      return { roleDetails, allRoles, jobRoleOptions };
     },
     readView: path.join('tailwindcss', 'user', 'read'),
     readLocals: async (item) => {
@@ -517,11 +535,15 @@ export default {
       const client = item.clientId ? await mdb.REST.customer.findById(item.clientId).lean() : null;
 
       const role = item.role || 'none';
-      const departments = rbac.getDepartmentsForRole(role);
-      const modelAccess = rbac.roleModelAccess[role] || {};
+      // Primary role plus job roles: the summary shows the union.
+      const heldRoles = rbac.rolesOf(item);
+      const departments = rbac.getDepartmentsForRole(heldRoles);
+      const modelAccess = rbac.mergedModelAccess(heldRoles);
+      const jobRoleLabels = rbac.jobRolesOf(item).map((r) => accessGroups.jobRoles[r]?.label || r);
 
       const permissions = {
         role,
+        jobRoles: jobRoleLabels,
         departments,
         models: Object.entries(modelAccess).map(([model, perms]) => {
           const ops = perms.split(',').map(e => e.trim());
@@ -535,7 +557,7 @@ export default {
           };
         }),
         customRoutes: Object.entries(rbac.routeAccess)
-          .filter(([, roles]) => roles === '*' || (Array.isArray(roles) && roles.includes(role)))
+          .filter(([, roles]) => roles === '*' || (Array.isArray(roles) && heldRoles.some((r) => roles.includes(r))))
           .map(([route]) => route),
       };
 

@@ -2,6 +2,7 @@ import express from 'express';
 const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/adminController.js';
+import userRolesCtrl from '../controllers/userRolesController.js';
 
 router.get(
   "/admin/deleted-items",
@@ -67,6 +68,13 @@ router.post(
   "/admin/jobs/:name/run",
   authService.ensureRole("admin"),
   ctrl.runJob,
+);
+
+// Job roles (user.roles[]) — the only place they change.
+router.post(
+  "/admin/users/:uuid/roles",
+  authService.ensureRole("admin"),
+  userRolesCtrl.postUserRoles,
 );
 
 export default router;

@@ -21,18 +21,25 @@ router.param("uuid", (req, res, next, uuid) => {
   next();
 });
 
-// Resolve a string like 'ensureRole:admin' or 'ensureRoles:admin,accountant' into actual middleware
-const resolveMiddleware = (entry = "") => {
+// Resolve a string like 'ensureRole:admin' or 'ensureRoles:admin,accountant' into actual middleware.
+// `grant` ({ model, operation }) lets a job role in whose permission groups
+// grant that operation on that model; the listed primary roles are unchanged.
+const resolveMiddleware = (entry = "", grant = null) => {
   if (!entry.includes(":")) return authService[entry];
   const [fn, ...rest] = entry.split(":");
   const arg = rest.join(":"); // rejoin in case of colons in args
   if (fn === "ensureRoles") {
     // Support comma-separated roles: 'ensureRoles:admin,accountant'
     const roles = arg.split(",").map((r) => r.trim());
-    return authService.ensureRoles(...roles);
+    return authService.ensureRolesOrGrant(roles, grant);
+  }
+  if (fn === "ensureRole" && arg && arg !== "public") {
+    return authService.ensureRolesOrGrant([arg], grant);
   }
   return authService[fn]?.(arg);
 };
+
+const ACTION_OPS = { create: "c", read: "r", update: "u", delete: "d" };
 
 for (const [key, handler] of Object.entries(crudController)) {
   const match = key.match(/^(create|read|update|delete)([A-Z][a-zA-Z]*)$/);
@@ -51,7 +58,8 @@ for (const [key, handler] of Object.entries(crudController)) {
 
   const middlewares = mergedConfig.middleware?.[action] || [];
 
-  const resolvedMiddleware = middlewares.map(resolveMiddleware).filter(Boolean);
+  const grant = { model: originalModel, operation: ACTION_OPS[action] };
+  const resolvedMiddleware = middlewares.map((m) => resolveMiddleware(m, grant)).filter(Boolean);
 
   switch (action) {
     case "create":

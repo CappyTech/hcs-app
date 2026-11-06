@@ -86,7 +86,7 @@ export function normalisePinned(pinned, items) {
  */
 export function build({ path = '/', user = null, pinned = null } = {}) {
   const customPerms = user?.customPermissions || {};
-  const can = (slug) => (user ? rbac.canAccessDepartment(user.role, slug, customPerms) : false);
+  const can = (slug) => (user ? rbac.canAccessDepartment(rbac.rolesOf(user), slug, customPerms) : false);
 
   const items = Object.entries(departmentsConfig)
     .filter(([slug, dept]) => dept.showInNav !== false && can(slug))

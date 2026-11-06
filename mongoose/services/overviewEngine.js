@@ -85,7 +85,8 @@ function modelFor(name) {
 }
 
 function perms(req) {
-  return { role: req.user?.role, custom: req.user?.customPermissions || {} };
+  // role: every role held (primary + job roles) -- the rbac helpers take an array.
+  return { role: rbac.rolesOf(req.user), custom: req.user?.customPermissions || {} };
 }
 
 // One rule for every page: a controlled route (rolePermissionsConfig.routeAccess)
@@ -94,9 +95,9 @@ function perms(req) {
 function canOpenPath(req, path) {
   if (!req.user || !path) return false;
   const { role, custom } = perms(req);
-  if (rbac.getAllowedRolesForRoute(path) || role === 'admin') return rbac.canAccessRoute(role, path, custom);
+  if (rbac.getAllowedRolesForRoute(path) || role.includes('admin')) return rbac.canAccessRoute(role, path, custom);
   const def = registry.getAreaByPath(path) || registry.getNodeByOverviewPath(path);
-  if (def && !def._default && Array.isArray(def.roles)) return def.roles.includes(role) || !!custom?.routes?.includes(path);
+  if (def && !def._default && Array.isArray(def.roles)) return role.some((r) => def.roles.includes(r)) || !!custom?.routes?.includes(path);
   return false;
 }
 

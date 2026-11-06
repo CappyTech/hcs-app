@@ -76,8 +76,18 @@ function rolesRequiring2FA() {
   // 'auditor' is in the default because it is the one role issued to someone
   // outside the company, reaching a public hostname. Leaving it out would make
   // the least-trusted account the only one without a second factor.
-  const value = raw === undefined ? "admin,accountant,auditor" : raw;
+  // Every job role (director, contractsManager, ...) reaches business data,
+  // so the default list includes all of them too.
+  const value = raw === undefined
+    ? ["admin", "accountant", "auditor", ...rbac.JOB_ROLES].join(",")
+    : raw;
   return value.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+// The first role a user holds that requires 2FA, or null.
+function roleRequiring2FA(user) {
+  const required = rolesRequiring2FA();
+  return rbac.rolesOf(user).find((r) => required.includes(r)) || null;
 }
 
 const TWOFA_SETUP_PATHS = new Set([
@@ -152,15 +162,12 @@ async function ensureAuthenticated(req, res, next) {
 
   // Per-role 2FA enforcement: privileged roles must enable TOTP before
   // accessing anything beyond their account page.
-  if (
-    !req.user.totpEnabled &&
-    rolesRequiring2FA().includes(req.user.role) &&
-    !isTwoFASetupPath(reqPath)
-  ) {
+  const twoFARole = req.user.totpEnabled ? null : roleRequiring2FA(req.user);
+  if (twoFARole && !isTwoFASetupPath(reqPath)) {
     if (typeof req.flash === "function") {
       req.flash(
         "error",
-        `Your role (${req.user.role}) requires two-factor authentication. Please enable it to continue.`,
+        `Your role (${twoFARole}) requires two-factor authentication. Please enable it to continue.`,
       );
     }
     return res.redirect("/user/account");
@@ -170,7 +177,34 @@ async function ensureAuthenticated(req, res, next) {
 }
 
 // ── Block unless user has one of the required role(s) ────────────────
+// A job role (roles[]) never matches the listed roles directly -- they name
+// primary roles. It gets in only where its group grants reach:
+//   - an explicit `grant` from the caller: { model, operation } for the
+//     generic CRUD/list routes, or { department } for a department dashboard;
+//   - otherwise the path's routeAccess entry -- but never past a guard that
+//     names 'admin' alone. routeAccess matches by longest prefix, so '/bank'
+//     would otherwise open the admin-only reversal routes beneath it. Moving
+//     an admin-only route to a group is a deliberate, per-route change.
+// Primary roles are checked exactly as before.
 function ensureRoles(...roles) {
+  return ensureRolesOrGrant(roles, null);
+}
+
+function jobRoleGranted(req, roles, grant) {
+  const jobRoles = rbac.jobRolesOf(req.user);
+  if (!jobRoles.length) return false;
+  if (grant && grant.model && grant.operation) {
+    return rbac.canAccess(jobRoles, grant.model, grant.operation).allowed;
+  }
+  if (grant && grant.department) {
+    return rbac.canAccessDepartment(jobRoles, grant.department);
+  }
+  if (roles.length === 1 && roles[0] === "admin") return false;
+  const matched = rbac.matchRoutePattern(req.path);
+  return !!matched && rbac.canAccessRoute(jobRoles, matched);
+}
+
+function ensureRolesOrGrant(roles, grant) {
   return (req, res, next) => {
     if (!req.user) {
       return next({
@@ -182,6 +216,9 @@ function ensureRoles(...roles) {
 
     // 1. Role match — allow
     if (roles.includes(req.user.role)) return next();
+
+    // 1b. Job role whose groups grant this route or model operation
+    if (jobRoleGranted(req, roles, grant)) return next();
 
     // 2. Custom route permission — check if this path is in user's custom grants
     const customRoutes = req.user.customPermissions?.routes || [];
@@ -230,8 +267,8 @@ function ensureModelAccess(model, operation) {
       });
     }
     const customPerms = req.user.customPermissions || {};
-    const { allowed, ownOnly } = rbac.canAccess(
-      req.user.role,
+    const { allowed, ownOnly, ownRole } = rbac.canAccess(
+      rbac.rolesOf(req.user),
       model,
       operation,
       customPerms,
@@ -245,6 +282,7 @@ function ensureModelAccess(model, operation) {
     }
     // Stash for downstream controllers to enforce ownership
     req.rbac = { ownOnly, model, operation };
+    if (ownRole) req.rbac.ownRole = ownRole;
     next();
   };
 }
@@ -275,7 +313,7 @@ function ensureOwnership(model) {
       return next();
     }
 
-    const ownerCfg = rbac.getOwnershipConfig(req.user.role, model);
+    const ownerCfg = rbac.getOwnershipConfig(req.rbac?.ownRole || req.user.role, model);
     if (!ownerCfg) {
       return next({
         statusCode: 403,
@@ -308,7 +346,7 @@ function ensureRouteAccess(req, res, next) {
   if (!matched) return next();
 
   const customPerms = req.user.customPermissions || {};
-  if (rbac.canAccessRoute(req.user.role, matched, customPerms)) return next();
+  if (rbac.canAccessRoute(rbac.rolesOf(req.user), matched, customPerms)) return next();
 
   return next({
     statusCode: 403,
@@ -328,7 +366,7 @@ function ensureDepartment(department) {
       });
     }
     const customPerms = req.user.customPermissions || {};
-    if (!rbac.canAccessDepartment(req.user.role, department, customPerms)) {
+    if (!rbac.canAccessDepartment(rbac.rolesOf(req.user), department, customPerms)) {
       return next({
         statusCode: 403,
         name: "ForbiddenError",
@@ -343,6 +381,8 @@ export default {
   ensureAuthenticated,
   ensureRouteAccess,
   rolesRequiring2FA,
+  roleRequiring2FA,
+  ensureRolesOrGrant,
   ensureRoles,
   ensureRole,
   ensureAnyRole,
@@ -351,7 +391,7 @@ export default {
   ensureDepartment,
 };
 
-export { ensureAuthenticated, ensureRouteAccess, rolesRequiring2FA, ensureRoles, ensureRole, ensureAnyRole, ensureModelAccess, ensureOwnership, ensureDepartment };
+export { ensureAuthenticated, ensureRouteAccess, rolesRequiring2FA, roleRequiring2FA, ensureRolesOrGrant, ensureRoles, ensureRole, ensureAnyRole, ensureModelAccess, ensureOwnership, ensureDepartment };
 
 // Exposed for tests only — a blanket "/resources/" entry here silently disables the
 // auth guard on the static mount, so it is worth asserting against.
