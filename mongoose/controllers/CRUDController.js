@@ -111,6 +111,10 @@ const extractSchema = (model, config = {}) => {
 
   Object.entries(paths).forEach(([field, path]) => {
     if ((config.hideFields || []).includes(field) || field === "__v" || field === "createdAt" || field === "updatedAt") return;
+    // A Map can't be edited as a single form input: it would render as
+    // "[object Object]" and post back a string Mongoose cannot cast to a Map
+    // ("Iterator value [ is not an entry object"). Skip it and its `.$*` path.
+    if (path.instance === "Map" || field.endsWith(".$*")) return;
 
     schema[field] = {
       type: path.instance,
