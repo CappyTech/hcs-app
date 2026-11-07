@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.95.3] - 2026-11-07
+
+### Changed
+- Help sidebar article links show their full title in a hover tooltip, so names cut off with an ellipsis can still be read.
+
 ## [6.95.2] - 2026-11-06
 
 ### Fixed
