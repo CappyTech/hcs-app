@@ -124,7 +124,7 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
     return people.get(key);
   };
 
-  const counts = { pending: 0, approved: 0, rejected: 0, total: 0 };
+  const counts = { pending: 0, 'site-approved': 0, approved: 0, rejected: 0, total: 0 };
   const recordsWithoutContract = [];
   for (const rec of attendance) {
     const kind = rec.employeeId ? 'employee' : 'subcontractor';
@@ -255,8 +255,11 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
       summary: `${assignmentRows.length} this week, ${assigned.length} people` },
     { n: 3, key: 'attendance', label: 'Attendance', done: assigned.length > 0 && !checks[2].items.length,
       summary: `${counts.total} records` },
-    { n: 4, key: 'review', label: 'Review & approve', done: counts.total > 0 && counts.pending === 0 && !openChecks.length,
-      summary: counts.pending ? `${counts.pending} pending` : openChecks.length ? `${openChecks.length} to check` : 'Nothing outstanding' },
+    // Done only once every record has its final approval (site-approved still waits)
+    { n: 4, key: 'review', label: 'Review & approve', done: counts.total > 0 && counts.pending === 0 && counts['site-approved'] === 0 && !openChecks.length,
+      summary: counts.pending ? `${counts.pending} pending`
+        : counts['site-approved'] ? `${counts['site-approved']} awaiting final approval`
+        : openChecks.length ? `${openChecks.length} to check` : 'Nothing outstanding' },
   ];
 
   return {

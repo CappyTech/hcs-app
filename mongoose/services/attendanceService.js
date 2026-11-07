@@ -405,6 +405,7 @@ const groupAttendanceByPerson = (
 
   // ── Management summary stats ──────────────────────────────────────
   let pendingCount = 0;
+  let siteApprovedCount = 0;
   let approvedCount = 0;
   let rejectedCount = 0;
   const typeBreakdown = {}; // { work: N, sick: N, ... }
@@ -415,6 +416,7 @@ const groupAttendanceByPerson = (
       Object.values(records).forEach(rec => {
         // Count statuses (employee attendance only, purchases have no status)
         if (rec.status === 'pending') pendingCount++;
+        else if (rec.status === 'site-approved') siteApprovedCount++;
         else if (rec.status === 'rejected') rejectedCount++;
         else if (rec.status) approvedCount++;
 
@@ -437,6 +439,7 @@ const groupAttendanceByPerson = (
     totalSubcontractorDays,
     daysOfWeek,
     pendingCount,
+    siteApprovedCount,
     approvedCount,
     rejectedCount,
     typeBreakdown,
@@ -524,6 +527,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     totalSubcontractorDays,
     daysOfWeek,
     pendingCount,
+    siteApprovedCount,
     approvedCount,
     rejectedCount,
     typeBreakdown,
@@ -613,6 +617,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     taxWeekNumber: requestedWeekNumber,
     taxYear: year,
     pendingCount,
+    siteApprovedCount,
     approvedCount,
     rejectedCount,
     typeBreakdown,

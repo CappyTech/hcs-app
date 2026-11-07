@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0). Phases 3b–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3. Phases 4–5 are planned below.
 
 ## Why
 
@@ -59,7 +59,7 @@ level** (`READ_ONLY_MODELS`).
 | Scope | Meaning | State |
 |---|---|---|
 | all | every record | enforced |
-| project | only records on the user's sites: contracts that name them in **Site managers / supervisors** (`contract.siteManagers`) and aren't Completed | enforced for **read and list** (3a); writes wait for 3b |
+| project | only records on the user's sites: contracts that name them in **Site managers / supervisors** (`contract.siteManagers`) and aren't Completed | **read and list** through the generic routes (3a); recording and approving attendance through routes that check each record (3b) |
 
 **How project scope works** (3a, 6.95.0):
 
@@ -73,10 +73,14 @@ level** (`READ_ONLY_MODELS`).
   deployment by `contractId`; attendance by `contractId` or `projectId`;
   purchase by `ProjectNumber`. A model not listed (customer, supplier,
   vehicle) can't be granted at project scope.
-- A project-scoped grant compiles to `r:project,l:project`, whatever its
-  level (`PROJECT_SCOPE_MAX_LEVEL = 'view'`). The generic update and delete
-  routes don't check a record's scope, so no write is granted at project
-  scope until a route that checks it exists (3b).
+- In the generic CRUD routes a project-scoped grant compiles to
+  `r:project,l:project`, whatever its level (`PROJECT_SCOPE_MAX_LEVEL =
+  'view'`), because the generic update and delete routes don't check a
+  record's scope.
+- Routes that do check each record ask `hasGroup(user, group, level,
+  { project: true })`, and there a project-scoped grant counts at its full
+  level (3b): recording on `/daily`, the inline attendance editor, and the
+  approval routes.
 - It reaches only routes whose data is filtered per record
   (`PROJECT_SCOPE_ROUTES`, today `/daily`), and no department dashboards:
   the weekly views, overviews and dashboards show whole-set figures.
@@ -202,8 +206,9 @@ These gaps are deliberate. They are the plan for the next phases.
   scoping (`dataScopingService`, `filterAttendanceForUser`) already reads every
   role: a Contracts Manager whose primary role is `employee` sees every week on
   `/weekly`, because Site Ops grants attendance unscoped.
-- **Writes on site.** Site Manager and Supervisor read and list their sites
-  only. Recording and approving attendance comes in phase 3b.
+- **Writes on site.** Site Manager and Supervisor record and approve
+  attendance on their sites (3b). Other site records (assignments, vehicle
+  deployments) are read only for them.
 - **Bank and payments** stay with `admin` and `accountant` (decision 3 below).
 - **Health & Safety** has no models yet.
 
@@ -267,8 +272,9 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
      and a manager needn't be on a labour assignment). Project-scoped grants
      give read and list on those contracts' records; Site Manager and
      Supervisor are assignable. See "How project scope works" above.
-   - **3b**: two-stage week approval, below, with scope-checked routes for
-     recording and approving attendance on the user's sites.
+   - **3b** *(6.96.0, built)*: two-stage week approval, below, with
+     scope-checked routes for recording and approving attendance on the
+     user's sites (`attendanceApprovalService`).
 
    **Two-stage week approval** (decision 2). Attendance today goes `pending` →
    `approved` / `rejected` in one admin step. Phase 3 adds a middle state:
@@ -282,6 +288,26 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
    The Contracts Manager step is required, so a week a Site Manager approved
    doesn't reach payroll until a Contracts Manager approves it too. Admin can
    still approve in one step, for cover.
+
+   **As built (3b, 6.96.0):**
+   - The site step applies where the record's contract (or, without one, its
+     project) belongs to a running contract that names a site manager. Other
+     records, including sick, holiday and off days, go straight to the
+     Contracts Manager.
+   - The site step is taken by a Site Ops approve grant on the viewer's sites
+     (a Site Manager, or a Contracts Manager who is also named on the
+     contract). The final step needs Site Ops approve over all records.
+   - The person who took the site step can't take the final step. This is
+     separation of duties inside one chain; the wider self-approval question
+     (decision 3) is still open.
+   - Reject works from pending or site approved, for anyone who could
+     approve the current step, and for the Site Manager on their own sites.
+   - Recording: a **Record a day** form on `/daily` (and the inline editor)
+     lets a Supervisor or Site Manager record on their contracts only, for
+     people assigned to them that week. The generic attendance form always
+     creates `pending` for non-admins.
+   - Holiday accrual and payroll use only `approved`. The weekly views and
+     the weekly flow count `site-approved` as still waiting.
 4. **Role editor.** Edit job roles and groups from the config store instead of
    code, in line with the single-tenant config direction. Each company sets its
    own roles.

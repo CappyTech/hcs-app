@@ -111,7 +111,7 @@ describe('buildWeekFlow', () => {
 
   it('counts records by status and marks steps done', () => {
     const flow = buildWeekFlow(fixture());
-    assert.deepEqual(flow.counts, { pending: 1, approved: 1, rejected: 0, total: 2 });
+    assert.deepEqual(flow.counts, { pending: 1, 'site-approved': 0, approved: 1, rejected: 0, total: 2 });
     const done = Object.fromEntries(flow.steps.map((s) => [s.key, s.done]));
     assert.deepEqual(done, { contracts: false, assignments: false, attendance: false, review: false });
   });

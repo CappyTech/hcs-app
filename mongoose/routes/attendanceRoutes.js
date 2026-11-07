@@ -21,6 +21,14 @@ router.get(
   authService.ensureGroup([{ group: "siteOps", level: "view", project: true }], null, ...SITE_VIEW_ROLES),
   ctrl.getDailyAttendance,
 );
+// Record a day from /daily. A Supervisor or Site Manager may pick only
+// contracts that name them (checked in ctrl.recordDay).
+const SITE_EDIT = [{ group: "siteOps", level: "edit", project: true }];
+router.post(
+  "/daily/:date/record",
+  authService.ensureGroup(SITE_EDIT, null, "admin", "accountant"),
+  ctrl.recordDay,
+);
 router.get(
   "/weekly/:year?/:week?",
   authService.ensureGroup("siteOps", "view", ...SITE_VIEW_ROLES),
@@ -75,33 +83,37 @@ router.post(
   ctrl.submitAttendance,
 );
 
-// Inline editing API — admin/accountant + Site Ops edit (must come before /:uuid wildcard routes)
+// Inline editing API — admin/accountant + Site Ops edit (must come before
+// /:uuid wildcard routes). Project scope counts: the controller holds a
+// Supervisor or Site Manager to their sites' records.
 router.post(
   "/attendance/inline",
-  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
+  authService.ensureGroup(SITE_EDIT, null, "admin", "accountant"),
   ctrl.inlineCreateAttendance,
 );
 router.patch(
   "/attendance/:uuid",
-  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
+  authService.ensureGroup(SITE_EDIT, null, "admin", "accountant"),
   ctrl.updateAttendance,
 );
 
-// Approval workflow — admin + Site Ops approve. One step for now; phase 3
-// splits it into Site Manager then Contracts Manager (docs/PERMISSION-GROUPS.md).
+// Two-stage week approval (attendanceApprovalService): Site Manager approves
+// for their sites, then a Contracts Manager gives the final approval; admin
+// in one step. Project scope counts: the service checks every record.
+const SITE_APPROVE = [{ group: "siteOps", level: "approve", project: true }];
 router.post(
   "/attendance/bulk-approve",
-  authService.ensureGroup("siteOps", "approve"),
+  authService.ensureGroup(SITE_APPROVE),
   ctrl.bulkApproveAttendance,
 );
 router.post(
   "/attendance/:uuid/approve",
-  authService.ensureGroup("siteOps", "approve"),
+  authService.ensureGroup(SITE_APPROVE),
   ctrl.approveAttendance,
 );
 router.post(
   "/attendance/:uuid/reject",
-  authService.ensureGroup("siteOps", "approve"),
+  authService.ensureGroup(SITE_APPROVE),
   ctrl.rejectAttendance,
 );
 
