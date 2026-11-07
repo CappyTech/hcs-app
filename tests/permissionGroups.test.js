@@ -294,11 +294,16 @@ describe('hasGroup', () => {
     assert.equal(rbac.hasGroup(office, 'siteOps', 'edit'), false);
   });
 
-  it('counts a project-scoped grant only where asked, and only at view', () => {
+  it('counts a project-scoped grant only where asked, at its full level', () => {
     const sm = { role: 'employee', roles: ['siteManager'], canSeeValues: true };
     assert.equal(rbac.hasGroup(sm, 'siteOps', 'view'), false);
     assert.equal(rbac.hasGroup(sm, 'siteOps', 'view', { project: true }), true);
-    assert.equal(rbac.hasGroup(sm, 'siteOps', 'approve', { project: true }), false, 'approve waits for 3b');
+    // 3b: routes that check each record ask with project: true at any level
+    assert.equal(rbac.hasGroup(sm, 'siteOps', 'approve', { project: true }), true);
+    assert.equal(rbac.hasGroup(sm, 'siteOps', 'manage', { project: true }), false);
+    const sup = { role: 'employee', roles: ['supervisor'] };
+    assert.equal(rbac.hasGroup(sup, 'siteOps', 'edit', { project: true }), true);
+    assert.equal(rbac.hasGroup(sup, 'siteOps', 'approve', { project: true }), false);
     // The values grant (Commercial) needs the flag
     assert.equal(rbac.hasGroup(sm, 'commercial', 'view', { project: true }), true);
     assert.equal(rbac.hasGroup({ ...sm, canSeeValues: false }, 'commercial', 'view', { project: true }), false);
@@ -361,10 +366,16 @@ describe('ensureGroup guards agree with the global route check', async () => {
   };
   for (const file of fs.readdirSync(routesDir).filter((f) => f.endsWith('.js'))) {
     const src = fs.readFileSync(new URL(file, routesDir), 'utf8');
+    // Guard arrays a file names once (const SITE_EDIT = [{ ... }];)
+    const consts = { SITE_VIEW_ROLES };
+    for (const c of src.matchAll(/const (SITE_[A-Z_]+) = (\[[^;]*\]);/g)) {
+      // eslint-disable-next-line no-new-func
+      if (!(c[1] in consts)) consts[c[1]] = new Function(`return ${c[2]};`)();
+    }
     let m;
     while ((m = re.exec(src)) !== null) {
       // eslint-disable-next-line no-new-func
-      const args = new Function('SITE_VIEW_ROLES', `return [${m[4]}];`)(SITE_VIEW_ROLES);
+      const args = new Function(...Object.keys(consts), `return [${m[4]}];`)(...Object.values(consts));
       routes.push({ file, method: m[1], path: m[3], args });
     }
     const h = helpers[file];

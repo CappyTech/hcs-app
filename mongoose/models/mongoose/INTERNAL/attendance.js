@@ -11,11 +11,21 @@ const attendanceSchema = new mongoose.Schema({
     },
 
     // ── Status / approval ───────────────────────────────────────────────
+    // Two-stage week approval (attendanceApprovalService): pending →
+    // site-approved (Site Manager, where the site names one) → approved
+    // (Contracts Manager). Payroll reads only `approved`.
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected'],
+        enum: ['pending', 'site-approved', 'approved', 'rejected'],
         default: 'pending'
     },
+    siteApprovedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+    siteApprovedAt: { type: Date },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+    approvedAt: { type: Date },
+    rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+    rejectedAt: { type: Date },
+    rejectionReason: { type: String, trim: true, maxlength: 500 },
 
     // ── References ──────────────────────────────────────────────────────
     locationId: { type: mongoose.Schema.Types.ObjectId, ref: 'location' },
