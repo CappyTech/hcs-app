@@ -28,6 +28,7 @@ export default {
 
   figures: {
     pending: { label: 'Awaiting approval', severity: 'warning', where: { status: 'pending' } },
+    siteApproved: { label: 'Approved for the site, awaiting final approval', severity: 'warning', where: { status: 'site-approved' } },
     lastWeek: { label: 'Records in the last 7 days', where: { date: { $withinPastDays: 7 } } },
     sickMonth: { label: 'Sick days in the last 30 days', where: { type: 'sick', date: { $withinPastDays: 30 } } },
     rejected: { label: 'Rejected in the last 30 days', where: { status: 'rejected', date: { $withinPastDays: 30 } } },
@@ -36,7 +37,7 @@ export default {
   summary: ['pending', 'lastWeek'],
 
   overview: {
-    figures: ['pending', 'lastWeek', 'sickMonth', 'rejected'],
+    figures: ['pending', 'siteApproved', 'lastWeek', 'sickMonth', 'rejected'],
     breakdowns: [
       { label: 'Last 7 days by type', by: 'type', where: { date: { $withinPastDays: 7 } },
         labels: { work: 'Work', sick: 'Sick', holiday: 'Holiday', training: 'Training', off: 'Off', leave: 'Leave' } },

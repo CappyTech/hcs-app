@@ -6,6 +6,14 @@
       <h1 class="text-2xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100">
         Daily Attendance for <%= fmtDate(date, 'do MMMM yyyy') %>
       </h1>
+      <%
+        // Per-record buttons come from attendanceApprovalService (two-stage
+        // approval); a Supervisor or Site Manager records through the form
+        // below rather than the generic create/edit pages.
+        const actions = (typeof approvalActions === 'object' && approvalActions) || {};
+        const form = (typeof recordForm === 'object' && recordForm) || null;
+        const sitesOnly = !!(form && form.sitesOnly);
+      %>
 
       <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
       <table class="min-w-full table-auto">
@@ -55,10 +63,14 @@
                   <span class="capitalize"><%= record.type || 'N/A' %></span>
                 </td>
                 <td class="px-4 py-2 border-r border-gray-200 dark:border-gray-700">
-                  <% const statusColors = { approved: 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400', pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400', rejected: 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' }; %>
+                  <% const statusColors = { approved: 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400', 'site-approved': 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-300', pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400', rejected: 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' }; %>
+                  <% const statusLabels = { 'site-approved': 'site approved' }; %>
                   <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold <%= statusColors[record.status] || statusColors.approved %>">
-                    <%= record.status || 'approved' %>
+                    <%= statusLabels[record.status] || record.status || 'approved' %>
                   </span>
+                  <% if (actions[record.uuid] && actions[record.uuid].waiting) { %>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1"><%= actions[record.uuid].waiting %></span>
+                  <% } %>
                 </td>
                 <td class="px-4 py-2 border-r border-gray-200 dark:border-gray-700">
                   <% if (record.hoursWorked) { %>
@@ -86,19 +98,24 @@
                   <a href="/attendance/read/<%= record.uuid %>" class="inline-block rounded bg-green-600 hover:bg-green-700 text-white p-1" title="View">
                     <i class="bi bi-eye"></i>
                   </a>
+                  <% if (!sitesOnly) { %>
                   <a href="/attendance/update/<%= record.uuid %>" class="inline-block rounded bg-gray-600 hover:bg-gray-700 text-white p-1" title="Edit">
                     <i class="bi bi-pencil-square"></i>
                   </a>
-                  <% if (record.status === 'pending' && canGroup('siteOps', 'approve')) { %>
+                  <% } %>
+                  <% const act = actions[record.uuid]; %>
+                  <% if (act && act.approve) { %>
                     <form method="POST" action="/attendance/<%= record.uuid %>/approve" class="inline">
                       <%- include('../partials/csrfHidden.ejs') %>
-                      <button type="submit" class="inline-block rounded bg-blue-600 hover:bg-blue-700 text-white p-1" title="Approve">
+                      <button type="submit" class="inline-block rounded bg-blue-600 hover:bg-blue-700 text-white p-1" title="<%= act.approveLabel %>" aria-label="<%= act.approveLabel %>">
                         <i class="bi bi-check-lg"></i>
                       </button>
                     </form>
+                  <% } %>
+                  <% if (act && act.reject) { %>
                     <form method="POST" action="/attendance/<%= record.uuid %>/reject" class="inline">
                       <%- include('../partials/csrfHidden.ejs') %>
-                      <button type="submit" class="inline-block rounded bg-red-600 hover:bg-red-700 text-white p-1" title="Reject">
+                      <button type="submit" class="inline-block rounded bg-red-600 hover:bg-red-700 text-white p-1" title="Reject" aria-label="Reject">
                         <i class="bi bi-x-lg"></i>
                       </button>
                     </form>
@@ -111,6 +128,7 @@
               <td colspan="8" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No attendance records found for this day.</td>
             </tr>
           <% } %>
+          <% if (!sitesOnly) { %>
           <tr class="font-light">
             <td class="px-4 py-2">
               <a href="/attendance/create?date=<%= date %>" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm transition">
@@ -119,9 +137,56 @@
             </td>
             <td colspan="7"></td>
           </tr>
+          <% } %>
         </tbody>
       </table>
       </div>
+
+      <% if (form) { %>
+        <section class="mt-8 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Record a day</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            <%= form.sitesOnly ? 'For people assigned to your sites this week.' : 'For people assigned to a running contract this week.' %>
+            It stays pending until the week is approved.
+          </p>
+          <% if (!form.contracts.length) { %>
+            <p class="text-sm text-gray-600 dark:text-gray-300"><%= form.sitesOnly ? 'No running contract names you as a site manager or supervisor.' : 'No running contracts.' %></p>
+          <% } else if (!form.people.length) { %>
+            <p class="text-sm text-gray-600 dark:text-gray-300">Nobody is assigned to <%= form.sitesOnly ? 'your sites' : 'a running contract' %> this week.</p>
+          <% } else { %>
+            <form method="POST" action="/daily/<%= date %>/record" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+              <%- include('../partials/csrfHidden.ejs') %>
+              <label class="block lg:col-span-2 text-sm">
+                <span class="text-gray-700 dark:text-gray-300">Person</span>
+                <select name="person" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                  <% form.people.forEach(p => { %><option value="<%= p.value %>"><%= p.label %></option><% }) %>
+                </select>
+              </label>
+              <label class="block lg:col-span-2 text-sm">
+                <span class="text-gray-700 dark:text-gray-300">Contract</span>
+                <select name="contractId" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                  <% form.contracts.forEach(c => { %><option value="<%= c._id %>"><%= c.title || 'Contract' %></option><% }) %>
+                </select>
+              </label>
+              <label class="block text-sm">
+                <span class="text-gray-700 dark:text-gray-300">Type</span>
+                <select name="type" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                  <% ['work', 'training', 'sick', 'holiday', 'off', 'leave'].forEach(t => { %><option value="<%= t %>" class="capitalize"><%= t %></option><% }) %>
+                </select>
+              </label>
+              <label class="block text-sm">
+                <span class="text-gray-700 dark:text-gray-300">Hours</span>
+                <input type="number" name="hoursWorked" min="0" max="24" step="0.25" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+              </label>
+              <label class="block sm:col-span-2 lg:col-span-5 text-sm">
+                <span class="text-gray-700 dark:text-gray-300">Notes</span>
+                <input type="text" name="notes" maxlength="2000" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+              </label>
+              <button type="submit" class="rounded-lg bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm font-semibold">Record</button>
+            </form>
+          <% } %>
+        </section>
+      <% } %>
     </div>
   </div>
 </div>

@@ -8,6 +8,7 @@
   const fmtDay = (key) => key.split('-').reverse().join('/');
   const statusPill = {
     pending: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
+    'site-approved': 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
     approved: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
     rejected: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
   };
@@ -313,8 +314,10 @@
 
       <div class="<%= card %> p-4">
         <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">This week's records</h3>
-        <dl class="grid grid-cols-3 gap-2 text-center mb-4">
+        <% const waitingCount = (flow.counts.pending || 0) + (flow.counts['site-approved'] || 0); %>
+        <dl class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center mb-4">
           <div><dt class="text-xs text-gray-500">Pending</dt><dd class="text-xl font-semibold text-amber-700 dark:text-amber-400"><%= flow.counts.pending %></dd></div>
+          <div><dt class="text-xs text-gray-500">Site approved</dt><dd class="text-xl font-semibold text-blue-700 dark:text-blue-300"><%= flow.counts['site-approved'] || 0 %></dd></div>
           <div><dt class="text-xs text-gray-500">Approved</dt><dd class="text-xl font-semibold text-green-700 dark:text-green-400"><%= flow.counts.approved %></dd></div>
           <div><dt class="text-xs text-gray-500">Rejected</dt><dd class="text-xl font-semibold text-red-700 dark:text-red-400"><%= flow.counts.rejected %></dd></div>
         </dl>
@@ -323,13 +326,13 @@
             <%- include('../partials/csrfHidden') %>
             <input type="hidden" name="weekStart" value="<%= week.days[0] %>">
             <input type="hidden" name="weekEnd" value="<%= week.days[6] %>">
-            <% if (flow.counts.pending) { %>
-              <button type="submit" class="<%= primaryBtn %> w-full">Approve all <%= flow.counts.pending %> pending</button>
+            <% if (waitingCount) { %>
+              <button type="submit" class="<%= primaryBtn %> w-full">Approve what's yours (<%= waitingCount %> waiting)</button>
             <% } else { %>
-              <button type="button" disabled class="w-full text-sm px-3 py-2 rounded-lg border border-green-400 text-green-700 dark:text-green-400 bg-white dark:bg-gray-900 cursor-default opacity-60">Nothing pending</button>
+              <button type="button" disabled class="w-full text-sm px-3 py-2 rounded-lg border border-green-400 text-green-700 dark:text-green-400 bg-white dark:bg-gray-900 cursor-default opacity-60">Nothing waiting</button>
             <% } %>
           </form>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Approving counts the days towards holiday accrual and payroll. To reject a single day, open it on the full grid.</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">On a site that names a site manager, they approve first; you then give the final approval. Days on other sites, and sick, holiday and off days, you approve directly. Only finally approved days count towards holiday accrual and payroll. To reject a single day, open it on the daily page.</p>
         <% } else { %>
           <p class="text-sm text-gray-500 dark:text-gray-400">An admin approves the week once the checks are clear.</p>
         <% } %>

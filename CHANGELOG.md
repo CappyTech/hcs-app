@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.96.0] - 2026-11-07
+
+### Added
+- Permission groups, phase 3b: two-stage week approval. Attendance now goes **pending → site approved → approved**. The Site Manager named on a contract approves its records for the site; a Contracts Manager then gives the final approval. Each step records who approved and when, and a rejection records who, when and (optionally) why. Admin can still approve in one step.
+- Records on a site that names no site manager, and records with no site (sick, holiday, off), skip the site step: a Contracts Manager approves them directly.
+- The person who approved a record for the site can't also give its final approval.
+- Site Managers and Supervisors can record attendance on their sites from a new **Record a day** form on the daily page, offering the people assigned to their contracts that week. The inline attendance editor also takes them, limited to their sites. Neither lets them set a day rate unless they can see values.
+- Daily page buttons now show per record what the viewer can do (approve for the site, approve, reject) and why a record is waiting. The attendance overview has an "Approved for the site, awaiting final approval" figure.
+
+### Changed
+- Bulk approve moves each record in the week as far as the viewer may take it, and says how many were approved, approved for the site, or are waiting for someone else.
+- The weekly flow's review step is done only when nothing is pending or site approved; the weekly views count site-approved records as awaiting approval.
+- A project-scoped grant now counts at its full level on routes that check each record against the viewer's sites. The generic create, update and delete routes still give it read and list only.
+
+### Fixed
+- A non-admin with Site Ops edit could create an attendance record through the generic form with any status (including approved), skipping approval. It now always starts pending, without approval stamps.
+
 ## [6.95.0] - 2026-11-06
 
 ### Added
