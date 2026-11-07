@@ -99,7 +99,7 @@ const helpContent = [
         ],
         notes: [
           'Contracts, projects, quotes and purchases show money, so you only see them if Can see values is ticked on your account.',
-          'Recording and approving attendance on site is being added as part of the two-stage week approval.',
+          'You can record a day for the people on your sites with Record a day on the daily attendance page. A Site Manager approves their sites first; a contracts manager then gives the final approval, and only then does it count for payroll.',
         ],
       },
       {
@@ -263,7 +263,7 @@ const helpContent = [
         id: 'submitting-attendance',
         title: 'Submitting Your Attendance',
         badge: 'Employee / Subcontractor',
-        description: 'As an employee or subcontractor, you submit your own attendance record each working day. Records start as Pending and must be approved by an administrator before they count toward payroll or holiday balances.',
+        description: 'As an employee or subcontractor, you submit your own attendance record each working day. Records start as Pending and must be finally approved before they count toward payroll or holiday balances.',
         steps: [
           'Go to Attendance → Submit (/attendance/submit).',
           'Select the date the record is for.',
@@ -306,13 +306,17 @@ const helpContent = [
         id: 'attendance-statuses',
         title: 'Attendance Statuses Explained',
         badge: 'All roles',
-        description: 'Every attendance record moves through an approval workflow with three possible statuses.',
+        description: 'Every attendance record moves through a two-stage approval workflow.',
         fields: [
           { name: 'Pending', required: '', description: 'Submitted and awaiting review. The record is not yet counted in payroll or holiday balances.' },
-          { name: 'Approved', required: '', description: 'Confirmed by an administrator. Feeds directly into payroll calculations and holiday accrual.' },
-          { name: 'Rejected', required: '', description: 'Declined by an administrator. You may resubmit with corrections if required.' },
+          { name: 'Site approved', required: '', description: 'Approved by the site manager named on the contract. Still waiting for a contracts manager, and not yet counted.' },
+          { name: 'Approved', required: '', description: 'Final approval by a contracts manager (or an administrator). Feeds payroll calculations and holiday accrual.' },
+          { name: 'Rejected', required: '', description: 'Declined by an approver. You may resubmit with corrections if required.' },
         ],
-        notes: [],
+        notes: [
+          'Sites with no site manager named, and sick, holiday and off days, skip the site step: a contracts manager approves them directly.',
+          'The person who approved a record for the site cannot also give it final approval. An administrator can approve in one step.',
+        ],
       },
       {
         id: 'daily-attendance',
@@ -357,7 +361,7 @@ const helpContent = [
           'Contracts: check which contracts are running this week and that each has its KashFlow project. Contracts with no project, still Planned after their start date, or ending mid-week are flagged.',
           'Assignments: add who is on each contract this week, or copy last week\'s assignments for contracts that are still running.',
           'Days worked: tick the days each person worked. Weekdays start ticked, and employees\' hours come from their contract. Saving records them as pending attendance against the contract and project.',
-          'Review and approve: work through the checks, such as contracts nobody is assigned to or people with no attendance, then approve everything pending.',
+          'Review and approve: work through the checks, such as contracts nobody is assigned to or people with no attendance, then approve. On a site that names a site manager they approve first and you give the final approval; everything else you approve directly.',
         ],
         notes: [
           'Days that already have attendance are shown but never overwritten.',

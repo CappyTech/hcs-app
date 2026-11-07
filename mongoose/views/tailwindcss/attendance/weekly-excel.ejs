@@ -22,10 +22,15 @@
     From <%= fmtDate(startDate, 'do MMMM yyyy') %> to <%= fmtDate(endDate, 'do MMMM yyyy') %>
   </p>
 
+  <%
+    // Two-stage approval: site-approved records still wait for the final step
+    const siteApproved = (typeof siteApprovedCount === 'number' ? siteApprovedCount : 0);
+    const waitingCount = (pendingCount || 0) + siteApproved;
+  %>
   <!-- Stats Grid -->
   <% if (isManagementView) { %>
     <%
-      const totalRecords = (pendingCount || 0) + (approvedCount || 0) + (rejectedCount || 0);
+      const totalRecords = waitingCount + (approvedCount || 0) + (rejectedCount || 0);
       const approvalRate = totalRecords > 0 ? Math.round((approvedCount / totalRecords) * 100) : 0;
       const tb = typeBreakdown || {};
     %>
@@ -329,12 +334,12 @@
   </div>
   <% } %>
 
-  <% if ((pendingCount || 0) > 0) { %>
+  <% if (waitingCount > 0) { %>
     <div class="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 print:hidden">
       <div class="flex items-center justify-between">
         <div>
-          <h4 class="font-semibold text-amber-800 dark:text-amber-300"><%= pendingCount %> attendance record<%= pendingCount === 1 ? '' : 's' %> pending approval</h4>
-          <p class="text-sm text-amber-600 dark:text-amber-400 mt-1">Review the highlighted rows below or approve all pending records for this week.</p>
+          <h4 class="font-semibold text-amber-800 dark:text-amber-300"><%= waitingCount %> attendance record<%= waitingCount === 1 ? '' : 's' %> awaiting approval<% if (siteApproved) { %> (<%= siteApproved %> approved for the site, awaiting final approval)<% } %></h4>
+          <p class="text-sm text-amber-600 dark:text-amber-400 mt-1">Review the highlighted rows below, or approve what's yours for this week: on a site with a site manager they approve first, then a contracts manager gives the final approval.</p>
         </div>
         <% if (canGroup('siteOps', 'approve')) { %>
         <form action="/attendance/bulk-approve" method="POST" class="ml-4">
@@ -342,8 +347,8 @@
           <input type="hidden" name="weekStart" value="<%= startDate %>">
           <input type="hidden" name="weekEnd" value="<%= endDate %>">
           <button type="submit" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition shadow-sm"
-                  data-confirm="Approve all <%= pendingCount %> pending attendance records for this week?">
-            <i class="bi bi-check-all"></i> Approve All (<%= pendingCount %>)
+                  data-confirm="Approve what's yours of the <%= waitingCount %> records awaiting approval this week?">
+            <i class="bi bi-check-all"></i> Approve (<%= waitingCount %> waiting)
           </button>
         </form>
         <% } %>

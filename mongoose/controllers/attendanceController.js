@@ -19,6 +19,7 @@ import logger from '../../services/loggerService.js';
 import { scopeQuery, matchesFilter } from '../../services/dataScopingService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import holidayAccrualService from '../services/holidayAccrualService.js';
+import approval from '../services/attendanceApprovalService.js';
 import __paperlessUpdateService from '../services/paperless/paperlessUpdateService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import mongoose from 'mongoose';
@@ -42,17 +43,118 @@ async function filterAttendanceForUser(req, records) {
   return records.filter((rec) => matchesFilter(rec, filter));
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The "record a day" form on /daily, for whoever can record attendance:
+ * admin, accountant, or Site Ops edit (a Supervisor or Site Manager gets
+ * only their own sites). People offered are those assigned to the listed
+ * contracts in the week holding `date`. null when the viewer can't record.
+ */
+async function recordFormFor(req, date) {
+  const user = req.user;
+  if (!user) return null;
+  const canRecord = ["admin", "accountant"].includes(user.role)
+    || rbac.hasGroup(user, "siteOps", "edit", { project: true });
+  if (!canRecord) return null;
+  const day = parseYMDLocal(date);
+  if (!day) return null;
+  const scope = await approval.writeScopeFor(req);
+  const contracts = await mdb.INTERNAL.contract
+    .find(scope === null ? { status: { $ne: "Completed" } } : { _id: { $in: scope.contractIds } })
+    .select("_id title").sort({ title: 1 }).lean();
+  const people = new Map();
+  if (contracts.length) {
+    const assignments = await mdb.INTERNAL.assignment
+      .find({
+        contractId: { $in: contracts.map((c) => c._id) },
+        weekStart: { $gt: new Date(day.getTime() - 7 * DAY_MS), $lte: new Date(day.getTime() + DAY_MS - 1) },
+      })
+      .populate("assignedEmployees", "name")
+      .populate("assignedSubcontractors", "Name name")
+      .lean();
+    for (const a of assignments) {
+      for (const e of a.assignedEmployees || []) {
+        if (e?._id) people.set(`e:${e._id}`, { value: `e:${e._id}`, label: e.name || "Employee", contractId: String(a.contractId) });
+      }
+      for (const s of a.assignedSubcontractors || []) {
+        if (s?._id) people.set(`s:${s._id}`, { value: `s:${s._id}`, label: s.Name || s.name || "Subcontractor", contractId: String(a.contractId) });
+      }
+    }
+  }
+  return {
+    contracts,
+    people: [...people.values()].sort((a, b) => a.label.localeCompare(b.label)),
+    sitesOnly: scope !== null,
+  };
+}
+
 export const getDailyAttendance = async (req, res, next) => {
   const date = req.params.date || format(new Date(), "yyyy-MM-dd");
   try {
     let attendance = await attendanceService.getAttendanceForDay(date);
     attendance = await filterAttendanceForUser(req, attendance);
+    const ctx = await approval.contextFor(req, attendance);
     res.render(path.join("tailwindcss", "attendance", "daily"), {
       title: `Attendance for ${format(new Date(date), "dd MMMM yyyy")}`,
       attendance,
       date,
+      approvalActions: approval.actionsFor(ctx, attendance),
+      recordForm: await recordFormFor(req, date),
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+const RECORD_TYPES = ["work", "training", "sick", "holiday", "off", "leave"];
+
+/**
+ * POST /daily/:date/record — record one person's day on a contract, from
+ * the form on /daily. A Supervisor or Site Manager may record only on
+ * contracts that name them; the record starts pending.
+ */
+export const recordDay = async (req, res, next) => {
+  const date = req.params.date;
+  const back = `/daily/${encodeURIComponent(date || "")}`;
+  const fail = (msg) => { req.flash("error", msg); return res.redirect(back); };
+  try {
+    const day = parseYMDLocal(date);
+    if (!day) return fail("Invalid date.");
+    const { person, contractId, type = "work", hoursWorked, notes } = req.body;
+    const [kind, personId] = String(person || "").split(":");
+    if (!["e", "s"].includes(kind) || !mongoose.Types.ObjectId.isValid(personId)) return fail("Choose who worked.");
+    if (!RECORD_TYPES.includes(type)) return fail("Invalid type.");
+    if (!mongoose.Types.ObjectId.isValid(contractId)) return fail("Choose a contract.");
+
+    const scope = await approval.writeScopeFor(req);
+    if (!approval.contractInScope(scope, contractId)) return fail("That contract isn't one of your sites.");
+    const contract = await mdb.INTERNAL.contract.findById(contractId).select("_id projectId locationId status").lean();
+    if (!contract) return fail("Contract not found.");
+
+    const data = { date: day, type, status: "pending", contractId: contract._id };
+    if (contract.projectId) data.projectId = contract.projectId;
+    if (contract.locationId) data.locationId = contract.locationId;
+    if (kind === "e") data.employeeId = personId; else data.subcontractorId = personId;
+    if (hoursWorked !== undefined && hoursWorked !== "") {
+      const h = Number(hoursWorked);
+      if (!Number.isFinite(h) || h < 0 || h > 24) return fail("Hours must be between 0 and 24.");
+      data.hoursWorked = h;
+    }
+    if (typeof notes === "string" && notes.trim()) data.notes = notes.trim().slice(0, 2000);
+
+    if (req.user?.role !== "admin") {
+      const lockedRun = await attendanceService.getLockedRunForDate(day);
+      if (lockedRun) return fail(`This date falls in a ${lockedRun.status} payroll period and can no longer be edited.`);
+    }
+
+    await new mdb.INTERNAL.attendance(data).save();
+    logger.info(`[attendanceController] Recorded attendance on ${date} by ${req.user?._id}`);
+    req.flash("success", "Day recorded. It's pending until the week is approved.");
+    return res.redirect(back);
+  } catch (err) {
+    if (err.code === 11000) return fail("That person already has a record on this day for this site.");
+    if (err.name === "ValidationError" || /Attendance/.test(err.message || "")) return fail(err.message);
     next(err);
   }
 };
@@ -83,6 +185,7 @@ export const getWeeklyAttendance = async (req, res, next) => {
       taxWeekNumber,
       taxYear,
       pendingCount,
+      siteApprovedCount,
       approvedCount,
       rejectedCount,
       typeBreakdown,
@@ -282,6 +385,7 @@ export const getWeeklyAttendance = async (req, res, next) => {
       taxWeekNumber,
       taxYear,
       pendingCount,
+      siteApprovedCount,
       approvedCount,
       rejectedCount,
       typeBreakdown,
@@ -313,20 +417,22 @@ function stripPayroll(record) {
   return clone;
 }
 
+// Two-stage approval: attendanceApprovalService decides what each viewer may
+// move (site step, final step, or admin's one step).
 export const approveAttendance = async (req, res, next) => {
   try {
-    const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
-      { uuid: req.params.uuid, status: "pending" },
-      { status: "approved" },
-      { new: true },
-    );
-    if (!updated) {
-      logger.warn(`[attendanceController] Approve failed: attendance ${req.params.uuid} not found or not pending`);
-      return res.status(404).redirect("back");
+    const result = await approval.approveOne(req, req.params.uuid);
+    if (!result.ok) {
+      logger.warn(`[attendanceController] Approve refused for ${req.params.uuid}: ${result.reason}`);
+      req.flash("error", result.reason);
+      return res.redirect("back");
     }
-    // Trigger holiday accrual now that it's approved
-    await holidayAccrualService.updateAccrualFromAttendance(updated);
-    logger.info(`[attendanceController] Attendance ${req.params.uuid} approved`);
+    // Holiday accrual only once it's finally approved
+    if (result.next === "approved") {
+      await holidayAccrualService.updateAccrualFromAttendance(result.record);
+    }
+    logger.info(`[attendanceController] Attendance ${req.params.uuid} ${result.next}`);
+    req.flash("success", result.next === "approved" ? "Approved." : "Approved for the site. A contracts manager gives the final approval.");
     res.redirect("back");
   } catch (err) {
     logger.error(`[attendanceController] Error approving attendance: ${err.message}`, { stack: err.stack });
@@ -336,16 +442,14 @@ export const approveAttendance = async (req, res, next) => {
 
 export const rejectAttendance = async (req, res, next) => {
   try {
-    const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
-      { uuid: req.params.uuid, status: "pending" },
-      { status: "rejected" },
-      { new: true },
-    );
-    if (!updated) {
-      logger.warn(`[attendanceController] Reject failed: attendance ${req.params.uuid} not found or not pending`);
-      return res.status(404).redirect("back");
+    const result = await approval.rejectOne(req, req.params.uuid, req.body?.reason);
+    if (!result.ok) {
+      logger.warn(`[attendanceController] Reject refused for ${req.params.uuid}: ${result.reason}`);
+      req.flash("error", result.reason);
+      return res.redirect("back");
     }
     logger.info(`[attendanceController] Attendance ${req.params.uuid} rejected`);
+    req.flash("success", "Rejected.");
     res.redirect("back");
   } catch (err) {
     logger.error(`[attendanceController] Error rejecting attendance: ${err.message}`, { stack: err.stack });
@@ -366,27 +470,24 @@ export const bulkApproveAttendance = async (req, res, next) => {
     const end = new Date(weekEnd);
     end.setHours(23, 59, 59, 999);
 
-    const result = await mdb.INTERNAL.attendance.updateMany(
-      { date: { $gte: start, $lte: end }, status: "pending" },
-      { status: "approved" },
-    );
+    // Each record moves as far as this viewer may take it
+    const { counts, approved } = await approval.approveRange(req, start, end);
 
-    // Trigger holiday accrual for each approved record
-    if (result.modifiedCount > 0) {
-      const approvedRecords = await mdb.INTERNAL.attendance.find({
-        date: { $gte: start, $lte: end },
-        status: "approved",
-      });
-      for (const record of approvedRecords) {
-        try {
-          await holidayAccrualService.updateAccrualFromAttendance(record);
-        } catch (accrualErr) {
-          logger.warn(`[attendanceController] Holiday accrual update failed for ${record.uuid}: ${accrualErr.message}`);
-        }
+    // Holiday accrual for each record that reached the final step
+    for (const record of approved) {
+      try {
+        await holidayAccrualService.updateAccrualFromAttendance(record);
+      } catch (accrualErr) {
+        logger.warn(`[attendanceController] Holiday accrual update failed for ${record.uuid}: ${accrualErr.message}`);
       }
     }
 
-    logger.info(`[attendanceController] Bulk approved ${result.modifiedCount} attendance records for ${weekStart} to ${weekEnd}`);
+    const parts = [];
+    if (counts.approved) parts.push(`${counts.approved} approved`);
+    if (counts["site-approved"]) parts.push(`${counts["site-approved"]} approved for the site`);
+    if (counts.waiting) parts.push(`${counts.waiting} waiting for another approver`);
+    req.flash("success", parts.length ? `${parts.join(", ")}.` : "Nothing for you to approve this week.");
+    logger.info(`[attendanceController] Bulk approve ${weekStart} to ${weekEnd}: ${JSON.stringify(counts)}`);
     res.redirect("back");
   } catch (err) {
     logger.error(`[attendanceController] Error bulk approving attendance: ${err.message}`, { stack: err.stack });
@@ -664,6 +765,21 @@ export const updateAttendance = async (req, res, next) => {
 
     const { type, hoursWorked, dayRate, locationId, contractId } = req.body;
 
+    // A Supervisor or Site Manager edits only records on their sites, and
+    // can't move one off them.
+    const scope = await approval.writeScopeFor(req);
+    if (scope !== null) {
+      const onSite = approval.contractInScope(scope, record.contractId)
+        || (!record.contractId && record.projectId && scope.projectIds.some((p) => String(p) === String(record.projectId)));
+      if (!onSite) return res.status(403).json({ success: false, error: "This record isn't on one of your sites." });
+      if (contractId !== undefined && !approval.contractInScope(scope, contractId)) {
+        return res.status(403).json({ success: false, error: "That contract isn't one of your sites." });
+      }
+    }
+    if (dayRate != null && !rbac.canSeeValues(req.user)) {
+      return res.status(403).json({ success: false, error: "You can't set a day rate." });
+    }
+
     if (type !== undefined && !VALID_TYPES.includes(type)) {
       return res.status(400).json({ success: false, error: "Invalid type." });
     }
@@ -765,6 +881,15 @@ export const inlineCreateAttendance = async (req, res, next) => {
         success: false,
         error: "hoursWorked and dayRate are mutually exclusive.",
       });
+    }
+
+    // A Supervisor or Site Manager records only on contracts that name them
+    const scope = await approval.writeScopeFor(req);
+    if (scope !== null && !approval.contractInScope(scope, contractId)) {
+      return res.status(403).json({ success: false, error: "Choose one of your sites' contracts." });
+    }
+    if (dayRate != null && !rbac.canSeeValues(req.user)) {
+      return res.status(403).json({ success: false, error: "You can't set a day rate." });
     }
 
     const data = {
@@ -1021,4 +1146,4 @@ export const updateVehicleDeployment = async (req, res, next) => {
 };
 
 
-export default { getDailyAttendance, getWeeklyAttendance, approveAttendance, rejectAttendance, bulkApproveAttendance, renderSubmitAttendance, submitAttendance, addStatementPurchase, removeStatementPurchase, updateAttendance, inlineCreateAttendance, inlineCreateAssignment, updateAssignment, inlineCreateVehicleDeployment, updateVehicleDeployment };
+export default { getDailyAttendance, recordDay, getWeeklyAttendance, approveAttendance, rejectAttendance, bulkApproveAttendance, renderSubmitAttendance, submitAttendance, addStatementPurchase, removeStatementPurchase, updateAttendance, inlineCreateAttendance, inlineCreateAssignment, updateAssignment, inlineCreateVehicleDeployment, updateVehicleDeployment };
