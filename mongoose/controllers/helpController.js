@@ -181,7 +181,7 @@ const helpContent = [
         id: 'submitting-attendance',
         title: 'Submitting Your Attendance',
         badge: 'Employee / Subcontractor',
-        description: 'As an employee or subcontractor, you submit your own attendance record each working day. Records start as Pending and must be approved by an administrator before they count toward payroll or holiday balances.',
+        description: 'As an employee or subcontractor, you submit your own attendance record each working day. Records start as Pending and must be finally approved before they count toward payroll or holiday balances.',
         steps: [
           'Go to Attendance → Submit (/attendance/submit).',
           'Select the date the record is for.',
@@ -224,13 +224,17 @@ const helpContent = [
         id: 'attendance-statuses',
         title: 'Attendance Statuses Explained',
         badge: 'All roles',
-        description: 'Every attendance record moves through an approval workflow with three possible statuses.',
+        description: 'Every attendance record moves through a two-stage approval workflow.',
         fields: [
           { name: 'Pending', required: '', description: 'Submitted and awaiting review. The record is not yet counted in payroll or holiday balances.' },
-          { name: 'Approved', required: '', description: 'Confirmed by an administrator. Feeds directly into payroll calculations and holiday accrual.' },
-          { name: 'Rejected', required: '', description: 'Declined by an administrator. You may resubmit with corrections if required.' },
+          { name: 'Site approved', required: '', description: 'Approved by the site manager named on the contract. Still waiting for a contracts manager, and not yet counted.' },
+          { name: 'Approved', required: '', description: 'Final approval by a contracts manager (or an administrator). Feeds payroll calculations and holiday accrual.' },
+          { name: 'Rejected', required: '', description: 'Declined by an approver. You may resubmit with corrections if required.' },
         ],
-        notes: [],
+        notes: [
+          'Sites with no site manager named, and sick, holiday and off days, skip the site step: a contracts manager approves them directly.',
+          'The person who approved a record for the site cannot also give it final approval. An administrator can approve in one step.',
+        ],
       },
       {
         id: 'daily-attendance',

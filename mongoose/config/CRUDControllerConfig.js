@@ -36,6 +36,11 @@ const vehicleLabel = (vehicle) => {
  */
 const ATTENDANCE_OWNER_FIELD = { employee: 'employeeId', subcontractor: 'subcontractorId' };
 const ATTENDANCE_ADMIN_ONLY_FIELDS = ['payRate', 'overtimeHours', 'overtimeRate'];
+// Set only by the approval routes (attendanceApprovalService), never a form.
+const ATTENDANCE_APPROVAL_FIELDS = [
+  'siteApprovedBy', 'siteApprovedAt', 'approvedBy', 'approvedAt',
+  'rejectedBy', 'rejectedAt', 'rejectionReason',
+];
 
 const forbidden = (message) => Object.assign(new Error(message), { statusCode: 403, name: 'ForbiddenError' });
 
@@ -92,15 +97,18 @@ export default {
   },
   attendance: {
     title: 'Attendance',
-    readOnly: ['uuid', 'createdAt'],
+    readOnly: ['uuid', 'createdAt', ...ATTENDANCE_APPROVAL_FIELDS],
     hideFields: ['_id', '__v'],
     // Non-admins: own record only, pending, no admin-set pay fields; and no
     // records inside a locked/submitted payroll run. Site Ops edit (a job role)
     // records for anyone, keeping the pay fields only if it sees values; the
-    // payroll lock still applies.
+    // payroll lock still applies. Only admin creates a record already past
+    // pending: everyone else goes through the approval routes.
     beforeCreate: async (cleanedData, req) => {
       if (req.user?.role === 'admin') return;
+      for (const field of ATTENDANCE_APPROVAL_FIELDS) delete cleanedData[field];
       if (rbac.hasGroup(req.user, 'siteOps', 'edit')) {
+        cleanedData.status = 'pending';
         if (!rbac.canSeeValues(req.user)) {
           for (const field of ATTENDANCE_ADMIN_ONLY_FIELDS) delete cleanedData[field];
         }
@@ -138,7 +146,7 @@ export default {
     validators: {
       date: value => !isNaN(Date.parse(value)),
       type: value => ['off', 'holiday', 'sick', 'work', 'training', 'leave'].includes(value),
-      status: value => ['pending', 'approved', 'rejected'].includes(value),
+      status: value => ['pending', 'site-approved', 'approved', 'rejected'].includes(value),
       hoursWorked: value => typeof value === 'number' && value >= 0,
       payRate: value => typeof value === 'number' && value >= 0,
       dayRate: value => typeof value === 'number' && value >= 0,

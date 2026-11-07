@@ -54,16 +54,22 @@ export const PROJECT_SCOPE_FIELDS = {
   purchase:          { field: 'ProjectNumber', set: 'projectNumbers' },
 };
 
-// Phase 3a: a project-scoped grant gives read and list only, whatever its
-// level. The generic update/delete routes don't check a record's scope, so
-// writes on site wait for scope-checked routes (phase 3b: record and approve
-// the week). Raise this only alongside those checks.
+// Model operations a project-scoped grant gives through the generic CRUD
+// routes: read and list only, whatever its level, because the generic
+// update/delete routes don't check a record's scope. Writes on site go
+// through routes that check each record themselves (phase 3b: recording on
+// /daily, inline attendance, and the approval routes), which ask
+// hasGroup(..., { project: true }) at the grant's full level.
 export const PROJECT_SCOPE_MAX_LEVEL = 'view';
 
-// Routes a project-scoped grant reaches. Only pages whose data goes through
-// scopeQuery per record: /daily does; the weekly views, overviews and
-// department dashboards show whole-set figures, so they're left out.
-export const PROJECT_SCOPE_ROUTES = new Set(['/daily']);
+// Routes a project-scoped grant reaches, at whatever level it holds. Only
+// routes that check scope per record: /daily filters its records and its
+// record form takes only the viewer's contracts; bulk approve moves only
+// what attendanceApprovalService lets the viewer move. The weekly views,
+// overviews and department dashboards show whole-set figures, so they're
+// left out. (/attendance/:uuid/approve, /reject, /inline and PATCH match no
+// routeAccess key, so their ensureGroup guard decides alone.)
+export const PROJECT_SCOPE_ROUTES = new Set(['/daily', '/attendance/bulk-approve']);
 
 // Models no group may write through the generic CRUD routes, whatever the
 // level: the REST namespace is written by the sync adapter alone, and the

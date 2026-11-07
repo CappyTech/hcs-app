@@ -433,7 +433,7 @@ function compileJobRoles() {
           const m = modelOps[model] || (modelOps[model] = new Map());
           for (const op of ops) if (!m.has(op)) m.set(op, 'project');
         }
-        for (const level of viewLevels) {
+        for (const level of levels) {
           for (const key of (group.routes && group.routes[level]) || []) {
             for (const matched of expandRoute(key)) {
               if (PROJECT_SCOPE_ROUTES.has(matched)) grantRoute(matched, slug);
@@ -529,8 +529,9 @@ function canSeeValues(user) {
  * a caller that also wants them names them itself, e.g.
  * ensureGroup('siteOps', 'approve', 'admin').
  *
- * Only grants that are enforced today count: a 'project'-scoped grant does
- * not (phase 3), and a values grant only counts where the role sees values.
+ * A 'project'-scoped grant counts only with { project: true } (the caller
+ * checks each record against the viewer's sites), and a values grant only
+ * counts where the role sees values.
  * @param {Object} user   req.user
  * @param {string} group  key in accessGroupsConfig.groups
  * @param {string} level  'view' | 'edit' | 'approve' | 'manage'
@@ -542,9 +543,8 @@ function hasGroup(user, group, level, { project = false } = {}) {
   if (need < 0) throw new Error(`Unknown permission level "${level}"`);
   if (!user) return false;
   if (user.role === 'admin') return true;
-  // A project-scoped grant counts only where the caller scopes the data per
-  // record ({ project: true }), and only up to PROJECT_SCOPE_MAX_LEVEL.
-  const projectMax = accessGroups.LEVELS.indexOf(accessGroups.PROJECT_SCOPE_MAX_LEVEL);
+  // A project-scoped grant counts only where the caller checks each record
+  // against the viewer's sites ({ project: true }); then at its full level.
   return jobRolesOf(user).some((compiled) => {
     const def = accessGroups.jobRoles[accessGroups.baseRole(compiled)];
     if (!def) return false;
@@ -553,7 +553,7 @@ function hasGroup(user, group, level, { project = false } = {}) {
       if (g.group !== group || !(seesValues || !g.values)) return false;
       const scope = g.scope || 'all';
       if (scope === 'project') {
-        return project && need <= projectMax && accessGroups.LEVELS.indexOf(g.level) >= need;
+        return project && accessGroups.LEVELS.indexOf(g.level) >= need;
       }
       return accessGroups.LEVELS.indexOf(g.level) >= need;
     });
