@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.95.4] - 2026-11-07
+
+### Added
+- Help articles for features added since the help was last brought up to date: job roles and permission groups, site managers and supervisors, personalising the app (navigation style, page width, customise home), email preferences, the weekly attendance flow, and holiday requests.
+- Documents help rewritten around the current workflow: how documents arrive, where to send them, the five document queues, entering an invoice and its checks, subcontractor invoices, teaching HCS a supplier's layout, sending to KashFlow, credit notes and other exceptions, and supplier statements.
+- Finance help for bank reconciliation, bulk supplier payments and the accountant portal; a new Payroll section for runs, HMRC submissions and pensions; Administration help for Configuration, Email & Notifications, the audit trail and security events, the inbound mail log and the website editor. Overview Dashboards now lists the Payroll, Holiday, Weekly attendance and Policies overviews.
+- A help article can name permission groups (`groups: [[group, level]]`), so job roles holding them see it as well as the roles its badge names.
+
+### Changed
+- The Navigation article no longer says labels hide on small screens, and mentions the header search and Ctrl+K.
+- Holiday help describes holiday requests instead of recording holiday as attendance.
+
 ## [6.95.2] - 2026-11-06
 
 ### Fixed
