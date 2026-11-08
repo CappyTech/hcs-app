@@ -15,6 +15,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  *  • training records (cards, tickets, certificates; phase 5a)
  *  • site inductions due again (phase 5b)
  *  • approved RAMS due for review (phase 5c; `reviewDate`, no person)
+ *  • accident book entries marked RIDDOR-reportable but not yet reported
+ *    (phase 5d): due 15 days after the incident. These go only to people who
+ *    can read the accident book (admins, H&S at approve), name nobody, and
+ *    email no one but them.
  *
  * Each (record, expiry date) is one reminder task given to everyone who looks
  * after Health & Safety: admins, and users holding a job role with the Health
@@ -28,9 +32,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * their account is linked to the employee or subcontractor and verified).
  */
 
-/** Job roles that look after Health & Safety (area at edit or above, role on). */
-export function healthSafetyJobRoles() {
-  const minLevel = accessGroups.LEVELS.indexOf('edit');
+/**
+ * Job roles that look after Health & Safety: the area at `level` or above on
+ * every site, role on. 'edit' = the reminders; 'approve' = the accident book.
+ */
+export function healthSafetyJobRoles(level = 'edit') {
+  const minLevel = accessGroups.LEVELS.indexOf(level);
   return Object.entries(accessGroups.jobRoles)
     .filter(([slug]) => accessGroups.isJobRoleAvailable(slug))
     .filter(([, def]) => (def.grants || []).some((g) => g.group === 'healthSafety'
@@ -39,9 +46,9 @@ export function healthSafetyJobRoles() {
     .map(([slug]) => slug);
 }
 
-/** Users who receive the reminders: admins plus Health & Safety job roles. */
-async function healthSafetyUsers(User) {
-  const jobRoles = healthSafetyJobRoles();
+/** Admins plus users holding a Health & Safety job role at `level`. */
+export async function healthSafetyUsers(User, level = 'edit') {
+  const jobRoles = healthSafetyJobRoles(level);
   const or = [{ role: 'admin' }];
   if (jobRoles.length) or.push({ roles: { $in: jobRoles } });
   return User.find({ $or: or }).select('_id email emailVerified').lean();
@@ -107,7 +114,22 @@ const SOURCES = [
     extraUserIds: (rec, names) => names.contracts.get(String(rec.contractId))?.siteManagers || [],
     advice: 'Review the RAMS, issue a new version if the work has changed, and update the review date',
   },
+  {
+    model: 'accidentReport',
+    prefix: 'riddor:',
+    // Over-seven-day injuries must reach HSE within 15 days; deaths and
+    // specified injuries without delay, which this deadline also covers.
+    query: () => ({ riddorReportable: true, riddorReportedDate: null }),
+    dateOf: (rec) => new Date(new Date(rec.occurredAt).getTime() + RIDDOR_DAYS * DAY_MS),
+    label: (rec) => `RIDDOR report: ${rec.category.toLowerCase()} on ${new Date(rec.occurredAt).toISOString().slice(0, 10)}`,
+    who: () => 'accident book',
+    holder: false,
+    bookOnly: true,
+    extraUserIds: () => [],
+    advice: 'Report it to HSE, then record the reference and date in the accident book',
+  },
 ];
+const RIDDOR_DAYS = 15;
 
 /** The holder's own account, when it is linked and can receive email. */
 async function holderUser(User, rec) {
@@ -137,17 +159,21 @@ async function notifyHolder(User, source, rec, { what, dateStr, isExpired }) {
   }
 }
 
-async function scanSource(source, { User, userIds, now, horizon, stats, newAlerts }) {
+async function scanSource(source, { User, userIds, bookUserIds, now, horizon, stats, newAlerts, bookAlerts }) {
   const Model = mdb.INTERNAL?.[source.model];
   if (!Model) return;
   const errorsBefore = stats.errors;
   const currentKeys = new Set();
   const field = source.field || 'expiryDate';
-  const records = await Model.find({ ...(source.where || {}), [field]: { $ne: null, $lte: horizon } }).lean();
-  const names = await loadNames(records);
+  let records = await Model.find(source.query ? source.query() : { ...(source.where || {}), [field]: { $ne: null, $lte: horizon } }).lean();
+  const dateOf = source.dateOf || ((rec) => new Date(rec[field]));
+  if (source.query) records = records.filter((rec) => dateOf(rec) <= horizon);
+  // The accident book's people never get names; only book readers hear of it.
+  const names = source.bookOnly ? { employees: new Map(), suppliers: new Map(), contracts: new Map() } : await loadNames(records);
+  const baseIds = source.bookOnly ? bookUserIds : userIds;
 
   for (const rec of records) {
-    const date = new Date(rec[field]);
+    const date = dateOf(rec);
     const isExpired = date < now;
     const daysLeft = Math.ceil((date - now) / DAY_MS);
     const dateStr = date.toISOString().slice(0, 10);
@@ -160,7 +186,7 @@ async function scanSource(source, { User, userIds, now, horizon, stats, newAlert
     const title = `[${isExpired ? 'EXPIRED' : 'EXPIRING'}] ${subject}`;
     const description = `${who}: ${what} ${isExpired ? 'expired' : 'expires'} on ${dateStr}. ${source.advice}; this task closes itself once the date is updated.`;
     const suffix = isExpired ? `expired ${Math.abs(daysLeft)} day(s) ago` : `expires in ${daysLeft} day(s)`;
-    const recipients = [...new Map([...userIds, ...source.extraUserIds(rec, names)].map((id) => [String(id), id])).values()];
+    const recipients = [...new Map([...baseIds, ...source.extraUserIds(rec, names)].map((id) => [String(id), id])).values()];
 
     try {
       const r = await taskService.ensureSystemTask({
@@ -175,7 +201,7 @@ async function scanSource(source, { User, userIds, now, horizon, stats, newAlert
       stats.created += r.created;
       stats.skipped += r.skipped;
       if (r.created > 0 || r.updated > 0) {
-        newAlerts.push(`${who} — ${what} ${suffix}`);
+        (source.bookOnly ? bookAlerts : newAlerts).push(`${who} — ${what} ${suffix}`);
         await notifyHolder(User, source, rec, { what, dateStr, isExpired });
       }
     } catch (err) {
@@ -209,7 +235,12 @@ async function checkExpiriesAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD, now
     logger.warn('[healthSafetyComplianceService] Nobody looks after Health & Safety — cannot create tasks.');
     return stats;
   }
-  const ctx = { User, userIds: people.map((u) => u._id), now, horizon: new Date(now.getTime() + daysAhead * DAY_MS), stats, newAlerts };
+  const bookPeople = await healthSafetyUsers(User, 'approve');
+  const bookAlerts = [];
+  const ctx = {
+    User, userIds: people.map((u) => u._id), bookUserIds: bookPeople.map((u) => u._id),
+    now, horizon: new Date(now.getTime() + daysAhead * DAY_MS), stats, newAlerts, bookAlerts,
+  };
   for (const source of SOURCES) {
     try {
       await scanSource(source, ctx);
@@ -245,6 +276,27 @@ async function checkExpiriesAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD, now
     }
   }
 
+  if (bookAlerts.length > 0) {
+    const today = now.toISOString().slice(0, 10);
+    const lines = ['These accident book entries are RIDDOR-reportable and not yet reported:', ...bookAlerts];
+    for (const u of bookPeople) {
+      if (!u.email || !u.emailVerified) continue;
+      try {
+        await notificationService.enqueue({
+          to: u.email,
+          recipientUserId: u._id,
+          subject: `Accident book: ${bookAlerts.length} RIDDOR report(s) due`,
+          html: notificationService.wrapTemplate({ heading: 'Accident book', bodyLines: lines, ctaText: 'Open the accident book', ctaUrl: `${notificationService.baseUrl()}/accidents` }),
+          text: lines.join('\n'),
+          category: 'health-safety',
+          dedupeKey: `riddor-due-${today}:${u.email}`,
+        });
+      } catch (err) {
+        logger.error(`[healthSafetyComplianceService] Failed to queue RIDDOR email: ${err.message}`);
+      }
+    }
+  }
+
   if (stats.created > 0 || stats.errors > 0 || stats.resolved > 0) {
     logger.info(`[healthSafetyComplianceService] Check complete: ${stats.created} tasks created, ${stats.skipped} skipped, ${stats.resolved} closed, ${stats.errors} errors.`);
   }
@@ -254,4 +306,5 @@ async function checkExpiriesAndCreateTasks({ daysAhead = DEFAULT_DAYS_AHEAD, now
 export default {
   checkExpiriesAndCreateTasks,
   healthSafetyJobRoles,
+  healthSafetyUsers,
 };

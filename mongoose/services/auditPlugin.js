@@ -4,7 +4,7 @@ import __mongooseDatabaseService from './mongooseDatabaseService.js';
 
 // Models whose single-record reads are logged (GDPR subject-access trail).
 // Override via env, comma-separated. List reads are deliberately NOT logged.
-const SENSITIVE_READ_MODELS = (process.env.AUDIT_SENSITIVE_MODELS || 'employee,payrollEntry')
+const SENSITIVE_READ_MODELS = (process.env.AUDIT_SENSITIVE_MODELS || 'employee,payrollEntry,accidentReport')
   .split(',').map((s) => s.trim()).filter(Boolean);
 
 // Fields never worth snapshotting verbatim.
@@ -66,6 +66,33 @@ async function record(entry) {
   }
 }
 
+// A schema can name fields whose values never go into the trail
+// (`schema.set('auditRedact', [...])`), e.g. injury details in the accident
+// book: people who can read the audit log needn't be able to read those. The
+// trail still records that the field changed, and who changed it.
+export const REDACTED = '[redacted]';
+export function redactEntry(entry, fields) {
+  if (!fields || !fields.size) return entry;
+  const blank = (v) => v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
+  const one = (v) => (blank(v) ? v : REDACTED);
+  const hide = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    const out = { ...obj };
+    for (const f of fields) if (f in out) out[f] = one(out[f]);
+    return out;
+  };
+  const out = { ...entry, before: hide(entry.before), after: hide(entry.after) };
+  if (entry.changes) {
+    out.changes = { ...entry.changes };
+    for (const f of fields) {
+      if (out.changes[f]) out.changes[f] = { from: one(out.changes[f].from), to: one(out.changes[f].to) };
+    }
+  }
+  if (!entry.before) delete out.before;
+  if (!entry.after) delete out.after;
+  return out;
+}
+
 // Marks internal book-keeping queries (our own before/after reads) so the read
 // hook and nested hooks ignore them.
 const INTERNAL_OPT = { _auditInternal: true };
@@ -73,6 +100,8 @@ const isInternal = (query) => !!query.getOptions()._auditInternal;
 
 export default function auditPlugin(schema, options) {
   const modelName = (options && options.modelName) || 'unknown';
+  const redact = new Set(schema.get('auditRedact') || []);
+  const rec = (entry) => record(redactEntry(entry, redact));
 
   // ── CREATE / UPDATE via document.save() ──────────────────────────────────
   schema.pre('save', async function () {
@@ -88,10 +117,10 @@ export default function auditPlugin(schema, options) {
   schema.post('save', async function (doc) {
     const after = sanitize(doc.toObject());
     if (this.$locals.auditIsNew) {
-      await record({ collectionName: modelName, op: 'create', docId: doc._id, docUuid: doc.uuid, after });
+      await rec({ collectionName: modelName, op: 'create', docId: doc._id, docUuid: doc.uuid, after });
     } else {
       const before = sanitize(this.$locals.auditBefore);
-      await record({
+      await rec({
         collectionName: modelName, op: 'update', docId: doc._id, docUuid: doc.uuid,
         before, after, changes: diff(before, after),
       });
@@ -102,7 +131,7 @@ export default function auditPlugin(schema, options) {
   schema.post('insertMany', async function (docs) {
     for (const d of (Array.isArray(docs) ? docs : [docs])) {
       const obj = d && d.toObject ? d.toObject() : d;
-      await record({ collectionName: modelName, op: 'create', docId: obj._id, docUuid: obj.uuid, after: sanitize(obj) });
+      await rec({ collectionName: modelName, op: 'create', docId: obj._id, docUuid: obj.uuid, after: sanitize(obj) });
     }
   });
 
@@ -121,7 +150,7 @@ export default function auditPlugin(schema, options) {
       try { after = await this.model.findById(b._id).setOptions(INTERNAL_OPT).lean(); } catch (_) { /* deleted? */ }
       const beforeS = sanitize(b);
       const afterS = sanitize(after);
-      await record({
+      await rec({
         collectionName: modelName, op: after ? 'update' : 'delete', docId: b._id, docUuid: b.uuid,
         before: beforeS, after: afterS, changes: after ? diff(beforeS, afterS) : undefined,
       });
@@ -139,7 +168,7 @@ export default function auditPlugin(schema, options) {
   schema.post(deleteOps, { query: true, document: false }, async function () {
     if (isInternal(this)) return;
     for (const b of (this._auditDeleted || [])) {
-      await record({ collectionName: modelName, op: 'delete', docId: b._id, docUuid: b.uuid, before: sanitize(b) });
+      await rec({ collectionName: modelName, op: 'delete', docId: b._id, docUuid: b.uuid, before: sanitize(b) });
     }
   });
 
@@ -147,7 +176,7 @@ export default function auditPlugin(schema, options) {
   if (SENSITIVE_READ_MODELS.includes(modelName)) {
     schema.post('findOne', async function (doc) {
       if (isInternal(this) || !doc) return;
-      await record({ collectionName: modelName, op: 'read', docId: doc._id, docUuid: doc.uuid });
+      await rec({ collectionName: modelName, op: 'read', docId: doc._id, docUuid: doc.uuid });
     });
   }
 };

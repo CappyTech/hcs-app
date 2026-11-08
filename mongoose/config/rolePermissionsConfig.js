@@ -287,6 +287,8 @@ const routeAccess = {
   '/overview/rams':           ['admin'],
   '/overview/ramsBriefing':   ['admin'],
   '/rams/brief':              ['admin'],
+  '/accidents':               ['admin'],
+  '/overview/accidentReport': ['admin'],
 
   // Subcontractor administration
   '/subcontractor/assign':['admin'],

@@ -171,7 +171,8 @@ export const jobRoles = {
     { title: 'Training & cards', text: 'Keeps everyone\'s site cards, plant tickets, first aid and courses up to date, and gets a reminder 30 days before one runs out.' },
     { title: 'Inductions on every site', text: 'Records and checks site inductions on any site, and sees which are unsigned or due again.' },
     { title: 'RAMS', text: 'Writes and approves the risk assessment and method statement for each site, keeps them under review, and sees who has been briefed.' },
-    { title: 'Across every site', text: 'Reads attendance to see who has been on which site. The accident book is coming in a later release.' },
+    { title: 'The accident book', text: 'Reads every accident, near miss and dangerous occurrence report, investigates it, and decides and records RIDDOR reports to HSE.' },
+    { title: 'Across every site', text: 'Reads attendance to see who has been on which site.' },
   ],
   fleetManager: [
     { title: 'Vehicles and plant', text: 'Keeps every vehicle\'s MOT, insurance, tax and servicing up to date, with fuel and mileage logs and which job each van is deployed to.' },

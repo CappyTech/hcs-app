@@ -1,0 +1,96 @@
+<%#
+  Report an accident, near miss or dangerous occurrence (/accident-report).
+  Open to anyone on site. Goes to the accident book; only admins and Health
+  & Safety read full entries.
+%>
+<%
+  const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const _label = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1';
+%>
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-bandaid text-red-600" aria-hidden="true"></i> Report an accident</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Injuries, near misses, dangerous occurrences, ill health and damage. Only Health &amp; Safety and admins can read what you write here.</p>
+    </div>
+    <a href="/accident-report/mine" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">My reports</a>
+  </div>
+
+  <p class="text-sm text-red-800 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-xl px-4 py-3">
+    If someone is seriously hurt, call 999 first. Report it here once they are being looked after.
+  </p>
+
+  <form method="POST" action="/accident-report" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-5">
+    <%- include('../partials/csrfHidden') %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="<%= _label %>">When it happened</span>
+        <input type="datetime-local" name="occurredAt" required value="<%= now %>" max="<%= now %>" class="<%= _input %>">
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">What kind</span>
+        <select name="category" required class="<%= _input %>">
+          <option value="">Choose…</option>
+          <% categories.forEach((c) => { %><option value="<%= c %>"><%= c %></option><% }) %>
+        </select>
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">Site</span>
+        <select name="contractId" class="<%= _input %>">
+          <option value="">Not on a site / not listed</option>
+          <% contracts.forEach((c) => { %><option value="<%= c._id %>"><%= c.title %></option><% }) %>
+        </select>
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">Where exactly</span>
+        <input name="location" maxlength="200" placeholder="e.g. rear garden, by the skip" class="<%= _input %>">
+      </label>
+    </div>
+
+    <fieldset class="space-y-2">
+      <legend class="<%= _label %>">Who was hurt</legend>
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="radio" name="who" value="me" required class="text-green-600 focus:ring-green-500"> Me</label>
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="radio" name="who" value="other" class="text-green-600 focus:ring-green-500"> Someone else:
+        <input name="personName" maxlength="120" aria-label="Name of the person who was hurt" placeholder="their name" class="<%= _input %> max-w-xs">
+      </label>
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="radio" name="who" value="nobody" class="text-green-600 focus:ring-green-500"> Nobody (near miss or damage)</label>
+    </fieldset>
+
+    <label class="block">
+      <span class="<%= _label %>">What happened</span>
+      <textarea name="description" required rows="4" maxlength="4000" class="<%= _input %>"></textarea>
+    </label>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="<%= _label %>">Injury</span>
+        <input name="injuryDetails" maxlength="2000" placeholder="e.g. cut, sprain, burn" class="<%= _input %>">
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">Part of the body</span>
+        <input name="bodyPart" maxlength="120" class="<%= _input %>">
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">First aid given</span>
+        <input name="firstAid" maxlength="1000" class="<%= _input %>">
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">Treatment</span>
+        <select name="treatment" class="<%= _input %>">
+          <% treatments.forEach((t) => { %><option value="<%= t %>" <%= t === 'Not known' ? 'selected' : '' %>><%= t %></option><% }) %>
+        </select>
+      </label>
+    </div>
+    <label class="block">
+      <span class="<%= _label %>">Witnesses</span>
+      <input name="witnesses" maxlength="1000" class="<%= _input %>">
+    </label>
+    <label class="block">
+      <span class="<%= _label %>">What was done straight away</span>
+      <textarea name="immediateAction" rows="2" maxlength="2000" placeholder="e.g. area fenced off, tool taken out of use" class="<%= _input %>"></textarea>
+    </label>
+
+    <div class="flex justify-end">
+      <button type="submit" class="text-sm bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Send report</button>
+    </div>
+  </form>
+</div>

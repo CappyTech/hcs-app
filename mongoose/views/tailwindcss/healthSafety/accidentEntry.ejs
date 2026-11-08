@@ -1,0 +1,79 @@
+<%#
+  One accident book entry and its investigation (/accidents/:uuid): admins and
+  Health & Safety at approve. The report itself is read-only here.
+%>
+<%
+  const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const _label = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1';
+  const _fmt = (d) => (d ? new Date(d).toISOString().slice(0, 16).replace('T', ' ') : '');
+  const _day = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+  const e = entry;
+  const who = (e.employeeId && e.employeeId.name) || [e.personName, subName].filter(Boolean).join(' — ') || 'Nobody';
+  const rows = [
+    ['When', _fmt(e.occurredAt)], ['What', e.category],
+    ['Site', e.contractId && e.contractId.title], ['Where exactly', e.location],
+    ['Person hurt', who], ['What happened', e.description],
+    ['Injury', e.injuryDetails], ['Part of the body', e.bodyPart],
+    ['First aid', e.firstAid], ['Treatment', e.treatment],
+    ['Witnesses', e.witnesses], ['Done straight away', e.immediateAction],
+    ['Reported by', e.reportedBy && e.reportedBy.username], ['Reported', _fmt(e.createdAt)],
+  ];
+%>
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-journal-medical text-red-600" aria-hidden="true"></i> <%= e.category %>, <%= _day(e.occurredAt) %></h1>
+    <a href="/accidents" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">← Accident book</a>
+  </div>
+
+  <dl class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+    <% rows.filter(([, v]) => v).forEach(([k, v]) => { %>
+      <dt class="text-gray-500 dark:text-gray-400"><%= k %></dt>
+      <dd class="sm:col-span-2 text-gray-900 dark:text-gray-100 whitespace-pre-line"><%= v %></dd>
+    <% }) %>
+  </dl>
+
+  <form method="POST" action="/accidents/<%= e.uuid %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-4">
+    <%- include('../partials/csrfHidden') %>
+    <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400">Investigation</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="<%= _label %>">Status</span>
+        <select name="status" class="<%= _input %>">
+          <% statuses.forEach((s) => { %><option value="<%= s %>" <%= e.status === s ? 'selected' : '' %>><%= s %></option><% }) %>
+        </select>
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">RIDDOR reportable</span>
+        <select name="riddorReportable" class="<%= _input %>">
+          <option value="" <%= e.riddorReportable == null ? 'selected' : '' %>>Not decided</option>
+          <option value="yes" <%= e.riddorReportable === true ? 'selected' : '' %>>Yes</option>
+          <option value="no" <%= e.riddorReportable === false ? 'selected' : '' %>>No</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">HSE reference</span>
+        <input name="riddorReference" maxlength="60" value="<%= e.riddorReference || '' %>" class="<%= _input %>">
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">Reported to HSE on</span>
+        <input type="date" name="riddorReportedDate" value="<%= _day(e.riddorReportedDate) %>" class="<%= _input %>">
+      </label>
+    </div>
+    <label class="block">
+      <span class="<%= _label %>">Findings</span>
+      <textarea name="investigation" rows="4" maxlength="4000" class="<%= _input %>"><%= e.investigation || '' %></textarea>
+    </label>
+    <label class="block">
+      <span class="<%= _label %>">Actions to stop it happening again</span>
+      <textarea name="actions" rows="3" maxlength="4000" class="<%= _input %>"><%= e.actions || '' %></textarea>
+    </label>
+    <p class="text-xs text-gray-500 dark:text-gray-400">
+      A RIDDOR-reportable entry with no date reported gets a reminder 15 days after the incident (sooner is required for deaths and specified injuries).
+      <% if (e.reviewedBy) { %> Last saved by <%= e.reviewedBy.username %>.<% } %>
+      <% if (e.closedAt) { %> Closed <%= _day(e.closedAt) %>.<% } %>
+    </p>
+    <div class="flex justify-end">
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
+    </div>
+  </form>
+</div>

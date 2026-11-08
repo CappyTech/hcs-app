@@ -166,4 +166,39 @@ export default [
       ],
     },
   },
+  {
+    // Health data: the list and entries are custom pages guarded at approve
+    // (listRoute), so only those who can open /accidents see this node, its
+    // figures or its rows.
+    id: 'accidentReport',
+    model: 'accidentReport',
+    label: { one: 'Accident book entry', many: 'Accident book' },
+    icon: 'bi-journal-medical',
+    description: 'Injuries, near misses and dangerous occurrences, their investigation and RIDDOR reports.',
+    parents: ['healthSafety'],
+    overviewPath: '/overview/accidentReport',
+    listPath: '/accidents',
+    listRoute: '/accidents',
+    readPath: '/accidents/:uuid',
+    actions: [{ label: 'Report an accident', href: '/accident-report' }],
+    figures: {
+      open: { label: 'Open', severity: 'warning', where: { status: { $in: ['Open', 'Investigating'] } } },
+      last30: { label: 'Reported in the last 30 days', where: { occurredAt: { $withinPastDays: 30 } } },
+      injuries12: { label: 'Injuries in the last year', where: { category: 'Injury', occurredAt: { $withinPastDays: 365 } } },
+      nearMiss12: { label: 'Near misses in the last year', where: { category: 'Near miss', occurredAt: { $withinPastDays: 365 } } },
+      riddorDue: { label: 'RIDDOR to report', severity: 'critical', where: { riddorReportable: true, riddorReportedDate: { $set: false } } },
+      undecided: { label: 'RIDDOR not decided', severity: 'warning', where: { category: { $in: ['Injury', 'Dangerous occurrence', 'Ill health'] }, riddorReportable: { $set: false } } },
+    },
+    summary: ['open', 'riddorDue', 'last30'],
+    overview: {
+      figures: ['open', 'riddorDue', 'undecided', 'last30', 'injuries12', 'nearMiss12'],
+      breakdowns: [{ label: 'Last year by kind', by: 'category', where: { occurredAt: { $withinPastDays: 365 } } }],
+      lists: [
+        { figure: 'riddorDue', sort: { occurredAt: 1 }, limit: 10,
+          columns: [{ field: 'occurredAt', label: 'When', format: 'date' }, { field: 'category', label: 'What' }, siteCol] },
+        { figure: 'open', sort: { occurredAt: -1 }, limit: 10,
+          columns: [{ field: 'occurredAt', label: 'When', format: 'date' }, { field: 'category', label: 'What' }, siteCol, { field: 'status', label: 'Status' }] },
+      ],
+    },
+  },
 ];
