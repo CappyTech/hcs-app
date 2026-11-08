@@ -1,6 +1,7 @@
 // Health & Safety records (phase 5). Training & cards: who holds what, and
 // what has run out or is about to. Inductions: who was inducted onto which
-// site. Expiry reminders come from healthSafetyComplianceService; these
+// site. RAMS: each site's risk assessments and who has been briefed on them.
+// Expiry and review reminders come from healthSafetyComplianceService; these
 // figures show the same rows.
 const employeeCol = { field: 'employeeId', label: 'Employee', ref: { model: 'employee', field: 'name' } };
 const subCol = { field: 'subcontractorId', label: 'Subcontractor', ref: { model: 'supplier', field: 'Name' } };
@@ -87,6 +88,81 @@ export default [
           columns: [{ field: 'expiryDate', label: 'Was due', format: 'date' }, siteCol, employeeCol, subCol, { field: 'personName', label: 'Operative' }] },
         { figure: 'unsigned', sort: { date: -1 }, limit: 10,
           columns: [{ field: 'date', label: 'Date', format: 'date' }, siteCol, employeeCol, subCol] },
+      ],
+    },
+  },
+  {
+    id: 'rams',
+    model: 'rams',
+    label: { one: 'RAMS', many: 'RAMS' },
+    icon: 'bi-clipboard2-pulse',
+    description: 'Risk assessments and method statements for each site, and when they are due for review.',
+    parents: ['healthSafety'],
+    overviewPath: '/overview/rams',
+    listPath: '/rams',
+    list: {
+      columns: [
+        { field: 'title', label: 'Title' },
+        { field: 'reference', label: 'Ref' },
+        { field: 'version', label: 'Version' },
+        { field: 'contractId', label: 'Site' },
+        { field: 'status', label: 'Status' },
+        { field: 'approvedDate', label: 'Approved' },
+        { field: 'reviewDate', label: 'Review due' },
+      ],
+    },
+    actions: [{ label: 'Write a RAMS', href: '/rams/create', op: 'c' }],
+    figures: {
+      approved: { label: 'Approved', where: { status: 'Approved' } },
+      drafts: { label: 'Drafts', where: { status: 'Draft' } },
+      reviewOverdue: { label: 'Past their review date', severity: 'critical', where: { status: 'Approved', reviewDate: { $beforeNow: true } } },
+      reviewDue: { label: 'Review due in 30 days', severity: 'warning', where: { status: 'Approved', reviewDate: { $withinNextDays: 30 } } },
+      noReview: { label: 'Approved with no review date', severity: 'warning', where: { status: 'Approved', reviewDate: { $set: false } } },
+    },
+    summary: ['approved', 'drafts', 'reviewOverdue'],
+    overview: {
+      figures: ['approved', 'drafts', 'reviewOverdue', 'reviewDue', 'noReview'],
+      breakdowns: [{ label: 'By status', by: 'status' }],
+      lists: [
+        { figure: 'drafts', sort: { updatedAt: -1 }, limit: 10,
+          columns: [{ field: 'title', label: 'RAMS' }, siteCol, { field: 'version', label: 'Version' }] },
+        { figure: 'reviewOverdue', sort: { reviewDate: 1 }, limit: 10,
+          columns: [{ field: 'reviewDate', label: 'Review was due', format: 'date' }, { field: 'title', label: 'RAMS' }, siteCol] },
+        { figure: 'reviewDue', sort: { reviewDate: 1 }, limit: 10,
+          columns: [{ field: 'reviewDate', label: 'Review due', format: 'date' }, { field: 'title', label: 'RAMS' }, siteCol] },
+      ],
+    },
+  },
+  {
+    id: 'ramsBriefing',
+    model: 'ramsBriefing',
+    label: { one: 'RAMS briefing', many: 'RAMS briefings' },
+    icon: 'bi-clipboard2-check',
+    description: 'Who has been briefed on which RAMS.',
+    parents: ['healthSafety'],
+    overviewPath: '/overview/ramsBriefing',
+    listPath: '/ramsbriefings',
+    list: {
+      columns: [
+        { field: 'date', label: 'Date' },
+        { field: 'ramsId', label: 'RAMS' },
+        { field: 'ramsVersion', label: 'Version' },
+        { field: 'contractId', label: 'Site' },
+        { field: 'employeeId', label: 'Employee' },
+        { field: 'subcontractorId', label: 'Subcontractor' },
+      ],
+    },
+    actions: [{ label: 'Record a RAMS briefing', href: '/rams/brief', route: '/rams/brief' }],
+    figures: {
+      all: { label: 'Briefings', where: {} },
+      last30: { label: 'Briefed in the last 30 days', where: { date: { $withinPastDays: 30 } } },
+    },
+    summary: ['last30'],
+    overview: {
+      figures: ['all', 'last30'],
+      lists: [
+        { figure: 'last30', sort: { date: -1 }, limit: 15,
+          columns: [{ field: 'date', label: 'Date', format: 'date' }, { field: 'ramsId', label: 'RAMS', ref: { model: 'rams', field: 'title' } }, siteCol, employeeCol, subCol] },
       ],
     },
   },

@@ -705,6 +705,24 @@ const helpContent = [
           'Employees and subcontractors can see their own inductions.',
         ],
       },
+      {
+        id: 'rams',
+        title: 'RAMS and Briefings',
+        badge: 'Health & Safety / Site Manager',
+        description: 'A RAMS (risk assessment and method statement) sets out the work on a site, its hazards and how they\'re controlled. Health & Safety writes and approves it; site managers brief the gang and record who was briefed.',
+        steps: [
+          'Health & Safety: go to Overviews → Health & Safety → RAMS and click Write a RAMS. Choose the site, describe the work, hazards and controls, tick the PPE, and link the full document if it\'s kept elsewhere.',
+          'Set the status to Approved when it\'s signed off, and set a review date. Approving fills in the approved date if it\'s empty.',
+          'When the work changes, set the old one to Superseded and write a new version, so everyone is briefed on the right one.',
+          'Site Managers and Supervisors: open the daily attendance page and click Record a RAMS briefing, or go to /rams/brief. Choose the RAMS, tick everyone who was briefed and signed, and save.',
+        ],
+        notes: [
+          'Only approved RAMS on your own sites are offered, and only people assigned to that site in the last four weeks or the coming week.',
+          'Each briefing records the RAMS version, so you can see who still needs briefing on a new version.',
+          'An approved RAMS due for review within 30 days creates a task for admins, Health & Safety and the site\'s site managers.',
+          'Employees and subcontractors can see their own briefings.',
+        ],
+      },
     ],
   },
   // ─────────────────────────────────────────────────────────────────────────

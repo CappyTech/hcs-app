@@ -14,11 +14,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * `daysAhead` days:
  *  • training records (cards, tickets, certificates; phase 5a)
  *  • site inductions due again (phase 5b)
+ *  • approved RAMS due for review (phase 5c; `reviewDate`, no person)
  *
  * Each (record, expiry date) is one reminder task given to everyone who looks
  * after Health & Safety: admins, and users holding a job role with the Health
- * & Safety area at edit or above on every site. A re-induction also goes to
- * the contract's site managers. Completing any copy completes them all;
+ * & Safety area at edit or above on every site. A re-induction or a RAMS
+ * review also goes to the contract's site managers. Completing any copy completes them all;
  * EXPIRING turns into EXPIRED on the same task; once the date is updated (or
  * the record deleted) the task closes itself.
  *
@@ -95,6 +96,17 @@ const SOURCES = [
     extraUserIds: (rec, names) => names.contracts.get(String(rec.contractId))?.siteManagers || [],
     advice: 'Re-induct them and record the new induction',
   },
+  {
+    model: 'rams',
+    prefix: 'rams:',
+    field: 'reviewDate',
+    where: { status: 'Approved' },
+    label: (rec) => `RAMS review: ${rec.title}${rec.version ? ` v${rec.version}` : ''}`,
+    who: (rec, names) => names.contracts.get(String(rec.contractId))?.title || 'Unknown site',
+    holder: false,
+    extraUserIds: (rec, names) => names.contracts.get(String(rec.contractId))?.siteManagers || [],
+    advice: 'Review the RAMS, issue a new version if the work has changed, and update the review date',
+  },
 ];
 
 /** The holder's own account, when it is linked and can receive email. */
@@ -106,6 +118,7 @@ async function holderUser(User, rec) {
 }
 
 async function notifyHolder(User, source, rec, { what, dateStr, isExpired }) {
+  if (source.holder === false) return;
   try {
     const user = await holderUser(User, rec);
     if (!user) return;
@@ -129,18 +142,19 @@ async function scanSource(source, { User, userIds, now, horizon, stats, newAlert
   if (!Model) return;
   const errorsBefore = stats.errors;
   const currentKeys = new Set();
-  const records = await Model.find({ expiryDate: { $ne: null, $lte: horizon } }).lean();
+  const field = source.field || 'expiryDate';
+  const records = await Model.find({ ...(source.where || {}), [field]: { $ne: null, $lte: horizon } }).lean();
   const names = await loadNames(records);
 
   for (const rec of records) {
-    const date = new Date(rec.expiryDate);
+    const date = new Date(rec[field]);
     const isExpired = date < now;
     const daysLeft = Math.ceil((date - now) / DAY_MS);
     const dateStr = date.toISOString().slice(0, 10);
     const systemKey = `${source.prefix}${rec._id}:${dateStr}`;
     currentKeys.add(systemKey);
 
-    const who = holderName(rec, names);
+    const who = source.who ? source.who(rec, names) : holderName(rec, names);
     const what = source.label(rec, names);
     const subject = `${what} – ${who}`;
     const title = `[${isExpired ? 'EXPIRED' : 'EXPIRING'}] ${subject}`;

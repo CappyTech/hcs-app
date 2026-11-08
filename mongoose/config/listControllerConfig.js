@@ -1798,6 +1798,98 @@ export default {
       { value: 'Commute', label: 'Commute' }
     ],
   },
+  rams: {
+    title: 'RAMS',
+    pathOverride: '/rams',
+    listPath: '/rams',
+    description: {
+      create: 'Write a risk assessment and method statement for work on a site.',
+      manage: 'RAMS for each site: status, version and review dates.',
+    },
+    linkField: 'title',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'scope', 'hazards', 'controls', 'ppe', 'notes', 'documentUrl', 'preparedBy'],
+    fieldOrder: ['title', 'reference', 'version', 'contractId', 'status', 'approvedBy', 'approvedDate', 'reviewDate'],
+    sortField: 'reviewDate',
+    sortOrder: 1,
+    labelOverrides: {
+      contractId: 'Site',
+      approvedBy: 'Approved by',
+      approvedDate: 'Approved',
+      reviewDate: 'Review due',
+    },
+    fieldTransforms: {
+      contractId: {
+        fromModel: 'contract',
+        matchField: '_id',
+        returnField: 'title',
+        linkTo: (matched) => `/contract/read/${matched.uuid}`
+      },
+      approvedBy: {
+        fromModel: 'user',
+        matchField: '_id',
+        returnField: 'username',
+      },
+    },
+    tabsby: 'status',
+    tabsValues: [
+      { value: 'all', label: 'All' },
+      { value: 'Approved', label: 'Approved' },
+      { value: 'Draft', label: 'Draft' },
+      { value: 'Superseded', label: 'Superseded' },
+    ],
+  },
+  ramsBriefing: {
+    title: 'RAMS Briefings',
+    listPath: '/ramsbriefings',
+    description: {
+      create: 'Record that someone was briefed on a RAMS.',
+      manage: 'Who has been briefed on which RAMS.',
+    },
+    linkField: 'date',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'notes'],
+    fieldOrder: ['date', 'ramsId', 'ramsVersion', 'contractId', 'employeeId', 'subcontractorId', 'personName', 'briefedBy'],
+    sortField: 'date',
+    sortOrder: -1,
+    labelOverrides: {
+      ramsId: 'RAMS',
+      ramsVersion: 'Version',
+      contractId: 'Site',
+      employeeId: 'Employee',
+      subcontractorId: 'Subcontractor',
+      personName: 'Operative',
+      briefedBy: 'Briefed by',
+    },
+    fieldTransforms: {
+      ramsId: {
+        fromModel: 'rams',
+        matchField: '_id',
+        returnField: 'title',
+        linkTo: (matched) => `/rams/read/${matched.uuid}`
+      },
+      contractId: {
+        fromModel: 'contract',
+        matchField: '_id',
+        returnField: 'title',
+        linkTo: (matched) => `/contract/read/${matched.uuid}`
+      },
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+      },
+      briefedBy: {
+        fromModel: 'user',
+        matchField: '_id',
+        returnField: 'username',
+      },
+    },
+  },
   induction: {
     title: 'Site Inductions',
     listPath: '/inductions',

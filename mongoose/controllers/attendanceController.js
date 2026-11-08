@@ -101,7 +101,8 @@ export const getDailyAttendance = async (req, res, next) => {
       date,
       approvalActions: approval.actionsFor(ctx, attendance),
       recordForm: await recordFormFor(req, date),
-      // Site Managers and Supervisors reach /inductions/record from here:
+      // Site Managers and Supervisors reach /inductions/record and
+      // /rams/brief from here:
       // their site-only access doesn't open the Health & Safety overviews.
       canRecordInduction: !!req.user && (req.user.role === "admin"
         || rbac.hasGroup(req.user, "healthSafety", "edit", { project: true })),

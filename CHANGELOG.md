@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.102.0] - 2026-11-08
+
+### Added
+- Health & Safety, phase 5c: RAMS (`rams`). A risk assessment and method statement per piece of work on a site: scope, hazards, controls, PPE, document link, version, status (Draft / Approved / Superseded) and review date. List at `/rams`; RAMS on the Health & Safety overview (approved, drafts, review overdue / due, no review date).
+- RAMS briefings (`ramsBriefing`) and `/rams/brief`: Site Managers and Supervisors tick who on their site was briefed on an approved RAMS; each briefing records the RAMS version. Linked from the daily attendance page.
+- Approved RAMS due for review within 30 days get a reminder task for Health & Safety and the site's site managers.
+- Help: a RAMS and Briefings article.
+
+### Fixed
+- Employees and subcontractors couldn't open the list of their own training records or inductions (the list page only let admins and job roles in). They can now, and the same goes for their RAMS briefings.
+
 ## [6.101.0] - 2026-11-08
 
 ### Added
