@@ -606,7 +606,14 @@ export const getSignOffs = async (req, res, next) => {
       : [];
     const accounts = await worklist.listAccounts();
 
-    res.render(VIEW('signoff'), { title: 'Period sign-off', signOffs, accounts });
+    res.render(VIEW('signoff'), {
+      title: 'Period sign-off',
+      signOffs,
+      accounts,
+      // The period is chosen on the form, so the rule is stated up front
+      // rather than disabling the button.
+      sodApplies: sod.applies(req.user),
+    });
   } catch (err) { next(err); }
 };
 

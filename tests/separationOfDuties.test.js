@@ -1,9 +1,11 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import ejs from 'ejs';
 import sod from '../mongoose/services/separationOfDutiesService.js';
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
-import { countEnteredBy } from '../mongoose/controllers/paymentController.js';
+import { countEnteredBy, numbersEnteredBy } from '../mongoose/controllers/paymentController.js';
 
 const src = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const director = { _id: 'u-dir', role: 'employee', roles: ['director'] };
@@ -91,5 +93,58 @@ describe('wiring', () => {
     for (const f of ['mongoose/routes/bankRoutes.js', 'mongoose/routes/paymentRoutes.js']) {
       assert.match(src(f), /authService\.ensureGroup\('finance', 'manage', 'admin', 'accountant'\)/, f);
     }
+  });
+});
+
+describe('blocked buttons are disabled with the reason', () => {
+  const saved = mdb.PAPERLESS;
+  afterEach(() => { mdb.PAPERLESS = saved; });
+  const view = (p) => fileURLToPath(new URL(`../mongoose/views/tailwindcss/${p}.ejs`, import.meta.url));
+
+  it('numbersEnteredBy lists the purchases this user entered, and nothing for admin', async () => {
+    let query;
+    mdb.PAPERLESS = { OcrDocument: { distinct: async (f, q) => { query = q; assert.equal(f, 'kashflowPurchaseNumber'); return [102]; } } };
+    assert.deepEqual(await numbersEnteredBy(director, [101, 102]), [102]);
+    assert.equal(query['entry.savedBy.userId'], 'u-dir');
+    mdb.PAPERLESS = { OcrDocument: { distinct: async () => { throw new Error('should not query'); } } };
+    assert.deepEqual(await numbersEnteredBy({ _id: 'a', role: 'admin' }, [1]), []);
+  });
+
+  it('bulk payments: a row the payer entered cannot be ticked and says why', async () => {
+    const row = (Number) => ({ Number, SupplierName: 'S', GrossAmount: 10, TotalPaidAmount: 0, outstanding: 10 });
+    const html = await ejs.renderFile(view('payments/bulk'), {
+      title: 't', csrfToken: 'c', filters: { supplierId: '', search: '', from: '', to: '', pageSize: 50 },
+      suppliers: [], bankAccounts: [], suggestions: {}, todayIso: '2026-11-08',
+      rows: [row(101), row(102)], page: 1, pages: 1, total: 2, enteredByMe: [102],
+    }, { async: true });
+    assert.match(html, /name="selected" value="101"/);
+    assert.doesNotMatch(html, /name="selected" value="102"/);
+    assert.match(html, /disabled aria-disabled="true" title="You entered this invoice, so someone else pays it\."/);
+    assert.match(html, /You entered this, so someone else pays it/);
+  });
+
+  it('bank sign-off states the rule to a Director only', async () => {
+    const render = (sodApplies) => ejs.renderFile(view('bank/signoff'), {
+      title: 't', csrfToken: 'c', user: { role: 'admin' }, accounts: [], signOffs: [], sodApplies,
+      slimDateTime: () => '', fmtDate: () => '', formatCurrency: (n) => String(n),
+    }, { async: true });
+    assert.match(await render(true), /id="sod-signoff-note"/);
+    assert.doesNotMatch(await render(false), /id="sod-signoff-note"/);
+  });
+
+  it('payroll run: the locker sees Post Journal, Submit FPS and Submit Pension disabled with the reason', () => {
+    const s = src('mongoose/controllers/payrollController.js');
+    assert.match(s, /sodBlocked: sod\.blocks\(req\.user, run\.lockedBy\)/);
+    const v = src('mongoose/views/tailwindcss/payroll/run.ejs');
+    assert.equal((v.match(/locals\.sodBlocked \? `disabled title="\$\{sodMessage\}"/g) || []).length, 3);
+    assert.match(v, /<%= sodMessage %> Posting the journal/);
+  });
+
+  it('KashFlow draft: whoever entered it gets a locked dry run and the reason', () => {
+    assert.match(src('mongoose/controllers/paperlessController.js'), /sodBlocked: sod\.blocks\(req\.user, doc\.entry\?\.savedBy\)/);
+    const v = src('mongoose/views/tailwindcss/paperless/draft.ejs');
+    assert.match(v, /<% if \(locals\.sodBlocked\) \{ %>\s*<input type="hidden" name="dryRun" value="true">/);
+    assert.match(v, /<input type="checkbox" checked disabled/);
+    assert.match(v, /<%= sodMessage %> You can still do a dry run/);
   });
 });

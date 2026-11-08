@@ -83,7 +83,7 @@
           <% if (canGroup('payroll', 'manage')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/post-journal">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
-            <button type="submit" class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition" <%- locals.sodBlocked ? `disabled title="${sodMessage}" aria-disabled="true"` : '' %>>
               <i class="bi bi-journal-check"></i> Post Journal
             </button>
           </form>
@@ -100,7 +100,7 @@
           <% if (canGroup('payroll', 'manage')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/fps/submit">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
-            <button type="submit" class="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition" <%- locals.sodBlocked ? `disabled title="${sodMessage}" aria-disabled="true"` : '' %>>
               <i class="bi bi-send"></i> Submit FPS to HMRC
             </button>
           </form>
@@ -112,10 +112,15 @@
           <% if (canGroup('payroll', 'manage')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/pension/submit">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
-            <button type="submit" class="inline-flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition" <%- locals.sodBlocked ? `disabled title="${sodMessage}" aria-disabled="true"` : '' %>>
               <i class="bi bi-cloud-upload"></i> Submit Pension
             </button>
           </form>
+          <% } %>
+          <% if (locals.sodBlocked && canGroup('payroll', 'manage')) { %>
+          <p class="w-full text-sm text-amber-700 dark:text-amber-400">
+            <i class="bi bi-people"></i> <%= sodMessage %> Posting the journal, submitting the FPS and submitting the pension need a second person.
+          </p>
           <% } %>
         <% } %>
       </div>

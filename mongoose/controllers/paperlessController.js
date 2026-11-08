@@ -681,6 +681,9 @@ export const getPurchaseDraft = async (req, res, next) => {
         return hasSupplier && lineItems.length > 0 && hasNominalPerLine && !!draft.Currency && totalsConsistent && !kfSendClaim.isAlreadyLinked(doc);
       })(),
       alreadySentLock: kfSendClaim.isAlreadyLinked(doc),
+      // Separation of duties: whoever saved the entry can only dry-run it.
+      sodBlocked: sod.blocks(req.user, doc.entry?.savedBy),
+      sodMessage: sod.MESSAGES.sendInvoice,
     });
   } catch (err) {
     logger.error("getPurchaseDraft error:", err);

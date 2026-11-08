@@ -72,6 +72,11 @@
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
           Signing off over unreviewed lines is recorded on the sign-off itself, so the gap stays visible.
         </p>
+        <% if (locals.sodApplies) { %>
+        <p id="sod-signoff-note" class="text-sm text-amber-700 dark:text-amber-400 mb-3">
+          <i class="bi bi-people"></i> You can't sign off a period in which you confirmed any match: someone else signs it off.
+        </p>
+        <% } %>
         <button type="submit"
           class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">
           Sign off period
