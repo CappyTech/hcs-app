@@ -3,6 +3,7 @@ import mdb from '../services/mongooseDatabaseService.js';
 import { getClientIp } from '../../services/ipService.js';
 import logger from '../../services/loggerService.js';
 import bulkPay from '../services/bulkPaymentService.js';
+import sod from '../services/separationOfDutiesService.js';
 
 /**
  * HTTP layer for bulk supplier payments. Thin: parse and validate, delegate to
@@ -16,6 +17,21 @@ import bulkPay from '../services/bulkPaymentService.js';
  */
 
 const VIEW = (name) => path.join('tailwindcss', 'payments', name);
+
+/**
+ * Separation of duties: how many of these purchases did this user enter
+ * (saved the Documents entry that sent them to KashFlow)? 0 when the rule
+ * doesn't apply to them.
+ */
+export async function countEnteredBy(user, numbers) {
+  if (!sod.applies(user) || !user?._id || !numbers.length) return 0;
+  const OcrDocument = mdb.PAPERLESS?.OcrDocument;
+  if (!OcrDocument) return 0;
+  return OcrDocument.countDocuments({
+    kashflowPurchaseNumber: { $in: numbers.map(Number) },
+    'entry.savedBy.userId': user._id,
+  });
+}
 
 /** Parse the posted line rows into [{ number, amount }]. */
 function parseLines(body) {
@@ -95,6 +111,12 @@ export const postPreview = async (req, res, next) => {
       return res.redirect('/payments/bulk');
     }
 
+    const mine = await countEnteredBy(req.user, items.map((i) => i.number));
+    if (mine) {
+      req.flash('error', sod.MESSAGES.payPurchases(mine));
+      return res.redirect('/payments/bulk');
+    }
+
     const bankAccounts = await bulkPay.listBankAccounts();
     const account = bankAccounts.find((a) => Number(a.Id) === accountId) || null;
     if (!account) {
@@ -130,6 +152,13 @@ export const postConfirm = async (req, res, next) => {
     if (!items.length || !Number.isFinite(accountId) || !Number.isFinite(method) ||
         !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       req.flash('error', 'The payment could not be confirmed — please start again.');
+      return res.redirect('/payments/bulk');
+    }
+
+    // Checked again here: the confirm form can be posted without the preview
+    const mine = await countEnteredBy(req.user, items.map((i) => i.number));
+    if (mine) {
+      req.flash('error', sod.MESSAGES.payPurchases(mine));
       return res.redirect('/payments/bulk');
     }
 

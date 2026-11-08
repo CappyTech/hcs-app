@@ -1,5 +1,6 @@
 import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
+import sod from '../services/separationOfDutiesService.js';
 import logger from '../../services/loggerService.js';
 import taxService from '../../services/taxService.js';
 import encryptionService from '../../services/encryptionService.js';
@@ -257,6 +258,8 @@ export const lockRun = async (req, res, next) => {
     if (entryCount === 0) { req.flash?.('error', 'Cannot lock a run with no entries. Calculate first.'); return res.redirect(`/payroll/run/${run.uuid}`); }
 
     run.status = 'locked';
+    run.lockedBy = req.user?._id || null;
+    run.lockedAt = new Date();
     await run.save();
     logger.info(`payrollController: locked run ${run.uuid}`);
     req.flash?.('success', 'Payroll run locked.');
@@ -272,6 +275,8 @@ export const unlockRun = async (req, res, next) => {
     if (run.status === 'submitted') { req.flash?.('error', 'Cannot unlock a submitted run.'); return res.redirect(`/payroll/run/${run.uuid}`); }
 
     run.status = 'draft';
+    run.lockedBy = null;
+    run.lockedAt = null;
     await run.save();
     logger.info(`payrollController: unlocked run ${run.uuid}`);
     req.flash?.('success', 'Payroll run unlocked.');
@@ -281,8 +286,22 @@ export const unlockRun = async (req, res, next) => {
 
 // ── KashFlow journal ──────────────────────────────────────────────────────────
 
+/**
+ * Separation of duties: whoever locked the run can't send it out of the app
+ * (journal, FPS, pension). Returns true when the request was refused.
+ */
+async function refuseIfLocker(req, res) {
+  if (!sod.applies(req.user)) return false;
+  const run = await mdb.INTERNAL?.payrollRun?.findOne({ uuid: req.params.uuid }).select('lockedBy').lean();
+  if (!run || !sod.isSamePerson(req.user, run.lockedBy)) return false;
+  req.flash?.('error', sod.MESSAGES.payrollRun);
+  res.redirect(`/payroll/run/${req.params.uuid}`);
+  return true;
+}
+
 export const postJournal = async (req, res, next) => {
   try {
+    if (await refuseIfLocker(req, res)) return;
     await payrollJournal.postPayrollJournal(req.params.uuid);
     req.flash?.('success', 'Payroll journal posted to KashFlow.');
     res.redirect(`/payroll/run/${req.params.uuid}`);
@@ -310,6 +329,7 @@ export const downloadFPS = async (req, res, next) => {
 
 export const submitFPS = async (req, res, next) => {
   try {
+    if (await refuseIfLocker(req, res)) return;
     const context = { clientIp: getClientIp(req), userId: req.user?.username || req.user?.email || 'unknown' };
     const result = await hmrcRti.submitFPSForRun(req.params.uuid, context);
     if (result.status === 'accepted') {
@@ -396,6 +416,10 @@ export const submitPension = async (req, res, next) => {
     const PayrollEntry = mdb.INTERNAL?.payrollEntry;
     const run = await PayrollRun.findOne({ uuid: req.params.uuid }).lean();
     if (!run) return res.status(404).send('Run not found');
+    if (sod.blocks(req.user, run.lockedBy)) {
+      req.flash?.('error', sod.MESSAGES.payrollRun);
+      return res.redirect(`/payroll/run/${run.uuid}`);
+    }
     const entries = await PayrollEntry.find({ runId: run._id }).populate('employeeId').lean();
     await peoplesPension.submitViaAPI(run, entries);
     req.flash?.('success', 'Pension contributions submitted.');

@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3. Phases 4–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.97.0). Phases 4–5 are planned below.
 
 ## Why
 
@@ -93,7 +93,7 @@ level** (`READ_ONLY_MODELS`).
 
 | Job role | Slug | Grants |
 |---|---|---|
-| Director | `director` | approve on every business group; view on System |
+| Director | `director` | **manage**: Finance, CIS, Payroll, Documents (decision 3) · approve on the other business groups · view on System |
 | System Administrator | `admin` (legacy) | everything |
 | Contracts Manager | `contractsManager` | approve: Site Ops, Commercial · view: CIS, Fleet, H&S |
 | Quantity Surveyor / Estimator | `quantitySurveyor` | edit: Commercial · view: CIS |
@@ -209,7 +209,7 @@ These gaps are deliberate. They are the plan for the next phases.
 - **Writes on site.** Site Manager and Supervisor record and approve
   attendance on their sites (3b). Other site records (assignments, vehicle
   deployments) are read only for them.
-- **Bank and payments** stay with `admin` and `accountant` (decision 3 below).
+- **Bank and payments** open to `admin`, `accountant` and Director, under separation of duties (decision 3 below).
 - **Health & Safety** has no models yet.
 
 ## Phases
@@ -254,7 +254,7 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
      every role held.
    - Later: consider a field-level split of the employee record.
 
-   **Still admin-only on purpose** (each is a `manage` level or a System
+   **Still admin-only on purpose** (each is a direct admin check or a System
    setting, held by no job role):
    - editing attendance inside a locked payroll period, and the weekly
      flow's "record as admin" path;
@@ -315,7 +315,7 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
 
 ## Open decisions
 
-Decisions 1 and 2 are made. Decision 3 has a default applied in phase 1; settle it before bank and payments are opened to job roles.
+All three decisions are made.
 
 1. **Money on site.** *Decided: per person.* Site Managers and Supervisors
    have a **Can see values** checkbox, off by default. See "Seeing values" above.
@@ -326,12 +326,29 @@ Decisions 1 and 2 are made. Decision 3 has a default applied in phase 1; settle 
    has approved. Built in phase 3, because the Site Manager step needs project
    scope. Until then, approval is still the single admin step it is today. See
    "Two-stage week approval" in phase 3.
-3. **Self-approval.** When one person holds roles that let them both raise and
-   approve the same item (for example entering a purchase and paying it), should
-   the app block it or only log it? *Default for now: nothing that leaves the
-   app is granted to a job role.* Bank reconciliation, payments, HMRC and
-   pension submissions, the payroll journal and unlocking a run all sit at a
-   `manage` level no job role holds. A Payroll / HR Officer can calculate and
-   lock the same run, the same as admin can today. In Documents, data entry
-   (edit) and sending to KashFlow (manage) stay with different people. Decide
-   this before opening any `manage` level.
+3. **Self-approval.** *Decided (6.97.0): Directors hold manage, and a second
+   person is always needed.* The Director job role holds **manage** on
+   Finance, CIS, Payroll and Documents, so it can send money and submissions
+   out of the app. `separationOfDutiesService` blocks it (never just logs)
+   from taking the outward step on something it took the step before on:
+
+   | First step (recorded as) | Blocked outward step |
+   |---|---|
+   | saved the Documents entry (`entry.savedBy`) | send that invoice to KashFlow (a dry run is still allowed) |
+   | saved the entry for a purchase (`entry.savedBy`, by `kashflowPurchaseNumber`) | pay it in bulk payments (preview and confirm both refuse) |
+   | confirmed a bank match in the period (`bankMatch.reviewedBy`) | sign that period off |
+   | locked the payroll run (`payrollRun.lockedBy`, new) | submit its FPS or pension, post its journal |
+
+   - The legacy `admin` and `accountant` roles are exempt: they did all of
+     this alone before job roles, and admin stays the one-person cover (as
+     with attendance approval).
+   - No other job role holds manage on these groups (a test enforces it).
+   - Manage also grants delete on the groups' models; REST and bank records
+     stay read-only at every level (`READ_ONLY_MODELS`).
+   - Actions with no recorded first step are open to a Director without a
+     check: unlocking a run, the EPS (monthly, not per run), CIS
+     subcontractor assignment and supplier change, receipt and purchase
+     submission changes, and the Documents repair tools.
+   - Bank and payments routes moved from `ensureRoles('admin', 'accountant')`
+     to `ensureGroup('finance', 'manage', 'admin', 'accountant')`. Reversing a
+     confirmation and reopening a signed period stay admin-only.

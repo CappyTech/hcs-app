@@ -294,6 +294,26 @@ describe('bankReconciliationService', () => {
       assert.equal(s.closingBalancePerLedger, 800); // 1000 - 200
     });
 
+    it('separation of duties: refuses a signer who confirmed matches in the period', async () => {
+      patchMdb({ outstanding: 0, confirmedInPeriod: [
+        { _id: 'a', reviewedBy: 'someone-else', bankLines: [{ amount: -200 }] },
+        { _id: 'b', reviewedBy: 'user-1', bankLines: [{ amount: -50 }] },
+      ] });
+      await assert.rejects(() => createSignOff({ ...period, separateDuties: true }), /someone else signs it off/);
+    });
+
+    it('separation of duties: signs off when someone else confirmed every match', async () => {
+      patchMdb({ outstanding: 0, confirmedInPeriod: [{ _id: 'a', reviewedBy: 'someone-else', bankLines: [{ amount: -200 }] }] });
+      const s = await createSignOff({ ...period, separateDuties: true });
+      assert.equal(s.status, 'signed');
+    });
+
+    it('without the flag (admin, accountant) the same signer may sign off', async () => {
+      patchMdb({ outstanding: 0, confirmedInPeriod: [{ _id: 'b', reviewedBy: 'user-1', bankLines: [{ amount: -50 }] }] });
+      const s = await createSignOff(period);
+      assert.equal(s.status, 'signed');
+    });
+
     it('records the gap when forced over an unreviewed backlog', async () => {
       patchMdb({
         outstanding: 2,

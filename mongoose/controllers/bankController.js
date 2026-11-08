@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs/promises';
 import mdb from '../services/mongooseDatabaseService.js';
+import sod from '../services/separationOfDutiesService.js';
 import auditLog from '../../services/auditLogService.js';
 import worklist from '../services/bankWorklistService.js';
 import recon from '../services/bankReconciliationService.js';
@@ -628,6 +629,7 @@ export const postSignOff = async (req, res, next) => {
       notes: String(req.body.notes || '').trim().slice(0, 2000),
       force: req.body.force === 'on' || req.body.force === 'true',
       user: req.user,
+      separateDuties: sod.applies(req.user),
     });
 
     auditLog.record('bank_signoff_signed', req, {

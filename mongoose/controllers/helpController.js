@@ -78,7 +78,8 @@ const helpContent = [
         fields: [
           { name: 'Permission groups', required: '', description: 'Access is grouped by area of the business: Site Ops, Commercial, Finance, CIS, Payroll, HR, Fleet, Health & Safety, Documents, Website and System.' },
           { name: 'Levels', required: '', description: 'Each group is granted at a level. View lets you read, edit lets you create and change, approve lets you sign things off, and manage covers the sensitive actions.' },
-          { name: 'Manage', required: '', description: 'Manage-level actions stay with admins: anything that writes to KashFlow, submits to HMRC or the pension provider, unlocks a payroll run, or repairs and deletes documents. This keeps the person entering data apart from the person sending it.' },
+          { name: 'Manage', required: '', description: 'Manage covers anything that writes to KashFlow, pays suppliers, signs off the bank, submits to HMRC or the pension provider, unlocks a payroll run, or repairs and deletes documents. Admins and Directors hold it.' },
+          { name: 'Two people', required: '', description: 'A Director needs a second person: you cannot send to KashFlow an invoice you entered, pay a purchase you entered, sign off a bank period where you confirmed matches, or submit a payroll run you locked. Someone else does that step.' },
           { name: 'Can see values', required: '', description: 'Decides whether a Site Manager or Supervisor sees day rates, costs and purchase or project values. Most other job roles have a fixed setting: Director, Contracts Manager, Quantity Surveyor and Payroll / HR Officer always see values, while Office Manager, Health & Safety and Fleet never do.' },
         ],
         notes: [
@@ -969,6 +970,7 @@ const helpContent = [
         id: 'bank-reconciliation',
         title: 'Bank Reconciliation',
         badge: 'Admin / Accountant',
+        groups: [['finance', 'manage']],
         description: 'Bank (/bank) shows each bank account and how much of it has been reconciled. HCS suggests what each bank line settles, and you confirm it. Nothing is written back to KashFlow.',
         steps: [
           'Go to Bank (/bank) to see each account and its progress. Run the sweep to refresh every suggestion.',
@@ -982,12 +984,14 @@ const helpContent = [
         notes: [
           'A statement is only trusted if its running balance adds up line by line. If it does not, it is held for review and none of its lines are used.',
           'HCS never guesses which account a statement belongs to. If it cannot tell, the statement is held for review.',
+          'Directors can reconcile too. A Director who confirmed any match in a period cannot sign that period off: someone else does.',
         ],
       },
       {
         id: 'bulk-payments',
         title: 'Paying Several Supplier Invoices at Once',
         badge: 'Admin / Accountant',
+        groups: [['finance', 'manage']],
         description: 'Bulk supplier payments (/payments/bulk) records one payment in KashFlow against several outstanding purchase invoices.',
         steps: [
           'Go to /payments/bulk and select the purchase invoices to pay. Filter by supplier to narrow the list.',
@@ -999,6 +1003,7 @@ const helpContent = [
         notes: [
           'This records a real payment in KashFlow. If anything changed between the preview and confirming, you are sent back to the preview rather than paying part of the batch.',
           'Every payment run is recorded in the audit trail with who made it, the account, the total and the invoices paid.',
+          'Directors can pay too, but not invoices they entered in Documents. Leave those out, or ask someone else to pay them.',
         ],
       },
       {
@@ -1046,7 +1051,7 @@ const helpContent = [
         ],
         notes: [
           'Payroll / HR Officers can create and calculate runs. Locking needs Payroll approve (Directors and Payroll / HR Officers).',
-          'Unlocking a run and posting the payroll journal to KashFlow stay with admins.',
+          'Unlocking a run and posting the payroll journal to KashFlow need Payroll manage (admins and Directors). Whoever locked the run cannot post its journal.',
           'The Payroll runs overview shows draft runs, locked runs not yet submitted, and year-to-date totals.',
           'Statutory rates are kept for each tax year and loaded automatically.',
         ],
@@ -1064,7 +1069,7 @@ const helpContent = [
           'Check the submissions log (/payroll/submissions) for what was sent, and whether HMRC accepted or rejected it.',
         ],
         notes: [
-          'Submitting to HMRC or the pension provider stays with admins. Anyone with Payroll view can download the files.',
+          'Submitting to HMRC or the pension provider needs Payroll manage (admins and Directors). Whoever locked a run cannot submit its FPS or pension: someone else does. Anyone with Payroll view can download the files.',
           'The HMRC submissions overview shows anything generated but not sent, and anything rejected.',
           'FPS is due on or before payday. See UK Statutory Compliance for the full calendar.',
         ],
@@ -1214,6 +1219,7 @@ const helpContent = [
         id: 'paperless-kashflow-draft',
         title: 'Sending an Invoice to KashFlow',
         badge: 'Admin',
+        groups: [['documents', 'manage']],
         description: 'Invoices in Ready for KashFlow are sent from their KashFlow draft page, which turns the entered values into a purchase.',
         steps: [
           'Open an invoice from Ready for KashFlow and follow the link to its draft (/paperless/ocr/:id/draft).',
@@ -1221,7 +1227,7 @@ const helpContent = [
           'Click Send to KashFlow. A banner shows the new purchase number, and the document is marked as sent.',
         ],
         notes: [
-          'Sending creates a real purchase in KashFlow and cannot be undone from HCS. Only admins can send, so the person entering data is not the one sending it.',
+          'Sending creates a real purchase in KashFlow and cannot be undone from HCS. Admins and Directors can send. A Director cannot send an invoice they entered: someone else sends it.',
           'If a purchase was sent by mistake, it can be unlinked, which puts the invoice back to Ready for KashFlow.',
         ],
       },

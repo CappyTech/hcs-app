@@ -10,8 +10,8 @@ import ctrl from '../controllers/payrollController.js';
 //   approve — lock a run
 //   manage  — anything that leaves the app or undoes a sign-off: unlock,
 //             post the KashFlow journal, submit FPS/EPS to HMRC, submit to
-//             the pension provider. No job role holds manage, so these stay
-//             admin-only until the separation-of-duties decision is made.
+//             the pension provider. Admin and Director hold manage; whoever
+//             locked a run can't submit it (separationOfDutiesService).
 // Payroll settings and tax rates are System settings and stay admin-only.
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────

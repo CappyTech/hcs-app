@@ -47,9 +47,10 @@ const generateLimiter = rateLimit({
 });
 
 // Finance department: admin and accountant.
+// Finance manage (Director) as well, under separationOfDutiesService.
 const bankGuard = [
   authService.ensureAuthenticated,
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('finance', 'manage', 'admin', 'accountant'),
   authService.ensureDepartment('finance'),
 ];
 

@@ -76,9 +76,9 @@ describe('bank routes / permissions consistency', () => {
     }
   });
 
-  it('grants bank access to admin and accountant only', () => {
+  it('grants bank access to admin, accountant and Director (Finance manage) only', () => {
     const allowed = rbac.routeAccess['/bank'];
-    assert.deepEqual([...allowed].sort(), ['accountant', 'admin']);
+    assert.deepEqual([...allowed].sort(), ['accountant', 'admin', 'director']);
   });
 
   it('declares no :param routeAccess patterns for /bank, which could never match', () => {

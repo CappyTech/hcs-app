@@ -5,8 +5,7 @@ import authService from '../../services/authService.js';
 import controller from '../controllers/submissionController.js';
 
 // Admin only — previously had NO auth middleware
-// Finance manage, which no job role holds: admin-only until the
-// separation-of-duties decision (docs/PERMISSION-GROUPS.md, decision 3).
+// Finance manage: admin and Director (docs/PERMISSION-GROUPS.md, decision 3).
 router.post(
   "/receipts/change-submission",
   authService.ensureGroup("finance", "manage"),

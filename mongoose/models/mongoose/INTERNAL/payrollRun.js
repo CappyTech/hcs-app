@@ -58,6 +58,10 @@ const payrollRunSchema = new mongoose.Schema({
     studentLoan:     { type: mongoose.Decimal128, default: 0 }
   },
 
+  // Who locked the run: they can't also submit it (separationOfDutiesService)
+  lockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'user', default: null },
+  lockedAt: { type: Date, default: null },
+
   // ── KashFlow journal ──────────────────────────────────────────────────────
   kashflowJournalRef: { type: String, default: null },  // Journal ID returned by KashFlow API
   journalPostedAt:    { type: Date, default: null },
