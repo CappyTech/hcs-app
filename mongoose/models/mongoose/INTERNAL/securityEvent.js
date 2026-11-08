@@ -24,6 +24,25 @@ const EVENT_TYPES = [
   'email_changed',
   'sso_token_issued',
   'sso_token_denied',
+  // Bank reconciliation (bankController)
+  'bank_match_confirmed',
+  'bank_match_bulk_confirmed',
+  'bank_match_rejected',
+  'bank_match_unconfirmed',
+  'bank_rule_created',
+  'bank_rule_updated',
+  'bank_rule_autoconfirm',
+  'bank_rule_deleted',
+  'bank_rules_seeded',
+  'bank_signoff_signed',
+  'bank_signoff_reopened',
+  'bank_statement_imported',
+  'bank_statement_grab',
+  // Job role editor (jobRoleEditorController)
+  'job_role_added',
+  'job_role_changed',
+  'job_role_reset',
+  'job_role_deleted',
 ];
 
 const securityEventSchema = new mongoose.Schema(

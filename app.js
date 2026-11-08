@@ -84,6 +84,7 @@ import __paymentRoutes from './mongoose/routes/paymentRoutes.js';
 import __accountantRoutes from './mongoose/routes/accountantRoutes.js';
 import __overviewRoutes from './mongoose/routes/overviewRoutes.js';
 import __overviewEditorRoutes from './mongoose/routes/overviewEditorRoutes.js';
+import __jobRoleEditorRoutes from './mongoose/routes/jobRoleEditorRoutes.js';
 import __homeLayoutRoutes from './mongoose/routes/homeLayoutRoutes.js';
 import __ssoRoutes from './mongoose/routes/ssoRoutes.js';
 import __microsoftSsoRoutes from './mongoose/routes/microsoftSsoRoutes.js';
@@ -362,6 +363,15 @@ const main = async () => {
       logger.warn('[startup] Overview changes not loaded, using defaults: ' + e.message);
     }
 
+    // Company changes to job roles (jobRoleConfig, /admin/job-roles) on top of
+    // the code defaults. A failure leaves the defaults in place.
+    try {
+      const jobRoleConfig = (await import('./mongoose/services/jobRoleConfigService.js')).default;
+      await jobRoleConfig.load();
+    } catch (e) {
+      logger.warn('[startup] Job role changes not loaded, using defaults: ' + e.message);
+    }
+
     // One-time migration: mark existing users (without a verification token) as email-verified
     try {
       const result = await mdb.INTERNAL.user.updateMany(
@@ -638,6 +648,7 @@ const main = async () => {
     appRouter.use('/', __accountantRoutes);
     appRouter.use('/', __overviewRoutes);
     appRouter.use('/', __overviewEditorRoutes);
+    appRouter.use('/', __jobRoleEditorRoutes);
     appRouter.use('/', __homeLayoutRoutes);
     appRouter.use('/', __ssoRoutes);
     appRouter.use('/', __helpRoutes);

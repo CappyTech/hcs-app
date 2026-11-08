@@ -34,6 +34,13 @@ export default {
         department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    JobRoles: {
+        title: 'Job Roles',
+        description: 'Change what each job role opens, add your own job roles, or turn one off.',
+        link: '/admin/job-roles',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     BackgroundJobs: {
         title: 'Background Jobs',
         description: 'Monitor scheduled tasks, notification outbox, and trigger jobs manually.',

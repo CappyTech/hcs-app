@@ -1,0 +1,115 @@
+<%#
+  Edit one job role (admin): name, description, money rule, on/off, and the
+  level it holds on each area. Saved through jobRoleConfigService.
+%>
+<%
+  const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const _levelText = { view: 'Sees', edit: 'Works on', approve: 'Approves', manage: 'Manages' };
+  const _moneyGroups = ['finance', 'cis', 'payroll', 'documents'];
+%>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-person-badge text-green-600" aria-hidden="true"></i> <%= def.label %></h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <%= custom ? 'Added here.' : (changed ? 'Built-in job role, changed here.' : 'Built-in job role.') %>
+        <%= holders %> <%= holders === 1 ? 'person holds' : 'people hold' %> it.
+      </p>
+    </div>
+    <a href="/admin/job-roles" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">← Job roles</a>
+  </div>
+
+  <form method="POST" action="/admin/job-roles/<%= encodeURIComponent(slug) %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-6">
+    <%- include('../../partials/csrfHidden') %>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Name</span>
+        <input name="label" required maxlength="60" value="<%= def.label %>" class="<%= _input %>">
+      </label>
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 md:mt-6">
+        <input type="checkbox" name="enabled" <%= def.disabled ? '' : 'checked' %> class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
+        On — can be given to people, and their access applies
+      </label>
+      <label class="block md:col-span-2">
+        <span class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</span>
+        <textarea name="description" rows="2" maxlength="300" class="<%= _input %>"><%= def.description %></textarea>
+      </label>
+    </div>
+    <% if (holders && !def.disabled) { %>
+      <p class="text-xs text-amber-700 dark:text-amber-400"><i class="bi bi-exclamation-triangle"></i> Turning it off takes this access away from the <%= holders %> <%= holders === 1 ? 'person' : 'people' %> who hold it, from their next page.</p>
+    <% } %>
+
+    <fieldset class="space-y-2">
+      <legend class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Money — rates, costs and values</legend>
+      <% [['always', 'Sees money'], ['never', 'Never sees money'], ['flag', 'Only people with "Can see values" ticked on their account']].forEach(([v, text]) => { %>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="radio" name="values" value="<%= v %>" <%= def.values === v ? 'checked' : '' %> class="text-green-600 focus:ring-green-500"> <%= text %>
+        </label>
+      <% }) %>
+    </fieldset>
+
+    <div>
+      <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Areas</h2>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+            <tr>
+              <th class="px-3 py-2 text-left">Area</th>
+              <th class="px-3 py-2 text-left">Level</th>
+              <th class="px-3 py-2 text-left">Own sites only</th>
+              <th class="px-3 py-2 text-left">Money-bearing</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <% areas.forEach((a) => { const g = grants[a.key] || {}; %>
+              <tr>
+                <td class="px-3 py-2 align-top">
+                  <div class="font-medium text-gray-900 dark:text-gray-100"><%= a.label %></div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 max-w-md"><%= a.description %></div>
+                </td>
+                <td class="px-3 py-2 align-top">
+                  <select name="level[<%= a.key %>]" aria-label="<%= a.label %> level" class="<%= _input %> min-w-[9rem]">
+                    <option value="">No access</option>
+                    <% a.levels.forEach((l) => { %>
+                      <option value="<%= l %>" <%= g.level === l ? 'selected' : '' %>><%= _levelText[l] %> (<%= l %>)</option>
+                    <% }) %>
+                  </select>
+                </td>
+                <td class="px-3 py-2 align-top">
+                  <% if (a.scopable) { %>
+                    <input type="checkbox" name="scope[<%= a.key %>]" aria-label="<%= a.label %>: own sites only" <%= g.scope === 'project' ? 'checked' : '' %> class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
+                  <% } else { %><span class="text-xs text-gray-400">—</span><% } %>
+                </td>
+                <td class="px-3 py-2 align-top">
+                  <input type="checkbox" name="money[<%= a.key %>]" aria-label="<%= a.label %>: money-bearing" <%= g.values ? 'checked' : '' %> class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <ul class="text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-1 list-disc pl-5">
+        <li>Each level includes the ones before it: sees, works on, approves, manages. Manages also allows deleting; KashFlow and bank records stay read-only.</li>
+        <li><strong>Own sites only</strong>: just the contracts that name the person as a site manager, read only.</li>
+        <li><strong>Money-bearing</strong>: the area is dropped for people who don't see money under the rule above.</li>
+        <li>Manages on <%= _moneyGroups.map((k) => (areas.find((a) => a.key === k) || {}).label).filter(Boolean).join(', ') %> sends money and submissions out of the app. Anyone who isn't an admin or accountant needs a second person for those steps: they can't send what they entered, locked or confirmed themselves.</li>
+        <li>System can be given at sees at most. Users, settings and security stay with admins.</li>
+      </ul>
+    </div>
+
+    <div class="flex justify-end">
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Save</button>
+    </div>
+  </form>
+
+  <% if (custom || changed) { %>
+    <form method="POST" action="/admin/job-roles/<%= encodeURIComponent(slug) %>/reset" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-3">
+      <%- include('../../partials/csrfHidden') %>
+      <p class="text-sm text-red-800 dark:text-red-300">
+        <%= custom ? 'Delete this job role. Only possible once nobody holds it.' : 'Put this job role back to its built-in settings.' %>
+      </p>
+      <button type="submit" class="text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition"><%= custom ? 'Delete' : 'Reset to default' %></button>
+    </form>
+  <% } %>
+</div>

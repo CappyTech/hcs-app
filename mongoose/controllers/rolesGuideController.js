@@ -24,6 +24,14 @@ const VALUES_TEXT = {
   flag: 'Sees money only when "Can see values" is ticked on their account.',
 };
 
+/** Is this job role still as shipped (same areas and money rule)? */
+function unchanged(slug) {
+  const live = accessGroups.jobRoles[slug];
+  const shipped = accessGroups.defaultJobRoles[slug];
+  if (!live || !shipped) return false;
+  return live.values === shipped.values && JSON.stringify(live.grants) === JSON.stringify(shipped.grants);
+}
+
 /** Job roles in config order, available ones only, ready for the view. */
 export function jobRoleEntries() {
   return accessGroups.JOB_ROLE_SLUGS
@@ -46,7 +54,9 @@ export function jobRoleEntries() {
         id: slug,
         label: def.label,
         summary: def.description,
-        uses: guide.jobRoles[slug] || [],
+        // The written day-to-day notes describe the shipped role; once a
+        // company changes or adds one, only the derived areas are shown.
+        uses: unchanged(slug) ? (guide.jobRoles[slug] || []) : [],
         areas,
         values: VALUES_TEXT[def.values] || null,
       };

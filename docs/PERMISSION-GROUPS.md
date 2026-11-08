@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0). Phases 4–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0). Phase 5 is planned below.
 
 ## Why
 
@@ -311,6 +311,34 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
 4. **Role editor.** Edit job roles and groups from the config store instead of
    code, in line with the single-tenant config direction. Each company sets its
    own roles.
+
+   **As built (6.99.0):** `/admin/job-roles`, admin only.
+   - Job roles are editable; **groups are not**. A group's departments,
+     models and routes are tied to code (a route only exists in code), so
+     they stay in `accessGroupsConfig.groups`.
+   - Change any job role's name, description, money rule (`values`), on/off,
+     and the level it holds on each group, with own-sites scope and the
+     money-bearing flag per grant. Add job roles (they start off, with no
+     grants). Reset a built-in role; delete an added one once nobody holds it.
+   - The code definitions are the defaults (`defaultJobRoles`, frozen). The
+     INTERNAL `jobRoleConfig` collection holds the whole definition of every
+     role a company changed or added. `jobRoleConfigService` validates,
+     stores and applies: `applyJobRoleOverrides()` rebuilds `jobRoles` and
+     `JOB_ROLE_SLUGS` in place, and `rbac.recompileJobRoles()` resets the
+     compiled tables to their hand-written state and compiles again. Loaded
+     at startup after the overview config; a stored role that no longer
+     validates is skipped with a warning.
+   - Rules: groups and levels from config only; one grant per group; System
+     at view at most; project scope only on groups where it limits something
+     (`groupScopable`); slugs never collide with a legacy role.
+   - Any level is allowed, including manage on the money groups (user's
+     decision): separation of duties already applies to every user who isn't
+     admin or accountant.
+   - A role turned off stays in users' `roles[]` but compiles to nothing and
+     can't be assigned. `user.roles` is no longer an enum (slugs change at
+     runtime); assignment still only saves available job roles.
+   - The public Roles page shows the written day-to-day notes only while a
+     role is as shipped.
 5. **Health & Safety module.** RAMS, inductions, training/cards, accident book.
 
 ## Open decisions

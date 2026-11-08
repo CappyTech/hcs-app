@@ -2,7 +2,6 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import encryptionService from '../../../../services/encryptionService.js';
 import crypto from 'crypto';
-import { JOB_ROLE_SLUGS } from '../../../config/accessGroupsConfig.js';
 
 const userSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
@@ -37,11 +36,13 @@ const userSchema = new mongoose.Schema({
         default: 'none'
     },
     // Job roles held on top of the primary `role` (director, contractsManager,
-    // …), defined as permission-group grants in accessGroupsConfig.js. Only
-    // job role slugs are accepted, so this list can never hold 'admin' or any
-    // other primary role. Access is the union of `role` and every entry here.
+    // …), defined as permission-group grants in accessGroupsConfig.js and
+    // editable on /admin/job-roles, so the list of slugs changes at runtime
+    // and isn't an enum here. POST /admin/users/:uuid/roles only saves
+    // available job roles, and rbac.rolesOf() ignores anything else, so this
+    // list can never grant 'admin' or any other primary role.
     roles: {
-        type: [{ type: String, enum: JOB_ROLE_SLUGS }],
+        type: [{ type: String, match: /^[a-z][A-Za-z0-9]{1,39}$/ }],
         default: []
     },
     // For job roles whose money visibility is per person (Site Manager,
