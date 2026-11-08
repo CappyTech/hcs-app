@@ -33,6 +33,21 @@ export async function countEnteredBy(user, numbers) {
   });
 }
 
+/**
+ * Which of these purchase numbers did this user enter? Used to disable their
+ * rows on the selection page. Empty when the rule doesn't apply.
+ */
+export async function numbersEnteredBy(user, numbers) {
+  if (!sod.applies(user) || !user?._id || !numbers.length) return [];
+  const OcrDocument = mdb.PAPERLESS?.OcrDocument;
+  if (!OcrDocument) return [];
+  const found = await OcrDocument.distinct('kashflowPurchaseNumber', {
+    kashflowPurchaseNumber: { $in: numbers.map(Number) },
+    'entry.savedBy.userId': user._id,
+  });
+  return found.map(Number);
+}
+
 /** Parse the posted line rows into [{ number, amount }]. */
 function parseLines(body) {
   const numbers = [].concat(body.number || []);
@@ -71,8 +86,12 @@ export const getBulkPay = async (req, res, next) => {
       bulkPay.paymentSuggestions(),
     ]);
 
+    const entered = await numbersEnteredBy(req.user, (result.rows || []).map((r) => r.Number));
+
     res.render(VIEW('bulk'), {
       title: 'Bulk Supplier Payment',
+      enteredByMe: entered,
+      sodMessage: sod.MESSAGES.payPurchases(1),
       filters,
       suppliers,
       bankAccounts,

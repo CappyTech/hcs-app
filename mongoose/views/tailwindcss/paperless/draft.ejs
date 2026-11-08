@@ -318,10 +318,21 @@
 				<input type="hidden" name="_csrf" value="<%= csrfToken %>">
 				<!-- Hidden supplier value populated by the selector on the right -->
 				<input type="hidden" id="supplier-uuid" name="supplierUuid" value="<%= selectedSupplier ? selectedSupplier.uuid : '' %>">
+				<% if (locals.sodBlocked) { %>
+				<input type="hidden" name="dryRun" value="true">
+				<label class="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400" title="<%= sodMessage %>">
+					<input type="checkbox" checked disabled aria-disabled="true" class="rounded border-gray-200 dark:border-gray-700 accent-green-600 dark:bg-gray-800 cursor-not-allowed">
+					Dry run (don’t send – just log)
+				</label>
+				<div id="sod-blocked-note" class="p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-300">
+					<i class="bi bi-people mr-1"></i><%= sodMessage %> You can still do a dry run to check it.
+				</div>
+				<% } else { %>
 				<label class="inline-flex items-center gap-2 text-sm">
 					<input type="checkbox" name="dryRun" value="true" checked class="rounded border-gray-200 dark:border-gray-700 accent-green-600 dark:bg-gray-800">
 					Dry run (don’t send – just log)
 				</label>
+				<% } %>
 				<label class="inline-flex items-center gap-2 text-sm" title="By default, sending is blocked when a purchase with the same supplier and reference already exists in KashFlow.">
 					<input type="checkbox" name="forceDuplicate" value="true" class="rounded border-gray-200 dark:border-gray-700 accent-amber-600 dark:bg-gray-800">
 					Send even if a matching supplier reference already exists (override duplicate check)
@@ -334,7 +345,7 @@
 				<% } %>
 				<div>
 						<button id="send-button" type="submit" class="inline-flex items-center px-4 py-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700 shadow-sm font-medium transition" <%= canSend ? '' : 'disabled' %>>
-							<%= isSubcontractor ? 'Send to KashFlow (Create a Subcontractor Invoice)' : 'Send to KashFlow (Create a Purchase Invoice)' %>
+							<% if (locals.sodBlocked) { %>Dry run only<% } else { %><%= isSubcontractor ? 'Send to KashFlow (Create a Subcontractor Invoice)' : 'Send to KashFlow (Create a Purchase Invoice)' %><% } %>
 						</button>
 						<% if (isSubcontractor) { %>
 							<div class="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-300">

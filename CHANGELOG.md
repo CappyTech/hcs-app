@@ -8,6 +8,7 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - Permission groups, decision 3 (self-approval): the Director job role now holds **manage** on Finance, CIS, Payroll and Documents, so a Director can send to KashFlow, pay suppliers in bulk, reconcile and sign off the bank, submit FPS, EPS and pension, post the payroll journal and unlock a run.
 - Separation of duties: a Director always needs a second person. They can't send to KashFlow an invoice they entered, pay a purchase they entered, sign off a bank period in which they confirmed a match, or submit or post a payroll run they locked. The admin and accountant roles are unaffected.
 - A payroll run records who locked it and when.
+- Blocked steps are shown, not just refused: whoever locked a payroll run sees Post Journal, Submit FPS and Submit Pension disabled with the reason; whoever entered an invoice gets a locked dry run on the KashFlow draft; in bulk payments the purchases you entered can't be ticked; and bank sign-off states the rule up front.
 
 ### Changed
 - Bank and bulk payment routes are guarded by Finance manage (admin, accountant, Director) instead of the admin and accountant roles. Reversing a confirmation, reopening a signed period and auto-confirm rules stay admin-only.

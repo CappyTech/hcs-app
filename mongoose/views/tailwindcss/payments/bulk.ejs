@@ -69,14 +69,20 @@ const INPUT = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-          <% rows.forEach(r => { %>
+          <% const mine = new Set((locals.enteredByMe || []).map(Number)); %>
+          <% rows.forEach(r => { const isMine = mine.has(Number(r.Number)); %>
             <tr class="pay-row hover:bg-gray-50 dark:hover:bg-gray-800/50" data-outstanding="<%= r.outstanding %>">
               <td class="px-3 py-2">
+                <% if (isMine) { %>
+                <input type="checkbox" disabled aria-disabled="true" title="You entered this invoice, so someone else pays it." class="pay-check align-middle cursor-not-allowed" />
+                <% } else { %>
                 <input type="checkbox" name="selected" value="<%= r.Number %>" class="pay-check align-middle" />
+                <% } %>
                 <input type="hidden" name="number" value="<%= r.Number %>" />
               </td>
               <td class="px-3 py-2 font-medium">
                 #<%= r.Number %>
+                <% if (isMine) { %><div class="text-[11px] text-amber-700 dark:text-amber-400"><i class="bi bi-people"></i> You entered this, so someone else pays it</div><% } %>
                 <% if (r.SupplierReference) { %><div class="text-[11px] text-gray-400"><%= r.SupplierReference %></div><% } %>
               </td>
               <td class="px-3 py-2"><%= r.SupplierName || '—' %></td>
@@ -201,7 +207,10 @@ const INPUT = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px
     });
     if (selectAll) {
       selectAll.addEventListener('change', function () {
-        rows.forEach(function (row) { row.querySelector('.pay-check').checked = selectAll.checked; });
+        rows.forEach(function (row) {
+          var chk = row.querySelector('.pay-check');
+          if (!chk.disabled) chk.checked = selectAll.checked;
+        });
         recompute();
       });
     }

@@ -183,7 +183,11 @@ export const renderRunDetail = async (req, res, next) => {
       entries,
       submissions,
       fmt,
-      toNum
+      toNum,
+      // Separation of duties: whoever locked the run sees its outward
+      // buttons disabled, with the reason.
+      sodBlocked: sod.blocks(req.user, run.lockedBy),
+      sodMessage: sod.MESSAGES.payrollRun,
     });
   } catch (err) {
     next(err);
