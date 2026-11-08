@@ -1,0 +1,181 @@
+<%# ─── Roles guide (public) ─────────────────────────────────────────────────
+   Content: mongoose/config/rolesGuideConfig.js (account roles + job-role prose)
+   and accessGroupsConfig.js (job-role labels, descriptions, areas), assembled
+   by rolesGuideController. %>
+<%
+  const _card = 'bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden';
+  const _bar = 'h-1.5 bg-gradient-to-r from-green-500 to-emerald-400';
+  const _chip = 'inline-flex items-center gap-1 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 hover:border-green-500 hover:text-green-700 dark:hover:text-green-400';
+  const _tag = 'inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-300';
+  const _company = (typeof companyName !== 'undefined' && companyName) ? companyName : 'the company';
+%>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <%# Intro + jump list %>
+  <section class="<%= _card %>">
+    <div class="<%= _bar %>"></div>
+    <div class="p-6 sm:p-8">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Roles</h1>
+      <p class="mt-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-3xl">
+        Everyone who signs in to <strong><%= _company %></strong>'s platform has a role. Your role decides
+        which pages, records and buttons you see: menus only ever show what you can open, and people who
+        work for us or with us see only their own records. This page explains each role and what a
+        normal day in the app looks like for it.
+      </p>
+      <p class="mt-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-3xl">
+        Staff can also hold <a href="#job-roles" class="text-green-700 dark:text-green-400 hover:underline">job roles</a>
+        on top of their main role, such as Director or Office Manager. Each one opens extra areas, and
+        someone holding several gets everything any of them allows.
+      </p>
+
+      <nav aria-label="Jump to a role" class="mt-6 space-y-3">
+        <div>
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Account roles</h2>
+          <div class="flex flex-wrap gap-2">
+            <% guideRoles.forEach((r) => { %>
+              <a href="#<%= r.id %>" class="<%= _chip %>"><i class="bi <%= r.icon %>" aria-hidden="true"></i><%= r.label %></a>
+            <% }) %>
+          </div>
+        </div>
+        <% if (guideJobRoles.length) { %>
+        <div>
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Job roles</h2>
+          <div class="flex flex-wrap gap-2">
+            <% guideJobRoles.forEach((r) => { %>
+              <a href="#<%= r.id %>" class="<%= _chip %>"><i class="bi bi-person-badge" aria-hidden="true"></i><%= r.label %></a>
+            <% }) %>
+          </div>
+        </div>
+        <% } %>
+      </nav>
+    </div>
+  </section>
+
+  <%# Account roles %>
+  <section aria-labelledby="account-roles" class="space-y-4">
+    <h2 id="account-roles" class="text-xl font-semibold text-gray-900 dark:text-gray-100">Account roles</h2>
+    <div class="grid gap-4 md:grid-cols-2">
+      <% guideRoles.forEach((r) => { %>
+      <article id="<%= r.id %>" class="<%= _card %> scroll-mt-6 flex flex-col">
+        <div class="<%= _bar %>"></div>
+        <div class="p-5 flex-1 flex flex-col">
+          <header class="flex items-start gap-3">
+            <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 shrink-0">
+              <i class="bi <%= r.icon %>" aria-hidden="true"></i>
+            </span>
+            <div class="min-w-0">
+              <h3 class="font-semibold text-gray-900 dark:text-gray-100 flex flex-wrap items-center gap-2">
+                <%= r.label %>
+                <span class="<%= _tag %>"><%= r.audience %></span>
+              </h3>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-snug"><%= r.summary %></p>
+            </div>
+          </header>
+
+          <ul class="mt-4 space-y-3">
+            <% r.uses.forEach((u) => { %>
+            <li class="text-sm leading-relaxed">
+              <span class="font-medium text-gray-900 dark:text-gray-100"><%= u.title %>.</span>
+              <span class="text-gray-700 dark:text-gray-300"><%= u.text %></span>
+            </li>
+            <% }) %>
+          </ul>
+
+          <% if (r.benefit) { %>
+          <div class="mt-4 rounded-xl border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 px-3 py-2.5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">What's in it for you</p>
+            <p class="mt-1 text-sm text-gray-700 dark:text-gray-300 leading-relaxed"><%= r.benefit %></p>
+          </div>
+          <% } %>
+
+          <div class="mt-auto pt-4">
+            <% if (r.where && r.where.length) { %>
+            <p class="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-1.5">
+              <span class="font-semibold uppercase tracking-wide">Where</span>
+              <% r.where.forEach((w) => { %><span class="<%= _tag %>"><%= w %></span><% }) %>
+            </p>
+            <% } %>
+            <% (r.notes || []).forEach((n) => { %>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1.5">
+              <i class="bi bi-info-circle mt-0.5" aria-hidden="true"></i><span><%= n %></span>
+            </p>
+            <% }) %>
+          </div>
+        </div>
+      </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <%# Job roles %>
+  <% if (guideJobRoles.length) { %>
+  <section aria-labelledby="job-roles" class="space-y-4 scroll-mt-6" id="job-roles">
+    <div>
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Job roles</h2>
+      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed">
+        A job role is added to a staff account by an admin. It opens areas of the business at a level —
+        <em>sees</em>, <em>works on</em>, <em>approves</em> or <em>manages</em> — and every job role needs
+        two-factor authentication. Sending to the accounting system, HMRC or the pension provider stays
+        with admins, whatever job roles someone holds.
+      </p>
+    </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      <% guideJobRoles.forEach((r) => { %>
+      <article id="<%= r.id %>" class="<%= _card %> scroll-mt-6 flex flex-col">
+        <div class="<%= _bar %>"></div>
+        <div class="p-5 flex-1 flex flex-col">
+          <header class="flex items-start gap-3">
+            <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 shrink-0">
+              <i class="bi bi-person-badge" aria-hidden="true"></i>
+            </span>
+            <div class="min-w-0">
+              <h3 class="font-semibold text-gray-900 dark:text-gray-100"><%= r.label %></h3>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-snug"><%= r.summary %></p>
+            </div>
+          </header>
+
+          <% if (r.uses.length) { %>
+          <ul class="mt-4 space-y-3">
+            <% r.uses.forEach((u) => { %>
+            <li class="text-sm leading-relaxed">
+              <span class="font-medium text-gray-900 dark:text-gray-100"><%= u.title %>.</span>
+              <span class="text-gray-700 dark:text-gray-300"><%= u.text %></span>
+            </li>
+            <% }) %>
+          </ul>
+          <% } %>
+
+          <div class="mt-auto pt-4">
+            <% if (r.areas.length) { %>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">Areas</p>
+            <ul class="flex flex-wrap gap-1.5">
+              <% r.areas.forEach((a) => { %>
+              <li class="<%= _tag %>">
+                <span class="text-gray-500 dark:text-gray-400 mr-1"><%= a.levelText %></span><%= a.label %><% if (a.ownSites) { %><span class="ml-1 text-gray-500 dark:text-gray-400">(their sites)</span><% } %>
+              </li>
+              <% }) %>
+            </ul>
+            <% } %>
+            <% if (r.values) { %>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1.5">
+              <i class="bi bi-currency-pound mt-0.5" aria-hidden="true"></i><span><%= r.values %></span>
+            </p>
+            <% } %>
+          </div>
+        </div>
+      </article>
+      <% }) %>
+    </div>
+  </section>
+  <% } %>
+
+  <p class="text-sm text-gray-600 dark:text-gray-400 text-center">
+    <% if (isAuthenticated) { %>
+      Your own role and job roles are shown on <a href="/user/profile" class="text-green-700 dark:text-green-400 hover:underline">your profile</a>.
+      If something you need is missing, ask an admin which job role covers it.
+    <% } else { %>
+      Have an account? <a href="/" class="text-green-700 dark:text-green-400 hover:underline">Log in</a>.
+      Your role is set by an admin once your account is created.
+    <% } %>
+  </p>
+</div>
