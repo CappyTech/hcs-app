@@ -232,7 +232,14 @@ export const groups = {
 //   'flag'   — per user: only when that user's `canSeeValues` is ticked
 //              (Site Manager, Supervisor).
 // Every job role needs 2FA (authService.rolesRequiring2FA).
-export const jobRoles = {
+//
+// These are the shipped DEFAULTS. A company changes them, adds its own job
+// roles or turns one off on /admin/job-roles (phase 4); jobRoleConfigService
+// stores those changes and applyJobRoleOverrides() rebuilds `jobRoles` in
+// place, then rolePermissionsConfig.recompileJobRoles() rebuilds the tables.
+// disabled: true — the role stays defined (users keep it in roles[]) but
+// grants nothing and can't be assigned.
+const DEFAULT_JOB_ROLES = {
   director: {
     label: 'Director',
     description: 'Runs the business. Approves across every business area, and can send money and submissions out of the app (always with a second person); sees but does not administer the system.',
@@ -336,7 +343,54 @@ export const jobRoles = {
   },
 };
 
+const clone = (v) => JSON.parse(JSON.stringify(v));
+const deepFreeze = (o) => { Object.values(o).forEach((v) => { if (v && typeof v === 'object') deepFreeze(v); }); return Object.freeze(o); };
+
+/** The shipped definitions, read-only. */
+export const defaultJobRoles = deepFreeze(clone(DEFAULT_JOB_ROLES));
+
+// The live definitions. Mutated in place (never reassigned), so every module
+// that imported them sees a company's changes.
+export const jobRoles = clone(DEFAULT_JOB_ROLES);
 export const JOB_ROLE_SLUGS = Object.keys(jobRoles);
+
+// Names a job role can never take: the legacy primary roles and the
+// pseudo-roles routeAccess and departmentsConfig use.
+export const RESERVED_ROLE_SLUGS = ['admin', 'accountant', 'employee', 'subcontractor', 'client', 'hmrc', 'auditor', 'none', 'public'];
+
+/**
+ * Rebuild `jobRoles` and `JOB_ROLE_SLUGS` from the defaults plus a company's
+ * stored changes. Each override is a complete definition
+ * ({ slug, custom, label, description, values, grants, disabled }), already
+ * validated by jobRoleConfigService. Built-in roles keep their code order;
+ * added ones follow in the order given.
+ * @param {Object[]} overrides
+ */
+export function applyJobRoleOverrides(overrides = []) {
+  const bySlug = new Map(overrides.map((o) => [o.slug, o]));
+  const next = {};
+  for (const [slug, def] of Object.entries(DEFAULT_JOB_ROLES)) {
+    const o = bySlug.get(slug);
+    next[slug] = o && !o.custom ? pick(o) : clone(def);
+  }
+  for (const o of overrides) {
+    if (o.custom && !DEFAULT_JOB_ROLES[o.slug]) next[o.slug] = { ...pick(o), custom: true };
+  }
+  for (const k of Object.keys(jobRoles)) delete jobRoles[k];
+  Object.assign(jobRoles, next);
+  JOB_ROLE_SLUGS.splice(0, JOB_ROLE_SLUGS.length, ...Object.keys(jobRoles));
+}
+
+function pick(o) {
+  const def = {
+    label: o.label,
+    description: o.description || '',
+    values: o.values,
+    grants: clone(o.grants || []),
+  };
+  if (o.disabled) def.disabled = true;
+  return def;
+}
 
 // A 'flag' role is compiled twice: `<slug>` without its values grants, and
 // `<slug>+values` with them. rolesOf() picks one per user from canSeeValues.
@@ -361,11 +415,12 @@ export function levelsUpTo(level) {
  */
 export function isJobRoleAvailable(slug) {
   const def = jobRoles[slug];
-  if (!def) return false;
+  if (!def || def.disabled) return false;
   return def.grants.every((g) => SCOPES.includes(g.scope || 'all'));
 }
 
 export default {
   LEVELS, LEVEL_OPS, SCOPES, PROJECT_SCOPE_FIELDS, PROJECT_SCOPE_MAX_LEVEL, PROJECT_SCOPE_ROUTES,
-  READ_ONLY_MODELS, groups, jobRoles, JOB_ROLE_SLUGS, VALUES_SUFFIX, baseRole, levelsUpTo, isJobRoleAvailable,
+  READ_ONLY_MODELS, groups, jobRoles, defaultJobRoles, JOB_ROLE_SLUGS, RESERVED_ROLE_SLUGS, VALUES_SUFFIX,
+  baseRole, levelsUpTo, isJobRoleAvailable, applyJobRoleOverrides,
 };

@@ -237,6 +237,7 @@ const routeAccess = {
   // rest, and longest-prefix matching would hide that.
   '/overview/admin':          ['admin'],
   '/admin/overviews':         ['admin'],
+  '/admin/job-roles':         ['admin'],
   '/overview/assignment':     ['admin'],
   '/overview/attendance':     ['admin'],
   '/overview/contract':       ['admin'],
@@ -386,6 +387,8 @@ const routeAccess = {
 // added, so departmentsConfig's own `roles` arrays are never mutated.
 function compileJobRoles() {
   const { groups, jobRoles, LEVEL_OPS, READ_ONLY_MODELS, levelsUpTo } = accessGroups;
+  // A turned-off job role compiles to nothing.
+  const active = Object.entries(jobRoles).filter(([slug]) => accessGroups.isJobRoleAvailable(slug));
   const routeKeys = Object.keys(routeAccess);
   const expandRoute = (key) => (key.endsWith('*')
     ? routeKeys.filter((k) => k.startsWith(key.slice(0, -1)))
@@ -399,7 +402,7 @@ function compileJobRoles() {
   // A 'flag' role compiles twice: without its values grants, and as
   // `<slug>+values` with them (see accessGroupsConfig VALUES_SUFFIX).
   const compiled = [];
-  for (const [slug, def] of Object.entries(jobRoles)) {
+  for (const [slug, def] of active) {
     if (roleModelAccess[slug] || ownershipFields[slug]) {
       throw new Error(`Job role "${slug}" collides with a hand-written role`);
     }
@@ -475,9 +478,32 @@ function compileJobRoles() {
     );
   }
 }
+// The hand-written tables as they stand before any job role is compiled in,
+// so recompileJobRoles() can start again from them.
+const BASE_ROUTE_ACCESS = Object.fromEntries(Object.entries(routeAccess)
+  .map(([k, v]) => [k, Array.isArray(v) ? [...v] : v]));
+const BASE_DEPARTMENT_ROLES = new Set(Object.keys(roleDepartments));
+const BASE_MODEL_ROLES = new Set(Object.keys(roleModelAccess));
+
 compileJobRoles();
 
 const JOB_ROLES = new Set(accessGroups.JOB_ROLE_SLUGS.filter(accessGroups.isJobRoleAvailable));
+
+/**
+ * Rebuild every job role's entries after accessGroups.applyJobRoleOverrides()
+ * (the role editor, phase 4). The tables are reset in place to their
+ * hand-written state and compiled again, so every module holding them sees
+ * the change on its next request. Throws if a definition doesn't compile;
+ * the caller puts the previous definitions back and calls this again.
+ */
+function recompileJobRoles() {
+  for (const k of Object.keys(roleDepartments)) if (!BASE_DEPARTMENT_ROLES.has(k)) delete roleDepartments[k];
+  for (const k of Object.keys(roleModelAccess)) if (!BASE_MODEL_ROLES.has(k)) delete roleModelAccess[k];
+  for (const [k, v] of Object.entries(BASE_ROUTE_ACCESS)) routeAccess[k] = Array.isArray(v) ? [...v] : v;
+  compileJobRoles();
+  JOB_ROLES.clear();
+  for (const slug of accessGroups.JOB_ROLE_SLUGS.filter(accessGroups.isJobRoleAvailable)) JOB_ROLES.add(slug);
+}
 
 /**
  * Every role a user holds, as compiled role names: the primary `role` plus
@@ -801,6 +827,7 @@ function getListableModels(role, customPerms) {
 }
 
 export default {
+  recompileJobRoles,
   roleDepartments,
   roleModelAccess,
   ownershipFields,
@@ -821,4 +848,4 @@ export default {
   JOB_ROLES,
 };
 
-export { roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels, rolesOf, jobRolesOf, canSeeValues, hasGroup, mergedModelAccess, JOB_ROLES };
+export { recompileJobRoles, roleDepartments, roleModelAccess, ownershipFields, routeAccess, getDepartmentsForRole, canAccess, canAccessRoute, matchRoutePattern, getOwnershipConfig, getAllowedRolesForRoute, canAccessDepartment, getListableModels, rolesOf, jobRolesOf, canSeeValues, hasGroup, mergedModelAccess, JOB_ROLES };

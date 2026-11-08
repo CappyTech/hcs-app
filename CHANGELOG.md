@@ -2,6 +2,22 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.99.0] - 2026-11-08
+
+### Added
+- Permission groups, phase 4: a job role editor at Admin → Job Roles (`/admin/job-roles`, admin only). Change any job role's name, description, money rule and the level it holds on each area (with own-sites scope and the money-bearing flag), turn a role off, reset a built-in role, or add your own job roles. Changes apply from everyone's next page.
+- `jobRoleConfig` (INTERNAL) stores each changed or added role; `jobRoleConfigService` validates, stores and applies them, loaded at startup. Changes go to the audit log.
+- Help: a Job Role Settings article, and the job roles article mentions the editor.
+
+### Changed
+- Job role definitions in code are now the defaults, rebuilt in place with a company's changes; the compiled permission tables are rebuilt on every change.
+- `user.roles` checks the slug format instead of a fixed list, since job roles can be added; assigning still saves only roles that are on.
+- The public Roles page shows the written notes for a job role only while it is as shipped.
+- Any job role given manage on the money areas falls under the two-person rule, as Director does.
+
+### Fixed
+- Bank reconciliation's security-log events (match confirmed, rejected or reversed, rules, statement imports, sign-off and reopen) were refused by the security event list and never stored; they are now accepted, as are the job role editor's.
+
 ## [6.98.0] - 2026-11-08
 
 ### Added

@@ -73,13 +73,14 @@ const helpContent = [
         steps: [
           'Your job roles are listed on your profile (/user/profile). Anything limited to the sites you work on is marked "(their sites)".',
           'Admins add or remove job roles on the user\'s edit page, in the Job roles card. Every change is recorded in the security log.',
+          'Admins can change what each job role opens, add new job roles or turn one off at Admin → Job Roles (/admin/job-roles), so the names and areas here may differ in your company.',
           'Menus, buttons and Help articles follow every role you hold, so new areas appear as soon as a job role is added. You may need to reload the page.',
         ],
         fields: [
           { name: 'Permission groups', required: '', description: 'Access is grouped by area of the business: Site Ops, Commercial, Finance, CIS, Payroll, HR, Fleet, Health & Safety, Documents, Website and System.' },
           { name: 'Levels', required: '', description: 'Each group is granted at a level. View lets you read, edit lets you create and change, approve lets you sign things off, and manage covers the sensitive actions.' },
           { name: 'Manage', required: '', description: 'Manage covers anything that writes to KashFlow, pays suppliers, signs off the bank, submits to HMRC or the pension provider, unlocks a payroll run, or repairs and deletes documents. Admins and Directors hold it.' },
-          { name: 'Two people', required: '', description: 'A Director needs a second person: you cannot send to KashFlow an invoice you entered, pay a purchase you entered, sign off a bank period where you confirmed matches, or submit a payroll run you locked. Someone else does that step.' },
+          { name: 'Two people', required: '', description: 'Any job role that manages money areas (Director, or another your admin set up) needs a second person: you cannot send to KashFlow an invoice you entered, pay a purchase you entered, sign off a bank period where you confirmed matches, or submit a payroll run you locked. Someone else does that step.' },
           { name: 'Can see values', required: '', description: 'Decides whether a Site Manager or Supervisor sees day rates, costs and purchase or project values. Most other job roles have a fixed setting: Director, Contracts Manager, Quantity Surveyor and Payroll / HR Officer always see values, while Office Manager, Health & Safety and Fleet never do.' },
         ],
         notes: [
@@ -1410,6 +1411,25 @@ const helpContent = [
           'A change that would break a page (a missing field, an unsupported comparison, a figure still in use) is refused with a message saying why.',
           'Filters can use relative dates ("within the last 30 days") but not fixed dates.',
           'Who may open the built-in pages is part of the app permissions and cannot be widened here. People still only see records their role allows.',
+        ],
+      },
+      {
+        id: 'job-role-settings',
+        title: 'Job Role Settings',
+        badge: 'Admin',
+        description: 'Admin → Job Roles (/admin/job-roles) controls what each job role opens. Your changes are kept on top of the built-in roles, so app updates still improve any role you have not changed, and Reset puts a built-in role back.',
+        steps: [
+          'Open a job role to change its name, description and whether it sees money (always, never, or only people with "Can see values" ticked).',
+          'For each area, choose No access or a level: sees, works on, approves or manages. Tick "Own sites only" to limit an area to the contracts that name the person as a site manager (read only). Tick "Money-bearing" for an area that should drop away for people who don\'t see money.',
+          'Save applies straight away: everyone holding the role gets the new access from their next page.',
+          'Add a job role by name. It starts turned off with no areas: give it its areas, tick On, save, then add it to people on their user page.',
+          'Turn a role off to take its access away from everyone who holds it without removing it from their accounts.',
+        ],
+        notes: [
+          'Manages on Finance, CIS, Payroll or Documents sends money and submissions out of the app. Anyone who isn\'t an admin or accountant still needs a second person for those steps.',
+          'System can be given at sees at most: users, settings and security stay with admins.',
+          'A job role you added can only be deleted once nobody holds it. Every change is recorded in the audit log.',
+          'The written notes on the public Roles page describe the built-in roles; once you change a role, the page lists only its areas.',
         ],
       },
       {

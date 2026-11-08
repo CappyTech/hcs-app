@@ -1,0 +1,54 @@
+<%#
+  Job roles (admin): every job role with the areas it opens and how many
+  people hold it, links to edit each, and a form to add one. Changes are kept
+  on top of the built-in roles (jobRoleConfigService).
+%>
+<%
+  const _badge = (cls, text) => `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${cls}">${text}</span>`;
+  const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+%>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-person-badge text-green-600" aria-hidden="true"></i> Job roles</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        A job role opens areas of the business at a level. Change the built-in ones to fit how your company works, or add your own; <em>Reset</em> puts a built-in role back.
+      </p>
+    </div>
+    <a href="/admin" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">← Admin</a>
+  </div>
+
+  <section class="space-y-3">
+    <% roles.forEach((r) => { %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="/admin/job-roles/<%= encodeURIComponent(r.slug) %>" class="font-semibold text-gray-900 dark:text-gray-100 hover:text-green-700 dark:hover:text-green-400"><%= r.label %></a>
+            <%- r.custom ? _badge('bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300', 'Added here') : '' %>
+            <%- r.changed ? _badge('bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', 'Changed') : '' %>
+            <%- r.disabled ? _badge('bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300', 'Off') : '' %>
+          </div>
+          <% if (r.description) { %><p class="text-sm text-gray-600 dark:text-gray-400 mt-1"><%= r.description %></p><% } %>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= r.areas.length ? r.areas.join(' · ') : 'No areas yet' %></p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+          <span class="text-xs text-gray-500 dark:text-gray-400"><%= r.holders %> <%= r.holders === 1 ? 'person' : 'people' %></span>
+          <a href="/admin/job-roles/<%= encodeURIComponent(r.slug) %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">Edit</a>
+        </div>
+      </div>
+    <% }) %>
+  </section>
+
+  <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-5 space-y-3">
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400">Add a job role</h2>
+    <form method="POST" action="/admin/job-roles" class="flex flex-col sm:flex-row gap-3 sm:items-end">
+      <%- include('../../partials/csrfHidden') %>
+      <label class="flex-1">
+        <span class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Name</span>
+        <input name="label" required maxlength="60" placeholder="e.g. Estimator" class="<%= _input %>">
+      </label>
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Add</button>
+    </form>
+    <p class="text-xs text-gray-500 dark:text-gray-400">A new job role starts turned off with no areas. Give it its areas, then turn it on and add it to people from their user page.</p>
+  </section>
+</div>
