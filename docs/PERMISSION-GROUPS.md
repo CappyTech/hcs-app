@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.97.0). Phases 4–5 are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0). Phases 4–5 are planned below.
 
 ## Why
 
@@ -326,7 +326,7 @@ All three decisions are made.
    has approved. Built in phase 3, because the Site Manager step needs project
    scope. Until then, approval is still the single admin step it is today. See
    "Two-stage week approval" in phase 3.
-3. **Self-approval.** *Decided (6.97.0): Directors hold manage, and a second
+3. **Self-approval.** *Decided (6.98.0): Directors hold manage, and a second
    person is always needed.* The Director job role holds **manage** on
    Finance, CIS, Payroll and Documents, so it can send money and submissions
    out of the app. `separationOfDutiesService` blocks it (never just logs)
