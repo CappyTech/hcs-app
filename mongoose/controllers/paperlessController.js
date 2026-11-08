@@ -13,6 +13,7 @@
 
 import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
+import sod from '../services/separationOfDutiesService.js';
 import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
 import { lacksAllTagsQuery } from '../config/paperlessTagsConfig.js';
 import logger from '../../services/loggerService.js';
@@ -835,8 +836,11 @@ export const sendDraftToKashflow = async (req, res, next) => {
 
     // Before claiming anything: only invoices go to KashFlow
     await mdb.connect();
-    const typed = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).select('documentType processingState excludedReason').lean();
-    const blocked = typed && sendBlockedMessage(typed);
+    const typed = await mdb.PAPERLESS.OcrDocument.findOne({ paperlessId }).select('documentType processingState excludedReason entry.savedBy').lean();
+    // Separation of duties: whoever saved the entry can't send it (a dry run
+    // only previews, so it stays open to them)
+    const blocked = (typed && sendBlockedMessage(typed))
+      || (!dryRun && typed && sod.blocks(req.user, typed.entry?.savedBy) ? sod.MESSAGES.sendInvoice : null);
     if (blocked) {
       logger.warn(`[paperless] send refused for ${paperlessId}: ${blocked}`);
       req.flash('error', blocked);

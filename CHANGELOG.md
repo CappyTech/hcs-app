@@ -2,12 +2,25 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.98.0] - 2026-11-08
+
+### Added
+- Permission groups, decision 3 (self-approval): the Director job role now holds **manage** on Finance, CIS, Payroll and Documents, so a Director can send to KashFlow, pay suppliers in bulk, reconcile and sign off the bank, submit FPS, EPS and pension, post the payroll journal and unlock a run.
+- Separation of duties: a Director always needs a second person. They can't send to KashFlow an invoice they entered, pay a purchase they entered, sign off a bank period in which they confirmed a match, or submit or post a payroll run they locked. The admin and accountant roles are unaffected.
+- A payroll run records who locked it and when.
+
+### Changed
+- Bank and bulk payment routes are guarded by Finance manage (admin, accountant, Director) instead of the admin and accountant roles. Reversing a confirmation, reopening a signed period and auto-confirm rules stay admin-only.
+- Help: job roles, sending to KashFlow, bank reconciliation, bulk payments, payroll runs and HMRC submissions describe who can act and the two-person rule; the bank, payments and sending articles now show to Directors.
+- Roles page: the Admin "Sends to KashFlow and HMRC" note and the Director card describe Director manage and the second-person rule.
+
 ## [6.97.0] - 2026-11-08
 
 ### Added
 - Public Roles page at `/roles`: an article on each account role (admin, accountant, employee, subcontractor, client, HMRC, auditor, no role yet) and each job role, covering who holds it and how they use the app day to day. Employee, subcontractor and client each get a "What's in it for you" note.
 - Job-role cards take their label, description, areas and money visibility from `accessGroupsConfig`, so the page follows the grants with no extra edit; `rolesGuideConfig` holds only the prose.
 - Link from the signed-out home page, under the login form.
+
 ## [6.96.0] - 2026-11-07
 
 ### Added

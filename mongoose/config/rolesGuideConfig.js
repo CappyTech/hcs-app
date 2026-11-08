@@ -30,7 +30,7 @@ export const roles = [
     uses: [
       { title: 'Sets people up', text: 'Creates accounts, links each one to an employee, subcontractor or customer record, and gives them a role and any job roles. Every change to someone\'s access is written to the security log.' },
       { title: 'Approves the week', text: 'Checks attendance as it comes in, approves or rejects it, and works through the weekly view so payroll and CIS run on approved days only.' },
-      { title: 'Sends to KashFlow and HMRC', text: 'Anything that leaves the building — invoices sent to KashFlow, supplier payments, RTI and CIS submissions, pension files — is manage-level work that no job role holds, so the person entering data is not the person sending it.' },
+      { title: 'Sends to KashFlow and HMRC', text: 'Anything that leaves the building — invoices sent to KashFlow, supplier payments, RTI and CIS submissions, pension files — is manage-level work. Admin can do it alone; a Director can too, but never on something they entered, locked or confirmed themselves.' },
       { title: 'Keeps the lights on', text: 'Settings, integrations, background jobs, logs, maintenance mode and the audit trail all live under Admin.' },
     ],
     where: ['Admin', 'Every department dashboard', 'Create', 'Settings'],
@@ -139,6 +139,7 @@ export const jobRoles = {
   director: [
     { title: 'Sees the whole business', text: 'Every department dashboard and overview, with values, so they can see how jobs, money and people are tracking.' },
     { title: 'Signs things off', text: 'Approves across every business area — attendance, holidays, CIS, documents — without holding the keys to the system itself.' },
+    { title: 'Sends money out, with a second person', text: 'Can send invoices to KashFlow, pay suppliers, sign off the bank and submit payroll to HMRC and the pension provider, but not on anything they entered, locked or confirmed themselves: someone else does that step.' },
   ],
   contractsManager: [
     { title: 'Runs their jobs', text: 'Projects, quotes, contracts and the purchases booked against them, from award to final account.' },

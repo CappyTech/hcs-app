@@ -125,11 +125,10 @@ export const groups = {
         '/accountant', '/kashflow', '/overview/finance', '/overview/invoice',
         '/overview/purchase', '/overview/supplier', '/overview/customer',
       ],
-      // Bank reconciliation and bulk payments (which write real payments to
-      // KashFlow) stay with admin + accountant: 'manage' is held by no job
-      // role. Opening them to a job role waits on the separation-of-duties
-      // decision (docs/PERMISSION-GROUPS.md, open decision 3).
-      manage: ['/bank', '/payments'],
+      // Bank reconciliation and bulk payments write real payments to
+      // KashFlow. Director holds manage, under separation of duties
+      // (separationOfDutiesService; docs/PERMISSION-GROUPS.md, decision 3).
+      manage: ['/bank', '/payments', '/receipts/change-submission', '/purchase/change'],
     },
   },
   cis: {
@@ -236,18 +235,21 @@ export const groups = {
 export const jobRoles = {
   director: {
     label: 'Director',
-    description: 'Runs the business. Approves across every business area; sees but does not administer the system.',
+    description: 'Runs the business. Approves across every business area, and can send money and submissions out of the app (always with a second person); sees but does not administer the system.',
     values: 'always',
+    // Manage on the money groups (decision 3): bank, payments, HMRC and
+    // pension submissions, sending to KashFlow. separationOfDutiesService
+    // stops a Director sending out what they entered, locked or confirmed.
     grants: [
       { group: 'siteOps', level: 'approve' },
       { group: 'commercial', level: 'approve' },
-      { group: 'finance', level: 'approve' },
-      { group: 'cis', level: 'approve' },
-      { group: 'payroll', level: 'approve' },
+      { group: 'finance', level: 'manage' },
+      { group: 'cis', level: 'manage' },
+      { group: 'payroll', level: 'manage' },
       { group: 'hr', level: 'approve' },
       { group: 'fleet', level: 'approve' },
       { group: 'healthSafety', level: 'approve' },
-      { group: 'documents', level: 'approve' },
+      { group: 'documents', level: 'manage' },
       { group: 'website', level: 'approve' },
       { group: 'system', level: 'view' },
     ],

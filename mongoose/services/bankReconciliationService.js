@@ -259,7 +259,7 @@ export async function bulkConfirm(uuids, { user } = {}) {
 export async function createSignOff({
   accountId, accountName = '', periodStart, periodEnd,
   openingBalance = 0, closingBalancePerStatement = null,
-  notes = '', force = false, user,
+  notes = '', force = false, user, separateDuties = false,
 } = {}) {
   const { BankMatch, BankSignOff } = models();
   if (!BankSignOff) throw new BankReconciliationError('bankSignOff model is not loaded', 503);
@@ -280,6 +280,13 @@ export async function createSignOff({
   const inPeriod = { accountId, 'bankLines.date': { $gte: start, $lte: end }, deletedAt: null };
   const confirmed = await BankMatch.find({ ...inPeriod, status: 'confirmed' }).lean();
   const outstanding = await BankMatch.countDocuments({ ...inPeriod, status: { $in: ['suggested'] } });
+
+  // Separation of duties (decision 3): a signer who confirmed any of the
+  // period's matches needs someone else to sign it off.
+  if (separateDuties && user?._id
+      && confirmed.some((m) => m.reviewedBy && String(m.reviewedBy) === String(user._id))) {
+    throw new BankReconciliationError('You confirmed matches in this period, so someone else signs it off.', 403);
+  }
 
   if (outstanding > 0 && !force) {
     throw new BankReconciliationError(

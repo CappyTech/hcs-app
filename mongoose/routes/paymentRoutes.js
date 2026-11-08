@@ -19,9 +19,10 @@ const router = express.Router();
  */
 
 // Finance department: admin and accountant (mirrors bankGuard).
+// Finance manage (Director) as well, under separationOfDutiesService.
 const financeGuard = [
   authService.ensureAuthenticated,
-  authService.ensureRoles('admin', 'accountant'),
+  authService.ensureGroup('finance', 'manage', 'admin', 'accountant'),
   authService.ensureDepartment('finance'),
 ];
 

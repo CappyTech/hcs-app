@@ -1,0 +1,95 @@
+import { describe, it, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import sod from '../mongoose/services/separationOfDutiesService.js';
+import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import { countEnteredBy } from '../mongoose/controllers/paymentController.js';
+
+const src = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+const director = { _id: 'u-dir', role: 'employee', roles: ['director'] };
+
+describe('separationOfDutiesService', () => {
+  it('applies to job roles, not to the legacy admin and accountant', () => {
+    assert.equal(sod.applies(director), true);
+    assert.equal(sod.applies({ _id: 'a', role: 'admin' }), false);
+    assert.equal(sod.applies({ _id: 'b', role: 'accountant', roles: ['director'] }), false);
+    assert.equal(sod.applies(null), false);
+  });
+
+  it('recognises the same person from an id, a user or a { userId } stamp', () => {
+    assert.equal(sod.isSamePerson(director, 'u-dir'), true);
+    assert.equal(sod.isSamePerson(director, { _id: 'u-dir' }), true);
+    assert.equal(sod.isSamePerson(director, { userId: 'u-dir', name: 'x' }), true);
+    assert.equal(sod.isSamePerson(director, 'u-other'), false);
+    assert.equal(sod.isSamePerson(director, null), false);
+    assert.equal(sod.isSamePerson({ role: 'employee' }, 'u-dir'), false);
+  });
+
+  it('blocks only when the rule applies and it was the same person', () => {
+    assert.equal(sod.blocks(director, { userId: 'u-dir' }), true);
+    assert.equal(sod.blocks(director, { userId: 'u-other' }), false);
+    assert.equal(sod.blocks({ _id: 'u-dir', role: 'admin' }, 'u-dir'), false);
+  });
+
+  it('payment message counts the invoices', () => {
+    assert.match(sod.MESSAGES.payPurchases(1), /1 of these invoice,.*pays it/);
+    assert.match(sod.MESSAGES.payPurchases(3), /3 of these invoices,.*pays them/);
+  });
+});
+
+describe('bulk payments: purchases the payer entered', () => {
+  const saved = mdb.PAPERLESS;
+  afterEach(() => { mdb.PAPERLESS = saved; });
+
+  it('counts OCR entries this user saved for the selected purchase numbers', async () => {
+    let query;
+    mdb.PAPERLESS = { OcrDocument: { countDocuments: async (q) => { query = q; return 2; } } };
+    assert.equal(await countEnteredBy(director, [101, '102']), 2);
+    assert.deepEqual(query.kashflowPurchaseNumber, { $in: [101, 102] });
+    assert.equal(query['entry.savedBy.userId'], 'u-dir');
+  });
+
+  it('skips the lookup for admin and accountant, and for an empty selection', async () => {
+    mdb.PAPERLESS = { OcrDocument: { countDocuments: async () => { throw new Error('should not query'); } } };
+    assert.equal(await countEnteredBy({ _id: 'a', role: 'admin' }, [1]), 0);
+    assert.equal(await countEnteredBy({ _id: 'b', role: 'accountant' }, [1]), 0);
+    assert.equal(await countEnteredBy(director, []), 0);
+  });
+});
+
+describe('wiring', () => {
+  it('payroll: lock stamps lockedBy, unlock clears it, and the three submit steps refuse the locker', () => {
+    const s = src('mongoose/controllers/payrollController.js');
+    assert.match(s, /run\.status = 'locked';\s*run\.lockedBy = req\.user\?\._id/);
+    assert.match(s, /run\.status = 'draft';\s*run\.lockedBy = null;/);
+    for (const fn of ['postJournal', 'submitFPS']) {
+      assert.match(s, new RegExp(`export const ${fn} = async[\\s\\S]{0,80}refuseIfLocker\\(req, res\\)`), fn);
+    }
+    assert.match(s, /export const submitPension[\s\S]*?sod\.blocks\(req\.user, run\.lockedBy\)[\s\S]*?submitViaAPI/);
+  });
+
+  it('payroll run model records who locked it', () => {
+    assert.match(src('mongoose/models/mongoose/INTERNAL/payrollRun.js'), /lockedBy: \{ type: mongoose\.Schema\.Types\.ObjectId, ref: 'user'/);
+  });
+
+  it('documents: sending refuses whoever saved the entry, except on a dry run', () => {
+    const s = src('mongoose/controllers/paperlessController.js');
+    assert.match(s, /select\('documentType processingState excludedReason entry\.savedBy'\)/);
+    assert.match(s, /!dryRun && typed && sod\.blocks\(req\.user, typed\.entry\?\.savedBy\) \? sod\.MESSAGES\.sendInvoice/);
+  });
+
+  it('bank: sign-off passes separateDuties for job roles', () => {
+    assert.match(src('mongoose/controllers/bankController.js'), /separateDuties: sod\.applies\(req\.user\)/);
+  });
+
+  it('payments: preview and confirm both check what the payer entered', () => {
+    const s = src('mongoose/controllers/paymentController.js');
+    assert.equal((s.match(/await countEnteredBy\(req\.user, items\.map/g) || []).length, 2);
+  });
+
+  it('bank and payments guards take Finance manage', () => {
+    for (const f of ['mongoose/routes/bankRoutes.js', 'mongoose/routes/paymentRoutes.js']) {
+      assert.match(src(f), /authService\.ensureGroup\('finance', 'manage', 'admin', 'accountant'\)/, f);
+    }
+  });
+});

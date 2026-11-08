@@ -40,8 +40,8 @@ const grabLimiter = rateLimit({
 //   approve — reopen a finished entry, link a document to a KashFlow purchase
 //   manage  — anything that writes to KashFlow (send, create a supplier),
 //             sends email (resend invoice), or repairs, re-ingests, unlinks
-//             or deletes. No job role holds manage, so these stay admin-only;
-//             data entry and sending to KashFlow stay with different people.
+//             or deletes. Admin and Director hold manage; whoever saved an
+//             entry can't send it themselves (separationOfDutiesService).
 const docs = (level) => [
   authService.ensureAuthenticated,
   authService.ensureGroup("documents", level),

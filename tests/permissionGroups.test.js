@@ -122,11 +122,31 @@ describe('compiled job roles', () => {
     assert.equal(rbac.canAccess(['siteManager'], 'attendance', 'u').allowed, false);
   });
 
-  it('no job role reaches bank, payments or the user admin', () => {
-    for (const key of ['/bank', '/payments', '/mail', '/admin/config', '/logs']) {
+  it('no job role reaches the user admin; only Director reaches bank and payments', () => {
+    for (const key of ['/mail', '/admin/config', '/logs']) {
       const allowed = rbac.routeAccess[key];
       for (const slug of accessGroups.JOB_ROLE_SLUGS) {
         assert.ok(!(Array.isArray(allowed) && allowed.includes(slug)), `${slug} on ${key}`);
+      }
+    }
+    for (const key of ['/bank', '/payments']) {
+      const allowed = rbac.routeAccess[key] || [];
+      for (const slug of accessGroups.JOB_ROLE_SLUGS) {
+        assert.equal(allowed.includes(slug), slug === 'director', `${slug} on ${key}`);
+      }
+    }
+  });
+
+  it('decision 3: Director holds manage on the money groups only', () => {
+    const user = { role: 'employee', roles: ['director'] };
+    for (const g of ['finance', 'cis', 'payroll', 'documents']) assert.ok(rbac.hasGroup(user, g, 'manage'), g);
+    for (const g of ['siteOps', 'commercial', 'hr', 'website', 'system']) assert.ok(!rbac.hasGroup(user, g, 'manage'), g);
+    for (const [slug, role] of Object.entries(accessGroups.jobRoles)) {
+      if (slug === 'director') continue;
+      for (const gr of role.grants) {
+        if (['finance', 'cis', 'payroll', 'documents'].includes(gr.group)) {
+          assert.notEqual(gr.level, 'manage', `${slug} ${gr.group}`);
+        }
       }
     }
   });
@@ -208,10 +228,13 @@ describe('authService with job roles', () => {
     assert.equal(await run(mw, cm, '/weekly'), undefined);
   });
 
-  it('bank stays closed to the Director', async () => {
-    const director = { role: 'employee', roles: ['director'] };
-    const err = await run(authService.ensureRoles('admin', 'accountant'), director, '/bank');
-    assert.equal(err?.statusCode, 403);
+  it('bank opens to the Director (Finance manage) and to no other job role', async () => {
+    const guard = authService.ensureGroup('finance', 'manage', 'admin', 'accountant');
+    assert.equal(await run(guard, { role: 'employee', roles: ['director'] }, '/bank'), undefined);
+    assert.equal(await run(guard, { role: 'accountant' }, '/bank'), undefined);
+    for (const slug of ['contractsManager', 'officeManager', 'payrollHr']) {
+      assert.equal((await run(guard, { role: 'employee', roles: [slug] }, '/bank'))?.statusCode, 403, slug);
+    }
   });
 
   it('primary roles are unaffected', async () => {
@@ -449,7 +472,7 @@ describe('ensureGroup guards agree with the global route check', async () => {
     assert.equal(await allowed('POST /paperless/ocr/:paperlessId/match', asJob('director')), true);
   });
 
-  it('Documents: nothing that writes to KashFlow, sends email, deletes or repairs is open to a job role', async () => {
+  it('Documents: what writes to KashFlow, sends email, deletes or repairs is open to Director only', async () => {
     const manage = routes.filter((r) => r.args[0] === 'documents' && r.args[1] === 'manage');
     assert.ok(manage.length >= 15, `only ${manage.length} manage routes`);
     for (const p of ['/paperless/ocr/:paperlessId/send', 'POST /paperless/suppliers', 'DELETE /paperless/ocr/:paperlessId', '/paperless/repair-drift']) {
@@ -457,7 +480,7 @@ describe('ensureGroup guards agree with the global route check', async () => {
     }
     for (const r of manage) {
       const spec = `${r.method.toUpperCase()} ${r.path}`;
-      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(spec, asJob(slug)), false, `${slug} reaches ${spec}`);
+      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(spec, asJob(slug)), slug === 'director', `${slug} on ${spec}`);
       assert.equal(await allowed(spec, { role: 'admin' }), true, `admin loses ${spec}`);
     }
   });
@@ -483,23 +506,23 @@ describe('ensureGroup guards agree with the global route check', async () => {
     assert.equal(await allowed('/payroll/runs', asJob('contractsManager')), false);
   });
 
-  it('Payroll: nothing that leaves the app or undoes a lock is open to a job role', async () => {
+  it('Payroll: what leaves the app or undoes a lock is open to Director only', async () => {
     for (const p of [
       '/payroll/run/:uuid/unlock', '/payroll/run/:uuid/post-journal', '/payroll/run/:uuid/fps/submit',
       '/payroll/hmrc/eps/:year/:month/submit', '/payroll/run/:uuid/pension/submit',
     ]) {
-      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(p, asJob(slug)), false, `${slug} reaches ${p}`);
+      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(p, asJob(slug)), slug === 'director', `${slug} on ${p}`);
       assert.equal(await allowed(p, { role: 'admin' }), true, `admin loses ${p}`);
     }
   });
 
-  it('CIS: returns and the dashboard need approve; assign and supplier change stay admin', async () => {
+  it('CIS: returns and the dashboard need approve; assign and supplier change need manage (Director)', async () => {
     assert.equal(await allowed('/CIS/returns/all/:year', asJob('director')), true);
     assert.equal(await allowed('/CIS/Dashboard/:year/:month', asJob('director')), true);
     assert.equal(await allowed('/CIS/returns/all/:year', asJob('contractsManager')), false, 'CIS view must not see returns');
     assert.equal(await allowed('/CIS/returns/all/:year', { role: 'hmrc' }), true);
     for (const p of ['/subcontractor/assign', '/supplier/change/:uuid']) {
-      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(p, asJob(slug)), false, `${slug} reaches ${p}`);
+      for (const slug of rbac.JOB_ROLES) assert.equal(await allowed(p, asJob(slug)), slug === 'director', `${slug} on ${p}`);
     }
   });
 });
@@ -522,10 +545,10 @@ describe('phase 2d', async () => {
     }
   });
 
-  it('receipt and purchase changes sit at Finance manage (admin only)', () => {
+  it('receipt and purchase changes sit at Finance manage (admin and Director)', () => {
     const s = src('mongoose/routes/submissionRoutes.js');
     assert.equal((s.match(/authService\.ensureGroup\("finance", "manage"\)/g) || []).length, 2);
-    for (const slug of rbac.JOB_ROLES) assert.equal(rbac.hasGroup(asJob(slug), 'finance', 'manage'), false, slug);
+    for (const slug of rbac.JOB_ROLES) assert.equal(rbac.hasGroup(asJob(slug), 'finance', 'manage'), slug === 'director', slug);
   });
 
   it('a holiday request is forced to the requester unless they hold HR edit', async () => {
