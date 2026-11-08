@@ -1,0 +1,114 @@
+<%#
+  Record a site induction (/inductions/record). Site Managers and Supervisors
+  see only their own sites and the people assigned to them; the controller
+  checks both again on save.
+%>
+<%
+  const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const _label = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1';
+  const _siteTitle = Object.fromEntries(contracts.map((c) => [String(c._id), c.title]));
+  const _fmt = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+%>
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-cone-striped text-orange-600" aria-hidden="true"></i> Record an induction</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <%= sitesOnly ? 'Your sites: the contracts that name you as a site manager.' : 'Every open contract.' %>
+        People are listed when they're assigned to a site in the last four weeks or the coming week.
+      </p>
+    </div>
+    <a href="/overview/healthSafety" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">← Health &amp; Safety</a>
+  </div>
+
+  <% if (!contracts.length) { %>
+    <p id="no-sites" class="text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-6">
+      <%= sitesOnly ? 'No open contract names you as a site manager, so there is nowhere to record an induction.' : 'There are no open contracts.' %>
+    </p>
+  <% } else { %>
+  <form method="POST" action="/inductions/record" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-5">
+    <%- include('../partials/csrfHidden') %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="<%= _label %>">Site</span>
+        <select name="contractId" required class="<%= _input %>">
+          <option value="">Choose a site…</option>
+          <% contracts.forEach((c) => { %><option value="<%= c._id %>"><%= c.title %></option><% }) %>
+        </select>
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">Person</span>
+        <select name="person" required class="<%= _input %>">
+          <option value="">Choose who was inducted…</option>
+          <% people.forEach((p) => { %>
+            <option value="<%= p.value %>"><%= p.label %><%= p.value.startsWith('s:') ? ' (subcontractor)' : '' %> — <%= p.contractIds.map((id) => _siteTitle[id]).filter(Boolean).join(', ') %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="block md:col-span-2">
+        <span class="<%= _label %>">Operative name <span class="font-normal">(only for someone a subcontractor sends)</span></span>
+        <input name="personName" maxlength="120" class="<%= _input %>">
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">Date of induction</span>
+        <input type="date" name="date" required value="<%= today %>" class="<%= _input %>">
+      </label>
+      <label class="block">
+        <span class="<%= _label %>">Re-induction due <span class="font-normal">(optional)</span></span>
+        <input type="date" name="expiryDate" class="<%= _input %>">
+      </label>
+    </div>
+
+    <fieldset>
+      <legend class="<%= _label %>">Covered</legend>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <% topics.forEach((t) => { %>
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input type="checkbox" name="topics" value="<%= t %>" class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"> <%= t %>
+          </label>
+        <% }) %>
+      </div>
+    </fieldset>
+
+    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+      <input type="checkbox" name="acknowledged" class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
+      They signed the induction sheet or confirmed they understood it
+    </label>
+
+    <label class="block">
+      <span class="<%= _label %>">Notes</span>
+      <textarea name="notes" rows="2" maxlength="2000" class="<%= _input %>"></textarea>
+    </label>
+
+    <div class="flex justify-end">
+      <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Record induction</button>
+    </div>
+  </form>
+  <% } %>
+
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+    <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Latest inductions<%= sitesOnly ? ' on your sites' : '' %></h2>
+    <% if (!recent.length) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">None yet.</p>
+    <% } else { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-gray-500 dark:text-gray-400 text-left">
+            <tr><th class="py-1 pr-3">Date</th><th class="py-1 pr-3">Site</th><th class="py-1 pr-3">Person</th><th class="py-1 pr-3">Signed</th><th class="py-1">Due again</th></tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
+            <% recent.forEach((r) => { %>
+              <tr>
+                <td class="py-1 pr-3 whitespace-nowrap"><%= _fmt(r.date) %></td>
+                <td class="py-1 pr-3"><%= r.site %></td>
+                <td class="py-1 pr-3"><%= r.who %></td>
+                <td class="py-1 pr-3"><%= r.acknowledged ? 'Yes' : 'No' %></td>
+                <td class="py-1 whitespace-nowrap"><%= _fmt(r.expiryDate) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>

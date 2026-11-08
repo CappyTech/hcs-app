@@ -152,10 +152,12 @@ export const jobRoles = {
   siteManager: [
     { title: 'Their sites only', text: 'Sees the contracts that name them as a site manager and are not yet Completed, with the project, quotes, location, assignments, attendance and vehicle deployments for each.' },
     { title: 'Records and approves the day', text: 'Records a day for the people on their sites with Record a day on the daily page, and gives the first, site approval. A contracts manager then gives the final approval before it counts for payroll.' },
+    { title: 'Inducts people onto site', text: 'Records site inductions for the people assigned to their sites, and gets a reminder when a re-induction is due.' },
   ],
   supervisor: [
     { title: 'Their gang', text: 'Sees the contracts that name them and the assignments and attendance on them, so they know who should be where.' },
     { title: 'Records the day', text: 'Records a day for the people on their sites from the daily page, ready for the site manager to approve.' },
+    { title: 'Inducts people onto site', text: 'Records site inductions for the people assigned to their sites.' },
   ],
   officeManager: [
     { title: 'Documents', text: 'Works the document queues: checks what has arrived and enters invoice details ready for an admin to send on.' },
@@ -167,7 +169,8 @@ export const jobRoles = {
   ],
   healthSafetyAdvisor: [
     { title: 'Training & cards', text: 'Keeps everyone\'s site cards, plant tickets, first aid and courses up to date, and gets a reminder 30 days before one runs out.' },
-    { title: 'Across every site', text: 'Reads attendance to see who has been on which site. Inductions, RAMS and the accident book are coming in later releases.' },
+    { title: 'Inductions on every site', text: 'Records and checks site inductions on any site, and sees which are unsigned or due again.' },
+    { title: 'Across every site', text: 'Reads attendance to see who has been on which site. RAMS and the accident book are coming in later releases.' },
   ],
   fleetManager: [
     { title: 'Vehicles and plant', text: 'Keeps every vehicle\'s MOT, insurance, tax and servicing up to date, with fuel and mileage logs and which job each van is deployed to.' },

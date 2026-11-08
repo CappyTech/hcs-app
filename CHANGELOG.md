@@ -2,6 +2,18 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.101.0] - 2026-11-08
+
+### Added
+- Health & Safety, phase 5b: Site Inductions (`induction`). Record who was inducted onto which site, what was covered, whether they signed, and when a re-induction is due. List at `/inductions`; Site inductions on the Health & Safety overview (recent, overdue, due soon, unsigned).
+- `/inductions/record`: Site Managers and Supervisors record inductions for the people assigned to their own sites; Health & Safety records them on any site. Linked from the daily attendance page.
+- Re-inductions due within 30 days get the same reminders as training, and the task also goes to the contract's site managers.
+- Help: a Site Inductions article.
+
+### Changed
+- Site Manager's Health & Safety access goes from view to edit on their own sites, and Supervisors get the same; employees and subcontractors can see their own inductions.
+- The Health & Safety reminder job covers inductions as well as training; its summary email links to the Health & Safety overview.
+
 ## [6.100.0] - 2026-11-08
 
 ### Added

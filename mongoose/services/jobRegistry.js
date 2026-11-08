@@ -313,7 +313,7 @@ function registerAll() {
   });
 
   scheduler.register('training-expiry', {
-    description: 'Create tasks (for admins and Health & Safety job roles; completing one completes all) and email alerts for cards and training expired or expiring within 30 days, and email the holder; close them once the date is updated.',
+    description: 'Create tasks (for admins and Health & Safety job roles, plus the site managers for a re-induction; completing one completes all) and email alerts for cards, training and site re-inductions expired or due within 30 days, and email the person; close them once the date is updated.',
     intervalMs: DAY,
     run: () => __healthSafetyComplianceService.checkExpiriesAndCreateTasks(),
   });
