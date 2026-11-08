@@ -1,0 +1,94 @@
+<%#
+  RAMS briefing (/rams/brief): pick an approved RAMS on one of your sites,
+  then tick who was briefed. The controller checks site and people on save.
+%>
+<%
+  const _input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const _label = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1';
+  const _site = Object.fromEntries(contracts.map((c) => [String(c._id), c.title]));
+  const _fmt = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+  const _name = (r) => (r.title + (r.reference ? ` (${r.reference})` : '') + ` v${r.version || 1}`);
+%>
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-clipboard2-check text-orange-600" aria-hidden="true"></i> RAMS briefing</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <%= sitesOnly ? 'Approved RAMS on your sites.' : 'Approved RAMS on every open contract.' %>
+        Record who was briefed and signed to say they understood it.
+      </p>
+    </div>
+    <a href="/overview/healthSafety" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">← Health &amp; Safety</a>
+  </div>
+
+  <% if (!ramsList.length) { %>
+    <p id="no-rams" class="text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-6">
+      <%= sitesOnly ? 'There is no approved RAMS on your sites yet. Health & Safety writes and approves them.' : 'There is no approved RAMS on an open contract yet.' %>
+    </p>
+  <% } else { %>
+    <form method="GET" action="/rams/brief" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 flex flex-col sm:flex-row gap-3 sm:items-end">
+      <label class="block flex-1">
+        <span class="<%= _label %>">RAMS</span>
+        <select name="rams" required class="<%= _input %>">
+          <option value="">Choose a RAMS…</option>
+          <% ramsList.forEach((r) => { %>
+            <option value="<%= r.uuid %>" <%= rams && rams.uuid === r.uuid ? 'selected' : '' %>><%= _site[String(r.contractId)] || 'Site' %> — <%= _name(r) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <button type="submit" class="text-sm bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition">Choose</button>
+    </form>
+
+    <% if (rams) { %>
+      <form method="POST" action="/rams/brief" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-5">
+        <%- include('../partials/csrfHidden') %>
+        <input type="hidden" name="rams" value="<%= rams.uuid %>">
+        <p class="text-sm text-gray-700 dark:text-gray-300"><strong><%= _name(rams) %></strong> on <%= _site[String(rams.contractId)] || 'this site' %></p>
+        <% if (!people.length) { %>
+          <p id="no-people" class="text-sm text-gray-500 dark:text-gray-400">Nobody is assigned to this site in the last four weeks or the coming week.</p>
+        <% } else { %>
+          <fieldset>
+            <legend class="<%= _label %>">Who was briefed</legend>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <% people.forEach((p) => { %>
+                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" name="people" value="<%= p.value %>" class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
+                  <%= p.label %><%= p.value.startsWith('s:') ? ' (subcontractor)' : '' %>
+                </label>
+              <% }) %>
+            </div>
+          </fieldset>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label class="block">
+              <span class="<%= _label %>">Date of briefing</span>
+              <input type="date" name="date" required value="<%= today %>" class="<%= _input %>">
+            </label>
+            <label class="block">
+              <span class="<%= _label %>">Notes</span>
+              <input name="notes" maxlength="1000" class="<%= _input %>">
+            </label>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Record briefing</button>
+          </div>
+        <% } %>
+      </form>
+
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+        <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Briefed on this RAMS</h2>
+        <% if (!briefed.length) { %>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Nobody yet.</p>
+        <% } else { %>
+          <ul class="text-sm text-gray-800 dark:text-gray-200 divide-y divide-gray-100 dark:divide-gray-800">
+            <% briefed.forEach((b) => { %>
+              <li class="py-1 flex justify-between gap-3">
+                <span><%= b.employeeId && b.employeeId.name ? b.employeeId.name : ([b.personName, b.subName].filter(Boolean).join(' — ') || (b.subcontractorId ? 'Subcontractor' : 'Unknown')) %><%= (b.ramsVersion || 1) !== (rams.version || 1) ? ` (v${b.ramsVersion || 1})` : '' %></span>
+                <span class="text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= _fmt(b.date) %></span>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+    <% } %>
+  <% } %>
+</div>

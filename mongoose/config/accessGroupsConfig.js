@@ -53,6 +53,8 @@ export const PROJECT_SCOPE_FIELDS = {
   quote:             { field: '_id', set: 'quoteIds' },
   purchase:          { field: 'ProjectNumber', set: 'projectNumbers' },
   induction:         { field: 'contractId', set: 'contractIds' },
+  rams:              { field: 'contractId', set: 'contractIds' },
+  ramsBriefing:      { field: 'contractId', set: 'contractIds' },
 };
 
 // Model operations a project-scoped grant gives through the generic CRUD
@@ -70,8 +72,9 @@ export const PROJECT_SCOPE_MAX_LEVEL = 'view';
 // overviews and department dashboards show whole-set figures, so they're
 // left out. (/attendance/:uuid/approve, /reject, /inline and PATCH match no
 // routeAccess key, so their ensureGroup guard decides alone.)
-// /inductions/record offers and accepts only the viewer's contracts.
-export const PROJECT_SCOPE_ROUTES = new Set(['/daily', '/attendance/bulk-approve', '/inductions/record']);
+// /inductions/record and /rams/brief offer and accept only the viewer's
+// contracts.
+export const PROJECT_SCOPE_ROUTES = new Set(['/daily', '/attendance/bulk-approve', '/inductions/record', '/rams/brief']);
 
 // Models no group may write through the generic CRUD routes, whatever the
 // level: the REST namespace is written by the sync adapter alone, and the
@@ -186,12 +189,12 @@ export const groups = {
     label: 'Health & Safety',
     // Phase 5 adds the records one at a time: training & cards (5a), then
     // inductions, RAMS and the accident book.
-    description: 'Training & cards and site inductions; later RAMS and the accident book.',
+    description: 'Training & cards, site inductions, and RAMS with their briefings; later the accident book.',
     departments: [],
-    models: ['trainingRecord', 'induction'],
+    models: ['trainingRecord', 'induction', 'rams', 'ramsBriefing'],
     routes: {
-      view: ['/overview/healthSafety', '/overview/trainingRecord', '/overview/induction'],
-      edit: ['/inductions/record'],
+      view: ['/overview/healthSafety', '/overview/trainingRecord', '/overview/induction', '/overview/rams', '/overview/ramsBriefing'],
+      edit: ['/inductions/record', '/rams/brief'],
     },
   },
   documents: {

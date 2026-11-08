@@ -816,6 +816,39 @@ export default {
       subcontractor: 'subcontractorId',
     },
   },
+  rams: {
+    readOnly: ['uuid', 'createdAt'],
+    validators: {
+      approvedDate: value => !value || !isNaN(Date.parse(value)),
+      reviewDate: value => !value || !isNaN(Date.parse(value)),
+      version: value => value == null || value === '' || (Number.isInteger(Number(value)) && Number(value) >= 1),
+    },
+    // No middleware: the RBAC matrix decides. Health & Safety writes and
+    // approves; Site Managers and Supervisors read their sites' RAMS.
+  },
+  ramsBriefing: {
+    readOnly: ['uuid', 'createdAt'],
+    validators: {
+      date: value => !isNaN(Date.parse(value)),
+    },
+    xorGroups: [
+      ['employeeId', 'subcontractorId']
+    ],
+    referenceFilters: {
+      employeeId: { status: 'active' },
+      subcontractorId: cisSupplierQuery()
+    },
+    // The generic list route defaults to admin + job-role grants, so a plain
+    // employee or subcontractor account needs naming here to list its own
+    // (the list and read handlers scope them to their own records).
+    middleware: {
+      read: ['ensureRoles:admin,employee,subcontractor'],
+    },
+    ownershipFields: {
+      employee: 'employeeId',
+      subcontractor: 'subcontractorId',
+    },
+  },
   induction: {
     readOnly: ['uuid', 'createdAt'],
     validators: {
@@ -829,9 +862,15 @@ export default {
       employeeId: { status: 'active' },
       subcontractorId: cisSupplierQuery()
     },
-    // No middleware: the RBAC matrix decides. Site Managers and Supervisors
-    // (project scope) read their sites' inductions here and record them on
-    // /inductions/record, which checks the contract.
+    // Create, update and delete: the RBAC matrix decides. Site Managers and
+    // Supervisors (project scope) read their sites' inductions here and
+    // record them on /inductions/record, which checks the contract.
+    // The generic list route defaults to admin + job-role grants, so a plain
+    // employee or subcontractor account needs naming here to list its own
+    // (the list and read handlers scope them to their own records).
+    middleware: {
+      read: ['ensureRoles:admin,employee,subcontractor'],
+    },
     ownershipFields: {
       employee: 'employeeId',
       subcontractor: 'subcontractorId',
@@ -851,8 +890,14 @@ export default {
       employeeId: { status: 'active' },
       subcontractorId: cisSupplierQuery()
     },
-    // No middleware: the RBAC matrix decides (Health & Safety at edit writes;
-    // employees and subcontractors read their own).
+    // Create, update and delete: the RBAC matrix decides (Health & Safety at
+    // edit writes).
+    // The generic list route defaults to admin + job-role grants, so a plain
+    // employee or subcontractor account needs naming here to list its own
+    // (the list and read handlers scope them to their own records).
+    middleware: {
+      read: ['ensureRoles:admin,employee,subcontractor'],
+    },
     ownershipFields: {
       employee: 'employeeId',
       subcontractor: 'subcontractorId',

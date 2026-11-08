@@ -99,6 +99,7 @@ const roleModelAccess = {
     vehicleMileageLog:'r:own,l:own',
     trainingRecord:   'r:own,l:own',
     induction:        'r:own,l:own',
+    ramsBriefing:     'r:own,l:own',
   },
 
   subcontractor: {
@@ -110,6 +111,7 @@ const roleModelAccess = {
     vehicleMileageLog:'r:own,l:own',
     trainingRecord:   'r:own,l:own',
     induction:        'r:own,l:own',
+    ramsBriefing:     'r:own,l:own',
   },
 
   client: {
@@ -140,6 +142,7 @@ const ownershipFields = {
       vehicleMileageLog: 'employeeId',
       trainingRecord:    'employeeId',
       induction:         'employeeId',
+      ramsBriefing:      'employeeId',
     },
   },
   subcontractor: {
@@ -153,6 +156,7 @@ const ownershipFields = {
       vehicleMileageLog: 'subcontractorId',
       trainingRecord:    'subcontractorId',
       induction:         'subcontractorId',
+      ramsBriefing:      'subcontractorId',
     },
   },
   client: {
@@ -280,6 +284,9 @@ const routeAccess = {
   '/overview/trainingRecord': ['admin'],
   '/overview/induction':      ['admin'],
   '/inductions/record':       ['admin'],
+  '/overview/rams':           ['admin'],
+  '/overview/ramsBriefing':   ['admin'],
+  '/rams/brief':              ['admin'],
 
   // Subcontractor administration
   '/subcontractor/assign':['admin'],

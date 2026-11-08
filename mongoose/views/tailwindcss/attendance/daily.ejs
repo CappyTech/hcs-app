@@ -7,7 +7,9 @@
         Daily Attendance for <%= fmtDate(date, 'do MMMM yyyy') %>
       </h1>
       <% if (locals.canRecordInduction) { %>
-        <p class="text-right -mt-6 mb-4"><a id="record-induction-link" href="/inductions/record" class="text-sm text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-person-check" aria-hidden="true"></i> Record a site induction</a></p>
+        <p class="text-right -mt-6 mb-4"><a id="record-induction-link" href="/inductions/record" class="text-sm text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-person-check" aria-hidden="true"></i> Record a site induction</a>
+          <span class="text-gray-300 dark:text-gray-600 mx-1">·</span>
+          <a id="rams-brief-link" href="/rams/brief" class="text-sm text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-clipboard2-check" aria-hidden="true"></i> Record a RAMS briefing</a></p>
       <% } %>
       <%
         // Per-record buttons come from attendanceApprovalService (two-stage

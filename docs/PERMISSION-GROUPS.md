@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0); **phase 5a (training & cards) built** (6.100.0); **phase 5b (inductions) built** (6.101.0). Phases 5c–5d are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0); **phase 5a (training & cards) built** (6.100.0); **phase 5b (inductions) built** (6.101.0); **phase 5c (RAMS) built** (6.102.0). Phase 5d is planned below.
 
 ## Why
 
@@ -389,6 +389,26 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
      inductions); a re-induction task also goes to the contract's
      `siteManagers`. Each source closes its stale tasks only after its own
      clean scan.
+
+   **5c as built (6.102.0):** INTERNAL `rams` — site (contract), title,
+   reference, version, status (Draft / Approved / Superseded), scope of work,
+   hazards, controls, PPE, optional document link, prepared / approved by,
+   approved date (filled on approval), review date. INTERNAL `ramsBriefing` —
+   RAMS, its version and site (copied for scope), the person, date, briefed by.
+   - Both are project-scoped by `contractId`: site roles list and read their
+     sites' RAMS and briefings. Health & Safety writes and approves RAMS
+     through the generic pages (no separate approval workflow).
+   - Site roles record briefings on `/rams/brief` (`ramsController`, in
+     `PROJECT_SCOPE_ROUTES`): pick an approved RAMS on your sites, tick the
+     people assigned to that site (same window as inductions), save one
+     briefing each. Linked from `/daily` next to Record a site induction.
+   - Approved RAMS due for review join the reminder sources (task to H&S and
+     the site managers; no person to email).
+   - **Fixed:** the generic list route falls back to admin + job-role grants,
+     so plain employee and subcontractor accounts couldn't list their own
+     training records or inductions. `trainingRecord`, `induction` and
+     `ramsBriefing` now name them in `middleware.read`, as the fuel and
+     mileage logs do; the handlers scope them to their own records.
 
 ## Open decisions
 

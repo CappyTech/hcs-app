@@ -53,7 +53,7 @@ describe('training records access', () => {
   it('has list, CRUD and overview config', () => {
     assert.equal(listConfig.trainingRecord.listPath, '/trainingrecords');
     assert.deepEqual(crudConfig.trainingRecord.xorGroups, [['employeeId', 'subcontractorId']]);
-    assert.equal(crudConfig.trainingRecord.middleware, undefined);
+    assert.deepEqual(crudConfig.trainingRecord.middleware, { read: ['ensureRoles:admin,employee,subcontractor'] });
     const area = overviews.getArea('healthSafety');
     assert.ok(area.children.includes('trainingRecord'));
     assert.ok(overviews.getNode('trainingRecord'));
