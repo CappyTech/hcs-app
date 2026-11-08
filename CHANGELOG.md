@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.97.0] - 2026-11-08
+
+### Added
+- Public Roles page at `/roles`: an article on each account role (admin, accountant, employee, subcontractor, client, HMRC, auditor, no role yet) and each job role, covering who holds it and how they use the app day to day. Employee, subcontractor and client each get a "What's in it for you" note.
+- Job-role cards take their label, description, areas and money visibility from `accessGroupsConfig`, so the page follows the grants with no extra edit; `rolesGuideConfig` holds only the prose.
+- Link from the signed-out home page, under the login form.
 ## [6.96.0] - 2026-11-07
 
 ### Added

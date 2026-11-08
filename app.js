@@ -92,6 +92,7 @@ import __searchRoutes from './mongoose/routes/searchRoutes.js';
 import __payrollRoutes from './mongoose/routes/payrollRoutes.js';
 import __gdprRoutes from './mongoose/routes/gdprRoutes.js';
 import __legalRoutes from './mongoose/routes/legalRoutes.js';
+import __rolesGuideRoutes from './mongoose/routes/rolesGuideRoutes.js';
 import __companyDocsRoutes from './mongoose/routes/companyDocsRoutes.js';
 import __auditRoutes from './mongoose/routes/auditRoutes.js';
 import __mailRoutes from './mongoose/routes/mailRoutes.js';
@@ -644,6 +645,7 @@ const main = async () => {
     appRouter.use('/', __payrollRoutes);
     appRouter.use('/', __gdprRoutes);
     appRouter.use('/', __legalRoutes);
+    appRouter.use('/', __rolesGuideRoutes);
     appRouter.use('/', __companyDocsRoutes);
     appRouter.use('/', __auditRoutes);
     // Inbound mail filtering log. Reads NDJSON from the mailsiem collector's

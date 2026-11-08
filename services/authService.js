@@ -18,6 +18,9 @@ const PUBLIC_PATHS = new Set([
   "/auth/microsoft",
   "/auth/microsoft/callback",
   "/health",
+  // Public roles guide, linked from the signed-out home page. Read-only and
+  // carries no user or business data (rolesGuideRoutes).
+  "/roles",
   // Token-scoped unsubscribe. Has no browser session — it is authorised solely
   // by the per-recipient notificationToken and only ever changes that one
   // recipient's notification preferences (never a login). GET is read-only.
@@ -420,3 +423,4 @@ export { ensureAuthenticated, ensureRouteAccess, rolesRequiring2FA, roleRequirin
 // Exposed for tests only — a blanket "/resources/" entry here silently disables the
 // auth guard on the static mount, so it is worth asserting against.
 export const PUBLIC_PREFIXES_FOR_TEST = PUBLIC_PREFIXES;
+export const PUBLIC_PATHS_FOR_TEST = PUBLIC_PATHS;
