@@ -87,12 +87,13 @@ export default [
     path: '/overview/healthSafety',
     label: 'Health & Safety',
     icon: 'bi-cone-striped',
-    description: 'Training and cards, site inductions, RAMS and their briefings.',
-    children: ['trainingRecord', 'induction', 'rams', 'ramsBriefing'],
+    description: 'Training and cards, site inductions, RAMS and their briefings, and the accident book.',
+    children: ['trainingRecord', 'induction', 'rams', 'ramsBriefing', 'accidentReport'],
     // Shown only to those who can open the route (rolePermissionsConfig)
     actions: [
       { label: 'Record an induction', href: '/inductions/record', route: '/inductions/record', icon: 'bi-person-check' },
       { label: 'Record a RAMS briefing', href: '/rams/brief', route: '/rams/brief', icon: 'bi-clipboard2-check' },
+      { label: 'Report an accident', href: '/accident-report', icon: 'bi-bandaid' },
     ],
   },
   {

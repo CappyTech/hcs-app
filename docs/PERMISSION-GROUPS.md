@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0); **phase 5a (training & cards) built** (6.100.0); **phase 5b (inductions) built** (6.101.0); **phase 5c (RAMS) built** (6.102.0). Phase 5d is planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0); **phase 5a (training & cards) built** (6.100.0); **phase 5b (inductions) built** (6.101.0); **phase 5c (RAMS) built** (6.102.0); **phase 5d (accident book) built** (6.103.0) — phase 5 done.
 
 ## Why
 
@@ -409,6 +409,33 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
      training records or inductions. `trainingRecord`, `induction` and
      `ramsBriefing` now name them in `middleware.read`, as the fuel and
      mileage logs do; the handlers scope them to their own records.
+
+   **5d as built (6.103.0):** INTERNAL `accidentReport` — when, site and/or
+   place, kind (injury, near miss, dangerous occurrence, ill health, damage),
+   who was hurt (employee, subcontractor or a name), what happened, injury,
+   body part, first aid, treatment, witnesses, immediate action, reported by;
+   investigation: status (Open / Investigating / Closed), RIDDOR reportable
+   (yes / no / not decided), HSE reference and date, findings, actions.
+   - Health data, so it is in **no** group's `models`: a group grant at view
+     would read it. Access is by route only, in `accidentController`:
+     `/accident-report` and `/accident-report/mine` for anyone who works for
+     the company (admin, accountant, employee, subcontractor or any job
+     role); `/accidents` and `/accidents/:uuid` at Health & Safety approve
+     (routes `approve` in the group). The report pages are outside
+     `/accidents` because routeAccess matches by prefix. The generic CRUD
+     pages stay admin-only (no grant anywhere).
+   - The H&S Advisor goes from edit to **approve** so they can read the book;
+     Director already held approve. Contracts Manager (view) can't.
+   - The overview node uses `listRoute: '/accidents'`, so the area page shows
+     its card and counts only to those who can open the book.
+   - `auditPlugin` gains per-schema `auditRedact`: the health fields are
+     recorded as `[redacted]` in the audit trail (the change and who made it
+     still are), because System view (`/audit`) isn't the same people.
+     `accidentReport` joins the sensitive-read models, so opening an entry
+     is logged.
+   - New reports email book readers with no details, just a link. A
+     RIDDOR-reportable entry with no reported date becomes a reminder task
+     15 days after the incident, for book readers only, with no names.
 
 ## Open decisions
 

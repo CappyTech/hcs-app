@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.103.0] - 2026-11-08
+
+### Added
+- Health & Safety, phase 5d: the accident book (`accidentReport`). Anyone working for the company reports injuries, near misses, dangerous occurrences, ill health and damage at `/accident-report`, and sees a summary of their own reports at `/accident-report/mine`.
+- `/accidents`: the book itself, with filters, and each entry's investigation (status, findings, actions, RIDDOR decision, HSE reference and date). Admins and Health & Safety at Approves only.
+- New reports email Health & Safety with a link and no details. RIDDOR-reportable entries not yet reported get a reminder task 15 days after the incident, for book readers only.
+- Accident book on the Health & Safety overview (open, RIDDOR to report or undecided, recent, last year's injuries and near misses), shown only to those who can open the book.
+- Audit trail fields can be redacted per model (`auditRedact`); the accident book's health fields are recorded as `[redacted]`, and opening an entry is logged.
+- Help: an Accident Book article.
+
+### Changed
+- The Health & Safety Advisor holds Health & Safety at Approves (was Works on), so they can read and investigate the accident book.
+
 ## [6.102.0] - 2026-11-08
 
 ### Added

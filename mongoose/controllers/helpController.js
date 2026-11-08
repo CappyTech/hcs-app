@@ -723,6 +723,24 @@ const helpContent = [
           'Employees and subcontractors can see their own briefings.',
         ],
       },
+      {
+        id: 'accident-book',
+        title: 'Accident Book',
+        badge: 'Everyone / Health & Safety',
+        description: 'Report injuries, near misses, dangerous occurrences, ill health and damage. Anyone working for us can report; only Health & Safety and admins can read the reports.',
+        steps: [
+          'If someone is seriously hurt, call 999 first.',
+          'Go to /accident-report: there is a link at the top of the daily attendance page, and on the Health & Safety overview. Enter when and where it happened, what kind it was and who was hurt, describe what happened, and send it.',
+          'My reports (/accident-report/mine) lists what you have reported and its status. It doesn\'t show the details again.',
+          'Health & Safety: the accident book is at /accidents. Open an entry to record findings and actions, set its status, and decide whether it\'s RIDDOR-reportable. Once reported to HSE, add the reference and date.',
+        ],
+        notes: [
+          'Reports hold health data. They are read only by admins and job roles with Health & Safety at Approves (the Health & Safety Advisor, Director). Opening an entry is logged.',
+          'The audit log records who changed an entry and which fields, but not the health details themselves.',
+          'New reports email Health & Safety without any details, just a link.',
+          'A RIDDOR-reportable entry with no reported date creates a task 15 days after the incident. Deaths and specified injuries must be reported without delay.',
+        ],
+      },
     ],
   },
   // ─────────────────────────────────────────────────────────────────────────

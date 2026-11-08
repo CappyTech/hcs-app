@@ -1,0 +1,37 @@
+<%#
+  The accident reports the viewer made (/accident-report/mine): a summary
+  only. Full entries are in the accident book (Health & Safety).
+%>
+<%
+  const _fmt = (d) => (d ? new Date(d).toISOString().slice(0, 16).replace('T', ' ') : '');
+%>
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-bandaid text-red-600" aria-hidden="true"></i> My accident reports</h1>
+    <a href="/accident-report" class="text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition">Report an accident</a>
+  </div>
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
+    <% if (!rows.length) { %>
+      <p id="no-reports" class="text-sm text-gray-500 dark:text-gray-400">You haven't reported anything.</p>
+    <% } else { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-gray-500 dark:text-gray-400 text-left">
+            <tr><th class="py-1 pr-3">When</th><th class="py-1 pr-3">What</th><th class="py-1 pr-3">Where</th><th class="py-1">Status</th></tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
+            <% rows.forEach((r) => { %>
+              <tr>
+                <td class="py-1 pr-3 whitespace-nowrap"><%= _fmt(r.occurredAt) %></td>
+                <td class="py-1 pr-3"><%= r.category %></td>
+                <td class="py-1 pr-3"><%= [r.contractId && r.contractId.title, r.location].filter(Boolean).join(' — ') %></td>
+                <td class="py-1"><%= r.status %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">Health &amp; Safety look into each report. If something you reported changes, tell them directly.</p>
+  </div>
+</div>

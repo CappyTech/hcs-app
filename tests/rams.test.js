@@ -61,7 +61,7 @@ describe('RAMS access', () => {
 
   it('is on the Health & Safety overview', () => {
     const area = overviews.getArea('healthSafety');
-    assert.deepEqual(area.children, ['trainingRecord', 'induction', 'rams', 'ramsBriefing']);
+    assert.deepEqual(area.children, ['trainingRecord', 'induction', 'rams', 'ramsBriefing', 'accidentReport']);
     assert.ok(overviews.getNode('rams') && overviews.getNode('ramsBriefing'));
     assert.deepEqual(overviews.validate(), []);
   });

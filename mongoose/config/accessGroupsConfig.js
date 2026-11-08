@@ -189,12 +189,17 @@ export const groups = {
     label: 'Health & Safety',
     // Phase 5 adds the records one at a time: training & cards (5a), then
     // inductions, RAMS and the accident book.
-    description: 'Training & cards, site inductions, and RAMS with their briefings; later the accident book.',
+    description: 'Training & cards, site inductions, RAMS with their briefings, and the accident book.',
     departments: [],
+    // No accidentReport: injury details are health data, so the accident
+    // book isn't readable at view. It is reached only through its own routes,
+    // at approve (/accidents); reporting (/accident-report) is open to anyone
+    // on site.
     models: ['trainingRecord', 'induction', 'rams', 'ramsBriefing'],
     routes: {
       view: ['/overview/healthSafety', '/overview/trainingRecord', '/overview/induction', '/overview/rams', '/overview/ramsBriefing'],
       edit: ['/inductions/record', '/rams/brief'],
+      approve: ['/accidents', '/overview/accidentReport'],
     },
   },
   documents: {
@@ -341,7 +346,8 @@ const DEFAULT_JOB_ROLES = {
     description: 'RAMS, inductions, training and audits across every site.',
     values: 'never',
     grants: [
-      { group: 'healthSafety', level: 'edit' },
+      // approve: reads and investigates the accident book.
+      { group: 'healthSafety', level: 'approve' },
       { group: 'siteOps', level: 'view' },
     ],
   },

@@ -1,0 +1,59 @@
+<%#
+  The accident book (/accidents): admins and Health & Safety at approve.
+%>
+<%
+  const _input = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white';
+  const _fmt = (d) => (d ? new Date(d).toISOString().slice(0, 16).replace('T', ' ') : '');
+  const _riddor = (r) => (r.riddorReportable === true ? (r.riddorReportedDate ? 'Reported' : 'To report') : (r.riddorReportable === false ? 'No' : '—'));
+%>
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-journal-medical text-red-600" aria-hidden="true"></i> Accident book</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Health data: keep what you read here to yourself. Opening an entry is logged.</p>
+    </div>
+    <div class="flex gap-3">
+      <a href="/overview/accidentReport" class="text-sm text-green-700 dark:text-green-400 hover:underline">Overview</a>
+      <a href="/accident-report" class="text-sm text-green-700 dark:text-green-400 hover:underline">Report one</a>
+    </div>
+  </div>
+
+  <form method="GET" action="/accidents" class="flex flex-wrap gap-3 items-end">
+    <select name="status" aria-label="Status" class="<%= _input %>">
+      <option value="">Any status</option>
+      <% statuses.forEach((s) => { %><option value="<%= s %>" <%= filters.status === s ? 'selected' : '' %>><%= s %></option><% }) %>
+    </select>
+    <select name="category" aria-label="Kind" class="<%= _input %>">
+      <option value="">Any kind</option>
+      <% categories.forEach((c) => { %><option value="<%= c %>" <%= filters.category === c ? 'selected' : '' %>><%= c %></option><% }) %>
+    </select>
+    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+      <input type="checkbox" name="riddor" value="due" <%= filters.riddor ? 'checked' : '' %> class="rounded border-gray-300 text-green-600"> RIDDOR to report
+    </label>
+    <button type="submit" class="text-sm bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium">Filter</button>
+  </form>
+
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-x-auto">
+    <% if (!rows.length) { %>
+      <p id="no-entries" class="text-sm text-gray-500 dark:text-gray-400 p-6">No entries.</p>
+    <% } else { %>
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-left">
+          <tr><th class="px-3 py-2">When</th><th class="px-3 py-2">What</th><th class="px-3 py-2">Where</th><th class="px-3 py-2">Person</th><th class="px-3 py-2">Status</th><th class="px-3 py-2">RIDDOR</th></tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
+          <% rows.forEach((r) => { %>
+            <tr>
+              <td class="px-3 py-2 whitespace-nowrap"><a href="/accidents/<%= r.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= _fmt(r.occurredAt) %></a></td>
+              <td class="px-3 py-2"><%= r.category %></td>
+              <td class="px-3 py-2"><%= [r.contractId && r.contractId.title, r.location].filter(Boolean).join(' — ') %></td>
+              <td class="px-3 py-2"><%= (r.employeeId && r.employeeId.name) || r.personName || (r.subcontractorId ? 'Subcontractor' : '—') %></td>
+              <td class="px-3 py-2"><%= r.status %></td>
+              <td class="px-3 py-2"><%= _riddor(r) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+</div>
