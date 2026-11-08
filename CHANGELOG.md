@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.100.0] - 2026-11-08
+
+### Added
+- Health & Safety, phase 5a: Training & Cards. Record the site cards, plant tickets, first aid certificates and courses that employees and subcontractors hold (`trainingRecord`), with issue, expiry and checked dates. List at `/trainingrecords`; new Health & Safety overview area with expired, expiring and unchecked figures.
+- Daily `training-expiry` job: cards and training expired or expiring within 30 days create a task for admins and Health & Safety job roles (completing one completes all, closing itself once the date is updated), one summary email, and an email to the holder.
+- Help: a Health & Safety section with a Training & Cards article.
+
+### Changed
+- The Health & Safety permission group now covers training records: the Health & Safety Advisor records them, and employees and subcontractors can see their own.
+
 ## [6.99.0] - 2026-11-08
 
 ### Added

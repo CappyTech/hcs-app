@@ -8,6 +8,7 @@ import __gdprDeadlineService from './gdprDeadlineService.js';
 import __deletedItemsPurgeService from './deletedItemsPurgeService.js';
 import __holidayService from './holidayService.js';
 import __hrComplianceService from './hrComplianceService.js';
+import __healthSafetyComplianceService from './healthSafetyComplianceService.js';
 import __taskService from './taskService.js';
 import __taskReminderService from './taskReminderService.js';
 import __policyReviewReminderService from './policyReviewReminderService.js';
@@ -309,6 +310,12 @@ function registerAll() {
     description: 'Create tasks (one per admin, completing one completes all) and email alerts for employee contracts and right-to-work checks expired or expiring within 90 days; close them once the date is updated.',
     intervalMs: DAY,
     run: () => __hrComplianceService.checkExpiriesAndCreateTasks(),
+  });
+
+  scheduler.register('training-expiry', {
+    description: 'Create tasks (for admins and Health & Safety job roles; completing one completes all) and email alerts for cards and training expired or expiring within 30 days, and email the holder; close them once the date is updated.',
+    intervalMs: DAY,
+    run: () => __healthSafetyComplianceService.checkExpiriesAndCreateTasks(),
   });
 
   scheduler.register('recurring-tasks', {

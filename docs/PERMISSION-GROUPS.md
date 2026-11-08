@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0). Phase 5 is planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0); **phase 5a (training & cards) built** (6.100.0). Phases 5b–5d are planned below.
 
 ## Why
 
@@ -340,6 +340,32 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
    - The public Roles page shows the written day-to-day notes only while a
      role is as shipped.
 5. **Health & Safety module.** RAMS, inductions, training/cards, accident book.
+
+   **Decided (2026-11-08):** four PRs, one record each — 5a training & cards,
+   5b inductions, 5c RAMS, 5d accident book.
+   - Cards, training and inductions warn before they expire, like vehicles:
+     a daily job gives admins and Health & Safety job roles a task and a
+     summary email 30 days ahead, and emails the person.
+   - Site Managers and Supervisors record inductions and RAMS sign-offs on
+     their own sites (project scope); the H&S Advisor works on every site.
+   - The accident book holds health data (UK GDPR special category): full
+     entries are read by admins and Health & Safety at approve or above.
+     Anyone on site can report one and sees only their own report.
+
+   **5a as built (6.100.0):** INTERNAL `trainingRecord` — held by an employee
+   or a CIS subcontractor (not both), with an optional operative name for
+   someone a subcontractor firm sends; type from a fixed list (site cards,
+   plant tickets, SMSTS/SSSTS, first aid, common courses, Other), card number,
+   provider, issued, expiry and checked dates. Generic CRUD and list pages,
+   guarded by the RBAC matrix only: the Health & Safety group now holds the
+   model, so the H&S Advisor (edit) records them; employees and
+   subcontractors read their own (`r:own,l:own`). New overview area
+   `/overview/healthSafety` with the Training & cards node (expired, due in
+   30 days, unchecked). `healthSafetyComplianceService` (job
+   `training-expiry`, daily) mirrors `hrComplianceService`; reminder
+   recipients are admins plus users holding an on job role with the H&S area
+   at edit or above at all-sites scope. Training records aren't site records,
+   so the Site Manager's project-scoped H&S view gives nothing here yet.
 
 ## Open decisions
 

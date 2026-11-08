@@ -12,6 +12,7 @@ import policies from './nodes/policies.js';
 import subcontractor from './nodes/subcontractor.js';
 import user from './nodes/user.js';
 import weekly from './nodes/weekly.js';
+import healthSafety from './nodes/healthSafety.js';
 
 /**
  * Overview hierarchy registry.
@@ -36,7 +37,7 @@ import weekly from './nodes/weekly.js';
  * the merged state, so the rest of the app never knows which is which.
  * See docs/OVERVIEW-HIERARCHY.md.
  */
-const defaultNodes = [employee, attendance, task, ...leave, vehicle, ...fleetLogs, ...projects, ...finance, ...payroll, policies, subcontractor, user, weekly];
+const defaultNodes = [employee, attendance, task, ...leave, vehicle, ...fleetLogs, ...projects, ...finance, ...payroll, policies, subcontractor, user, weekly, ...healthSafety];
 
 // ── Merging ───────────────────────────────────────────────────────────────
 // Objects merge key by key; arrays and filters (`where`) are replaced whole;

@@ -166,7 +166,8 @@ export const jobRoles = {
     { title: 'People', text: 'Holidays and their approval, starters and leavers, absence.' },
   ],
   healthSafetyAdvisor: [
-    { title: 'Across every site', text: 'Reads attendance to see who has been on which site. RAMS, inductions and training records are coming in a later release.' },
+    { title: 'Training & cards', text: 'Keeps everyone\'s site cards, plant tickets, first aid and courses up to date, and gets a reminder 30 days before one runs out.' },
+    { title: 'Across every site', text: 'Reads attendance to see who has been on which site. Inductions, RAMS and the accident book are coming in later releases.' },
   ],
   fleetManager: [
     { title: 'Vehicles and plant', text: 'Keeps every vehicle\'s MOT, insurance, tax and servicing up to date, with fuel and mileage logs and which job each van is deployed to.' },

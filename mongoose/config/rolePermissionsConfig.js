@@ -97,6 +97,7 @@ const roleModelAccess = {
     vehicle:          'r:own,l:own',
     vehicleFuelLog:   'r:own,l:own',
     vehicleMileageLog:'r:own,l:own',
+    trainingRecord:   'r:own,l:own',
   },
 
   subcontractor: {
@@ -106,6 +107,7 @@ const roleModelAccess = {
     vehicle:          'r:own,l:own',
     vehicleFuelLog:   'r:own,l:own',
     vehicleMileageLog:'r:own,l:own',
+    trainingRecord:   'r:own,l:own',
   },
 
   client: {
@@ -134,6 +136,7 @@ const ownershipFields = {
       vehicle:           'employeeId',
       vehicleFuelLog:    'employeeId',
       vehicleMileageLog: 'employeeId',
+      trainingRecord:    'employeeId',
     },
   },
   subcontractor: {
@@ -145,6 +148,7 @@ const ownershipFields = {
       vehicle:           'subcontractorId',
       vehicleFuelLog:    'subcontractorId',
       vehicleMileageLog: 'subcontractorId',
+      trainingRecord:    'subcontractorId',
     },
   },
   client: {
@@ -268,6 +272,8 @@ const routeAccess = {
   '/overview/vehicleMileageLog': ['admin'],
   '/overview/weekly':         ['admin', 'accountant'], // same as /weekly-flow
   '/overview/vehicleService': ['admin'],
+  '/overview/healthSafety':   ['admin'],
+  '/overview/trainingRecord': ['admin'],
 
   // Subcontractor administration
   '/subcontractor/assign':['admin'],

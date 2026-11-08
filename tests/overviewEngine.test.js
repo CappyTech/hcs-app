@@ -354,7 +354,7 @@ describe('home tiles', () => {
     const tiles = engine.homeTiles(admin).map((t) => t.href);
     assert.deepStrictEqual(tiles, [
       '/overview/human', '/overview/fleet', '/overview/finance', '/overview/projects', '/overview/weekly', '/overview/subcontractors',
-      '/overview/payroll', '/overview/documents', '/overview/policies', '/overview/admin',
+      '/overview/payroll', '/overview/documents', '/overview/policies', '/overview/healthSafety', '/overview/admin',
     ]);
     assert.ok(!tiles.includes('/overview/holiday'));
   });

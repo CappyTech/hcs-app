@@ -182,10 +182,14 @@ export const groups = {
   },
   healthSafety: {
     label: 'Health & Safety',
-    description: 'RAMS, inductions, training records and the accident book. No models yet — a later phase adds them.',
+    // Phase 5 adds the records one at a time: training & cards (5a), then
+    // inductions, RAMS and the accident book.
+    description: 'Training & cards, and later inductions, RAMS and the accident book.',
     departments: [],
-    models: [],
-    routes: {},
+    models: ['trainingRecord'],
+    routes: {
+      view: ['/overview/healthSafety', '/overview/trainingRecord'],
+    },
   },
   documents: {
     label: 'Documents',
