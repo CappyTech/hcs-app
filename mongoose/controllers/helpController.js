@@ -651,6 +651,44 @@ const helpContent = [
     ],
   },
   // ─────────────────────────────────────────────────────────────────────────
+  //  HEALTH & SAFETY
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'health-safety',
+    title: 'Health & Safety',
+    icon: 'bi-cone-striped',
+    colorClass: 'text-orange-600 dark:text-orange-400',
+    bgClass: 'bg-orange-500',
+    borderClass: 'border-orange-500',
+    articles: [
+      {
+        id: 'training-records',
+        title: 'Training & Cards',
+        badge: 'Health & Safety',
+        description: 'Record the site cards, plant tickets, first aid certificates and courses that employees and subcontractors hold, so you can see what has run out before someone goes to site.',
+        steps: [
+          'Go to Overviews → Health & Safety → Training & cards, or navigate to /overview/trainingRecord.',
+          'Click Add training or a card.',
+          'Choose the employee or the subcontractor who holds it. For an operative a subcontractor sends, choose the subcontractor and type the operative\'s name.',
+          'Pick the type, and add the card number, issue and expiry dates.',
+          'Set Checked to the date you saw the card or checked it online.',
+        ],
+        fields: [
+          { name: 'Employee / Subcontractor', required: true, description: 'Who holds it: one or the other, not both.' },
+          { name: 'Operative', required: false, description: 'The name on the card, when a subcontractor firm sends someone who has no record of their own.' },
+          { name: 'Type', required: true, description: 'CSCS and other site cards, plant tickets (CPCS, NPORS, IPAF, PASMA), SMSTS/SSSTS, first aid, and common courses. Use Other with a detail for anything else.' },
+          { name: 'Expiry date', required: false, description: 'Leave empty for training that doesn\'t expire.' },
+          { name: 'Checked', required: false, description: 'When someone saw the card or certificate. Unchecked cards are counted on the overview.' },
+        ],
+        notes: [
+          'Every day the app looks for cards and training that have expired or expire within 30 days. Admins and anyone whose job role looks after Health & Safety get a task and one summary email; the task closes itself once the expiry date is updated.',
+          'The holder gets their own email too, if their account is linked to the employee or subcontractor record.',
+          'Employees and subcontractors can see their own training records.',
+        ],
+      },
+    ],
+  },
+  // ─────────────────────────────────────────────────────────────────────────
   //  FLEET
   // ─────────────────────────────────────────────────────────────────────────
   {

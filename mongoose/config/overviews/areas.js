@@ -83,6 +83,14 @@ export default [
     children: ['policyDocument'],
   },
   {
+    id: 'healthSafety',
+    path: '/overview/healthSafety',
+    label: 'Health & Safety',
+    icon: 'bi-cone-striped',
+    description: 'Training and cards, and when they run out.',
+    children: ['trainingRecord'],
+  },
+  {
     id: 'admin',
     path: '/overview/admin',
     label: 'Admin',

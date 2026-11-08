@@ -1798,6 +1798,45 @@ export default {
       { value: 'Commute', label: 'Commute' }
     ],
   },
+  trainingRecord: {
+    title: 'Training & Cards',
+    listPath: '/trainingrecords',
+    description: {
+      create: 'Record a site card, plant ticket, first aid certificate or course.',
+      manage: 'Training and cards held by employees and subcontractors, with expiry dates.',
+    },
+    linkField: 'type',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'notes', 'provider', 'issuedDate'],
+    fieldOrder: [
+      'type', 'title', 'employeeId', 'subcontractorId', 'personName',
+      'cardNumber', 'expiryDate', 'checkedDate',
+    ],
+    sortField: 'expiryDate',
+    sortOrder: 1,
+    labelOverrides: {
+      title: 'Detail',
+      employeeId: 'Employee',
+      subcontractorId: 'Subcontractor',
+      personName: 'Operative',
+      cardNumber: 'Card no.',
+      issuedDate: 'Issued',
+      expiryDate: 'Expires',
+      checkedDate: 'Checked',
+    },
+    fieldTransforms: {
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+      },
+    },
+  },
   vehicleService: {
     title: 'Service History',
     // Stated explicitly: `listPath` (tile) defaults to camelCase while the

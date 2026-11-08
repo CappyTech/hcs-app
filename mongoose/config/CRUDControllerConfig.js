@@ -816,6 +816,27 @@ export default {
       subcontractor: 'subcontractorId',
     },
   },
+  trainingRecord: {
+    readOnly: ['uuid', 'createdAt'],
+    validators: {
+      issuedDate: value => !value || !isNaN(Date.parse(value)),
+      expiryDate: value => !value || !isNaN(Date.parse(value)),
+      checkedDate: value => !value || !isNaN(Date.parse(value)),
+    },
+    xorGroups: [
+      ['employeeId', 'subcontractorId']
+    ],
+    referenceFilters: {
+      employeeId: { status: 'active' },
+      subcontractorId: cisSupplierQuery()
+    },
+    // No middleware: the RBAC matrix decides (Health & Safety at edit writes;
+    // employees and subcontractors read their own).
+    ownershipFields: {
+      employee: 'employeeId',
+      subcontractor: 'subcontractorId',
+    },
+  },
   vehicleMileageLog: {
     readOnly: ['uuid', 'createdAt', 'distance', 'claimAmount'],
     validators: {
