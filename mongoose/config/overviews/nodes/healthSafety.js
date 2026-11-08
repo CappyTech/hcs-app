@@ -1,8 +1,10 @@
 // Health & Safety records (phase 5). Training & cards: who holds what, and
-// what has run out or is about to. Expiry reminders come from
-// healthSafetyComplianceService; these figures show the same rows.
+// what has run out or is about to. Inductions: who was inducted onto which
+// site. Expiry reminders come from healthSafetyComplianceService; these
+// figures show the same rows.
 const employeeCol = { field: 'employeeId', label: 'Employee', ref: { model: 'employee', field: 'name' } };
 const subCol = { field: 'subcontractorId', label: 'Subcontractor', ref: { model: 'supplier', field: 'Name' } };
+const siteCol = { field: 'contractId', label: 'Site', ref: { model: 'contract', field: 'title' } };
 
 export default [
   {
@@ -44,6 +46,47 @@ export default [
           columns: [{ field: 'expiryDate', label: 'Expired', format: 'date' }, { field: 'type', label: 'Type' }, employeeCol, subCol, { field: 'personName', label: 'Operative' }] },
         { figure: 'dueSoon', sort: { expiryDate: 1 }, limit: 10,
           columns: [{ field: 'expiryDate', label: 'Expires', format: 'date' }, { field: 'type', label: 'Type' }, employeeCol, subCol, { field: 'personName', label: 'Operative' }] },
+      ],
+    },
+  },
+  {
+    id: 'induction',
+    model: 'induction',
+    label: { one: 'Induction', many: 'Site inductions' },
+    icon: 'bi-person-check',
+    description: 'Who has been inducted onto which site, and when they are due again.',
+    parents: ['healthSafety'],
+    overviewPath: '/overview/induction',
+    listPath: '/inductions',
+    list: {
+      columns: [
+        { field: 'date', label: 'Date' },
+        { field: 'contractId', label: 'Site' },
+        { field: 'employeeId', label: 'Employee' },
+        { field: 'subcontractorId', label: 'Subcontractor' },
+        { field: 'personName', label: 'Operative' },
+        { field: 'acknowledged', label: 'Signed?' },
+        { field: 'expiryDate', label: 'Due again' },
+      ],
+    },
+    actions: [{ label: 'Record an induction', href: '/inductions/record', route: '/inductions/record' }],
+    figures: {
+      all: { label: 'Inductions', where: {} },
+      last30: { label: 'Inducted in the last 30 days', where: { date: { $withinPastDays: 30 } } },
+      expired: { label: 'Re-induction overdue', severity: 'critical', where: { expiryDate: { $beforeNow: true } } },
+      dueSoon: { label: 'Re-induction due in 30 days', severity: 'warning', where: { expiryDate: { $withinNextDays: 30 } } },
+      unsigned: { label: 'Not signed', severity: 'warning', where: { acknowledged: false } },
+    },
+    summary: ['last30', 'expired', 'unsigned'],
+    overview: {
+      figures: ['all', 'last30', 'expired', 'dueSoon', 'unsigned'],
+      lists: [
+        { figure: 'last30', sort: { date: -1 }, limit: 10,
+          columns: [{ field: 'date', label: 'Date', format: 'date' }, siteCol, employeeCol, subCol, { field: 'personName', label: 'Operative' }] },
+        { figure: 'expired', sort: { expiryDate: 1 }, limit: 10,
+          columns: [{ field: 'expiryDate', label: 'Was due', format: 'date' }, siteCol, employeeCol, subCol, { field: 'personName', label: 'Operative' }] },
+        { figure: 'unsigned', sort: { date: -1 }, limit: 10,
+          columns: [{ field: 'date', label: 'Date', format: 'date' }, siteCol, employeeCol, subCol] },
       ],
     },
   },

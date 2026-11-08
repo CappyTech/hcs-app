@@ -1798,6 +1798,55 @@ export default {
       { value: 'Commute', label: 'Commute' }
     ],
   },
+  induction: {
+    title: 'Site Inductions',
+    listPath: '/inductions',
+    description: {
+      create: 'Record that someone was inducted onto a site.',
+      manage: 'Who has been inducted onto which site, and when a re-induction is due.',
+    },
+    linkField: 'date',
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', 'notes', 'topics'],
+    fieldOrder: [
+      'date', 'contractId', 'employeeId', 'subcontractorId', 'personName',
+      'acknowledged', 'expiryDate', 'inductedBy',
+    ],
+    sortField: 'date',
+    sortOrder: -1,
+    labelOverrides: {
+      contractId: 'Site',
+      employeeId: 'Employee',
+      subcontractorId: 'Subcontractor',
+      personName: 'Operative',
+      acknowledged: 'Signed?',
+      expiryDate: 'Due again',
+      inductedBy: 'Inducted by',
+    },
+    fieldTransforms: {
+      contractId: {
+        fromModel: 'contract',
+        matchField: '_id',
+        returnField: 'title',
+        linkTo: (matched) => `/contract/read/${matched.uuid}`
+      },
+      employeeId: {
+        fromModel: 'employee',
+        matchField: '_id',
+        returnField: 'name',
+        linkTo: (matched) => `/employee/read/${matched.uuid}`
+      },
+      subcontractorId: {
+        fromModel: 'supplier',
+        matchField: '_id',
+        returnField: 'Name',
+      },
+      inductedBy: {
+        fromModel: 'user',
+        matchField: '_id',
+        returnField: 'username',
+      },
+    },
+  },
   trainingRecord: {
     title: 'Training & Cards',
     listPath: '/trainingrecords',

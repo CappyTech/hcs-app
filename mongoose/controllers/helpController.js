@@ -686,6 +686,25 @@ const helpContent = [
           'Employees and subcontractors can see their own training records.',
         ],
       },
+      {
+        id: 'site-inductions',
+        title: 'Site Inductions',
+        badge: 'Site Manager / Health & Safety',
+        description: 'Record that someone was inducted onto a site: what was covered, whether they signed, and when they need inducting again.',
+        steps: [
+          'Site Managers and Supervisors: open the daily attendance page and click Record a site induction, or go to /inductions/record.',
+          'Choose the site and the person. Only your sites are listed, and only people assigned to them in the last four weeks or the coming week.',
+          'For an operative a subcontractor sends, choose the subcontractor and type the operative\'s name.',
+          'Set the date, tick what was covered, and tick Signed once they have signed the induction sheet or confirmed they understood it.',
+          'If the site needs re-inductions, set when the next one is due.',
+        ],
+        notes: [
+          'Health & Safety can record inductions on any site, from the same page or from Overviews → Health & Safety → Site inductions.',
+          'The overview counts inductions in the last 30 days, re-inductions overdue or due within 30 days, and inductions not yet signed.',
+          'A re-induction due within 30 days creates a task for admins, Health & Safety and the site\'s site managers, and emails the person if their account is linked.',
+          'Employees and subcontractors can see their own inductions.',
+        ],
+      },
     ],
   },
   // ─────────────────────────────────────────────────────────────────────────

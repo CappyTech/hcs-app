@@ -87,8 +87,10 @@ export default [
     path: '/overview/healthSafety',
     label: 'Health & Safety',
     icon: 'bi-cone-striped',
-    description: 'Training and cards, and when they run out.',
-    children: ['trainingRecord'],
+    description: 'Training and cards, site inductions, and when they run out.',
+    children: ['trainingRecord', 'induction'],
+    // Shown only to those who can open the route (rolePermissionsConfig)
+    actions: [{ label: 'Record an induction', href: '/inductions/record', route: '/inductions/record', icon: 'bi-person-check' }],
   },
   {
     id: 'admin',

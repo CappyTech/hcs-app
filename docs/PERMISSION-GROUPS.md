@@ -1,6 +1,6 @@
 # Permission groups and job roles
 
-Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0); **phase 5a (training & cards) built** (6.100.0). Phases 5b–5d are planned below.
+Status: **phase 1 built** (6.89.0); **phase 2a (Site Ops) built** (6.90.0); **phase 2b (Payroll, CIS) built** (6.91.0); **phase 2c (Documents, Website) built** (6.92.0); **phase 2d built** (6.94.0), which completes phase 2; **phase 3a (project scope) built** (6.95.0); **phase 3b (two-stage week approval) built** (6.96.0), which completes phase 3; **decision 3 (self-approval) decided and built** (6.98.0); **phase 4 (role editor) built** (6.99.0); **phase 5a (training & cards) built** (6.100.0); **phase 5b (inductions) built** (6.101.0). Phases 5c–5d are planned below.
 
 ## Why
 
@@ -366,6 +366,29 @@ Each phase is its own PR, merged before the next one starts (hcs-app is rebase-m
    recipients are admins plus users holding an on job role with the H&S area
    at edit or above at all-sites scope. Training records aren't site records,
    so the Site Manager's project-scoped H&S view gives nothing here yet.
+
+   **5b as built (6.101.0):** INTERNAL `induction` — contract (the site), the
+   person (employee or CIS subcontractor, optional operative name), date,
+   inducted by, topics covered (fixed list), signed, re-induction due, notes.
+   - `induction` is in `PROJECT_SCOPE_FIELDS` by `contractId`, so a
+     project-scoped H&S grant lists and reads its sites' inductions.
+   - Site Manager's H&S grant goes from view to **edit**, project-scoped; the
+     Supervisor gets the same grant (it had none).
+   - Project-scoped writes go through `/inductions/record`
+     (`inductionController`, in `PROJECT_SCOPE_ROUTES`): it offers only the
+     viewer's open contracts and the people assigned to them from four weeks
+     back to a week ahead, and checks both again on save. Admins and H&S on
+     every site see every open contract there, and use the generic pages too.
+     The daily attendance page links to it, because a project-scoped grant
+     doesn't open the H&S overviews.
+   - Employees and subcontractors read their own (`r:own,l:own`).
+   - Overview node Site inductions (last 30 days, re-induction overdue / due,
+     not signed) under the Health & Safety area, with a Record an induction
+     action.
+   - `healthSafetyComplianceService` now scans a list of sources (training,
+     inductions); a re-induction task also goes to the contract's
+     `siteManagers`. Each source closes its stale tasks only after its own
+     clean scan.
 
 ## Open decisions
 
