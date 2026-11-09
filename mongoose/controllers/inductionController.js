@@ -18,9 +18,7 @@ import { INDUCTION_TOPICS } from '../models/mongoose/INTERNAL/induction.js';
  */
 
 const view = path.join('tailwindcss', 'healthSafety', 'recordInduction');
-const DAY_MS = 24 * 60 * 60 * 1000;
-const PEOPLE_WINDOW_BACK = 28 * DAY_MS;
-const PEOPLE_WINDOW_AHEAD = 7 * DAY_MS;
+const { PEOPLE_WINDOW_BACK, PEOPLE_WINDOW_AHEAD } = projectScope;
 const BACK = '/inductions/record';
 
 export function parseYMD(s) {
