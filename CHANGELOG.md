@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.107.4] - 2026-11-11
+
+### Fixed
+- Site managers and "Nobody named" show in the default view of `/contracts`. 6.107.2 reordered the list config, but the overview columns set the order.
+
 ## [6.107.3] - 2026-11-11
 
 ### Fixed

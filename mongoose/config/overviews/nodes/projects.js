@@ -23,10 +23,11 @@ export default [
         { field: 'status', label: 'Current Status' },
         { field: 'startDate', label: 'Start Date' },
         { field: 'endDate', label: 'End Date' },
+        // Before the other plain fields: the rows layout shows only two of them.
+        { field: 'siteManagers', label: 'Site managers' },
         { field: 'location', label: 'Site or area' },
         { field: 'projectId', label: 'Project' },
         { field: 'locationId', label: 'Saved location' },
-        { field: 'siteManagers', label: 'Site managers' },
         { field: 'notes', label: 'Notes' },
       ],
     },
