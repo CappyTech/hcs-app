@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.107.0] - 2026-11-09
+
+### Added
+- Contract page: the site managers and supervisors named on it, and a Health & Safety panel (inductions, RAMS and briefings for that site, with links), shown to those who can read those records. Accident reports stay out of it.
+- Quote on the contract form.
+- `/contracts` shows site managers, with "Nobody named" on open contracts, and the contract overview has a figure for open contracts with no site manager.
+- List pages can be filtered to one record's items from a link (`type: 'ref'` filters); inductions, RAMS and briefings use it for one site.
+
+### Changed
+- New under Assignments on a contract page opens the form with that contract chosen.
+- Contract form: clearer labels ("Site or area", "Saved location", "Project"), a singular heading, and multi-line notes.
+- The site managers picker explains why it's empty and links to where job roles are set, and no longer offers +, which opened a form that can't set them.
+
+### Fixed
+- A contract's end date can no longer be before its start date.
+- Blank contract fields now clear on save. Before, a saved date, link or note couldn't be removed, and the last site manager couldn't be unticked, so they kept their access.
+- A failed form-level check on a generic create form re-rendered as an update form that posted to the wrong address.
 ## [6.106.1] - 2026-11-09
 
 ### Changed

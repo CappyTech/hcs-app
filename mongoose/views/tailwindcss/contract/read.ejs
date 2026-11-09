@@ -6,6 +6,9 @@
   const _location = (typeof location !== 'undefined') ? location : null;
   const _quote = (typeof quote !== 'undefined') ? quote : null;
   const _asgs = (typeof assignments !== 'undefined' && Array.isArray(assignments)) ? assignments : [];
+  const _managers = (typeof siteManagers !== 'undefined' && Array.isArray(siteManagers)) ? siteManagers : [];
+  const _safety = typeof safety !== 'undefined' ? safety : null;
+  const _siteQuery = `?f_contractId=${encodeURIComponent(item.uuid)}`;
   const _canUpdate = typeof canUpdate !== 'undefined' ? canUpdate : isAdmin;
 
   // Duration in days (inclusive) when both dates are present.
@@ -61,7 +64,7 @@
         <% } %>
         <% if (_location) { %>
         <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-          <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Location</div>
+          <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Saved location</div>
           <div class="text-sm font-medium"><a href="/location/read/<%= _location.uuid %>" class="text-green-600 dark:text-green-400 hover:underline"><%= _location.name %></a></div>
         </div>
         <% } %>
@@ -70,6 +73,20 @@
           <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Quote</div>
           <div class="text-sm font-medium"><a href="/quote/read/<%= _quote.uuid %>" class="text-green-600 dark:text-green-400 hover:underline"><%= _quote.label %></a></div>
         </div>
+        <% } %>
+      </div>
+
+      <!-- Site managers -->
+      <div id="contract-site-managers">
+        <h2 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1"><i class="bi bi-person-badge mr-1"></i>Site managers / supervisors</h2>
+        <% if (_managers.length) { %>
+          <p class="text-sm text-gray-800 dark:text-gray-200">
+            <% _managers.forEach((m, i) => { %><% if (isAdmin) { %><a href="/user/read/<%= m.uuid %>" class="text-green-600 dark:text-green-400 hover:underline"><%= m.username %></a><% } else { %><%= m.username %><% } %><%= i < _managers.length - 1 ? ', ' : '' %><% }) %>
+          </p>
+        <% } else if (_status !== 'Completed') { %>
+          <p class="text-sm text-amber-700 dark:text-amber-400">Nobody named. Site managers and supervisors can't see this contract until someone is.</p>
+        <% } else { %>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Nobody named.</p>
         <% } %>
       </div>
 
@@ -84,6 +101,48 @@
     </div>
   </div>
 
+  <% if (_safety) { %>
+  <!-- Health & Safety on this site -->
+  <div id="contract-safety" class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-amber-500 to-orange-400"></div>
+    <div class="p-6 sm:p-8 space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100"><i class="bi bi-cone-striped mr-2 text-amber-500"></i>Health &amp; Safety</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <% if (_safety.inductions) { %>
+          <a href="/inductions<%= _siteQuery %>" class="block px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:ring-2 hover:ring-green-500 transition">
+            <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Inductions</div>
+            <div class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= _safety.inductions.total %></div>
+            <div class="text-xs text-gray-500 dark:text-gray-400"><%= _safety.inductions.unsigned %> not signed · <%= _safety.inductions.due %> due again within 30 days</div>
+          </a>
+        <% } %>
+        <% if (_safety.rams) { %>
+          <a href="/rams<%= _siteQuery %>" class="block px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:ring-2 hover:ring-green-500 transition">
+            <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">RAMS</div>
+            <div class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= _safety.rams.total %></div>
+            <div class="text-xs text-gray-500 dark:text-gray-400"><%= _safety.rams.draft %> draft · <%= _safety.rams.reviewDue %> review due within 30 days</div>
+          </a>
+        <% } %>
+        <% if (_safety.briefings) { %>
+          <a href="/ramsbriefings<%= _siteQuery %>" class="block px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:ring-2 hover:ring-green-500 transition">
+            <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">RAMS briefings</div>
+            <div class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= _safety.briefings.total %></div>
+          </a>
+        <% } %>
+      </div>
+      <% if (_safety.rams && _safety.rams.rows.length) { %>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
+          <% _safety.rams.rows.forEach((r) => { %>
+            <li class="py-2 flex flex-wrap items-center justify-between gap-2">
+              <a href="/rams/read/<%= r.uuid %>" class="text-green-600 dark:text-green-400 hover:underline font-medium"><%= r.title %></a>
+              <span class="text-gray-500 dark:text-gray-400"><%= r.status %><% if (r.version) { %> · v<%= r.version %><% } %><% if (r.reviewDate) { %> · review <%= slimDateTime(r.reviewDate, ['displayFormat']) %><% } %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+
   <!-- Assignments under this contract -->
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
     <div class="h-1.5 bg-gradient-to-r from-blue-500 to-blue-400"></div>
@@ -91,7 +150,7 @@
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100"><i class="bi bi-calendar-week mr-2 text-blue-500"></i>Assignments<% if (_asgs.length) { %> <span class="text-sm font-normal text-gray-400">(<%= _asgs.length %>)</span><% } %></h2>
         <% if (isAuthenticated && _canUpdate) { %>
-          <a href="/assignment/create" class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition shadow-sm"><i class="bi bi-plus-lg"></i><span class="hidden sm:inline">New</span></a>
+          <a id="contract-new-assignment" href="/assignment/create?contractId=<%= encodeURIComponent(item.uuid) %>" class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition shadow-sm"><i class="bi bi-plus-lg"></i><span class="hidden sm:inline">New</span></a>
         <% } %>
       </div>
       <% if (_asgs.length) { %>

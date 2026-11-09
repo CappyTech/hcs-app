@@ -223,14 +223,43 @@ export default {
     }
   },
   contract: {
+    title: 'Contract',
     readOnly: ['uuid', 'createdAt'],
+    // The list hides quoteId; the form needs it, and hideFields also locks a field.
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    fieldOrder: ['title', 'status', 'startDate', 'endDate', 'location', 'locationId', 'projectId', 'quoteId', 'siteManagers', 'notes'],
     labelOverrides: {
+      location: 'Site or area',
+      locationId: 'Saved location',
+      projectId: 'Project',
+      quoteId: 'Quote',
       siteManagers: 'Site managers / supervisors',
     },
     // The picker offers only people holding a site role.
     referenceFilters: {
       siteManagers: { roles: { $in: ['siteManager', 'supervisor'] } },
     },
+    referenceLabelFormat: {
+      quoteId: (q) => [`Quote ${q.Number}`, q.CustomerName].filter(Boolean).join(' — '),
+    },
+    // Job roles can't be set on the create-user form, so + wouldn't help here.
+    refNoCreate: ['siteManagers'],
+    referenceEmpty: {
+      siteManagers: {
+        text: 'Nobody holds the Site Manager or Supervisor job role yet.',
+        href: '/users',
+        link: 'Give someone the job role on their user record.',
+      },
+    },
+    clearWhenBlank: {
+      siteManagers: [], locationId: null, projectId: null, quoteId: null,
+      startDate: null, endDate: null, notes: '',
+    },
+    multilineFields: ['notes'],
+    crossValidate: (body) => (
+      body.startDate && body.endDate && new Date(body.endDate) < new Date(body.startDate)
+        ? ['The end date is before the start date.'] : []
+    ),
     validators: {
       title: value => typeof value === 'string' && value.length >= 3,
       status: value => ['Planned', 'In Progress', 'Completed'].includes(value),
