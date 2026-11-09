@@ -1,3 +1,4 @@
+import { listPathFor } from '../services/listPathService.js';
 import path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
@@ -160,7 +161,9 @@ const extractSchema = (model, config = {}) => {
         field
           .replace(/([a-z])([A-Z])/g, "$1 $2")
           .replace(/_/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase()),
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+          // A link to a record reads as the record ("Project"), a stored id as "ID".
+          .replace(/ Id$/, path.options?.ref ? "" : " ID"),
       readOnly: SYSTEM_FIELDS.includes(field) || !!config.readOnly?.includes?.(field),
       ref:
         path.options?.ref?.toLowerCase() ||
@@ -561,6 +564,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
 
           res.render(viewPath, {
             title: `${config.title || baseName} Details`,
+            listPath: listPathFor(modelName),
             item,
             schema,
             basePath: modelName,
@@ -688,7 +692,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
             }
           }
           req.flash('success', `${baseName} created successfully.`);
-          res.redirect(`/${modelName}s`);
+          res.redirect(listPathFor(modelName));
         } catch (err) {
           if (err.name === 'ValidationError') {
             const errors = Object.values(err.errors).map(e => e.message);
@@ -866,7 +870,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
             }
           }
           req.flash('success', `${baseName} updated successfully.`);
-          res.redirect(`/${modelName}s`);
+          res.redirect(listPathFor(modelName));
         } catch (err) {
           logger.error(`[CRUDController] Error updating ${modelName}: ${err.message}`);
           req.flash('error', `Failed to update ${baseName.toLowerCase()}.`);
@@ -897,7 +901,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
                 schema,
                 referenceData,
                 basePath: modelName,
-                cancelUrl: `/${modelName}s`,
+                cancelUrl: listPathFor(modelName),
                 formAction: `/${modelName}/${item.uuid}/delete`,
                 listControllerConfig: listControllerConfig[modelName] || {},
                 config,
@@ -914,7 +918,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
         try {
           await Model.findOneAndDelete({ uuid: req.params.uuid });
           req.flash('success', `${baseName} deleted successfully.`);
-          res.redirect(`/${modelName}s`);
+          res.redirect(listPathFor(modelName));
         } catch (err) {
           logger.error(`[CRUDController] Error deleting ${modelName}: ${err.message}`);
           req.flash('error', `Failed to delete ${baseName.toLowerCase()}.`);

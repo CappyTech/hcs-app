@@ -83,11 +83,11 @@
       </div>
       <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center">
         <h4 class="text-lg font-semibold mb-2">Total Employee Hours Worked</h4>
-        <p class="text-4xl font-bold"><%= totalEmployeeHours || '0' %> hours</p>
+        <p class="text-4xl font-bold"><%= totalEmployeeHours || '0' %> hour<%= Number(totalEmployeeHours) === 1 ? '' : 's' %></p>
       </div>
       <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 text-center">
         <h4 class="text-lg font-semibold mb-2">Total Subcontractor Days Worked</h4>
-        <p class="text-4xl font-bold"><%= totalSubcontractorDays || '0' %> days</p>
+        <p class="text-4xl font-bold"><%= totalSubcontractorDays || '0' %> day<%= Number(totalSubcontractorDays) === 1 ? '' : 's' %></p>
       </div>
     </div>
   <% } %>
@@ -190,7 +190,7 @@
           <% fleetCompliance.forEach(v => { %>
             <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
               <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap font-medium">
-                <a href="/vehicle/read/<%= v._id %>" class="text-green-900 dark:text-green-400 hover:underline">
+                <a href="/vehicle/read/<%= v.uuid %>" class="text-green-900 dark:text-green-400 hover:underline">
                   <%= v.registrationNumber || '—' %>
                 </a>
               </td>

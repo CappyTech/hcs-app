@@ -8,6 +8,7 @@ import encryptionService from '../../services/encryptionService.js';
 import totpService from '../../services/totpService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import accessGroups from '../config/accessGroupsConfig.js';
+import { onlyPages } from '../../services/routeInventoryService.js';
 import crypto from 'crypto';
 import emailService from '../../services/emailService.js';
 import auditLog from '../../services/auditLogService.js';
@@ -62,14 +63,14 @@ export const getProfilePage = async (req, res, next) => {
       // Only real, navigable pages: drop parameterised patterns like
       // "/paperless/ocr/:paperlessId/draft" — they need an id, aren't standalone
       // pages, and rendered as broken links. Sorted for a tidy, scannable list.
-      customRoutes: Object.entries(rbac.routeAccess)
+      customRoutes: onlyPages(Object.entries(rbac.routeAccess)
         .filter(
           ([, roles]) =>
             roles === "*" || (Array.isArray(roles) && heldRoles.some((r) => roles.includes(r))),
         )
         .map(([route]) => route)
         .filter((route) => !route.includes(":"))
-        .sort(),
+        .sort(), req.app),
     };
 
     // Fetch last login time from the most recent session

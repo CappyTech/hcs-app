@@ -58,7 +58,8 @@ const generateHeaders = (firstDoc, config = {}, listName = null) => {
       key
         .replace(/([a-z])([A-Z])/g, "$1 $2")
         .replace(/_/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase()),
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+        .replace(/\bId\b/g, "ID"),
   }));
 };
 
@@ -71,6 +72,8 @@ export function applyEmptyLabels(row, transforms = {}) {
   }
   return row;
 }
+// "CostOfSale" -> "Cost Of Sale", for tabs built from stored values.
+export const spaced = (value) => String(value).replace(/([a-z])([A-Z])/g, "$1 $2");
 
 // CSV export for list views (?format=csv) — same columns/labels as the table
 function csvEscape(value) {
@@ -334,7 +337,7 @@ function countActiveFilters(req, filterConfigs) {
             .sort((a, b) => a.localeCompare(b));
           tabsValues = [
             { value: "all", label: "All" },
-            ...sorted.map((v) => ({ value: v, label: v })),
+            ...sorted.map((v) => ({ value: v, label: spaced(v) })),
           ];
           // Re-validate activeTab against the actual values
           if (
