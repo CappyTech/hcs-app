@@ -62,6 +62,16 @@ const generateHeaders = (firstDoc, config = {}, listName = null) => {
   }));
 };
 
+// fieldTransforms[field].emptyLabel(row): what to show when a transformed field is empty.
+export function applyEmptyLabels(row, transforms = {}) {
+  for (const [field, t] of Object.entries(transforms)) {
+    if (typeof t.emptyLabel !== 'function' || !(field in row)) continue;
+    const v = row[field];
+    if (v === null || v === undefined || v === '' || v === '—' || (Array.isArray(v) && !v.length)) row[field] = t.emptyLabel(row);
+  }
+  return row;
+}
+
 // CSV export for list views (?format=csv) — same columns/labels as the table
 function csvEscape(value) {
   if (value === null || value === undefined) return "";
@@ -87,11 +97,19 @@ function sendCsv(res, modelName, headers, rows) {
 }
 
 // Apply per-model filter params from req.query (f_FieldName, f_FieldName_from/to)
-function applyFilterParams(req, filterConfigs, mongoFilter) {
+export async function applyFilterParams(req, filterConfigs, mongoFilter) {
   for (const fc of filterConfigs) {
     const qkey = `f_${fc.field}`;
     let fcond = null;
-    if (fc.type === 'boolean') {
+    if (fc.type === 'ref') {
+      // A link from a record's page (no control in the filter panel). The URL
+      // carries the public uuid; an unknown one matches nothing.
+      const val = req.query[qkey];
+      if (typeof val === 'string' && val) {
+        const doc = await mdb.INTERNAL?.[fc.model]?.findOne({ uuid: val }).select('_id').lean();
+        fcond = { [fc.field]: { $in: doc ? [doc._id] : [] } };
+      }
+    } else if (fc.type === 'boolean') {
       const val = req.query[qkey];
       if (val === 'true') fcond = { [fc.field]: true };
       else if (val === 'false') fcond = { [fc.field]: false };
@@ -267,7 +285,7 @@ function countActiveFilters(req, filterConfigs) {
 
       // ── Per-model field filters ──
       const filterConfigs = config.filters || [];
-      mongoFilter = applyFilterParams(req, filterConfigs, mongoFilter);
+      mongoFilter = await applyFilterParams(req, filterConfigs, mongoFilter);
       const activeFilterCount = countActiveFilters(req, filterConfigs);
 
       // ── Overview hierarchy: ?view=node.figure narrows to that figure's rows
@@ -521,6 +539,7 @@ function countActiveFilters(req, filterConfigs) {
               }
             }
           }
+          applyEmptyLabels(row, transforms);
           if (Object.keys(links).length) row.__links = links;
           return row;
         });
@@ -673,7 +692,7 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
 
     // ── Per-model field filters ──
     const filterConfigs = config.filters || [];
-    mongoFilter = applyFilterParams(req, filterConfigs, mongoFilter);
+    mongoFilter = await applyFilterParams(req, filterConfigs, mongoFilter);
     const activeFilterCount = countActiveFilters(req, filterConfigs);
 
     // Overview hierarchy: ?view= and breadcrumbs (see the main handler)
@@ -869,7 +888,8 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
             }
           }
         }
-        if (Object.keys(links).length) row.__links = links;
+        applyEmptyLabels(row, transforms);
+          if (Object.keys(links).length) row.__links = links;
         return row;
       });
 

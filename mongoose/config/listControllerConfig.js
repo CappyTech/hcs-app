@@ -2,6 +2,7 @@ import rbac from './rolePermissionsConfig.js';
 import __path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
+import { siteSafety } from '../services/contractSiteSafetyService.js';
 
 /**
  * listControllerConfig.js
@@ -194,18 +195,19 @@ export default {
     labelOverrides: {
       uuid: 'Contract ID',
       title: 'Name',
-      location: 'Site Location',
+      location: 'Site or area',
       status: 'Current Status',
       startDate: 'Start Date',
       endDate: 'End Date',
       projectId: 'Project',
-      locationId: 'Location'
+      locationId: 'Saved location',
+      siteManagers: 'Site managers',
     },
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
       // quoteId — the originating KashFlow quote that generated this contract;
       // accessible via the contract detail view, not needed in the list
       'quoteId'],
-    fieldOrder: ['title', 'status', 'startDate', 'endDate', 'location', 'projectId', 'locationId', 'notes'],
+    fieldOrder: ['title', 'status', 'startDate', 'endDate', 'location', 'projectId', 'locationId', 'siteManagers', 'notes'],
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],
@@ -221,12 +223,19 @@ export default {
         matchField: '_id',
         returnField: 'name',
         linkTo: (matched) => `/location/read/${matched.uuid}`
-      }
+      },
+      siteManagers: {
+        fromModel: 'user',
+        matchField: '_id',
+        returnField: 'username',
+        // Site roles can't see an open contract until someone is named on it.
+        emptyLabel: (row) => (row.status === 'Completed' ? '' : 'Nobody named'),
+      },
     },
     // Streamlined detail view (replaces the generic stacked form-read) with a compact
     // header/meta grid plus a table of the assignments that belong to this contract.
     readView: __path.join('tailwindcss', 'contract', 'read'),
-    readLocals: async (item) => {
+    readLocals: async (item, req) => {
       const pick = (ref) =>
         mdb.REST?.[ref] || mdb.INTERNAL?.[ref] || mdb.PAPERLESS?.[ref] || mdb[ref];
       const Project = pick('project');
@@ -251,7 +260,13 @@ export default {
             .lean()
         : [];
 
+      const siteManagerDocs = item.siteManagers?.length && pick('user')
+        ? await pick('user').find({ _id: { $in: item.siteManagers } }).select('uuid username').sort({ username: 1 }).lean()
+        : [];
+
       return {
+        siteManagers: siteManagerDocs.map((u) => ({ uuid: u.uuid, username: u.username })),
+        safety: await siteSafety(req, item),
         project: projectDoc ? { name: projectDoc.Name || projectDoc.name, uuid: projectDoc.uuid } : null,
         location: locationDoc ? { name: locationDoc.name, uuid: locationDoc.uuid } : null,
         quote: quoteDoc ? { label: quoteDoc.Number || quoteDoc.Reference || 'Quote', uuid: quoteDoc.uuid } : null,
@@ -1801,6 +1816,7 @@ export default {
   rams: {
     title: 'RAMS',
     pathOverride: '/rams',
+    filters: [{ field: 'contractId', model: 'contract', label: 'site', type: 'ref' }],
     listPath: '/rams',
     description: {
       create: 'Write a risk assessment and method statement for work on a site.',
@@ -1841,6 +1857,7 @@ export default {
   ramsBriefing: {
     title: 'RAMS Briefings',
     listPath: '/ramsbriefings',
+    filters: [{ field: 'contractId', model: 'contract', label: 'site', type: 'ref' }],
     description: {
       create: 'Record that someone was briefed on a RAMS.',
       manage: 'Who has been briefed on which RAMS.',
@@ -1893,6 +1910,7 @@ export default {
   induction: {
     title: 'Site Inductions',
     listPath: '/inductions',
+    filters: [{ field: 'contractId', model: 'contract', label: 'site', type: 'ref' }],
     description: {
       create: 'Record that someone was inducted onto a site.',
       manage: 'Who has been inducted onto which site, and when a re-induction is due.',

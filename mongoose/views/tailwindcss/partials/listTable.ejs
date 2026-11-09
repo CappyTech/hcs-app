@@ -175,7 +175,7 @@
           Apply
         </button>
 
-        <% if (typeof filters !== 'undefined' && Array.isArray(filters) && filters.length > 0) { %>
+        <% if (typeof filters !== 'undefined' && Array.isArray(filters) && filters.some((f) => f.type !== 'ref')) { %>
           <button type="button" id="filter-toggle"
                   class="text-sm px-3 py-1.5 rounded-lg border transition inline-flex items-center gap-1.5
                          <%= (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) ? 'border-green-500 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:border-green-500 hover:text-green-700 dark:hover:text-green-400' %>">
@@ -188,7 +188,7 @@
         <% } %>
       </form>
 
-      <% if (typeof filters !== 'undefined' && Array.isArray(filters) && filters.length > 0) { %>
+      <% if (typeof filters !== 'undefined' && Array.isArray(filters) && filters.some((f) => f.type !== 'ref')) { %>
         <%
           const _selectCls = 'w-full text-sm border rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500';
           const _inputCls  = 'w-full text-sm border rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500';
@@ -207,7 +207,7 @@
           <% if (typeof listLayout !== 'undefined' && listLayout === 'rows') { %><input type="hidden" name="layout" value="rows"><% } %>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            <% filters.forEach(fc => { %>
+            <% filters.filter((f) => f.type !== 'ref').forEach(fc => { %>
               <% const _fqk = `f_${fc.field}`; %>
               <div class="flex flex-col gap-1">
                 <label class="text-xs font-medium text-gray-500 dark:text-gray-400"><%= fc.label %></label>
@@ -264,6 +264,11 @@
       </div>
     </div>
   </div>
+
+  <% const _oneOf = (typeof filters !== 'undefined' && Array.isArray(filters)) ? filters.find((f) => f.type === 'ref' && _rq[`f_${f.field}`]) : null; %>
+  <% if (_oneOf) { %>
+    <p id="ref-filter-note" class="mb-4 text-sm text-gray-500 dark:text-gray-400">Showing one <%= _oneOf.label %> only. <a href="?" class="font-medium text-green-600 dark:text-green-400 hover:underline">Show all</a></p>
+  <% } %>
 
   <!-- Tab Buttons -->
   <% if (Array.isArray(tabs) && tabs.length > 0) { %>

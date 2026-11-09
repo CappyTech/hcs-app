@@ -219,13 +219,34 @@ const fetchReferenceData = async (
     referenceData[key] = await refModel
       .find(filter)
       .select(
-        "uuid name Name InvoiceNumber Customer jobRef title username Number Status status Id address city postalCode registrationNumber make model",
+        "uuid name Name InvoiceNumber Customer CustomerName jobRef title username Number Status status Id address city postalCode registrationNumber make model",
       )
       .lean();
   }
 
   return referenceData;
 };
+
+/** Form-level checks: xorGroups, plus any cross-field rule the model's config has. */
+export function formErrors(config, body) {
+  return [
+    ...(config?.xorGroups ? validateXorGroups(body, config.xorGroups) : []),
+    ...(typeof config?.crossValidate === "function" ? config.crossValidate(body) || [] : []),
+  ];
+}
+
+/**
+ * Blank form fields are dropped so an update doesn't overwrite what it didn't
+ * mean to, which also means they can never be emptied. config.clearWhenBlank
+ * ({ field: emptyValue }) names the fields a blank should really clear.
+ * Unticking every box in a multi-picker posts nothing at all, so absent counts.
+ */
+export function applyClearWhenBlank(cleaned, config) {
+  for (const [field, empty] of Object.entries(config?.clearWhenBlank || {})) {
+    if (!(field in cleaned) || cleaned[field] === undefined) cleaned[field] = empty;
+  }
+  return cleaned;
+}
 
 function validateXorGroups(data, xorGroups) {
   const errors = [];
@@ -617,20 +638,20 @@ for (const namespace of ["REST", "INTERNAL"]) {
         }
 
         try {
-          if (config?.xorGroups) {
-            const xorErrors = validateXorGroups(req.body, config.xorGroups);
+          {
+            const xorErrors = formErrors(config, req.body);
             if (xorErrors.length > 0) {
               const schema = extractSchema(Model, config);
               const referenceData = await fetchReferenceData(schema, config);
 
               return res
                 .status(400)
-                .render(path.join("tailwindcss", "partials", "form-update"), {
+                .render(path.join("tailwindcss", "partials", "form-create"), {
                   title: `Create ${config.title || baseName}`,
                   formData: req.body,
                   schema,
                   referenceData,
-                  formAction: `/${modelName}/${req.params.uuid}`,
+                  formAction: `/${modelName}`,
                   basePath: modelName,
                   listControllerConfig: listControllerConfig[modelName] || {},
                   config,
@@ -740,8 +761,8 @@ for (const namespace of ["REST", "INTERNAL"]) {
         }
 
         try {
-          if (config?.xorGroups) {
-            const xorErrors = validateXorGroups(req.body, config.xorGroups);
+          {
+            const xorErrors = formErrors(config, req.body);
             if (xorErrors.length > 0) {
               const schema = extractSchema(Model, config);
               const referenceData = await fetchReferenceData(schema, config);
@@ -806,6 +827,8 @@ for (const namespace of ["REST", "INTERNAL"]) {
             // otherwise just use it as-is
             cleaned[key] = val;
           }
+
+          applyClearWhenBlank(cleaned, config);
 
           // 3) actually update, dropping any undefined keys
           // Capture the pre-update state when an afterUpdate hook wants to
