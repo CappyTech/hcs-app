@@ -193,7 +193,7 @@ export const groups = {
     // Phase 5 adds the records one at a time: training & cards (5a), then
     // inductions, RAMS and the accident book.
     description: 'Training & cards, site inductions, RAMS with their briefings, and the accident book.',
-    departments: [],
+    departments: ['health-safety'],
     // No accidentReport: injury details are health data, so the accident
     // book isn't readable at view. It is reached only through its own routes,
     // at approve (/accidents); reporting (/accident-report) is open to anyone

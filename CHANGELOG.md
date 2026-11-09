@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.105.0] - 2026-11-09
+
+### Added
+- Health & Safety in the navigation, opening the Health & Safety overview. Shown to admins and job roles holding Health & Safety on every site; Site Managers and Supervisors keep working from the daily attendance page. No change to what anyone can open.
+- Health & Safety on the signed-out home page's feature list. Companies that don't use it can hide it with the `safety` id in `PUBLIC_HOME_HIDDEN`.
+
 ## [6.104.0] - 2026-11-09
 
 ### Added

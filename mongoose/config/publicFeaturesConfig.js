@@ -48,6 +48,7 @@ export default [
       { id: 'projects', departments: ['management'], icon: 'bi-clipboard-check', title: 'Projects', text: 'Contracts, weekly assignments and project financial checks.' },
       { id: 'tasks', departments: ['human-resources'], icon: 'bi-list-check', title: 'Tasks', text: 'Personal and shared tasks with due dates, recurring tasks and automatic reminders.' },
       { id: 'fleet', departments: ['maintenance'], icon: 'bi-truck', title: 'Fleet', text: 'Vehicles, MOT, insurance and tax dates, servicing, fuel and mileage logs.' },
+      { id: 'safety', departments: ['health-safety'], icon: 'bi-cone-striped', title: 'Health & Safety', text: 'Training and site cards with expiry reminders, site inductions, RAMS and briefings, and a private accident book.' },
       { id: 'documents', departments: ['documents'], icon: 'bi-file-earmark-text', title: 'Documents', text: 'Invoices and statements read automatically, checked, then sent to the accounts.' },
       { id: 'policies', departments: ['documents'], icon: 'bi-journal-text', title: 'Policies', text: 'Company policies, letterhead and review dates in one place.' },
     ],
