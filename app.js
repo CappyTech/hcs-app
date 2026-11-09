@@ -85,6 +85,7 @@ import __accountantRoutes from './mongoose/routes/accountantRoutes.js';
 import __overviewRoutes from './mongoose/routes/overviewRoutes.js';
 import __overviewEditorRoutes from './mongoose/routes/overviewEditorRoutes.js';
 import __jobRoleEditorRoutes from './mongoose/routes/jobRoleEditorRoutes.js';
+import __dataCheckRoutes from './mongoose/routes/dataCheckRoutes.js';
 import __inductionRoutes from './mongoose/routes/inductionRoutes.js';
 import __ramsRoutes from './mongoose/routes/ramsRoutes.js';
 import __accidentRoutes from './mongoose/routes/accidentRoutes.js';
@@ -652,6 +653,7 @@ const main = async () => {
     appRouter.use('/', __overviewRoutes);
     appRouter.use('/', __overviewEditorRoutes);
     appRouter.use('/', __jobRoleEditorRoutes);
+    appRouter.use('/', __dataCheckRoutes);
     appRouter.use('/', __inductionRoutes);
     appRouter.use('/', __ramsRoutes);
     appRouter.use('/', __accidentRoutes);
