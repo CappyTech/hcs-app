@@ -26,6 +26,7 @@ import CRUDControllerConfig from '../config/CRUDControllerConfig.js';
 import listControllerConfig from '../config/listControllerConfig.js';
 import { scopeQuery as realScopeQuery } from '../../services/dataScopingService.js';
 import realLogger from '../../services/loggerService.js';
+import { listPages, matchPages } from './pageSearchService.js';
 
 export const MIN_QUERY_LENGTH = 2;
 export const MAX_QUERY_LENGTH = 100;
@@ -167,6 +168,7 @@ export function createSearch({
   logger = realLogger,
   entities = ENTITIES,
   middlewareFor = readMiddleware,
+  pages = () => [],
 } = {}) {
   /**
    * Which entities this request may search, with their ownership filters.
@@ -229,6 +231,15 @@ export function createSearch({
     }));
 
     const groups = [];
+    // Places in the app, ahead of the records. Not part of a one-type search.
+    if (!type) {
+      try {
+        const items = matchPages(pages(req), q);
+        if (items.length) groups.push({ key: 'page', label: 'Pages', items, more: false });
+      } catch (err) {
+        logger.warn(`[search] pages failed: ${err.message}`);
+      }
+    }
     results.forEach((r, i) => {
       if (r.status === 'fulfilled') { if (r.value) groups.push(r.value); return; }
       logger.warn(`[search] ${targets[i].entity.key} failed: ${r.reason && r.reason.message}`);
@@ -239,7 +250,7 @@ export function createSearch({
   return { search, allowedEntities };
 }
 
-const instance = createSearch();
+const instance = createSearch({ pages: listPages });
 export const search = instance.search;
 export const allowedEntities = instance.allowedEntities;
 

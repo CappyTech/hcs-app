@@ -22,14 +22,14 @@
     <% if (type) { %><input type="hidden" name="type" value="<%= type %>"><% } %>
     <label for="search-q" class="sr-only">Search</label>
     <input id="search-q" name="q" value="<%= q %>" maxlength="<%= maxLength %>" autofocus autocomplete="off"
-      placeholder="<%= type ? 'Search ' + typeLabel.toLowerCase() : 'Name, number, reference, registration…' %>"
+      placeholder="<%= type ? 'Search ' + typeLabel.toLowerCase() : 'Page, name, number, reference, registration…' %>"
       class="<%= _input %>" />
     <button type="submit" class="<%= _btn %>">Search</button>
   </form>
 
   <% if (!q) { %>
     <p class="text-sm text-gray-500 dark:text-gray-400">
-      Searches every area you can open — people, customers, suppliers, invoices, purchases, quotes, projects, vehicles, tasks, documents and more — and shows a few hits from each.
+      Searches the pages you can open and the records in them — people, customers, suppliers, invoices, purchases, quotes, projects, vehicles, tasks, documents and more — and shows a few hits from each.
     </p>
   <% } else if (tooShort) { %>
     <div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
