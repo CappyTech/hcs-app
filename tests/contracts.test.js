@@ -229,6 +229,10 @@ describe('contract list', () => {
   it('shows site managers in the rows layout, which keeps two plain fields', async () => {
     const order = (await imp('mongoose/config/listControllerConfig.js')).default.contract.fieldOrder;
     assert.equal(order.indexOf('siteManagers'), order.indexOf('endDate') + 1);
+    // The overview node's columns set the order the list actually uses.
+    const nodes = (await imp('mongoose/config/overviews/nodes/projects.js')).default;
+    const fields = nodes.find((n) => n.id === 'contract').list.columns.map((c) => c.field);
+    assert.equal(fields.indexOf('siteManagers'), fields.indexOf('endDate') + 1);
   });
 
   it('counts open contracts with nobody named on the overview', async () => {
