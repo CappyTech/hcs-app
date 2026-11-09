@@ -52,7 +52,7 @@ export default {
     title: 'Maintenance',
     navLabel: 'Maintenance',
     icon: 'bi-tools',
-    group: 'system',
+    group: 'work',
     roles: ['admin'],
   },
   payroll: {

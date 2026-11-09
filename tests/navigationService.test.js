@@ -69,6 +69,15 @@ describe('navigation items', () => {
   });
 });
 
+describe('Maintenance link', () => {
+  it('sits in the Work group', () => {
+    const built = nav.build({ user: as('admin') });
+    assert.equal(built.items.find((i) => i.slug === 'maintenance').group, 'work');
+    assert.ok(built.groups.find((g) => g.key === 'work').items.some((i) => i.slug === 'maintenance'));
+    assert.ok(!built.groups.find((g) => g.key === 'system').items.some((i) => i.slug === 'maintenance'));
+  });
+});
+
 describe('Health & Safety link', () => {
   const slugs = (user) => nav.build({ user }).items.map((i) => i.slug);
   const jobRole = (slug) => as('none', { roles: [slug] });
