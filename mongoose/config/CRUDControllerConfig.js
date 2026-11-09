@@ -4,6 +4,7 @@ import path from 'path';
 import __attendanceService from '../services/attendanceService.js';
 import auditLog from '../../services/auditLogService.js';
 import crypto from 'crypto';
+import { onlyPages } from '../../services/routeInventoryService.js';
 import rbac from './rolePermissionsConfig.js';
 import accessGroups from './accessGroupsConfig.js';
 import mdb from '../services/mongooseDatabaseService.js';
@@ -594,7 +595,7 @@ export default {
       return { roleDetails, allRoles, jobRoleOptions, canSeeValues, valuesFlagRoles };
     },
     readView: path.join('tailwindcss', 'user', 'read'),
-    readLocals: async (item) => {
+    readLocals: async (item, req) => {
 
       const employee = item.employeeId ? await mdb.INTERNAL.employee.findById(item.employeeId).lean() : null;
       const subcontractor = item.subcontractorId ? await mdb.REST.supplier.findById(item.subcontractorId).lean() : null;
@@ -622,9 +623,10 @@ export default {
             }),
           };
         }),
-        customRoutes: Object.entries(rbac.routeAccess)
+        customRoutes: onlyPages(Object.entries(rbac.routeAccess)
           .filter(([, roles]) => roles === '*' || (Array.isArray(roles) && heldRoles.some((r) => roles.includes(r))))
-          .map(([route]) => route),
+          .map(([route]) => route)
+          .filter((route) => !route.includes(':')), req?.app),
       };
 
       let lastLoginTime = null;

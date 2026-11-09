@@ -90,6 +90,31 @@ describe('dead links', () => {
   });
 });
 
+describe('document access check', () => {
+  it('finds models under their namespace', async () => {
+    const mdb = (await imp('mongoose/services/mongooseDatabaseService.js')).default;
+    const guard = (await imp('services/ensureCanAccessRecord.js')).default('u');
+    const record = { _id: 1, uuid: 'p1' };
+    const { project } = mdb.REST;
+    const findOne = project.findOne;
+    project.findOne = () => chain(record);
+    try {
+      const req = { user: { role: 'admin' }, params: { model: 'Project', uuid: 'p1' } };
+      const err = await new Promise((resolve) => guard(req, {}, resolve));
+      assert.equal(err, undefined);
+      assert.equal(req.parentRecord, record);
+    } finally {
+      project.findOne = findOne;
+    }
+  });
+});
+
+describe('payroll overview', () => {
+  it('links to the page with the create form', () => {
+    assert.doesNotMatch(read('mongoose/views/tailwindcss/overview/panels/payrollMonthly.ejs'), /href="\/payroll\/runs\/create"/);
+  });
+});
+
 describe('accessible pages', () => {
   const app = () => {
     const a = express();
@@ -141,7 +166,8 @@ describe('labels', () => {
   });
 
   it('says 1 day and 1 hour', () => {
-    const src = fs.readFileSync(path.join(VIEWS, 'attendance/weekly.ejs'), 'utf8');
+    // weekly-excel is the template /weekly renders
+    const src = fs.readFileSync(path.join(VIEWS, 'attendance/weekly-excel.ejs'), 'utf8');
     assert.match(src, /Number\(totalSubcontractorDays\) === 1 \? '' : 's'/);
     assert.match(src, /Number\(totalEmployeeHours\) === 1 \? '' : 's'/);
   });
