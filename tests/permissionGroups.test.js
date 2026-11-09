@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
+import projectScope from '../mongoose/services/projectScopeService.js';
 import accessGroups from '../mongoose/config/accessGroupsConfig.js';
 import departmentsConfig from '../mongoose/config/departmentsConfig.js';
 import rbac from '../mongoose/config/rolePermissionsConfig.js';
@@ -57,8 +58,8 @@ describe('accessGroupsConfig', () => {
     assert.ok(rbac.JOB_ROLES.has('supervisor'));
   });
 
-  it('every project scope mapping names a set projectScopeService builds', () => {
-    const sets = ['contractIds', 'projectIds', 'projectNumbers', 'quoteIds', 'locationIds'];
+  it('every project scope mapping names a set projectScopeService builds', async () => {
+    const sets = Object.keys(await projectScope.resolve(null, {}));
     for (const [model, spec] of Object.entries(accessGroups.PROJECT_SCOPE_FIELDS)) {
       for (const { set } of (Array.isArray(spec) ? spec : [spec])) assert.ok(sets.includes(set), `${model} -> ${set}`);
     }

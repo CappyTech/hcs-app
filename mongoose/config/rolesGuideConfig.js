@@ -153,11 +153,13 @@ export const jobRoles = {
     { title: 'Their sites only', text: 'Sees the contracts that name them as a site manager and are not yet Completed, with the project, quotes, location, assignments, attendance and vehicle deployments for each.' },
     { title: 'Records and approves the day', text: 'Records a day for the people on their sites with Record a day on the daily page, and gives the first, site approval. A contracts manager then gives the final approval before it counts for payroll.' },
     { title: 'Inducts and briefs people on site', text: 'Records site inductions and RAMS briefings for the people assigned to their sites, and gets a reminder when a re-induction or a RAMS review is due.' },
+    { title: 'Checks cards on site', text: 'Sees the training and site cards of the people assigned to their sites in the last four weeks or the coming week.' },
   ],
   supervisor: [
     { title: 'Their gang', text: 'Sees the contracts that name them and the assignments and attendance on them, so they know who should be where.' },
     { title: 'Records the day', text: 'Records a day for the people on their sites from the daily page, ready for the site manager to approve.' },
     { title: 'Inducts and briefs people on site', text: 'Records site inductions and RAMS briefings for the people assigned to their sites.' },
+    { title: 'Checks cards on site', text: 'Sees the training and site cards of the people assigned to their sites in the last four weeks or the coming week.' },
   ],
   officeManager: [
     { title: 'Documents', text: 'Works the document queues: checks what has arrived and enters invoice details ready for an admin to send on.' },

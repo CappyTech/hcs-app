@@ -52,6 +52,9 @@ export const PROJECT_SCOPE_FIELDS = {
   location:          { field: '_id', set: 'locationIds' },
   quote:             { field: '_id', set: 'quoteIds' },
   purchase:          { field: 'ProjectNumber', set: 'projectNumbers' },
+  // Training is about a person, not a site: a site role sees the records
+  // of whoever is assigned to their sites (projectScopeService.sitePeople).
+  trainingRecord:    [{ field: 'employeeId', set: 'employeeIds' }, { field: 'subcontractorId', set: 'subcontractorIds' }],
   induction:         { field: 'contractId', set: 'contractIds' },
   rams:              { field: 'contractId', set: 'contractIds' },
   ramsBriefing:      { field: 'contractId', set: 'contractIds' },

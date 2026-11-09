@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.104.0] - 2026-11-09
+
+### Added
+- Site Managers and Supervisors can read the training records of the people assigned to their sites (from four weeks ago to a week ahead), from Training on your sites on the daily attendance page or `/trainingrecords`. Read only; Health & Safety still records training.
+- Project scope now includes the employees and subcontractors assigned to a user's sites, so person-based records can be scoped to a site.
+
+### Changed
+- The induction form and project scope share one definition of who is on a site.
+
 ## [6.103.0] - 2026-11-08
 
 ### Added

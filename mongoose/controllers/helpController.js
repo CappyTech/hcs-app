@@ -684,6 +684,7 @@ const helpContent = [
           'Every day the app looks for cards and training that have expired or expire within 30 days. Admins and anyone whose job role looks after Health & Safety get a task and one summary email; the task closes itself once the expiry date is updated.',
           'The holder gets their own email too, if their account is linked to the employee or subcontractor record.',
           'Employees and subcontractors can see their own training records.',
+          'Site Managers and Supervisors can see the training records of the people assigned to their sites in the last four weeks or the coming week: Training on your sites on the daily attendance page, or /trainingrecords.',
         ],
       },
       {
