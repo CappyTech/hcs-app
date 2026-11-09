@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.106.0] - 2026-11-09
+
+### Added
+- Search finds pages as well as records: a word that names a place in the app, such as "weekly", lists the overviews, workflows and dashboard pages you can open, in a Pages group above the results.
+
 ## [6.105.0] - 2026-11-09
 
 ### Added
