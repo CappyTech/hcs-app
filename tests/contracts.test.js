@@ -226,6 +226,11 @@ describe('contract list', () => {
     assert.equal(list.applyEmptyLabels({ status: 'Planned', siteManagers: 'sam' }, transforms()).siteManagers, 'sam');
   });
 
+  it('shows site managers in the rows layout, which keeps two plain fields', async () => {
+    const order = (await imp('mongoose/config/listControllerConfig.js')).default.contract.fieldOrder;
+    assert.equal(order.indexOf('siteManagers'), order.indexOf('endDate') + 1);
+  });
+
   it('counts open contracts with nobody named on the overview', async () => {
     const nodes = (await imp('mongoose/config/overviews/nodes/projects.js')).default;
     const node = nodes.find((n) => n.id === 'contract');

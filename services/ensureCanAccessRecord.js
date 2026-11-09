@@ -67,7 +67,8 @@ export default function ensureCanAccessRecord(operation = 'r') {
     }
 
     try {
-      const model = mdb[modelName];
+      // Models live under their namespace; there is no top-level mdb.project.
+      const model = mdb.REST?.[modelName] || mdb.INTERNAL?.[modelName] || mdb.PAPERLESS?.[modelName] || mdb[modelName];
       if (!model) {
         return next({
           statusCode: 404,

@@ -207,7 +207,8 @@ export default {
       // quoteId — the originating KashFlow quote that generated this contract;
       // accessible via the contract detail view, not needed in the list
       'quoteId'],
-    fieldOrder: ['title', 'status', 'startDate', 'endDate', 'location', 'projectId', 'locationId', 'siteManagers', 'notes'],
+    // Site managers first of the plain fields: the rows layout shows only two.
+    fieldOrder: ['title', 'status', 'startDate', 'endDate', 'siteManagers', 'location', 'projectId', 'locationId', 'notes'],
     sortField: 'createdAt',
     sortOrder: -1,
     department: ['management'],

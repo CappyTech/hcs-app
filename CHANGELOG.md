@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.107.2] - 2026-11-09
+
+### Fixed
+- "1 days" and "1 hours" on the weekly page: 6.107.1 changed a template it does not render.
+- Site managers and "Nobody named" now show in the default rows view of `/contracts`, not just the table view.
+- Documents on projects and employees: uploading, viewing and deleting all returned 404, because the access check looked for the model in the wrong place.
+- Accessible Pages on a user's record page lists only addresses that open, as the profile already does.
+- The create-first-run link on the payroll overview went to a form-only address; it now opens the payroll runs page.
+
 ## [6.107.1] - 2026-11-09
 
 ### Fixed
