@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.106.1] - 2026-11-09
+
+### Changed
+- Maintenance moves from the System group to the Work group in the grouped, command and sidebar navigation styles.
+
 ## [6.106.0] - 2026-11-09
 
 ### Added
