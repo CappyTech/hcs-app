@@ -152,6 +152,9 @@ describe('tabs is pixel-identical to the old inline header', () => {
   });
 });
 
+// Labels reach the markup through <%= %>, so "Health & Safety" is escaped.
+const htmlEscaped = (text) => text.replace(/&/g, '&amp;');
+
 describe('phone and desktop markup', () => {
   it('tabs and two-tier scroll horizontally with labels visible', async () => {
     const tabs = await renderPartial('tabs', locals('tabs'));
@@ -161,7 +164,7 @@ describe('phone and desktop markup', () => {
     assert.match(two, /overflow-x-auto/);
     const row = two.match(/aria-label="Areas"[\s\S]*$/)[0];
     for (const item of locals('two-tier').nav.items.filter((i) => i.special !== 'create' && i.slug !== 'user')) {
-      assert.match(row, new RegExp(`<span>${item.label}</span>`));
+      assert.match(row, new RegExp(`<span>${htmlEscaped(item.label)}</span>`));
     }
   });
 
@@ -233,7 +236,7 @@ describe('phone and desktop markup', () => {
       assert.match(html, /<form method="GET" action="\/search" role="search" x-data="navJump"/, `${style}: Jump to submits to the real search`);
       assert.match(html, /<input id="nav-jump" name="q" type="search"/);
       const list = html.match(/<ul id="nav-jump-results"[\s\S]*?<\/ul>/)[0];
-      for (const item of l.nav.items) assert.match(list, new RegExp(`data-jump-text="[^"]*${item.label.toLowerCase()}[^"]*"[\\s\\S]*?href="${item.href}"`), `${style}: ${item.label}`);
+      for (const item of l.nav.items) assert.match(list, new RegExp(`data-jump-text="[^"]*${htmlEscaped(item.label.toLowerCase())}[^"]*"[\\s\\S]*?href="${item.href}"`), `${style}: ${item.label}`);
       assert.match(list, /data-jump-empty/);
     }
   });

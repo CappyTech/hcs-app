@@ -69,6 +69,31 @@ describe('navigation items', () => {
   });
 });
 
+describe('Health & Safety link', () => {
+  const slugs = (user) => nav.build({ user }).items.map((i) => i.slug);
+  const jobRole = (slug) => as('none', { roles: [slug] });
+
+  it('opens the overview and has no generated dashboard', () => {
+    const item = nav.build({ user: as('admin') }).items.find((i) => i.slug === 'health-safety');
+    assert.equal(item.href, '/overview/healthSafety');
+    assert.equal(item.group, 'work');
+    assert.equal(departmentsConfig['health-safety'].hasDashboard, false);
+  });
+
+  it('shows to admins and job roles holding Health & Safety on every site', () => {
+    assert.ok(slugs(as('admin')).includes('health-safety'));
+    for (const r of ['healthSafetyAdvisor', 'director', 'contractsManager']) {
+      assert.ok(slugs(jobRole(r)).includes('health-safety'), r);
+      assert.ok(rbac.canAccessRoute(rbac.rolesOf(jobRole(r)), '/overview/healthSafety'), `${r} can open it`);
+    }
+  });
+
+  it('is hidden from site-only job roles and plain accounts', () => {
+    for (const r of ['siteManager', 'supervisor']) assert.ok(!slugs(jobRole(r)).includes('health-safety'), r);
+    for (const r of ['employee', 'subcontractor', 'accountant']) assert.ok(!slugs(as(r)).includes('health-safety'), r);
+  });
+});
+
 describe('grouping', () => {
   it('orders groups People, Money, Work, System and drops empty ones', () => {
     const admin = nav.build({ path: '/', user: as('admin') });

@@ -118,6 +118,18 @@ export default {
     group: 'people',
     roles: ['admin', 'employee', 'subcontractor'],
   },
+  'health-safety': {
+    // A nav link to the Health & Safety overview, which is the area's home.
+    // Project-scoped grants add no departments, so Site Managers and
+    // Supervisors don't get it: they work from the daily attendance page.
+    title: 'Health & Safety',
+    navLabel: 'Health & Safety',
+    icon: 'bi-cone-striped',
+    group: 'work',
+    path: '/overview/healthSafety',
+    hasDashboard: false,
+    roles: ['admin'],
+  },
   website: {
     // Authoring surface for the public site at heroncs.co.uk (hcs-web).
     //
