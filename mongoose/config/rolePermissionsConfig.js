@@ -250,6 +250,7 @@ const routeAccess = {
   '/overview/admin':          ['admin'],
   '/admin/overviews':         ['admin'],
   '/admin/job-roles':         ['admin'],
+  '/admin/data-check':        ['admin'],
   '/overview/assignment':     ['admin'],
   '/overview/attendance':     ['admin'],
   '/overview/contract':       ['admin'],

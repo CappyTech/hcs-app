@@ -20,6 +20,13 @@ export default {
         department: ['admin'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    DataCheck: {
+        title: 'Data Check',
+        description: 'Find records that are listed but whose page won\'t open.',
+        link: '/admin/data-check',
+        department: ['admin'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     LogViewer: {
         title: 'System Logs',
         description: 'View and monitor real-time application logs.',

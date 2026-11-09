@@ -941,6 +941,21 @@ const helpContent = [
         notes: [],
       },
       {
+        id: 'data-check',
+        title: 'Data Check',
+        badge: 'Admin',
+        description: 'Finds records that appear in lists but whose page will not open, because their id is missing, in the wrong format, or shared with another record.',
+        steps: [
+          'Go to Admin → Data Check, or navigate to /admin/data-check.',
+          'The check runs when the page opens. Click Check again to repeat it.',
+        ],
+        fields: [],
+        notes: [
+          'The page only looks; it changes nothing. Fixing a record means giving it a new id in the database.',
+          'If some records could not be checked, the page says so, and the result is incomplete.',
+        ],
+      },
+      {
         id: 'tasks',
         title: 'Tasks',
         badge: 'Admin',

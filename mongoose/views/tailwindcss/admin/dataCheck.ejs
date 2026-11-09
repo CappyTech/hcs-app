@@ -1,0 +1,60 @@
+<%#
+  Data check (admin): records whose page can't be opened because of a missing,
+  malformed or shared uuid (dataCheckService). Read only.
+%>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-clipboard2-pulse text-green-600" aria-hidden="true"></i> Data check</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Finds records that appear in lists but whose page won't open. This page only looks; it changes nothing.</p>
+    </div>
+    <a href="/admin/data-check" class="text-sm bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium whitespace-nowrap">Check again</a>
+  </div>
+
+  <% if (result.failed.length) { %>
+    <div id="data-check-failed" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-2xl p-4 text-sm text-amber-800 dark:text-amber-300">
+      <p class="font-medium">Some records couldn't be checked, so this result is incomplete:</p>
+      <p class="mt-1"><%= result.failed.map((f) => f.model).join(', ') %></p>
+    </div>
+  <% } %>
+
+  <% if (!result.problems.length) { %>
+    <div id="data-check-clear" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-check-circle text-green-600" aria-hidden="true"></i>
+      No problems found across <%= result.checked %> kinds of record.
+    </div>
+  <% } else { %>
+    <p id="data-check-summary" class="text-sm text-gray-700 dark:text-gray-300">
+      <strong><%= result.total %></strong> problem<%= result.total === 1 ? '' : 's' %> across <%= result.checked %> kinds of record checked.
+    </p>
+    <% result.problems.forEach((p) => { %>
+      <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= p.title %></h2>
+          <% if (p.listPath) { %><a href="<%= p.listPath %>" class="text-sm text-green-700 dark:text-green-400 hover:underline whitespace-nowrap">Open list</a><% } %>
+        </div>
+        <% if (p.count) { %>
+          <p class="text-sm text-gray-600 dark:text-gray-400"><%= p.count %> record<%= p.count === 1 ? '' : 's' %> can't be opened: the id is missing or in the wrong format.</p>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-left text-gray-500 dark:text-gray-400"><tr><th class="py-1 pr-4 font-medium">Record</th><th class="py-1 font-medium">Stored id</th></tr></thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
+                <% p.records.forEach((r) => { %>
+                  <tr><td class="py-1 pr-4"><%= r.label %></td><td class="py-1 font-mono text-xs"><%= r.uuid || 'none' %></td></tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% if (p.count > p.records.length) { %><p class="text-xs text-gray-500 dark:text-gray-400">Showing the first <%= p.records.length %>.</p><% } %>
+        <% } %>
+        <% if (p.duplicates.length) { %>
+          <p class="text-sm text-gray-600 dark:text-gray-400"><%= p.duplicates.length %> id<%= p.duplicates.length === 1 ? ' is' : 's are' %> shared by more than one record, so a link can open the wrong one:</p>
+          <ul class="text-xs font-mono text-gray-800 dark:text-gray-200 space-y-0.5">
+            <% p.duplicates.forEach((d) => { %><li><%= d.uuid %> (<%= d.count %> records)</li><% }) %>
+          </ul>
+        <% } %>
+      </section>
+    <% }) %>
+    <p class="text-xs text-gray-500 dark:text-gray-400">Fixing one means giving the record a new, proper id in the database. The sync keeps whatever id a record already has, so these won't correct themselves.</p>
+  <% } %>
+</div>

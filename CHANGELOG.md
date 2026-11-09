@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.108.0] - 2026-11-09
+
+### Added
+- Data Check (`/admin/data-check`, admin only): finds records that are listed but whose page won't open, because their id is missing, in the wrong format, or shared with another record. Read only, and says so if any records couldn't be checked.
+
 ## [6.107.4] - 2026-11-11
 
 ### Fixed

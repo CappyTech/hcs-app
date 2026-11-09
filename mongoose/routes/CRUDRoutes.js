@@ -3,14 +3,12 @@ import crudController from '../controllers/CRUDController.js';
 import crudConfig from '../config/CRUDControllerConfig.js';
 import authService from '../../services/authService.js';
 import __listControllerConfig from '../config/listControllerConfig.js';
+import { UUID_V4 } from '../services/dataCheckService.js';
 
 const router = express.Router();
 
-const uuidv4Regex =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 router.param("uuid", (req, res, next, uuid) => {
-  if (!uuidv4Regex.test(uuid)) {
+  if (!UUID_V4.test(uuid)) {
     // Not a valid UUID — skip this CRUD route and let Express try the next
     // matching route. Sending a 404 here instead would *shadow* specific
     // routes that share the `/:model/<segment>` shape — e.g. POST /user/2fa
