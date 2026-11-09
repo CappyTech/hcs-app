@@ -157,6 +157,7 @@ export default {
         description: 'Submit your daily attendance records.',
         link: '/attendance/submit',
         department: ['attendance'],
+        hideFromAdmin: true, // the route is for employees and subcontractors only
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
     MyDailyAttendance: {

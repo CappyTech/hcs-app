@@ -1,3 +1,4 @@
+import { listPathFor } from '../services/listPathService.js';
 import express from 'express';
 import listController from '../controllers/listController.js';
 import authService from '../../services/authService.js';
@@ -16,19 +17,7 @@ for (const [functionName, handler] of Object.entries(listController)) {
   const originalModel = modelName.charAt(0).toLowerCase() + modelName.slice(1);
   const listConfig =
     __listControllerConfig[originalModel] || {};
-  const routeModel = (listConfig.modelRename || originalModel).toLowerCase();
-  let routePath;
-  if (listConfig.pathOverride) {
-    routePath = listConfig.pathOverride.startsWith("/")
-      ? listConfig.pathOverride
-      : `/${listConfig.pathOverride}`;
-  } else {
-    // Support nested paths in modelRename, e.g., 'paperless/ocrdocument' -> '/paperless/ocrdocuments'
-    const parts = routeModel.split("/").filter(Boolean);
-    const last = parts.pop();
-    const pluralLast = `${last}s`;
-    routePath = `/${[...parts, pluralLast].join("/")}`;
-  }
+  const routePath = listPathFor(originalModel, listConfig);
 
   // Build role list. Admin always has access.
   // Check which other roles can list this model via RBAC config.

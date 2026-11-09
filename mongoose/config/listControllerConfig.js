@@ -1344,6 +1344,8 @@ export default {
     },
     linkField: 'Name',
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
+      // Sync bookkeeping and KashFlow's internal key, not meaningful to read
+      'Id', '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt', 'lastSeenRun',
       // KashFlow product / stock fields — nominals double as product catalogue entries
       // in KashFlow's inventory module, which is not used here
       'DefaultProduct', 'AutoFillLineItem', 'IsProduct',
@@ -1417,8 +1419,9 @@ export default {
       manage: 'KashFlow VAT rate definitions synced from the API.'
     },
     linkField: 'VATText',
-    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid'],
+    hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid', '_kfHash', 'syncedAt', 'createdByRunId', 'deletedAt', 'DeletedAt', 'lastSeenRun'],
     fieldOrder: ['VATId', 'VATRate', 'VATText', 'Rate', 'CountryCode'],
+    labelOverrides: { VATId: 'VAT ID', VATRate: 'VAT Rate', VATText: 'VAT Text' },
     sortField: 'VATId',
     sortOrder: 1,
     department: ['finance'],

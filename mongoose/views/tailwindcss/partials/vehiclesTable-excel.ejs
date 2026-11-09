@@ -68,7 +68,7 @@
       <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
         <!-- Registration -->
         <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 whitespace-nowrap">
-          <a href="/vehicle/read/<%= v._id %>" class="font-medium text-green-900 dark:text-green-400 hover:underline"><%= v.registrationNumber || '' %></a>
+          <a href="/vehicle/read/<%= v.uuid %>" class="font-medium text-green-900 dark:text-green-400 hover:underline"><%= v.registrationNumber || '' %></a>
           <% if (v.make || v.model) { %><span class="block text-[10px] text-gray-400 dark:text-gray-500"><%= [v.make, v.model].filter(Boolean).join(' ') %></span><% } %>
         </td>
         <!-- Body type -->

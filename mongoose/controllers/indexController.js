@@ -33,7 +33,7 @@ const denyGuard = (config, op) =>
  * external links (nothing to match), and internal paths with no entry.
  */
 const canUseTile = (tile, userRole) => {
-  if (userRole === 'admin' || (Array.isArray(userRole) && userRole.includes('admin'))) return true;
+  if (userRole === 'admin' || (Array.isArray(userRole) && userRole.includes('admin'))) return !tile?.hideFromAdmin;
   const link = String(tile?.link || '');
   if (!link.startsWith('/')) return true; // external link
 

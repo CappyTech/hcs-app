@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.107.1] - 2026-11-09
+
+### Fixed
+- Dead links: Cancel and Back on the subcontractor form, vehicles on the weekly page, and Back links and post-save redirects on models with irregular list addresses (Countries, Currencies, RAMS and others).
+- Submit Attendance no longer shows to admins, who can't open it.
+- Accessible Pages on the profile lists only addresses that open in a browser.
+- Field labels: links to a record read as the record ("Contract", not "Contract Id"), and stored ids as "ID".
+- Nominal tabs have spaces ("Cost Of Sale"), and sync bookkeeping (run ids, sync dates) no longer shows on the Nominal and VAT Rate lists.
+- "1 days" and "1 hours" on the weekly page.
+
 ## [6.107.0] - 2026-11-09
 
 ### Added
