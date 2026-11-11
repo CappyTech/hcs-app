@@ -181,6 +181,8 @@ const routeAccess = {
   '/weekly':              ['admin', 'accountant', 'employee', 'subcontractor'],
   '/weekly-management':   ['admin'],
   '/weekly-flow':         ['admin', 'accountant'],
+  '/weekly-sheet':        ['admin', 'accountant'], // same as /weekly-flow
+  '/job-register':        ['admin', 'accountant'], // Job Register (Commercial; accountant reads)
   '/attendance/submit':   ['employee', 'subcontractor'],
   '/attendance/approve':  ['admin'],
   '/attendance/reject':   ['admin'],

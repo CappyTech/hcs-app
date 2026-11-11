@@ -517,3 +517,7 @@ export default {
 };
 
 export { isWeekday, contractRunsInWeek, defaultDailyHours, personKey, buildWeekFlow, loadWeek, createAssignment, copyPreviousWeek, recordAttendance };
+
+// Shared with the simple weekly sheet (weeklySheetService), which reads the
+// same leave, closures and subcontractors and stores dates the same way.
+export { leaveDaysByEmployee, fetchApprovedLeave, fetchClosures, listSubcontractors, parseYMDLocal, dayStart, dayEnd, ymd, LEAVE_LABELS };

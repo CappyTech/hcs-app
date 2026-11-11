@@ -2,6 +2,22 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.109.0] - 2026-11-11
+
+### Added
+- **Job Register** (`/job-register`): the Job Reg workbook as a page, and the plan of what will be in KashFlow, kept as double entry. One row per quote or job, with the workbook's columns: quote number, job (project) number, dates, site, client, contact, net value, description, invoice number and date, client order ref and notes.
+  - The stage follows from the numbers: quoted, won (has a project number), invoiced (has an invoice number), or cancelled.
+  - Each number is checked against the synced KashFlow quote, project and invoice: a tick when it agrees, "not in KashFlow yet", or what differs (value, client, or an invoice on another project).
+  - The other side of the double entry: KashFlow quotes and projects in the tax year with no register row are listed under the table.
+  - Filters: stage (including "Not in KashFlow yet" and "Doesn't match KashFlow"), client (spellings such as "Plus Dane" and "Plus dane" count as one), tax year, and a search. Totals for the rows shown.
+  - Adding suggests the next quote and project numbers after the highest in the register or KashFlow. A row can be linked to the contract that runs it on site.
+  - Commercial view or Finance view reads it (admin and accountant by role); Commercial edit or admin changes it. Nothing is written to KashFlow.
+- **Weekly sheet** (`/weekly-sheet/:monday?`): the WEEKLY ATTENDANCE spreadsheet as one page. One row per person, Monday to Sunday, grouped Office, Landscaping, Other staff and Sub-contract, with a filter for each group. Each cell picks a site (an open contract), a saved location such as Office, Off or Sick, and Save week writes pending attendance, so the weekly flow and payroll see the same days.
+  - Shows approved holiday requests and bank holidays, each employee's holiday left this year, and alongside, as on the spreadsheet: the contracts running this week, jobs for allocation (won in the Job Register with no contract yet), and vehicle tax, MOT, insurance and breakdown dates, red when past due and amber within 30 days.
+  - Leaves alone anything signed off, days with more than one record, approved holiday, and days in a locked payroll period (except for an admin). A cell changed by someone else since the page was opened is skipped, not overwritten.
+  - Subcontractors with attendance in the last four weeks are listed; others can be added to the week.
+  - Same access as the weekly flow. The Projects and Weekly attendance overviews link to both new pages.
+
 ## [6.108.0] - 2026-11-09
 
 ### Added

@@ -47,7 +47,11 @@ export default [
     description: 'Contracts, weekly assignments and KashFlow projects.',
     children: ['contract', 'assignment', 'weekly', 'project'],
     // Shown only to those who can open the route (rolePermissionsConfig)
-    actions: [{ label: 'Do weekly attendance', href: '/weekly-flow', route: '/weekly-flow', icon: 'bi-calendar-check' }],
+    actions: [
+      { label: 'Weekly sheet', href: '/weekly-sheet', route: '/weekly-sheet', icon: 'bi-table' },
+      { label: 'Do weekly attendance', href: '/weekly-flow', route: '/weekly-flow', icon: 'bi-calendar-check' },
+      { label: 'Job Register', href: '/job-register', route: '/job-register', icon: 'bi-journal-text' },
+    ],
   },
   {
     id: 'weeklyAttendance', path: '/overview/weekly', bespoke: true, opens: 'weekly',
