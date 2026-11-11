@@ -38,9 +38,9 @@ const getAttendanceForDay = async (date) => {
     return await mdb.INTERNAL.attendance
       .find({ date: { $gte: start, $lte: end } })
       .populate('employeeId')
-      .populate('subcontractorId')
+      .populate({ path: 'subcontractorId', model: mdb.REST.supplier })
       .populate('locationId')
-      .populate('projectId')
+      .populate({ path: 'projectId', model: mdb.REST.project })
       .populate('contractAssignmentId')
       .sort({ date: 1 });
   } catch (error) {
@@ -61,7 +61,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
     const attendancePromise = mdb.INTERNAL.attendance
       .find({ date: { $gte: start, $lte: end } })
       .populate('employeeId')
-      .populate('subcontractorId')
+      .populate({ path: 'subcontractorId', model: mdb.REST.supplier })
       .populate('locationId')
       .populate('contractId')
       .populate('contractAssignmentId')
@@ -748,7 +748,7 @@ const fetchAssignmentsForWeek = async (payrollWeekStart) => {
       .find({ weekStart: { $gte: dayStart, $lte: dayEnd } })
       .populate('contractId', '_id uuid title location status')
       .populate('assignedEmployees', '_id uuid name department')
-      .populate('assignedSubcontractors', '_id uuid Name')
+      .populate({ path: 'assignedSubcontractors', select: '_id uuid Name', model: mdb.REST.supplier })
       .sort({ 'contractId.title': 1, title: 1 })
       .lean();
   } catch (e) {
@@ -766,7 +766,7 @@ const fetchVehicleDeploymentsForWeek = async (start, end) => {
       .find({ date: { $gte: start, $lte: end } })
       .populate('vehicleId', '_id uuid registrationNumber make model bodyType')
       .populate('driverEmployeeId', '_id uuid name')
-      .populate('driverSubcontractorId', '_id uuid Name')
+      .populate({ path: 'driverSubcontractorId', select: '_id uuid Name', model: mdb.REST.supplier })
       .populate('locationId', '_id uuid name')
       .populate('contractId', '_id uuid title location')
       .sort({ date: 1 })
