@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.110.0] - 2026-11-11
+
+### Changed
+- The navigation bar is now the overview areas (the hierarchy at `/admin/overviews`): HR, Fleet, Finance, Projects, Weekly, Subcontractors, Payroll, Documents, Policies, Health & Safety and Admin, each shown to those who can open it, in hierarchy order. Changes made in the overview editor (labels, icons, order, hidden or added areas) show in the nav straight away.
+  - The HR, Finance, Payroll, Documents, Admin and Maintenance dashboard links give way to their area; the dashboards still open at their addresses and light up the area in the nav. Someone who can open a dashboard but not its area keeps the dashboard link.
+  - CIS, Management, Accountant, Attendance, Website, Create and the account link have no area and stay as they were.
+  - A child overview (e.g. `/overview/employee`) lights up its area.
+  - Pinned items on the command rail that were a replaced department now pin its area.
+
 ## [6.109.0] - 2026-11-11
 
 ### Added

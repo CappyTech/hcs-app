@@ -1,6 +1,7 @@
 import mdb from './mongooseDatabaseService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import registry from '../config/overviews/index.js';
+import { canUserOpenPath } from './overviewAccess.js';
 import { listConfig } from './listDefinitionService.js';
 import { scopeQuery } from '../../services/dataScopingService.js';
 import logger from '../../services/loggerService.js';
@@ -89,16 +90,9 @@ function perms(req) {
   return { role: rbac.rolesOf(req.user), custom: req.user?.customPermissions || {} };
 }
 
-// One rule for every page: a controlled route (rolePermissionsConfig.routeAccess)
-// when there is one; otherwise, for an area or overview added from the
-// database, the roles stored with it. Anything else stays closed.
+// One rule for every page (services/overviewAccess.js, which the nav uses too).
 function canOpenPath(req, path) {
-  if (!req.user || !path) return false;
-  const { role, custom } = perms(req);
-  if (rbac.getAllowedRolesForRoute(path) || role.includes('admin')) return rbac.canAccessRoute(role, path, custom);
-  const def = registry.getAreaByPath(path) || registry.getNodeByOverviewPath(path);
-  if (def && !def._default && Array.isArray(def.roles)) return role.some((r) => def.roles.includes(r)) || !!custom?.routes?.includes(path);
-  return false;
+  return canUserOpenPath(req.user, path);
 }
 
 function canListModel(req, model) {

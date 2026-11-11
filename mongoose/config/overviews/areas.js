@@ -12,11 +12,15 @@
  * An area with `opens: '<nodeId>'` is a home tile for that node's generated
  * overview (its `path` is the node's overviewPath); it has no page of its own.
  *
+ * The navigation is this list too (services/navigationService): every area the
+ * person can open, clustered by `group` (people | money | work | system; an
+ * area without one, e.g. one added from the database, goes under Work).
+ *
  * See docs/OVERVIEW-HIERARCHY.md for the design.
  */
 export default [
   {
-    id: 'human',
+    id: 'human', group: 'people', navLabel: 'HR',
     path: '/overview/human',
     label: 'Human Resources',
     icon: 'bi-people',
@@ -24,7 +28,7 @@ export default [
     children: ['employee', 'leave', 'attendance', 'weekly', 'task'],
   },
   {
-    id: 'fleet',
+    id: 'fleet', group: 'work',
     path: '/overview/fleet',
     label: 'Fleet',
     icon: 'bi-truck',
@@ -32,7 +36,7 @@ export default [
     children: ['vehicle', 'vehicleService', 'vehicleFuelLog', 'vehicleMileageLog'],
   },
   {
-    id: 'finance',
+    id: 'finance', group: 'money',
     path: '/overview/finance',
     label: 'Finance',
     icon: 'bi-wallet2',
@@ -40,7 +44,7 @@ export default [
     children: ['invoice', 'purchase', 'customer', 'supplier', 'subcontractor', 'quote'],
   },
   {
-    id: 'projects',
+    id: 'projects', group: 'work',
     path: '/overview/projects',
     label: 'Projects',
     icon: 'bi-clipboard-check',
@@ -54,12 +58,12 @@ export default [
     ],
   },
   {
-    id: 'weeklyAttendance', path: '/overview/weekly', bespoke: true, opens: 'weekly',
+    id: 'weeklyAttendance', group: 'people', navLabel: 'Weekly', path: '/overview/weekly', bespoke: true, opens: 'weekly',
     label: 'Weekly attendance', icon: 'bi-calendar-check',
     description: 'This payroll week: contracts, assignments, days worked and approval.',
   },
   {
-    id: 'subcontractors',
+    id: 'subcontractors', group: 'money',
     path: '/overview/subcontractors',
     label: 'Subcontractors',
     icon: 'bi-person-gear',
@@ -67,7 +71,7 @@ export default [
     children: ['subcontractor'],
   },
   {
-    id: 'payroll',
+    id: 'payroll', group: 'money',
     path: '/overview/payroll',
     label: 'Payroll',
     icon: 'bi-cash-coin',
@@ -75,11 +79,11 @@ export default [
     children: ['payrollRun', 'payrollSubmission'],
   },
   {
-    id: 'documents', path: '/overview/documents', bespoke: true,
+    id: 'documents', group: 'work', path: '/overview/documents', bespoke: true,
     label: 'Documents', icon: 'bi-file-earmark-text', description: 'Paperless documents, queues and data entry.',
   },
   {
-    id: 'policies',
+    id: 'policies', group: 'work',
     path: '/overview/policies',
     label: 'Policies',
     icon: 'bi-journal-text',
@@ -87,7 +91,7 @@ export default [
     children: ['policyDocument'],
   },
   {
-    id: 'healthSafety',
+    id: 'healthSafety', group: 'work',
     path: '/overview/healthSafety',
     label: 'Health & Safety',
     icon: 'bi-cone-striped',
@@ -101,7 +105,7 @@ export default [
     ],
   },
   {
-    id: 'admin',
+    id: 'admin', group: 'system',
     path: '/overview/admin',
     label: 'Admin',
     icon: 'bi-shield-check',
