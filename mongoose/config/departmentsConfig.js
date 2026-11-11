@@ -21,6 +21,9 @@
  *  - group       people | money | work | system: how the grouped, command and
  *                sidebar navigation styles cluster it (services/navigationService)
  *  - hasDashboard  false = nav link only, page served elsewhere
+ *  - navArea     overview area (config/overviews/areas.js) that takes this
+ *                department's place in the nav whenever the person can open
+ *                it; the dashboard stays at its address
  *  - special     'create' = tiles come from getCreateModels, not departments
  *
  * Object order defines nav + route order. Keep this file dependency-free
@@ -32,6 +35,7 @@ export default {
     navLabel: 'Admin',
     icon: 'bi-shield-lock',
     group: 'system',
+    navArea: 'admin',
     roles: ['admin'],
   },
   'construction-industry-scheme': {
@@ -53,6 +57,7 @@ export default {
     navLabel: 'Maintenance',
     icon: 'bi-tools',
     group: 'work',
+    navArea: 'fleet',
     roles: ['admin'],
   },
   payroll: {
@@ -63,6 +68,7 @@ export default {
     // union of the old roleDepartments (accountant had 'payroll') and the
     // old admin-only route guard — accountant already saw the nav link,
     // and /payroll/dashboard already allowed accountant
+    navArea: 'payroll',
     roles: ['admin', 'accountant'],
   },
   'human-resources': {
@@ -70,6 +76,7 @@ export default {
     navLabel: 'HR',
     icon: 'bi-people',
     group: 'people',
+    navArea: 'human',
     roles: ['admin'],
   },
   documents: {
@@ -79,6 +86,7 @@ export default {
     navLabel: 'Documents',
     icon: 'bi-file-earmark-text',
     group: 'work',
+    navArea: 'documents',
     roles: ['admin'],
   },
   finance: {
@@ -88,6 +96,7 @@ export default {
     navLabel: 'Finance',
     icon: 'bi-wallet2',
     group: 'money',
+    navArea: 'finance',
     roles: ['admin', 'accountant'],
   },
   'accountant-portal': {
@@ -128,6 +137,7 @@ export default {
     group: 'work',
     path: '/overview/healthSafety',
     hasDashboard: false,
+    navArea: 'healthSafety',
     roles: ['admin'],
   },
   website: {

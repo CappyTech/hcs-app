@@ -6,8 +6,6 @@ import ejs from 'ejs';
 
 import nav from '../services/navigationService.js';
 import navPreference from '../mongoose/services/navPreferenceService.js';
-import departmentsConfig from '../mongoose/config/departmentsConfig.js';
-import rbac from '../mongoose/config/rolePermissionsConfig.js';
 import dateService from '../services/dateService.js';
 
 /**
@@ -67,10 +65,11 @@ describe('every nav style', () => {
       });
 
       it('marks the active item with aria-current and nothing else', async () => {
+        // The Finance area stands in for the Finance department, so its pages light it up.
         const html = await renderPartial(style, locals(style, '/finance/invoices'));
         const c = currents(html);
-        assert.ok(c.includes('/finance'), `${style} marks /finance active`);
-        assert.ok(c.every((h) => h === '/finance'), `only /finance is current, got ${c.join(', ')}`);
+        assert.ok(c.includes('/overview/finance'), `${style} marks the Finance area active`);
+        assert.ok(c.every((h) => h === '/overview/finance'), `only the Finance area is current, got ${c.join(', ')}`);
         const home = await renderPartial(style, locals(style, '/'));
         assert.ok(currents(home).every((h) => h === '/'), 'only Home is current on /');
       });
@@ -140,10 +139,13 @@ describe('tabs is pixel-identical to the old inline header', () => {
     for (const role of ['admin', 'accountant', 'employee', 'subcontractor', 'hmrc', 'client', 'auditor']) {
       for (const reqPath of ['/', '/finance/invoices', '/help', '/create', '/attendance']) {
         const who = { _id: 'u', role, customPermissions: {} };
+        // The items now come from the overview areas as well as departments, so
+        // the legacy loop is fed the same items: this checks the markup, not the set.
+        const items = nav.build({ path: reqPath, user: who }).items;
         const old = ejs.render(legacy, {
-          departmentsConfig,
-          canDept: (slug) => rbac.canAccessDepartment(role, slug, {}),
-          navActive: (href) => nav.isActive(reqPath, href),
+          departmentsConfig: Object.fromEntries(items.map((i) => [i.slug, { navLabel: i.label, icon: i.icon, path: i.href, special: i.special || undefined }])),
+          canDept: () => true,
+          navActive: (href) => items.find((i) => i.href === href)?.active ?? nav.isActive(reqPath, href),
         });
         const now = await renderPartial('tabs', locals('tabs', reqPath, who));
         assert.equal(normalise(now).replace(' data-nav-style="tabs"', ''), normalise(old), `${role} at ${reqPath}`);
@@ -199,7 +201,7 @@ describe('phone and desktop markup', () => {
     assert.match(html, /-translate-x-full lg:translate-x-0/);
     assert.match(html, /w-\[232px\]/);
     assert.match(html, /<details[^>]*>/);
-    assert.match(html, /href="\/admin"/);
+    assert.match(html, /href="\/overview\/admin"/);
     assert.match(html, /id="nav-jump"/);
   });
 
