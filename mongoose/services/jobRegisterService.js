@@ -15,6 +15,8 @@
 import mongoose from 'mongoose';
 import mdb from './mongooseDatabaseService.js';
 import taxService from '../../services/taxService.js';
+import logger from '../../services/loggerService.js';
+import kfSession from '../../services/kashflowSessionService.js';
 
 export const STAGES = ['quoted', 'won', 'invoiced', 'cancelled'];
 export const STAGE_LABELS = { quoted: 'Quoted', won: 'Won', invoiced: 'Invoiced', cancelled: 'Cancelled' };
@@ -178,6 +180,81 @@ export function nextNumber(...lists) {
   return max > 0 ? max + 1 : null;
 }
 
+// ── KashFlow next available numbers ─────────────────────────────────────
+
+const KF_NEXT_TIMEOUT_MS = 5000;
+const KF_NEXT_PATHS = { quote: '/nextavailablequotenumber', project: '/nextavailableprojectnumber' };
+
+/**
+ * A number from a KashFlow next-available response. The spec doesn't give its
+ * shape, so this accepts a bare number or numeric string, or an object with
+ * the number in Number / NextNumber / NextAvailableNumber / Value / Data.
+ * Anything else is null.
+ */
+export function parseNextAvailable(data) {
+  if (data == null) return null;
+  if (typeof data === 'number' || typeof data === 'string') {
+    const s = String(data).trim().replace(/^"|"$/g, '');
+    const n = Number(s);
+    return /^\d+$/.test(s) && n > 0 ? n : null;
+  }
+  if (typeof data === 'object') {
+    for (const k of ['Number', 'NextNumber', 'NextAvailableNumber', 'Value', 'Data']) {
+      if (k in data) return parseNextAvailable(data[k]);
+    }
+  }
+  return null;
+}
+
+/**
+ * KashFlow's own next quote and project numbers, asked for live. Either is
+ * null when KashFlow can't be reached or answers with something unexpected,
+ * so the page can fall back to the synced copy.
+ */
+export async function kashflowNextNumbers() {
+  const base = (process.env.KASHFLOW_API_BASE_URL || 'https://api.kashflow.com/v2').replace(/\/+$/, '');
+  const ask = async (kind) => {
+    try {
+      const data = await kfSession.withKfAuth(async (token) => {
+        const resp = await kfSession.kfAxios.get(`${base}${KF_NEXT_PATHS[kind]}`, {
+          headers: { Authorization: `KfToken ${token}` },
+          timeout: KF_NEXT_TIMEOUT_MS,
+        });
+        return resp.data;
+      });
+      const n = parseNextAvailable(data);
+      if (n == null) logger.warn(`[jobRegisterService] KashFlow next ${kind} number came back as ${JSON.stringify(data)?.slice(0, 100)}`);
+      return n;
+    } catch (err) {
+      logger.warn(`[jobRegisterService] Couldn't get the next ${kind} number from KashFlow: ${err.message}`);
+      return null;
+    }
+  };
+  const [quote, project] = await Promise.all([ask('quote'), ask('project')]);
+  return { quote, project };
+}
+
+/**
+ * The number to suggest: KashFlow's next, unless the register already holds
+ * that number or a later one (entered here before KashFlow), when it's one
+ * past the register's highest. Without KashFlow, one past the highest of the
+ * register and the synced copy. `source` says which the page is showing.
+ */
+export function suggestNext({ kashflow = null, register = [], synced = [] }) {
+  const afterRegister = nextNumber(register);
+  if (kashflow != null) {
+    return { number: Math.max(kashflow, afterRegister ?? 0), source: 'kashflow' };
+  }
+  return { number: nextNumber(register, synced), source: 'sync' };
+}
+
+function combineNext({ entries, kf, topQuote, topProject }) {
+  const nums = (k) => entries.map((e) => e[k]).filter((n) => n != null).map(Number);
+  const quote = suggestNext({ kashflow: kf.quote, register: nums('quoteNumber'), synced: [topQuote?.Number ?? []].flat() });
+  const project = suggestNext({ kashflow: kf.project, register: nums('projectNumber'), synced: [topProject?.Number ?? []].flat() });
+  return { quote: quote.number, project: project.number, quoteSource: quote.source, projectSource: project.source };
+}
+
 // ── Database ────────────────────────────────────────────────────────────
 
 const byNumber = (docs) => new Map(docs.map((d) => [Number(d.Number), d]));
@@ -197,7 +274,7 @@ export async function loadRegister(filters = {}) {
   const Quote = mdb.REST.quote;
   const Project = mdb.REST.project;
   const Invoice = mdb.REST.invoice;
-  const [quotes, projects, invoices, periodQuotes, periodProjects, topQuote, topProject] = await Promise.all([
+  const [quotes, projects, invoices, periodQuotes, periodProjects, topQuote, topProject, kf] = await Promise.all([
     quoteNumbers.size ? Quote.find({ Number: { $in: [...quoteNumbers] } }).select('uuid Number Date CustomerName NetAmount Status ProjectNumber').lean() : [],
     projectNumbers.size ? Project.find({ Number: { $in: [...projectNumbers] } }).select('uuid Number Name CustomerName Status StartDate').lean() : [],
     invoiceNumbers.length ? Invoice.find({ Number: { $in: invoiceNumbers } }).select('uuid Number IssuedDate CustomerName NetAmount ProjectNumber Status').lean() : [],
@@ -205,6 +282,7 @@ export async function loadRegister(filters = {}) {
     Project.find({ StartDate: { $gte: from, $lt: to } }).select('uuid Number Name CustomerName Status StartDate').sort({ Number: -1 }).lean(),
     Quote.findOne({}).sort({ Number: -1 }).select('Number').lean(),
     Project.findOne({}).sort({ Number: -1 }).select('Number').lean(),
+    kashflowNextNumbers(),
   ]);
 
   const register = buildRegister({
@@ -224,10 +302,7 @@ export async function loadRegister(filters = {}) {
       quotes: unregistered.quotes.slice(0, UNREGISTERED_LIMIT),
       projects: unregistered.projects.slice(0, UNREGISTERED_LIMIT),
     },
-    next: {
-      quote: nextNumber([...quoteNumbers], topQuote?.Number ?? []),
-      project: nextNumber([...projectNumbers], topProject?.Number ?? []),
-    },
+    next: combineNext({ entries, kf, topQuote, topProject }),
   };
 }
 
@@ -285,6 +360,32 @@ export function parseEntryForm(body = {}) {
   const contract = text(body.contractUuid);
   fields.contractUuid = contract || null;
   return fields;
+}
+
+/**
+ * The form as it was typed, shaped like a register row so the form can be
+ * shown again (after a Next button) without losing anything. Nothing here is
+ * saved; dates that aren't yyyy-mm-dd are dropped so the view can show them.
+ */
+export function formEcho(body = {}) {
+  const keep = ['quoteNumber', 'projectNumber', 'site', 'client', 'contact', 'value', 'description',
+    'clientRef', 'invoiceNumber', 'notes'];
+  const entry = Object.fromEntries(keep.map((k) => [k, text(body[k])]));
+  for (const k of ['quoteDate', 'jobDate', 'invoiceDate']) {
+    const s = text(body[k]);
+    entry[k] = /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(`${s}T12:00:00Z`).getTime()) ? s : '';
+  }
+  entry.contractId = text(body.contractUuid) ? { uuid: text(body.contractUuid) } : null;
+  entry.cancelled = body.cancelled === 'on' || body.cancelled === 'true' || body.cancelled === true;
+  return entry;
+}
+
+/** formEcho with the quote or project number set to `next`'s, for the Next buttons. */
+export function fillNext(body, next) {
+  const entry = formEcho(body);
+  const kind = body?.fill === 'project' ? 'project' : 'quote';
+  if (next?.[kind]) entry[`${kind}Number`] = String(next[kind]);
+  return entry;
 }
 
 async function applyContract(fields) {
@@ -359,5 +460,6 @@ export async function jobsForAllocation() {
 export default {
   STAGES, STAGE_LABELS, STAGE_FILTERS,
   stageOf, clientKey, entryDate, taxYearOf, matchEntry, buildRegister, findUnregistered, nextNumber, parseEntryForm,
+  parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext,
   loadRegister, createEntry, updateEntry, findEntry, contractChoices, jobsForAllocation,
 };

@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.111.0] - 2026-11-11
+
+### Added
+- **Job Register: next numbers from KashFlow.** The next quote and project numbers are now asked of KashFlow itself (`GET /nextavailablequotenumber` and `/nextavailableprojectnumber`) instead of worked out from the last sync, so a quote or project made in KashFlow since the last sync is counted.
+  - If the register already holds that number or a later one (entered here before KashFlow), the suggestion is one past the register's highest, so two rows aren't given the same number.
+  - If KashFlow doesn't answer within 5 seconds, the page falls back to one past the highest of the register and the synced copy, and says so.
+  - A **Next** button beside the quote and project number fields, on the add form and on an entry's page, fills the field in with a number asked of KashFlow at that moment. It's a form button (`POST /job-register/next`, `POST /job-register/:uuid/next`): the form comes back with everything typed kept and nothing saved.
+
 ## [6.110.0] - 2026-11-11
 
 ### Changed

@@ -2,16 +2,24 @@
   The register row's fields, shared by the add and edit forms. In the order of
   the Job Reg workbook: quote, job, site, client, contact, value, description,
   invoice, client ref.
-  Locals: entry, next, clients, contracts, input, label
+  Locals: entry, next, clients, contracts, input, label, nextAction
+
+  The Next buttons post the form as typed to nextAction, which shows it again
+  with KashFlow's next number filled in (forms only: no fetch, see
+  docs/UI-GUIDELINES.md).
 %>
 <%
   const ymd = (d) => d ? new Date(d).toISOString().slice(0, 10) : '';
   const v = (k) => entry[k] ?? '';
   const currentContract = entry.contractId?.uuid || '';
+  const nextBtn = 'shrink-0 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium transition disabled:opacity-50';
 %>
 <div>
   <label for="jr-quoteNumber" class="<%= label %>">Quote no. (KashFlow)</label>
-  <input id="jr-quoteNumber" name="quoteNumber" inputmode="numeric" value="<%= v('quoteNumber') %>" placeholder="<%= next.quote || '' %>" class="<%= input %> w-full font-mono">
+  <div class="flex gap-2">
+    <input id="jr-quoteNumber" name="quoteNumber" inputmode="numeric" value="<%= v('quoteNumber') %>" placeholder="<%= next.quote || '' %>" class="<%= input %> w-full min-w-0 font-mono">
+    <button type="submit" name="fill" value="quote" formaction="<%= nextAction %>" formnovalidate title="Fill in the next quote number, asked of KashFlow now" class="<%= nextBtn %>">Next</button>
+  </div>
 </div>
 <div>
   <label for="jr-quoteDate" class="<%= label %>">Quote date</label>
@@ -19,7 +27,10 @@
 </div>
 <div>
   <label for="jr-projectNumber" class="<%= label %>">Job / project no. (KashFlow)</label>
-  <input id="jr-projectNumber" name="projectNumber" inputmode="numeric" value="<%= v('projectNumber') %>" placeholder="<%= next.project ? `${next.project} when won` : 'When won' %>" class="<%= input %> w-full font-mono">
+  <div class="flex gap-2">
+    <input id="jr-projectNumber" name="projectNumber" inputmode="numeric" value="<%= v('projectNumber') %>" placeholder="<%= next.project ? `${next.project} when won` : 'When won' %>" class="<%= input %> w-full min-w-0 font-mono">
+    <button type="submit" name="fill" value="project" formaction="<%= nextAction %>" formnovalidate title="Fill in the next project number, asked of KashFlow now" class="<%= nextBtn %>">Next</button>
+  </div>
 </div>
 <div>
   <label for="jr-jobDate" class="<%= label %>">Job date</label>
@@ -44,7 +55,7 @@
 
 <div>
   <label for="jr-value" class="<%= label %>">Value (net £)</label>
-  <input id="jr-value" name="value" inputmode="decimal" value="<%= entry.value != null ? Number(entry.value).toFixed(2) : '' %>" class="<%= input %> w-full">
+  <input id="jr-value" name="value" inputmode="decimal" value="<%= typeof entry.value === 'string' ? entry.value : (entry.value != null ? Number(entry.value).toFixed(2) : '') %>" class="<%= input %> w-full">
 </div>
 <div>
   <label for="jr-description" class="<%= label %>">Description</label>
@@ -82,3 +93,4 @@
     Cancelled
   </label>
 </div>
+

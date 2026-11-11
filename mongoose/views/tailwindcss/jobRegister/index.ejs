@@ -220,11 +220,12 @@
       Give it the number it will have in KashFlow.
       <% if (next.quote) { %>Next quote number: <span class="font-mono"><%= next.quote %></span>.<% } %>
       <% if (next.project) { %>Next project number: <span class="font-mono"><%= next.project %></span>.<% } %>
+      <% if ((next.quote || next.project) && (next.quoteSource === 'sync' || next.projectSource === 'sync')) { %><span class="text-amber-700 dark:text-amber-400">KashFlow didn't answer, so these are one past the last synced numbers; check them in KashFlow.</span><% } %>
       Leave the project number blank until the quote is won.
     </p>
     <form method="POST" action="/job-register" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <%- include('../partials/csrfHidden') %>
-      <%- include('_fields', { entry: {}, next, clients, contracts, input, label }) %>
+      <%- include('_fields', { entry: locals.form || {}, next, clients, contracts, input, label, nextAction: '/job-register/next#add' }) %>
       <div class="sm:col-span-2 lg:col-span-4">
         <button type="submit" class="<%= primaryBtn %>">Add to register</button>
       </div>

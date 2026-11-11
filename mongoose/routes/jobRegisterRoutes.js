@@ -16,6 +16,18 @@ router.post(
   authService.ensureGroup('commercial', 'edit', 'admin'),
   ctrl.postCreate,
 );
+// The Next buttons: show the form again with KashFlow's next number filled in.
+// Before /:uuid, which would otherwise take "next" as an entry.
+router.post(
+  '/job-register/next',
+  authService.ensureGroup('commercial', 'edit', 'admin'),
+  ctrl.postFillNext,
+);
+router.post(
+  '/job-register/:uuid/next',
+  authService.ensureGroup('commercial', 'edit', 'admin'),
+  ctrl.postFillNextEdit,
+);
 router.get(
   '/job-register/:uuid',
   authService.ensureGroup([{ group: 'commercial', level: 'view' }, { group: 'finance', level: 'view' }], null, 'admin', 'accountant'),
