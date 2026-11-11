@@ -1,0 +1,233 @@
+<%#
+  Job Register: the plan of what will be in KashFlow (double entry), one row
+  per quote/job, as on the Job Reg workbook, with each number checked against
+  the synced KashFlow quote, project and invoice.
+  Locals: rows, counts, clients, years, totals, filters, unregistered, next,
+          stageLabels, stages, contracts, crumbs
+%>
+<%
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
+  const h2 = 'font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const input = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
+  const th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap';
+  const td = 'px-3 py-2 text-gray-900 dark:text-gray-100 align-top';
+  const label = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '';
+  const money = (v) => v == null ? '' : '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const stagePill = {
+    quoted: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
+    won: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
+    invoiced: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
+    cancelled: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
+  };
+  const qs = (over) => {
+    const p = { stage: filters.stage, client: filters.client, year: filters.year ?? '', q: filters.q, ...over };
+    const parts = Object.entries(p).filter(([k, v]) => v !== '' && v != null && !(k === 'stage' && v === 'all'))
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`);
+    return '/job-register' + (parts.length ? '?' + parts.join('&') : '');
+  };
+  const chips = [
+    ['all', 'All'], ['quoted', 'Quoted'], ['won', 'Won'], ['invoiced', 'Invoiced'], ['cancelled', 'Cancelled'],
+    ['unmatched', 'Not in KashFlow yet'], ['differs', "Doesn't match KashFlow"],
+  ];
+  // One KashFlow check: tick, missing or differs
+  const sideBadge = (s, what, number) => {
+    if (s.state === 'none') return '';
+    if (s.state === 'ok') return `<span class="inline-flex items-center gap-1 text-green-700 dark:text-green-400" title="${what} ${number} is in KashFlow and agrees"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>${what}</span>`;
+    if (s.state === 'missing') return `<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400" title="${what} ${number} isn't in KashFlow yet"><i class="bi bi-hourglass-split" aria-hidden="true"></i>${what}</span>`;
+    return `<span class="inline-flex items-center gap-1 text-red-700 dark:text-red-400" title="${s.issues.join('; ').replace(/"/g, '&quot;')}"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>${what}</span>`;
+  };
+  const yearLabel = (y) => `${y}/${String(y + 1).slice(-2)}`;
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs, current: 'Job Register' }) %>
+
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-journal-text text-green-600 dark:text-green-400" aria-hidden="true"></i>
+        Job Register
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Quotes and jobs, entered here first and checked against KashFlow. A quote is won when it has a project number, and invoiced when it has an invoice number.
+      </p>
+    </div>
+    <a href="#add" class="<%= primaryBtn %> whitespace-nowrap"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a quote or job</a>
+  </div>
+
+  <!-- Stage filter -->
+  <div class="flex flex-wrap gap-2 mb-4" role="navigation" aria-label="Filter by stage">
+    <% chips.forEach(([key, text]) => { const active = filters.stage === key; %>
+      <a href="<%= qs({ stage: key }) %>"
+         class="text-sm px-3 py-1.5 rounded-full border transition <%= active ? 'bg-green-600 border-green-600 text-white' : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' %>"
+         <%= active ? 'aria-current=true' : '' %>>
+        <%= text %> <span class="<%= active ? 'text-green-100' : 'text-gray-400' %>"><%= counts[key] ?? 0 %></span>
+      </a>
+    <% }) %>
+  </div>
+
+  <!-- Client, year, search -->
+  <form method="GET" action="/job-register" class="<%= card %> p-4 mb-6 flex flex-wrap gap-3 items-end">
+    <% if (filters.stage !== 'all') { %><input type="hidden" name="stage" value="<%= filters.stage %>"><% } %>
+    <div>
+      <label for="f-client" class="<%= label %>">Client</label>
+      <select id="f-client" name="client" class="<%= input %>">
+        <option value="">All clients</option>
+        <% clients.forEach((c) => { %>
+          <option value="<%= c.key %>" <%= filters.client && filters.client.trim().toLowerCase() === c.key ? 'selected' : '' %>><%= c.name %><%= c.variants > 1 ? ` (${c.variants} spellings)` : '' %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label for="f-year" class="<%= label %>">Tax year</label>
+      <select id="f-year" name="year" class="<%= input %>">
+        <option value="">All years</option>
+        <% years.forEach((y) => { %>
+          <option value="<%= y %>" <%= filters.year === y ? 'selected' : '' %>><%= yearLabel(y) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="flex-1 min-w-48">
+      <label for="f-q" class="<%= label %>">Search</label>
+      <input id="f-q" name="q" value="<%= filters.q %>" placeholder="Site, contact, number, client ref…" class="<%= input %> w-full">
+    </div>
+    <button type="submit" class="<%= primaryBtn %>">Filter</button>
+    <% if (filters.client || filters.year || filters.q) { %>
+      <a href="<%= qs({ client: '', year: '', q: '' }) %>" class="<%= secondaryBtn %>">Clear</a>
+    <% } %>
+  </form>
+
+  <!-- Totals -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="<%= card %> p-4">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Value shown</p>
+      <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(totals.value) || '£0.00' %></p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Net, excluding cancelled</p>
+    </div>
+    <div class="<%= card %> p-4">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Won, not invoiced</p>
+      <p class="text-2xl font-bold text-blue-700 dark:text-blue-400"><%= money(totals.won) || '£0.00' %></p>
+    </div>
+    <div class="<%= card %> p-4">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Invoiced</p>
+      <p class="text-2xl font-bold text-green-700 dark:text-green-400"><%= money(totals.invoiced) || '£0.00' %></p>
+    </div>
+  </div>
+
+  <!-- The register -->
+  <% if (!rows.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center mb-6">
+      Nothing in the register matches these filters.
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-6">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th class="<%= th %>">Quote</th>
+            <th class="<%= th %>">Job</th>
+            <th class="<%= th %>">Date</th>
+            <th class="<%= th %>">Site</th>
+            <th class="<%= th %>">Client</th>
+            <th class="<%= th %>">Contact</th>
+            <th class="<%= th %> text-right">Value</th>
+            <th class="<%= th %>">Desc.</th>
+            <th class="<%= th %>">Invoice</th>
+            <th class="<%= th %>">Inv. date</th>
+            <th class="<%= th %>">Client ref</th>
+            <th class="<%= th %>">KashFlow</th>
+            <th class="<%= th %>">Stage</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <% rows.forEach(({ entry: e, stage, match }) => { %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition <%= stage === 'cancelled' ? 'opacity-60' : '' %>">
+              <td class="<%= td %> font-mono text-xs"><a href="/job-register/<%= e.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= e.quoteNumber ?? '—' %></a></td>
+              <td class="<%= td %> font-mono text-xs"><a href="/job-register/<%= e.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= e.projectNumber ?? '—' %></a></td>
+              <td class="<%= td %> whitespace-nowrap"><%= fmt(e.jobDate || e.quoteDate) %></td>
+              <td class="<%= td %>"><%= e.site %></td>
+              <td class="<%= td %>"><%= e.client %></td>
+              <td class="<%= td %>"><%= e.contact || '' %></td>
+              <td class="<%= td %> text-right whitespace-nowrap"><%= money(e.value) %></td>
+              <td class="<%= td %>"><%= e.description || '' %></td>
+              <td class="<%= td %> font-mono text-xs"><%= e.invoiceNumber ?? '' %></td>
+              <td class="<%= td %> whitespace-nowrap"><%= fmt(e.invoiceDate) %></td>
+              <td class="<%= td %> font-mono text-xs"><%= e.clientRef || '' %></td>
+              <td class="<%= td %> text-xs whitespace-nowrap">
+                <div class="flex flex-col gap-0.5">
+                  <%- sideBadge(match.quote, 'Quote', e.quoteNumber) %>
+                  <%- sideBadge(match.project, 'Project', e.projectNumber) %>
+                  <%- sideBadge(match.invoice, 'Invoice', e.invoiceNumber) %>
+                </div>
+                <% [match.quote, match.project, match.invoice].flatMap((s) => s.issues).forEach((issue) => { %>
+                  <p class="text-red-700 dark:text-red-400 whitespace-normal mt-0.5"><%= issue %></p>
+                <% }) %>
+              </td>
+              <td class="<%= td %>">
+                <span class="text-[11px] px-2 py-0.5 rounded-full border <%= stagePill[stage] %>"><%= stageLabels[stage] %></span>
+                <% if (e.notes) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= e.notes %></p><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 flex flex-wrap gap-4">
+      <span><i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i> In KashFlow and agrees</span>
+      <span><i class="bi bi-hourglass-split text-amber-600" aria-hidden="true"></i> Not in KashFlow yet (or not synced)</span>
+      <span><i class="bi bi-exclamation-triangle-fill text-red-600" aria-hidden="true"></i> In KashFlow but differs</span>
+    </p>
+  <% } %>
+
+  <!-- The other side of the double entry -->
+  <% if (unregistered.quoteCount || unregistered.projectCount) { %>
+    <div class="rounded-2xl border p-4 mb-6 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">
+      <h2 class="<%= h2 %> mb-1">In KashFlow, not in the register (<%= yearLabel(unregistered.year) %>)</h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
+        <%= unregistered.quoteCount %> quote<%= unregistered.quoteCount === 1 ? '' : 's' %> and
+        <%= unregistered.projectCount %> project<%= unregistered.projectCount === 1 ? '' : 's' %> in KashFlow have no register row.
+        Add them so the two agree.
+      </p>
+      <div class="grid md:grid-cols-2 gap-4 text-sm">
+        <% [['Quotes', unregistered.quotes, (r) => [r.Number, fmt(r.Date), r.CustomerName, money(r.NetAmount)], unregistered.quoteCount, '/quote/read/'],
+            ['Projects', unregistered.projects, (r) => [r.Number, fmt(r.StartDate), r.Name, r.CustomerName], unregistered.projectCount, '/project/read/']]
+            .forEach(([heading, list, cells, total, href]) => { if (!list.length) return; %>
+          <div>
+            <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-1"><%= heading %></h3>
+            <ul class="divide-y divide-amber-200 dark:divide-amber-800">
+              <% list.forEach((r) => { const c = cells(r); %>
+                <li class="py-1 flex gap-3">
+                  <a href="<%= href %><%= r.uuid %>" class="font-mono text-xs text-green-700 dark:text-green-400 hover:underline"><%= c[0] %></a>
+                  <span class="text-gray-500 dark:text-gray-400"><%= c[1] %></span>
+                  <span class="flex-1 min-w-0 truncate text-gray-700 dark:text-gray-300"><%= c[2] %></span>
+                  <span class="text-gray-500 dark:text-gray-400"><%= c[3] || '' %></span>
+                </li>
+              <% }) %>
+            </ul>
+            <% if (total > list.length) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-1">and <%= total - list.length %> more</p><% } %>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Add -->
+  <div id="add" class="<%= card %> p-4 scroll-mt-24">
+    <h2 class="<%= h2 %> mb-1">Add a quote or job</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+      Give it the number it will have in KashFlow.
+      <% if (next.quote) { %>Next quote number: <span class="font-mono"><%= next.quote %></span>.<% } %>
+      <% if (next.project) { %>Next project number: <span class="font-mono"><%= next.project %></span>.<% } %>
+      Leave the project number blank until the quote is won.
+    </p>
+    <form method="POST" action="/job-register" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <%- include('../partials/csrfHidden') %>
+      <%- include('_fields', { entry: {}, next, clients, contracts, input, label }) %>
+      <div class="sm:col-span-2 lg:col-span-4">
+        <button type="submit" class="<%= primaryBtn %>">Add to register</button>
+      </div>
+    </form>
+  </div>
+</div>

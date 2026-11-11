@@ -3,6 +3,7 @@ const router = express.Router();
 import authService from '../../services/authService.js';
 import ctrl from '../controllers/attendanceController.js';
 import flow from '../controllers/weeklyFlowController.js';
+import sheet from '../controllers/weeklySheetController.js';
 
 // Permission groups (accessGroupsConfig): Site Ops view reads the daily and
 // weekly views, edit records attendance and assignments, approve signs them
@@ -69,6 +70,22 @@ router.post(
   "/weekly-flow/:year/:week/record",
   authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   flow.postRecord,
+);
+
+// Weekly sheet: the WEEKLY ATTENDANCE spreadsheet as one page (people by
+// days, a site in each cell). Same access as the weekly flow it feeds.
+router.get(
+  "/weekly-sheet/:monday?",
+  authService.ensureGroup(
+    [{ group: "siteOps", level: "edit" }, { group: "payroll", level: "view" }],
+    null, "admin", "accountant",
+  ),
+  sheet.getSheet,
+);
+router.post(
+  "/weekly-sheet/:monday",
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
+  sheet.postSheet,
 );
 
 // Self-service attendance submission (employee / subcontractor)

@@ -501,7 +501,8 @@ describe('weekly attendance overview', () => {
     assert.equal(checks.severity, 'critical');
     assert.deepStrictEqual(checks.rows[0].cells, ['Assigned but no attendance', '2']);
     assert.equal(loads, 1);
-    assert.equal(page.actions[0].href, '/weekly-flow');
+    // The simple weekly sheet comes first, then the four-step flow
+    assert.deepStrictEqual(page.actions.map((a) => a.href), ['/weekly-sheet', '/weekly-flow']);
   });
 
   it('opens for accountants, like the flow page, and not for employees', async () => {

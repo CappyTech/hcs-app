@@ -102,7 +102,7 @@ export const groups = {
     models: ['attendance', 'assignment', 'location', 'vehicleDeployment'],
     routes: {
       view:    ['/daily', '/weekly', '/overview/attendance', '/overview/assignment'],
-      edit:    ['/weekly-flow'],
+      edit:    ['/weekly-flow', '/weekly-sheet'],
       approve: ['/attendance/approve', '/attendance/reject', '/attendance/bulk-approve', '/weekly-management'],
     },
   },
@@ -110,11 +110,11 @@ export const groups = {
     label: 'Commercial',
     description: 'Projects, quotes, contracts and the purchases booked against them.',
     departments: ['management'],
-    models: ['project', 'quote', 'contract', 'customer', 'supplier', 'purchase'],
+    models: ['project', 'quote', 'contract', 'customer', 'supplier', 'purchase', 'jobRegister'],
     routes: {
       view: [
         '/overview/project', '/overview/projects', '/overview/quote', '/overview/contract',
-        '/overview/customer', '/overview/supplier', '/overview/purchase',
+        '/overview/customer', '/overview/supplier', '/overview/purchase', '/job-register',
       ],
     },
   },
@@ -130,7 +130,7 @@ export const groups = {
     ],
     routes: {
       view: [
-        '/accountant', '/kashflow', '/overview/finance', '/overview/invoice',
+        '/accountant', '/kashflow', '/overview/finance', '/overview/invoice', '/job-register',
         '/overview/purchase', '/overview/supplier', '/overview/customer',
       ],
       // Bank reconciliation and bulk payments write real payments to
@@ -160,7 +160,7 @@ export const groups = {
     routes: {
       view: [
         '/payroll/dashboard', '/payroll/runs', '/payroll/submissions', '/overview/payroll',
-        '/overview/payrollRun', '/overview/payrollSubmission', '/weekly-flow', '/overview/weekly',
+        '/overview/payrollRun', '/overview/payrollSubmission', '/weekly-flow', '/weekly-sheet', '/overview/weekly',
       ],
     },
   },

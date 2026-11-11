@@ -1,0 +1,237 @@
+<%#
+  Weekly attendance sheet: the WEEKLY ATTENDANCE spreadsheet as one page.
+  One row per person, Monday to Sunday; each cell picks a site, a location
+  (Office), Off or Sick. Saving writes pending attendance records.
+  Locals: week, sheet, closures, running, jobs, vehicles, group, groups, addSubcontractor,
+          subcontractorChoices, dayLabels, crumbs
+%>
+<%
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
+  const h2 = 'font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const input = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const cellSelect = 'w-full min-w-28 text-xs border border-gray-200 dark:border-gray-700 rounded-md px-1.5 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
+  const th = 'px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap';
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '';
+  const fmtDay = (key) => key.split('-').reverse().join('/');
+  const base = `/weekly-sheet/${week.monday}`;
+  const withGroup = (url, g = group) => url + (g ? `?group=${g}` : '');
+  const tone = {
+    leave: 'bg-purple-50 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+    approved: 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+    locked: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+    multi: 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
+    other: 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  };
+  const toneIcon = { leave: 'bi-sun', approved: 'bi-check-circle-fill', locked: 'bi-lock-fill', multi: 'bi-stack', other: 'bi-dash-circle' };
+  const choiceGroups = ['Sites', 'Locations', 'Other'].map((g) => [g, sheet.choices.filter((c) => c.group === g)]).filter(([, list]) => list.length);
+  const dueClass = { overdue: 'text-red-700 dark:text-red-400 font-semibold', soon: 'text-amber-700 dark:text-amber-400 font-semibold', ok: 'text-gray-700 dark:text-gray-300' };
+  const hasLocations = sheet.choices.some((c) => c.group === 'Locations');
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs, current: 'Weekly sheet' }) %>
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-table text-green-600 dark:text-green-400" aria-hidden="true"></i>
+        Weekly attendance
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Monday <%= fmtDay(week.days[0]) %> to Sunday <%= fmtDay(week.days[6]) %>.
+        Pick where each person is; days you add are pending until approved in the <a href="/weekly-flow" class="text-green-700 dark:text-green-400 hover:underline">weekly flow</a>.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 print:hidden">
+      <a href="<%= withGroup(`/weekly-sheet/${week.previous}`) %>" class="<%= secondaryBtn %>"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous week</a>
+      <% if (week.monday !== week.thisWeek) { %><a href="<%= withGroup('/weekly-sheet') %>" class="<%= secondaryBtn %>">This week</a><% } %>
+      <a href="<%= withGroup(`/weekly-sheet/${week.next}`) %>" class="<%= secondaryBtn %>">Next week <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    </div>
+  </div>
+
+  <!-- Group filter, as the spreadsheet's colour key -->
+  <div class="flex flex-wrap gap-2 mb-4 print:hidden" role="navigation" aria-label="Filter by group">
+    <% [{ key: '', label: 'Everyone' }, ...groups].forEach((g) => { const active = group === g.key; const n = g.key ? sheet.counts[g.key] : sheet.total; %>
+      <a href="<%= withGroup(base, g.key) %>"
+         class="text-sm px-3 py-1.5 rounded-full border transition <%= active ? 'bg-green-600 border-green-600 text-white' : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' %>"
+         <%= active ? 'aria-current=true' : '' %>>
+        <%= g.label %> <span class="<%= active ? 'text-green-100' : 'text-gray-400' %>"><%= n || 0 %></span>
+      </a>
+    <% }) %>
+  </div>
+
+  <% if (!hasLocations) { %>
+    <div class="rounded-2xl border p-3 mb-4 text-sm border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-gray-700 dark:text-gray-300">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      There are no saved locations, so Office isn't a choice yet. <a href="/location/create" class="text-green-700 dark:text-green-400 hover:underline">Add an Office location</a>.
+    </div>
+  <% } %>
+
+  <!-- The sheet -->
+  <% if (!sheet.sections.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center mb-6">
+      Nobody in this group.
+    </div>
+  <% } else { %>
+    <form method="POST" action="<%= base %>">
+      <%- include('../partials/csrfHidden') %>
+      <input type="hidden" name="group" value="<%= group %>">
+      <% if (addSubcontractor) { %><input type="hidden" name="addedSubcontractor" value="<%= addSubcontractor %>"><% } %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-3">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="<%= th %>">Name</th>
+              <th class="<%= th %>" title="Holiday days left this holiday year">Hol. left</th>
+              <% week.days.forEach((day, i) => { const closure = closures.get(day); %>
+                <th class="<%= th %> <%= day === week.today ? 'text-green-700 dark:text-green-400' : '' %>">
+                  <%= dayLabels[i] %>
+                  <% if (closure) { %><span class="block normal-case font-normal text-purple-700 dark:text-purple-300"><%= closure %></span><% } %>
+                </th>
+              <% }) %>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-gray-900">
+            <% sheet.sections.forEach((section) => { %>
+              <tr class="bg-gray-100 dark:bg-gray-800">
+                <th colspan="<%= week.days.length + 2 %>" scope="colgroup" class="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"><%= section.label %></th>
+              </tr>
+              <% section.rows.forEach((row) => { %>
+                <tr class="border-t border-gray-100 dark:border-gray-700">
+                  <th scope="row" class="px-2 py-1.5 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap"><%= row.name %></th>
+                  <td class="px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <% if (row.holidayLeft != null) { %>
+                      <span title="<%= row.holidayRenews ? 'Renews after ' + fmt(row.holidayRenews) : '' %>"><%= row.holidayLeft %></span>
+                    <% } %>
+                  </td>
+                  <% row.cells.forEach((cell, i) => { const name = `cell[${row.key}][${cell.day}]`; %>
+                    <td class="px-1 py-1 align-top <%= cell.closure ? 'bg-purple-50/50 dark:bg-purple-900/10' : '' %>">
+                      <% if (cell.editable) { %>
+                        <input type="hidden" name="was[<%= row.key %>][<%= cell.day %>]" value="<%= cell.value %>">
+                        <label class="sr-only" for="c-<%= row.key %>-<%= cell.day %>"><%= row.name %>, <%= dayLabels[i] %></label>
+                        <select id="c-<%= row.key %>-<%= cell.day %>" name="<%= name %>" class="<%= cellSelect %> <%= cell.status === 'rejected' ? 'border-red-400 dark:border-red-600' : '' %>">
+                          <option value=""></option>
+                          <% if (cell.extra) { %><option value="<%= cell.extra.value %>" selected><%= cell.extra.label %></option><% } %>
+                          <% choiceGroups.forEach(([g, list]) => { %>
+                            <optgroup label="<%= g %>">
+                              <% list.forEach((c) => { %><option value="<%= c.value %>" <%= c.value === cell.value ? 'selected' : '' %>><%= c.label %></option><% }) %>
+                            </optgroup>
+                          <% }) %>
+                        </select>
+                        <% if (cell.status === 'rejected') { %><span class="block text-[11px] text-red-700 dark:text-red-400">Rejected</span><% } %>
+                      <% } else { %>
+                        <a href="/daily/<%= cell.day %>" class="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs <%= tone[cell.tone] || tone.other %> hover:underline"
+                           title="<%= cell.tone === 'approved' ? 'Signed off' : cell.tone === 'locked' ? 'In a locked payroll period' : cell.tone === 'multi' ? 'More than one record: change them on the daily page' : cell.tone === 'leave' ? 'Approved holiday request' : 'Change this on the daily page' %>">
+                          <i class="bi <%= toneIcon[cell.tone] || toneIcon.other %>" aria-hidden="true"></i><span class="truncate"><%= cell.label %></span>
+                        </a>
+                      <% } %>
+                    </td>
+                  <% }) %>
+                </tr>
+              <% }) %>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-8">
+        <p class="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-3">
+          <span><i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i> Signed off</span>
+          <span><i class="bi bi-sun text-purple-600" aria-hidden="true"></i> Holiday (from holiday requests)</span>
+          <span><i class="bi bi-lock-fill text-gray-500" aria-hidden="true"></i> Payroll locked</span>
+          <span><i class="bi bi-stack text-amber-600" aria-hidden="true"></i> More than one record</span>
+        </p>
+        <button type="submit" class="<%= primaryBtn %>">Save week</button>
+      </div>
+    </form>
+  <% } %>
+
+  <!-- Add a subcontractor row -->
+  <% if (subcontractorChoices.length && (!group || group === 'sub')) { %>
+    <form method="GET" action="<%= base %>" class="<%= card %> p-4 mb-6 flex flex-wrap items-end gap-3 print:hidden">
+      <% if (group) { %><input type="hidden" name="group" value="<%= group %>"><% } %>
+      <div>
+        <label for="add-sub" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Add a subcontractor to this week</label>
+        <select id="add-sub" name="add" class="<%= input %>">
+          <% subcontractorChoices.forEach((s) => { %><option value="<%= s._id %>"><%= s.Name %></option><% }) %>
+        </select>
+      </div>
+      <button type="submit" class="<%= secondaryBtn %>">Add row</button>
+      <p class="text-xs text-gray-500 dark:text-gray-400 basis-full">Subcontractors with attendance in the last four weeks are listed already.</p>
+    </form>
+  <% } %>
+
+  <!-- Side panels, as on the spreadsheet -->
+  <div class="grid lg:grid-cols-2 gap-4 mb-4">
+    <div class="<%= card %> p-4">
+      <h2 class="<%= h2 %> mb-3">Contracts this week</h2>
+      <% if (!running.length) { %>
+        <p class="text-sm text-gray-500 dark:text-gray-400">No open contracts run this week. <a href="/contracts" class="text-green-700 dark:text-green-400 hover:underline">Contracts</a></p>
+      <% } else { %>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+          <% running.forEach((c) => { %>
+            <li class="py-1.5 flex gap-3">
+              <span class="font-mono text-xs text-gray-500 dark:text-gray-400 w-12"><%= c.project?.Number || '' %></span>
+              <a href="/contract/read/<%= c.uuid %>" class="flex-1 min-w-0 truncate text-green-700 dark:text-green-400 hover:underline"><%= c.title %></a>
+              <span class="text-xs text-gray-500 dark:text-gray-400 truncate"><%= c.location %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+    <div class="<%= card %> p-4">
+      <h2 class="<%= h2 %> mb-3">Jobs for allocation</h2>
+      <% if (!jobs.length) { %>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Every won job in the <a href="/job-register?stage=won" class="text-green-700 dark:text-green-400 hover:underline">Job Register</a> has a contract.</p>
+      <% } else { %>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Won in the Job Register, with no contract yet.</p>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+          <% jobs.forEach((j) => { %>
+            <li class="py-1.5 flex gap-3">
+              <a href="/job-register/<%= j.uuid %>" class="font-mono text-xs text-green-700 dark:text-green-400 hover:underline w-12"><%= j.projectNumber %></a>
+              <span class="flex-1 min-w-0 truncate text-gray-900 dark:text-gray-100"><%= j.site %></span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 truncate"><%= j.client %><%= j.description ? ` · ${j.description}` : '' %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="<%= card %> p-4">
+    <h2 class="<%= h2 %> mb-3">Vehicles</h2>
+    <% if (!vehicles.length) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">No vehicles.</p>
+    <% } else { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr>
+              <th class="<%= th %>">Vehicle</th><th class="<%= th %>">Type</th><th class="<%= th %>">Tax</th>
+              <th class="<%= th %>">MOT</th><th class="<%= th %>">Insurance</th><th class="<%= th %>">Breakdown</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% vehicles.forEach((v) => { %>
+              <tr>
+                <td class="px-2 py-1.5 font-mono text-xs"><a href="/vehicle/read/<%= v.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= v.registrationNumber %></a></td>
+                <td class="px-2 py-1.5 text-gray-700 dark:text-gray-300"><%= v.bodyType || [v.make, v.model].filter(Boolean).join(' ') %></td>
+                <% [['tax', v.roadTaxExpiryDate, ''], ['mot', v.motExpiryDate, ''], ['insurance', v.insuranceExpiryDate, v.insuranceProvider], ['breakdown', v.breakdownExpiryDate, v.breakdownProvider]].forEach(([k, date, provider]) => { %>
+                  <td class="px-2 py-1.5 whitespace-nowrap <%= dueClass[v.due[k]] || 'text-gray-400' %>">
+                    <%= date ? fmt(date) : '—' %><% if (provider) { %> <span class="font-normal text-xs text-gray-500 dark:text-gray-400">(<%= provider %>)</span><% } %>
+                    <% if (v.due[k] === 'overdue') { %><span class="sr-only"> overdue</span><% } else if (v.due[k] === 'soon') { %><span class="sr-only"> due soon</span><% } %>
+                  </td>
+                <% }) %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        <span class="text-red-700 dark:text-red-400 font-semibold">Red</span>: past due.
+        <span class="text-amber-700 dark:text-amber-400 font-semibold">Amber</span>: due within 30 days.
+      </p>
+    <% } %>
+  </div>
+</div>

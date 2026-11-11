@@ -1,0 +1,84 @@
+<%#
+  The register row's fields, shared by the add and edit forms. In the order of
+  the Job Reg workbook: quote, job, site, client, contact, value, description,
+  invoice, client ref.
+  Locals: entry, next, clients, contracts, input, label
+%>
+<%
+  const ymd = (d) => d ? new Date(d).toISOString().slice(0, 10) : '';
+  const v = (k) => entry[k] ?? '';
+  const currentContract = entry.contractId?.uuid || '';
+%>
+<div>
+  <label for="jr-quoteNumber" class="<%= label %>">Quote no. (KashFlow)</label>
+  <input id="jr-quoteNumber" name="quoteNumber" inputmode="numeric" value="<%= v('quoteNumber') %>" placeholder="<%= next.quote || '' %>" class="<%= input %> w-full font-mono">
+</div>
+<div>
+  <label for="jr-quoteDate" class="<%= label %>">Quote date</label>
+  <input id="jr-quoteDate" type="date" name="quoteDate" value="<%= ymd(entry.quoteDate) %>" class="<%= input %> w-full">
+</div>
+<div>
+  <label for="jr-projectNumber" class="<%= label %>">Job / project no. (KashFlow)</label>
+  <input id="jr-projectNumber" name="projectNumber" inputmode="numeric" value="<%= v('projectNumber') %>" placeholder="<%= next.project ? `${next.project} when won` : 'When won' %>" class="<%= input %> w-full font-mono">
+</div>
+<div>
+  <label for="jr-jobDate" class="<%= label %>">Job date</label>
+  <input id="jr-jobDate" type="date" name="jobDate" value="<%= ymd(entry.jobDate) %>" class="<%= input %> w-full">
+</div>
+
+<div class="sm:col-span-2">
+  <label for="jr-site" class="<%= label %>">Site</label>
+  <input id="jr-site" name="site" required maxlength="300" value="<%= v('site') %>" placeholder="25 Baker Way, Liverpool" class="<%= input %> w-full">
+</div>
+<div>
+  <label for="jr-client" class="<%= label %>">Client</label>
+  <input id="jr-client" name="client" required maxlength="200" list="jr-clients" value="<%= v('client') %>" placeholder="Plus Dane" class="<%= input %> w-full">
+  <datalist id="jr-clients">
+    <% clients.forEach((c) => { %><option value="<%= c.name %>"></option><% }) %>
+  </datalist>
+</div>
+<div>
+  <label for="jr-contact" class="<%= label %>">Contact</label>
+  <input id="jr-contact" name="contact" maxlength="200" value="<%= v('contact') %>" class="<%= input %> w-full">
+</div>
+
+<div>
+  <label for="jr-value" class="<%= label %>">Value (net £)</label>
+  <input id="jr-value" name="value" inputmode="decimal" value="<%= entry.value != null ? Number(entry.value).toFixed(2) : '' %>" class="<%= input %> w-full">
+</div>
+<div>
+  <label for="jr-description" class="<%= label %>">Description</label>
+  <input id="jr-description" name="description" maxlength="300" value="<%= v('description') %>" placeholder="Paving, fencing, structural…" class="<%= input %> w-full">
+</div>
+<div>
+  <label for="jr-clientRef" class="<%= label %>">Client order / PO ref</label>
+  <input id="jr-clientRef" name="clientRef" maxlength="100" value="<%= v('clientRef') %>" class="<%= input %> w-full font-mono">
+</div>
+<div>
+  <label for="jr-contract" class="<%= label %>">Contract on site</label>
+  <select id="jr-contract" name="contractUuid" class="<%= input %> w-full">
+    <option value="">— None yet —</option>
+    <% contracts.forEach((c) => { %>
+      <option value="<%= c.uuid %>" <%= c.uuid === currentContract ? 'selected' : '' %>><%= c.title %><%= c.status === 'Completed' ? ' (completed)' : '' %></option>
+    <% }) %>
+  </select>
+</div>
+
+<div>
+  <label for="jr-invoiceNumber" class="<%= label %>">Invoice no. (KashFlow)</label>
+  <input id="jr-invoiceNumber" name="invoiceNumber" inputmode="numeric" value="<%= v('invoiceNumber') %>" class="<%= input %> w-full font-mono">
+</div>
+<div>
+  <label for="jr-invoiceDate" class="<%= label %>">Invoice date</label>
+  <input id="jr-invoiceDate" type="date" name="invoiceDate" value="<%= ymd(entry.invoiceDate) %>" class="<%= input %> w-full">
+</div>
+<div class="sm:col-span-2">
+  <label for="jr-notes" class="<%= label %>">Notes</label>
+  <input id="jr-notes" name="notes" maxlength="2000" value="<%= v('notes') %>" placeholder="Paint to do, key 3142…" class="<%= input %> w-full">
+</div>
+<div class="sm:col-span-2 lg:col-span-4">
+  <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+    <input type="checkbox" name="cancelled" <%= entry.cancelled ? 'checked' : '' %> class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
+    Cancelled
+  </label>
+</div>

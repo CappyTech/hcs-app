@@ -8,7 +8,10 @@ export default {
   description: 'This payroll week, step by step: contracts, assignments, attendance and approval.',
   parents: ['projects', 'human'],
   overviewPath: '/overview/weekly',
-  actions: [{ label: 'Do weekly attendance', href: '/weekly-flow', route: '/weekly-flow', icon: 'bi-calendar-check' }],
+  actions: [
+    { label: 'Weekly sheet', href: '/weekly-sheet', route: '/weekly-sheet', icon: 'bi-table' },
+    { label: 'Do weekly attendance', href: '/weekly-flow', route: '/weekly-flow', icon: 'bi-calendar-check' },
+  ],
   summary: ['attendance.pending', 'assignment.thisWeek'],
   overview: {
     figures: ['attendance.pending', 'assignment.thisWeek', 'assignment.unstaffed'],
