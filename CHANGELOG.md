@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.111.1] - 2026-11-11
+
+### Fixed
+- **Date fields: the calendar icon opens the date picker again** (Job Register and every other date field). The layout drew its own calendar icon in the field's right padding and hid the browser's real one, which sat to its left, so clicking the visible icon did nothing. The browser's own icon is shown instead, lit for dark mode.
+
 ## [6.111.0] - 2026-11-11
 
 ### Added
