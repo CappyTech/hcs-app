@@ -56,7 +56,7 @@
     <h2 class="<%= h2 %> mb-4">Register entry</h2>
     <form method="POST" action="/job-register/<%= entry.uuid %>" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <%- include('../partials/csrfHidden') %>
-      <%- include('_fields', { entry, next, clients, contracts, input, label }) %>
+      <%- include('_fields', { entry: locals.form || entry, next, clients, contracts, input, label, nextAction: `/job-register/${entry.uuid}/next` }) %>
       <div class="sm:col-span-2 lg:col-span-4">
         <button type="submit" class="<%= primaryBtn %>">Save</button>
       </div>

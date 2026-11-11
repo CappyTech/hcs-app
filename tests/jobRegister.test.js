@@ -9,6 +9,7 @@ import rbac from '../mongoose/config/rolePermissionsConfig.js';
 import accessGroups from '../mongoose/config/accessGroupsConfig.js';
 import {
   stageOf, clientKey, taxYearOf, matchEntry, buildRegister, findUnregistered, nextNumber, parseEntryForm,
+  parseNextAvailable, suggestNext, formEcho, fillNext,
 } from '../mongoose/services/jobRegisterService.js';
 import { readFilters } from '../mongoose/controllers/jobRegisterController.js';
 
@@ -128,6 +129,29 @@ describe('Job Register filters', () => {
     assert.equal(nextNumber([], []), null);
   });
 
+  it('reads KashFlow next-available answers in any likely shape', () => {
+    assert.equal(parseNextAvailable(1001), 1001);
+    assert.equal(parseNextAvailable('1001'), 1001);
+    assert.equal(parseNextAvailable('"1001"'), 1001);
+    assert.equal(parseNextAvailable({ Number: 1001 }), 1001);
+    assert.equal(parseNextAvailable({ NextNumber: '1001' }), 1001);
+    assert.equal(parseNextAvailable({ Data: { Number: 1001 } }), 1001);
+    assert.equal(parseNextAvailable(null), null);
+    assert.equal(parseNextAvailable(''), null);
+    assert.equal(parseNextAvailable('abc'), null);
+    assert.equal(parseNextAvailable(0), null);
+    assert.equal(parseNextAvailable({ Other: 5 }), null);
+  });
+
+  it("takes KashFlow's next number, unless the register is already past it", () => {
+    assert.deepEqual(suggestNext({ kashflow: 1001, register: [990], synced: [999] }), { number: 1001, source: 'kashflow' });
+    // Entered here before KashFlow: don't hand out a number the register holds
+    assert.deepEqual(suggestNext({ kashflow: 1001, register: [1001, 1002], synced: [1000] }), { number: 1003, source: 'kashflow' });
+    // KashFlow didn't answer: fall back to the synced copy
+    assert.deepEqual(suggestNext({ kashflow: null, register: [990], synced: [999] }), { number: 1000, source: 'sync' });
+    assert.deepEqual(suggestNext({ kashflow: null, register: [], synced: [] }), { number: null, source: 'sync' });
+  });
+
   it('reads the year from the query string, and ignores junk', () => {
     assert.equal(readFilters({ year: '2026' }).year, 2026);
     assert.equal(readFilters({ year: 'x' }).year, null);
@@ -150,6 +174,26 @@ describe('Job Register form', () => {
     assert.throws(() => parseEntryForm({ quoteNumber: '51a' }), /quote number/);
     assert.throws(() => parseEntryForm({ value: '-3' }), /value/);
     assert.throws(() => parseEntryForm({ jobDate: '11/11/2026' }), /job date/);
+  });
+});
+
+describe('Job Register Next buttons', () => {
+  it('keeps what was typed and fills in the asked-for number', () => {
+    const body = { fill: 'project', quoteNumber: '1001', site: ' 1 Test St ', client: 'Client A', value: '12.5',
+      quoteDate: '2026-11-11', jobDate: 'junk', contractUuid: 'k1', cancelled: 'on' };
+    const e = fillNext(body, { quote: 2000, project: 3000 });
+    assert.equal(e.projectNumber, '3000');
+    assert.equal(e.quoteNumber, '1001');
+    assert.equal(e.site, '1 Test St');
+    assert.equal(e.value, '12.5');
+    assert.equal(e.quoteDate, '2026-11-11');
+    assert.equal(e.jobDate, '');
+    assert.deepEqual(e.contractId, { uuid: 'k1' });
+    assert.equal(e.cancelled, true);
+    assert.equal(fillNext({}, { quote: 2000 }).quoteNumber, '2000');
+    // No number to give: leave the field as typed
+    assert.equal(fillNext({ fill: 'quote', quoteNumber: '5' }, { quote: null }).quoteNumber, '5');
+    assert.equal(formEcho().site, '');
   });
 });
 
@@ -185,6 +229,23 @@ describe('Job Register page', () => {
     assert.match(html, /action="\/job-register"/);
     assert.match(html, /name="_csrf"/);
     assert.doesNotMatch(html, /<script/);
+    assert.match(html, /name="fill" value="quote" formaction="\/job-register\/next#add" formnovalidate/);
+    assert.match(html, /name="fill" value="project" formaction="\/job-register\/next#add" formnovalidate/);
+  });
+
+  it('shows the add form again as typed after a Next button', async () => {
+    const form = fillNext({ fill: 'quote', site: '1 Test St', client: 'Client A', value: 'abc' }, base.next);
+    const html = await ejs.renderFile(view, { ...base, ...build({}), form });
+    assert.match(html, /id="jr-quoteNumber" name="quoteNumber" inputmode="numeric" value="51767"/);
+    assert.match(html, /value="1 Test St"/);
+    assert.match(html, /id="jr-value" name="value" inputmode="decimal" value="abc"/);
+  });
+
+  it("says when KashFlow didn't answer and the numbers come from the sync", async () => {
+    const html = await ejs.renderFile(view, { ...base, ...build({}), next: { ...base.next, quoteSource: 'sync', projectSource: 'kashflow' } });
+    assert.match(html, /KashFlow didn.t answer/);
+    const ok = await ejs.renderFile(view, { ...base, ...build({}), next: { ...base.next, quoteSource: 'kashflow', projectSource: 'kashflow' } });
+    assert.doesNotMatch(ok, /didn.t answer/);
   });
 
   it('keeps the other filters on the stage chips', async () => {
@@ -202,5 +263,6 @@ describe('Job Register page', () => {
     assert.match(html, /In KashFlow but differs/);
     assert.match(html, /No number yet/);
     assert.match(html, /action="\/job-register\/b"/);
+    assert.match(html, /formaction="\/job-register\/b\/next"/);
   });
 });
