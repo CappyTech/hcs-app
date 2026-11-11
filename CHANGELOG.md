@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.107.3] - 2026-11-11
+
+### Fixed
+- The weekly page (`/weekly`, `/weekly-management`) gave "500 – Failed to fetch weekly attendance" for any week with a subcontractor's attendance in it.
+  - Attendance is in INTERNAL, but suppliers and projects are REST models. Populating `subcontractorId` (and `projectId` on the daily view) looked for them on the INTERNAL connection and threw "Schema hasn't been registered for model supplier". Those populates now name the REST model.
+  - The same bug dropped assignments and vehicle deployments with a subcontractor from the week without any error. They show again.
+
 ## [6.107.2] - 2026-11-09
 
 ### Fixed
