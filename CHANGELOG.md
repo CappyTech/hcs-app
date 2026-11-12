@@ -22,6 +22,13 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - **A dotted date in a line's details** (`03.09.26`) is no longer read as the line's amount, and neither is a dotted number like `1.2.34`. Such a line had matched its purchase by reference but showed "amount differs".
   - Stored readings are redone (reader version 3).
 
+## [6.111.5] - 2026-11-12
+
+### Fixed
+- **Purchases list: searching a supplier's name finds their purchases.** The list only searched the purchase number and supplier reference, so a supplier's name found nothing there, even from "Open in list" on a search that had found them. It now also searches the supplier's name and code.
+- **Every list search matches what the global search matches.** A list with no search fields of its own now uses the global search's fields for its model (invoices and quotes by customer name, projects by name and customer, and so on) instead of only its link field.
+- **A search no field can match finds nothing.** Words typed into a list that only searches number fields were ignored, so the list showed every record as if nothing had been typed.
+
 ## [6.111.1] - 2026-11-11
 
 ### Fixed

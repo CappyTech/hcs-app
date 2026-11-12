@@ -717,7 +717,7 @@ export default {
       'PurchaseInECMemberState'],
     fieldOrder: ['Number', 'SupplierName', 'SupplierReference', 'GrossAmount', 'NetAmount', 'VATAmount', 'Status', 'TotalPaidAmount', 'IssuedDate', 'DueAmount', 'DueDate', 'PaidDate'],
     strictOrder: true,
-    searchFields: ['Number', 'SupplierReference'],
+    searchFields: ['Number', 'SupplierName', 'SupplierCode', 'SupplierReference'],
     sortField: 'Number',
     sortOrder: -1,
     department: ['finance'],
