@@ -60,9 +60,15 @@ export function findDates(line) {
 }
 
 /** Every money amount on a line, signed (CR, brackets and a trailing minus are negative). */
-export function findMoney(line) {
+export function findMoney(line, { dates = findDates(line) } = {}) {
+  const s = String(line || '');
   const out = [];
-  for (const m of String(line || '').matchAll(MONEY_RE)) {
+  for (const m of s.matchAll(MONEY_RE)) {
+    const start = m.index;
+    const end = start + m[0].length;
+    // A dotted date ("03.09.26") or a dotted number ("1.2.34") isn't an amount
+    if (dates.some((d) => start < d.index + d.text.length && end > d.index)) continue;
+    if (/^\.\d/.test(s.slice(end)) || /\d\.$/.test(s.slice(0, start))) continue;
     const n = Number(`${m[2].replace(/,/g, '')}.${m[3]}`);
     if (!Number.isFinite(n)) continue;
     const tail = (m[4] || '').trim().toUpperCase();
@@ -191,7 +197,7 @@ export function parseStatement(text) {
     const prev = above;
     above = raw;
     const dates = findDates(raw);
-    const money = findMoney(raw);
+    const money = findMoney(raw, { dates });
     const lower = raw.toLowerCase();
 
     // An ageing table: the headings end "Amount Due" and the figures sit on the
