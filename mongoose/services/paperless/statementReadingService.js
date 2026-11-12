@@ -24,7 +24,7 @@ import { isDocumentType, documentTypeQuery } from '../../config/paperlessTypesCo
 import { supplierFor } from './documentReadingService.js';
 
 // Bump when the parser or matcher changes enough that stored readings should be redone
-export const STATEMENT_READER_VERSION = 2;
+export const STATEMENT_READER_VERSION = 3;
 /** Days either side of a statement line's date that a purchase may be issued and still match on amount. */
 export const DATE_TOLERANCE_DAYS = 5;
 const MAX_LINES = 400;
@@ -76,7 +76,8 @@ export function findMoney(line) {
 export const normRef = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const PAYMENT_WORDS = /\b(payment|paid|receipt|remittance|bacs|cheque|chq|transfer|rebill|top[ -]?up|thank you)\b/i;
-const CREDIT_WORDS = /\b(credit|cr note|c\/n|refund)\b/i;
+// "Cre" and "Crn" are the type column's short form on some statements ("Inv" / "Cre")
+const CREDIT_WORDS = /\b(credit|cr note|c\/n|refund|cre|crn)\b/i;
 const BALANCE_WORDS = /\b(balance|b\/f|c\/f|brought forward|carried forward|opening|closing|total|sub[ -]?total|amount due|outstanding|overdue|current|30 days|60 days|90 days)\b/i;
 
 /** What kind of statement line this is, from its words. */
@@ -115,6 +116,46 @@ const CLOSING_WORDS = 'closing balance|balance due|amount due|total due|total ou
 const CLOSING_RE = new RegExp(`\\b(${CLOSING_WORDS})\\b`);
 const CLOSING_COLUMN_RE = new RegExp(`\\b(${CLOSING_WORDS})\\s*$`);
 const OPENING_RE = /\b(previous balance|opening balance|brought forward|b\/f)\b/;
+// An ageing table's headings ending in "Total": "Prior  August  September  Current  On Account  Total"
+const AGEING_TOTAL_RE = /\b(current|prior|older|days|period|on account)\b.*\btotal\s*$/;
+
+/**
+ * The columns of a statement's line table that carry a reference, in order,
+ * from its heading row: "Date  Branch  Document Reference  Value  Outstanding"
+ * gives ['code', 'doc']. A code column (branch, depot, account) holds the same
+ * short number on every line; the document column is the one KashFlow knows.
+ */
+const COLUMN_RE = /\b(document reference|document (?:no|number)|doc(?:ument)? ?(?:no|number|ref)|invoice (?:no|number|ref)|inv no|transaction (?:no|ref)|our ref(?:erence)?|your ref(?:erence)?|order (?:no|number|ref)|cust(?:omer)? ref|reference|document|ref|number|branch|depot|account|a\/c|acct)\b/g;
+const AMOUNT_HEADING_RE = /\b(value|amount|debit|credit|balance|outstanding|total|gross)\b/;
+const columnKind = (label) => (/^(branch|depot|account|a\/c|acct)$/.test(label) ? 'code'
+  : /^(your ref|order|cust)/.test(label) ? 'other' : 'doc');
+
+/** The reference columns of a heading row, or null when the row isn't one. */
+export function referenceColumns(row) {
+  const lower = String(row || '').toLowerCase();
+  if (!/\bdate\b/.test(lower) || !AMOUNT_HEADING_RE.test(lower) || /\d/.test(lower)) return null;
+  const kinds = [...lower.matchAll(COLUMN_RE)].map((m) => columnKind(m[1]));
+  if (!kinds.length) return null;
+  const doc = kinds.indexOf('doc');
+  return { kinds, pick: doc >= 0 ? doc : Math.max(0, kinds.indexOf('other')) };
+}
+
+/**
+ * A date under a "Date" heading in a header box: "Account  Date  Page" over
+ * "100317  02/11/2026  1". Taken from the same column when the two rows line
+ * up, or when it's the only date on the row.
+ */
+const headerBoxDate = (above, raw, dates) => {
+  // The heading row may share its line with the address ("1 Example Street  Account  Date  Page"),
+  // so digits are fine; dates and amounts are not
+  if (!above || !dates.length || findDates(above).length || findMoney(above).length) return null;
+  const labels = above.toLowerCase().replace(/:/g, '').split(' ');
+  const at = labels.findIndex((w, i) => w === 'date' && !/^(due|invoice|payment|printed)$/.test(labels[i - 1] || ''));
+  if (at < 0) return null;
+  const values = raw.split(' ');
+  if (values.length === labels.length) return dates.find((d) => d.text === values[at])?.value ?? null;
+  return dates.length === 1 ? dates[0].value : null;
+};
 
 /** "Date 31/10/2026" on its own, as a header beside the address prints it. Not a due or invoice date. */
 const isDateLabel = (raw, date) => {
@@ -136,8 +177,12 @@ export function parseStatement(text) {
   const lines = [];
   let unread = 0;
   let closingColumnAbove = false;
+  let columns = null;
+  let above = null;
 
   for (const raw of rows) {
+    const prev = above;
+    above = raw;
     const dates = findDates(raw);
     const money = findMoney(raw);
     const lower = raw.toLowerCase();
@@ -145,7 +190,7 @@ export function parseStatement(text) {
     // An ageing table: the headings end "Amount Due" and the figures sit on the
     // row below, so the last figure is the closing balance
     const figuresForClosing = closingColumnAbove && money.length && !dates.length;
-    closingColumnAbove = !money.length && CLOSING_COLUMN_RE.test(lower);
+    closingColumnAbove = !money.length && (CLOSING_COLUMN_RE.test(lower) || (AGEING_TOTAL_RE.test(lower) && !/\bdate\b/.test(lower)));
     if (figuresForClosing) {
       if (header.closingBalance == null) header.closingBalance = money.at(-1).value;
       continue;
@@ -155,6 +200,9 @@ export function parseStatement(text) {
     const labelledDate = !lines.length && dates.length === 1 && isDateLabel(raw, dates[0]);
     if (header.statementDate == null && (/statement\s*(date|of account)?\b/.test(lower) || labelledDate) && dates.length && !money.length) {
       header.statementDate = dates[0].value;
+    }
+    if (header.statementDate == null && !lines.length && !money.length) {
+      header.statementDate = headerBoxDate(prev, raw, dates);
     }
     if (header.periodStart == null && /\b(period|from)\b/.test(lower) && dates.length >= 2) {
       header.periodStart = dates[0].value;
@@ -174,11 +222,16 @@ export function parseStatement(text) {
     }
 
     if (!money.length) {
+      // The line table's headings say which column is the reference
+      const cols = !dates.length && referenceColumns(raw);
+      if (cols) columns = cols;
       // A date with nothing to it (a page header, a due date column) isn't a line
       continue;
     }
     const refs = findRefs(raw, { dates, money });
-    const kind = lineKind(raw);
+    let kind = lineKind(raw);
+    // "Inv 1601 02108768 ... -66.90": a negative invoice line is a credit
+    if (kind === 'invoice' && money[0].value < 0) kind = 'credit';
     if (kind === 'balance' && !refs.length && !dates.length) {
       // A totals row: "Total 114.00", "Balance 56.95". Only a closing figure
       // counts; "Previous balance" and "Opening balance" are the period's start.
@@ -191,16 +244,25 @@ export function parseStatement(text) {
       continue;
     }
     if (lines.length >= MAX_LINES) { unread += 1; continue; }
+    // Take the reference from the document column when the headings say which
+    // one it is; a code column (branch, account) becomes the prefix
+    const byColumn = Boolean(columns && columns.kinds.length > 1 && refs.length >= columns.kinds.length);
+    const pick = byColumn ? columns.pick : 0;
+    const code = byColumn ? columns.kinds.indexOf('code') : -1;
     lines.push({
       raw: slimRaw(raw),
       kind,
       date: dates[0]?.value ?? null,
-      ref: refs[0] ?? null,
+      ref: refs[pick] ?? null,
+      prefix: code >= 0 && code !== pick ? refs[code] : null,
+      byColumn,
       refs,
       amount: money[0].value,
       balance: money.length > 1 ? money.at(-1).value : null,
     });
   }
+
+  pickRepeatedCode(lines);
 
   // No period printed: take it from the dated lines
   const dated = lines.map((l) => l.date).filter(Boolean).sort();
@@ -212,6 +274,27 @@ export function parseStatement(text) {
     header.periodSource = 'printed';
   }
   return { header, lines, unread, hasText: rows.length > 0 };
+}
+
+/**
+ * No headings to go by: a reference that is the same on most lines (a branch
+ * or account code printed beside each document number) is not the document's
+ * reference. The next one on the line is, and the code becomes its prefix.
+ */
+function pickRepeatedCode(lines) {
+  const open = lines.filter((l) => !l.byColumn && (l.kind === 'invoice' || l.kind === 'credit'));
+  if (open.length < 3) return;
+  const counts = new Map();
+  for (const l of open) if (l.ref && l.refs.length > 1) counts.set(normRef(l.ref), (counts.get(normRef(l.ref)) || 0) + 1);
+  for (const [code, n] of counts) {
+    if (n < 3 || n < open.length * 0.6) continue;
+    for (const l of open) {
+      if (normRef(l.ref) !== code || l.refs.length < 2) continue;
+      const at = l.refs.findIndex((r) => normRef(r) === code);
+      l.prefix = l.refs[at];
+      l.ref = l.refs[at + 1] ?? l.refs.find((r, i) => i !== at) ?? null;
+    }
+  }
 }
 
 // ── Reconciling ──────────────────────────────────────────────────────
@@ -253,16 +336,54 @@ export const slimPurchase = (p) => ({
   status: p.Status || null,
 });
 
-/** Does statement reference `a` stand for purchase reference `b`? Exact once normalised, or one inside the other when long enough. */
-export function refsMatch(a, b) {
+const MIN_PARTIAL = 5;
+/** Does a reference end with `part` (normalised) after a separator? "1601/02108768" ends with "02108768". */
+const endsAfterSeparator = (whole, part) => {
+  const segs = String(whole || '').split(/[^A-Za-z0-9]+/).filter(Boolean);
+  for (let k = 1; k < segs.length; k += 1) if (normRef(segs.slice(-k).join('')) === part) return true;
+  return false;
+};
+
+/**
+ * How well statement reference `a` stands for purchase reference `b`:
+ * 3 the same once normalised; 2 one is the other's tail after a separator
+ * ("1601/02108768" and "02108768", either way round); 1 one is inside the
+ * other; 0 no match. Partial matches need MIN_PARTIAL characters.
+ */
+export function refMatchScore(a, b) {
   const x = normRef(a);
   const y = normRef(b);
-  if (!x || !y) return false;
-  if (x === y) return true;
+  if (!x || !y) return 0;
+  if (x === y) return 3;
   const shorter = x.length < y.length ? x : y;
   const longer = shorter === x ? y : x;
-  return shorter.length >= 5 && longer.includes(shorter);
+  if (shorter.length < MIN_PARTIAL) return 0;
+  if (endsAfterSeparator(shorter === x ? b : a, shorter)) return 2;
+  return longer.includes(shorter) ? 1 : 0;
 }
+
+/** Does statement reference `a` stand for purchase reference `b`? */
+export const refsMatch = (a, b) => refMatchScore(a, b) > 0;
+
+/**
+ * The references a statement line can be matched by: each one printed, except
+ * a branch or account code on its own, plus neighbours joined ("1601" and
+ * "02108768" printed in separate columns answer "1601/02108768").
+ */
+const lineRefs = (l) => {
+  const code = normRef(l.prefix);
+  const single = (l.refs || []).filter((r) => !code || normRef(r) !== code);
+  const joined = [];
+  if (l.prefix && l.ref) joined.push(`${l.prefix}/${l.ref}`);
+  for (let i = 0; i + 1 < (l.refs || []).length; i += 1) joined.push(`${l.refs[i]}/${l.refs[i + 1]}`);
+  return { single, joined };
+};
+/** The best score a line's references get against a purchase reference. A joined pair counts only when exact. */
+const lineScore = (l, ref) => {
+  const { single, joined } = lineRefs(l);
+  if (joined.some((r) => normRef(r) === normRef(ref))) return 3;
+  return Math.max(0, ...single.map((r) => refMatchScore(r, ref)));
+};
 
 /**
  * Set the statement's lines against the supplier's purchases.
@@ -284,33 +405,40 @@ export function reconcile(parsed, purchases = [], { toleranceDays = DATE_TOLERAN
   const onStatementOnly = [];
   const candidates = lines.map((l, i) => ({ l, i })).filter(({ l }) => l.kind === 'invoice' || l.kind === 'credit');
 
-  // Pass 1: by reference
-  const left = [];
+  // Pass 1: by reference, the closest matches first (the same reference,
+  // then one ending with the other, then one inside the other), so a loose
+  // match never takes a purchase another line names exactly
   const done = new Set();
-  for (const c of candidates) {
-    if (done.has(c.i)) continue;
-    done.add(c.i);
-    const hits = c.l.refs.length
-      ? pool.filter((x) => !x.used && x.ref && c.l.refs.some((r) => refsMatch(r, x.ref)))
-      : [];
-    const parts = c.l.ref ? candidates.filter((o) => (o.i === c.i || !done.has(o.i)) && o.l.kind === c.l.kind && normRef(o.l.ref) === normRef(c.l.ref)) : [c];
-    if (parts.length > 1 && hits.length === 1) {
-      const [only] = hits;
-      only.used = true;
-      const partsTotal = round2(parts.reduce((s, o) => s + o.l.amount, 0));
-      const purchase = slimPurchase(only.p);
-      for (const o of parts) {
-        done.add(o.i);
-        matched.push({ line: o.i, by: 'reference', amountAgrees: sameMoney(partsTotal, only.gross), parts: parts.length, partsTotal, purchase });
+  const lineKey = (l) => `${normRef(l.prefix)}|${normRef(l.ref)}`;
+  for (const tier of [3, 2, 1]) {
+    for (const c of candidates) {
+      if (done.has(c.i) || !c.l.refs.length) continue;
+      const hits = pool.filter((x) => !x.used && x.ref && lineScore(c.l, x.ref) === tier);
+      if (!hits.length) continue;
+      done.add(c.i);
+      // Lines sharing a document reference that one purchase answers are one
+      // invoice printed in parts, but only when that shared reference is
+      // itself what matched: a branch code on every line is not one invoice
+      const parts = c.l.ref ? candidates.filter((o) => (o.i === c.i || !done.has(o.i)) && o.l.kind === c.l.kind && lineKey(o.l) === lineKey(c.l)) : [c];
+      const shared = hits.length === 1 && (refMatchScore(c.l.ref, hits[0].ref) >= 2
+        || (c.l.prefix && normRef(`${c.l.prefix}${c.l.ref}`) === hits[0].ref));
+      if (parts.length > 1 && shared) {
+        const [only] = hits;
+        only.used = true;
+        const partsTotal = round2(parts.reduce((s, o) => s + o.l.amount, 0));
+        const purchase = slimPurchase(only.p);
+        for (const o of parts) {
+          done.add(o.i);
+          matched.push({ line: o.i, by: 'reference', amountAgrees: sameMoney(partsTotal, only.gross), parts: parts.length, partsTotal, purchase });
+        }
+        continue;
       }
-      continue;
-    }
-    const [hit] = hits;
-    if (hit) {
+      const [hit] = hits;
       hit.used = true;
       matched.push({ line: c.i, by: 'reference', amountAgrees: sameMoney(c.l.amount, hit.gross), purchase: slimPurchase(hit.p) });
-    } else left.push(c);
+    }
   }
+  const left = candidates.filter((c) => !done.has(c.i));
   // Pass 2: by amount and date
   for (const c of left) {
     const sameAmount = pool.filter((x) => !x.used && sameMoney(x.gross, c.l.amount));
@@ -335,6 +463,8 @@ export function reconcile(parsed, purchases = [], { toleranceDays = DATE_TOLERAN
       matched.push({ line: i, by: 'payment', amountAgrees: true, purchase: slimPurchase(hit.p) });
     }
   }
+
+  matched.sort((a, b) => a.line - b.line);
 
   // Purchases the statement doesn't list: inside its period when one is
   // printed; otherwise anything still unpaid in KashFlow up to the statement
@@ -515,7 +645,7 @@ export async function readMissing({ limit = 20 } = {}, deps = {}) {
 
 export default {
   STATEMENT_READER_VERSION, DATE_TOLERANCE_DAYS,
-  findDates, findMoney, findRefs, lineKind, normRef, parseStatement,
-  refsMatch, reconcile, slimPurchase, stillOwed, summaryText,
+  findDates, findMoney, findRefs, lineKind, normRef, parseStatement, referenceColumns,
+  refsMatch, refMatchScore, reconcile, slimPurchase, stillOwed, summaryText,
   purchasesFor, readStatement, readStatementSoon, readMissing, needsReading,
 };
