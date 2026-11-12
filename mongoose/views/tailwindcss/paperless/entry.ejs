@@ -640,7 +640,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
                   <thead><tr class="text-left text-gray-500 dark:text-gray-400"><th class="px-3 py-1">Date</th><th class="px-3 py-1">Reference</th><th class="px-3 py-1 text-right">Amount</th><th class="px-3 py-1">As printed</th></tr></thead>
                   <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     <% rec.onStatementOnly.slice(0, SHOW).forEach((i) => { const l = stLine(i); %>
-                      <tr><td class="px-3 py-1 whitespace-nowrap"><%= day(l.date) %></td><td class="px-3 py-1 font-mono"><%= l.ref || '—' %></td><td class="px-3 py-1 text-right whitespace-nowrap"><%= money(l.amount) %></td><td class="px-3 py-1 text-gray-500 dark:text-gray-400 break-all"><%= l.raw %></td></tr>
+                      <tr data-statement-line="<%= i %>"><td class="px-3 py-1 whitespace-nowrap"><%= day(l.date) %></td><td class="px-3 py-1 font-mono"><%= l.ref || '—' %></td><td class="px-3 py-1 text-right whitespace-nowrap"><%= money(l.amount) %></td><td class="px-3 py-1 text-gray-500 dark:text-gray-400 break-all"><%= l.raw %></td></tr>
                     <% }) %>
                   </tbody>
                 </table>
@@ -678,7 +678,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
                   <thead><tr class="text-left text-gray-500 dark:text-gray-400"><th class="px-3 py-1">Statement</th><th class="px-3 py-1 text-right">Amount</th><th class="px-3 py-1">Purchase</th><th class="px-3 py-1 text-right">Gross</th><th class="px-3 py-1">Matched by</th></tr></thead>
                   <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     <% rec.matched.slice(0, SHOW).forEach((m) => { const l = stLine(m.line); const p = m.purchase; %>
-                      <tr class="<%= m.amountAgrees ? '' : 'text-red-800 dark:text-red-300' %>">
+                      <tr data-statement-line="<%= m.line %>" class="<%= m.amountAgrees ? '' : 'text-red-800 dark:text-red-300' %>">
                         <td class="px-3 py-1"><span class="font-mono"><%= l.ref || '—' %></span> <span class="text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= day(l.date) %></span></td>
                         <td class="px-3 py-1 text-right whitespace-nowrap"><%= money(l.amount) %></td>
                         <td class="px-3 py-1"><% if (purchaseLink(p)) { %><a href="<%= purchaseLink(p) %>" class="text-green-700 dark:text-green-400 hover:underline">#<%= p.number %></a><% } else { %>#<%= p.number %><% } %> <span class="font-mono text-gray-500 dark:text-gray-400"><%= p.reference || '' %></span></td>
@@ -695,6 +695,56 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
             <% if (sum.status === 'no-lines') { %>
               <p class="text-xs text-gray-500 dark:text-gray-400">No invoice lines could be read off this statement, so there's nothing to match. The balance and payments above are all that was found.</p>
             <% } %>
+          <% } %>
+          <%# ── Where the lines were read from, and pointing out this supplier's columns (statement-marks.js) ── %>
+          <% if (st && !st.error && st.hasText) {
+            const tones = {};
+            (rec?.matched || []).forEach((m) => { tones[m.line] = m.amountAgrees ? 'ok' : 'differs'; });
+            (rec?.onStatementOnly || []).forEach((i) => { tones[i] = 'missing'; });
+            const TONE_LABEL = { ok: 'Matched', differs: 'Amount differs', missing: 'Not in KashFlow' };
+            const lineMarks = (st.lines || []).map((l, i) => (l.box && tones[i] ? { key: `line:${i}`, tone: tones[i], box: l.box, label: `${TONE_LABEL[tones[i]]} · ${l.ref || day(l.date)} · ${money(l.amount)}` } : null)).filter(Boolean);
+            const COLUMN_LABEL = { doc: 'Reference', code: 'Branch or account', other: 'Other reference', date: 'Date', due: 'Due or paid date', type: 'Type', details: 'Details', amount: 'Amount', credit: 'Credit', outstanding: 'Outstanding', balance: 'Balance' };
+            const columns = (st.columns || []).filter((c) => COLUMN_LABEL[c.role]);
+            const columnMarks = columns.filter((c) => c.box && c.box.y != null).map((c) => ({ key: `col:${c.role}`, box: c.box, label: `${COLUMN_LABEL[c.role]}${c.taught ? ' (pointed out)' : ''}` }));
+            const canTeach = doc.correspondent?.id != null;
+            const kindNow = st.openItemsTaught === true ? 'open' : st.openItemsTaught === false ? 'running' : 'auto';
+            const btn = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition';
+          %>
+            <div hidden data-statement-marks="<%= JSON.stringify(lineMarks) %>" data-statement-columns="<%= JSON.stringify(columnMarks) %>"></div>
+            <details class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" data-statement-teach data-paperless-id="<%= doc.paperlessId %>" data-source="<%= st.source || 'text' %>">
+              <summary class="cursor-pointer px-3 py-2 font-medium">Columns <span class="font-normal text-xs text-gray-500 dark:text-gray-400"><%= st.source === 'positions' ? `read column by column from the PDF${st.taught ? ', as pointed out for this supplier' : ''}` : 'read from the OCR text' %></span></summary>
+              <div class="px-3 pb-3 space-y-2 text-xs">
+                <% if (st.source === 'positions' && columns.length) { %>
+                  <ul class="flex flex-wrap gap-x-3 gap-y-1" data-statement-columns-list>
+                    <% columns.forEach((c) => { %>
+                      <li><span class="text-gray-500 dark:text-gray-400"><%= COLUMN_LABEL[c.role] %>:</span> <%= c.label ? `“${c.label}”` : 'pointed out' %><% if (c.taught) { %> <i class="bi bi-hand-index text-blue-600" title="Pointed out by hand"></i><% } %></li>
+                    <% }) %>
+                  </ul>
+                <% } else { %>
+                  <p class="text-gray-500 dark:text-gray-400">No column headings were found on the PDF, so each line was read from the OCR text, where a branch code, a figure in the details and the amount can be mistaken for each other.</p>
+                <% } %>
+                <% if (canTeach) { %>
+                  <p>If a column was read wrong, say which it is: pick one below, then click its heading on the document (or any value in it). It's remembered for <strong><%= doc.correspondent?.name || 'this supplier' %></strong>, this statement is checked again with it, and so are their next statements.</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" class="<%= btn %>" data-teach-role="ref" data-label="reference"><i class="bi bi-cursor"></i> Reference column</button>
+                    <button type="button" class="<%= btn %>" data-teach-role="amount" data-label="amount"><i class="bi bi-cursor"></i> Amount column</button>
+                    <button type="button" class="<%= btn %>" data-teach-role="balance" data-label="outstanding or balance"><i class="bi bi-cursor"></i> Outstanding / balance column</button>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-gray-500 dark:text-gray-400">This supplier's statements list</span>
+                    <% [['open', 'Open items only'], ['running', 'Everything, with a running balance'], ['auto', 'Work it out']].forEach(([k, label]) => { %>
+                      <button type="button" class="<%= btn %><%= kindNow === k ? ' ring-2 ring-blue-500' : '' %>" data-teach-kind="<%= k %>" aria-pressed="<%= kindNow === k %>"><%= label %></button>
+                    <% }) %>
+                  </div>
+                  <% if (st.taught) { %>
+                    <button type="button" class="text-red-700 dark:text-red-400 hover:underline" data-teach-forget><i class="bi bi-x-circle"></i> Forget what was pointed out for this supplier</button>
+                  <% } %>
+                  <p data-teach-status role="status" hidden></p>
+                <% } else { %>
+                  <p class="text-gray-500 dark:text-gray-400">This statement has no correspondent in Paperless, so its columns can't be remembered for a supplier.</p>
+                <% } %>
+              </div>
+            </details>
           <% } %>
         </div>
       <% } else { %>
@@ -747,4 +797,5 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
   <% } %>
 </div>
 <script type="module" src="/resources/js/document-suggestions.js"></script>
+<script type="module" src="/resources/js/statement-marks.js"></script>
 <script type="module" src="/resources/js/document-viewer.js"></script>

@@ -13,6 +13,11 @@ const SupplierLayoutSchema = new mongoose.Schema({
   // total), used by the reader for this supplier ahead of the built-in labels
   labels:            { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   invoicesLearned:   { type: Number, default: 0 },
+  // The supplier's statement columns someone pointed out on the entry screen
+  // (statementReadingService.teachLayout): { columns: { ref, amount, balance:
+  // {x, w, page, y, h, label, at} }, openItems: true | false | null, updatedAt }.
+  // The statement reader takes the column under each span ahead of its guess.
+  statement:         { type: mongoose.Schema.Types.Mixed, default: null },
 }, { timestamps: true, minimize: false });
 
 export default {
