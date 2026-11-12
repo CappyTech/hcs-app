@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.111.3] - 2026-11-12
+
+### Fixed
+- **Supplier statements: the reference is read from the document column, not a branch code.** On a statement laid out as Date, Branch, Document Reference, Value, Payment Date, Outstanding, every line's reference came out as the branch code, so every line matched the same purchase by reference (flagged as a different amount) and the purchases really on the statement were listed under "In KashFlow, not on the statement".
+  - The line table's heading row now says which column is the reference: Reference, Document, Doc No or Invoice No over a Branch, Depot or Account column. The code column is kept as the line's prefix. With no headings, a code repeated on most lines is taken as the branch.
+  - A statement reference matches a KashFlow reference that ends with it after a separator (`<branch>/<number>` and `<number>`), either way round, and a branch and number printed in separate columns match the two together. Exact matches are made first, then these, then one inside the other, so a loose match never takes a purchase another line names exactly.
+  - Lines sharing a reference are only taken as one invoice printed in parts when that shared reference is itself what matched, so a branch code on every line no longer ties them all to one purchase.
+  - "Cre" type lines, and invoice lines with a negative value, are read as credits.
+  - **Statement date** is read from a header box ("Account Date Page" over the values), and the **balance** from an ageing table whose headings end in Total, which was also counted as an unread line.
+  - Stored readings are redone (reader version 3).
+
 ## [6.111.1] - 2026-11-11
 
 ### Fixed
