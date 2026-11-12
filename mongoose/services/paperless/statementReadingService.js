@@ -21,10 +21,12 @@
 import mdb from '../mongooseDatabaseService.js';
 import logger from '../../../services/loggerService.js';
 import { isDocumentType, documentTypeQuery } from '../../config/paperlessTypesConfig.js';
-import { supplierFor } from './documentReadingService.js';
+import { supplierFor, extractItems, packItem, unpackItem, READER_VERSION } from './documentReadingService.js';
+import { groupRows, charBox, unionBox } from '../../../public/js/invoice-field-finder.js';
+import __paperlessClient from './paperlessClient.js';
 
 // Bump when the parser or matcher changes enough that stored readings should be redone
-export const STATEMENT_READER_VERSION = 3;
+export const STATEMENT_READER_VERSION = 4; // 4: read by column from the PDF's positioned text, with a supplier's taught layout
 /** Days either side of a statement line's date that a purchase may be issued and still match on amount. */
 export const DATE_TOLERANCE_DAYS = 5;
 const MAX_LINES = 400;
@@ -280,8 +282,12 @@ export function parseStatement(text) {
   }
 
   pickRepeatedCode(lines);
+  periodFromLines(header, lines);
+  return { header, lines, unread, hasText: rows.length > 0 };
+}
 
-  // No period printed: take it from the dated lines
+/** No period printed: take it from the dated lines. */
+function periodFromLines(header, lines) {
   const dated = lines.map((l) => l.date).filter(Boolean).sort();
   if (!header.periodStart && dated.length) {
     header.periodStart = dated[0];
@@ -290,7 +296,6 @@ export function parseStatement(text) {
   } else if (header.periodStart) {
     header.periodSource = 'printed';
   }
-  return { header, lines, unread, hasText: rows.length > 0 };
 }
 
 /**
@@ -312,6 +317,353 @@ function pickRepeatedCode(lines) {
       l.ref = l.refs[at + 1] ?? l.refs.find((r, i) => i !== at) ?? null;
     }
   }
+}
+
+// ── Reading by position ──────────────────────────────────────────────
+//
+// The OCR text has lost where things sit on the page: a branch code, a
+// document number, a dotted date in the details and the amount are just words
+// on a line. The PDF's own text layer (documentReadingService.extractItems)
+// still has each word's x position, so a statement with a heading row can be
+// read column by column: the reference is whatever sits under "Reference",
+// the amount whatever sits under "Value". A person can also point out a
+// supplier's columns on the PDF (teachLayout), and that wins over the guess.
+
+/** The statement columns a person can point out for a supplier. */
+export const TAUGHT_ROLES = ['ref', 'amount', 'balance'];
+export const STATEMENT_MAX_PAGES = 12;
+const MONEY_ROLES = ['amount', 'credit', 'outstanding', 'balance'];
+const REF_ROLES = ['code', 'doc', 'other'];
+const HEADING_REACH = 60;
+const TAUGHT_REACH = 20;
+
+// A heading's words → what its column holds. Each pattern is the whole
+// heading, so "Branch Document Reference Details" (headings PDF.js joined into
+// one text item) splits into its headings rather than reading as one.
+const HEADING_ROLES = [
+  [/^(?:invoice |inv |doc(?:ument)? |trans(?:action)? |posting |entry |tran |tx )?date$/, 'date'],
+  [/^(?:due|due date|payment date|date paid|paid date|paid on)$/, 'due'],
+  [/^(?:type|trans(?:action)? type|doc(?:ument)? type|tran type|tx type)$/, 'type'],
+  [/^(?:details?|description|particulars|narrative|memo|comments?|items?)$/, 'details'],
+  [/^(?:running |cumulative |account )?balance$/, 'balance'],
+  [/^(?:outstanding(?: amount| balance| value)?|amount outstanding|unpaid(?: amount)?|o\/s(?: amount)?|amount due|balance due|due amount|open(?: amount)?|remaining(?: amount)?|amount remaining)$/, 'outstanding'],
+  [/^(?:credits?|cr|payments?|receipts?|paid amount|amount paid|paid)$/, 'credit'],
+  [/^(?:debits?|dr|value|amount|gross|total|charges?|original(?: amount)?|(?:invoice|inv|document|doc|original|gross|transaction) (?:amount|value|total))$/, 'amount'],
+  [/^(?:branch|depot|account|a\/c|acct|site|store)(?: (?:no|number|code|ref))?$/, 'code'],
+  [/^(?:your ref(?:erence)?|order(?: (?:no|number|ref))?|cust(?:omer)? (?:ref(?:erence)?|order(?: no)?)|po(?: (?:no|number))?|purchase order(?: no)?)$/, 'other'],
+  [/^(?:(?:document|doc|invoice|inv|transaction|trans|our|supplier|item|tx) )?(?:ref(?:erence)?|no|number|#)$|^(?:document|invoice|reference|ref|transaction|number)$/, 'doc'],
+];
+const LONGEST_HEADING = 4; // words
+export const headingRole = (label) => {
+  const l = String(label || '').toLowerCase().replace(/\(£\)|£|[:.]/g, ' ').replace(/\s+/g, ' ').trim();
+  return l ? (HEADING_ROLES.find(([re]) => re.test(l))?.[1] ?? null) : null;
+};
+
+/** Each word of a row with its left and right edge (PDF units). */
+function rowWords(row) {
+  const out = [];
+  for (const it of row.items) {
+    for (const m of it.str.matchAll(/\S+/g)) {
+      const b = charBox(it, m.index, m.index + m[0].length);
+      out.push({ text: m[0], x0: b.x, x1: b.x + b.w, box: b });
+    }
+  }
+  return out.sort((a, b) => a.x0 - b.x0);
+}
+const rowText = (row) => row.items.map((it) => it.str).join(' ').replace(/\s+/g, ' ').trim();
+const r1 = (n) => Math.round(n * 10) / 10;
+const plainBox = (b) => (b ? { page: b.page, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) } : null);
+const rowBox = (row) => plainBox(unionBox(row.items.map((it) => charBox(it))));
+const wordsText = (ws) => ws.map((w) => w.text).join(' ');
+
+/**
+ * A run of heading words as headings: the longest phrase that is one at each
+ * point ("Outstanding Amount", then "Document Reference"); words that are no
+ * heading join up into a column of their own, so nothing bleeds across it.
+ */
+function splitHeadings(run, cell) {
+  const out = [];
+  let i = 0;
+  while (i < run.length) {
+    let n = Math.min(LONGEST_HEADING, run.length - i);
+    while (n > 0 && !headingRole(wordsText(run.slice(i, i + n)))) n -= 1;
+    if (n) {
+      out.push({ ws: run.slice(i, i + n), role: headingRole(wordsText(run.slice(i, i + n))) });
+      i += n;
+      continue;
+    }
+    const last = out.at(-1);
+    if (last && last.role == null) last.ws.push(run[i]); else out.push({ ws: [run[i]], role: null });
+    i += 1;
+  }
+  return out.map((c) => ({ ...cell(c.ws), role: c.role }));
+}
+
+/**
+ * The columns of a heading row, or null when the row isn't one: no figures,
+ * a Date column, and a column of amounts. Words printed apart are never one
+ * heading; words close together are split into the headings they make.
+ * @returns {Array<{label, role, x0, x1, box}>|null}
+ */
+export function headingColumns(row) {
+  if (/\d/.test(rowText(row))) return null;
+  const words = rowWords(row);
+  if (words.length < 2) return null;
+  const gap = Math.max(2, (row.h || 10) * 0.6);
+  const runs = [];
+  for (const w of words) {
+    const last = runs.at(-1);
+    if (last && w.x0 - last.at(-1).x1 <= gap) last.push(w); else runs.push([w]);
+  }
+  const cell = (ws) => ({ label: wordsText(ws), x0: ws[0].x0, x1: ws.at(-1).x1, box: plainBox(unionBox(ws.map((w) => w.box))) });
+  const cells = runs.flatMap((run) => splitHeadings(run, cell));
+  const roles = cells.map((c) => c.role);
+  if (!roles.includes('date') || !roles.some((r) => MONEY_ROLES.includes(r))) return null;
+  // One document column, the first; a later one is another reference
+  let seenDoc = false;
+  for (const c of cells) {
+    if (c.role !== 'doc') continue;
+    if (seenDoc) c.role = 'other';
+    seenDoc = true;
+  }
+  if (!seenDoc) {
+    const other = cells.find((c) => c.role === 'other');
+    if (other) other.role = 'doc';
+  }
+  return cells;
+}
+
+/**
+ * The column a word (or a pointed-out span) belongs to: the one it overlaps
+ * most, or else the one it lines up with (left edges, centres or right
+ * edges, since figures are right-aligned under headings that often aren't),
+ * within reach.
+ */
+function columnFor(span, columns, reach) {
+  let best = null;
+  let most = 0;
+  for (const c of columns) {
+    const overlap = Math.min(span.x1, c.x1) - Math.max(span.x0, c.x0);
+    if (overlap > most) { most = overlap; best = c; }
+  }
+  if (best) return best;
+  let near = null;
+  let closest = reach;
+  const mid = (span.x0 + span.x1) / 2;
+  for (const c of columns) {
+    const d = Math.min(Math.abs(span.x0 - c.x0), Math.abs(span.x1 - c.x1), Math.abs(mid - (c.x0 + c.x1) / 2));
+    if (d < closest) { closest = d; near = c; }
+  }
+  return near;
+}
+
+/** A taught layout as stored on SupplierLayout.statement → the spans the reader takes. */
+const taughtSpans = (taught) => Object.entries(taught?.columns || {})
+  .filter(([role, b]) => TAUGHT_ROLES.includes(role) && b && Number.isFinite(Number(b.x)) && Number(b.w) > 0)
+  .map(([role, b]) => ({ role, x0: Number(b.x), x1: Number(b.x) + Number(b.w), label: b.label || null }));
+
+const OWED_ROLES = ['outstanding', 'balance'];
+
+/**
+ * Put what a person pointed out over the guessed columns: the heading under
+ * a taught span takes that role and any other column with it gives it up.
+ * With no heading under it, the span is a column of its own.
+ */
+export function applyTaught(cells, taught) {
+  const cols = cells.map((c) => ({ ...c }));
+  for (const t of taughtSpans(taught)) {
+    const hit = columnFor(t, cols, 25);
+    const owed = taught.openItems === true ? 'outstanding' : taught.openItems === false ? 'balance'
+      : OWED_ROLES.includes(hit?.role) ? hit.role : 'balance';
+    const role = t.role === 'ref' ? 'doc' : t.role === 'amount' ? 'amount' : owed;
+    for (const c of cols) {
+      if (c === hit || c.role == null) continue;
+      if (role === 'doc' && c.role === 'doc') c.role = 'other';
+      else if (role === 'amount' && c.role === 'amount') c.role = null;
+      else if (OWED_ROLES.includes(role) && OWED_ROLES.includes(c.role)) c.role = null;
+    }
+    if (hit) Object.assign(hit, { role, taught: true });
+    else cols.push({ label: t.label, x0: t.x0, x1: t.x1, role, taught: true, box: null });
+  }
+  return cols.sort((a, b) => a.x0 - b.x0);
+}
+
+/**
+ * One row under the headings, read column by column.
+ * @returns {{line?: object, unread?: boolean}}
+ */
+function lineFromRow(row, columns, reach) {
+  const byCol = new Map();
+  const loose = [];
+  for (const w of rowWords(row)) {
+    const c = columnFor(w, columns, reach);
+    if (!c) loose.push(w);
+    else if (byCol.has(c)) byCol.get(c).push(w);
+    else byCol.set(c, [w]);
+  }
+  const textIn = (c) => wordsText(byCol.get(c) || []);
+  const ofRole = (...roles) => columns.filter((c) => roles.includes(c.role));
+  const moneyIn = (role) => {
+    for (const c of ofRole(role)) {
+      const t = textIn(c);
+      const m = t ? findMoney(t) : [];
+      if (m.length) return m;
+    }
+    return null;
+  };
+  const raw = rowText(row);
+  const looseText = wordsText(loose);
+
+  // The date from the Date column; with none, from anything that isn't a due date or an amount
+  const dateCols = ofRole('date');
+  const dates = (dateCols.length ? dateCols : columns.filter((c) => c.role !== 'due' && !MONEY_ROLES.includes(c.role)))
+    .flatMap((c) => findDates(textIn(c)));
+  if (!dateCols.length) dates.push(...findDates(looseText));
+
+  // The amount from the amount column (a credit column's is negative). With
+  // neither, the outstanding figure is the line's amount.
+  let amount = null;
+  let fromOwed = false;
+  const debit = moneyIn('amount');
+  const credit = debit ? null : moneyIn('credit');
+  if (debit) amount = debit[0].value;
+  else if (credit) amount = -Math.abs(credit[0].value);
+  else if (!ofRole('amount', 'credit').length) {
+    const o = moneyIn('outstanding') || moneyIn('balance');
+    if (o) { amount = o[0].value; fromOwed = true; }
+  }
+  const owed = moneyIn('balance') || moneyIn('outstanding');
+  const balance = owed && !fromOwed ? owed.at(-1).value : null;
+
+  const refsIn = (cols) => cols.flatMap((c) => { const t = textIn(c); return t ? findRefs(t) : []; });
+  const docRefs = refsIn(ofRole('doc'));
+  const code = refsIn(ofRole('code'))[0] ?? null;
+  const refs = refsIn(columns.filter((c) => REF_ROLES.includes(c.role)));
+  if (!docRefs.length) {
+    // Nothing under the reference heading: a reference in the details (a payment's) still counts
+    refs.push(...refsIn(columns.filter((c) => !REF_ROLES.includes(c.role) && !MONEY_ROLES.includes(c.role) && c.role !== 'date' && c.role !== 'due')));
+    refs.push(...findRefs(looseText));
+  }
+
+  if (amount == null) return { unread: dates.length > 0 && findMoney(raw).length > 0 };
+  if (!refs.length && !dates.length) return {}; // a totals row
+  let kind = lineKind(raw);
+  if (kind === 'invoice' && amount < 0) kind = 'credit';
+  const notCode = (r) => !code || normRef(r) !== normRef(code);
+  const ref = docRefs[0] ?? refs.find(notCode) ?? refs[0] ?? null;
+  return {
+    line: {
+      raw: slimRaw(raw),
+      kind,
+      date: dates[0]?.value ?? null,
+      ref,
+      prefix: code && normRef(code) !== normRef(ref) ? code : null,
+      byColumn: docRefs.length > 0,
+      refs,
+      amount,
+      balance,
+      box: rowBox(row),
+    },
+  };
+}
+
+/** A column as kept on the reading, for the entry screen. */
+const slimColumn = (c, page) => ({
+  role: c.role,
+  label: c.label || null,
+  taught: Boolean(c.taught),
+  box: c.box ? plainBox(c.box) : { page, x: r1(c.x0), y: null, w: r1(c.x1 - c.x0), h: null },
+});
+
+/**
+ * Read a statement from the PDF's positioned text, column by column.
+ * @param {Array} items  {str, x, y, w, h, page}, as extractItems gives them
+ * @param {object} [opts] { taught } the supplier's taught layout (SupplierLayout.statement)
+ * @returns {object|null} what parseStatement returns, plus `columns`,
+ *   `source: 'positions'` and a `box` on each line; null with no heading row
+ *   to go by and nothing taught
+ */
+export function parseStatementItems(items, { taught = null } = {}) {
+  if (!items?.length) return null;
+  const rows = groupRows(items);
+  const headings = new Map(rows.map((r) => [r, headingColumns(r)]).filter(([, h]) => h));
+  const headedPages = new Set([...headings.keys()].map((r) => r.page));
+  const spans = taughtSpans(taught);
+  let columns = null;
+  let reach = HEADING_REACH;
+  let first = null;
+  let page = null;
+  const lines = [];
+  let unread = 0;
+
+  for (const row of rows) {
+    if (row.page !== page) {
+      page = row.page;
+      // A page that prints its own headings is read from below them; one
+      // that doesn't carries on with the last page's columns
+      if (headedPages.has(page)) columns = null;
+      else if (!columns && spans.length) { columns = applyTaught([], taught); reach = TAUGHT_REACH; }
+      if (columns && !first) first = { columns, page };
+    }
+    const heading = headings.get(row);
+    if (heading) {
+      columns = applyTaught(heading, taught);
+      reach = HEADING_REACH;
+      first ||= { columns, page };
+      continue;
+    }
+    if (!columns) continue;
+    const got = lineFromRow(row, columns, reach);
+    if (got.unread) unread += 1;
+    if (!got.line) continue;
+    if (lines.length >= MAX_LINES) { unread += 1; continue; }
+    lines.push(got.line);
+  }
+  if (!first) return null;
+
+  pickRepeatedCode(lines);
+  // The header figures (statement date, balance, payments) from the same text, row by row
+  const { header } = parseStatement(rows.map(rowText).join('\n'));
+  if (header.periodSource === 'lines') { header.periodStart = null; header.periodEnd = null; delete header.periodSource; }
+  periodFromLines(header, lines);
+  const roles = first.columns.map((c) => c.role);
+  if (typeof taught?.openItems === 'boolean') header.openItems = taught.openItems;
+  else if (roles.includes('balance')) header.openItems = false;
+  else if (roles.includes('outstanding')) header.openItems = true;
+  if (!header.openItems) delete header.openItems;
+  return {
+    header,
+    lines,
+    unread,
+    hasText: true,
+    source: 'positions',
+    columns: first.columns.filter((c) => c.role).map((c) => slimColumn(c, first.page)),
+  };
+}
+
+/** Give the text reader's lines the box of the PDF row each was read from, where one matches. */
+export function boxLines(lines, items) {
+  if (!items?.length) return lines;
+  const rows = groupRows(items).map((r) => ({ text: rowText(r), row: r }));
+  for (const l of lines) {
+    const key = String(l.raw || '').replace(/…$/, '');
+    const hit = key && rows.find((r) => r.text.startsWith(key));
+    if (hit) l.box = rowBox(hit.row);
+  }
+  return lines;
+}
+
+/**
+ * Read a statement document: by position when the PDF has a text layer and a
+ * heading row (or a taught layout) that gives lines, otherwise from the OCR text.
+ * @param {{text?: string, items?: Array, taught?: object}} doc
+ */
+export function parseStatementDocument({ text = '', items = [], taught = null } = {}) {
+  const byPosition = parseStatementItems(items, { taught });
+  if (byPosition?.lines.length) return byPosition;
+  const parsed = parseStatement(text);
+  boxLines(parsed.lines, items);
+  return { ...parsed, source: 'text', columns: byPosition?.columns || [] };
 }
 
 // ── Reconciling ──────────────────────────────────────────────────────
@@ -575,9 +927,18 @@ const defaultDeps = () => ({
   connect: () => mdb.connect(),
   models: () => ({
     OcrDocument: mdb.PAPERLESS?.OcrDocument,
+    DocumentText: mdb.PAPERLESS?.DocumentText,
+    SupplierLayout: mdb.PAPERLESS?.SupplierLayout,
     Supplier: mdb.REST?.supplier,
     Purchase: mdb.REST?.purchase,
   }),
+  fetchPdf: async (paperlessId) => {
+    const file = await __paperlessClient.makeClient().getDocumentFile(paperlessId);
+    const chunks = [];
+    for await (const c of file.stream) chunks.push(c);
+    return Buffer.concat(chunks);
+  },
+  extract: extractItems,
   now: () => new Date(),
 });
 const withDeps = (deps) => {
@@ -595,27 +956,64 @@ export async function purchasesFor(Purchase, supplier) {
 }
 
 /**
+ * The PDF's positioned text, as stored in DocumentText (shared with the
+ * invoice reader), fetched from Paperless and stored the first time. Empty
+ * when there's no text layer or the PDF can't be had: the OCR text is read instead.
+ */
+async function itemsFor(d, paperlessId, { refetch = false } = {}) {
+  const { DocumentText } = d.m;
+  if (!DocumentText) return [];
+  let stored = refetch ? null : await DocumentText.findOne({ paperlessId }).lean();
+  if (!stored && d.fetchPdf && d.extract) {
+    try {
+      const { items, pages, pageWidth } = await d.extract(await d.fetchPdf(paperlessId), { maxPages: STATEMENT_MAX_PAGES });
+      stored = { paperlessId, items: items.map(packItem), pages, pageWidth };
+      await DocumentText.updateOne({ paperlessId }, { $set: { ...stored, readAt: d.now(), readerVersion: READER_VERSION } }, { upsert: true });
+    } catch (err) {
+      logger.warn(`[statementReading] ${paperlessId}: no PDF text (${err.message}), reading the OCR text`);
+      return [];
+    }
+  }
+  return (stored?.items || []).map(unpackItem);
+}
+
+/** What someone pointed out on this supplier's statements (SupplierLayout.statement), or null. */
+async function taughtFor(SupplierLayout, doc) {
+  if (!SupplierLayout || doc?.correspondent?.id == null) return null;
+  const l = await SupplierLayout.findOne({ correspondentId: doc.correspondent.id }).select('statement').lean();
+  const t = l?.statement;
+  return t && (Object.keys(t.columns || {}).length || typeof t.openItems === 'boolean') ? t : null;
+}
+
+/**
  * Read one statement and set it against KashFlow; store the result on the
- * document. Not a statement, or not found: null. A failure is stored as
+ * document. Read by column from the PDF when it has a text layer, else from
+ * the OCR text. Not a statement, or not found: null. A failure is stored as
  * `error`, never thrown.
  * @returns {Promise<object|null>} the stored `statement`
  */
 export async function readStatement(paperlessId, deps = {}) {
   const d = withDeps(deps);
   if (d.connect) await d.connect();
-  const { OcrDocument, Supplier, Purchase } = d.m;
+  const { OcrDocument, Supplier, Purchase, SupplierLayout } = d.m;
   const doc = await OcrDocument.findOne({ paperlessId }).select('paperlessId correspondent documentType ocrText').lean();
   if (!doc || !isDocumentType(doc.documentType, 'supplierStatement')) return null;
   const now = d.now();
   let statement;
   try {
-    const parsed = parseStatement(doc.ocrText);
+    const items = await itemsFor(d, paperlessId, { refetch: Boolean(deps.refetch) });
+    const taught = await taughtFor(SupplierLayout, doc);
+    const parsed = parseStatementDocument({ text: doc.ocrText, items, taught });
     const supplier = await supplierFor(Supplier, doc.correspondent?.name);
     const purchases = supplier ? await purchasesFor(Purchase, supplier) : [];
     statement = {
       version: STATEMENT_READER_VERSION,
       at: now,
       hasText: parsed.hasText,
+      source: parsed.source,
+      columns: parsed.columns,
+      taught: Boolean(taught),
+      openItemsTaught: typeof taught?.openItems === 'boolean' ? taught.openItems : null,
       supplier: supplier ? { id: supplier.Id ?? null, code: supplier.Code || null, name: supplier.Name || null } : null,
       header: parsed.header,
       lines: parsed.lines,
@@ -631,6 +1029,69 @@ export async function readStatement(paperlessId, deps = {}) {
   statement.summaryText = summaryText(statement);
   await OcrDocument.updateOne({ paperlessId }, { $set: { statement } });
   return statement;
+}
+
+// ── Teaching a supplier's statement layout ───────────────────────────
+
+const validSpan = (b) => !!b && [b.x, b.w].every((n) => Number.isFinite(Number(n)))
+  && Number(b.w) > 0 && Number(b.x) >= 0 && Number(b.x) + Number(b.w) <= 5000
+  && (b.page == null || (Number.isInteger(Number(b.page)) && Number(b.page) >= 1));
+const r1n = (n) => Math.round(Number(n) * 10) / 10;
+
+/**
+ * Apply one change to a supplier's statement layout:
+ *   { role, box, label }  this is the reference / amount / outstanding-or-balance column
+ *   { openItems }         open items (true), running balance (false), or let the reader guess (null)
+ *   { forget: true }      forget it all
+ * @returns {{ok: boolean, message?: string, statement?: object}} the layout to store
+ */
+export function changeLayout(current, change, now = new Date()) {
+  if (change?.forget) return { ok: true, statement: { columns: {}, openItems: null, updatedAt: now } };
+  const next = { columns: { ...(current?.columns || {}) }, openItems: typeof current?.openItems === 'boolean' ? current.openItems : null };
+  if (change && 'openItems' in change && change.role == null) {
+    if (![true, false, null].includes(change.openItems)) return { ok: false, message: 'Unknown kind of statement.' };
+    return { ok: true, statement: { ...next, openItems: change.openItems, updatedAt: now } };
+  }
+  if (!TAUGHT_ROLES.includes(change?.role)) return { ok: false, message: 'Unknown column.' };
+  if (!validSpan(change.box)) return { ok: false, message: 'That spot is not on the page.' };
+  const b = change.box;
+  const label = typeof change.label === 'string' ? (change.label.replace(/\s+/g, ' ').trim().slice(0, 60) || null) : null;
+  next.columns[change.role] = {
+    x: r1n(b.x),
+    w: r1n(b.w),
+    page: b.page != null ? Number(b.page) : null,
+    y: Number.isFinite(Number(b.y)) ? r1n(b.y) : null,
+    h: Number.isFinite(Number(b.h)) ? r1n(b.h) : null,
+    label,
+    at: now,
+  };
+  return { ok: true, statement: { ...next, updatedAt: now } };
+}
+
+/**
+ * Teach the reader about a statement's supplier from the statement itself
+ * (the entry screen), then read the statement again with it.
+ * @returns {Promise<{ok: boolean, message?: string, statement?: object, reading?: object}>}
+ */
+export async function teachLayout(paperlessId, change, deps = {}) {
+  const d = withDeps(deps);
+  if (d.connect) await d.connect();
+  const { OcrDocument, SupplierLayout } = d.m;
+  const doc = await OcrDocument.findOne({ paperlessId }).select('paperlessId correspondent documentType').lean();
+  if (!doc || !isDocumentType(doc.documentType, 'supplierStatement')) return { ok: false, message: 'Only supplier statements have columns to point out.' };
+  if (doc.correspondent?.id == null) return { ok: false, message: 'This statement has no correspondent in Paperless, so there is no supplier to remember it for.' };
+  if (!SupplierLayout) return { ok: false, message: 'Supplier layouts are not available.' };
+  const id = Number(doc.correspondent.id);
+  const existing = await SupplierLayout.findOne({ correspondentId: id }).lean();
+  const r = changeLayout(existing?.statement, change, d.now());
+  if (!r.ok) return r;
+  await SupplierLayout.updateOne(
+    { correspondentId: id },
+    { $set: { correspondentName: doc.correspondent.name || existing?.correspondentName || null, statement: r.statement } },
+    { upsert: true },
+  );
+  const reading = await readStatement(paperlessId, deps);
+  return { ok: true, statement: r.statement, reading };
 }
 
 /** True when a document's stored reading is missing or from an older reader. */
@@ -668,6 +1129,8 @@ export async function readMissing({ limit = 20 } = {}, deps = {}) {
 export default {
   STATEMENT_READER_VERSION, DATE_TOLERANCE_DAYS,
   findDates, findMoney, findRefs, lineKind, normRef, parseStatement, referenceColumns, isOpenItemHeading,
+  TAUGHT_ROLES, headingRole, headingColumns, applyTaught, parseStatementItems, parseStatementDocument, boxLines,
+  changeLayout, teachLayout,
   refsMatch, refMatchScore, reconcile, slimPurchase, stillOwed, summaryText,
   purchasesFor, readStatement, readStatementSoon, readMissing, needsReading,
 };

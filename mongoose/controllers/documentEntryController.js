@@ -11,6 +11,7 @@
  *   POST /paperless/ocr/:paperlessId/resend-invoice  re-send the invoice email (H6)
  *   POST /paperless/ocr/:paperlessId/reviewed     mark a supplier statement reviewed (H6)
  *   POST /paperless/ocr/:paperlessId/statement-check  set a supplier statement against KashFlow again
+ *   POST /paperless/ocr/:paperlessId/statement-layout point out the statement's columns for its supplier (JSON)
  *   POST /paperless/ocr/:paperlessId/supplier     set the KashFlow supplier (the Paperless correspondent)
  *   GET  /paperless/ocr/:paperlessId/file         the PDF, streamed from Paperless
  */
@@ -369,6 +370,30 @@ export const postStatementCheck = async (req, res, next) => {
   }
 };
 
+/**
+ * "This is the reference column" (or amount, or outstanding/balance), the kind
+ * of statement, or forget it: saved for the statement's correspondent, then
+ * the statement is read again with it. JSON in, JSON out (statement-marks.js).
+ */
+export const postStatementLayout = async (req, res) => {
+  const id = idParam(req);
+  if (!id) return res.status(404).json({ ok: false, message: 'Not found' });
+  try {
+    const body = req.body || {};
+    const KINDS = { open: true, running: false, auto: null };
+    const change = body.forget ? { forget: true }
+      : body.kind != null ? { openItems: Object.hasOwn(KINDS, body.kind) ? KINDS[body.kind] : 'unknown' }
+        : { role: String(body.role || ''), box: body.box, label: typeof body.label === 'string' ? body.label : null };
+    await mdb.connect();
+    const r = await statementSvc.teachLayout(id, change);
+    if (!r.ok) return res.status(400).json({ ok: false, message: r.message });
+    return res.json({ ok: true, summaryText: r.reading?.summaryText || null });
+  } catch (err) {
+    logger.error(`[documentEntry] statement-layout ${req.params.paperlessId}: ${err.message}`);
+    return res.status(500).json({ ok: false, message: 'Could not save that.' });
+  }
+};
+
 export const postReviewed = async (req, res, next) => {
   try {
     const id = idParam(req);
@@ -420,4 +445,4 @@ export function makeGetFile(deps = {}) {
 
 export const getFile = makeGetFile();
 
-export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendInvoice, postReviewed, postStatementCheck, postSupplier, getFile, makeGetFile };
+export default { getEntry, postEntry, postCreditNote, postNotForKashflow, postReopen, postResendInvoice, postReviewed, postStatementCheck, postStatementLayout, postSupplier, getFile, makeGetFile };
