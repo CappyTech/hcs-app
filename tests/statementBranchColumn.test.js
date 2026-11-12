@@ -180,3 +180,20 @@ describe('an open-item statement', () => {
     assert.equal(svc.isOpenItemHeading('Date Type Reference Amount Outstanding Amount'), true);
   });
 });
+
+describe('a dotted date in the details column', () => {
+  const LINE = '30/09/2026 41187 04.09.26 330912 - Skip Hire 182.40 182.40';
+
+  it('is a date, not an amount', () => {
+    assert.deepEqual(svc.findMoney(LINE).map((m) => m.value), [182.4, 182.4]);
+    assert.deepEqual(svc.findMoney('ref 1.2.34 then 5.00').map((m) => m.value), [5], 'a dotted number is not an amount either');
+    assert.deepEqual(svc.findMoney('12.50 and 3.09').map((m) => m.value), [12.5, 3.09], 'plain amounts still read');
+  });
+
+  it('the line takes the debit as its amount and the last figure as its balance', () => {
+    const p = svc.parseStatement(`Date Ref Details Debit Credit Balance\n${LINE}`);
+    assert.deepEqual(p.lines.map((l) => [l.date, l.ref, l.amount, l.balance]), [['2026-09-30', '41187', 182.4, 182.4]]);
+    const r = svc.reconcile(p, [purchase(1, '41187', '2026-09-30', 182.4)]);
+    assert.deepEqual(r.matched.map((m) => [m.by, m.amountAgrees]), [['reference', true]]);
+  });
+});
