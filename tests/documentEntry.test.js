@@ -739,6 +739,7 @@ describe('entry view', () => {
     const tags = src.match(/<script[^>]*>/g) || [];
     assert.deepEqual(tags, [
       '<script type="module" src="/resources/js/document-suggestions.js">',
+      '<script type="module" src="/resources/js/statement-marks.js">',
       '<script type="module" src="/resources/js/document-viewer.js">',
     ], 'only the module src tags');
     assert.ok(!/<script[^>]*>[^<]/.test(src), 'no inline script body');
