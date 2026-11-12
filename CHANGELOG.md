@@ -11,6 +11,8 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
   - Lines sharing a reference are only taken as one invoice printed in parts when that shared reference is itself what matched, so a branch code on every line no longer ties them all to one purchase.
   - "Cre" type lines, and invoice lines with a negative value, are read as credits.
   - **Statement date** is read from a header box ("Account Date Page" over the values), and the **balance** from an ageing table whose headings end in Total, which was also counted as an unread line.
+  - **Open-item statements** (a per-line Outstanding column, no Balance column, settled invoices not listed): the last figure on a line is read as what is still outstanding on it, not a running balance. Payments are no longer compared there, because a statement that leaves out settled invoices leaves out their payments too, which showed as a false difference. The panel says the statement lists only open items, and the balance is the check that counts.
+  - **Balance owed** is also read from an ageing table whose headings end in Total Payable (and Amount Payable, Balance Payable and similar).
   - Stored readings are redone (reader version 3).
 
 ## [6.111.1] - 2026-11-11

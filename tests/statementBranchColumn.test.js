@@ -127,3 +127,56 @@ describe('matching a reference across a separator', () => {
     assert.deepEqual(r.matched.map((m) => [m.line, m.purchase.number]), [[0, 2], [1, 1]]);
   });
 });
+
+/**
+ * An open-item statement: each line's last figure is what is still
+ * outstanding on it, settled invoices aren't listed, and the foot is an
+ * ageing table ending "TOTAL PAYABLE". Everything here is made up.
+ */
+const OPEN_ITEM_STATEMENT = `STATEMENT
+Example Timber Co
+Account EXT001 Statement Date 31/10/2026
+DATE TYPE REFERENCE AMOUNT OUTSTANDING AMOUNT
+03/10/2026 Receipt Bal 205.48 -0.08
+15/10/2026 Invoice TI-77120 96.00 96.00
+22/10/2026 Invoice TI-77188 48.50 48.50
+Older 3 Months 2 Months 1 Month Current Month TOTAL PAYABLE
+0.00 0.00 0.00 -0.08 144.50 144.42`;
+
+describe('an open-item statement', () => {
+  const kashflow = () => [
+    // settled before the statement, so not listed on it; overpaid by 0.08, which KashFlow leaves as -0.08 owed
+    purchase(11, 'TI-77001', '2026-09-20', 205.4, { TotalPaidAmount: 205.48, PaymentLines: [{ Date: new Date('2026-10-03'), Amount: 205.48 }] }),
+    purchase(12, 'TI-77120', '2026-10-15', 96),
+    purchase(13, 'TI-77188', '2026-10-22', 48.5),
+  ];
+
+  it('reads the total payable under the ageing headings as the balance, and knows it lists open items', () => {
+    const p = svc.parseStatement(OPEN_ITEM_STATEMENT);
+    assert.equal(p.header.closingBalance, 144.42);
+    assert.equal(p.header.openItems, true);
+    assert.equal(p.header.statementDate, '2026-10-31');
+    assert.deepEqual(p.lines.map((l) => [l.kind, l.ref, l.amount, l.balance]), [
+      ['payment', null, 205.48, -0.08],
+      ['invoice', 'TI-77120', 96, 96],
+      ['invoice', 'TI-77188', 48.5, 48.5],
+    ]);
+    assert.equal(p.unread, 0);
+  });
+
+  it('checks the balance, not the payments', () => {
+    const r = svc.reconcile(svc.parseStatement(OPEN_ITEM_STATEMENT), kashflow());
+    assert.deepEqual(r.balance, { statement: 144.42, kashflow: 144.42, agree: true });
+    assert.equal(r.payments.agree, null);
+    assert.equal(r.payments.openItems, true);
+    assert.deepEqual(r.matched.map((m) => [m.line, m.by, m.purchase.number]), [[1, 'reference', 12], [2, 'reference', 13]]);
+    assert.deepEqual(r.inKashflowOnly, []);
+    assert.equal(r.summary.status, 'reconciled');
+    assert.doesNotMatch(svc.summaryText({ hasText: true, supplier: {}, reconciliation: r }), /payments differ/);
+  });
+
+  it('a running-balance statement still compares payments', () => {
+    assert.equal(svc.isOpenItemHeading('Date Reference Debit Credit Balance'), false);
+    assert.equal(svc.isOpenItemHeading('Date Type Reference Amount Outstanding Amount'), true);
+  });
+});

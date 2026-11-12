@@ -621,9 +621,13 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
               </div>
               <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-2" data-payments-agree="<%= pay.agree %>">
                 <div class="text-gray-500 dark:text-gray-400 mb-1">Payments in the period</div>
+                <% if (pay.openItems) { %>
+                <div data-open-items>This statement lists only open items, so settled invoices and their payments aren't on it and payments aren't compared. The balance owed is the check that counts.</div>
+                <% } else { %>
                 <div>Statement received <strong><%= money(pay.statement) %></strong> · KashFlow paid <strong><%= money(pay.kashflow) %></strong>
                   <% if (pay.agree === true) { %><i class="bi bi-check2 text-green-600" title="They agree"></i><% } else if (pay.agree === false) { %><span class="text-red-700 dark:text-red-400">differ by <%= money(Math.abs(pay.statement - pay.kashflow)) %></span><% } %>
                 </div>
+                <% } %>
               </div>
             </div>
 
