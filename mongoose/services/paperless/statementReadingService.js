@@ -112,7 +112,7 @@ export function findRefs(line, { dates = findDates(line), money = findMoney(line
 
 const slimRaw = (s) => (s.length > RAW_KEEP ? `${s.slice(0, RAW_KEEP - 1)}…` : s);
 
-const CLOSING_WORDS = 'closing balance|balance due|amount due|total due|total outstanding|balance outstanding|amount outstanding|balance now due';
+const CLOSING_WORDS = 'closing balance|balance due|amount due|total due|total outstanding|balance outstanding|amount outstanding|balance now due|total payable|amount payable|balance payable|now payable|total amount payable|total now due';
 const CLOSING_RE = new RegExp(`\\b(${CLOSING_WORDS})\\b`);
 const CLOSING_COLUMN_RE = new RegExp(`\\b(${CLOSING_WORDS})\\s*$`);
 const OPENING_RE = /\b(previous balance|opening balance|brought forward|b\/f)\b/;
@@ -129,6 +129,13 @@ const COLUMN_RE = /\b(document reference|document (?:no|number)|doc(?:ument)? ?(
 const AMOUNT_HEADING_RE = /\b(value|amount|debit|credit|balance|outstanding|total|gross)\b/;
 const columnKind = (label) => (/^(branch|depot|account|a\/c|acct)$/.test(label) ? 'code'
   : /^(your ref|order|cust)/.test(label) ? 'other' : 'doc');
+
+/** "Date  Type  Reference  Amount  Outstanding Amount": a per-line Outstanding column and no Balance column. */
+export function isOpenItemHeading(row) {
+  const lower = String(row || '').toLowerCase();
+  return /\bdate\b/.test(lower) && /\boutstanding\b/.test(lower) && !/\bbalance\b/.test(lower)
+    && !/\btotal outstanding\b/.test(lower) && !/\d/.test(lower);
+}
 
 /** The reference columns of a heading row, or null when the row isn't one. */
 export function referenceColumns(row) {
@@ -225,6 +232,10 @@ export function parseStatement(text) {
       // The line table's headings say which column is the reference
       const cols = !dates.length && referenceColumns(raw);
       if (cols) columns = cols;
+      // An open-item statement: each line's last figure is what's still
+      // outstanding on it, not a running balance, and settled invoices and
+      // their payments aren't listed at all
+      if (!dates.length && isOpenItemHeading(raw)) header.openItems = true;
       // A date with nothing to it (a page header, a due date column) isn't a line
       continue;
     }
@@ -485,7 +496,8 @@ export function reconcile(parsed, purchases = [], { toleranceDays = DATE_TOLERAN
     ? round2(paymentLinesOnStatement.reduce((s, l) => s + Math.abs(l.amount), 0))
     : null);
   const first = lines[0];
-  const broughtForward = Boolean(header.openingBalance) || (first?.balance != null && !sameMoney(first.balance, first.amount));
+  // On an open-item statement the last figure is the line's outstanding amount, not a running balance
+  const broughtForward = Boolean(header.openingBalance) || (!header.openItems && first?.balance != null && !sameMoney(first.balance, first.amount));
   const coveredByStatement = (p) => {
     if (header.periodSource !== 'lines' || broughtForward) return true;
     const issued = toIso(p.IssuedDate);
@@ -506,7 +518,11 @@ export function reconcile(parsed, purchases = [], { toleranceDays = DATE_TOLERAN
   // A purchase printed in parts is one difference, however many lines it took
   const amountDiffers = new Set(matched.filter((m) => !m.amountAgrees).map((m) => m.purchase)).size;
   const differences = onStatementOnly.length + inKashflowOnly.length + amountDiffers;
-  const payments = { statement: statementPayments, kashflow: kashflowPayments, agree: statementPayments != null && kashflowPayments != null ? sameMoney(statementPayments, kashflowPayments) : null };
+  // An open-item statement leaves out settled invoices and their payments, so
+  // its payments can't be set against KashFlow's; the balance check is the one that counts
+  const payments = header.openItems
+    ? { statement: statementPayments, kashflow: kashflowPayments, agree: null, openItems: true }
+    : { statement: statementPayments, kashflow: kashflowPayments, agree: statementPayments != null && kashflowPayments != null ? sameMoney(statementPayments, kashflowPayments) : null };
   const balance = { statement: header.closingBalance, kashflow: kashflowOutstanding, agree: header.closingBalance != null && kashflowOutstanding != null ? sameMoney(header.closingBalance, kashflowOutstanding) : null };
 
   return {
@@ -645,7 +661,7 @@ export async function readMissing({ limit = 20 } = {}, deps = {}) {
 
 export default {
   STATEMENT_READER_VERSION, DATE_TOLERANCE_DAYS,
-  findDates, findMoney, findRefs, lineKind, normRef, parseStatement, referenceColumns,
+  findDates, findMoney, findRefs, lineKind, normRef, parseStatement, referenceColumns, isOpenItemHeading,
   refsMatch, refMatchScore, reconcile, slimPurchase, stillOwed, summaryText,
   purchasesFor, readStatement, readStatementSoon, readMissing, needsReading,
 };

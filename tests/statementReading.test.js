@@ -415,6 +415,17 @@ describe('the views', () => {
     assert.match(html, /Statement says <strong>£135\.49<\/strong>/);
     assert.match(html, /Statement received <strong>£120\.00<\/strong>/);
     assert.match(html, /data-payments-agree="false"/);
+    assert.doesNotMatch(html, /data-open-items/);
+
+    // An open-item statement says why payments aren't compared
+    const openItems = svc.parseStatement('Statement Date 31/10/2026\nDate Type Reference Amount Outstanding Amount\n15/10/2026 Invoice SI-4401 120.00 120.00');
+    const openHtml = await ejs.renderFile(view, {
+      title: 'Statement.pdf', csrfToken: 'tok', errors: {}, warnings: [], isAdmin: false, locked: false, paperlessUiBase: '', lineCount: 1,
+      doc: { ...doc, statement: { ...doc.statement, header: openItems.header, lines: openItems.lines, reconciliation: svc.reconcile(openItems, [purchase(1, 'SI-4401', '2026-10-15', 120)]) } }, kind: entryKind(doc), values: formValues(doc),
+    });
+    assert.match(openHtml, /data-open-items/);
+    assert.match(openHtml, /lists only open items/);
+    assert.doesNotMatch(openHtml, /Statement received/);
 
     const unread = await ejs.renderFile(view, {
       title: 'Statement.pdf', csrfToken: 'tok', errors: {}, warnings: [], isAdmin: false, locked: false, paperlessUiBase: '', lineCount: 1,
