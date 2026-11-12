@@ -31,6 +31,22 @@ import logger from '../../../services/loggerService.js';
 import { entryAsCustomFields } from './entryOverlay.js';
 import { parseVatRate, vatRateProblem, cisChecks } from '../../../public/js/entry-checks.js';
 import { normalizeWhtRate } from '../../../services/cisService.js';
+import { findVatNumbersInText, normaliseVatNumber } from '../../../public/js/invoice-line-finder.js';
+
+/**
+ * The supplier's VAT numbers on a document: what the reader found in the
+ * PDF's text layer, plus any in Paperless's OCR text (a footer drawn as an
+ * image has no text in the PDF but is OCR'd), leaving out our own (printed as
+ * the customer's). Pure.
+ * @param {{reading?: object, ocrText?: string}} doc
+ * @param {string} [own] our VAT number
+ * @returns {string[]} digits only
+ */
+export function documentVatNumbers(doc, own = null) {
+  const ours = normaliseVatNumber(own);
+  const fromPdf = (doc?.reading?.vatNumbers || []).map((v) => normaliseVatNumber(v.number));
+  return [...new Set([...fromPdf, ...findVatNumbersInText(doc?.ocrText)])].filter((n) => n && n !== ours);
+}
 
 export { entryAsCustomFields };
 
@@ -267,7 +283,11 @@ export function invoiceProblems({ ocrText = '', reading = null, docVatNumbers = 
   const vat = parseMoneyInput(values.totalVat);
   const charged = (vat !== INVALID && vat > 0) || (values.lines || []).some((l) => Number(l?.vatRate) > 0);
   if (charged && !(docVatNumbers || []).length) {
-    out.push("VAT is charged but there's no VAT number on it, so it isn't a valid VAT invoice: the VAT can't be reclaimed until the supplier sends one that shows it.");
+    // A PDF that couldn't be read only had its OCR text looked at, which can miss a small footer
+    const pdfUnread = Boolean(reading?.error) || reading?.hasText === false;
+    out.push(pdfUnread
+      ? "VAT is charged but no VAT number was found in the OCR text, and the PDF itself couldn't be read to check. Look for one on the invoice: without it, it isn't a valid VAT invoice and the VAT can't be reclaimed."
+      : "VAT is charged but there's no VAT number on it, so it isn't a valid VAT invoice: the VAT can't be reclaimed until the supplier sends one that shows it.");
   }
   return out;
 }
@@ -849,7 +869,7 @@ export default {
   completionErrors,
   cisDeduction,
   vatCase,
-  invoiceProblems,
+  invoiceProblems, documentVatNumbers,
   consistencyWarnings,
   formValues,
   entryAsCustomFields,

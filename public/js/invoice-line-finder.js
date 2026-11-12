@@ -415,4 +415,26 @@ export function findVatNumbers(items) {
   return out;
 }
 
-export default { findLines, findDayLines, fillMissingRates, findPaymentTerms, findVatNumbers, normaliseVatNumber, parseNumber };
+/**
+ * Every UK VAT number in plain text (Paperless's OCR text), by the same rules
+ * as findVatNumbers: on a line that says VAT, or with a GB prefix, and not an
+ * EORI number. For when the PDF's text layer doesn't carry it (a footer drawn
+ * as an image or outlines).
+ * @returns {string[]} digits only
+ */
+export function findVatNumbersInText(text) {
+  const out = [];
+  const re = /\b(?:GB\s*)?\d(?:\s?\d){8}(?:(?:\s?\d){3})?\b/g;
+  for (const line of String(text || '').split(/\r?\n/)) {
+    if (!/\bvat\b|\bGB\s*\d/i.test(line)) continue;
+    for (const m of line.matchAll(re)) {
+      if (!/^GB/i.test(m[0]) && !/\bvat\b/i.test(line)) continue;
+      if (/eori\b[^0-9]*$/i.test(line.slice(0, m.index))) continue;
+      const n = normaliseVatNumber(m[0]);
+      if (n && !out.includes(n)) out.push(n);
+    }
+  }
+  return out;
+}
+
+export default { findLines, findDayLines, fillMissingRates, findPaymentTerms, findVatNumbers, findVatNumbersInText, normaliseVatNumber, parseNumber };

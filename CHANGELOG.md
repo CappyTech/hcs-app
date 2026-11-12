@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.111.4] - 2026-11-12
+
+### Fixed
+- **Invoice checks: "VAT is charged but there's no VAT number on it" no longer fires when the VAT number is in the OCR text.** The check only used the VAT numbers read from the PDF's text layer, so a footer drawn as an image or outlines (seen on screen and OCR'd by Paperless, but with no text in the PDF) counted as no VAT number. The supplier's VAT number is now also looked for in the OCR text, by the same rules (a line that says VAT or a GB prefix, not an EORI number, not our own). The subcontractor VAT case uses the same list, so it no longer calls a VAT-registered subcontractor unregistered for this reason.
+  - When the PDF couldn't be read at all, the warning says the VAT number couldn't be checked rather than that the invoice has none.
+
 ## [6.111.3] - 2026-11-12
 
 ### Fixed
