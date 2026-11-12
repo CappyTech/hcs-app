@@ -6,6 +6,28 @@ import { scopeQuery } from '../../services/dataScopingService.js';
 import overviewEngine from '../services/overviewEngine.js';
 import registry from '../config/overviews/index.js';
 import { withListControls } from '../services/listDefinitionService.js';
+import { ENTITIES as SEARCH_ENTITIES, buildFilter } from '../services/searchService.js';
+
+/**
+ * The fields a list's search box matches: the list's own searchFields, else
+ * the global search's fields for that model (so "Open in list" from /search
+ * finds what the search found), else its link field.
+ */
+export function listSearchFields(config, modelName) {
+  if (Array.isArray(config?.searchFields) && config.searchFields.length) return config.searchFields;
+  const entity = SEARCH_ENTITIES.find((e) => e.model === modelName);
+  if (entity) return entity.fields;
+  return [config?.linkField || 'title'];
+}
+
+/**
+ * The filter for a typed search: a "contains" on text fields, an exact match
+ * on number fields. A term no field can match (words against number-only
+ * fields) matches nothing, rather than being ignored and listing everything.
+ */
+export function listSearchFilter(model, fields, term) {
+  return buildFilter(model, fields, term) || { _id: { $in: [] } };
+}
 
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
@@ -214,33 +236,7 @@ function countActiveFilters(req, filterConfigs) {
 
       let mongoFilter = {};
       if (query) {
-        const searchFields =
-          Array.isArray(config.searchFields) && config.searchFields.length
-            ? config.searchFields
-            : [config.linkField || "title"];
-        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const regex = new RegExp(escaped, "i");
-        const orConds = [];
-        for (const f of searchFields) {
-          // Type-aware search: use numeric equality for number fields, regex for strings
-          const pathInfo = model?.schema?.path?.(f) || null;
-          const instance = pathInfo ? pathInfo.instance : null; // 'Number', 'String', etc.
-          if (instance === "Number") {
-            const n = Number(query);
-            if (!Number.isNaN(n)) {
-              orConds.push({ [f]: n });
-            }
-            // Skip non-numeric queries for numeric fields to avoid cast errors
-          } else if (
-            instance === "String" ||
-            instance === "Mixed" ||
-            !instance
-          ) {
-            // Default to regex for strings or unknown types
-            orConds.push({ [f]: regex });
-          }
-        }
-        if (orConds.length) mongoFilter.$or = orConds;
+        mongoFilter = listSearchFilter(model, listSearchFields(config, modelName), query);
       }
 
       if (tabsBy && activeTab) {
@@ -643,30 +639,8 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
     let mongoFilter = config.baseFilter ? { ...config.baseFilter } : {};
 
     if (query) {
-      const searchFields =
-        Array.isArray(config.searchFields) && config.searchFields.length
-          ? config.searchFields
-          : [config.linkField || "title"];
-      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(escaped, "i");
-      const orConds = [];
-      for (const f of searchFields) {
-        const pathInfo = model?.schema?.path?.(f) || null;
-        const instance = pathInfo ? pathInfo.instance : null;
-        if (instance === "Number") {
-          const n = Number(query);
-          if (!Number.isNaN(n)) orConds.push({ [f]: n });
-        } else if (instance === "String" || instance === "Mixed" || !instance) {
-          orConds.push({ [f]: regex });
-        }
-      }
-      if (orConds.length) {
-        if (Object.keys(mongoFilter).length > 0) {
-          mongoFilter = { $and: [mongoFilter, { $or: orConds }] };
-        } else {
-          mongoFilter.$or = orConds;
-        }
-      }
+      const searchFilter = listSearchFilter(model, listSearchFields(config, targetModelName), query);
+      mongoFilter = Object.keys(mongoFilter).length > 0 ? { $and: [mongoFilter, searchFilter] } : searchFilter;
     }
 
     if (tabsBy && activeTab) {
