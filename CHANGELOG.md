@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.112.0] - 2026-11-12
+
+### Added
+- **Supplier statements are read column by column from the PDF.** The reader used to work on Paperless's flattened OCR text, where a branch code, a figure or dotted date in the details and the amount are just words on a line, so one column could be read as another. It now finds the statement's heading row in the PDF's own text layer (the positioned text the invoice reader already uses) and reads each line by where its words sit: the reference from under Reference or Document No, the branch from under Branch, the amount from under Value or Debit (a Credit column's figures are negative), and what's owed from under Outstanding or Balance. Headings PDF.js joins into one text item are split back into their columns, and a page that repeats the headings is read from below them. The OCR text is still read when the PDF has no text layer or no heading row it can use. The PDF text is fetched once and kept with the invoice reader's.
+- **Statement lines are boxed on the PDF** on the entry screen: green where a line matched a purchase, amber where the amount differs, red where it isn't in KashFlow. Hovering a row of the reconciliation lights up its line. The Highlights button turns the boxes off and on, as it does for invoices.
+- **Pointing out a supplier's statement columns.** A Columns panel under Against KashFlow says how the lines were read and which heading each column came from. Pick Reference, Amount or Outstanding / balance column, then click its heading (or any value in it) on the PDF, and say whether the supplier's statements list open items only or everything with a running balance. It is saved for the correspondent (new `SupplierLayout.statement`), the statement is checked again with it straight away, and their next statements are read with it ahead of the guess. It can be forgotten from the same panel. New route `POST /paperless/ocr/:paperlessId/statement-layout`.
+
+### Changed
+- Stored statement readings are redone (statement reader version 4), and now record whether they came from the PDF or the OCR text, the columns used, and each line's place on the page.
+
 ## [6.111.5] - 2026-11-12
 
 ### Fixed

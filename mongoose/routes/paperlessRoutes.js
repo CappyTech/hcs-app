@@ -65,6 +65,7 @@ router.post("/paperless/ocr/:paperlessId/reopen", ...docs("approve"), entryCtrl.
 router.post("/paperless/ocr/:paperlessId/resend-invoice", ...docs("manage"), entryCtrl.postResendInvoice);
 router.post("/paperless/ocr/:paperlessId/reviewed", ...docs("edit"), entryCtrl.postReviewed);
 router.post("/paperless/ocr/:paperlessId/statement-check", ...docs("edit"), entryCtrl.postStatementCheck);
+router.post("/paperless/ocr/:paperlessId/statement-layout", ...docs("edit"), entryCtrl.postStatementLayout);
 router.post("/paperless/ocr/:paperlessId/supplier", ...docs("edit"), entryCtrl.postSupplier);
 router.post("/paperless/ocr/:paperlessId/type", ...docs("edit"), typeCtrl.postType);
 router.post("/paperless/ocr/:paperlessId/type-confirmed", ...docs("edit"), typeCtrl.postTypeConfirmed);
