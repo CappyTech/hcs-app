@@ -79,6 +79,30 @@
     border-style: solid;
     border-width: 2px;
   }
+  /* Supplier statement lines (statement-marks.js): matched, amount differs,
+     not in KashFlow. Column headings show while the Columns panel is open. */
+  .hcs-pdf-mark.is-stmt-ok {
+    border-color: rgb(22 163 74);
+    background: rgb(22 163 74 / 0.08);
+  }
+  .hcs-pdf-mark.is-stmt-differs {
+    border-color: rgb(245 158 11);
+    background: rgb(245 158 11 / 0.1);
+  }
+  .hcs-pdf-mark.is-stmt-missing {
+    border-color: rgb(220 38 38);
+    background: rgb(220 38 38 / 0.08);
+  }
+  .hcs-pdf-mark.is-stmt-ok .hcs-pdf-mark-tag { background: rgb(22 163 74); }
+  .hcs-pdf-mark.is-stmt-missing .hcs-pdf-mark-tag { background: rgb(220 38 38); }
+  .hcs-pdf-mark.is-stmt-column {
+    border: 1px dashed rgb(37 99 235);
+    background: rgb(37 99 235 / 0.06);
+  }
+  .hcs-pdf-mark.is-stmt-column .hcs-pdf-mark-tag {
+    display: block;
+    background: rgb(37 99 235);
+  }
   .hcs-highlights-toggle.is-on {
     border-color: rgb(245 158 11);
     color: rgb(180 83 9);
