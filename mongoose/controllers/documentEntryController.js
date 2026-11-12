@@ -30,7 +30,6 @@ import cisCheckSvc from '../services/paperless/cisCheckService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import { parseCorrespondentName, correspondentLabel } from '../services/paperless/correspondentName.js';
-import { normaliseVatNumber } from '../../public/js/invoice-line-finder.js';
 import * as organisation from '../../services/organisationService.js';
 import logger from '../../services/loggerService.js';
 
@@ -65,10 +64,9 @@ async function kashflowSupplier(doc) {
  * For a subcontractor invoice: the CIS deduction at the KashFlow supplier's
  * rate, and which VAT case it is (vatCase). Null for other documents.
  */
-/** VAT numbers read off the document, leaving out our own (printed as the customer's). */
+/** VAT numbers on the document (PDF text layer and OCR text), leaving out our own (printed as the customer's). */
 function supplierVatNumbers(doc) {
-  const own = normaliseVatNumber(organisation.companyVatNumber());
-  return [...new Set((doc.reading?.vatNumbers || []).map((v) => normaliseVatNumber(v.number)).filter((n) => n && n !== own))];
+  return entry.documentVatNumbers(doc, organisation.companyVatNumber());
 }
 
 /** Us, as an invoice should name us: from Admin → Configuration → Organisation. */
