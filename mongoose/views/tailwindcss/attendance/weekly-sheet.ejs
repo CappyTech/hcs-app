@@ -1,7 +1,7 @@
 <%#
   Weekly attendance sheet: the WEEKLY ATTENDANCE spreadsheet as one page.
   One row per person, Monday to Sunday; each cell picks a site, a location
-  (Office), Off or Sick. Saving writes pending attendance records.
+  (Office), Off or Sick. Saving writes planned attendance records.
   Locals: week, sheet, closures, running, jobs, vehicles, group, groups,
           addChoices { employees, subcontractors } (people not on the sheet), dayLabels, crumbs
 %>
@@ -41,7 +41,7 @@
       </h1>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         Monday <%= fmtDay(week.days[0]) %> to Sunday <%= fmtDay(week.days[6]) %>.
-        Pick where each person is; days you add are pending until approved in the <a href="/weekly-flow" class="text-green-700 dark:text-green-400 hover:underline">weekly flow</a>.
+        Pick where each person is; days you add are planned. On the day, each person confirms theirs or the site manager marks it attended on the <a href="/daily" class="text-green-700 dark:text-green-400 hover:underline">daily page</a>, then it's approved as usual.
       </p>
     </div>
     <div class="flex flex-wrap gap-2 print:hidden">
@@ -140,7 +140,7 @@
                                   aria-label="Copy <%= row.name %>'s <%= dayLabels[i - 1] %> into <%= dayLabels[i] %>"><i class="bi bi-arrow-return-right text-xs" aria-hidden="true"></i></button>
                         <% } %>
                         </div>
-                        <% if (cell.status === 'rejected') { %><span class="block text-[11px] text-red-700 dark:text-red-400">Rejected</span><% } %>
+                        <% if (cell.status === 'rejected') { %><span class="block text-[11px] text-red-700 dark:text-red-400">Rejected</span><% } %><% if (cell.status === 'pending') { %><span class="block text-[11px] text-green-700 dark:text-green-400">Confirmed</span><% } %>
                       <% } else { %>
                         <a href="/daily/<%= cell.day %>" class="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs <%= tone[cell.tone] || tone.other %> hover:underline"
                            title="<%= cell.tone === 'approved' ? 'Signed off' : cell.tone === 'locked' ? 'In a locked payroll period' : cell.tone === 'multi' ? 'More than one record: change them on the daily page' : cell.tone === 'leave' ? 'Approved holiday request' : 'Change this on the daily page' %>">

@@ -2,6 +2,21 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.121.0] - 2026-11-16
+
+### Added
+- **Planned attendance.** A new `planned` status comes before `pending`. The weekly sheet now writes planned days, so a plan is no longer in the approval queue before it has happened.
+- **Confirm button for the person.** On `/daily`, an employee or subcontractor confirms their own planned day once it has come (planned → pending). Submitting the same day through `/attendance/submit` confirms and corrects the plan instead of adding a second record.
+- **Attended / Not attended for the Site Manager.** Approving a planned day that has come marks it attended and takes it straight to the site step. A new Not attended button (`POST /attendance/:uuid/not-attended`) turns a planned or pending work day into an Off day, pending, for the Contracts Manager to sign off.
+- **Planned counts** on the weekly views, the weekly flow (step 4 waits for them) and the attendance overview (planned days that have passed and aren't confirmed).
+
+### Changed
+- Nothing planned for a day still to come can be approved or confirmed, by anyone. Week approval moves planned days that have come and leaves future ones alone.
+- Recording a day on `/daily` for someone with a planned day records over the plan.
+- Weekly sheet: a confirmed (pending) day stays pending when changed; a new or rejected day goes (back) to planned. Confirmed days show "Confirmed".
+
+### Fixed
+- Weekly views counted any status other than pending, site-approved or rejected as approved; planned days are now counted separately.
 ## [6.120.2] - 2026-11-16
 
 ### Changed

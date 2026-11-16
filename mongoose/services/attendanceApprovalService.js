@@ -2,8 +2,13 @@
  * Two-stage week approval for attendance (permission groups phase 3b,
  * docs/PERMISSION-GROUPS.md "Two-stage week approval").
  *
- *   pending ──(Site Manager)──▶ site-approved ──(Contracts Manager)──▶ approved
+ *   planned ──(person confirms)──▶ pending ──(Site Manager)──▶ site-approved ──(Contracts Manager)──▶ approved
  *
+ * - `planned` is the weekly sheet's plan. Once the day has come, the person
+ *   confirms it (pending), or the Site Manager marks it attended, which is
+ *   the same as approving it from pending. Nothing planned for a day still
+ *   to come can be approved. "Not attended" turns a planned or pending work
+ *   day into Off, pending, for the Contracts Manager to sign off.
  * - The site step belongs to whoever runs the record's site: a Site Ops
  *   approve grant (project scope counts) on a contract that names them in
  *   `siteManagers` (projectScopeService).
@@ -25,6 +30,25 @@ import rbac from '../config/rolePermissionsConfig.js';
 import { matchesFilter } from '../../services/dataScopingService.js';
 
 export const AWAITING = ['pending', 'site-approved'];
+/** Statuses an approver can move on: the plan as well as what's waiting. */
+export const APPROVABLE = ['planned', ...AWAITING];
+const SITE_TYPES = ['work', 'training'];
+
+/** Whether a record's day has come (on or before today, server time). */
+export function isDue(record, now = new Date()) {
+  if (!record?.date) return false;
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  return new Date(record.date).getTime() <= end.getTime();
+}
+
+/** Whether `user` is the person the record is for (their linked employee or subcontractor). */
+export function isOwner(user, record) {
+  if (!user || !record) return false;
+  const e = refId(record.employeeId);
+  const s = refId(record.subcontractorId);
+  return (!!e && e === refId(user.employeeId)) || (!!s && s === refId(user.subcontractorId));
+}
 
 const refId = (v) => (v && typeof v === 'object' && v._id ? String(v._id) : v ? String(v) : null);
 
@@ -72,6 +96,7 @@ export async function contextFor(req, records, db = mdb) {
   }
   return {
     userId: user?._id ? String(user._id) : null,
+    user,
     admin,
     all,
     siteFilter,
@@ -88,11 +113,12 @@ const inSites = (ctx, record) => !!ctx.siteFilter && matchesFilter(record, ctx.s
  * What approving `record` would do for this viewer.
  * @returns {{ok:true, next:'site-approved'|'approved'} | {ok:false, reason:string}}
  */
-export function decideApprove(ctx, record) {
+export function decideApprove(ctx, record, now = new Date()) {
   const status = record.status || 'pending';
-  if (!AWAITING.includes(status)) return { ok: false, reason: 'This record is not waiting for approval.' };
+  if (!APPROVABLE.includes(status)) return { ok: false, reason: 'This record is not waiting for approval.' };
+  if (status === 'planned' && !isDue(record, now)) return { ok: false, reason: "Planned: this day hasn't come yet." };
   if (ctx.admin) return { ok: true, next: 'approved' };
-  if (status === 'pending') {
+  if (status === 'pending' || status === 'planned') {
     const siteStep = needsSiteStep(record, ctx.managed);
     if (siteStep && inSites(ctx, record)) return { ok: true, next: 'site-approved' };
     if (ctx.all && !siteStep) return { ok: true, next: 'approved' };
@@ -110,9 +136,30 @@ export function decideApprove(ctx, record) {
 /** Whether this viewer may reject `record`. */
 export function decideReject(ctx, record) {
   const status = record.status || 'pending';
-  if (!AWAITING.includes(status)) return { ok: false, reason: 'This record is not waiting for approval.' };
+  if (!APPROVABLE.includes(status)) return { ok: false, reason: 'This record is not waiting for approval.' };
   if (ctx.admin || ctx.all || inSites(ctx, record)) return { ok: true };
   return { ok: false, reason: 'This record is not on one of your sites.' };
+}
+
+/**
+ * Whether this viewer may mark `record` not attended: a planned or pending
+ * work or training day that has come, on one of their sites.
+ */
+export function decideNotAttended(ctx, record, now = new Date()) {
+  const status = record.status || 'pending';
+  if (!['planned', 'pending'].includes(status)) return { ok: false, reason: 'Only a planned or pending day can be marked not attended.' };
+  if (!SITE_TYPES.includes(record.type || 'work')) return { ok: false, reason: 'This day is not a work day.' };
+  if (!isDue(record, now)) return { ok: false, reason: "This day hasn't come yet." };
+  if (ctx.admin || ctx.all || inSites(ctx, record)) return { ok: true };
+  return { ok: false, reason: 'This record is not on one of your sites.' };
+}
+
+/** Whether this viewer may confirm `record`: their own planned day, once it has come. */
+export function decideConfirm(ctx, record, now = new Date()) {
+  if ((record.status || 'pending') !== 'planned') return { ok: false, reason: 'This day is not planned.' };
+  if (!isOwner(ctx.user, record)) return { ok: false, reason: 'You can only confirm your own days.' };
+  if (!isDue(record, now)) return { ok: false, reason: "This day hasn't come yet." };
+  return { ok: true };
 }
 
 /** The update that moves a record to `next`, stamped with who and when. */
@@ -128,18 +175,28 @@ export function rejectionUpdate(userId, reason, now = new Date()) {
   return update;
 }
 
-/** Per-record buttons for a page: { [uuid]: { approve, approveLabel, reject } }. */
-export function actionsFor(ctx, records) {
+/** The label for the approve button on `record`. */
+export function approveLabelFor(record, next) {
+  if ((record.status || 'pending') === 'planned') return next === 'site-approved' ? 'Attended (approve for the site)' : 'Attended (approve)';
+  return next === 'site-approved' ? 'Approve for the site' : 'Approve';
+}
+
+/** Per-record buttons for a page: { [uuid]: { approve, approveLabel, reject, notAttended, confirm, waiting } }. */
+export function actionsFor(ctx, records, now = new Date()) {
   const out = {};
   for (const r of records) {
-    const a = decideApprove(ctx, r);
+    const a = decideApprove(ctx, r, now);
     const j = decideReject(ctx, r);
-    if (!a.ok && !j.ok) continue;
+    const n = decideNotAttended(ctx, r, now);
+    const c = decideConfirm(ctx, r, now);
+    if (!a.ok && !j.ok && !c.ok) continue;
     out[r.uuid] = {
       approve: a.ok,
-      approveLabel: a.ok && a.next === 'site-approved' ? 'Approve for the site' : 'Approve',
+      approveLabel: a.ok ? approveLabelFor(r, a.next) : 'Approve',
       reject: j.ok,
-      waiting: a.ok ? null : a.reason,
+      notAttended: n.ok,
+      confirm: c.ok,
+      waiting: a.ok || c.ok ? null : a.reason,
     };
   }
   return out;
@@ -179,21 +236,77 @@ export async function rejectOne(req, uuid, reason, db = mdb) {
   return { ok: true, record: updated };
 }
 
+/** The update that turns a day into a not-attended Off day, pending the final step. */
+export function notAttendedUpdate(record, userId, now = new Date()) {
+  const note = `Not attended (marked ${now.toISOString().slice(0, 10)})`;
+  const notes = record.notes ? `${record.notes}\n${note}`.slice(0, 2000) : note;
+  return {
+    $set: { type: 'off', status: 'pending', notes },
+    $unset: {
+      contractId: 1, locationId: 1, projectId: 1, contractAssignmentId: 1,
+      hoursWorked: 1, dayRate: 1, overtimeHours: 1, overtimeRate: 1, payRate: 1,
+      siteApprovedBy: 1, siteApprovedAt: 1,
+    },
+  };
+}
+
+export async function notAttendedOne(req, uuid, db = mdb) {
+  const record = await db.INTERNAL.attendance.findOne({ uuid }).lean();
+  if (!record) return { ok: false, reason: 'Attendance record not found.', status: 404 };
+  const ctx = await contextFor(req, [record], db);
+  const d = decideNotAttended(ctx, record);
+  if (!d.ok) return { ...d, status: 403 };
+  const updated = await db.INTERNAL.attendance.findOneAndUpdate(
+    { _id: record._id, status: record.status || 'pending' },
+    notAttendedUpdate(record, req.user._id),
+    { new: true },
+  );
+  if (!updated) return { ok: false, reason: 'Someone else changed this record. Refresh and try again.', status: 409 };
+  return { ok: true, record: updated };
+}
+
+export async function confirmOne(req, uuid, db = mdb) {
+  const record = await db.INTERNAL.attendance.findOne({ uuid }).lean();
+  if (!record) return { ok: false, reason: 'Attendance record not found.', status: 404 };
+  const d = decideConfirm({ user: req.user }, record);
+  if (!d.ok) return { ...d, status: 403 };
+  const updated = await db.INTERNAL.attendance.findOneAndUpdate(
+    { _id: record._id, status: 'planned' },
+    { status: 'pending' },
+    { new: true },
+  );
+  if (!updated) return { ok: false, reason: 'Someone else changed this record. Refresh and try again.', status: 409 };
+  return { ok: true, record: updated };
+}
+
+/**
+ * The person's planned record on `day`, if there's exactly one, for a
+ * submission or a recorded day to confirm instead of adding a second record.
+ * who: { employeeId } or { subcontractorId }.
+ */
+export async function plannedFor(who, day, db = mdb) {
+  const start = new Date(day); start.setHours(0, 0, 0, 0);
+  const end = new Date(day); end.setHours(23, 59, 59, 999);
+  const found = await db.INTERNAL.attendance.find({ ...who, date: { $gte: start, $lte: end }, status: 'planned' }).limit(2);
+  return found.length === 1 ? found[0] : null;
+}
+
 /**
  * Approve what this viewer can in a date range. Returns the counts and the
  * records that reached `approved` (for holiday accrual).
  */
 export async function approveRange(req, start, end, db = mdb) {
   const records = await db.INTERNAL.attendance
-    .find({ date: { $gte: start, $lte: end }, status: { $in: AWAITING } }).lean();
+    .find({ date: { $gte: start, $lte: end }, status: { $in: APPROVABLE } }).lean();
   const ctx = await contextFor(req, records, db);
+  const now = new Date();
   const moves = new Map(); // `${from}>${next}` -> [_id]
   let waiting = 0;
   for (const r of records) {
-    const d = decideApprove(ctx, r);
+    const d = decideApprove(ctx, r, now);
     if (!d.ok) {
-      // Only count what the viewer could see but not move yet
-      if (ctx.admin || ctx.all || inSites(ctx, r)) waiting++;
+      // Only count what the viewer could see but not move yet (not days still to come)
+      if ((ctx.admin || ctx.all || inSites(ctx, r)) && (r.status !== 'planned' || isDue(r, now))) waiting++;
       continue;
     }
     const key = `${r.status || 'pending'}>${d.next}`;
@@ -235,7 +348,8 @@ export function contractInScope(scope, contractId) {
 }
 
 export default {
-  AWAITING, managedSites, needsSiteStep, contextFor, decideApprove, decideReject,
+  AWAITING, APPROVABLE, isDue, isOwner, managedSites, needsSiteStep, contextFor, decideApprove, decideReject,
+  decideNotAttended, decideConfirm, approveLabelFor, notAttendedUpdate, notAttendedOne, confirmOne, plannedFor,
   approvalUpdate, rejectionUpdate, actionsFor, approveOne, rejectOne, approveRange,
   writeScopeFor, contractInScope,
 };

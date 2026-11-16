@@ -153,6 +153,19 @@ export const recordDay = async (req, res, next) => {
       if (lockedRun) return fail(`This date falls in a ${lockedRun.status} payroll period and can no longer be edited.`);
     }
 
+    // A day already planned on the weekly sheet: record over the plan
+    // instead of adding a second record for the day
+    const who = kind === "e" ? { employeeId: personId } : { subcontractorId: personId };
+    const planned = await approval.plannedFor(who, day);
+    if (planned) {
+      for (const k of ["contractId", "locationId", "projectId", "contractAssignmentId", "hoursWorked", "dayRate"]) planned.set(k, undefined);
+      planned.set(data);
+      await planned.save();
+      logger.info(`[attendanceController] Recorded over planned attendance ${planned.uuid} on ${date} by ${req.user?._id}`);
+      req.flash("success", "Day recorded over the plan. It's pending until the week is approved.");
+      return res.redirect(back);
+    }
+
     await new mdb.INTERNAL.attendance(data).save();
     logger.info(`[attendanceController] Recorded attendance on ${date} by ${req.user?._id}`);
     req.flash("success", "Day recorded. It's pending until the week is approved.");
@@ -189,6 +202,7 @@ export const getWeeklyAttendance = async (req, res, next) => {
       projectStatusFilter,
       taxWeekNumber,
       taxYear,
+      plannedCount,
       pendingCount,
       siteApprovedCount,
       approvedCount,
@@ -389,6 +403,7 @@ export const getWeeklyAttendance = async (req, res, next) => {
       isManagementView,
       taxWeekNumber,
       taxYear,
+      plannedCount,
       pendingCount,
       siteApprovedCount,
       approvedCount,
@@ -441,6 +456,46 @@ export const approveAttendance = async (req, res, next) => {
     res.redirect("back");
   } catch (err) {
     logger.error(`[attendanceController] Error approving attendance: ${err.message}`, { stack: err.stack });
+    next(err);
+  }
+};
+
+/** POST /attendance/:uuid/not-attended — a Site Manager says a planned or pending work day didn't happen: it becomes Off, pending. */
+export const notAttendedAttendance = async (req, res, next) => {
+  try {
+    const result = await approval.notAttendedOne(req, req.params.uuid);
+    if (!result.ok) {
+      logger.warn(`[attendanceController] Not-attended refused for ${req.params.uuid}: ${result.reason}`);
+      req.flash("error", result.reason);
+      return res.redirect("back");
+    }
+    logger.info(`[attendanceController] Attendance ${req.params.uuid} marked not attended`);
+    req.flash("success", "Marked not attended: the day is now Off, waiting for a contracts manager to sign off.");
+    res.redirect("back");
+  } catch (err) {
+    if (err.code === 11000) {
+      req.flash("error", "This person already has an Off day recorded on this date. Remove one of the records instead.");
+      return res.redirect("back");
+    }
+    logger.error(`[attendanceController] Error marking attendance not attended: ${err.message}`, { stack: err.stack });
+    next(err);
+  }
+};
+
+/** POST /attendance/:uuid/confirm — the person confirms their own planned day once it has come. */
+export const confirmAttendance = async (req, res, next) => {
+  try {
+    const result = await approval.confirmOne(req, req.params.uuid);
+    if (!result.ok) {
+      logger.warn(`[attendanceController] Confirm refused for ${req.params.uuid}: ${result.reason}`);
+      req.flash("error", result.reason);
+      return res.redirect("back");
+    }
+    logger.info(`[attendanceController] Attendance ${req.params.uuid} confirmed by ${req.user?._id}`);
+    req.flash("success", "Confirmed. It's pending until the week is approved.");
+    res.redirect("back");
+  } catch (err) {
+    logger.error(`[attendanceController] Error confirming attendance: ${err.message}`, { stack: err.stack });
     next(err);
   }
 };
@@ -598,6 +653,35 @@ export const submitAttendance = async (req, res, next) => {
           `has been ${lockedRun.status}. Contact an administrator if a correction is needed.`,
       );
       return res.redirect("/attendance/submit");
+    }
+
+    // A day planned on the weekly sheet: the submission confirms (and
+    // corrects) the plan instead of adding a second record for the day
+    const who = isEmployee ? { employeeId: data.employeeId } : { subcontractorId: data.subcontractorId };
+    const day = parseYMDLocal(String(data.date || ""));
+    const planned = day ? await approval.plannedFor(who, day) : null;
+    if (planned) {
+      if (!approval.isDue(planned)) {
+        req.flash("error", "That day is planned and hasn't come yet. Submit it on the day.");
+        return res.redirect("/attendance/submit");
+      }
+      // Keep the planned site unless they say they were somewhere else
+      const movedSite = (data.projectId && String(data.projectId) !== String(planned.projectId || ""))
+        || (data.locationId && String(data.locationId) !== String(planned.locationId || ""));
+      if (movedSite || !["work", "training"].includes(data.type)) {
+        for (const k of ["contractId", "locationId", "projectId", "contractAssignmentId"]) planned.set(k, undefined);
+      }
+      if (data.hoursWorked != null || data.dayRate != null) {
+        planned.set("hoursWorked", undefined);
+        planned.set("dayRate", undefined);
+      }
+      const { date: _date, employeeId: _e, subcontractorId: _s, notes, ...rest } = data;
+      planned.set(rest);
+      if (notes) planned.notes = notes;
+      await planned.save();
+      logger.info(`[attendanceController] Planned attendance ${planned.uuid} confirmed by ${req.user.username} (${role})`);
+      req.flash("success", "Confirmed your planned day. It's pending until the week is approved.");
+      return res.redirect("/daily/" + format(new Date(data.date), "yyyy-MM-dd"));
     }
 
     const record = new mdb.INTERNAL.attendance(data);
@@ -761,10 +845,10 @@ export const updateAttendance = async (req, res, next) => {
     if (!record) {
       return res.status(404).json({ success: false, error: "Record not found." });
     }
-    if (record.status !== "pending") {
+    if (!["planned", "pending"].includes(record.status)) {
       return res.status(403).json({
         success: false,
-        error: "Only pending records can be edited.",
+        error: "Only planned or pending records can be edited.",
       });
     }
 
@@ -814,7 +898,7 @@ export const updateAttendance = async (req, res, next) => {
     if (contractId !== undefined) update.contractId = contractId || null;
 
     const updated = await mdb.INTERNAL.attendance.findOneAndUpdate(
-      { uuid: req.params.uuid, status: "pending" },
+      { uuid: req.params.uuid, status: record.status },
       update,
       { new: true, runValidators: true },
     );
@@ -1151,4 +1235,4 @@ export const updateVehicleDeployment = async (req, res, next) => {
 };
 
 
-export default { getDailyAttendance, recordDay, getWeeklyAttendance, approveAttendance, rejectAttendance, bulkApproveAttendance, renderSubmitAttendance, submitAttendance, addStatementPurchase, removeStatementPurchase, updateAttendance, inlineCreateAttendance, inlineCreateAssignment, updateAssignment, inlineCreateVehicleDeployment, updateVehicleDeployment };
+export default { getDailyAttendance, recordDay, getWeeklyAttendance, approveAttendance, rejectAttendance, notAttendedAttendance, confirmAttendance, bulkApproveAttendance, renderSubmitAttendance, submitAttendance, addStatementPurchase, removeStatementPurchase, updateAttendance, inlineCreateAttendance, inlineCreateAssignment, updateAssignment, inlineCreateVehicleDeployment, updateVehicleDeployment };

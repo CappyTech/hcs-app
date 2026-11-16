@@ -85,7 +85,7 @@ export const postSheet = async (req, res, next) => {
   try {
     const { saved, skipped } = await weeklySheet.saveSheet(req.params.monday, req.body, { isAdmin: req.user?.role === 'admin' });
     logger.info(`[weeklySheetController] Week ${monday}: saved ${saved}, skipped ${skipped}`);
-    if (saved) req.flash('success', `Saved ${plural(saved, 'day')}. New days are pending approval.`);
+    if (saved) req.flash('success', `Saved ${plural(saved, 'day')}. New days are planned until confirmed on the day.`);
     if (skipped) req.flash('error', `${plural(skipped, 'day')} not saved: changed by someone else since you opened the page, signed off, or in a locked payroll period. Reload to see them.`);
     if (!saved && !skipped) req.flash('success', 'Nothing had changed.');
     res.redirect(backTo(monday, group));

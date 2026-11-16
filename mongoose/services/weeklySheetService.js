@@ -2,14 +2,17 @@
 //
 // One row per person, Monday to Sunday, each cell saying where they were:
 // a contract (site), a saved location (Office), Off or Sick. Saving writes
-// ordinary attendance records (pending), so payroll and the weekly flow see
-// exactly what was entered here. Beside the grid, as on the spreadsheet:
+// planned attendance records: the person confirms each day once it comes, or
+// the Site Manager marks it attended, and it goes on through approval as
+// usual (attendanceApprovalService). Payroll reads only approved days. Beside the grid, as on the spreadsheet:
 // the contracts running, the jobs for allocation and the vehicle dates.
 //
 // Rules, kept from the weekly flow (weeklyFlowService):
 //   - approved holiday requests are the record of leave; the sheet shows them
 //     and never writes holiday attendance over them
-//   - only pending or rejected records can be changed here; anything signed
+//   - only planned, pending or rejected records can be changed here; a
+//     changed confirmed (pending) day stays pending, anything else goes back
+//     to planned; anything signed
 //     off, or with more than one record that day, is shown and left alone
 //   - days in a locked payroll period can't be changed, except by an admin
 //
@@ -26,7 +29,7 @@ import {
 
 const TZ_NOON = (key) => new Date(`${key}T12:00:00Z`);
 const id = (x) => (x == null ? null : String(x._id || x));
-const EDITABLE_STATUSES = ['pending', 'rejected'];
+const EDITABLE_STATUSES = ['planned', 'pending', 'rejected'];
 const RECENT_SUBCONTRACTOR_WEEKS = 4;
 const VEHICLE_WARN_DAYS = 30;
 
@@ -429,7 +432,8 @@ export async function saveSheet(param, body, { isAdmin = false } = {}) {
         continue;
       }
       const doc = existing || new mdb.INTERNAL.attendance({ ...who, date: parseYMDLocal(change.day) });
-      doc.status = 'pending';
+      // A confirmed day stays confirmed; a new, planned or rejected one is (back in) the plan
+      doc.status = existing?.status === 'pending' ? 'pending' : 'planned';
       for (const k of ['contractId', 'locationId', 'projectId', 'contractAssignmentId']) doc.set(k, undefined);
       if (value === 'off' || value === 'sick') {
         doc.type = value;

@@ -404,6 +404,7 @@ const groupAttendanceByPerson = (
     .reduce((sum, e) => sum + Object.keys(e.dailyRecords).length, 0);
 
   // ── Management summary stats ──────────────────────────────────────
+  let plannedCount = 0;
   let pendingCount = 0;
   let siteApprovedCount = 0;
   let approvedCount = 0;
@@ -415,7 +416,8 @@ const groupAttendanceByPerson = (
     Object.entries(person.dailyRecords).forEach(([day, records]) => {
       Object.values(records).forEach(rec => {
         // Count statuses (employee attendance only, purchases have no status)
-        if (rec.status === 'pending') pendingCount++;
+        if (rec.status === 'planned') plannedCount++;
+        else if (rec.status === 'pending') pendingCount++;
         else if (rec.status === 'site-approved') siteApprovedCount++;
         else if (rec.status === 'rejected') rejectedCount++;
         else if (rec.status) approvedCount++;
@@ -438,6 +440,7 @@ const groupAttendanceByPerson = (
     totalSubcontractorPay,
     totalSubcontractorDays,
     daysOfWeek,
+    plannedCount,
     pendingCount,
     siteApprovedCount,
     approvedCount,
@@ -526,6 +529,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     totalSubcontractorPay,
     totalSubcontractorDays,
     daysOfWeek,
+    plannedCount,
     pendingCount,
     siteApprovedCount,
     approvedCount,
@@ -616,6 +620,7 @@ const getAttendanceForWeek = async (yearParam, weekParam) => {
     projectStatusFilter: ['Planned', 'In Progress'],
     taxWeekNumber: requestedWeekNumber,
     taxYear: year,
+    plannedCount,
     pendingCount,
     siteApprovedCount,
     approvedCount,
