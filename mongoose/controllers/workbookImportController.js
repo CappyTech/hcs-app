@@ -13,7 +13,7 @@ import xlsx from '../services/xlsxReaderService.js';
 import jobImport from '../services/jobRegisterImportService.js';
 import sheetImport from '../services/weeklySheetImportService.js';
 import overviewEngine from '../services/overviewEngine.js';
-import mdb from '../services/mongooseDatabaseService.js';
+import store from '../services/workbookImportStore.js';
 
 const VIEW = (name) => path.join('tailwindcss', 'import', name);
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -65,44 +65,27 @@ const handle400s = (back) => (err, req, res, next) => {
   next(err);
 };
 
-const UPLOAD_LIFETIME_MS = 864e5; // workbookImport's TTL
-const RECENT_LIMIT = 20;
-
-/**
- * Uploads of one kind that haven't expired yet, newest first, for the list
- * on the upload page. Filtered on age as well as left to the TTL index,
- * which only sweeps about once a minute.
- */
-export async function recentUploads(kind, now = new Date()) {
-  const docs = await mdb.INTERNAL.workbookImport
-    .find({ kind, createdAt: { $gt: new Date(now.getTime() - UPLOAD_LIFETIME_MS) } })
-    .select('uuid fileName createdAt importedAt result createdBy')
-    .populate('createdBy', 'username email')
-    .sort({ createdAt: -1 })
-    .limit(RECENT_LIMIT)
-    .lean();
-  return docs.map((d) => describeUpload(d, kind));
-}
-
-/** One upload as the list shows it. Pure. */
-export function describeUpload(doc, kind) {
-  const r = doc.result || {};
-  let summary = '';
-  if (doc.importedAt) {
-    summary = kind === 'jobRegister'
-      ? `${plural(r.created || 0, 'row')} added, ${plural(r.updated || 0, 'row')} filled in`
-      : `${plural(r.created || 0, 'day')} imported${r.createdLocations ? `, ${plural(r.createdLocations, 'new location')}` : ''}`;
+/** POST …/import/:uuid/save — keep the choices; the upload stays until imported or deleted. */
+const saveHandler = (back, saveFn) => async (req, res, next) => {
+  try {
+    await saveFn(req.params.uuid, req.body || {}, req.user?._id);
+    req.flash('success', 'Saved. This upload is kept until you import it or delete it.');
+    res.redirect(`${back}/${encodeURIComponent(req.params.uuid)}`);
+  } catch (err) {
+    handle400s(back)(err, req, res, next);
   }
-  return {
-    uuid: doc.uuid,
-    fileName: doc.fileName || '(no name)',
-    createdAt: doc.createdAt,
-    expiresAt: doc.createdAt ? new Date(new Date(doc.createdAt).getTime() + UPLOAD_LIFETIME_MS) : null,
-    by: doc.createdBy?.username || doc.createdBy?.email || '',
-    importedAt: doc.importedAt || null,
-    summary,
-  };
-}
+};
+
+/** POST …/import/:uuid/delete — remove the parked upload (nothing it imported). */
+const deleteHandler = (back, kind) => async (req, res, next) => {
+  try {
+    await store.deleteUpload(req.params.uuid, kind);
+    req.flash('success', 'Upload deleted.');
+    res.redirect(back);
+  } catch (err) {
+    handle400s(back)(err, req, res, next);
+  }
+};
 
 // ── Job Register ────────────────────────────────────────────────────────
 
@@ -112,7 +95,7 @@ const jrCrumbs = (req) => [...overviewEngine.breadcrumbs(req, 'projects'), { lab
 /** GET /job-register/import */
 export const getJobRegisterUpload = async (req, res, next) => {
   let uploads;
-  try { uploads = await recentUploads('jobRegister'); } catch (err) { return next(err); }
+  try { uploads = await store.recentUploads('jobRegister'); } catch (err) { return next(err); }
   res.render(VIEW('upload'), {
     uploads,
     title: 'Import the Job Reg workbook',
@@ -146,6 +129,12 @@ export const getJobRegisterCheck = async (req, res, next) => {
   }
 };
 
+/** POST /job-register/import/:uuid/save */
+export const postJobRegisterSave = saveHandler(JR, (uuid, body, userId) => jobImport.saveForLater(uuid, body.pair, userId));
+
+/** POST /job-register/import/:uuid/delete */
+export const postJobRegisterDelete = deleteHandler(JR, 'jobRegister');
+
 /** POST /job-register/import/:uuid */
 export const postJobRegisterImport = async (req, res, next) => {
   try {
@@ -171,7 +160,7 @@ const wsCrumbs = (req) => [...overviewEngine.breadcrumbs(req, 'weekly'), { label
 /** GET /weekly-sheet/import */
 export const getWeeklySheetUpload = async (req, res, next) => {
   let uploads;
-  try { uploads = await recentUploads('weeklySheet'); } catch (err) { return next(err); }
+  try { uploads = await store.recentUploads('weeklySheet'); } catch (err) { return next(err); }
   res.render(VIEW('upload'), {
     uploads,
     title: 'Import the weekly attendance workbook',
@@ -205,6 +194,12 @@ export const getWeeklySheetMapping = async (req, res, next) => {
   }
 };
 
+/** POST /weekly-sheet/import/:uuid/save */
+export const postWeeklySheetSave = saveHandler(WS, sheetImport.saveForLater);
+
+/** POST /weekly-sheet/import/:uuid/delete */
+export const postWeeklySheetDelete = deleteHandler(WS, 'weeklySheet');
+
 /** POST /weekly-sheet/import/:uuid */
 export const postWeeklySheetImport = async (req, res, next) => {
   try {
@@ -230,7 +225,6 @@ export const postWeeklySheetImport = async (req, res, next) => {
 };
 
 export default {
-  recentUploads, describeUpload,
-  getJobRegisterUpload, postJobRegisterUpload, getJobRegisterCheck, postJobRegisterImport,
-  getWeeklySheetUpload, postWeeklySheetUpload, getWeeklySheetMapping, postWeeklySheetImport,
+  getJobRegisterUpload, postJobRegisterUpload, getJobRegisterCheck, postJobRegisterSave, postJobRegisterDelete, postJobRegisterImport,
+  getWeeklySheetUpload, postWeeklySheetUpload, getWeeklySheetMapping, postWeeklySheetSave, postWeeklySheetDelete, postWeeklySheetImport,
 };

@@ -82,6 +82,8 @@ router.get("/weekly-sheet/import", authService.ensureRole("admin"), importCtrl.g
 router.post("/weekly-sheet/import", authService.ensureRole("admin"), importCtrl.postWeeklySheetUpload);
 router.get("/weekly-sheet/import/:uuid", authService.ensureRole("admin"), importCtrl.getWeeklySheetMapping);
 router.post("/weekly-sheet/import/:uuid", authService.ensureRole("admin"), importCtrl.postWeeklySheetImport);
+router.post("/weekly-sheet/import/:uuid/save", authService.ensureRole("admin"), importCtrl.postWeeklySheetSave);
+router.post("/weekly-sheet/import/:uuid/delete", authService.ensureRole("admin"), importCtrl.postWeeklySheetDelete);
 router.get(
   "/weekly-sheet/:monday?",
   authService.ensureGroup(

@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.115.0] - 2026-11-16
+
+### Added
+- **Save an import for later.** The check pages for both workbook imports have a **Save for later** button. It keeps what you've chosen (the weekly sheet's name and site matches, the Job Reg's ticked pairs) and stops the upload expiring, so you can come back and finish. Opening it again shows your saved choices, and you can save again as often as you like.
+- Saved uploads appear on the upload page as **Saved**, with **Carry on**, and are kept until they're imported or deleted. Once imported, an upload expires a day later.
+- **Delete an upload** from the upload page or its check page. This removes only the parked upload and its choices, never what an import wrote.
+
+### Changed
+- Upload expiry moved from a TTL on `createdAt` to a new `expiresAt` field (cleared while saved). On start-up the old TTL index is dropped and uploads from before the change are given an `expiresAt` a day after they were made.
+
 ## [6.114.0] - 2026-11-16
 
 ### Added

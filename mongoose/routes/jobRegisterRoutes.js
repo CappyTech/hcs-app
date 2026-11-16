@@ -23,6 +23,8 @@ router.get('/job-register/import', authService.ensureRole('admin'), importCtrl.g
 router.post('/job-register/import', authService.ensureRole('admin'), importCtrl.postJobRegisterUpload);
 router.get('/job-register/import/:uuid', authService.ensureRole('admin'), importCtrl.getJobRegisterCheck);
 router.post('/job-register/import/:uuid', authService.ensureRole('admin'), importCtrl.postJobRegisterImport);
+router.post('/job-register/import/:uuid/save', authService.ensureRole('admin'), importCtrl.postJobRegisterSave);
+router.post('/job-register/import/:uuid/delete', authService.ensureRole('admin'), importCtrl.postJobRegisterDelete);
 // The Next and Today buttons: show the form again with KashFlow's next number
 // or today's date filled in.
 // Before /:uuid, which would otherwise take "next" as an entry.

@@ -38,6 +38,7 @@ import firstRunService from './services/firstRunService.js';
 import __firstRunRoutes from './mongoose/routes/firstRunRoutes.js';
 import __payrollTaxRatesSeedService from './mongoose/services/payrollTaxRatesSeedService.js';
 import __emailTypesSeedService from './mongoose/services/emailTypesSeedService.js';
+import __workbookImportStore from './mongoose/services/workbookImportStore.js';
 import __configValidatorService from './mongoose/services/configValidatorService.js';
 import cisMappings from './mongoose/config/cisMappings.js';
 import __socketService from './services/socketService.js';
@@ -397,6 +398,14 @@ const main = async () => {
       if (renamed > 0) logger.info(`[migration] Renamed ${renamed} legacy notification kind row(s)`);
     } catch (migrationErr) {
       logger.error('[migration] Notification kind rename failed', { error: migrationErr.message });
+    }
+
+    // Workbook uploads: expiry moved from a TTL on createdAt to expiresAt, so
+    // saved uploads are kept (drops the old index, dates the old uploads).
+    try {
+      await __workbookImportStore.migrateExpiry();
+    } catch (migrationErr) {
+      logger.error('[migration] Workbook upload expiry failed', { error: migrationErr.message });
     }
 
     // Seed payroll tax rates for known tax years (insert-only — admin edits
