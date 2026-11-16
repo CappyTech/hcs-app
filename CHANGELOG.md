@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.124.1] - 2026-11-16
+
+### Fixed
+- **Invoices from suppliers whose prices include VAT no longer get stuck at send.** Working each line's VAT out as Net x 20% can leave the lines a penny a line short of the invoice's VAT (the supplier takes VAT as Gross - Net). Edit entry allowed a penny a line, but the draft only took up 2p and the send check wants an exact match, so an invoice with three or more such lines passed entry and was then refused. The draft now takes up a penny a line (at least 2p), a penny on each of the lines that rounded the other way, so the lines match the invoice. Bigger gaps are still refused.
+
 ## [6.124.0] - 2026-11-16
 
 ### Added

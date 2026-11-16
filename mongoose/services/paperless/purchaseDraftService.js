@@ -522,36 +522,49 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
       if (vatAmount == null) vatAmount = sums.vat;
       if (grossAmount == null) grossAmount = sums.gross;
 
-      // Reconcile small rounding drift between header VAT and sum of line VATs by nudging a single line
-      // This addresses cases like 5 lines at 20% where per-line rounding leads to a 0.01 difference
+      // Reconcile rounding drift between header VAT and the sum of line VATs.
+      // Lines worked out as Net × rate round each line's VAT on its own, while a
+      // supplier pricing VAT-inclusive (Net = Gross / 1.2, VAT = Gross − Net) can
+      // land a penny the other way on several lines. Allow a penny a line (at
+      // least 2p), the same allowance as Edit entry's check, and spread it a
+      // penny at a time over the lines whose exact VAT was closest to rounding
+      // the other way, so no line moves more than 1p.
       if (typeof vatAmount === "number") {
         const sumVat = sums.vat;
         const drift = +(vatAmount - sumVat).toFixed(2);
-        // Only attempt to adjust when the drift is a single penny (or very small)
-        if (Math.abs(drift) >= 0.005 && Math.abs(drift) <= 0.02) {
-          // Pick the last line that has a numeric VATAmount (common accounting practice)
-          let adjustIdx = -1;
-          for (let k = items.length - 1; k >= 0; k--) {
-            if (typeof items[k].VATAmount === "number") {
-              adjustIdx = k;
-              break;
-            }
-          }
-          if (adjustIdx >= 0) {
-            const li = items[adjustIdx];
-            li.VATAmount = +((li.VATAmount || 0) + drift).toFixed(2);
+        const vatIdx = items
+          .map((it, k) => (typeof it.VATAmount === "number" ? k : -1))
+          .filter((k) => k >= 0);
+        const pennies = Math.round(Math.abs(drift) * 100);
+        const allowance = Math.max(2, vatIdx.length);
+        if (pennies >= 1 && pennies <= allowance && pennies <= vatIdx.length) {
+          const step = drift > 0 ? 0.01 : -0.01;
+          // How far each line's exact VAT sits from its rounded VAT, in the drift's direction
+          const lean = (k) => {
+            const it = items[k];
+            if (typeof it.NetAmount !== "number" || typeof it.VATLevel !== "number") return 0;
+            const exact = (it.NetAmount * it.VATLevel) / 100;
+            return (exact - it.VATAmount) * Math.sign(drift);
+          };
+          // Most-leaning first; ties go to the later line (the old single-line rule)
+          const order = vatIdx.slice().sort((a, b) => lean(b) - lean(a) || b - a);
+          const adjusted = order.slice(0, pennies).sort((a, b) => a - b);
+          for (const k of adjusted) {
+            const li = items[k];
+            li.VATAmount = +(li.VATAmount + step).toFixed(2);
             if (typeof li.NetAmount === "number") {
               li.GrossAmount = +(li.NetAmount + li.VATAmount).toFixed(2);
             } else if (typeof li.GrossAmount === "number") {
               li.NetAmount = +(li.GrossAmount - li.VATAmount).toFixed(2);
             }
-            // mark debug for UI/traceability
-            var __ROUND_ADJUST__ = {
-              LineAdjusted: adjustIdx + 1,
-              Field: "VATAmount",
-              Drift: drift,
-            };
           }
+          // mark debug for UI/traceability
+          var __ROUND_ADJUST__ = {
+            LineAdjusted: adjusted[adjusted.length - 1] + 1,
+            LinesAdjusted: adjusted.map((k) => k + 1),
+            Field: "VATAmount",
+            Drift: drift,
+          };
         }
       }
 
