@@ -48,6 +48,9 @@
       <a href="<%= withGroup(`/weekly-sheet/${week.previous}`) %>" class="<%= secondaryBtn %>"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous week</a>
       <% if (week.monday !== week.thisWeek) { %><a href="<%= withGroup('/weekly-sheet') %>" class="<%= secondaryBtn %>">This week</a><% } %>
       <a href="<%= withGroup(`/weekly-sheet/${week.next}`) %>" class="<%= secondaryBtn %>">Next week <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+      <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
+        <a href="/weekly-sheet/import" class="<%= secondaryBtn %>"><i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i> Import workbook</a>
+      <% } %>
     </div>
   </div>
 

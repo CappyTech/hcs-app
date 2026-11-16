@@ -13,8 +13,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = _esmDirname(__filename);
 
 // INTERNAL models excluded from the audit trail: the audit log itself, plus
-// high-frequency infrastructure writes (session activity) that would flood it.
-const AUDIT_EXCLUDE_MODELS = (process.env.AUDIT_EXCLUDE_MODELS || 'auditLog,session')
+// high-frequency infrastructure writes (session activity) that would flood it,
+// and parked workbook uploads (the import itself is audited record by record).
+const AUDIT_EXCLUDE_MODELS = (process.env.AUDIT_EXCLUDE_MODELS || 'auditLog,session,workbookImport')
   .split(',').map((s) => s.trim()).filter(Boolean);
 
 const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {}, WEB: {} };

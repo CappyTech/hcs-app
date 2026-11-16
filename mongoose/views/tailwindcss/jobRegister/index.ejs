@@ -54,7 +54,12 @@
         Quotes and jobs, entered here first and checked against KashFlow. A quote is won when it has a project number, and invoiced when it has an invoice number.
       </p>
     </div>
-    <a href="#add" class="<%= primaryBtn %> whitespace-nowrap"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a quote or job</a>
+    <div class="flex flex-wrap gap-2">
+      <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
+        <a href="/job-register/import" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i> Import workbook</a>
+      <% } %>
+      <a href="#add" class="<%= primaryBtn %> whitespace-nowrap"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a quote or job</a>
+    </div>
   </div>
 
   <!-- Stage filter -->
