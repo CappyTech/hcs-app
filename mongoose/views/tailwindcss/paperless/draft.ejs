@@ -39,14 +39,17 @@
 	  // canSend and alreadySentLock are computed in getPurchaseDraft controller and passed as template vars
 	%>
 	<% const usedCustomFieldLines = (draft.Debug && Array.isArray(draft.Debug.EnumeratedLineItems) && draft.Debug.EnumeratedLineItems.length > 0); %>
-	<% const sumNet = +lineItems.reduce((a,li)=>{ const n = toNum(li.NetAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
-	<% const sumVAT = +lineItems.reduce((a,li)=>{ const n = toNum(li.VATAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
+	<% /* Line totals as KashFlow will work them out (Quantity × Rate + VAT), checked to the penny against the invoice's typed totals: the same check the send makes */ %>
+	<% const _kf = locals.kashflowTotals; %>
+	<% const sumNet = _kf ? _kf.net : +lineItems.reduce((a,li)=>{ const n = toNum(li.NetAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
+	<% const sumVAT = _kf ? _kf.vat : +lineItems.reduce((a,li)=>{ const n = toNum(li.VATAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
 	<% const sumGross = +lineItems.reduce((a,li)=>{ const n = toNum(li.GrossAmount); return a + (n ?? 0); }, 0).toFixed(2); %>
 	<% const sumGrossDerived = +((sumNet + sumVAT)).toFixed(2); %>
-	<% const headerVsLinesNetOk = (_netH == null) || Math.abs(_netH - sumNet) < 0.01; %>
-	<% /* VAT: a penny a line, as suppliers round per line or on the total (matches the send guard) */ %>
-	<% const headerVsLinesVatOk = (_vatH == null) || Math.abs(_vatH - sumVAT) <= Math.max(0.02, 0.01 * lineItems.length) + 1e-9; %>
-	<% const headerVsLinesGrossOk = (_grossH == null) || Math.abs(_grossH - sumGrossDerived) < 0.01; %>
+	<% const _typed = draft.InvoiceTotals || {}; %>
+	<% const _netT = toNum(_typed.NetAmount), _vatT = toNum(_typed.VATAmount), _grossT = toNum(_typed.GrossAmount); %>
+	<% const headerVsLinesNetOk = (_netT == null) || Math.abs(_netT - sumNet) < 0.005; %>
+	<% const headerVsLinesVatOk = (_vatT == null) || Math.abs(_vatT - sumVAT) < 0.005; %>
+	<% const headerVsLinesGrossOk = (_grossT == null) || Math.abs(_grossT - sumGrossDerived) < 0.005; %>
 
 	<%
 	// Subcontractor mode — detect sub-contractor and materials nominal codes from the nominal map
@@ -255,22 +258,22 @@
 								<td class="p-2">
 									<%= sumNet.toFixed(2) %>
 									<i class="bi <%= headerVsLinesNetOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
-									<% if (!headerVsLinesNetOk && draft.NetAmount != null) { %>
-										<span class="text-red-600">(Δ <%= (draft.NetAmount - sumNet).toFixed(2) %>)</span>
+									<% if (!headerVsLinesNetOk && _netT != null) { %>
+										<span class="text-red-600">(Δ <%= (_netT - sumNet).toFixed(2) %>)</span>
 									<% } %>
 								</td>
 								<td class="p-2">
 									<%= sumVAT.toFixed(2) %>
 									<i class="bi <%= headerVsLinesVatOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
-									<% if (!headerVsLinesVatOk && draft.VATAmount != null) { %>
-										<span class="text-red-600">(Δ <%= (draft.VATAmount - sumVAT).toFixed(2) %>)</span>
+									<% if (!headerVsLinesVatOk && _vatT != null) { %>
+										<span class="text-red-600">(Δ <%= (_vatT - sumVAT).toFixed(2) %>)</span>
 									<% } %>
 								</td>
 								<td class="p-2">
 									<%= sumGrossDerived.toFixed(2) %>
 									<i class="bi <%= headerVsLinesGrossOk ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
-									<% if (!headerVsLinesGrossOk && draft.GrossAmount != null) { %>
-										<span class="text-red-600">(Δ <%= (draft.GrossAmount - sumGrossDerived).toFixed(2) %>)</span>
+									<% if (!headerVsLinesGrossOk && _grossT != null) { %>
+										<span class="text-red-600">(Δ <%= (_grossT - sumGrossDerived).toFixed(2) %>)</span>
 									<% } %>
 								</td>
 								<td class="p-2" colspan="2"></td>
@@ -337,7 +340,12 @@
 					<input type="checkbox" name="forceDuplicate" value="true" class="rounded border-gray-200 dark:border-gray-700 accent-amber-600 dark:bg-gray-800">
 					Send even if a matching supplier reference already exists (override duplicate check)
 				</label>
-				<% if (!(headerVsLinesNetOk && headerVsLinesVatOk)) { %>
+				<% if (locals.linesProblem) { %>
+				<div class="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-300">
+					<i class="bi bi-exclamation-triangle-fill"></i> <%= linesProblem %>
+				</div>
+				<% } %>
+				<% if (locals.linesProblem) { %>
 				<label class="inline-flex items-start gap-2 text-sm" title="Use this when the invoice itself is wrong: its printed lines don't add up to its printed totals, and it has been accepted as it stands. KashFlow totals the purchase from the lines, so it will carry the lines' figures.">
 					<input type="checkbox" id="accept-line-mismatch" name="acceptLineMismatch" value="true" class="mt-0.5 rounded border-gray-200 dark:border-gray-700 accent-amber-600 dark:bg-gray-800">
 					<span>The lines don't add up to the invoice's totals and that is how the invoice was issued. Send the lines as they are (override line check). This is recorded on the document.</span>
@@ -404,8 +412,8 @@
 						<span>Net + VAT equals Gross</span>
 					</li>
 					<li class="flex items-start gap-2">
-						<i id="check-lines-icon" class="bi <%= (headerVsLinesNetOk && headerVsLinesVatOk) ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
-						<span>Lines add up to Net and VAT<% if (!(headerVsLinesNetOk && headerVsLinesVatOk)) { %> (they don't: correct them in <a href="/paperless/ocr/<%= paperlessId %>/entry" class="underline">Edit entry</a>, or add the missing lines. Sending is refused until they do<span id="check-lines-accepted" class="hidden">, unless the override on the left is ticked because the invoice itself doesn't add up</span>.)<% } %></span>
+						<i id="check-lines-icon" class="bi <%= (!locals.linesProblem) ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-red-600' %>"></i>
+						<span>Lines add up to Net and VAT<% if (locals.linesProblem) { %> (they don't: correct them in <a href="/paperless/ocr/<%= paperlessId %>/entry" class="underline">Edit entry</a>, or add the missing lines. Sending is refused until they do<span id="check-lines-accepted" class="hidden">, unless the override on the left is ticked because the invoice itself doesn't add up</span>.)<% } %></span>
 					</li>
 					<li class="flex items-start gap-2">
 						<i class="bi <%= hasSupplierRef ? 'bi-check-circle-fill text-green-600' : 'bi-exclamation-triangle-fill text-yellow-500' %>"></i>

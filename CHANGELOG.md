@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.111.7] - 2026-11-16
+
+### Fixed
+- **Purchases reached KashFlow for a different amount from the invoice.** KashFlow ignores the totals it's sent and works a purchase out from its lines (quantity × rate, plus each line's VAT). Three things let the lines differ from what the invoice says:
+  - **A line whose printed total isn't quantity × price** (a discount, or a price kept to 4 places on a large quantity) was sent as quantity × price. The draft even "corrected" the typed line total to match. Such a line now goes to KashFlow as 1 × the printed line total, with the printed quantity and price kept in the description (e.g. "Bricks (5000 × 0.7945)"). A quantity with no price no longer goes as quantity × line total.
+  - **The send check compared the lines with the draft's own totals.** When the typed totals were missing or didn't add up, those totals were replaced with the line sums, so the check compared the lines with themselves and always passed. It now checks the lines against the totals typed from the invoice.
+  - **The check allowed a penny of VAT a line.** It now works out what KashFlow will make of the payload it is about to be sent and requires net, VAT and invoice total to match to the penny. A draft with no invoice totals entered is refused.
+- **The draft page shows the same check as the send.** The line totals are now the KashFlow figures, compared with the typed totals, and a red banner says why a send will be refused.
+
 ## [6.111.6] - 2026-11-16
 
 ### Fixed

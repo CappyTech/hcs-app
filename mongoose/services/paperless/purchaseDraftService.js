@@ -198,6 +198,11 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     }
   }
 
+  // The invoice's own totals, as typed (or read) from the document, before
+  // anything is worked out from the lines. The send guard checks the lines
+  // against these, never against totals that were themselves taken from the lines.
+  const invoiceTotals = { NetAmount: netAmount ?? null, VATAmount: vatAmount ?? null, GrossAmount: grossAmount ?? null };
+
   // Line items: try to read as JSON; else single-line fallback
   let lineItemsRaw = findCustomField(cf, mapping.LineItems);
   let lineItems = undefined;
@@ -364,8 +369,12 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
         const n = +(li.Quantity * li.UnitPrice).toFixed(2);
         if (Number.isFinite(n)) li.NetAmount = n;
       }
-      // If NetAmount is present but inconsistent with Qty×UnitPrice, correct it
+      // If NetAmount is present but inconsistent with Qty×UnitPrice, correct it.
+      // Not when it is the line total typed from the invoice (Total_LineN): the
+      // printed total is what the supplier charges (a discount, or a price kept
+      // to 4 places), and the KashFlow payload sends such a line as 1 × total.
       if (
+        !li.__NetCameFromTotalField &&
         li.Quantity != null &&
         li.UnitPrice != null &&
         typeof li.NetAmount === "number" &&
@@ -748,6 +757,7 @@ function buildPurchaseDraftFromOcr(ocr, opts = {}) {
     NetAmount: netAmount,
     VATAmount: vatAmount,
     GrossAmount: grossAmount,
+    InvoiceTotals: invoiceTotals,
 
     // Details (omit ReadableString on draft)
     LineItems: lineItems,
@@ -828,6 +838,8 @@ export default {
   buildPurchaseDraftById,
   defaultMap,
   buildKashFlowPayloadFromDraft,
+  kashflowQuantityAndRate,
+  kashflowLineTotals,
 };
 
 /**
@@ -850,6 +862,54 @@ function formatKFDate(d) {
   const SS = pad(dt.getUTCSeconds());
   // "YYYY-MM-DD HH:mm:ss" (commonly accepted by KF JSON API)
   return `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}`;
+}
+
+const isNum = (v) => typeof v === "number" && Number.isFinite(v);
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+const fmtQty = (n) => String(+n.toFixed(4));
+
+/**
+ * The Quantity and Rate to send for a line. KashFlow ignores any line total it
+ * is given and works the line out as Quantity × Rate, so they must come to the
+ * invoice's printed line total. When they don't (a discount, a price kept to 4
+ * places, or a quantity with no price), the line goes as 1 × the printed total,
+ * with the printed quantity and price kept in the description.
+ */
+export function kashflowQuantityAndRate(li) {
+  const qty = isNum(li.Quantity) ? li.Quantity : null;
+  const unit = isNum(li.UnitPrice) ? li.UnitPrice : isNum(li.Rate) ? li.Rate : null;
+  const net = isNum(li.NetAmount) ? round2(li.NetAmount) : null;
+  const description = li.Description;
+  if (net == null) return { Quantity: qty ?? 1, Rate: unit ?? 0, Description: description };
+  if (qty != null && unit != null && Math.abs(round2(qty * unit) - net) < 0.005) {
+    return { Quantity: qty, Rate: unit, Description: description };
+  }
+  if ((qty == null || qty === 1) && unit == null) return { Quantity: 1, Rate: net, Description: description };
+  const printed = qty != null && unit != null ? `${fmtQty(qty)} × ${unit}` : qty != null ? `qty ${fmtQty(qty)}` : `at ${unit}`;
+  return {
+    Quantity: 1,
+    Rate: net,
+    Description: [description, `(${printed})`].filter((s) => s != null && String(s).trim() !== "").join(" "),
+  };
+}
+
+/**
+ * What KashFlow will total a payload's lines to: each line's Quantity × Rate,
+ * to the penny, and the VAT sent on each line (or its VAT level of that net).
+ */
+export function kashflowLineTotals(payload) {
+  const lines = Array.isArray(payload?.LineItems) ? payload.LineItems : [];
+  let net = 0;
+  let vat = 0;
+  for (const li of lines) {
+    const n = round2((isNum(li.Quantity) ? li.Quantity : 1) * (isNum(li.Rate) ? li.Rate : 0));
+    net += n;
+    if (isNum(li.VATAmount)) vat += li.VATAmount;
+    else if (isNum(li.VATLevel)) vat += round2((n * li.VATLevel) / 100);
+  }
+  net = round2(net);
+  vat = round2(vat);
+  return { net, vat, gross: round2(net + vat) };
 }
 
 function buildKashFlowPayloadFromDraft(draft, opts = {}) {
@@ -962,11 +1022,11 @@ function buildKashFlowPayloadFromDraft(draft, opts = {}) {
     LineItems: Array.isArray(draft.LineItems)
       ? draft.LineItems.map((li) => {
           const resolvedVatLevel = computeVatLevelFromAmounts(li);
+          const { Quantity, Rate, Description } = kashflowQuantityAndRate(li);
           return {
-            Description: li.Description,
-            Quantity: li.Quantity ?? 1,
-            // KashFlow expects Rate (unit price). If only NetAmount was provided, fallback to that.
-            Rate: li.UnitPrice ?? li.Rate ?? li.NetAmount ?? 0,
+            Description,
+            Quantity,
+            Rate,
             VATLevel: resolvedVatLevel,
             VATAmount: li.VATAmount,
             VATExempt:
