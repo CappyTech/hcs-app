@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.122.0] - 2026-11-16
+
+### Added
+- Employees have an Overhead tick box for people whose work is never costed to a job (office, yard, management). Shown as a badge on the employee page.
+
+### Changed
+- Weekly flow: work by overhead people is listed as "Overhead days", a grey note that doesn't hold up the Review & approve step. Their days no longer raise "Work recorded without a contract" or "Attendance from people not on any assignment". Everyone else is still flagged, and the no-contract check links to the employee record.
+
 ## [6.121.0] - 2026-11-16
 
 ### Added

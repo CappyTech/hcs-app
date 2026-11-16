@@ -79,6 +79,12 @@ employeeSchema.add({
   subcontractorSupplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier', default: null }
 });
 
+// Overhead: none of this person's work is costed to a job (office, yard,
+// management). Their days need no contract or assignment.
+employeeSchema.add({
+  overhead: { type: Boolean, default: false }
+});
+
 // ── Payroll / PAYE fields ────────────────────────────────────────────────────
 employeeSchema.add({
   payroll: {

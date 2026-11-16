@@ -41,6 +41,9 @@
             <% if (item.type) { %>
               <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700 capitalize"><%= item.type %></span>
             <% } %>
+            <% if (item.overhead) { %>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">Overhead</span>
+            <% } %>
             <% if (item.ir35) { %>
               <span class="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-700">IR35: <%= item.ir35 %></span>
             <% } %>
