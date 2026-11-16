@@ -2,7 +2,7 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [6.123.1] - 2026-11-16
+## [6.123.2] - 2026-11-16
 
 ### Fixed
 - **Invoice data entry learns a supplier's layout from where you picked each value.** Clicking a value on the PDF, or using a suggestion, now sends that spot with the save, and the supplier's layout is learned from it (checked against the document's text). Before, the save looked for the first place the saved value appeared, so on a one-line invoice, where the line, the goods and the total show the same amount, the line item's position could be learned as the total.
