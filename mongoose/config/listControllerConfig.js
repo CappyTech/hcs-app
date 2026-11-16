@@ -3,6 +3,7 @@ import __path from 'path';
 import mdb from '../services/mongooseDatabaseService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
 import { siteSafety } from '../services/contractSiteSafetyService.js';
+import { loadEmployeePolicies } from '../controllers/companyDocsController.js';
 
 /**
  * listControllerConfig.js
@@ -404,8 +405,10 @@ export default {
       }
     },
     readView: __path.join('tailwindcss', 'employee', 'read'),
-    readLocals: async (item) => {
-      const [relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements, relatedManager, relatedLinkedSupplier] = await Promise.all([
+    // Read view locals live here only: a readLocals in CRUDControllerConfig
+    // would replace this one (merged config, CRUD wins).
+    readLocals: async (item, req) => {
+      const [relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements, relatedManager, relatedLinkedSupplier, employeePolicies] = await Promise.all([
         mdb.INTERNAL?.vehicle?.find({ employeeId: item._id }).select('uuid registrationNumber make model year availabilityStatus').sort({ registrationNumber: 1 }).lean() ?? [],
         mdb.INTERNAL?.holidayRequest?.find({ employeeId: item._id }).select('uuid startDate endDate daysRequested leaveType status').sort({ startDate: -1 }).limit(20).lean() ?? [],
         mdb.INTERNAL?.employeeHoliday?.find({ employeeId: item._id }).select('uuid periodStart periodEnd entitlementDays takenDays accruedDays carryOverDays').sort({ periodStart: -1 }).lean() ?? [],
@@ -415,8 +418,10 @@ export default {
         item.subcontractorSupplierId && mdb.REST?.supplier
           ? mdb.REST.supplier.findOne({ _id: item.subcontractorSupplierId }).select('uuid Name').lean()
           : null,
+        // Policies card: documents assigned to this employee in Company Docs.
+        loadEmployeePolicies(item, req?.user),
       ]);
-      return { relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements, relatedManager, relatedLinkedSupplier };
+      return { relatedVehicles, relatedHolidayRequests, relatedHolidayEntitlements, relatedManager, relatedLinkedSupplier, employeePolicies };
     },
   },
   holiday: {

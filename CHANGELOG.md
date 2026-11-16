@@ -9,6 +9,11 @@ All notable changes to hcs-app will be documented here. Format follows [Keep a C
 - With nothing picked, a value that appears more than once is learned from where the reader found it by its label, or for amounts from the lowest copy that isn't on a line item, instead of the first one in the text.
 - Month-first dates ("November 11, 2026", "Nov 11 2026") are read and can be clicked to fill a date field; they were refused with "That isn't a Invoice date". Stored readings are redone (reader version 8).
 
+## [6.123.1] - 2026-11-16
+
+### Fixed
+- The employee page lost its vehicles, holiday entitlements, holiday requests, manager and linked supplier in 6.123.0, and the new Policies card didn't show: the employee page has its own view and read locals, which the new CRUD-config read locals replaced. The policies lookup now sits alongside the others and the card is on the employee view.
+
 ## [6.123.0] - 2026-11-16
 
 ### Added

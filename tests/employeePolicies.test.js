@@ -16,7 +16,7 @@ process.env.ENCRYPTION_KEY ||= 'test-key';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const imp = (p) => import(pathToFileURL(path.join(root, p)).href);
 
-let mdb, ctrl, crudConfig;
+let mdb, ctrl, crudConfig, listConfig;
 const EMP = 'e1';
 const OTHER = 'e2';
 const rows = [
@@ -31,6 +31,7 @@ before(async () => {
   mdb.INTERNAL ||= {};
   ctrl = await imp('mongoose/controllers/companyDocsController.js');
   crudConfig = (await imp('mongoose/config/CRUDControllerConfig.js')).default;
+  listConfig = (await imp('mongoose/config/listControllerConfig.js')).default;
 });
 
 beforeEach(() => {
@@ -60,9 +61,15 @@ describe('loadEmployeePolicies', () => {
     assert.equal(await ctrl.loadEmployeePolicies({ _id: EMP }, { role: 'employee', employeeId: OTHER }), null);
   });
 
-  it('is wired into the employee read view', async () => {
-    const locals = await crudConfig.employee.readLocals({ _id: EMP }, { user: { role: 'admin' } });
+  it('is wired into the employee read view alongside the other related records', async () => {
+    for (const m of ['vehicle', 'holidayRequest', 'employeeHoliday']) mdb.INTERNAL[m] ||= memoryModel([]);
+    const locals = await listConfig.employee.readLocals({ _id: EMP }, { user: { role: 'admin' } });
     assert.deepEqual(titles(locals.employeePolicies), ['Contract', 'Onboarding']);
+    for (const k of ['relatedVehicles', 'relatedHolidayRequests', 'relatedHolidayEntitlements']) assert.ok(Array.isArray(locals[k]), k);
+  });
+
+  it('has no CRUD-config readLocals that would replace the list-config one', () => {
+    assert.equal(crudConfig.employee.readLocals, undefined);
   });
 });
 

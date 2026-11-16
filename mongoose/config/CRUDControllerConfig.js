@@ -11,7 +11,6 @@ import mdb from '../services/mongooseDatabaseService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
 import __taskService from '../services/taskService.js';
 import __holidayRequestService from '../services/holidayRequestService.js';
-import { loadEmployeePolicies } from '../controllers/companyDocsController.js';
 
 // Vehicles have no name/title field, so reference dropdowns fell back to the
 // raw ObjectId. Label them by registration, then make and model.
@@ -309,11 +308,6 @@ export default {
     ownershipFields: {
       employee: '_id',
     },
-    // Policies card: individual documents (contract, onboarding pack...)
-    // assigned to this employee in Company Docs.
-    readLocals: async (item, req) => ({
-      employeePolicies: await loadEmployeePolicies(item, req.user),
-    }),
   },
   customer: {
     readOnly: ['uuid', 'createdAt'],
