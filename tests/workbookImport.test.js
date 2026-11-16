@@ -472,13 +472,15 @@ describe('Import pages', () => {
       { name: 'Quotes 26', rows: [quoteRow(50010, '1 Test St', 'Example Homes', 1000)] },
       { name: 'Job Reg 26', rows: [jobRow(41010, '1 Test St', 'Example Homes', 1100)] },
     ]);
-    const suggestions = p.suggestions.map((s) => ({ ...s, value: `${s.quoteNumber}:${s.projectNumber}` }));
+    const suggestions = jobImport.tickedPairs({ parsed: p });
     const plan = planImport(p.entries, []);
     const html = await ejs.renderFile(view('job-register.ejs'), {
       title: 't', csrfToken: 'c', crumbs: [], staged: { uuid: 'u1', fileName: 'f.xlsx', parsed: p }, plan, suggestions, counts: summarisePlan(plan),
     });
     assert.match(html, /name="pair" value="50010:41010"[^>]*checked/);
     assert.match(html, /action="\/job-register\/import\/u1"/);
+    assert.match(html, /formaction="\/job-register\/import\/u1\/save"/);
+    assert.match(html, /action="\/job-register\/import\/u1\/delete"/);
     assert.match(html, /1 Test St/);
     assert.doesNotMatch(html, /<script/);
   });
@@ -496,6 +498,8 @@ describe('Import pages', () => {
     assert.match(html, /name="place_1"/);
     assert.match(html, /<option value="loc:l1" selected>Office/);
     assert.match(html, /action="\/weekly-sheet\/import\/u2"/);
+    assert.match(html, /formaction="\/weekly-sheet\/import\/u2\/save"/);
+    assert.match(html, /action="\/weekly-sheet\/import\/u2\/delete"/);
     assert.doesNotMatch(html, /<script/);
   });
 });
@@ -513,48 +517,100 @@ describe('Import buttons', () => {
   });
 });
 
-describe('Recent uploads list', () => {
-  let ctrl; let saved; let lastQuery;
+describe('Saved and recent uploads', () => {
+  let store; let saved; let lastQuery; let docs; let updates;
+  const NOW = new Date('2026-11-16T12:00:00Z');
   before(async () => {
-    ctrl = (await import('../mongoose/controllers/workbookImportController.js')).default;
+    store = (await import('../mongoose/services/workbookImportStore.js')).default;
     saved = mdb.INTERNAL;
-    const rows = [
-      { uuid: 'u2', fileName: 'week.xlsx', createdAt: new Date('2026-11-16T09:00:00Z'), createdBy: { username: 'admin1' } },
-      { uuid: 'u1', fileName: 'jobs.xlsx', createdAt: new Date('2026-11-16T08:00:00Z'), importedAt: new Date('2026-11-16T08:05:00Z'), result: { created: 5, updated: 1 } },
-    ];
-    const q = { select: () => q, populate: () => q, sort: () => q, limit: () => q, lean: async () => rows };
-    mdb.INTERNAL = { workbookImport: { find: (filter) => { lastQuery = filter; return q; } } };
+    const q = (rows) => { const o = { select: () => o, populate: () => o, sort: () => o, limit: () => o, lean: async () => rows() }; return o; };
+    mdb.INTERNAL = {
+      workbookImport: {
+        find: (filter) => { lastQuery = filter; return q(() => docs); },
+        findOne: (f) => q(() => docs.find((d) => d.uuid === f.uuid && d.kind === f.kind) || null),
+        updateOne: async (f, u) => { updates.push({ f, u }); },
+        deleteOne: async (f) => ({ deletedCount: docs.some((d) => d.uuid === f.uuid && d.kind === f.kind) ? 1 : 0 }),
+      },
+    };
   });
   after(() => { mdb.INTERNAL = saved; });
 
-  it('asks only for this kind, younger than a day', async () => {
-    const now = new Date('2026-11-16T12:00:00Z');
-    const list = await ctrl.recentUploads('jobRegister', now);
-    assert.equal(lastQuery.kind, 'jobRegister');
-    assert.equal(lastQuery.createdAt.$gt.toISOString(), '2026-11-15T12:00:00.000Z');
-    assert.equal(list.length, 2);
-    assert.equal(list[0].by, 'admin1');
-    assert.equal(list[0].expiresAt.toISOString(), '2026-11-17T09:00:00.000Z');
-    assert.equal(list[1].summary, '5 rows added, 1 row filled in');
+  it('asks for saved uploads not yet imported, plus any not expired', async () => {
+    docs = [
+      { uuid: 'u3', kind: 'weeklySheet', fileName: 'kept.xlsx', createdAt: new Date('2026-11-10T09:00:00Z'), saved: true, savedAt: new Date('2026-11-10T10:00:00Z') },
+      { uuid: 'u2', kind: 'weeklySheet', fileName: 'week.xlsx', createdAt: new Date('2026-11-16T09:00:00Z'), expiresAt: new Date('2026-11-17T09:00:00Z'), createdBy: { username: 'admin1' } },
+      { uuid: 'u1', kind: 'weeklySheet', fileName: 'done.xlsx', createdAt: new Date('2026-11-16T08:00:00Z'), expiresAt: new Date('2026-11-17T08:05:00Z'), importedAt: new Date('2026-11-16T08:05:00Z'), result: { created: 12, createdLocations: 1 } },
+    ];
+    const list = await store.recentUploads('weeklySheet', NOW);
+    assert.equal(lastQuery.kind, 'weeklySheet');
+    assert.deepEqual(lastQuery.$or[0], { saved: true, importedAt: null });
+    assert.equal(lastQuery.$or[1].expiresAt.$gt, NOW);
+    assert.deepEqual(list.map((u) => [u.uuid, u.saved]), [['u3', true], ['u2', false], ['u1', false]]);
+    assert.equal(list[1].by, 'admin1');
+    assert.equal(list[2].summary, '12 days imported, 1 new location');
+    assert.equal(store.describeUpload({ uuid: 'x', importedAt: new Date(), result: { created: 5, updated: 1 } }, 'jobRegister').summary, '5 rows added, 1 row filled in');
   });
 
-  it('describes a weekly sheet import by days and new locations', () => {
-    const d = ctrl.describeUpload({ uuid: 'x', createdAt: new Date(), importedAt: new Date(), result: { created: 12, createdLocations: 1 } }, 'weeklySheet');
-    assert.equal(d.summary, '12 days imported, 1 new location');
-  });
-
-  it('lists the uploads on the upload page with a link to each', async () => {
-    const uploads = await ctrl.recentUploads('weeklySheet', new Date('2026-11-16T12:00:00Z'));
+  it('lists saved, waiting and imported uploads on the upload page, each with a delete button', async () => {
+    const uploads = await store.recentUploads('weeklySheet', NOW);
     const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/import/upload.ejs'), {
       title: 't', csrfToken: 'c', crumbs: [], action: '/weekly-sheet/import', heading: 'h', icon: 'bi-x', intro: 'i', points: [], uploads,
     });
+    assert.match(html, /href="\/weekly-sheet\/import\/u3"[^>]*>Carry on/);
     assert.match(html, /href="\/weekly-sheet\/import\/u2"[^>]*>Check and import/);
     assert.match(html, /href="\/weekly-sheet\/import\/u1"[^>]*>View/);
-    assert.match(html, /Not imported/);
-    assert.match(html, /week\.xlsx/);
+    assert.match(html, /Kept until imported or deleted/);
+    assert.match(html, /action="\/weekly-sheet\/import\/u2\/delete"/);
     const empty = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/import/upload.ejs'), {
       title: 't', csrfToken: 'c', crumbs: [], action: '/x', heading: 'h', icon: 'bi-x', intro: 'i', points: [], uploads: [],
     });
     assert.match(empty, /No uploads waiting/);
+  });
+
+  it('treats an unsaved upload past its expiry as gone, and a saved one as kept', async () => {
+    docs = [
+      { uuid: 'old', kind: 'jobRegister', expiresAt: new Date('2026-11-16T11:00:00Z'), parsed: {} },
+      { uuid: 'kept', kind: 'jobRegister', saved: true, parsed: {} },
+    ];
+    await assert.rejects(store.findUpload('old', 'jobRegister', NOW), (e) => e.status === 404);
+    assert.equal((await store.findUpload('kept', 'jobRegister', NOW)).uuid, 'kept');
+    await assert.rejects(store.findUpload('kept', 'weeklySheet', NOW), (e) => e.status === 404);
+  });
+
+  it('saving keeps the choices and clears the expiry; importing sets it again', async () => {
+    docs = [{ _id: 'd1', uuid: 'u9', kind: 'weeklySheet', expiresAt: new Date('2026-11-17T00:00:00Z'), parsed: {} }];
+    updates = [];
+    await store.saveChoices('u9', 'weeklySheet', { person: { 0: 'e:x' } }, 'admin');
+    assert.equal(updates[0].u.$set.saved, true);
+    assert.deepEqual(updates[0].u.$set.choices, { person: { 0: 'e:x' } });
+    assert.deepEqual(updates[0].u.$unset, { expiresAt: 1 });
+    await store.markImported('d1', { created: 1 }, NOW);
+    assert.equal(updates[1].u.$set.saved, false);
+    assert.equal(updates[1].u.$set.expiresAt.toISOString(), '2026-11-17T12:00:00.000Z');
+    docs[0].importedAt = NOW;
+    await assert.rejects(store.saveChoices('u9', 'weeklySheet', {}, 'admin'), /already been imported/);
+  });
+
+  it('deletes an upload, or says it is gone', async () => {
+    docs = [{ uuid: 'u5', kind: 'jobRegister' }];
+    await store.deleteUpload('u5', 'jobRegister');
+    await assert.rejects(store.deleteUpload('nope', 'jobRegister'), (e) => e.status === 404);
+  });
+});
+
+describe('Saved choices', () => {
+  it('weekly sheet: keeps only well-formed matches, blank meaning skip', () => {
+    const id = 'a'.repeat(24);
+    const c = sheetImport.readChoices(
+      { person_0: `e:${id}`, person_1: '', person_2: 'junk', place_0: 'new', place_1: `con:${id}`, place_2: 'con:bad' },
+      { people: [{}, {}, {}], places: [{}, {}, {}] },
+    );
+    assert.deepEqual(c, { person: { 0: `e:${id}`, 1: '' }, place: { 0: 'new', 1: `con:${id}` } });
+  });
+
+  it('Job Reg: ticks the saved pairs instead of the likely ones', () => {
+    const parsed = { suggestions: [{ quoteNumber: 1, projectNumber: 10, likely: true }, { quoteNumber: 2, projectNumber: 20, likely: false }] };
+    assert.deepEqual(jobImport.tickedPairs({ parsed }).map((s) => s.ticked), [true, false]);
+    assert.deepEqual(jobImport.tickedPairs({ parsed, saved: true, choices: { pairs: ['2:20'] } }).map((s) => s.ticked), [false, true]);
   });
 });

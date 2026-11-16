@@ -27,6 +27,7 @@ import mdb from './mongooseDatabaseService.js';
 import attendanceService from './attendanceService.js';
 import { defaultDailyHours, listSubcontractors } from './weeklyFlowService.js';
 import { addDays } from './weeklySheetService.js';
+import store from './workbookImportStore.js';
 
 const DAY_COLS = [3, 4, 5, 6, 7, 8]; // D–I: Monday to Saturday
 const DAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -301,10 +302,31 @@ export async function stageUpload({ sheets, fileName, userId }) {
   return mdb.INTERNAL.workbookImport.create({ kind: 'weeklySheet', fileName, parsed, createdBy: userId || undefined });
 }
 
-async function findStaged(uuid) {
-  const doc = await mdb.INTERNAL.workbookImport.findOne({ uuid: String(uuid || ''), kind: 'weeklySheet' }).lean();
-  if (!doc) throw Object.assign(new Error('That upload has expired. Upload the workbook again.'), { status: 404 });
-  return doc;
+const findStaged = (uuid) => store.findUpload(uuid, 'weeklySheet');
+
+/**
+ * The submitted mapping (person_<i>, place_<i>) as saved choices: only values
+ * of the right shape, '' meaning skip. Pure.
+ */
+export function readChoices(body = {}, { people = [], places = [] } = {}) {
+  const person = {};
+  const place = {};
+  people.forEach((_, i) => {
+    const v = body[`person_${i}`];
+    if (v === '' || readPersonChoice(v)) person[i] = String(v);
+  });
+  places.forEach((_, i) => {
+    const v = body[`place_${i}`];
+    if (v === '' || readPlaceChoice(v)) place[i] = String(v);
+  });
+  return { person, place };
+}
+
+/** Save the mapping for later; the upload is kept until imported or deleted. */
+export async function saveForLater(uuid, body, userId) {
+  const staged = await findStaged(uuid);
+  if (staged.importedAt) throw Object.assign(new Error('That upload has already been imported.'), { status: 400 });
+  await store.saveChoices(uuid, 'weeklySheet', readChoices(body, staged.parsed), userId);
 }
 
 /** The mapping page: the parsed workbook, the choices and a suggestion for every name and site. */
@@ -312,12 +334,15 @@ export async function loadMapping(uuid) {
   const staged = await findStaged(uuid);
   const choices = await loadChoices();
   const { people, places } = staged.parsed;
+  // A saved choice wins over the suggestion; '' is a saved Skip
+  const saved = staged.saved ? staged.choices || {} : {};
+  const pick = (map, i, fallback) => (map && Object.prototype.hasOwnProperty.call(map, String(i)) ? map[String(i)] : fallback);
   return {
     staged,
     choices,
     // Index = the field number (person_<i>); a name with no importable days isn't asked about
-    people: people.map((p, index) => ({ ...p, index, suggestion: suggestPerson(p.label, choices) })).filter((p) => p.count > 0),
-    places: places.map((p, index) => ({ ...p, index, suggestion: suggestPlace(p.label, choices) })),
+    people: people.map((p, index) => ({ ...p, index, suggestion: pick(saved.person, index, suggestPerson(p.label, choices)) })).filter((p) => p.count > 0),
+    places: places.map((p, index) => ({ ...p, index, suggestion: pick(saved.place, index, suggestPlace(p.label, choices)) })),
   };
 }
 
@@ -421,12 +446,12 @@ export async function runImport(uuid, body = {}, { today } = {}) {
   }
 
   const result = { created, failed, createdLocations, skipped, notImported: staged.parsed.counts, weeks: staged.parsed.weeks.length };
-  await mdb.INTERNAL.workbookImport.updateOne({ _id: staged._id }, { $set: { importedAt: new Date(), result } });
+  await store.markImported(staged._id, result);
   logger.info(`[weeklySheetImport] ${staged.fileName}: created ${created}, failed ${failed}, new locations ${createdLocations}, skipped ${JSON.stringify(skipped)}`);
   return result;
 }
 
 export default {
   text, keyOf, classifyCell, findHeaderRow, parseWeekSheet, parseAttendanceWorkbook, suggestPerson, suggestPlace,
-  readPersonChoice, readPlaceChoice, planAttendance, loadChoices, stageUpload, loadMapping, runImport,
+  readPersonChoice, readPlaceChoice, readChoices, saveForLater, planAttendance, loadChoices, stageUpload, loadMapping, runImport,
 };

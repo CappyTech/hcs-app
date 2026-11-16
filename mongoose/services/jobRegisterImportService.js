@@ -19,6 +19,7 @@
 import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
 import { clientKey } from './jobRegisterService.js';
+import store from './workbookImportStore.js';
 
 const QUOTE_COLS = { date: 1, number: 2, site: 3, client: 4, contact: 5, value: 6, description: 7, invoice: 8, invoiceDate: 9 };
 const JOB_COLS = { number: 0, date: 1, site: 2, client: 3, contact: 4, value: 5, description: 6, invoice: 7, invoiceDate: 8, clientRef: 9, notes: [10, 11] };
@@ -386,24 +387,36 @@ export async function stageUpload({ sheets, fileName, userId }) {
   return mdb.INTERNAL.workbookImport.create({ kind: 'jobRegister', fileName, parsed, createdBy: userId || undefined });
 }
 
-async function findStaged(uuid) {
-  const doc = await mdb.INTERNAL.workbookImport.findOne({ uuid: String(uuid || ''), kind: 'jobRegister' }).lean();
-  if (!doc) throw Object.assign(new Error('That upload has expired. Upload the workbook again.'), { status: 404 });
-  return doc;
-}
+const findStaged = (uuid) => store.findUpload(uuid, 'jobRegister');
 
 const pairValue = (s) => `${s.quoteNumber}:${s.projectNumber}`;
 
+/** The ticked pairs: as saved, else the likely suggestions. Pure. */
+export function tickedPairs(staged) {
+  const offered = (staged.parsed.suggestions || []).map((s) => ({ ...s, value: pairValue(s) }));
+  const saved = staged.saved && Array.isArray(staged.choices?.pairs) ? new Set(staged.choices.pairs.map(String)) : null;
+  return offered.map((s) => ({ ...s, ticked: saved ? saved.has(s.value) : s.likely }));
+}
+
 /**
  * The preview: the parsed workbook planned against the register as it is
- * now, with the likely suggested pairs ticked (the counts assume those).
+ * now, with the suggested pairs ticked as saved (or the likely ones); the
+ * counts assume those.
  */
 export async function loadPreview(uuid) {
   const staged = await findStaged(uuid);
-  const suggestions = (staged.parsed.suggestions || []).map((s) => ({ ...s, value: pairValue(s) }));
-  const entries = applyChosenPairs(staged.parsed.entries, suggestions.filter((s) => s.likely).map((s) => s.value));
+  const suggestions = tickedPairs(staged);
+  const entries = applyChosenPairs(staged.parsed.entries, suggestions.filter((s) => s.ticked).map((s) => s.value));
   const plan = planImport(entries, await existingRows());
   return { staged, plan, suggestions, counts: summarisePlan(plan) };
+}
+
+/** Save the ticked pairs for later; the upload is kept until imported or deleted. */
+export async function saveForLater(uuid, chosenPairs, userId) {
+  const staged = await findStaged(uuid);
+  const offered = new Set((staged.parsed.suggestions || []).map(pairValue));
+  const pairs = [].concat(chosenPairs || []).map(String).filter((v) => offered.has(v));
+  await store.saveChoices(uuid, 'jobRegister', { pairs }, userId);
 }
 
 /**
@@ -440,12 +453,12 @@ export async function runImport(uuid, chosenPairs = []) {
       result.failed.push({ label, reason: err.code === 11000 ? 'Number already in the register' : err.message });
     }
   }
-  await mdb.INTERNAL.workbookImport.updateOne({ _id: staged._id }, { $set: { importedAt: new Date(), result } });
+  await store.markImported(staged._id, result);
   logger.info(`[jobRegisterImport] ${staged.fileName}: created ${result.created}, updated ${result.updated}, unchanged ${result.unchanged}, conflicts ${result.conflicts}, failed ${result.failed.length}`);
   return result;
 }
 
 export default {
   cellText, cellInt, cellMoney, cellDate, siteKey, findSheets, parseRow, matchKey, pairQuotesWithJobs, mergePair,
-  suggestPairs, applyChosenPairs, parseJobRegWorkbook, planImport, summarisePlan, toModelFields, stageUpload, loadPreview, runImport,
+  suggestPairs, applyChosenPairs, parseJobRegWorkbook, tickedPairs, saveForLater, planImport, summarisePlan, toModelFields, stageUpload, loadPreview, runImport,
 };

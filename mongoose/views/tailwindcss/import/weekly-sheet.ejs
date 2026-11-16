@@ -48,6 +48,13 @@
     </div>
   <% } %>
 
+  <% if (staged.saved && !staged.importedAt) { %>
+    <div class="rounded-2xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-bookmark-check-fill text-blue-600" aria-hidden="true"></i>
+      Saved <%= new Date(staged.savedAt).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %>, with your matches below. It's kept until you import it or delete it.
+    </div>
+  <% } %>
+
   <div class="rounded-2xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300 space-y-1">
     <p><i class="bi bi-info-circle text-blue-600" aria-hidden="true"></i>
       Not imported from the sheet: <%= days(parsed.counts.leave) %> of holiday (approved holiday requests are the record of leave),
@@ -136,9 +143,16 @@
     <% if (!staged.importedAt) { %>
       <div class="flex flex-wrap items-center gap-3 mt-6">
         <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Import attendance</button>
-        <a href="/weekly-sheet" class="<%= secondaryBtn %>">Cancel</a>
-        <span class="text-xs text-gray-500 dark:text-gray-400">Records are created as pending. This upload expires after a day.</span>
+        <button type="submit" formaction="/weekly-sheet/import/<%= staged.uuid %>/save" class="<%= secondaryBtn %>"><i class="bi bi-bookmark" aria-hidden="true"></i> Save for later</button>
+        <a href="/weekly-sheet/import" class="<%= secondaryBtn %>">Back to uploads</a>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Records are created as pending. <%= staged.saved ? 'Saved: kept until imported or deleted.' : 'Save keeps your matches; unsaved uploads expire after a day.' %></span>
       </div>
     <% } %>
+  </form>
+
+  <form method="POST" action="/weekly-sheet/import/<%= staged.uuid %>/delete" class="mt-4">
+    <%- include('../partials/csrfHidden') %>
+    <button type="submit" class="text-xs text-red-700 dark:text-red-400 hover:underline"><i class="bi bi-trash" aria-hidden="true"></i> Delete this upload</button>
+    <span class="text-xs text-gray-500 dark:text-gray-400">Removes the uploaded file and your matches only<%= staged.importedAt ? ', not what it imported' : '' %>.</span>
   </form>
 </div>

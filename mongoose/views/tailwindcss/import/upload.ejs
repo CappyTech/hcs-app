@@ -1,7 +1,7 @@
 <%#
   Upload a workbook to import (Job Reg or WEEKLY ATTENDANCE).
   Locals: crumbs, action, heading, icon, intro, points[],
-          uploads[] (recentUploads: uploads not yet expired, newest first)
+          uploads[] (workbookImportStore.recentUploads: saved, plus unexpired, newest first)
 %>
 <%
   const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
@@ -41,10 +41,10 @@
     </div>
   </div>
 
-  <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-8 mb-3">Uploads from the last day</h2>
+  <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-8 mb-3">Saved and recent uploads</h2>
   <% if (!list.length) { %>
     <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
-      No uploads waiting. Uploads are kept for a day.
+      No uploads waiting. Uploads are kept for a day, or until imported if you save them.
     </div>
   <% } else { %>
     <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
@@ -61,13 +61,20 @@
                 <% if (u.importedAt) { %>
                   <span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">Imported <%= when(u.importedAt) %></span>
                   <div class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= u.summary %></div>
+                <% } else if (u.saved) { %>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700">Saved <%= when(u.savedAt) %></span>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Kept until imported or deleted</div>
                 <% } else { %>
                   <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">Not imported</span>
                   <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Expires <%= when(u.expiresAt) %></div>
                 <% } %>
               </td>
               <td class="<%= td %> text-right whitespace-nowrap">
-                <a href="<%= action %>/<%= u.uuid %>" class="text-xs px-3 py-1.5 rounded-lg <%= u.importedAt ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-green-600 hover:bg-green-700 text-white shadow-sm' %> font-medium transition"><%= u.importedAt ? 'View' : 'Check and import' %></a>
+                <a href="<%= action %>/<%= u.uuid %>" class="text-xs px-3 py-1.5 rounded-lg <%= u.importedAt ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-green-600 hover:bg-green-700 text-white shadow-sm' %> font-medium transition"><%= u.importedAt ? 'View' : u.saved ? 'Carry on' : 'Check and import' %></a>
+                <form method="POST" action="<%= action %>/<%= u.uuid %>/delete" class="inline">
+                  <%- include('../partials/csrfHidden') %>
+                  <button type="submit" class="text-xs px-2 py-1.5 text-red-700 dark:text-red-400 hover:underline" aria-label="Delete the upload <%= u.fileName %>"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                </form>
               </td>
             </tr>
           <% }) %>

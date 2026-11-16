@@ -55,6 +55,13 @@
     </div>
   <% } %>
 
+  <% if (staged.saved && !staged.importedAt) { %>
+    <div class="rounded-2xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-bookmark-check-fill text-blue-600" aria-hidden="true"></i>
+      Saved <%= new Date(staged.savedAt).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %>. It's kept until you import it or delete it.
+    </div>
+  <% } %>
+
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <% tiles.forEach((t) => { %>
       <div class="<%= card %> p-4">
@@ -72,7 +79,7 @@
         <h2 class="<%= h2 %> mb-1">Possible matches</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
           These jobs didn't match a quote exactly. Tick the ones that are the same job so they import as one row; unticked ones import as a separate quote and job.
-          The counts above assume the ticked ones.
+          The counts above assume the ticked ones<%= staged.saved ? ' (as you saved them)' : '' %>.
         </p>
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
@@ -83,7 +90,7 @@
               <% suggestions.forEach((s) => { const q = quotes.get(s.quoteNumber) || {}; const j = jobs.get(s.projectNumber) || {}; %>
                 <tr>
                   <td class="<%= td %>">
-                    <input type="checkbox" name="pair" value="<%= s.value %>" id="pair-<%= s.value %>" <%= s.likely ? 'checked' : '' %>
+                    <input type="checkbox" name="pair" value="<%= s.value %>" id="pair-<%= s.value %>" <%= s.ticked ? 'checked' : '' %>
                            class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
                     <label for="pair-<%= s.value %>" class="sr-only">Quote <%= s.quoteNumber %> and job <%= s.projectNumber %> are the same job</label>
                   </td>
@@ -147,9 +154,16 @@
     <% if (!staged.importedAt) { %>
       <div class="flex flex-wrap items-center gap-3 mt-6">
         <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Import into the Job Register</button>
-        <a href="/job-register" class="<%= secondaryBtn %>">Cancel</a>
-        <span class="text-xs text-gray-500 dark:text-gray-400">Nothing in the register is overwritten. This upload expires after a day.</span>
+        <button type="submit" formaction="/job-register/import/<%= staged.uuid %>/save" class="<%= secondaryBtn %>"><i class="bi bi-bookmark" aria-hidden="true"></i> Save for later</button>
+        <a href="/job-register/import" class="<%= secondaryBtn %>">Back to uploads</a>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Nothing in the register is overwritten. <%= staged.saved ? 'Saved: kept until imported or deleted.' : 'Unsaved uploads expire after a day.' %></span>
       </div>
     <% } %>
+  </form>
+
+  <form method="POST" action="/job-register/import/<%= staged.uuid %>/delete" class="mt-4">
+    <%- include('../partials/csrfHidden') %>
+    <button type="submit" class="text-xs text-red-700 dark:text-red-400 hover:underline"><i class="bi bi-trash" aria-hidden="true"></i> Delete this upload</button>
+    <span class="text-xs text-gray-500 dark:text-gray-400">Removes the uploaded file only<%= staged.importedAt ? ', not what it imported' : '' %>.</span>
   </form>
 </div>
