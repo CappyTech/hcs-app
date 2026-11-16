@@ -859,3 +859,36 @@ describe('Customer from the row\'s own KashFlow records', () => {
     });
   });
 });
+
+describe('Importing a weekly sheet again after failures', () => {
+  it('is allowed only when an earlier import left days unsaved', () => {
+    assert.equal(sheetImport.canImport({}), true);
+    assert.equal(sheetImport.canImport({ importedAt: new Date(), result: { failed: 0 } }), false);
+    assert.equal(sheetImport.canImport({ importedAt: new Date(), result: { failed: 754 } }), true);
+  });
+
+  it('records the matches used, and shows them again with the missing days on the page', async () => {
+    const store = (await import('../mongoose/services/workbookImportStore.js')).default;
+    const saved = mdb.INTERNAL;
+    const updates = [];
+    mdb.INTERNAL = { workbookImport: { updateOne: async (f, u) => { updates.push(u); } } };
+    try {
+      await store.markImported('d1', { created: 1, failed: 2 }, new Date('2026-11-16T03:49:00Z'), { choices: { person: { 0: 'e:x' } } });
+    } finally { mdb.INTERNAL = saved; }
+    assert.deepEqual(updates[0].$set.choices, { person: { 0: 'e:x' } });
+    assert.equal(updates[0].$set.result.failed, 2);
+    assert.equal(store.describeUpload({ uuid: 'x', importedAt: new Date(), result: { created: 5, failed: 2 } }, 'weeklySheet').summary, '5 days imported, 2 days not saved');
+
+    const parsed = parseAttendanceWorkbook([weekTab('11 JAN 26', '2026-01-05', [['ALEX', 'Site One']])]);
+    const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/import/weekly-sheet.ejs'), {
+      title: 't', csrfToken: 'c', crumbs: [], canImport: true,
+      staged: { uuid: 'u3', fileName: 'w.xlsx', parsed, importedAt: new Date(), result: { created: 1, failed: 2 } },
+      choices: { employees: [], subcontractors: [], contracts: [], locations: [] },
+      people: parsed.people.map((x, index) => ({ ...x, index, suggestion: '' })),
+      places: parsed.places.map((x, index) => ({ ...x, index, suggestion: 'new' })),
+    });
+    assert.match(html, /couldn't be saved/);
+    assert.match(html, /Import the missing days/);
+    assert.doesNotMatch(html, /Save for later/);
+  });
+});

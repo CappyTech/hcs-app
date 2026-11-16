@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.118.1] - 2026-11-16
+
+### Fixed
+- **Two employees at the same location on the same day no longer clash.** The attendance duplicate-prevention indexes were `sparse`, which on a compound index still includes a record without the person field (as null). So every employee's record was also in the subcontractor index with subcontractorId null, and a second employee at one location on one day was refused as a duplicate (E11000 on `unique_subcontractor_day_location_project`). The same applied to subcontractors on the employee indexes. This failed 754 days of the weekly sheet import, and would refuse the same on the weekly sheet page. The four indexes now cover only their own kind of record (`partialFilterExpression` on employeeId / subcontractorId); on start-up the old ones are dropped and recreated.
+- **A weekly sheet upload with days that couldn't be saved can be imported again.** Its page says how many failed and offers **Import the missing days**, with the matches used last time; days already imported are skipped, so only the missing ones are added. The upload list says "N days not saved". Each import now records the matches it used.
+
 ## [6.118.0] - 2026-11-16
 
 ### Added
