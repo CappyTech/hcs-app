@@ -1,4 +1,5 @@
 import path from 'path';
+import mongoose from 'mongoose';
 import multer from 'multer';
 import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
@@ -103,9 +104,14 @@ export const postLetterhead = [
 // Category groups display in the order they are declared on the model.
 const POLICY_CATEGORY_ORDER = POLICY_CATEGORIES;
 
-// Loads employees for the assignment dropdown (id + name only).
-function loadEmployeeOptions() {
-  return mdb.INTERNAL.employee.find({}, 'name').sort({ name: 1 }).lean();
+// Loads employees for the assignment dropdown (id + name only): current staff,
+// plus whoever the policy is already assigned to so an edit doesn't drop them.
+function loadEmployeeOptions(currentId = null) {
+  const active = { status: { $ne: 'inactive' } };
+  const filter = currentId && mongoose.isValidObjectId(currentId)
+    ? { $or: [active, { _id: currentId }] }
+    : active;
+  return mdb.INTERNAL.employee.find(filter, 'name').sort({ name: 1 }).lean();
 }
 
 // Default days before the effective review date that a policy is flagged "due
@@ -281,11 +287,9 @@ export const postCreatePolicy = async (req, res, next) => {
 // ── Edit policy ──────────────────────────────────────────────────────────────
 export const getEditPolicy = async (req, res, next) => {
   try {
-    const [policy, employees] = await Promise.all([
-      mdb.INTERNAL.policyDocument.findOne({ uuid: req.params.uuid }).lean(),
-      loadEmployeeOptions(),
-    ]);
+    const policy = await mdb.INTERNAL.policyDocument.findOne({ uuid: req.params.uuid }).lean();
     if (!policy) return next(Object.assign(new Error('Policy not found'), { statusCode: 404 }));
+    const employees = await loadEmployeeOptions(policy.employee);
     res.render('tailwindcss/company-docs/policy-form', {
       title: `Edit: ${policy.title}`,
       policy,

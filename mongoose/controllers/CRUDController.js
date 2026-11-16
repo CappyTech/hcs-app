@@ -200,12 +200,38 @@ const extractSchema = (model, config = {}) => {
   return schema;
 };
 
+// Pickers for these models hide retired records unless a model's own
+// referenceFilters says otherwise: leavers shouldn't be offered on new records.
+export const DEFAULT_REFERENCE_FILTERS = {
+  employee: { status: { $ne: "inactive" } },
+};
+
+// The ids a record already points at through `key`, so an edit form still
+// shows (and keeps) a choice the picker's filter would now hide.
+function keptIds(keep, key) {
+  const raw = keep?.[key];
+  const list = (Array.isArray(raw) ? raw : [raw])
+    .map((v) => (v && typeof v === "object" && v._id ? v._id : v))
+    .filter((v) => v && mongoose.isValidObjectId(v));
+  return list;
+}
+
+/** The query a picker for `key` runs: its filter, plus anything `keep` already holds. */
+export function referenceFilterFor(key, field, config = {}, { skipFilters = false, keep = null } = {}) {
+  if (skipFilters) return {};
+  const filter = config.referenceFilters?.[key] || DEFAULT_REFERENCE_FILTERS[field.ref] || {};
+  if (!Object.keys(filter).length) return filter;
+  const ids = keptIds(keep, key);
+  return ids.length ? { $or: [filter, { _id: { $in: ids } }] } : filter;
+}
+
 // Fetch reference data (for fields with .ref)
 // skipFilters: when true, ignore referenceFilters (used by read/delete views to resolve any referenced item)
+// keep: the record being edited, whose current references stay in the pickers
 const fetchReferenceData = async (
   schema,
   config = {},
-  { skipFilters = false } = {},
+  { skipFilters = false, keep = null } = {},
 ) => {
   const referenceData = {};
 
@@ -218,7 +244,7 @@ const fetchReferenceData = async (
       mdb.PAPERLESS?.[field.ref] ||
       mdb[field.ref];
     if (!refModel || typeof refModel.find !== "function") continue;
-    const filter = skipFilters ? {} : config.referenceFilters?.[key] || {};
+    const filter = referenceFilterFor(key, field, config, { skipFilters, keep });
     referenceData[key] = await refModel
       .find(filter)
       .select(
@@ -727,7 +753,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
             if (!item) return res.status(404).render(path.join("tailwindcss", "error"), { title: '404 - Not Found', error: { title: '404 - Not Found', message: `${baseName} not found.` } });
 
             const schema = extractSchema(Model, config);
-            const referenceData = await fetchReferenceData(schema, config);
+            const referenceData = await fetchReferenceData(schema, config, { keep: item });
 
             // Allow per-model custom update view + extra locals
             const updateViewPath =
@@ -769,7 +795,8 @@ for (const namespace of ["REST", "INTERNAL"]) {
             const xorErrors = formErrors(config, req.body);
             if (xorErrors.length > 0) {
               const schema = extractSchema(Model, config);
-              const referenceData = await fetchReferenceData(schema, config);
+              const current = await Model.findOne({ uuid: req.params.uuid }).lean();
+              const referenceData = await fetchReferenceData(schema, config, { keep: current });
 
               return res
                 .status(400)

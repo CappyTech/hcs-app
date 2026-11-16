@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.120.1] - 2026-11-16
+
+### Changed
+- **Inactive employees are left out where they don't belong.** Every form's employee picker (assignments, vehicles, training, inductions, accidents, managers, user links and the rest) now hides inactive employees unless the model sets its own filter. Editing a record keeps whoever it already points at, even if they've since left.
+- **Policy assignment** lists only current employees, plus the policy's existing assignee when editing.
+- **Holiday balances panel** no longer lists leavers.
+- **Health & Safety expiry reminders** skip leavers' training cards and inductions, and close any already raised for them. RIDDOR accident reminders are unchanged.
+
 ## [6.120.0] - 2026-11-16
 
 ### Added
