@@ -695,7 +695,7 @@ describe('Job Register client is a KashFlow customer', () => {
       entry: { client: 'Old Typed Name' }, next: {}, clients: [], contracts: [], customers: [{ code: 'EX1', name: 'Example Homes Ltd' }],
       input: '', label: '', nextAction: '/x',
     });
-    assert.match(html, /<select id="jr-customer" name="customerCode" required/);
+    assert.match(html, /<select id="jr-customer" name="customerCode"/);
     assert.match(html, /was: Old Typed Name/);
     assert.match(html, /<option value="EX1" >Example Homes Ltd \(EX1\)/);
   });
@@ -781,5 +781,81 @@ describe('Register by tax year', () => {
     assert.ok(y26 > 0 && y25 > y26, 'newest year first');
     assert.match(html, /href="#ty-2025"/);
     assert.match(html, /href="\/job-register\/link-clients"/);
+  });
+});
+
+describe('Customer from the row\'s own KashFlow records', () => {
+  const lookup = { projects: new Map([[41001, 'PR1']]), quotes: new Map([[50001, 'QU1'], [50002, 'QU2']]), invoices: new Map([[1700, 'IN1']]) };
+  const customers = [{ code: 'PR1', name: 'Project Customer' }, { code: 'QU1', name: 'Quote Customer' }, { code: 'IN1', name: 'Invoice Customer' }];
+
+  it('prefers the project, then the quote, then the invoice', () => {
+    assert.deepEqual(jobImport.customerFromKashflow({ projectNumber: 41001, quoteNumber: 50001 }, lookup), { code: 'PR1', source: 'project' });
+    assert.deepEqual(jobImport.customerFromKashflow({ projectNumber: 49999, quoteNumber: 50001 }, lookup), { code: 'QU1', source: 'quote' });
+    assert.deepEqual(jobImport.customerFromKashflow({ invoiceNumber: 1700 }, lookup), { code: 'IN1', source: 'invoice' });
+    assert.equal(jobImport.customerFromKashflow({ quoteNumber: 1 }, lookup), null);
+  });
+
+  it('sets the customer on rows found in KashFlow (known customers only) and leaves the rest for the mapping', () => {
+    const out = jobImport.applyKashflowCustomers([
+      { quoteNumber: 50001, client: 'typed' }, { quoteNumber: 50002, client: 'typed' }, { quoteNumber: 7, client: 'other' },
+    ], lookup, customers);
+    assert.equal(out[0].customerCode, 'QU1');
+    assert.equal(out[0].client, 'Quote Customer');
+    assert.equal(out[0].customerFrom, 'quote');
+    assert.equal(out[1].customerCode, undefined); // QU2 isn't a known customer
+    assert.deepEqual([...jobImport.clientsNeeded(out)], [['typed', 1], ['other', 1]]);
+    const mapped = jobImport.applyClients(out, [{ key: 'typed', code: 'IN1' }, { key: 'other', code: '' }], customers);
+    assert.equal(mapped[0].customerCode, 'QU1'); // KashFlow's customer wins over the mapping
+    assert.equal(mapped[1].customerCode, 'IN1');
+    assert.equal(mapped[2].unmatchedClient, true);
+  });
+
+  describe('linking and importing with a KashFlow database', () => {
+    let saved; let rows; let updates; let createdRows;
+    const q = (fn) => { const o = { select: () => o, sort: () => o, lean: async () => fn() }; return o; };
+    before(() => {
+      saved = { INTERNAL: mdb.INTERNAL, REST: mdb.REST };
+      mdb.INTERNAL = {
+        jobRegister: {
+          find: () => q(() => rows),
+          updateMany: async (f, u) => { updates.push({ f, u }); return { modifiedCount: f._id.$in.length }; },
+          create: async (f) => { createdRows.push(f); return f; },
+        },
+      };
+      mdb.REST = {
+        customer: {
+          find: () => q(() => [{ Code: 'PR1', Name: 'Project Customer' }, { Code: 'QU1', Name: 'Quote Customer' }]),
+          findOne: (f) => q(() => ({ PR1: { Code: 'PR1', Name: 'Project Customer' }, QU1: { Code: 'QU1', Name: 'Quote Customer' } }[f.Code] || null)),
+        },
+        project: { find: () => q(() => [{ Number: 41001, CustomerCode: 'PR1' }]), findOne: (f) => q(() => (f.Number === 41001 ? { CustomerCode: 'PR1' } : null)) },
+        quote: { find: () => q(() => [{ Number: 50001, CustomerCode: 'QU1' }]), findOne: (f) => q(() => (f.Number === 50001 ? { CustomerCode: 'QU1' } : null)) },
+        invoice: { find: () => q(() => []), findOne: () => q(() => null) },
+      };
+    });
+    after(() => { mdb.INTERNAL = saved.INTERNAL; mdb.REST = saved.REST; });
+
+    it('the link page splits rows found in KashFlow from the rest, and links them by customer', async () => {
+      rows = [
+        { _id: 'a', client: 'Typed A', projectNumber: 41001 },
+        { _id: 'b', client: 'Typed B', quoteNumber: 50001 },
+        { _id: 'c', client: 'Typed C', quoteNumber: 9 },
+      ];
+      updates = [];
+      const page = await jobImport.loadUnlinked();
+      assert.deepEqual(page.fromKashflow.map((c) => [c.code, c.count]), [['PR1', 1], ['QU1', 1]]);
+      assert.deepEqual(page.clients.map((c) => c.label), ['Typed C']);
+      const r = await jobImport.linkFromKashflow();
+      assert.deepEqual(r, { rows: 2, customers: 2 });
+      assert.deepEqual(updates.map((u) => [u.f._id.$in, u.u.$set.customerCode, u.u.$set.client]), [[['a'], 'PR1', 'Project Customer'], [['b'], 'QU1', 'Quote Customer']]);
+    });
+
+    it('a form save with no customer picked takes the one on its KashFlow project or quote', async () => {
+      const jr = (await import('../mongoose/services/jobRegisterService.js')).default;
+      createdRows = [];
+      await jr.createEntry({ quoteNumber: '50001', site: 'A' });
+      assert.equal(createdRows[0].customerCode, 'QU1');
+      assert.equal(createdRows[0].client, 'Quote Customer');
+      await assert.rejects(jr.createEntry({ quoteNumber: '50009', site: 'A' }), /Choose the client/);
+    });
   });
 });

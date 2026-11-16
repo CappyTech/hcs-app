@@ -79,7 +79,9 @@
     <div class="<%= card %> p-4 mb-6">
       <h2 class="<%= h2 %> mb-1">Clients on the sheet</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-        Each client in the register is a KashFlow customer. Pick the customer for each client written on the sheet; rows for a client set to “Don't import” are left out.
+        Each client in the register is a KashFlow customer.
+        <% if (typeof fromKashflow !== 'undefined' && fromKashflow) { %><strong><%= fromKashflow %> row<%= fromKashflow === 1 ? '' : 's' %></strong> take their customer from their own quote, project or invoice in KashFlow.<% } %>
+        For the rest, pick the customer for each client written on the sheet; rows for a client set to “Don't import” are left out.
         Changes here update the counts above when you save for later.
       </p>
       <% if (!customers.length) { %>
@@ -91,10 +93,14 @@
             <tr><th class="<%= th %>">On the sheet</th><th class="<%= th %>">Rows</th><th class="<%= th %>">KashFlow customer</th></tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <% clients.forEach((c) => { const field = `client_${c.index}`; %>
+            <% const shownClients = clients.filter((c) => c.needed === undefined || c.needed > 0); %>
+            <% if (!shownClients.length) { %>
+              <tr><td colspan="3" class="<%= td %> text-gray-500 dark:text-gray-400">Every row's customer comes from KashFlow.</td></tr>
+            <% } %>
+            <% shownClients.forEach((c) => { const field = `client_${c.index}`; %>
               <tr class="<%= c.code ? '' : 'bg-amber-50 dark:bg-amber-900/20' %>">
                 <td class="<%= td %>"><label for="<%= field %>"><%= c.label %></label></td>
-                <td class="<%= td %> text-gray-500 dark:text-gray-400"><%= c.count %></td>
+                <td class="<%= td %> text-gray-500 dark:text-gray-400"><%= c.needed ?? c.count %></td>
                 <td class="<%= td %>">
                   <select id="<%= field %>" name="<%= field %>" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
                     <option value="" <%= c.code ? '' : 'selected' %>>Don't import these rows</option>

@@ -424,9 +424,23 @@ export async function customerChoices() {
   return docs.map((c) => ({ code: String(c.Code).trim(), name: String(c.Name || c.Code).trim() }));
 }
 
-/** The chosen customer's code and name onto the fields; a 400 if none or unknown. */
+/** The customer code on the row's own KashFlow project, quote or invoice (in that order), or ''. */
+async function kashflowCustomerCode(fields) {
+  for (const [field, Model] of [['projectNumber', mdb.REST.project], ['quoteNumber', mdb.REST.quote], ['invoiceNumber', mdb.REST.invoice]]) {
+    if (fields[field] == null || !Model) continue;
+    const rec = await Model.findOne({ Number: fields[field] }).select('CustomerCode').lean();
+    if (rec?.CustomerCode) return String(rec.CustomerCode).trim();
+  }
+  return '';
+}
+
+/**
+ * The chosen customer's code and name onto the fields. With none chosen, the
+ * customer on the row's own KashFlow project/quote/invoice is used; a 400 if
+ * there's neither, or the code isn't a known customer.
+ */
 async function applyCustomer(fields) {
-  const code = String(fields.customerCode || '').trim();
+  const code = String(fields.customerCode || '').trim() || await kashflowCustomerCode(fields);
   if (!code) throw Object.assign(new Error('Choose the client from the KashFlow customers.'), { status: 400 });
   const c = await mdb.REST.customer.findOne({ Code: code }).select('Code Name').lean();
   if (!c) throw Object.assign(new Error("That client isn't a KashFlow customer (or hasn't synced yet)."), { status: 400 });

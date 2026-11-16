@@ -142,4 +142,15 @@ export const postLinkClients = async (req, res, next) => {
   }
 };
 
-export default { getLinkClients, postLinkClients, getRegister, postFillNext, postFillNextEdit, postCreate, getEdit, postUpdate, readFilters };
+/** POST /job-register/link-clients/kashflow: link rows to the customer on their own KashFlow quote/project/invoice. */
+export const postLinkFromKashflow = async (req, res, next) => {
+  try {
+    const r = await jobImport.linkFromKashflow();
+    req.flash('success', r.rows ? `Linked ${r.rows} row${r.rows === 1 ? '' : 's'} to ${r.customers} KashFlow customer${r.customers === 1 ? '' : 's'}, from their quotes, projects and invoices.` : 'No unlinked rows have a quote, project or invoice in KashFlow.');
+    res.redirect('/job-register/link-clients');
+  } catch (err) {
+    next(err);
+  }
+};
+
+export default { getLinkClients, postLinkClients, postLinkFromKashflow, getRegister, postFillNext, postFillNextEdit, postCreate, getEdit, postUpdate, readFilters };

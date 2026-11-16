@@ -1,6 +1,7 @@
 <%#
   Link the clients of existing register rows to KashFlow customers.
-  Locals: crumbs, clients [{ index, label, count, code }], customers [{ code, name }], total
+  Locals: crumbs, clients [{ index, label, count, code }] (rows not found in KashFlow), customers [{ code, name }], total,
+          fromKashflow [{ code, name, count, typed }] (rows whose own quote/project/invoice is in KashFlow)
 %>
 <%
   const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
@@ -21,18 +22,37 @@
       </h1>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-3xl">
         <%= total %> register row<%= total === 1 ? '' : 's' %> have a client typed in rather than chosen from KashFlow.
-        Pick the customer for each client and every row with that client is linked, its client renamed to the customer's KashFlow name.
-        Leave one blank to deal with it later.
+        Rows whose quote, project or invoice is in KashFlow take the customer on that record; the rest are linked by client below.
       </p>
     </div>
     <a href="/job-register" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-arrow-left" aria-hidden="true"></i> Job Register</a>
   </div>
 
+  <% const kfRows = (typeof fromKashflow !== 'undefined' ? fromKashflow : []).reduce((t, c) => t + c.count, 0); %>
+  <% if (kfRows) { %>
+    <form method="POST" action="/job-register/link-clients/kashflow" class="<%= card %> p-4 mb-6">
+      <%- include('../partials/csrfHidden') %>
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">From KashFlow</h2>
+      <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
+        <%= kfRows %> row<%= kfRows === 1 ? ' has' : 's have' %> a quote, project or invoice in KashFlow, which says who the customer is
+        (the project's customer first, then the quote's, then the invoice's):
+      </p>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 mb-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+        <% fromKashflow.forEach((c) => { %>
+          <li><span class="font-medium"><%= c.name %></span> <span class="font-mono text-xs text-gray-500">(<%= c.code %>)</span> · <%= c.count %> row<%= c.count === 1 ? '' : 's' %></li>
+        <% }) %>
+      </ul>
+      <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-cloud-check" aria-hidden="true"></i> Link these <%= kfRows %> from KashFlow</button>
+    </form>
+  <% } %>
+
   <% if (!clients.length) { %>
     <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
-      Every row's client is a KashFlow customer.
+      <%= kfRows ? 'Every other row is linked already.' : "Every row's client is a KashFlow customer." %>
     </div>
   <% } else { %>
+    <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Not in KashFlow: link by client</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">These rows' numbers aren't in KashFlow (yet), so pick the customer for each client. Leave one blank to deal with it later.</p>
     <% if (!customers.length) { %>
       <div class="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 mb-4 text-sm text-gray-700 dark:text-gray-300">
         No KashFlow customers have synced yet, so nothing can be linked.
