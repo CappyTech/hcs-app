@@ -107,7 +107,8 @@ export const getJobRegisterUpload = async (req, res, next) => {
     points: [
       'Reads the Quotes and Job Reg sheets. Rows with a number but no site or client (the blank numbered rows) are skipped.',
       'A job is matched to the quote it was copied from by site, client and value, and they become one row. Near matches are listed for you to tick.',
-      'Quotes and jobs already in the register are not overwritten: only their empty fields are filled in. Uploading the same workbook again adds only what\'s new.',
+      'Each client on the sheet is matched to a KashFlow customer before anything is imported.',
+      'A row an earlier import created, and nobody has edited since, is updated to match the sheet. Any other row already in the register (entered or edited by hand) only has its empty fields filled in. A blank on the sheet never clears anything.',
     ],
   });
 };
@@ -130,7 +131,7 @@ export const getJobRegisterCheck = async (req, res, next) => {
 };
 
 /** POST /job-register/import/:uuid/save */
-export const postJobRegisterSave = saveHandler(JR, (uuid, body, userId) => jobImport.saveForLater(uuid, body.pair, userId));
+export const postJobRegisterSave = saveHandler(JR, jobImport.saveForLater);
 
 /** POST /job-register/import/:uuid/delete */
 export const postJobRegisterDelete = deleteHandler(JR, 'jobRegister');
@@ -138,9 +139,10 @@ export const postJobRegisterDelete = deleteHandler(JR, 'jobRegister');
 /** POST /job-register/import/:uuid */
 export const postJobRegisterImport = async (req, res, next) => {
   try {
-    const r = await jobImport.runImport(req.params.uuid, req.body.pair);
+    const r = await jobImport.runImport(req.params.uuid, req.body || {});
     const parts = [`Added ${plural(r.created, 'row')}`, `filled in ${plural(r.updated, 'existing row')}`];
     if (r.unchanged) parts.push(`${r.unchanged} already up to date`);
+    if (r.skipped) parts.push(`${plural(r.skipped, 'row')} left out (client not matched to a KashFlow customer)`);
     req.flash('success', `${parts.join(', ')}.`);
     if (r.conflicts || r.failed.length) {
       const why = r.failed.slice(0, 3).map((f) => `${f.label}: ${f.reason}`).join('; ');

@@ -2,7 +2,7 @@
   Job Register: the plan of what will be in KashFlow (double entry), one row
   per quote/job, as on the Job Reg workbook, with each number checked against
   the synced KashFlow quote, project and invoice.
-  Locals: rows, counts, clients, years, totals, filters, unregistered, next,
+  Locals: rows, counts, clients, years, totals, filters, unregistered, next, unlinkedCount,
           stageLabels, stages, contracts, crumbs
 %>
 <%
@@ -121,14 +121,53 @@
     </div>
   </div>
 
-  <!-- The register -->
+  <!-- Clients not linked to KashFlow customers yet -->
+  <% if (typeof unlinkedCount !== 'undefined' && unlinkedCount) { %>
+    <div class="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300 flex flex-wrap items-center justify-between gap-3">
+      <span><i class="bi bi-exclamation-triangle-fill text-amber-600" aria-hidden="true"></i>
+        <%= unlinkedCount %> row<%= unlinkedCount === 1 ? ' has a client' : 's have clients' %> typed in rather than chosen from the KashFlow customers.</span>
+      <a href="/job-register/link-clients" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-link-45deg" aria-hidden="true"></i> Link clients</a>
+    </div>
+  <% } %>
+
+  <!-- The register, one table per tax year (newest first) -->
+  <%
+    const groupsByYear = new Map();
+    rows.forEach((r) => { const k = r.taxYear ?? 'none'; (groupsByYear.get(k) || groupsByYear.set(k, []).get(k)).push(r); });
+    const yearGroups = [...groupsByYear.entries()]
+      .sort((a, b) => (a[0] === 'none') - (b[0] === 'none') || b[0] - a[0])
+      .map(([year, list]) => {
+        const live = list.filter((r) => r.stage !== 'cancelled');
+        const sum = (xs) => xs.reduce((t, r) => t + (Number(r.entry.value) || 0), 0);
+        return {
+          year, rows: list,
+          label: year === 'none' ? 'No date' : `Tax year ${yearLabel(year)}`,
+          value: sum(live), won: sum(live.filter((r) => r.stage === 'won')), invoiced: sum(live.filter((r) => r.stage === 'invoiced')),
+        };
+      });
+  %>
   <% if (!rows.length) { %>
     <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center mb-6">
       Nothing in the register matches these filters.
     </div>
   <% } else { %>
-    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-6">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+    <% if (yearGroups.length > 1) { %>
+      <nav class="flex flex-wrap gap-2 mb-4 text-sm" aria-label="Jump to a tax year">
+        <% yearGroups.forEach((g) => { %><a href="#ty-<%= g.year %>" class="<%= secondaryBtn %>"><%= g.year === 'none' ? 'No date' : yearLabel(g.year) %> <span class="text-gray-400"><%= g.rows.length %></span></a><% }) %>
+      </nav>
+    <% } %>
+    <% yearGroups.forEach((g) => { %>
+      <section id="ty-<%= g.year %>" class="mb-8 scroll-mt-20">
+        <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 mb-2">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= g.label %> <span class="text-sm font-normal text-gray-500 dark:text-gray-400">· <%= g.rows.length %> row<%= g.rows.length === 1 ? '' : 's' %></span></h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            <%= money(g.value) || '£0.00' %> net ·
+            <span class="text-blue-700 dark:text-blue-400"><%= money(g.won) || '£0.00' %> won, not invoiced</span> ·
+            <span class="text-green-700 dark:text-green-400"><%= money(g.invoiced) || '£0.00' %> invoiced</span>
+          </p>
+        </div>
+        <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800">
           <tr>
             <th class="<%= th %>">Quote</th>
@@ -147,7 +186,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
-          <% rows.forEach(({ entry: e, stage, match }) => { %>
+          <% g.rows.forEach(({ entry: e, stage, match }) => { %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition <%= stage === 'cancelled' ? 'opacity-60' : '' %>">
               <td class="<%= td %> font-mono text-xs"><a href="/job-register/<%= e.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= e.quoteNumber ?? '—' %></a></td>
               <td class="<%= td %> font-mono text-xs"><a href="/job-register/<%= e.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= e.projectNumber ?? '—' %></a></td>
@@ -177,8 +216,10 @@
             </tr>
           <% }) %>
         </tbody>
-      </table>
-    </div>
+          </table>
+        </div>
+      </section>
+    <% }) %>
     <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 flex flex-wrap gap-4">
       <span><i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i> In KashFlow and agrees</span>
       <span><i class="bi bi-hourglass-split text-amber-600" aria-hidden="true"></i> Not in KashFlow yet (or not synced)</span>
@@ -230,7 +271,7 @@
     </p>
     <form method="POST" action="/job-register" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <%- include('../partials/csrfHidden') %>
-      <%- include('_fields', { entry: locals.form || {}, next, clients, contracts, input, label, nextAction: '/job-register/next#add' }) %>
+      <%- include('_fields', { entry: locals.form || {}, next, clients, contracts, customers: locals.customers || [], input, label, nextAction: '/job-register/next#add' }) %>
       <div class="sm:col-span-2 lg:col-span-4">
         <button type="submit" class="<%= primaryBtn %>">Add to register</button>
       </div>

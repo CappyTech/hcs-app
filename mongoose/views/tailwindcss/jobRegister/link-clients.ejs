@@ -1,0 +1,68 @@
+<%#
+  Link the clients of existing register rows to KashFlow customers.
+  Locals: crumbs, clients [{ index, label, count, code }], customers [{ code, name }], total
+%>
+<%
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
+  const input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
+  const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap';
+  const td = 'px-4 py-3 text-gray-900 dark:text-gray-100 align-middle';
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs, current: 'Link clients' }) %>
+
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-link-45deg text-green-600 dark:text-green-400" aria-hidden="true"></i>
+        Link clients to KashFlow customers
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-3xl">
+        <%= total %> register row<%= total === 1 ? '' : 's' %> have a client typed in rather than chosen from KashFlow.
+        Pick the customer for each client and every row with that client is linked, its client renamed to the customer's KashFlow name.
+        Leave one blank to deal with it later.
+      </p>
+    </div>
+    <a href="/job-register" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-arrow-left" aria-hidden="true"></i> Job Register</a>
+  </div>
+
+  <% if (!clients.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      Every row's client is a KashFlow customer.
+    </div>
+  <% } else { %>
+    <% if (!customers.length) { %>
+      <div class="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 mb-4 text-sm text-gray-700 dark:text-gray-300">
+        No KashFlow customers have synced yet, so nothing can be linked.
+      </div>
+    <% } %>
+    <form method="POST" action="/job-register/link-clients" class="<%= card %>">
+      <%- include('../partials/csrfHidden') %>
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+          <tr><th class="<%= th %>">Client as typed</th><th class="<%= th %>">Rows</th><th class="<%= th %>">KashFlow customer</th></tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <% clients.forEach((c) => { const field = `client_${c.index}`; %>
+            <tr class="<%= c.code ? '' : 'bg-amber-50 dark:bg-amber-900/20' %>">
+              <td class="<%= td %>"><label for="<%= field %>"><%= c.label %></label></td>
+              <td class="<%= td %> text-gray-500 dark:text-gray-400"><%= c.count %></td>
+              <td class="<%= td %>">
+                <select id="<%= field %>" name="<%= field %>" class="<%= input %>">
+                  <option value="" <%= c.code ? '' : 'selected' %>>Leave for now</option>
+                  <% customers.forEach((k) => { %><option value="<%= k.code %>" <%= k.code === c.code ? 'selected' : '' %>><%= k.name %> (<%= k.code %>)</option><% }) %>
+                </select>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <div class="flex flex-wrap items-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+        <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-link-45deg" aria-hidden="true"></i> Link</button>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Suggestions are by name; check each before linking.</span>
+      </div>
+    </form>
+  <% } %>
+</div>

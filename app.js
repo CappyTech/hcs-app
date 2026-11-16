@@ -39,6 +39,7 @@ import __firstRunRoutes from './mongoose/routes/firstRunRoutes.js';
 import __payrollTaxRatesSeedService from './mongoose/services/payrollTaxRatesSeedService.js';
 import __emailTypesSeedService from './mongoose/services/emailTypesSeedService.js';
 import __workbookImportStore from './mongoose/services/workbookImportStore.js';
+import __jobRegisterImportService from './mongoose/services/jobRegisterImportService.js';
 import __configValidatorService from './mongoose/services/configValidatorService.js';
 import cisMappings from './mongoose/config/cisMappings.js';
 import __socketService from './services/socketService.js';
@@ -406,6 +407,13 @@ const main = async () => {
       await __workbookImportStore.migrateExpiry();
     } catch (migrationErr) {
       logger.error('[migration] Workbook upload expiry failed', { error: migrationErr.message });
+    }
+
+    // Job Register rows imported before rows recorded their import
+    try {
+      await __jobRegisterImportService.flagImportedRows();
+    } catch (migrationErr) {
+      logger.error('[migration] Marking imported Job Register rows failed', { error: migrationErr.message });
     }
 
     // Seed payroll tax rates for known tax years (insert-only — admin edits
