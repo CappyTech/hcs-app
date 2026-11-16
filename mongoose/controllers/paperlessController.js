@@ -30,6 +30,7 @@ const {
   buildPurchaseDraftFromOcr,
   buildPurchaseDraftById,
   buildKashFlowPayloadFromDraft,
+  kashflowLineTotals,
   defaultMap,
 } = __purchaseDraftService;
 const {
@@ -65,28 +66,37 @@ export function notDraftableMessage(doc) {
 }
 
 /**
- * Why the draft's lines can't be sent: they don't add up to its Net and VAT.
- * KashFlow totals a purchase from its lines, so lines that don't match the
- * invoice would create a purchase for the wrong amount. Null when they agree.
- * VAT allows a penny a line, since suppliers round VAT per line or on the total.
+ * Why the draft's lines can't be sent: what KashFlow will make of them doesn't
+ * come to the invoice's totals. KashFlow ignores header totals and works a
+ * purchase out from its lines (Quantity × Rate, plus each line's VAT), so the
+ * check is made on the payload it will be sent, against the totals typed from
+ * the invoice (`InvoiceTotals`), never totals that were taken from the lines.
+ * It must match to the penny: a few pence a line is a purchase for the wrong
+ * amount. Null when they agree.
  */
 export function lineTotalsProblem(draft) {
   const lines = Array.isArray(draft?.LineItems) ? draft.LineItems : [];
+  if (!lines.length) return null;
   const num = (v) => {
     if (v == null || v === '') return null;
     const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
     return Number.isFinite(n) ? n : null;
   };
-  const net = num(draft?.NetAmount);
-  const vat = num(draft?.VATAmount);
-  if (!lines.length || (net == null && vat == null)) return null;
-  const sumNet = lines.reduce((s, li) => s + (num(li.NetAmount) ?? 0), 0);
-  const sumVat = lines.reduce((s, li) => s + (num(li.VATAmount) ?? 0), 0);
+  const typed = draft.InvoiceTotals || draft;
+  const net = num(typed.NetAmount);
+  const vat = num(typed.VATAmount);
+  const gross = num(typed.GrossAmount);
+  if (net == null && vat == null && gross == null) {
+    return "The invoice's totals haven't been entered, so the lines can't be checked against them. Enter the total goods, VAT and invoice total in Edit entry before sending.";
+  }
+  const kf = kashflowLineTotals(buildKashFlowPayloadFromDraft(draft));
+  const off = (a, b) => Math.abs(a - b) >= 0.005;
   const out = [];
-  if (net != null && Math.abs(sumNet - net) > 0.01 + 1e-9) out.push(`net ${sumNet.toFixed(2)} (invoice ${net.toFixed(2)})`);
-  if (vat != null && Math.abs(sumVat - vat) > Math.max(0.02, 0.01 * lines.length) + 1e-9) out.push(`VAT ${sumVat.toFixed(2)} (invoice ${vat.toFixed(2)})`);
+  if (net != null && off(kf.net, net)) out.push(`net ${kf.net.toFixed(2)} (invoice ${net.toFixed(2)})`);
+  if (vat != null && off(kf.vat, vat)) out.push(`VAT ${kf.vat.toFixed(2)} (invoice ${vat.toFixed(2)})`);
+  if (gross != null && off(kf.gross, gross) && !out.length) out.push(`a total of ${kf.gross.toFixed(2)} (invoice ${gross.toFixed(2)})`);
   if (!out.length) return null;
-  return `The lines don't add up to the invoice: they come to ${out.join(' and ')}. Correct the lines in Edit entry, or add the missing ones, before sending.`;
+  return `The lines don't add up to the invoice: in KashFlow they would come to ${out.join(' and ')}. Correct the lines in Edit entry, or add the missing ones, before sending.`;
 }
 
 /** Why `doc` can't be drafted or sent to KashFlow, or null when it can. */
@@ -652,6 +662,10 @@ export const getPurchaseDraft = async (req, res, next) => {
       suppliers,
       selectedSupplier,
       payloadPreview,
+      // The send guard's verdict and what KashFlow will total the lines to,
+      // so the page shows the same check the send makes
+      linesProblem: lineTotalsProblem(draft),
+      kashflowTotals: payloadPreview ? kashflowLineTotals(payloadPreview) : null,
       sources,
       nominalMap,
       activeProjects,
