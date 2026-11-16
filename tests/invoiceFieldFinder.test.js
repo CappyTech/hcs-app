@@ -130,6 +130,30 @@ describe('invoice field finder', () => {
     assert.equal(Math.round(f.totalVat.box.x), 526);
   });
 
+  it('totals in a Gross / Net / VAT table with many lines between the headings and the totals', () => {
+    // The headings are far above the "Sub total" row: without them, "Sub total"
+    // would give the gross as goods and nothing would add up
+    const rows = [
+      [430, 566, 25, 'Gross'], [476, 566, 18, 'Net'], [517, 569, 18, 'VAT'], [551, 569, 18, 'VAT'],
+      [384, 569, 40, 'Discount'], [389, 563, 25, 'Value'], [512, 563, 32, 'Applied'], [554, 563, 8, '%'],
+    ];
+    let y = 551;
+    for (let i = 0; i < 8; i++, y -= 12) {
+      rows.push([40, y, 100, `Item ${i}`], [321, y, 25, '6.00'], [403, y, 20, '0.00'], [439, y, 30, '6.00'], [481, y, 30, '5.00'], [526, y, 25, '1.00'], [554, y, 15, '20.0']);
+    }
+    rows.push([264, y, 40, 'Sub total'], [321, y, 25, '48.00'], [403, y, 20, '0.00'], [439, y, 30, '£48.00'], [481, y, 30, '£40.00'], [526, y, 25, '£8.00']);
+    rows.push([399, y - 21, 40, 'Total Paid:'], [521, y - 21, 30, '£48.00']);
+    const items = page(rows);
+    const f = findFields(items);
+    assert.deepEqual([f.totalGoods.value, f.totalVat.value, f.invoiceTotal.value], ['40.00', '8.00', '48.00']);
+    // A spot learned from a shorter invoice, now where the total is printed, doesn't win
+    const totalPaid = locateValue(items, 'invoiceTotal', '48.00');
+    const spot = { page: 1, x: 521, y: y - 21 - 2.5, w: 30, h: 12.5 };
+    const g = findFields(items, { layout: { totalVat: spot, totalGoods: spot } });
+    assert.ok(totalPaid);
+    assert.deepEqual([g.totalGoods.value, g.totalVat.value, g.invoiceTotal.value], ['40.00', '8.00', '48.00']);
+  });
+
   it('Stark: "INV TOTAL £", and bare Total does not take TOTAL GOODS', () => {
     const items = page([
       [374, 140, 60, 'TOTAL GOODS'], [493, 140, 25, '38.18'],

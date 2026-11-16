@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.124.2] - 2026-11-16
+
+### Fixed
+- **The entry screen no longer suggests the invoice total for Total goods and Total VAT on longer invoices with a Gross / Net / VAT totals table.** The reader only looked a few lines up from the "Sub total" row for the column headings. With more lines in between, it didn't find them, so "Sub total" gave the gross as goods, and the VAT came from where this supplier's earlier, shorter invoices printed it, which is now where the total is. It now follows the column up past the lines to the headings. Stored readings are redone (reader version 10).
+
 ## [6.124.1] - 2026-11-16
 
 ### Fixed

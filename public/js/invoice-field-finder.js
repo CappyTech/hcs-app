@@ -351,14 +351,32 @@ function columnTotals(rows) {
       // enough for a heading over two rows above two lines (Screwfix's "VAT"
       // over "Applied"), so the VAT column is found and goods + VAT = total
       // can pick Net over a gross "Sub total".
+      const over = (r) => rows[r].items.filter((h) => h.x < it.x + it.w && h.x + h.w > it.x && parseMoney(h.str) == null).map((h) => h.str);
       const words = [];
-      for (let r = ri - 1; r >= 0 && rows[r].page === row.page && rows[r].y - row.y < row.h * 9; r--) {
-        for (const h of rows[r].items) {
-          if (h.x < it.x + it.w && h.x + h.w > it.x && parseMoney(h.str) == null) words.unshift(h.str);
-        }
+      let r = ri - 1;
+      let lastY = null; // the highest row with words in this column so far
+      for (; r >= 0 && rows[r].page === row.page && rows[r].y - row.y < row.h * 9; r--) {
+        const w = over(r);
+        if (w.length) { words.unshift(...w); lastY = rows[r].y; }
       }
-      const heading = words.join(' ');
-      const hit = HEADING_FIELD.find(([, re]) => re.test(heading));
+      let hit = HEADING_FIELD.find(([, re]) => re.test(words.join(' ')));
+      // A longer invoice puts more line rows between the headings and the
+      // totals row. Carry on up the column past rows that only have figures in
+      // it (the lines) to the first words, then take the row just above them
+      // too, for a heading over two rows.
+      for (; !hit && r >= 0 && rows[r].page === row.page; r--) {
+        const w = over(r);
+        if (!w.length) {
+          if (lastY != null) break;
+          continue;
+        }
+        if (lastY != null && rows[r].y - lastY > rows[r].h * 2.6) break;
+        const isFirst = lastY == null;
+        words.unshift(...w);
+        lastY = rows[r].y;
+        hit = HEADING_FIELD.find(([, re]) => re.test(words.join(' ')));
+        if (!isFirst) break;
+      }
       if (!hit) continue;
       const def = FIELDS.find((f) => f.field === hit[0]);
       out.push({
