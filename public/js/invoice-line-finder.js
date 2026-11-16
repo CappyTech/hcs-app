@@ -337,16 +337,57 @@ export function fillMissingRates(lines, totalGoods, totalVat) {
 
 const TERMS = [
   // "30 days end of month", "30 days EOM"
-  { re: /\b(\d{1,3})\s*days?\s*(from\s*)?(the\s*)?(end\s*of\s*(the\s*)?month|eom)\b/i, eom: true },
-  // "end of month following", "EOM following"
-  { re: /\b(end\s*of\s*(the\s*)?month|eom)\s*following\b/i, days: 0, eomFollowing: true },
+  { re: /\b(\d{1,3})\s*days?\s*(from\s*)?(the\s*)?(end\s*of\s*(the\s*)?month|eom)\b/i, kind: 'eom' },
+  // "end of month following", "EOM following", "end of next month", "end of the following month"
+  { re: /\b(end\s*of\s*(the\s*)?month|eom)\s*following\b|\bend\s*of\s*(the\s*)?(next|following)\s*month\b/i, days: 0, kind: 'eomFollowing' },
   // "30 days net", "strictly 30 days", "payment within 30 days", "net 30". A bare
   // "within 28 days" is usually returns or queries ("call within 28 days to arrange
   // collection"), so "within" only counts after payment wording.
-  { re: /\b(?:net\s*(\d{1,3})(?:\s*days?)?|(\d{1,3})\s*days?\s*(?:net|nett|from\s*(?:date\s*of\s*)?invoice|of\s*invoice)|(?:strictly|(?:payment|payable|pay|due|settle(?:ment)?)\s*(?:is\s*)?(?:due\s*)?within|(?:payment\s*)?terms:?)\s*(\d{1,3})\s*days?)\b/i },
+  { re: /\b(?:net\s*(\d{1,3})(?:\s*days?)?|(\d{1,3})\s*days?\s*(?:net|nett|from\s*(?:date\s*of\s*)?invoice|of\s*invoice)|(?:strictly|(?:payment|payable|pay|due|settle(?:ment)?)\s*(?:is\s*)?(?:due\s*)?within|(?:payment\s*)?terms:?)\s*(\d{1,3})\s*days?)\b/i, kind: 'days' },
 ];
 
 const ymd = (d) => d.toISOString().slice(0, 10);
+
+/**
+ * Kinds of payment terms, as printed on an invoice or agreed with a supplier:
+ *   days          N days from the invoice date
+ *   eom           N days after the end of the invoice's month (0: the end of that month)
+ *   eomFollowing  the last day of the next month
+ *   dayFollowing  the Nth of the next month (the 31st is the month's last day)
+ */
+export const DUE_KINDS = ['days', 'eom', 'eomFollowing', 'dayFollowing'];
+
+const ordinal = (n) => `${n}${[11, 12, 13].includes(n % 100) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th')}`;
+
+/** Terms in words: "End of next month", "30 days from the invoice date". */
+export function describeTerms(t) {
+  if (!t || !DUE_KINDS.includes(t.kind)) return '';
+  const n = Number(t.days) || 0;
+  if (t.kind === 'eomFollowing') return 'End of next month';
+  if (t.kind === 'dayFollowing') return `The ${ordinal(n)} of next month`;
+  if (t.kind === 'eom') return n ? `${n} day${n === 1 ? '' : 's'} after the end of the invoice month` : 'End of the invoice month';
+  return `${n} day${n === 1 ? '' : 's'} from the invoice date`;
+}
+
+/** Due date ('YYYY-MM-DD') from an invoice date and terms, or null. */
+export function dueFromTerms(invoiceDate, t) {
+  const base = invoiceDate && parseDate(invoiceDate);
+  if (!base || !t || !DUE_KINDS.includes(t.kind)) return null;
+  const n = Number(t.days) || 0;
+  const d = new Date(`${base}T00:00:00Z`);
+  if (t.kind === 'eomFollowing') {
+    d.setUTCMonth(d.getUTCMonth() + 2, 0); // last day of next month
+  } else if (t.kind === 'dayFollowing') {
+    const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 2, 0)).getUTCDate();
+    d.setUTCMonth(d.getUTCMonth() + 1, Math.min(Math.max(n, 1), last));
+  } else if (t.kind === 'eom') {
+    d.setUTCMonth(d.getUTCMonth() + 1, 0); // end of this month…
+    d.setUTCDate(d.getUTCDate() + n); // …then the days
+  } else {
+    d.setUTCDate(d.getUTCDate() + n);
+  }
+  return ymd(d);
+}
 
 /**
  * Payment terms printed on the invoice, and the due date they give from the
@@ -360,20 +401,9 @@ export function findPaymentTerms(items, invoiceDate) {
       const days = t.days ?? Number(m.slice(1).find((g) => g && /^\d+$/.test(g)));
       if (!Number.isFinite(days) || days > 180) continue;
       const at = it.str.indexOf(m[0]);
-      const found = { text: m[0].trim(), days, eom: !!t.eom, eomFollowing: !!t.eomFollowing, page: it.page, box: charBox(it, at, at + m[0].length) };
-      const base = invoiceDate && parseDate(invoiceDate);
-      if (base) {
-        const d = new Date(`${base}T00:00:00Z`);
-        if (t.eomFollowing) {
-          d.setUTCMonth(d.getUTCMonth() + 2, 0); // last day of next month
-        } else if (t.eom) {
-          d.setUTCMonth(d.getUTCMonth() + 1, 0); // end of this month…
-          d.setUTCDate(d.getUTCDate() + days); // …then the days
-        } else {
-          d.setUTCDate(d.getUTCDate() + days);
-        }
-        found.dueDate = ymd(d);
-      }
+      const found = { text: m[0].trim(), days, kind: t.kind, eom: t.kind === 'eom', eomFollowing: t.kind === 'eomFollowing', page: it.page, box: charBox(it, at, at + m[0].length) };
+      const due = dueFromTerms(invoiceDate, { kind: t.kind, days });
+      if (due) found.dueDate = due;
       return found;
     }
   }
@@ -437,4 +467,4 @@ export function findVatNumbersInText(text) {
   return out;
 }
 
-export default { findLines, findDayLines, fillMissingRates, findPaymentTerms, findVatNumbers, findVatNumbersInText, normaliseVatNumber, parseNumber };
+export default { findLines, findDayLines, fillMissingRates, findPaymentTerms, dueFromTerms, describeTerms, DUE_KINDS, findVatNumbers, findVatNumbersInText, normaliseVatNumber, parseNumber };

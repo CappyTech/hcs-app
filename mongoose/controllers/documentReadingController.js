@@ -12,10 +12,13 @@
  *   POST /paperless/reading/supplier/:correspondentId/teach    JSON {field, box}: "this is where X is"
  *   POST /paperless/reading/supplier/:correspondentId/forget   field (or none: everything)
  *   POST /paperless/reading/supplier/:correspondentId/labels   field + label words
+ *   POST /paperless/reading/supplier/:correspondentId/due-terms kind + days: a due-date arrangement ('' clears it)
  */
 
 import path from 'path';
 import reading from '../services/paperless/documentReadingService.js';
+import { actorFromUser } from '../services/paperless/documentStateService.js';
+import { describeTerms } from '../../public/js/invoice-line-finder.js';
 import logger from '../../services/loggerService.js';
 
 const idParam = (req) => {
@@ -136,6 +139,7 @@ export const getSupplier = async (req, res, next) => {
       shown,
       fields: reading.HEADER_FIELDS,
       fieldLabels: FIELD_LABELS,
+      dueTermsText: describeTerms(detail.dueTerms),
     });
   } catch (err) {
     logger.error(`[documentReading] supplier ${req.params.correspondentId}: ${err.message}`);
@@ -189,6 +193,28 @@ export const postLabels = async (req, res) => {
   return res.redirect(`${supplierUrl(id)}#labels`);
 };
 
+export const postDueTerms = async (req, res) => {
+  const id = supplierParam(req);
+  if (id == null) return res.redirect('/paperless/reading');
+  try {
+    const r = await reading.setDueTerms(id, {
+      kind: String(req.body?.kind || ''),
+      days: req.body?.days == null ? null : String(req.body.days).trim(),
+    }, {
+      name: req.body?.name ? String(req.body.name).slice(0, 120) : null,
+      actor: (({ userId, name }) => ({ userId, name }))(actorFromUser(req.user)),
+    });
+    if (!r.ok) req.flash('error', r.message);
+    else req.flash('success', r.terms
+      ? `Due date arrangement saved: ${r.text}. It's used for this supplier's invoices from now on.`
+      : 'Due date arrangement removed. Due dates come from the invoice again.');
+  } catch (err) {
+    logger.error(`[documentReading] due-terms ${id}: ${err.message}`);
+    req.flash('error', 'Could not save the due date arrangement.');
+  }
+  return res.redirect(`${supplierUrl(id)}#due-terms`);
+};
+
 export const getInsights = makeGetInsights();
 
-export default { getInsights, makeGetInsights, postRead, postReprocess, getFixture, getReport, getSupplier, postTeach, postForget, postLabels };
+export default { getInsights, makeGetInsights, postRead, postReprocess, getFixture, getReport, getSupplier, postTeach, postForget, postLabels, postDueTerms };

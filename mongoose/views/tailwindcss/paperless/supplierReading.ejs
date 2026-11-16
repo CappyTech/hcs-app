@@ -80,6 +80,37 @@ const spotText = (list) => {
 
     <%# ── What it knows, per field ── %>
     <div class="lg:col-span-2 space-y-3" id="labels">
+      <%# ── Due date arrangement ── %>
+      <% const due = detail.dueTerms; %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-2" id="due-terms">
+        <h2 class="font-semibold text-sm text-gray-800 dark:text-gray-200">Due date arrangement</h2>
+        <p class="text-xs <%= due ? 'text-green-700 dark:text-green-400' : 'text-gray-400' %>">
+          <% if (due) { %><i class="bi bi-calendar-check"></i> <%= dueTermsText %>. Used for every invoice from <%= detail.name %>, over any terms the invoice prints.<% } else { %>None: the due date comes from the invoice (a printed due date or its payment terms).<% } %>
+        </p>
+        <form method="POST" action="/paperless/reading/supplier/<%= detail.correspondentId %>/due-terms" class="space-y-2">
+          <%- include('../partials/csrfHidden') %>
+          <input type="hidden" name="name" value="<%= detail.name %>">
+          <div class="flex flex-wrap gap-2 items-end">
+            <div class="flex-1 min-w-[12rem]">
+              <label class="block text-xs text-gray-500 dark:text-gray-400" for="due-kind">Due</label>
+              <select id="due-kind" name="kind" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="" <%= !due ? 'selected' : '' %>>No arrangement (read the invoice)</option>
+                <option value="eomFollowing" <%= due?.kind === 'eomFollowing' ? 'selected' : '' %>>End of next month</option>
+                <option value="days" <%= due?.kind === 'days' ? 'selected' : '' %>>Days from the invoice date</option>
+                <option value="eom" <%= due?.kind === 'eom' ? 'selected' : '' %>>Days after the end of the invoice month</option>
+                <option value="dayFollowing" <%= due?.kind === 'dayFollowing' ? 'selected' : '' %>>A day of next month</option>
+              </select>
+            </div>
+            <div class="w-24">
+              <label class="block text-xs text-gray-500 dark:text-gray-400" for="due-days">Days / day</label>
+              <input id="due-days" name="days" inputmode="numeric" value="<%= due && due.kind !== 'eomFollowing' ? due.days : '' %>" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <button type="submit" class="<%= btnGrey %>">Save</button>
+          </div>
+          <p class="text-xs text-gray-400">E.g. invoice 12/11/2026 → end of next month 31/12/2026; 30 days 12/12/2026; 30 days after end of month 30/12/2026; the 20th of next month 20/12/2026. Not needed for End of next month.</p>
+        </form>
+      </div>
+
       <% fields.forEach((f) => { const list = detail.spots?.[f]; const words = detail.labels?.[f] || []; %>
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-2" data-field-card="<%= f %>">
           <div class="flex items-center gap-2">

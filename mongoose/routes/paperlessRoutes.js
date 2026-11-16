@@ -79,6 +79,7 @@ router.get("/paperless/reading/supplier/:correspondentId", ...docs("view"), read
 router.post("/paperless/reading/supplier/:correspondentId/teach", ...docs("edit"), readingCtrl.postTeach);
 router.post("/paperless/reading/supplier/:correspondentId/forget", ...docs("edit"), readingCtrl.postForget);
 router.post("/paperless/reading/supplier/:correspondentId/labels", ...docs("edit"), readingCtrl.postLabels);
+router.post("/paperless/reading/supplier/:correspondentId/due-terms", ...docs("edit"), readingCtrl.postDueTerms);
 
 router.get("/paperless/ocr", ...docs("view"), ctrl.listOcr);
 router.get("/paperless/ocr/:paperlessId", ...docs("view"), ctrl.readOcr);

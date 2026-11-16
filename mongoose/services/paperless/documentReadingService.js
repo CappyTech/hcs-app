@@ -30,12 +30,13 @@ import {
 } from '../../../public/js/invoice-field-finder.js';
 import {
   findLines, fillMissingRates, findPaymentTerms, findVatNumbers, normaliseVatNumber,
+  dueFromTerms, describeTerms, DUE_KINDS,
 } from '../../../public/js/invoice-line-finder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Bump when the reader changes enough that stored readings should be redone
-export const READER_VERSION = 8; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25"); 5: day-by-day subcontractor lines, CIS deductions not VAT or the total; 6: headings with the currency ("Unit Price (£)"), reverse charge note ends the lines, "Payment due by …"; 7: VAT-inclusive unit prices become net (Screwfix), totals headings over two rows above the lines; 8: month-first dates ("November 11, 2026")
+export const READER_VERSION = 9; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25"); 5: day-by-day subcontractor lines, CIS deductions not VAT or the total; 6: headings with the currency ("Unit Price (£)"), reverse charge note ends the lines, "Payment due by …"; 7: VAT-inclusive unit prices become net (Screwfix), totals headings over two rows above the lines; 8: month-first dates ("November 11, 2026"); 9: "end of next month" terms, supplier due date arrangements
 export const MAX_PAGES = 5;
 export const HEADER_FIELDS = FIELDS.map((f) => f.field);
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));
@@ -97,13 +98,16 @@ const roundBox = (b) => (b ? { page: b.page, x: r1(b.x), y: r1(b.y), w: r1(b.w),
  * @param {Array} items
  * @param {object} [opts] { pageWidth, pages, layout }
  */
-export function summarise(items, { pageWidth = 595, pages = null, layout = null, labels = null, now = new Date() } = {}) {
+export function summarise(items, { pageWidth = 595, pages = null, layout = null, labels = null, dueTerms = null, now = new Date() } = {}) {
   const found = findFields(items, { pageWidth, layout: layout || undefined, labels: labels || undefined });
   const fields = Object.fromEntries(HEADER_FIELDS.map((f) => [f, slim(found[f])]));
   const terms = findPaymentTerms(items, fields.invoiceDate?.value);
   if (!fields.dueDate && terms?.dueDate) {
     fields.dueDate = { value: terms.dueDate, page: terms.page, box: roundBox(terms.box), fromTerms: terms.text };
   }
+  // A due-date arrangement with the supplier wins over whatever the invoice prints
+  const arranged = dueTerms && dueFromTerms(fields.invoiceDate?.value, dueTerms);
+  if (arranged) fields.dueDate = { value: arranged, page: null, box: null, fromArrangement: describeTerms(dueTerms) };
   const lines = fillMissingRates(findLines(items), fields.totalGoods?.value, fields.totalVat?.value)
     .map((l) => ({
       description: l.description, quantity: l.quantity, price: l.price, total: l.total, vatRate: l.vatRate,
@@ -385,9 +389,9 @@ const withDeps = (deps) => {
 
 // What a supplier's layout gives the reader: learned spots and label words
 async function hintsForDoc(SupplierLayout, doc) {
-  if (!SupplierLayout || doc?.correspondent?.id == null) return { layout: null, labels: null };
+  if (!SupplierLayout || doc?.correspondent?.id == null) return { layout: null, labels: null, dueTerms: null };
   const l = await SupplierLayout.findOne({ correspondentId: doc.correspondent.id }).lean();
-  return { layout: l ? layoutFromSpots(l.spots) : null, labels: l?.labels || null };
+  return { layout: l ? layoutFromSpots(l.spots) : null, labels: l?.labels || null, dueTerms: cleanDueTerms(l?.dueTerms) };
 }
 async function layoutForDoc(SupplierLayout, doc) {
   return (await hintsForDoc(SupplierLayout, doc)).layout;
@@ -427,8 +431,8 @@ export async function readDocument(paperlessId, deps = {}) {
       );
     }
     const items = stored.items.map(unpackItem);
-    const { layout, labels } = await hintsForDoc(SupplierLayout, doc);
-    reading = summarise(items, { pageWidth: stored.pageWidth, pages: stored.pages, layout, labels, now });
+    const { layout, labels, dueTerms } = await hintsForDoc(SupplierLayout, doc);
+    reading = summarise(items, { pageWidth: stored.pageWidth, pages: stored.pages, layout, labels, dueTerms, now });
   } catch (err) {
     logger.warn(`[documentReading] ${paperlessId}: ${err.message}`);
     reading = { version: READER_VERSION, at: now, error: err.message, score: -1 };
@@ -670,6 +674,7 @@ export async function supplierDetail(correspondentId, deps = {}) {
     invoicesLearned: layout?.invoicesLearned || 0,
     spots: layout?.spots || {},
     labels: layout?.labels || {},
+    dueTerms: cleanDueTerms(layout?.dueTerms),
     updatedAt: layout?.updatedAt || null,
     documents: docs.map((doc) => ({ ...doc, hasText: withText.includes(doc.paperlessId) })),
   };
@@ -731,6 +736,51 @@ export async function setLabels(correspondentId, field, input, { name = null } =
   return { ok: true, labels: phrases };
 }
 
+/**
+ * A due-date arrangement as stored, or null if it isn't a usable one.
+ * { kind: 'days' | 'eom' | 'eomFollowing' | 'dayFollowing', days }
+ */
+export function cleanDueTerms(t) {
+  if (!t || !DUE_KINDS.includes(t.kind)) return null;
+  if (t.kind === 'eomFollowing') return { kind: t.kind, days: 0 };
+  const days = Number(t.days);
+  if (!Number.isInteger(days)) return null;
+  if (t.kind === 'dayFollowing' ? days < 1 || days > 31 : days < 0 || days > 180) return null;
+  return { kind: t.kind, days };
+}
+
+/**
+ * Set (or with kind '' clear) a supplier's due-date arrangement. Invoices of
+ * theirs still being entered are read again, so their due date follows it.
+ */
+export async function setDueTerms(correspondentId, { kind = '', days = null } = {}, { name = null, actor = null } = {}, deps = {}) {
+  const d = withDeps(deps);
+  if (d.connect) await d.connect();
+  const id = Number(correspondentId);
+  let terms = null;
+  if (kind) {
+    terms = cleanDueTerms({ kind, days: days === '' || days == null ? (kind === 'eom' ? 0 : NaN) : Number(days) });
+    if (!terms) {
+      return { ok: false, message: kind === 'dayFollowing' ? 'Give a day of the month from 1 to 31.' : 'Give a number of days from 0 to 180.' };
+    }
+  }
+  const existing = await d.m.SupplierLayout.findOne({ correspondentId: id }).lean();
+  await d.m.SupplierLayout.updateOne(
+    { correspondentId: id },
+    { $set: {
+      correspondentName: name || existing?.correspondentName || null,
+      dueTerms: terms ? { ...terms, setAt: d.now(), setBy: actor || null } : null,
+    } },
+    { upsert: true },
+  );
+  // Re-read their open invoices so the stored due date follows the arrangement
+  const open = await d.m.OcrDocument.find({
+    'correspondent.id': id, processingState: { $in: ['awaiting_entry', 'entered'] }, deletedInPaperlessAt: null,
+  }).select('paperlessId').lean();
+  for (const { paperlessId } of open) readSoon(paperlessId, deps);
+  return { ok: true, terms, text: describeTerms(terms), reread: open.length };
+}
+
 /** Ask Paperless to OCR a document again (for PDFs with no text layer). */
 export async function reprocess(paperlessId, deps = {}) {
   const client = deps.client || __paperlessClient.makeClient();
@@ -748,5 +798,5 @@ export default {
   layoutFromSpots, mergeSpots, savedValues, compareReading, parsePicks, chooseSpot,
   supplierFor, supplierMatch, vatCheck, duplicatesOf,
   readDocument, readSoon, readMissing, learnFromSave, layoutFor, hintsFor, insights, accuracyReport, fixtureFor, reprocess,
-  cleanLabels, teachSpots, supplierDetail, teach, forget, setLabels,
+  cleanLabels, teachSpots, supplierDetail, teach, forget, setLabels, cleanDueTerms, setDueTerms,
 };
