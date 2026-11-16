@@ -11,8 +11,9 @@ import crypto from 'crypto';
 //
 // The stage (quoted, won, invoiced, cancelled) is worked out from which of
 // these are filled in (jobRegisterService.stageOf), so it can't disagree with
-// them. Nothing here is written to KashFlow: the register page matches each
-// number against the synced REST quotes, projects and invoices instead.
+// them. The register page matches each number against the synced REST
+// quotes, projects and invoices. KashFlow is only written by the optional
+// Create in KashFlow buttons (jobRegisterKashflowService).
 const jobRegisterSchema = new mongoose.Schema({
   uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
 
@@ -51,6 +52,14 @@ const jobRegisterSchema = new mongoose.Schema({
   // The contract that runs the job on site, once it has one. A won job with
   // no contract is a "job for allocation" on the weekly sheet.
   contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'contract' },
+
+  // Create in KashFlow: when the quote / project was created there from this
+  // row (so it isn't offered again), and the claim held while a create is in
+  // flight (so a double press can't make two).
+  quoteSentAt: { type: Date },
+  projectSentAt: { type: Date },
+  quoteSendingAt: { type: Date },
+  projectSendingAt: { type: Date },
 }, { timestamps: true });
 
 jobRegisterSchema.index({ quoteNumber: 1 }, { unique: true, partialFilterExpression: { quoteNumber: { $type: 'number' } } });

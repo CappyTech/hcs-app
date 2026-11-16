@@ -1,6 +1,7 @@
 <%#
   One Job Register row: its KashFlow checks and the form to change it.
-  Locals: entry, stage, stageLabels, match, next, clients, contracts, customers: locals.customers || [], crumbs, title
+  Locals: entry, stage, stageLabels, match, next, clients, contracts, customers: locals.customers || [], crumbs, title,
+  canCreate ({ quote, project }: show the Create in KashFlow buttons)
 %>
 <%
   const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
@@ -18,6 +19,7 @@
     none: 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900',
   };
   const stateText = { ok: 'In KashFlow and agrees', missing: "Not in KashFlow yet, or not synced", differs: 'In KashFlow but differs', none: 'No number yet' };
+  const can = locals.canCreate || {};
   const sides = match ? [
     ['Quote', entry.quoteNumber, match.quote, '/quote/read/', (r) => `${fmt(r.Date)} · ${r.CustomerName || ''} · ${money(r.NetAmount)}${r.Status ? ' · ' + r.Status : ''}`],
     ['Project', entry.projectNumber, match.project, '/project/read/', (r) => `${r.Name || ''} · ${r.CustomerName || ''}${r.Status ? ' · ' + r.Status : ''}`],
@@ -47,6 +49,18 @@
             <a href="<%= href %><%= s.record.uuid %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Open in hcs-app</a>
           <% } %>
           <% s.issues.forEach((issue) => { %><p class="text-xs text-red-700 dark:text-red-400 mt-1"><%= issue %></p><% }) %>
+          <% const sentAt = name === 'Quote' ? entry.quoteSentAt : name === 'Project' ? entry.projectSentAt : null; %>
+          <% if (sentAt) { %>
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-2"><i class="bi bi-cloud-check" aria-hidden="true"></i> Created in KashFlow from here on <%= fmt(sentAt) %>.</p>
+          <% } else if (name === 'Quote' && s.state === 'missing' && can.quote) { %>
+            <a href="/job-register/<%= entry.uuid %>/kashflow-quote" class="<%= secondaryBtn %> mt-3"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Create in KashFlow</a>
+          <% } else if (name === 'Project' && s.state === 'missing' && can.project) { %>
+            <form method="POST" action="/job-register/<%= entry.uuid %>/kashflow-project" class="mt-3">
+              <%- include('../partials/csrfHidden') %>
+              <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Creates project <span class="font-mono"><%= entry.projectNumber %></span> named <em><%= entry.site %></em> for <%= entry.client %><%= entry.jobDate ? `, starting ${fmt(entry.jobDate)}` : '' %>. If the number is taken in KashFlow, KashFlow picks the next and this row changes to match.</p>
+              <button type="submit" class="<%= secondaryBtn %>"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Create in KashFlow</button>
+            </form>
+          <% } %>
         </div>
       <% }) %>
     </div>

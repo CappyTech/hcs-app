@@ -42,6 +42,11 @@ router.post(
   authService.ensureGroup('commercial', 'edit', 'admin'),
   ctrl.postFillNextEdit,
 );
+// Create in KashFlow: the row's quote (with lines from the form) or project.
+// The same people who edit the register.
+router.get('/job-register/:uuid/kashflow-quote', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.getKashflowQuote);
+router.post('/job-register/:uuid/kashflow-quote', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.postKashflowQuote);
+router.post('/job-register/:uuid/kashflow-project', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.postKashflowProject);
 router.get(
   '/job-register/:uuid',
   authService.ensureGroup([{ group: 'commercial', level: 'view' }, { group: 'finance', level: 'view' }], null, 'admin', 'accountant'),

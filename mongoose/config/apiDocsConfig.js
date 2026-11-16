@@ -2953,6 +2953,7 @@ const apiDocs = [
         },
         notes: [
           'Response adds HomeCurrencyGrossAmount, PreviousNumber, NextNumber, Permalink, CustomerId, CustomerName, NetAmount, VATAmount, ProjectName, FileCount, IsEmailSent, Currency.Name/Symbol/DisplaySymbolOnRight, LineItems.ProductName, and Addresses/DeliveryAddresses.CountryName — all server-resolved or computed.',
+          'Used by the Job Register "Create in KashFlow" quote button (jobRegisterKashflowService). It sends Number, Date, CustomerCode, CustomerReference and LineItems (Description, Quantity, Rate, VATLevel, VATAmount, NominalCode). It checks GET /quotes/{number} first: if another customer has the number it omits Number so KashFlow picks one, and reads the chosen Number back from the response.',
         ],
       },
       {
@@ -6183,7 +6184,9 @@ const apiDocs = [
           description: 'Created project. Full detail shape — see GET /projects/{number} for field descriptions. Response adds Id, CustomerName, AssociatedQuotesCount, and all Actual*/WorkInProgress aggregated fields.',
           fields: [],
         },
-        notes: [],
+        notes: [
+          'Used by the Job Register "Create in KashFlow" project button (jobRegisterKashflowService). It sends Number, Name (the site), CustomerCode, StartDate (the job date), Description and Reference. It checks GET /projects/{number} first: if another customer has the number it omits Number so KashFlow picks one.',
+        ],
       },
       {
         id: 'projects-update',

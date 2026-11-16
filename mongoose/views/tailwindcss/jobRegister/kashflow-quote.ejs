@@ -1,0 +1,116 @@
+<%#
+  Create a Job Register row's quote in KashFlow: the lines, with the register's
+  price beside the lines' total so they can be made to agree before sending.
+  No script: Add line and Update totals post the form back.
+  Locals: entry, values { date, reference, lines[] }, errors, totals { net, vat, gross },
+  nominals [{ code, name }], defaultNominal, vatChoices, crumbs, title
+%>
+<%
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
+  const h2 = 'font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const base = 'w-full text-sm border rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const input = (key) => `${base} ${errors[key] ? 'border-red-400 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'}`;
+  const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
+  const label = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
+  const money = (v) => v == null ? '' : '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const err = (key) => errors[key] ? `<p class="text-xs text-red-700 dark:text-red-400 mt-1">${errors[key]}</p>` : '';
+  const lines = values.lines && values.lines.length ? values.lines : [{}];
+  const registerValue = entry.value != null ? Number(entry.value) : null;
+  const diff = registerValue != null ? Math.round((totals.net - registerValue) * 100) / 100 : null;
+%>
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs, current: 'Create in KashFlow' }) %>
+
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %></h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><%= entry.site %> &middot; <%= entry.client %> <span class="font-mono">(<%= entry.customerCode %>)</span></p>
+    </div>
+    <a href="/job-register/<%= entry.uuid %>" class="<%= secondaryBtn %>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to the row</a>
+  </div>
+
+  <form method="POST" action="/job-register/<%= entry.uuid %>/kashflow-quote" class="grid lg:grid-cols-3 gap-4">
+    <%- include('../partials/csrfHidden') %>
+    <input type="hidden" name="defaultNominal" value="<%= defaultNominal ?? '' %>">
+    <%# Enter in a box updates the totals, never creates the quote: the form's first submit button %>
+    <button type="submit" name="action" value="totals" class="sr-only" tabindex="-1" aria-hidden="true">Update totals</button>
+
+    <div class="lg:col-span-2 space-y-4">
+      <div class="<%= card %> p-4">
+        <h2 class="<%= h2 %> mb-3">Quote</h2>
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div>
+            <span class="<%= label %>">Number</span>
+            <p class="text-sm font-mono py-2 text-gray-900 dark:text-gray-100"><%= entry.quoteNumber %></p>
+          </div>
+          <label class="block">
+            <span class="<%= label %>">Date</span>
+            <input type="date" name="date" value="<%= values.date %>" class="<%= input('date') %>" required>
+            <%- err('date') %>
+          </label>
+          <label class="block">
+            <span class="<%= label %>">Client's reference</span>
+            <input name="reference" value="<%= values.reference %>" maxlength="100" class="<%= input('reference') %>">
+          </label>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">If quote <%= entry.quoteNumber %> is taken in KashFlow by another client, KashFlow picks the next number and this row changes to match.</p>
+      </div>
+
+      <div class="<%= card %> p-4" id="lines">
+        <h2 class="<%= h2 %> mb-1">Lines</h2>
+        <p class="text-xs text-gray-400 mb-3">Prices are net. Clear every box on a line to remove it.</p>
+        <%- err('lines') %>
+        <div class="space-y-3">
+          <% lines.forEach((l, i) => { const p = (k) => `lines.${i}.${k}`; const q = Number(l.quantity || 1), r = Number(l.rate); %>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+              <div class="flex justify-between text-xs text-gray-400">
+                <span>Line <%= i + 1 %></span>
+                <% if (Number.isFinite(q) && Number.isFinite(r) && l.rate !== '' && l.rate != null) { %><span>Net <%= money(q * r) %></span><% } %>
+              </div>
+              <input name="lines[<%= i %>][description]" value="<%= l.description || '' %>" placeholder="Description" aria-label="Line <%= i + 1 %> description" maxlength="500" class="<%= input(p('description')) %>">
+              <%- err(p('description')) %>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <input name="lines[<%= i %>][quantity]" value="<%= l.quantity || '' %>" placeholder="Qty" inputmode="decimal" aria-label="Line <%= i + 1 %> quantity" class="<%= input(p('quantity')) %>">
+                <input name="lines[<%= i %>][rate]" value="<%= l.rate || '' %>" placeholder="Price £ (net)" inputmode="decimal" aria-label="Line <%= i + 1 %> price, net" class="<%= input(p('rate')) %>">
+                <select name="lines[<%= i %>][vat]" aria-label="Line <%= i + 1 %> VAT" class="<%= input(p('vat')) %>">
+                  <% vatChoices.forEach((c) => { %><option value="<%= c.value %>" <%= (l.vat || '20') === c.value ? 'selected' : '' %>>VAT <%= c.label %></option><% }) %>
+                </select>
+                <select name="lines[<%= i %>][nominal]" aria-label="Line <%= i + 1 %> nominal" class="<%= input(p('nominal')) %>">
+                  <option value="">Nominal…</option>
+                  <% nominals.forEach((n) => { %><option value="<%= n.code %>" <%= String(l.nominal || '') === String(n.code) ? 'selected' : '' %>><%= n.code %> <%= n.name %></option><% }) %>
+                </select>
+              </div>
+              <%- err(p('quantity')) %><%- err(p('rate')) %><%- err(p('vat')) %><%- err(p('nominal')) %>
+            </div>
+          <% }) %>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button type="submit" name="action" value="addLine" class="<%= secondaryBtn %>"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add line</button>
+          <button type="submit" name="action" value="totals" class="<%= secondaryBtn %>"><i class="bi bi-calculator" aria-hidden="true"></i> Update totals</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div class="<%= card %> p-4 text-sm space-y-1">
+        <h2 class="<%= h2 %> mb-2">Price</h2>
+        <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Register value (net)</span><span><%= registerValue != null ? money(registerValue) : 'none' %></span></div>
+        <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+        <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Lines net</span><span><%= money(totals.net) %></span></div>
+        <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">VAT</span><span><%= money(totals.vat) %></span></div>
+        <div class="flex justify-between font-medium text-gray-900 dark:text-white"><span>Quote total</span><span><%= money(totals.gross) %></span></div>
+        <% if (diff != null && Math.abs(diff) >= 0.01) { %>
+          <p class="text-xs text-amber-700 dark:text-amber-400 mt-2" data-price-differs><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> The lines come to <%= money(Math.abs(diff)) %> <%= diff > 0 ? 'more' : 'less' %> than the register value. The register will show the quote as differing until they agree.</p>
+        <% } else if (diff != null) { %>
+          <p class="text-xs text-green-700 dark:text-green-400 mt-2"><i class="bi bi-check2-circle" aria-hidden="true"></i> The lines agree with the register value.</p>
+        <% } %>
+        <p class="text-xs text-gray-400 mt-2">Worked out from the boxes when the page was last shown: press Update totals after changing them.</p>
+      </div>
+      <div class="<%= card %> p-4">
+        <button type="submit" name="action" value="create" class="<%= primaryBtn %> w-full"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Create quote in KashFlow</button>
+        <p class="text-xs text-gray-400 mt-2">Creates the quote for <%= entry.client %> in KashFlow straight away. It can't be undone from here: change or delete it in KashFlow.</p>
+      </div>
+    </div>
+  </form>
+</div>
