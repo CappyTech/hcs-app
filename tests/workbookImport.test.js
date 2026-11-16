@@ -499,3 +499,16 @@ describe('Import pages', () => {
     assert.doesNotMatch(html, /<script/);
   });
 });
+
+describe('Import buttons', () => {
+  // The layout gives views `isAdmin` (app.js), not `user`, so the button must key off that
+  it('show on the Job Register and weekly sheet for admins only', async () => {
+    const fs = await import('node:fs');
+    for (const [file, href] of [['jobRegister/index.ejs', '/job-register/import'], ['attendance/weekly-sheet.ejs', '/weekly-sheet/import']]) {
+      const src = fs.readFileSync(path.join(root, 'mongoose/views/tailwindcss', file), 'utf8');
+      const at = src.indexOf(`href="${href}"`);
+      assert.ok(at > 0, `${file} links to ${href}`);
+      assert.match(src.slice(Math.max(0, at - 200), at), /typeof isAdmin !== 'undefined' && isAdmin/);
+    }
+  });
+});
