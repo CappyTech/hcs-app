@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.119.1] - 2026-11-16
+
+### Changed
+- **Weekly sheet: Import workbook moved to the bottom of the page.** It sat next to Next week, so it was easy to hit by mistake.
+
 ## [6.119.0] - 2026-11-16
 
 ### Added

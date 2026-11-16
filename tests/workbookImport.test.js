@@ -520,8 +520,14 @@ describe('Import buttons', () => {
       const src = fs.readFileSync(path.join(root, 'mongoose/views/tailwindcss', file), 'utf8');
       const at = src.indexOf(`href="${href}"`);
       assert.ok(at > 0, `${file} links to ${href}`);
-      assert.match(src.slice(Math.max(0, at - 200), at), /typeof isAdmin !== 'undefined' && isAdmin/);
+      assert.match(src.slice(Math.max(0, at - 500), at), /typeof isAdmin !== 'undefined' && isAdmin/);
     }
+  });
+
+  it('keeps the weekly sheet import away from the week buttons', async () => {
+    const fs = await import('node:fs');
+    const src = fs.readFileSync(path.join(root, 'mongoose/views/tailwindcss/attendance/weekly-sheet.ejs'), 'utf8');
+    assert.ok(src.indexOf('href="/weekly-sheet/import"') > src.indexOf('Vehicles'), 'import link sits at the bottom, after the side panels');
   });
 });
 
