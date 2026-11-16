@@ -46,7 +46,7 @@
     </div>
     <div class="flex flex-wrap gap-2 print:hidden">
       <a href="<%= withGroup(`/weekly-sheet/${week.previous}`) %>" class="<%= secondaryBtn %>"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous week</a>
-      <% if (week.monday !== week.thisWeek) { %><a href="<%= withGroup('/weekly-sheet') %>" class="<%= secondaryBtn %>">This week</a><% } %>
+      <% if (week.monday !== week.thisWeek) { %><a href="<%= withGroup('/weekly-sheet') %>" class="<%= secondaryBtn %>">This week</a><% } else { %><span class="<%= secondaryBtn %> opacity-50 cursor-default pointer-events-none" aria-disabled="true" aria-current="page">This week</span><% } %>
       <a href="<%= withGroup(`/weekly-sheet/${week.next}`) %>" class="<%= secondaryBtn %>">Next week <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
     </div>
   </div>
