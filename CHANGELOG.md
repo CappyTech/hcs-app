@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.113.1] - 2026-11-16
+
+### Fixed
+- **The Import workbook button shows for admins** on the Job Register and the weekly sheet. It checked a `user` the pages aren't given, so it never appeared; it now uses `isAdmin`, as the layout provides. The import pages themselves were reachable by URL.
+
 ## [6.113.0] - 2026-11-16
 
 ### Added
