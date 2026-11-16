@@ -131,7 +131,7 @@ export function sameLines(typed, found) {
 }
 
 // A date inside a phrase: "Payment due by 29 August 2026", "Due on 29/08/2026"
-const DATE_IN = /\b\d{1,2}(?:st|nd|rd|th)?[\s-]+[a-z]{3,9}\.?,?[\s-]+\d{2,4}\b|\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{4}-\d{1,2}-\d{1,2}\b/gi;
+const DATE_IN = /\b\d{1,2}(?:st|nd|rd|th)?[\s-]+[a-z]{3,9}\.?,?[\s-]+\d{2,4}\b|\b[a-z]{3,9}\.?[\s-]+\d{1,2}(?:st|nd|rd|th)?,?[\s-]+\d{4}\b|\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{4}-\d{1,2}-\d{1,2}\b/gi;
 const dateIn = (text) => {
   for (const m of text.matchAll(DATE_IN)) {
     const d = parseDate(m[0]);

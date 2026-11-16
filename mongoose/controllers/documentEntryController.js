@@ -210,7 +210,11 @@ export const postEntry = async (req, res, next) => {
     }
 
     // Learn where this supplier puts each value, after the response has gone
-    if (kind === 'invoice') setImmediate(() => { readingSvc.learnFromSave(id).catch(() => {}); });
+    // from where each value was picked on the PDF, when it was
+    if (kind === 'invoice') {
+      const picks = readingSvc.parsePicks(req.body.picks);
+      setImmediate(() => { readingSvc.learnFromSave(id, {}, { picks }).catch(() => {}); });
+    }
 
     if (action === 'addLine') return res.redirect(`${entryUrl(id)}?extraLines=1#lines`);
 

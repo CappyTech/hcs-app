@@ -26,7 +26,7 @@ import logger from '../../../services/loggerService.js';
 import { refreshTypeCheck } from './documentTypeCheck.js';
 import { parseCorrespondentName } from './correspondentName.js';
 import {
-  findFields, locateValue, normalise, toItems, FIELDS,
+  findFields, locateAll, normalise, toItems, FIELDS,
 } from '../../../public/js/invoice-field-finder.js';
 import {
   findLines, fillMissingRates, findPaymentTerms, findVatNumbers, normaliseVatNumber,
@@ -35,7 +35,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Bump when the reader changes enough that stored readings should be redone
-export const READER_VERSION = 7; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25"); 5: day-by-day subcontractor lines, CIS deductions not VAT or the total; 6: headings with the currency ("Unit Price (£)"), reverse charge note ends the lines, "Payment due by …"; 7: VAT-inclusive unit prices become net (Screwfix), totals headings over two rows above the lines
+export const READER_VERSION = 8; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25"); 5: day-by-day subcontractor lines, CIS deductions not VAT or the total; 6: headings with the currency ("Unit Price (£)"), reverse charge note ends the lines, "Payment due by …"; 7: VAT-inclusive unit prices become net (Screwfix), totals headings over two rows above the lines; 8: month-first dates ("November 11, 2026")
 export const MAX_PAGES = 5;
 export const HEADER_FIELDS = FIELDS.map((f) => f.field);
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));
@@ -192,6 +192,66 @@ export function compareReading(reading, entry) {
     else out[f] = normalise(TYPE[f], got) === normalise(TYPE[f], want) ? 'matched' : 'corrected';
   }
   return out;
+}
+
+// ── Which copy of a saved value to learn ─────────────────────────────
+
+// How far (PDF points) a picked spot may be from the text it names
+const PICK_NEAR = 20;
+const centre = (b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+const gap = (a, b) => { const p = centre(a); const q = centre(b); return Math.hypot(p.x - q.x, p.y - q.y); };
+const nearest = (matches, box) => matches
+  .filter((mt) => mt.box.page === box.page)
+  .map((mt) => ({ mt, d: gap(mt.box, box) }))
+  .sort((a, b) => a.d - b.d)[0] || null;
+
+/**
+ * picks[field] from the entry form, "page,x,y,w,h": where the value was clicked
+ * or the suggestion used. Anything malformed is dropped.
+ */
+export function parsePicks(body) {
+  const out = {};
+  if (!body || typeof body !== 'object') return out;
+  for (const f of HEADER_FIELDS) {
+    const raw = body[f];
+    if (typeof raw !== 'string' || raw.length > 80) continue;
+    const n = raw.split(',').map(Number);
+    if (n.length !== 5 || !n.every(Number.isFinite) || !Number.isInteger(n[0]) || n[0] < 1 || n[3] < 0 || n[4] < 0) continue;
+    const [page, x, y, w, h] = n;
+    out[f] = { page, x, y, w, h };
+  }
+  return out;
+}
+
+/** Is a match on one of the line-item rows the reader found? */
+const onALine = (box, lines) => (lines || []).some((l) => l.box && l.box.page === box.page
+  && centre(box).y >= l.box.y && centre(box).y <= l.box.y + l.box.h);
+
+/**
+ * Where to learn a saved value from, when it appears more than once (a
+ * one-line invoice prints the same amount as the line, the goods and the
+ * total). Best first: where it was picked; where the reader found it by its
+ * label; for amounts, the last copy that isn't on a line item; the first.
+ */
+export function chooseSpot(matches, { pick = null, guess = null, lines = null, type = null } = {}) {
+  if (!matches.length) return null;
+  if (pick) {
+    const n = nearest(matches, pick);
+    if (n && n.d <= PICK_NEAR) return n.mt;
+  }
+  if (matches.length === 1) return matches[0];
+  // A guess from the learned layout would only confirm itself; one from a label is evidence
+  if (guess?.box && !guess.learned) {
+    const n = nearest(matches, guess.box);
+    if (n && n.d <= PICK_NEAR) return n.mt;
+  }
+  if (type === 'money') {
+    // Totals sit under the lines: the lowest copy on the last page it's on (PDF y runs upwards)
+    const off = matches.filter((mt) => !onALine(mt.box, lines))
+      .sort((a, b) => b.box.page - a.box.page || a.box.y - b.box.y);
+    if (off.length) return off[0];
+  }
+  return matches[0];
 }
 
 // ── Checks against KashFlow data ─────────────────────────────────────
@@ -419,8 +479,9 @@ export async function readMissing({ limit = 20 } = {}, deps = {}) {
 /**
  * After a save: learn where this supplier puts each field, and score the
  * reading against what was saved. Never throws; runs after the response.
+ * @param {object} [opts] { picks }: field → box the value was picked from (parsePicks)
  */
-export async function learnFromSave(paperlessId, deps = {}) {
+export async function learnFromSave(paperlessId, deps = {}, { picks = {} } = {}) {
   try {
     const d = withDeps(deps);
     if (d.connect) await d.connect();
@@ -439,7 +500,9 @@ export async function learnFromSave(paperlessId, deps = {}) {
     const saved = savedValues(fresh.entry);
     const found = {};
     for (const f of HEADER_FIELDS) {
-      const at = saved[f] ? locateValue(items, f, saved[f]) : null;
+      const at = saved[f] ? chooseSpot(locateAll(items, f, saved[f]), {
+        pick: picks[f], guess: fresh.reading?.fields?.[f], lines: fresh.reading?.lines, type: TYPE[f],
+      }) : null;
       if (at) found[f] = at.box;
     }
     if (!Object.keys(found).length) return outcome;
@@ -682,7 +745,7 @@ export async function reprocess(paperlessId, deps = {}) {
 
 export default {
   READER_VERSION, HEADER_FIELDS, extractItems, summarise, packItem, unpackItem,
-  layoutFromSpots, mergeSpots, savedValues, compareReading,
+  layoutFromSpots, mergeSpots, savedValues, compareReading, parsePicks, chooseSpot,
   supplierFor, supplierMatch, vatCheck, duplicatesOf,
   readDocument, readSoon, readMissing, learnFromSave, layoutFor, hintsFor, insights, accuracyReport, fixtureFor, reprocess,
   cleanLabels, teachSpots, supplierDetail, teach, forget, setLabels,
