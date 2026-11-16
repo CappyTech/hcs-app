@@ -174,6 +174,47 @@ describe('lines sent to KashFlow match the invoice line totals', () => {
     assert.deepEqual([p.LineItems[0].Quantity, p.LineItems[0].Rate], [1, 18]);
   });
 
+  it('take up VAT-inclusive rounding of a penny a line, a penny on each line, so the lines match the invoice', () => {
+    // Supplier prices include VAT: Net = Gross / 1.2 and VAT = Gross - Net, so
+    // three lines carry a penny more VAT than Net x 20% rounded (3p in all)
+    const ocr = {
+      paperlessId: 3,
+      customFields: [],
+      entry: {
+        savedAt: new Date(), invoiceNumber: 'T-3', totalGoods: 54.45, totalVat: 10.91, invoiceTotal: 65.36,
+        lines: [
+          { description: 'A', quantity: 1, price: 4.24, total: 4.24, vatRate: 20 },
+          { description: 'B', quantity: 1, price: 30.82, total: 30.82, vatRate: 20 },
+          { description: 'C', quantity: 1, price: 3.57, total: 3.57, vatRate: 20 },
+          { description: 'D', quantity: 1, price: 15.82, total: 15.82, vatRate: 20 },
+        ],
+      },
+    };
+    const d = buildPurchaseDraftFromOcr(ocr);
+    assert.deepEqual(d.LineItems.map((l) => l.VATAmount), [0.85, 6.17, 0.72, 3.17]);
+    assert.deepEqual(d.LineItems.map((l) => l.GrossAmount), [5.09, 36.99, 4.29, 18.99]);
+    assert.equal(lineTotalsProblem(d), null);
+    const kf = kashflowLineTotals(buildKashFlowPayloadFromDraft(d));
+    assert.deepEqual([kf.net, kf.vat], [54.45, 10.91]);
+  });
+
+  it('leave lines alone when the VAT gap is more than a penny a line', () => {
+    const ocr = {
+      paperlessId: 4,
+      customFields: [],
+      entry: {
+        savedAt: new Date(), invoiceNumber: 'T-4', totalGoods: 20, totalVat: 4.05, invoiceTotal: 24.05,
+        lines: [
+          { description: 'A', quantity: 1, price: 10, total: 10, vatRate: 20 },
+          { description: 'B', quantity: 1, price: 10, total: 10, vatRate: 20 },
+        ],
+      },
+    };
+    const d = buildPurchaseDraftFromOcr(ocr);
+    assert.deepEqual(d.LineItems.map((l) => l.VATAmount), [2, 2]);
+    assert.match(lineTotalsProblem(d), /VAT 4\.00 \(invoice 4\.05\)/);
+  });
+
   it('refuse a draft whose lines were short of the typed totals, even though its header was aligned to them', () => {
     const ocr = {
       paperlessId: 2,
