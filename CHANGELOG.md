@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.111.6] - 2026-11-16
+
+### Fixed
+- **Attendance list shows the project's name instead of "[Object]".** The project column looks a project up by its record id or its KashFlow number. The record ids couldn't be read as numbers, so the whole lookup failed and the raw id was shown. Each lookup field is now only asked for the values it can hold. This fixes every list column that looks records up by more than one field.
+
 ## [6.111.5] - 2026-11-12
 
 ### Fixed

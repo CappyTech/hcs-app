@@ -33,6 +33,32 @@ const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
 const listController = {};
 
+/**
+ * The query a field transform runs to find the records its values point at.
+ * A transform can match on several fields of different types (a project by
+ * its Mongo _id or its KashFlow numeric Id), and Mongoose rejects the whole
+ * query when one value can't be cast to a field's type, which left the
+ * column showing raw ids. Each field is only asked for the values its type
+ * can hold; returns null when no field can hold any of them.
+ */
+export const buildLookupFilter = (model, matchFields, values) => {
+  const or = [];
+  for (const f of matchFields) {
+    const type = model?.schema?.path?.(f)?.instance;
+    let vals = values;
+    if (type === 'Number') {
+      vals = values
+        .map((v) => (typeof v === 'number' ? v : /^\s*-?\d+(\.\d+)?\s*$/.test(String(v)) ? Number(v) : NaN))
+        .filter((n) => Number.isFinite(n));
+    } else if (type === 'ObjectId') {
+      vals = values.filter((v) => /^[0-9a-fA-F]{24}$/.test(String(v && v._id ? v._id : v)));
+    }
+    if (vals.length) or.push({ [f]: { $in: vals } });
+  }
+  if (!or.length) return null;
+  return or.length === 1 ? or[0] : { $or: or };
+};
+
 const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
 // Resolve configuration with case-insensitive + singular fallbacks
@@ -479,8 +505,8 @@ function countActiveFilters(req, filterConfigs) {
             if (!fromModel || typeof fromModel.find !== "function") continue;
             // Prepare values array with proper types (use originals to preserve ObjectId type when needed)
             const values = Array.from(keys).map((k) => originals.get(k));
-            const or = matchFields.map((f) => ({ [f]: { $in: values } }));
-            const filter = or.length === 1 ? or[0] : { $or: or };
+            const filter = buildLookupFilter(fromModel, matchFields, values);
+            if (!filter) continue;
             const docs = await fromModel.find(filter).lean();
             const index = new Map();
             docs.forEach((d) => {
@@ -808,8 +834,8 @@ for (const [aliasName, aliasConfig] of Object.entries(listControllerConfig)) {
             (mdb.REST && mdb.REST[fromModelName]);
           if (!fromModel || typeof fromModel.find !== "function") continue;
           const values = Array.from(keys).map((k) => originals.get(k));
-          const or = matchFields.map((f) => ({ [f]: { $in: values } }));
-          const filter = or.length === 1 ? or[0] : { $or: or };
+          const filter = buildLookupFilter(fromModel, matchFields, values);
+          if (!filter) continue;
           const docs = await fromModel.find(filter).lean();
           const index = new Map();
           docs.forEach((d) => {
