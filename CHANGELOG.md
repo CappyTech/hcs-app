@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.123.0] - 2026-11-16
+
+### Added
+- **Policies card on the employee page.** `/employee/read/:uuid` now lists the documents assigned to that employee in Company Docs (contract, onboarding pack and so on), with View and, for Documents editors, Edit links and a New document button that preselects the employee. Documents viewers also see draft/published status and review warnings.
+- The employee themself sees their own published documents on their page and can open (print) them; drafts, other people's documents and company-wide policies stay behind Documents view.
+
 ## [6.122.0] - 2026-11-16
 
 ### Added

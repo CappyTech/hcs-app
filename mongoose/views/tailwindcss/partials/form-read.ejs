@@ -164,6 +164,11 @@
     </div>
   </div><!-- /main card -->
 
+  <!-- Policies (employee: documents assigned in Company Docs) -->
+  <% if (typeof employeePolicies !== 'undefined' && employeePolicies) { %>
+    <%- include('_employee-policies-card', { item, employeePolicies }) %>
+  <% } %>
+
   <!-- Documents -->
   <% if (config?.handlesDocuments) { %>
     <%- include('_documents-card', { item, basePath }) %>

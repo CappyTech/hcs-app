@@ -19,6 +19,7 @@ router.post('/company-docs/policies',              edit, ctrl.postCreatePolicy);
 router.get('/company-docs/policies/:uuid/edit',    edit, ctrl.getEditPolicy);
 router.post('/company-docs/policies/:uuid',        edit, ctrl.postEditPolicy);
 router.post('/company-docs/policies/:uuid/delete', approve, ctrl.postDeletePolicy);
-router.get('/company-docs/policies/:uuid/print',   view, ctrl.getPrintPolicy);
+// The assigned employee may also print their own published document.
+router.get('/company-docs/policies/:uuid/print',   ctrl.ensureCanPrintPolicy(view), ctrl.getPrintPolicy);
 
 export default router;

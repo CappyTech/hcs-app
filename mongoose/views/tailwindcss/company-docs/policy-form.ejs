@@ -41,7 +41,7 @@
             <option value="">Company-wide (no specific employee)</option>
             <% employees.forEach(emp => { %>
               <% const empId = emp._id.toString(); %>
-              <option value="<%= empId %>" <%= policy && policy.employee && policy.employee.toString() === empId ? 'selected' : '' %>><%= emp.name %></option>
+              <option value="<%= empId %>" <%= (policy && policy.employee && policy.employee.toString() === empId) || (!policy && typeof preselectEmployee !== 'undefined' && preselectEmployee === empId) ? 'selected' : '' %>><%= emp.name %></option>
             <% }) %>
           </select>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">For individual documents like a contract or onboarding pack. Leave as company-wide for general policies.</p>
