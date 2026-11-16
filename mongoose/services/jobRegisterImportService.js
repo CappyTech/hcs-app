@@ -18,7 +18,7 @@
 // Everything above "Database" is pure, for testing without a database.
 import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
-import { clientKey } from './jobRegisterService.js';
+import { clientKey, customerChoices } from './jobRegisterService.js';
 import store from './workbookImportStore.js';
 
 const QUOTE_COLS = { date: 1, number: 2, site: 3, client: 4, contact: 5, value: 6, description: 7, invoice: 8, invoiceDate: 9 };
@@ -26,7 +26,7 @@ const JOB_COLS = { number: 0, date: 1, site: 2, client: 3, contact: 4, value: 5,
 const LIMITS = { site: 300, client: 200, contact: 200, description: 300, clientRef: 100, notes: 2000 };
 
 // Fields the import may fill in on a row already in the register
-const FILLABLE = ['quoteNumber', 'quoteDate', 'projectNumber', 'jobDate', 'site', 'client', 'contact', 'value',
+const FILLABLE = ['quoteNumber', 'quoteDate', 'projectNumber', 'jobDate', 'site', 'customerCode', 'client', 'contact', 'value',
   'description', 'clientRef', 'invoiceNumber', 'invoiceDate', 'notes'];
 const DATE_FIELDS = ['quoteDate', 'jobDate', 'invoiceDate'];
 
@@ -307,6 +307,83 @@ export function parseJobRegWorkbook(sheets) {
   };
 }
 
+// ── Clients → KashFlow customers ────────────────────────────────────────
+
+/** The distinct clients written on the sheets, by clientKey, in name order. Pure. */
+export function sheetClients(entries = []) {
+  const m = new Map();
+  for (const e of entries) {
+    const key = clientKey(e.client);
+    if (!key) continue;
+    const c = m.get(key) || m.set(key, { key, spellings: new Map(), count: 0 }).get(key);
+    c.count++;
+    const name = String(e.client).trim().replace(/\s+/g, ' ');
+    c.spellings.set(name, (c.spellings.get(name) || 0) + 1);
+  }
+  return [...m.values()]
+    .map((c) => ({ key: c.key, label: [...c.spellings.entries()].sort((a, b) => b[1] - a[1])[0][0], count: c.count }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * A sheet client's suggested KashFlow customer code, or ''. Same name (case
+ * and spacing aside) wins; else the one customer whose name starts with the
+ * sheet's (word for word), or whose name the sheet's starts with ("Plus Dane
+ * MAJ" → "Plus Dane"). customers: [{ code, name }]. Pure.
+ */
+export function suggestCustomer(label, customers = []) {
+  const k = clientKey(label);
+  if (!k) return '';
+  const byName = (c) => clientKey(c.name);
+  const exact = customers.filter((c) => byName(c) === k);
+  if (exact.length === 1) return exact[0].code;
+  const starts = customers.filter((c) => `${byName(c)} `.startsWith(`${k} `));
+  if (starts.length === 1) return starts[0].code;
+  const within = customers.filter((c) => byName(c) && `${k} `.startsWith(`${byName(c)} `));
+  if (within.length === 1) return within[0].code;
+  return '';
+}
+
+/**
+ * Each sheet client with the customer chosen for it: as saved, else the
+ * suggestion. Only codes of known customers count; '' means "don't import".
+ */
+export function clientMapping(staged, customers = []) {
+  const codes = new Set(customers.map((c) => c.code));
+  const saved = staged.saved && staged.choices?.clients && typeof staged.choices.clients === 'object' ? staged.choices.clients : null;
+  return sheetClients(staged.parsed.entries).map((c, index) => {
+    const has = saved && Object.prototype.hasOwnProperty.call(saved, String(index));
+    const pick = has ? String(saved[String(index)]) : suggestCustomer(c.label, customers);
+    return { ...c, index, code: pick && codes.has(pick) ? pick : '', suggested: !has };
+  });
+}
+
+/** The submitted client choices (client_<i>) as { [index]: code | '' }, known codes only. Pure. */
+export function readClientChoices(body = {}, clients = [], customers = []) {
+  const codes = new Set(customers.map((c) => c.code));
+  const out = {};
+  clients.forEach((_, i) => {
+    const v = body[`client_${i}`];
+    if (v === undefined) return;
+    out[i] = codes.has(String(v)) ? String(v) : '';
+  });
+  return out;
+}
+
+/**
+ * Entries with their client set to the chosen customer (code and KashFlow
+ * name), or marked unmatchedClient when none was chosen. Pure.
+ */
+export function applyClients(entries, mapping, customers = []) {
+  const nameOf = new Map(customers.map((c) => [c.code, c.name]));
+  const codeByKey = new Map(mapping.map((m) => [m.key, m.code]));
+  return entries.map((e) => {
+    const code = codeByKey.get(clientKey(e.client));
+    if (!code) return { ...e, unmatchedClient: true };
+    return { ...e, sheetClient: e.client, customerCode: code, client: nameOf.get(code) || e.client };
+  });
+}
+
 // ── Planning against the register ───────────────────────────────────────
 
 const blank = (v) => v == null || v === '';
@@ -319,7 +396,13 @@ const sameValue = (a, b) => {
 /**
  * What the import would do with each entry, given the register as it is.
  * existing: register rows (lean) with quoteNumber/projectNumber.
- * Each plan item is { action: 'create' | 'update' | 'same' | 'conflict', entry, fill, existing, reason }.
+ * Each plan item is { action: 'create' | 'update' | 'same' | 'conflict' | 'skip', entry, fill, existing, reason, overwrite }.
+ * 'skip' is a row whose client wasn't matched to a KashFlow customer.
+ *
+ * An existing row that came from an import and hasn't been edited by hand
+ * since (importId set, no editedAt) is overwritten with the sheet's values
+ * where they differ (overwrite: true); any other row only has its empty
+ * fields filled in. A blank on the sheet never clears a field.
  */
 export function planImport(entries, existing) {
   const byQuote = new Map();
@@ -329,6 +412,7 @@ export function planImport(entries, existing) {
     if (e.projectNumber != null) byProject.set(Number(e.projectNumber), e);
   }
   return entries.map((entry) => {
+    if (entry.unmatchedClient) return { action: 'skip', entry, reason: `Client “${entry.client}” isn't matched to a KashFlow customer` };
     const pRow = entry.projectNumber != null ? byProject.get(entry.projectNumber) : null;
     const qRow = entry.quoteNumber != null ? byQuote.get(entry.quoteNumber) : null;
     if (pRow && qRow && String(pRow._id) !== String(qRow._id)) {
@@ -342,20 +426,23 @@ export function planImport(entries, existing) {
         return { action: 'conflict', entry, existing: row, reason: `The register row has ${label} number ${row[field]}` };
       }
     }
+    const overwrite = !!row.importId && !row.editedAt;
     const fill = {};
     for (const k of FILLABLE) {
-      if (!blank(entry[k]) && blank(row[k])) fill[k] = entry[k];
+      if (blank(entry[k])) continue;
+      if (blank(row[k]) || (overwrite && !sameValue(entry[k], row[k]))) fill[k] = entry[k];
     }
     if (entry.cancelled && !row.cancelled && row.invoiceNumber == null) fill.cancelled = true;
+    if (overwrite && !entry.cancelled && row.cancelled) fill.cancelled = false;
     // An invoice number needs its project number on the row
     if (fill.invoiceNumber != null && row.projectNumber == null && fill.projectNumber == null) delete fill.invoiceNumber;
-    return Object.keys(fill).length ? { action: 'update', entry, existing: row, fill } : { action: 'same', entry, existing: row };
+    return Object.keys(fill).length ? { action: 'update', entry, existing: row, fill, overwrite } : { action: 'same', entry, existing: row };
   });
 }
 
 /** Counts of a plan, by action. */
 export function summarisePlan(plan) {
-  const counts = { create: 0, update: 0, same: 0, conflict: 0 };
+  const counts = { create: 0, update: 0, same: 0, conflict: 0, skip: 0 };
   for (const p of plan) counts[p.action]++;
   return counts;
 }
@@ -375,7 +462,7 @@ export function toModelFields(src) {
 // ── Database ────────────────────────────────────────────────────────────
 
 async function existingRows() {
-  return mdb.INTERNAL.jobRegister.find({}).select(`_id uuid cancelled ${FILLABLE.join(' ')}`).lean();
+  return mdb.INTERNAL.jobRegister.find({}).select(`_id uuid cancelled importId editedAt ${FILLABLE.join(' ')}`).lean();
 }
 
 /** Park a parsed workbook for its preview. Returns the import document. */
@@ -405,47 +492,61 @@ export function tickedPairs(staged) {
  */
 export async function loadPreview(uuid) {
   const staged = await findStaged(uuid);
+  const customers = await customerList();
   const suggestions = tickedPairs(staged);
-  const entries = applyChosenPairs(staged.parsed.entries, suggestions.filter((s) => s.ticked).map((s) => s.value));
-  const plan = planImport(entries, await existingRows());
-  return { staged, plan, suggestions, counts: summarisePlan(plan) };
+  const clients = clientMapping(staged, customers);
+  const paired = applyChosenPairs(staged.parsed.entries, suggestions.filter((s) => s.ticked).map((s) => s.value));
+  const plan = planImport(applyClients(paired, clients, customers), await existingRows());
+  return { staged, plan, suggestions, clients, customers, counts: summarisePlan(plan) };
 }
 
-/** Save the ticked pairs for later; the upload is kept until imported or deleted. */
-export async function saveForLater(uuid, chosenPairs, userId) {
-  const staged = await findStaged(uuid);
+const customerList = () => customerChoices();
+
+/** What was submitted: the ticked pairs (offered ones only) and the client choices. */
+function readSubmitted(staged, body, customers) {
   const offered = new Set((staged.parsed.suggestions || []).map(pairValue));
-  const pairs = [].concat(chosenPairs || []).map(String).filter((v) => offered.has(v));
-  await store.saveChoices(uuid, 'jobRegister', { pairs }, userId);
+  const pairs = [].concat(body.pair || []).map(String).filter((v) => offered.has(v));
+  const clients = readClientChoices(body, sheetClients(staged.parsed.entries), customers);
+  return { pairs, clients };
+}
+
+/** Save the ticked pairs and client choices for later; kept until imported or deleted. */
+export async function saveForLater(uuid, body, userId) {
+  const staged = await findStaged(uuid);
+  await store.saveChoices(uuid, 'jobRegister', readSubmitted(staged, body || {}, await customerList()), userId);
 }
 
 /**
  * Run the import with the suggested pairs that were ticked. Planned again
  * first, so anything entered since the preview is respected.
  */
-export async function runImport(uuid, chosenPairs = []) {
+export async function runImport(uuid, body = {}) {
   const staged = await findStaged(uuid);
   if (staged.importedAt) throw Object.assign(new Error('That upload has already been imported.'), { status: 400 });
-  const offered = new Set((staged.parsed.suggestions || []).map(pairValue));
-  const chosen = [].concat(chosenPairs || []).map(String).filter((v) => offered.has(v));
-  const plan = planImport(applyChosenPairs(staged.parsed.entries, chosen), await existingRows());
-  const result = { created: 0, updated: 0, unchanged: 0, conflicts: 0, failed: [] };
+  const customers = await customerList();
+  const { pairs, clients } = readSubmitted(staged, body || {}, customers);
+  const mapping = clientMapping({ ...staged, saved: true, choices: { clients } }, customers);
+  const plan = planImport(applyClients(applyChosenPairs(staged.parsed.entries, pairs), mapping, customers), await existingRows());
+  const result = { created: 0, updated: 0, unchanged: 0, conflicts: 0, skipped: 0, failed: [] };
   const Model = mdb.INTERNAL.jobRegister;
 
   for (const p of plan) {
     const label = p.entry.projectNumber != null ? `Job ${p.entry.projectNumber}` : `Quote ${p.entry.quoteNumber}`;
     try {
       if (p.action === 'create') {
-        await Model.create(toModelFields(p.entry));
+        await Model.create({ ...toModelFields(p.entry), importId: staged.uuid, importedAt: new Date() });
         result.created++;
       } else if (p.action === 'update') {
         const doc = await Model.findById(p.existing._id);
         if (!doc) { result.failed.push({ label, reason: 'The register row was deleted during the import' }); continue; }
         doc.set(toModelFields({ ...p.fill, cancelled: p.fill.cancelled }));
+        if (p.fill.cancelled === false) doc.cancelled = false;
         await doc.save();
         result.updated++;
       } else if (p.action === 'same') {
         result.unchanged++;
+      } else if (p.action === 'skip') {
+        result.skipped++;
       } else {
         result.conflicts++;
       }
@@ -458,7 +559,84 @@ export async function runImport(uuid, chosenPairs = []) {
   return result;
 }
 
+// ── Linking rows already in the register ───────────────────────────────
+
+/**
+ * Register rows whose client isn't linked to a KashFlow customer yet, by
+ * client, each with a suggested customer. For the link-clients page.
+ */
+export async function loadUnlinked() {
+  const [rows, customers] = await Promise.all([
+    mdb.INTERNAL.jobRegister.find({ customerCode: { $in: [null, ''] } }).select('_id client').lean(),
+    customerList(),
+  ]);
+  const clients = sheetClients(rows).map((c, index) => ({ ...c, index, code: suggestCustomer(c.label, customers) }));
+  return { clients, customers, total: rows.length };
+}
+
+/**
+ * Link the chosen clients (client_<i> → customer code; blank leaves it) on
+ * every unlinked row with that client: customerCode set and client renamed to
+ * the customer's KashFlow name. Not a hand edit, so a re-import may still
+ * overwrite an imported row. Returns { rows, clients }.
+ */
+export async function linkClients(body = {}) {
+  const { clients, customers } = await loadUnlinked();
+  const nameOf = new Map(customers.map((c) => [c.code, c.name]));
+  const chosen = readClientChoices(body, clients, customers);
+  const rows = await mdb.INTERNAL.jobRegister.find({ customerCode: { $in: [null, ''] } }).select('_id client').lean();
+  let linkedRows = 0;
+  let linkedClients = 0;
+  for (const c of clients) {
+    const code = chosen[c.index];
+    if (!code) continue;
+    const ids = rows.filter((r) => clientKey(r.client) === c.key).map((r) => r._id);
+    if (!ids.length) continue;
+    const res = await mdb.INTERNAL.jobRegister.updateMany({ _id: { $in: ids } }, { $set: { customerCode: code, client: nameOf.get(code) } });
+    linkedRows += res.modifiedCount ?? ids.length;
+    linkedClients++;
+  }
+  logger.info(`[jobRegister] Linked ${linkedRows} row(s) across ${linkedClients} client(s) to KashFlow customers`);
+  return { rows: linkedRows, clients: linkedClients };
+}
+
+/**
+ * Start-up: rows imported before rows recorded their import (6.116.0) get
+ * importId/importedAt from the upload that made them, while that upload is
+ * still kept (a day after its import). A row is that upload's when its quote
+ * or project number is on the sheet and it was created in the hour before
+ * the import finished. One changed after it was created counts as edited by
+ * hand (editedAt = updatedAt), so a re-import won't overwrite it.
+ * Idempotent.
+ */
+export async function flagImportedRows() {
+  const Uploads = mdb.INTERNAL.workbookImport;
+  const Rows = mdb.INTERNAL.jobRegister;
+  if (!Uploads || !Rows) return 0;
+  const uploads = await Uploads.find({ kind: 'jobRegister', importedAt: { $ne: null } }).select('uuid importedAt parsed.entries').lean();
+  let flagged = 0;
+  for (const u of uploads) {
+    const entries = u.parsed?.entries || [];
+    const quotes = entries.map((e) => e.quoteNumber).filter((n) => n != null);
+    const projects = entries.map((e) => e.projectNumber).filter((n) => n != null);
+    const end = new Date(u.importedAt);
+    const rows = await Rows.find({
+      importId: { $in: [null, ''] },
+      createdAt: { $gte: new Date(end.getTime() - 3600e3), $lte: end },
+      $or: [{ quoteNumber: { $in: quotes } }, { projectNumber: { $in: projects } }],
+    }).select('_id createdAt updatedAt').lean();
+    for (const r of rows) {
+      const edited = r.updatedAt && r.createdAt && new Date(r.updatedAt) - new Date(r.createdAt) > 60e3;
+      await Rows.updateOne({ _id: r._id }, { $set: { importId: u.uuid, importedAt: end, ...(edited ? { editedAt: r.updatedAt } : {}) } }, { timestamps: false });
+      flagged++;
+    }
+  }
+  if (flagged) logger.info(`[migration] Job Register: marked ${flagged} row(s) as imported`);
+  return flagged;
+}
+
 export default {
   cellText, cellInt, cellMoney, cellDate, siteKey, findSheets, parseRow, matchKey, pairQuotesWithJobs, mergePair,
-  suggestPairs, applyChosenPairs, parseJobRegWorkbook, tickedPairs, saveForLater, planImport, summarisePlan, toModelFields, stageUpload, loadPreview, runImport,
+  suggestPairs, applyChosenPairs, parseJobRegWorkbook, tickedPairs, saveForLater,
+  sheetClients, suggestCustomer, clientMapping, readClientChoices, applyClients, flagImportedRows, loadUnlinked, linkClients, planImport, summarisePlan, toModelFields, stageUpload, loadPreview, runImport,
 };

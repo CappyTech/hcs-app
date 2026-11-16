@@ -1,6 +1,7 @@
 import path from 'path';
 import logger from '../../services/loggerService.js';
 import jobRegister from '../services/jobRegisterService.js';
+import jobImport from '../services/jobRegisterImportService.js';
 import overviewEngine from '../services/overviewEngine.js';
 
 const VIEW = (name) => path.join('tailwindcss', 'jobRegister', name);
@@ -24,6 +25,7 @@ async function renderRegister(req, res, filters, fill = null) {
     stageLabels: jobRegister.STAGE_LABELS,
     stages: jobRegister.STAGES,
     contracts: await jobRegister.contractChoices(),
+    customers: await jobRegister.customerChoices(),
     crumbs: overviewEngine.breadcrumbs(req, 'projects'),
     form: fill ? jobRegister.fillNext(fill, data.next) : {},
   });
@@ -76,6 +78,7 @@ async function renderEdit(req, res, next, fill = null) {
     next: data.next,
     clients: data.clients,
     contracts: await jobRegister.contractChoices(entry.contractId?._id),
+    customers: await jobRegister.customerChoices(),
     crumbs: [...overviewEngine.breadcrumbs(req, 'projects'), { label: 'Job Register', href: '/job-register' }],
     form: fill ? jobRegister.fillNext(fill, data.next) : null,
   });
@@ -114,4 +117,29 @@ export const postUpdate = async (req, res, next) => {
   }
 };
 
-export default { getRegister, postFillNext, postFillNextEdit, postCreate, getEdit, postUpdate, readFilters };
+/** GET /job-register/link-clients: rows whose client isn't a KashFlow customer yet, by client. */
+export const getLinkClients = async (req, res, next) => {
+  try {
+    const data = await jobImport.loadUnlinked();
+    res.render(VIEW('link-clients'), {
+      title: 'Link clients to KashFlow customers',
+      ...data,
+      crumbs: [...overviewEngine.breadcrumbs(req, 'projects'), { label: 'Job Register', href: '/job-register' }],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** POST /job-register/link-clients */
+export const postLinkClients = async (req, res, next) => {
+  try {
+    const r = await jobImport.linkClients(req.body || {});
+    req.flash('success', r.rows ? `Linked ${r.rows} row${r.rows === 1 ? '' : 's'} (${r.clients} client${r.clients === 1 ? '' : 's'}) to KashFlow customers.` : 'Nothing was linked: choose a customer for at least one client.');
+    res.redirect('/job-register/link-clients');
+  } catch (err) {
+    next(err);
+  }
+};
+
+export default { getLinkClients, postLinkClients, getRegister, postFillNext, postFillNextEdit, postCreate, getEdit, postUpdate, readFilters };

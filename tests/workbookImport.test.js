@@ -204,7 +204,7 @@ describe('Job Reg planning', () => {
     ], existing);
     assert.deepEqual(plan.map((p) => p.action), ['update', 'same', 'create']);
     assert.deepEqual(plan[0].fill, { projectNumber: 41001, jobDate: '2026-02-01', contact: 'Pat' });
-    assert.deepEqual(summarisePlan(plan), { create: 1, update: 1, same: 1, conflict: 0 });
+    assert.deepEqual(summarisePlan(plan), { create: 1, update: 1, same: 1, conflict: 0, skip: 0 });
   });
 
   it('reports a quote and job that are separate register rows, or a row with another number', () => {
@@ -397,7 +397,7 @@ describe('Running the imports', () => {
         findById: async () => ({ set(f) { this.fields = f; }, async save() { created.push({ updated: this.fields }); } }),
       },
     };
-    mdb.REST = { supplier: { find: () => query([]) } };
+    mdb.REST = { supplier: { find: () => query([]) }, customer: { find: () => query([{ Code: 'EX1', Name: 'Example Homes Ltd' }]) } };
   });
   after(() => { mdb.INTERNAL = saved.INTERNAL; mdb.REST = saved.REST; });
 
@@ -443,11 +443,15 @@ describe('Running the imports', () => {
       fileName: 'jobreg.xlsx',
     });
     const preview = await jobImport.loadPreview('u1');
-    assert.deepEqual(preview.counts, { create: 1, update: 1, same: 0, conflict: 0 });
-    const r = await jobImport.runImport('u1', []);
+    assert.deepEqual(preview.counts, { create: 1, update: 1, same: 0, conflict: 0, skip: 0 });
+    assert.deepEqual(preview.clients.map((c) => [c.label, c.code]), [['Example Homes', 'EX1']]); // suggested by name
+    const r = await jobImport.runImport('u1', {});
     assert.equal(r.created, 1);
     assert.equal(r.updated, 1);
-    assert.equal(created.find((c) => c.quoteNumber === 50011).quoteDate.toISOString(), '2026-01-10T12:00:00.000Z');
+    const q = created.find((c) => c.quoteNumber === 50011);
+    assert.equal(q.quoteDate.toISOString(), '2026-01-10T12:00:00.000Z');
+    assert.equal(q.customerCode, 'EX1');
+    assert.equal(q.client, 'Example Homes Ltd'); // the KashFlow name
     assert.equal(created.find((c) => c.updated).updated.quoteNumber, 50010);
   });
 });
@@ -474,9 +478,13 @@ describe('Import pages', () => {
     ]);
     const suggestions = jobImport.tickedPairs({ parsed: p });
     const plan = planImport(p.entries, []);
+    const customers = [{ code: 'EX1', name: 'Example Homes Ltd' }];
+    const clients = jobImport.clientMapping({ parsed: p }, customers);
     const html = await ejs.renderFile(view('job-register.ejs'), {
-      title: 't', csrfToken: 'c', crumbs: [], staged: { uuid: 'u1', fileName: 'f.xlsx', parsed: p }, plan, suggestions, counts: summarisePlan(plan),
+      title: 't', csrfToken: 'c', crumbs: [], staged: { uuid: 'u1', fileName: 'f.xlsx', parsed: p }, plan, suggestions, counts: summarisePlan(plan), clients, customers,
     });
+    assert.match(html, /name="client_0"/);
+    assert.match(html, /<option value="EX1" selected>Example Homes Ltd \(EX1\)/);
     assert.match(html, /name="pair" value="50010:41010"[^>]*checked/);
     assert.match(html, /action="\/job-register\/import\/u1"/);
     assert.match(html, /formaction="\/job-register\/import\/u1\/save"/);
@@ -612,5 +620,166 @@ describe('Saved choices', () => {
     const parsed = { suggestions: [{ quoteNumber: 1, projectNumber: 10, likely: true }, { quoteNumber: 2, projectNumber: 20, likely: false }] };
     assert.deepEqual(jobImport.tickedPairs({ parsed }).map((s) => s.ticked), [true, false]);
     assert.deepEqual(jobImport.tickedPairs({ parsed, saved: true, choices: { pairs: ['2:20'] } }).map((s) => s.ticked), [false, true]);
+  });
+});
+
+describe('Job Reg clients as KashFlow customers', () => {
+  const customers = [
+    { code: 'PD1', name: 'Plus Example Housing' }, { code: 'KM1', name: 'Example Council' },
+    { code: 'EX2', name: 'Example Homes' }, { code: 'EX3', name: 'Example Homes North' },
+  ];
+
+  it('lists the clients written on the sheets once each, with the usual spelling', () => {
+    const list = jobImport.sheetClients([{ client: 'Plus Example' }, { client: 'plus example ' }, { client: 'Plus Example' }, { client: 'Example Council' }]);
+    assert.deepEqual(list, [{ key: 'example council', label: 'Example Council', count: 1 }, { key: 'plus example', label: 'Plus Example', count: 3 }]);
+  });
+
+  it('suggests a customer by name, by a name it starts, or a name it is started by', () => {
+    assert.equal(jobImport.suggestCustomer('example council', customers), 'KM1');
+    assert.equal(jobImport.suggestCustomer('Plus Example', customers), 'PD1');
+    assert.equal(jobImport.suggestCustomer('Example Council MAJ', customers), 'KM1');
+    assert.equal(jobImport.suggestCustomer('Example Homes', customers), 'EX2'); // exact beats the longer one
+    assert.equal(jobImport.suggestCustomer('Nobody Ltd', customers), '');
+  });
+
+  it('uses saved choices over suggestions, and only known customers', () => {
+    const parsed = { entries: [{ client: 'Example Council' }, { client: 'Plus Example' }] };
+    assert.deepEqual(jobImport.clientMapping({ parsed }, customers).map((c) => c.code), ['KM1', 'PD1']);
+    const saved = { parsed, saved: true, choices: { clients: { 0: '', 1: 'XX9' } } };
+    assert.deepEqual(jobImport.clientMapping(saved, customers).map((c) => c.code), ['', '']);
+    assert.deepEqual(jobImport.readClientChoices({ client_0: 'KM1', client_1: 'bogus' }, [{}, {}, {}], customers), { 0: 'KM1', 1: '' });
+  });
+
+  it('sets each row to its customer, and leaves out rows whose client has none', () => {
+    const entries = [{ kind: 'job', projectNumber: 1, client: 'Plus Example', site: 'A' }, { kind: 'job', projectNumber: 2, client: 'Nobody', site: 'B' }];
+    const mapping = [{ key: 'plus example', code: 'PD1' }, { key: 'nobody', code: '' }];
+    const out = jobImport.applyClients(entries, mapping, customers);
+    assert.equal(out[0].customerCode, 'PD1');
+    assert.equal(out[0].client, 'Plus Example Housing');
+    assert.equal(out[1].unmatchedClient, true);
+    const plan = planImport(out, []);
+    assert.deepEqual(plan.map((x) => x.action), ['create', 'skip']);
+    assert.equal(toModelFields(out[0]).customerCode, 'PD1');
+  });
+});
+
+describe('Job Register client is a KashFlow customer', () => {
+  let jr; let saved; let createdRows;
+  before(async () => {
+    jr = (await import('../mongoose/services/jobRegisterService.js')).default;
+    saved = { INTERNAL: mdb.INTERNAL, REST: mdb.REST };
+    const one = (row) => ({ select: () => ({ lean: async () => row }) });
+    mdb.INTERNAL = { jobRegister: { create: async (f) => { createdRows.push(f); return { uuid: 'n1', ...f }; } } };
+    mdb.REST = { customer: { findOne: (f) => one(f.Code === 'EX1' ? { Code: 'EX1', Name: 'Example Homes Ltd' } : null) } };
+  });
+  after(() => { mdb.INTERNAL = saved.INTERNAL; mdb.REST = saved.REST; });
+
+  it('needs a known customer, and takes the client name from KashFlow', async () => {
+    createdRows = [];
+    await assert.rejects(jr.createEntry({ quoteNumber: '50001', site: 'A' }), (e) => e.status === 400 && /Choose the client/.test(e.message));
+    await assert.rejects(jr.createEntry({ quoteNumber: '50001', site: 'A', customerCode: 'NOPE' }), (e) => e.status === 400);
+    await jr.createEntry({ quoteNumber: '50001', site: 'A', customerCode: 'EX1', client: 'typed name' });
+    assert.equal(createdRows[0].customerCode, 'EX1');
+    assert.equal(createdRows[0].client, 'Example Homes Ltd');
+  });
+
+  it('checks KashFlow records by customer code when both have one', () => {
+    const entry = { quoteNumber: 1, client: 'Example Homes Ltd', customerCode: 'EX1' };
+    assert.equal(jr.matchEntry(entry, { quote: { CustomerCode: 'ex1', CustomerName: 'Renamed Ltd' } }).quote.state, 'ok');
+    assert.equal(jr.matchEntry(entry, { quote: { CustomerCode: 'OTHER', CustomerName: 'Example Homes Ltd' } }).quote.state, 'differs');
+    assert.equal(jr.matchEntry({ quoteNumber: 1, client: 'Example Homes Ltd' }, { quote: { CustomerName: 'example homes ltd' } }).quote.state, 'ok');
+  });
+
+  it('draws the form with a customer select, keeping an old typed client visible', async () => {
+    const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/jobRegister/_fields.ejs'), {
+      entry: { client: 'Old Typed Name' }, next: {}, clients: [], contracts: [], customers: [{ code: 'EX1', name: 'Example Homes Ltd' }],
+      input: '', label: '', nextAction: '/x',
+    });
+    assert.match(html, /<select id="jr-customer" name="customerCode" required/);
+    assert.match(html, /was: Old Typed Name/);
+    assert.match(html, /<option value="EX1" >Example Homes Ltd \(EX1\)/);
+  });
+});
+
+describe('Re-importing over imported rows', () => {
+  const entry = (over) => ({ kind: 'job', projectNumber: 41001, site: 'New Site', client: 'C', value: 200, notes: '', cancelled: false, ...over });
+
+  it('updates an imported row nobody has edited, and only fills in one edited by hand', () => {
+    const untouched = { _id: 'a', projectNumber: 41001, site: 'Old Site', client: 'C', value: 100, contact: 'Kept', importId: 'up1' };
+    const edited = { ...untouched, editedAt: new Date() };
+    const manual = { ...untouched, importId: undefined };
+    const [u] = planImport([entry({ contact: '' })], [untouched]);
+    assert.equal(u.action, 'update');
+    assert.equal(u.overwrite, true);
+    assert.deepEqual(u.fill, { site: 'New Site', value: 200 }); // a blank contact doesn't clear "Kept"
+    assert.equal(planImport([entry()], [edited])[0].action, 'same');
+    assert.equal(planImport([entry()], [manual])[0].action, 'same');
+  });
+
+  it('can un-cancel an untouched imported row the sheet no longer cancels', () => {
+    const row = { _id: 'a', projectNumber: 41001, site: 'New Site', client: 'C', value: 200, cancelled: true, importId: 'up1' };
+    assert.equal(planImport([entry()], [row])[0].fill.cancelled, false);
+  });
+});
+
+describe('Marking and linking rows already imported', () => {
+  let svc; let saved; let rows; let updates;
+  before(async () => {
+    svc = (await import('../mongoose/services/jobRegisterImportService.js')).default;
+    saved = { INTERNAL: mdb.INTERNAL, REST: mdb.REST };
+    const q = (fn) => { const o = { select: () => o, sort: () => o, lean: async () => fn() }; return o; };
+    mdb.INTERNAL = {
+      workbookImport: { find: () => q(() => [{ uuid: 'up1', importedAt: new Date('2026-11-16T03:00:00Z'), parsed: { entries: [{ projectNumber: 41001 }, { quoteNumber: 50001 }] } }]) },
+      jobRegister: {
+        find: (f) => q(() => rows.filter((r) => (f.importId ? !r.importId : true) && (f.customerCode ? !r.customerCode : true))),
+        updateOne: async (f, u) => { updates.push({ f, u }); },
+        updateMany: async (f, u) => { updates.push({ f, u }); return { modifiedCount: f._id.$in.length }; },
+      },
+    };
+    mdb.REST = { customer: { find: () => q(() => [{ Code: 'EX1', Name: 'Example Homes Ltd' }]) } };
+  });
+  after(() => { mdb.INTERNAL = saved.INTERNAL; mdb.REST = saved.REST; });
+
+  it('marks the rows an earlier upload created, treating ones changed since as edited', async () => {
+    rows = [
+      { _id: 'r1', createdAt: new Date('2026-11-16T02:59:00Z'), updatedAt: new Date('2026-11-16T02:59:00Z') },
+      { _id: 'r2', createdAt: new Date('2026-11-16T02:59:30Z'), updatedAt: new Date('2026-11-16T03:20:00Z') },
+    ];
+    updates = [];
+    assert.equal(await svc.flagImportedRows(), 2);
+    assert.deepEqual(updates[0].u.$set, { importId: 'up1', importedAt: new Date('2026-11-16T03:00:00Z') });
+    assert.equal(updates[1].u.$set.editedAt.toISOString(), '2026-11-16T03:20:00.000Z');
+  });
+
+  it('links every unlinked row of a client to the chosen customer', async () => {
+    rows = [{ _id: 'a', client: 'Example Homes' }, { _id: 'b', client: 'example homes ' }, { _id: 'c', client: 'Other' }];
+    updates = [];
+    const page = await svc.loadUnlinked();
+    assert.equal(page.total, 3);
+    assert.deepEqual(page.clients.map((c) => [c.label, c.count, c.code]), [['Example Homes', 2, 'EX1'], ['Other', 1, '']]);
+    const r = await svc.linkClients({ client_0: 'EX1', client_1: '' });
+    assert.deepEqual(r, { rows: 2, clients: 1 });
+    assert.deepEqual(updates[0].f._id.$in, ['a', 'b']);
+    assert.deepEqual(updates[0].u.$set, { customerCode: 'EX1', client: 'Example Homes Ltd' });
+  });
+});
+
+describe('Register by tax year', () => {
+  it('draws a table per tax year, newest first, with the unlinked-clients banner', async () => {
+    const jr = (await import('../mongoose/services/jobRegisterService.js')).default;
+    const entries = [
+      { uuid: 'a', quoteNumber: 1, site: 'A', client: 'C', value: 100, quoteDate: new Date('2025-05-01T12:00:00Z') },
+      { uuid: 'b', quoteNumber: 2, site: 'B', client: 'C', value: 50, quoteDate: new Date('2026-05-01T12:00:00Z'), customerCode: 'X' },
+    ];
+    const data = jr.buildRegister({ entries, quotesByNumber: new Map(), projectsByNumber: new Map(), invoicesByNumber: new Map() });
+    const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/jobRegister/index.ejs'), {
+      title: 't', csrfToken: 'c', crumbs: [], ...data, unregistered: { year: 2026, quoteCount: 0, projectCount: 0, quotes: [], projects: [] },
+      next: {}, stageLabels: jr.STAGE_LABELS, stages: jr.STAGES, contracts: [], customers: [], form: {}, unlinkedCount: 1, isAdmin: true,
+    });
+    const y26 = html.indexOf('Tax year 2026/27');
+    const y25 = html.indexOf('Tax year 2025/26');
+    assert.ok(y26 > 0 && y25 > y26, 'newest year first');
+    assert.match(html, /href="#ty-2025"/);
+    assert.match(html, /href="\/job-register\/link-clients"/);
   });
 });

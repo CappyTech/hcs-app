@@ -2,7 +2,7 @@
   The register row's fields, shared by the add and edit forms. In the order of
   the Job Reg workbook: quote, job, site, client, contact, value, description,
   invoice, client ref.
-  Locals: entry, next, clients, contracts, input, label, nextAction
+  Locals: entry, next, clients, contracts, customers [{ code, name }], input, label, nextAction
 
   The Next buttons post the form as typed to nextAction, which shows it again
   with KashFlow's next number filled in; the Today buttons do the same with
@@ -49,11 +49,15 @@
   <input id="jr-site" name="site" required maxlength="300" value="<%= v('site') %>" placeholder="25 Baker Way, Liverpool" class="<%= input %> w-full">
 </div>
 <div>
-  <label for="jr-client" class="<%= label %>">Client</label>
-  <input id="jr-client" name="client" required maxlength="200" list="jr-clients" value="<%= v('client') %>" placeholder="Plus Dane" class="<%= input %> w-full">
-  <datalist id="jr-clients">
-    <% clients.forEach((c) => { %><option value="<%= c.name %>"></option><% }) %>
-  </datalist>
+  <label for="jr-customer" class="<%= label %>">Client (KashFlow customer)</label>
+  <% const currentCode = String(v('customerCode')).trim().toUpperCase(); const known = customers.some((c) => c.code.toUpperCase() === currentCode); %>
+  <select id="jr-customer" name="customerCode" required class="<%= input %> w-full">
+    <option value=""><%= v('client') && !known ? `— Choose — (was: ${v('client')})` : '— Choose a customer —' %></option>
+    <% customers.forEach((c) => { %>
+      <option value="<%= c.code %>" <%= c.code.toUpperCase() === currentCode ? 'selected' : '' %>><%= c.name %> (<%= c.code %>)</option>
+    <% }) %>
+  </select>
+  <% if (!customers.length) { %><p class="mt-1 text-xs text-amber-700 dark:text-amber-400">No KashFlow customers have synced yet.</p><% } %>
 </div>
 <div>
   <label for="jr-contact" class="<%= label %>">Contact</label>

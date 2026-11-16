@@ -1,6 +1,7 @@
 <%#
   Check a Job Reg workbook import before running it.
-  Locals: crumbs, staged (workbookImport, lean), plan[], suggestions[], counts { create, update, same, conflict }
+  Locals: crumbs, staged (workbookImport, lean), plan[], suggestions[], counts { create, update, same, conflict, skip },
+          clients [{ index, label, count, code, suggested }], customers [{ code, name }]
 %>
 <%
   const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
@@ -15,18 +16,19 @@
   const byNumber = (field) => new Map(parsed.entries.filter((e) => e[field] != null).map((e) => [e[field], e]));
   const quotes = byNumber('quoteNumber');
   const jobs = byNumber('projectNumber');
-  const FIELD_LABELS = { quoteNumber: 'quote no.', quoteDate: 'quote date', projectNumber: 'project no.', jobDate: 'job date', site: 'site', client: 'client', contact: 'contact', value: 'value', description: 'description', clientRef: 'client ref', invoiceNumber: 'invoice no.', invoiceDate: 'invoice date', notes: 'notes', cancelled: 'cancelled' };
+  const FIELD_LABELS = { customerCode: 'customer', quoteNumber: 'quote no.', quoteDate: 'quote date', projectNumber: 'project no.', jobDate: 'job date', site: 'site', client: 'client', contact: 'contact', value: 'value', description: 'description', clientRef: 'client ref', invoiceNumber: 'invoice no.', invoiceDate: 'invoice date', notes: 'notes', cancelled: 'cancelled' };
   const groups = [
     { action: 'create', title: 'To add', tone: 'text-green-700 dark:text-green-400', open: false },
-    { action: 'update', title: 'Already in the register: empty fields to fill in', tone: 'text-blue-700 dark:text-blue-400', open: true },
+    { action: 'update', title: 'Already in the register: to update (imported, not edited since) or fill in', tone: 'text-blue-700 dark:text-blue-400', open: true },
     { action: 'conflict', title: "Can't import: check by hand", tone: 'text-red-700 dark:text-red-400', open: true },
+    { action: 'skip', title: 'Left out: client not matched to a KashFlow customer', tone: 'text-amber-700 dark:text-amber-400', open: false },
     { action: 'same', title: 'Already in the register, nothing to add', tone: 'text-gray-500 dark:text-gray-400', open: false },
   ];
   const tiles = [
     { n: counts.create, label: 'to add', tone: 'text-green-700 dark:text-green-400' },
     { n: counts.update, label: 'to fill in', tone: 'text-blue-700 dark:text-blue-400' },
     { n: counts.same, label: 'already there', tone: 'text-gray-700 dark:text-gray-300' },
-    { n: counts.conflict + parsed.problems.length, label: "can't import", tone: 'text-red-700 dark:text-red-400' },
+    { n: counts.conflict + counts.skip + parsed.problems.length, label: "can't import", tone: 'text-red-700 dark:text-red-400' },
   ];
 %>
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -73,6 +75,38 @@
 
   <form method="POST" action="/job-register/import/<%= staged.uuid %>">
     <%- include('../partials/csrfHidden') %>
+
+    <div class="<%= card %> p-4 mb-6">
+      <h2 class="<%= h2 %> mb-1">Clients on the sheet</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+        Each client in the register is a KashFlow customer. Pick the customer for each client written on the sheet; rows for a client set to “Don't import” are left out.
+        Changes here update the counts above when you save for later.
+      </p>
+      <% if (!customers.length) { %>
+        <p class="text-sm text-amber-700 dark:text-amber-400">No KashFlow customers have synced yet, so nothing can be imported.</p>
+      <% } %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr><th class="<%= th %>">On the sheet</th><th class="<%= th %>">Rows</th><th class="<%= th %>">KashFlow customer</th></tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% clients.forEach((c) => { const field = `client_${c.index}`; %>
+              <tr class="<%= c.code ? '' : 'bg-amber-50 dark:bg-amber-900/20' %>">
+                <td class="<%= td %>"><label for="<%= field %>"><%= c.label %></label></td>
+                <td class="<%= td %> text-gray-500 dark:text-gray-400"><%= c.count %></td>
+                <td class="<%= td %>">
+                  <select id="<%= field %>" name="<%= field %>" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <option value="" <%= c.code ? '' : 'selected' %>>Don't import these rows</option>
+                    <% customers.forEach((k) => { %><option value="<%= k.code %>" <%= k.code === c.code ? 'selected' : '' %>><%= k.name %> (<%= k.code %>)</option><% }) %>
+                  </select>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <% if (suggestions.length) { %>
       <div class="<%= card %> p-4 mb-6">
@@ -125,7 +159,7 @@
               <tr>
                 <th class="<%= th %>">Quote</th><th class="<%= th %>">Job</th><th class="<%= th %>">Date</th><th class="<%= th %>">Site</th>
                 <th class="<%= th %>">Client</th><th class="<%= th %> text-right">Value</th><th class="<%= th %>">Invoice</th>
-                <th class="<%= th %>"><%= g.action === 'update' ? 'Fills in' : g.action === 'conflict' ? 'Why' : 'Notes' %></th>
+                <th class="<%= th %>"><%= g.action === 'update' ? 'Changes' : (g.action === 'conflict' || g.action === 'skip') ? 'Why' : 'Notes' %></th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -139,8 +173,8 @@
                   <td class="<%= td %> text-right whitespace-nowrap"><%= money(e.value) %></td>
                   <td class="<%= td %>"><%= e.invoiceNumber ?? '' %><%= e.cancelled ? ' Cancelled' : '' %></td>
                   <td class="<%= td %> text-gray-500 dark:text-gray-400">
-                    <% if (g.action === 'update') { %><%= Object.keys(p.fill).map((k) => FIELD_LABELS[k] || k).join(', ') %>
-                    <% } else if (g.action === 'conflict') { %><%= p.reason %>
+                    <% if (g.action === 'update') { %><%= p.overwrite ? 'Updates' : 'Fills in' %>: <%= Object.keys(p.fill).map((k) => FIELD_LABELS[k] || k).join(', ') %>
+                    <% } else if (g.action === 'conflict' || g.action === 'skip') { %><%= p.reason %>
                     <% } else { %><%= e.notes %><% } %>
                   </td>
                 </tr>
@@ -156,7 +190,7 @@
         <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Import into the Job Register</button>
         <button type="submit" formaction="/job-register/import/<%= staged.uuid %>/save" class="<%= secondaryBtn %>"><i class="bi bi-bookmark" aria-hidden="true"></i> Save for later</button>
         <a href="/job-register/import" class="<%= secondaryBtn %>">Back to uploads</a>
-        <span class="text-xs text-gray-500 dark:text-gray-400">Nothing in the register is overwritten. <%= staged.saved ? 'Saved: kept until imported or deleted.' : 'Unsaved uploads expire after a day.' %></span>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Rows entered or edited by hand are never overwritten. <%= staged.saved ? 'Saved: kept until imported or deleted.' : 'Unsaved uploads expire after a day.' %></span>
       </div>
     <% } %>
   </form>

@@ -66,8 +66,14 @@ export function matchEntry(entry, { quote = null, project = null, invoice = null
     const issues = check(record);
     return { state: issues.length ? 'differs' : 'ok', record, issues };
   };
-  const clientIssue = (r) => (r.CustomerName && clientKey(r.CustomerName) !== clientKey(entry.client)
-    ? [`Client in KashFlow is ${r.CustomerName}`] : []);
+  // By customer code where both have one, else by name
+  const clientIssue = (r) => {
+    if (entry.customerCode && r.CustomerCode) {
+      return String(r.CustomerCode).trim().toUpperCase() !== String(entry.customerCode).trim().toUpperCase()
+        ? [`Client in KashFlow is ${r.CustomerName || r.CustomerCode}`] : [];
+    }
+    return r.CustomerName && clientKey(r.CustomerName) !== clientKey(entry.client) ? [`Client in KashFlow is ${r.CustomerName}`] : [];
+  };
 
   const q = side(entry.quoteNumber, quote, (r) => [
     ...(differsBy(entry.value, r.NetAmount) ? [`Value in KashFlow is £${Number(r.NetAmount).toFixed(2)}`] : []),
@@ -275,9 +281,9 @@ export async function loadRegister(filters = {}) {
   const Project = mdb.REST.project;
   const Invoice = mdb.REST.invoice;
   const [quotes, projects, invoices, periodQuotes, periodProjects, topQuote, topProject, kf] = await Promise.all([
-    quoteNumbers.size ? Quote.find({ Number: { $in: [...quoteNumbers] } }).select('uuid Number Date CustomerName NetAmount Status ProjectNumber').lean() : [],
-    projectNumbers.size ? Project.find({ Number: { $in: [...projectNumbers] } }).select('uuid Number Name CustomerName Status StartDate').lean() : [],
-    invoiceNumbers.length ? Invoice.find({ Number: { $in: invoiceNumbers } }).select('uuid Number IssuedDate CustomerName NetAmount ProjectNumber Status').lean() : [],
+    quoteNumbers.size ? Quote.find({ Number: { $in: [...quoteNumbers] } }).select('uuid Number Date CustomerName CustomerCode NetAmount Status ProjectNumber').lean() : [],
+    projectNumbers.size ? Project.find({ Number: { $in: [...projectNumbers] } }).select('uuid Number Name CustomerName CustomerCode Status StartDate').lean() : [],
+    invoiceNumbers.length ? Invoice.find({ Number: { $in: invoiceNumbers } }).select('uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status').lean() : [],
     Quote.find({ Date: { $gte: from, $lt: to } }).select('uuid Number Date CustomerName NetAmount Status').sort({ Number: -1 }).lean(),
     Project.find({ StartDate: { $gte: from, $lt: to } }).select('uuid Number Name CustomerName Status StartDate').sort({ Number: -1 }).lean(),
     Quote.findOne({}).sort({ Number: -1 }).select('Number').lean(),
@@ -303,6 +309,7 @@ export async function loadRegister(filters = {}) {
       projects: unregistered.projects.slice(0, UNREGISTERED_LIMIT),
     },
     next: combineNext({ entries, kf, topQuote, topProject }),
+    unlinkedCount: entries.filter((e) => !e.customerCode).length,
   };
 }
 
@@ -340,6 +347,7 @@ export function parseEntryForm(body = {}) {
     projectNumber: int(body.projectNumber),
     jobDate: day(body.jobDate),
     site: text(body.site),
+    customerCode: text(body.customerCode),
     client: text(body.client),
     contact: text(body.contact),
     value: money(body.value),
@@ -368,7 +376,7 @@ export function parseEntryForm(body = {}) {
  * saved; dates that aren't yyyy-mm-dd are dropped so the view can show them.
  */
 export function formEcho(body = {}) {
-  const keep = ['quoteNumber', 'projectNumber', 'site', 'client', 'contact', 'value', 'description',
+  const keep = ['quoteNumber', 'projectNumber', 'site', 'customerCode', 'client', 'contact', 'value', 'description',
     'clientRef', 'invoiceNumber', 'notes'];
   const entry = Object.fromEntries(keep.map((k) => [k, text(body[k])]));
   for (const k of ['quoteDate', 'jobDate', 'invoiceDate']) {
@@ -410,6 +418,21 @@ async function applyContract(fields) {
   return { ...rest, contractId: c._id };
 }
 
+/** KashFlow customers a row's client can be, by name. */
+export async function customerChoices() {
+  const docs = await mdb.REST.customer.find({ Code: { $nin: [null, ''] } }).select('Code Name').sort({ Name: 1 }).lean();
+  return docs.map((c) => ({ code: String(c.Code).trim(), name: String(c.Name || c.Code).trim() }));
+}
+
+/** The chosen customer's code and name onto the fields; a 400 if none or unknown. */
+async function applyCustomer(fields) {
+  const code = String(fields.customerCode || '').trim();
+  if (!code) throw Object.assign(new Error('Choose the client from the KashFlow customers.'), { status: 400 });
+  const c = await mdb.REST.customer.findOne({ Code: code }).select('Code Name').lean();
+  if (!c) throw Object.assign(new Error("That client isn't a KashFlow customer (or hasn't synced yet)."), { status: 400 });
+  return { ...fields, customerCode: String(c.Code).trim(), client: String(c.Name || c.Code).trim() };
+}
+
 function duplicateError(err) {
   if (err?.code !== 11000) return err;
   const key = Object.keys(err.keyPattern || err.keyValue || {})[0];
@@ -427,7 +450,7 @@ function validationError(err) {
 }
 
 export async function createEntry(body) {
-  const fields = Object.fromEntries(Object.entries(await applyContract(parseEntryForm(body)))
+  const fields = Object.fromEntries(Object.entries(await applyCustomer(await applyContract(parseEntryForm(body))))
     .filter(([, v]) => v !== null && v !== ''));
   try {
     return await mdb.INTERNAL.jobRegister.create(fields);
@@ -439,9 +462,11 @@ export async function createEntry(body) {
 export async function updateEntry(uuid, body) {
   const doc = await mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') });
   if (!doc) throw Object.assign(new Error('That register entry no longer exists.'), { status: 404 });
-  const fields = await applyContract(parseEntryForm(body));
+  const fields = await applyCustomer(await applyContract(parseEntryForm(body)));
   // Blank → unset, so the partial unique indexes don't see a null
   for (const [k, v] of Object.entries(fields)) doc.set(k, v === null || v === '' ? undefined : v);
+  // A hand edit: a re-import will no longer overwrite this row, only fill it in
+  doc.editedAt = new Date();
   try {
     return await doc.save();
   } catch (err) {
@@ -475,5 +500,5 @@ export default {
   STAGES, STAGE_LABELS, STAGE_FILTERS,
   stageOf, clientKey, entryDate, taxYearOf, matchEntry, buildRegister, findUnregistered, nextNumber, parseEntryForm,
   parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext, ukToday,
-  loadRegister, createEntry, updateEntry, findEntry, contractChoices, jobsForAllocation,
+  loadRegister, createEntry, updateEntry, findEntry, contractChoices, customerChoices, jobsForAllocation,
 };

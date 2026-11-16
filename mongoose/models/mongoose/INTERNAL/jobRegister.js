@@ -22,7 +22,11 @@ const jobRegisterSchema = new mongoose.Schema({
   jobDate: { type: Date },
 
   site: { type: String, required: [true, 'Enter the site.'], trim: true, maxlength: 300 },
-  client: { type: String, required: [true, 'Enter the client.'], trim: true, maxlength: 200 },
+  // The client is a KashFlow customer: its Code is the link, and client holds
+  // its Name as it was when chosen (for display and filtering). Rows from
+  // before the link may have a client with no customerCode.
+  customerCode: { type: String, trim: true, maxlength: 50 },
+  client: { type: String, required: [true, 'Choose the client.'], trim: true, maxlength: 200 },
   contact: { type: String, trim: true, maxlength: 200 },
   // Net, as on the spreadsheet and KashFlow's NetAmount
   value: { type: Number, min: 0 },
@@ -36,6 +40,14 @@ const jobRegisterSchema = new mongoose.Schema({
   notes: { type: String, trim: true, maxlength: 2000 },
   cancelled: { type: Boolean, default: false },
 
+  // Where the row came from. importId is the workbook upload (workbookImport
+  // uuid) that created it; none means it was entered by hand. editedAt is
+  // the last time someone saved it from the form. A re-import may overwrite
+  // an imported row nobody has edited since; anything else it only fills in.
+  importId: { type: String, trim: true },
+  importedAt: { type: Date },
+  editedAt: { type: Date },
+
   // The contract that runs the job on site, once it has one. A won job with
   // no contract is a "job for allocation" on the weekly sheet.
   contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'contract' },
@@ -44,6 +56,8 @@ const jobRegisterSchema = new mongoose.Schema({
 jobRegisterSchema.index({ quoteNumber: 1 }, { unique: true, partialFilterExpression: { quoteNumber: { $type: 'number' } } });
 jobRegisterSchema.index({ projectNumber: 1 }, { unique: true, partialFilterExpression: { projectNumber: { $type: 'number' } } });
 jobRegisterSchema.index({ invoiceNumber: 1 });
+jobRegisterSchema.index({ customerCode: 1 });
+jobRegisterSchema.index({ importId: 1 }, { sparse: true });
 
 jobRegisterSchema.pre('validate', function (next) {
   if (this.quoteNumber == null && this.projectNumber == null) {

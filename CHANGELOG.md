@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.116.0] - 2026-11-16
+
+### Changed
+- **Job Register: the client is a KashFlow customer.** The add and edit forms pick the client from the synced KashFlow customers instead of free text. The row keeps the customer's code (new `customerCode` field) and its name as `client`. A row from before this keeps its typed client on show until a customer is picked, and saving it needs one.
+- The KashFlow checks compare the client by customer code where both sides have one (so a renamed customer still matches), and by name otherwise.
+- **Link clients to KashFlow customers** (`/job-register/link-clients`, Commercial edit). For rows already in the register with a typed client: each client is listed with a suggested customer, and linking sets the code and KashFlow name on every row with that client. The register shows a banner while any row is unlinked.
+- **The register is shown by tax year**: one table per tax year, newest first, each with its row count and net, won and invoiced totals, and links to jump between years.
+- **Job Reg import: clients on the sheet are matched to KashFlow customers.** The check page lists each client written on the sheets with the suggested customer: the same name, or a name it starts or is started by ("… MAJ" → the customer without it). Each can be changed, or set to "Don't import these rows", which leaves those rows out. Imported rows get the customer's code and KashFlow name. The choices are kept by Save for later.
+- **Imported rows are marked, and a re-import updates them.** A row records the upload that created it (`importId`, `importedAt`), and saving a row from the form records `editedAt`. Importing again updates an imported row nobody has edited since to match the sheet; a row entered or edited by hand still only has its empty fields filled in, and a blank on the sheet never clears a field. On start-up, rows from an import made before this are marked from that upload while it's still kept, and any changed since they were created count as edited.
+
 ## [6.115.0] - 2026-11-16
 
 ### Added
