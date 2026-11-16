@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.114.0] - 2026-11-16
+
+### Added
+- **The workbook import pages list the uploads from the last day** (`/job-register/import`, `/weekly-sheet/import`). Each shows the file, when and by whom it was uploaded, and whether it has been imported (with what it added) or is still waiting, with the time it expires. A waiting upload can be opened to check and import it without uploading the file again.
+
 ## [6.113.2] - 2026-11-16
 
 ### Changed

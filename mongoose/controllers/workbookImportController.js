@@ -13,6 +13,7 @@ import xlsx from '../services/xlsxReaderService.js';
 import jobImport from '../services/jobRegisterImportService.js';
 import sheetImport from '../services/weeklySheetImportService.js';
 import overviewEngine from '../services/overviewEngine.js';
+import mdb from '../services/mongooseDatabaseService.js';
 
 const VIEW = (name) => path.join('tailwindcss', 'import', name);
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -64,14 +65,56 @@ const handle400s = (back) => (err, req, res, next) => {
   next(err);
 };
 
+const UPLOAD_LIFETIME_MS = 864e5; // workbookImport's TTL
+const RECENT_LIMIT = 20;
+
+/**
+ * Uploads of one kind that haven't expired yet, newest first, for the list
+ * on the upload page. Filtered on age as well as left to the TTL index,
+ * which only sweeps about once a minute.
+ */
+export async function recentUploads(kind, now = new Date()) {
+  const docs = await mdb.INTERNAL.workbookImport
+    .find({ kind, createdAt: { $gt: new Date(now.getTime() - UPLOAD_LIFETIME_MS) } })
+    .select('uuid fileName createdAt importedAt result createdBy')
+    .populate('createdBy', 'username email')
+    .sort({ createdAt: -1 })
+    .limit(RECENT_LIMIT)
+    .lean();
+  return docs.map((d) => describeUpload(d, kind));
+}
+
+/** One upload as the list shows it. Pure. */
+export function describeUpload(doc, kind) {
+  const r = doc.result || {};
+  let summary = '';
+  if (doc.importedAt) {
+    summary = kind === 'jobRegister'
+      ? `${plural(r.created || 0, 'row')} added, ${plural(r.updated || 0, 'row')} filled in`
+      : `${plural(r.created || 0, 'day')} imported${r.createdLocations ? `, ${plural(r.createdLocations, 'new location')}` : ''}`;
+  }
+  return {
+    uuid: doc.uuid,
+    fileName: doc.fileName || '(no name)',
+    createdAt: doc.createdAt,
+    expiresAt: doc.createdAt ? new Date(new Date(doc.createdAt).getTime() + UPLOAD_LIFETIME_MS) : null,
+    by: doc.createdBy?.username || doc.createdBy?.email || '',
+    importedAt: doc.importedAt || null,
+    summary,
+  };
+}
+
 // ── Job Register ────────────────────────────────────────────────────────
 
 const JR = '/job-register/import';
 const jrCrumbs = (req) => [...overviewEngine.breadcrumbs(req, 'projects'), { label: 'Job Register', href: '/job-register' }];
 
 /** GET /job-register/import */
-export const getJobRegisterUpload = (req, res) => {
+export const getJobRegisterUpload = async (req, res, next) => {
+  let uploads;
+  try { uploads = await recentUploads('jobRegister'); } catch (err) { return next(err); }
   res.render(VIEW('upload'), {
+    uploads,
     title: 'Import the Job Reg workbook',
     crumbs: jrCrumbs(req),
     action: JR,
@@ -126,8 +169,11 @@ const WS = '/weekly-sheet/import';
 const wsCrumbs = (req) => [...overviewEngine.breadcrumbs(req, 'weekly'), { label: 'Weekly sheet', href: '/weekly-sheet' }];
 
 /** GET /weekly-sheet/import */
-export const getWeeklySheetUpload = (req, res) => {
+export const getWeeklySheetUpload = async (req, res, next) => {
+  let uploads;
+  try { uploads = await recentUploads('weeklySheet'); } catch (err) { return next(err); }
   res.render(VIEW('upload'), {
+    uploads,
     title: 'Import the weekly attendance workbook',
     crumbs: wsCrumbs(req),
     action: WS,
@@ -184,6 +230,7 @@ export const postWeeklySheetImport = async (req, res, next) => {
 };
 
 export default {
+  recentUploads, describeUpload,
   getJobRegisterUpload, postJobRegisterUpload, getJobRegisterCheck, postJobRegisterImport,
   getWeeklySheetUpload, postWeeklySheetUpload, getWeeklySheetMapping, postWeeklySheetImport,
 };

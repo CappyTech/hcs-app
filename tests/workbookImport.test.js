@@ -512,3 +512,49 @@ describe('Import buttons', () => {
     }
   });
 });
+
+describe('Recent uploads list', () => {
+  let ctrl; let saved; let lastQuery;
+  before(async () => {
+    ctrl = (await import('../mongoose/controllers/workbookImportController.js')).default;
+    saved = mdb.INTERNAL;
+    const rows = [
+      { uuid: 'u2', fileName: 'week.xlsx', createdAt: new Date('2026-11-16T09:00:00Z'), createdBy: { username: 'admin1' } },
+      { uuid: 'u1', fileName: 'jobs.xlsx', createdAt: new Date('2026-11-16T08:00:00Z'), importedAt: new Date('2026-11-16T08:05:00Z'), result: { created: 5, updated: 1 } },
+    ];
+    const q = { select: () => q, populate: () => q, sort: () => q, limit: () => q, lean: async () => rows };
+    mdb.INTERNAL = { workbookImport: { find: (filter) => { lastQuery = filter; return q; } } };
+  });
+  after(() => { mdb.INTERNAL = saved; });
+
+  it('asks only for this kind, younger than a day', async () => {
+    const now = new Date('2026-11-16T12:00:00Z');
+    const list = await ctrl.recentUploads('jobRegister', now);
+    assert.equal(lastQuery.kind, 'jobRegister');
+    assert.equal(lastQuery.createdAt.$gt.toISOString(), '2026-11-15T12:00:00.000Z');
+    assert.equal(list.length, 2);
+    assert.equal(list[0].by, 'admin1');
+    assert.equal(list[0].expiresAt.toISOString(), '2026-11-17T09:00:00.000Z');
+    assert.equal(list[1].summary, '5 rows added, 1 row filled in');
+  });
+
+  it('describes a weekly sheet import by days and new locations', () => {
+    const d = ctrl.describeUpload({ uuid: 'x', createdAt: new Date(), importedAt: new Date(), result: { created: 12, createdLocations: 1 } }, 'weeklySheet');
+    assert.equal(d.summary, '12 days imported, 1 new location');
+  });
+
+  it('lists the uploads on the upload page with a link to each', async () => {
+    const uploads = await ctrl.recentUploads('weeklySheet', new Date('2026-11-16T12:00:00Z'));
+    const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/import/upload.ejs'), {
+      title: 't', csrfToken: 'c', crumbs: [], action: '/weekly-sheet/import', heading: 'h', icon: 'bi-x', intro: 'i', points: [], uploads,
+    });
+    assert.match(html, /href="\/weekly-sheet\/import\/u2"[^>]*>Check and import/);
+    assert.match(html, /href="\/weekly-sheet\/import\/u1"[^>]*>View/);
+    assert.match(html, /Not imported/);
+    assert.match(html, /week\.xlsx/);
+    const empty = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/import/upload.ejs'), {
+      title: 't', csrfToken: 'c', crumbs: [], action: '/x', heading: 'h', icon: 'bi-x', intro: 'i', points: [], uploads: [],
+    });
+    assert.match(empty, /No uploads waiting/);
+  });
+});
