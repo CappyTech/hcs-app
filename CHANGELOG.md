@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.119.0] - 2026-11-16
+
+### Added
+- **Weekly sheet: choose who's on it.** Each week starts with the people of the week before.
+  - **Add someone**: any employee (former employees too) or CIS subcontractor not on the sheet, from one list. Replaces the "add a subcontractor" row, which only lasted until the page was left.
+  - **Remove** (the × by a name) takes someone off. It's part of the week's form, so any days changed on the sheet are saved first.
+  - Either change applies to that week and the weeks after it (a later week changed on its own keeps its own list). Anyone with days recorded in a week always shows that week.
+  - Stored per week in a new `weeklySheetPeople` collection (the changes from the usual list of active employees and recent subcontractors).
+
 ## [6.118.1] - 2026-11-16
 
 ### Fixed

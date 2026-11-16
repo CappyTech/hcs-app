@@ -189,7 +189,7 @@ export function buildSheet({
   const sections = GROUPS.map((g) => ({ ...g, rows: shown.filter((r) => r.group === g.key).sort((a, b) => String(a.name).localeCompare(String(b.name))) }))
     .filter((s) => s.rows.length);
 
-  return { sections, counts, total: rows.length, choices, running, group: shown === rows ? '' : group };
+  return { sections, counts, total: rows.length, allRows: rows, choices, running, group: shown === rows ? '' : group };
 }
 
 /**
@@ -231,7 +231,57 @@ async function fetchCurrentHolidays(employeeIds) {
   return new Map(docs.map((d) => [id(d.employeeId), d]));
 }
 
-/** Subcontractors to show: anyone with attendance this week or in the few weeks before, plus `extra`. */
+// ── Who's on the sheet ──────────────────────────────────────────────────
+
+/**
+ * The people on a week's sheet. Pure.
+ *   defaults     personKeys shown without any change (active employees,
+ *                subcontractors with recent attendance)
+ *   overrides    { added, removed } in force for the week (its own, or the
+ *                nearest earlier week's), or null
+ *   withRecords  personKeys with attendance this week: always shown
+ */
+export function effectivePeople({ defaults = [], overrides = null, withRecords = [] }) {
+  const removed = new Set(overrides?.removed || []);
+  const out = new Set([...defaults, ...(overrides?.added || [])].filter((k) => !removed.has(k)));
+  for (const k of withRecords) out.add(k);
+  return out;
+}
+
+/** Overrides after adding or removing one person. Pure. */
+export function changeOverrides(overrides, key, action) {
+  const added = new Set(overrides?.added || []);
+  const removed = new Set(overrides?.removed || []);
+  if (action === 'add') { removed.delete(key); added.add(key); }
+  if (action === 'remove') { added.delete(key); removed.add(key); }
+  return { added: [...added], removed: [...removed] };
+}
+
+/** The changes in force for a week: its own, or the nearest earlier week's. */
+export async function fetchOverrides(monday) {
+  if (!mdb.INTERNAL.weeklySheetPeople) return null;
+  return mdb.INTERNAL.weeklySheetPeople.findOne({ monday: { $lte: monday } }).sort({ monday: -1 }).select('monday added removed').lean();
+}
+
+/**
+ * Add or remove someone from a week onwards: the week gets its own copy of the
+ * changes in force, with this one applied. key: 'e:<id>' | 's:<id>'.
+ */
+export async function changePeople(param, key, action, userId) {
+  if (!/^[es]:[0-9a-f]{24}$/.test(String(key || '')) || !['add', 'remove'].includes(action)) {
+    throw Object.assign(new Error('Choose someone to add or remove.'), { status: 400 });
+  }
+  const { monday } = resolveWeek(param);
+  const next = changeOverrides(await fetchOverrides(monday), key, action);
+  await mdb.INTERNAL.weeklySheetPeople.updateOne(
+    { monday },
+    { $set: { ...next, updatedBy: userId || undefined }, $setOnInsert: { monday } },
+    { upsert: true },
+  );
+  return { monday, ...next };
+}
+
+/** Subcontractors with attendance this week or in the few weeks before (plus `extra`). */
 async function fetchSubcontractorRows(days, extraIds = []) {
   const since = dayStart(addDays(days[0], -7 * RECENT_SUBCONTRACTOR_WEEKS));
   const recent = await mdb.INTERNAL.attendance.distinct('subcontractorId', {
@@ -244,10 +294,11 @@ async function fetchSubcontractorRows(days, extraIds = []) {
 }
 
 /** Everything the sheet shows for one week. */
-export async function loadSheet(param, { isAdmin = false, group = '', addSubcontractor = null } = {}) {
+export async function loadSheet(param, { isAdmin = false, group = '' } = {}) {
   const week = resolveWeek(param);
   const { days } = week;
-  const [employees, attendance, openContracts, locations, leave, closures, lockedDays, subcontractors, vehicles, jobs] = await Promise.all([
+  const overrides = await fetchOverrides(week.monday);
+  const [activeEmployees, attendance, openContracts, locations, leave, closures, lockedDays, recentSubs, vehicles, jobs] = await Promise.all([
     mdb.INTERNAL.employee.find({ status: 'active' }).select('_id uuid name department contract').sort({ name: 1 }).lean(),
     mdb.INTERNAL.attendance.find({ date: { $gte: dayStart(days[0]), $lte: dayEnd(days[6]) } })
       .select('_id uuid date type status employeeId subcontractorId contractId locationId projectId hoursWorked').lean(),
@@ -256,7 +307,7 @@ export async function loadSheet(param, { isAdmin = false, group = '', addSubcont
     fetchApprovedLeave(days),
     fetchClosures(days),
     fetchLockedDays(days),
-    fetchSubcontractorRows(days, addSubcontractor ? [addSubcontractor] : []),
+    fetchSubcontractorRows(days),
     mdb.INTERNAL.vehicle.find({ availabilityStatus: { $ne: 'Disposed' } })
       .select('uuid registrationNumber make model bodyType roadTaxExpiryDate motExpiryDate insuranceExpiryDate insuranceProvider breakdownExpiryDate breakdownProvider')
       .sort({ registrationNumber: 1 }).lean(),
@@ -268,10 +319,21 @@ export async function loadSheet(param, { isAdmin = false, group = '', addSubcont
   const extra = [...new Set(attendance.map((r) => id(r.contractId)).filter(Boolean))].filter((cid) => !contracts.some((c) => id(c) === cid));
   if (extra.length) contracts.push(...await mdb.INTERNAL.contract.find({ _id: { $in: extra } }).select(CONTRACT_FIELDS).lean());
 
-  // Employees on leave or with records this week who are no longer active still get a row
+  // Who's on the sheet: the defaults with the week's changes, plus anyone with records this week
+  const withRecords = attendance.map((r) => (r.employeeId ? personKey('employee', id(r.employeeId)) : personKey('subcontractor', id(r.subcontractorId))));
+  const shown = effectivePeople({
+    defaults: [...activeEmployees.map((e) => personKey('employee', id(e))), ...recentSubs.map((s) => personKey('subcontractor', id(s)))],
+    overrides,
+    withRecords,
+  });
+  const employees = activeEmployees.filter((e) => shown.has(personKey('employee', id(e))));
   const known = new Set(employees.map(id));
-  const missing = [...new Set(attendance.map((r) => id(r.employeeId)).filter((e) => e && !known.has(e)))];
+  const missing = [...shown].filter((k) => k.startsWith('e:') && !known.has(k.slice(2))).map((k) => k.slice(2));
   if (missing.length) employees.push(...await mdb.INTERNAL.employee.find({ _id: { $in: missing } }).select('_id uuid name department contract').lean());
+  const subcontractors = recentSubs.filter((s) => shown.has(personKey('subcontractor', id(s))));
+  const knownSubs = new Set(subcontractors.map(id));
+  const missingSubs = [...shown].filter((k) => k.startsWith('s:') && !knownSubs.has(k.slice(2))).map((k) => k.slice(2));
+  if (missingSubs.length) subcontractors.push(...await mdb.REST.supplier.find({ _id: { $in: missingSubs } }).select('_id uuid Name').lean());
 
   const holidays = await fetchCurrentHolidays(employees.map((e) => e._id));
   const projectIds = [...new Set(contracts.map((c) => id(c.projectId)).filter(Boolean))];
@@ -294,6 +356,7 @@ export async function loadSheet(param, { isAdmin = false, group = '', addSubcont
         breakdown: dueState(v.breakdownExpiryDate, week.today),
       },
     })),
+    overrides,
     employeesById: new Map(employees.map((e) => [id(e), e])),
     contractsById: new Map(contracts.map((c) => [id(c), c])),
     attendance,
@@ -306,7 +369,7 @@ export async function loadSheet(param, { isAdmin = false, group = '', addSubcont
  * the sheet can't edit, is skipped and counted. Returns { saved, skipped }.
  */
 export async function saveSheet(param, body, { isAdmin = false } = {}) {
-  const loaded = await loadSheet(param, { isAdmin, addSubcontractor: body.addedSubcontractor || null });
+  const loaded = await loadSheet(param, { isAdmin });
   const { week, sheet, employeesById, contractsById } = loaded;
   const changes = changedCells(body, week.days);
   if (!changes.length) return { saved: 0, skipped: 0 };
@@ -369,4 +432,5 @@ export async function saveSheet(param, body, { isAdmin = false } = {}) {
 
 export default {
   GROUPS, TYPE_CHOICES, addDays, mondayOf, resolveWeek, cellValueOf, holidayLeft, dueState, buildSheet, changedCells, loadSheet, saveSheet,
+  effectivePeople, changeOverrides, fetchOverrides, changePeople,
 };
