@@ -231,6 +231,41 @@ async function fetchCurrentHolidays(employeeIds) {
   return new Map(docs.map((d) => [id(d.employeeId), d]));
 }
 
+/**
+ * "Copy from yesterday" on one person's day: the form as it stands (submitted
+ * cells, else what's saved), with that person's place on the day before put
+ * into `day`, if that cell can be edited and the place is on offer. A day
+ * before that can't be edited (signed off, say) still copies its single
+ * record's place; an empty one copies nothing. Pure; nothing is saved.
+ * Returns { draft: { [personKey]: { [day]: value } }, copied, from }.
+ */
+export function copyFromYesterday({ rows = [], days = [], person, day, cells = {}, allowed = new Set() }) {
+  const i = days.indexOf(day);
+  if (i < 1) return { draft: {}, copied: 0, from: null };
+  const from = days[i - 1];
+  const draft = {};
+  let copied = 0;
+  for (const row of rows) {
+    const submitted = cells && typeof cells === 'object' ? cells[row.key] || {} : {};
+    const rowDraft = {};
+    for (const c of row.cells) {
+      if (c.editable) rowDraft[c.day] = submitted[c.day] !== undefined ? String(submitted[c.day]) : c.value;
+    }
+    draft[row.key] = rowDraft;
+    if (row.key !== person) continue;
+    const before = row.cells.find((c) => c.day === from);
+    const target = row.cells.find((c) => c.day === day);
+    let value = '';
+    if (before?.editable) value = rowDraft[from] || '';
+    else if (before?.records?.length === 1) value = cellValueOf(before.records[0]) || '';
+    if (target?.editable && value && (allowed.has(value) || value === target.extra?.value)) {
+      if (rowDraft[day] !== value) copied++;
+      rowDraft[day] = value;
+    }
+  }
+  return { draft, copied, from };
+}
+
 // ── Who's on the sheet ──────────────────────────────────────────────────
 
 /**
@@ -432,5 +467,5 @@ export async function saveSheet(param, body, { isAdmin = false } = {}) {
 
 export default {
   GROUPS, TYPE_CHOICES, addDays, mondayOf, resolveWeek, cellValueOf, holidayLeft, dueState, buildSheet, changedCells, loadSheet, saveSheet,
-  effectivePeople, changeOverrides, fetchOverrides, changePeople,
+  effectivePeople, changeOverrides, fetchOverrides, changePeople, copyFromYesterday,
 };
