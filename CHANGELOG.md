@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.120.2] - 2026-11-16
+
+### Changed
+- **Weekly sheet: This week is always shown.** On the current week it's greyed out instead of hidden, so Previous week and Next week stay in the same place as you move between weeks.
+
 ## [6.120.1] - 2026-11-16
 
 ### Changed
