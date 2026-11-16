@@ -371,13 +371,50 @@ export function readClientChoices(body = {}, clients = [], customers = []) {
 }
 
 /**
+ * The customer a row's own KashFlow records name: its project's, else its
+ * quote's, else its invoice's. lookup: { projects, quotes, invoices }, each a
+ * Map of Number → CustomerCode. Returns { code, source } or null. Pure.
+ */
+export function customerFromKashflow(entry, lookup = {}) {
+  for (const [field, map, source] of [['projectNumber', lookup.projects, 'project'], ['quoteNumber', lookup.quotes, 'quote'], ['invoiceNumber', lookup.invoices, 'invoice']]) {
+    if (entry[field] == null || !map) continue;
+    const code = map.get(Number(entry[field]));
+    if (code) return { code, source };
+  }
+  return null;
+}
+
+/**
+ * Entries whose quote, project or invoice is in KashFlow take that record's
+ * customer (when it's a known customer), marked customerFrom. The rest are
+ * left for the client mapping. Pure.
+ */
+export function applyKashflowCustomers(entries, lookup, customers = []) {
+  const nameOf = new Map(customers.map((c) => [c.code, c.name]));
+  return entries.map((e) => {
+    const found = customerFromKashflow(e, lookup);
+    if (!found || !nameOf.has(found.code)) return e;
+    return { ...e, sheetClient: e.client, customerCode: found.code, client: nameOf.get(found.code), customerFrom: found.source };
+  });
+}
+
+/** How many entries still need each sheet client mapped (no customer from KashFlow). Pure. */
+export function clientsNeeded(entries) {
+  const m = new Map();
+  for (const e of entries) if (!e.customerCode) m.set(clientKey(e.client), (m.get(clientKey(e.client)) || 0) + 1);
+  return m;
+}
+
+/**
  * Entries with their client set to the chosen customer (code and KashFlow
- * name), or marked unmatchedClient when none was chosen. Pure.
+ * name), or marked unmatchedClient when none was chosen. Entries that already
+ * have a customer (from KashFlow) are left as they are. Pure.
  */
 export function applyClients(entries, mapping, customers = []) {
   const nameOf = new Map(customers.map((c) => [c.code, c.name]));
   const codeByKey = new Map(mapping.map((m) => [m.key, m.code]));
   return entries.map((e) => {
+    if (e.customerCode) return e;
     const code = codeByKey.get(clientKey(e.client));
     if (!code) return { ...e, unmatchedClient: true };
     return { ...e, sheetClient: e.client, customerCode: code, client: nameOf.get(code) || e.client };
@@ -494,13 +531,31 @@ export async function loadPreview(uuid) {
   const staged = await findStaged(uuid);
   const customers = await customerList();
   const suggestions = tickedPairs(staged);
-  const clients = clientMapping(staged, customers);
   const paired = applyChosenPairs(staged.parsed.entries, suggestions.filter((s) => s.ticked).map((s) => s.value));
-  const plan = planImport(applyClients(paired, clients, customers), await existingRows());
-  return { staged, plan, suggestions, clients, customers, counts: summarisePlan(plan) };
+  const withKf = applyKashflowCustomers(paired, await kashflowLookup(paired), customers);
+  const needed = clientsNeeded(withKf);
+  const clients = clientMapping(staged, customers).map((c) => ({ ...c, needed: needed.get(c.key) || 0 }));
+  const plan = planImport(applyClients(withKf, clients, customers), await existingRows());
+  const fromKashflow = withKf.filter((e) => e.customerFrom).length;
+  return { staged, plan, suggestions, clients, customers, fromKashflow, counts: summarisePlan(plan) };
 }
 
 const customerList = () => customerChoices();
+
+const codeMap = (docs) => new Map(docs.filter((d) => d.Number != null && d.CustomerCode)
+  .map((d) => [Number(d.Number), String(d.CustomerCode).trim()]));
+
+/** The customer codes on the KashFlow projects, quotes and invoices with these entries' numbers. */
+export async function kashflowLookup(entries) {
+  const nums = (k) => [...new Set(entries.map((e) => e[k]).filter((n) => n != null).map(Number))];
+  const find = (Model, numbers) => (numbers.length && Model ? Model.find({ Number: { $in: numbers } }).select('Number CustomerCode').lean() : []);
+  const [projects, quotes, invoices] = await Promise.all([
+    find(mdb.REST.project, nums('projectNumber')),
+    find(mdb.REST.quote, nums('quoteNumber')),
+    find(mdb.REST.invoice, nums('invoiceNumber')),
+  ]);
+  return { projects: codeMap(projects), quotes: codeMap(quotes), invoices: codeMap(invoices) };
+}
 
 /** What was submitted: the ticked pairs (offered ones only) and the client choices. */
 function readSubmitted(staged, body, customers) {
@@ -526,7 +581,9 @@ export async function runImport(uuid, body = {}) {
   const customers = await customerList();
   const { pairs, clients } = readSubmitted(staged, body || {}, customers);
   const mapping = clientMapping({ ...staged, saved: true, choices: { clients } }, customers);
-  const plan = planImport(applyClients(applyChosenPairs(staged.parsed.entries, pairs), mapping, customers), await existingRows());
+  const paired = applyChosenPairs(staged.parsed.entries, pairs);
+  const withKf = applyKashflowCustomers(paired, await kashflowLookup(paired), customers);
+  const plan = planImport(applyClients(withKf, mapping, customers), await existingRows());
   const result = { created: 0, updated: 0, unchanged: 0, conflicts: 0, skipped: 0, failed: [] };
   const Model = mdb.INTERNAL.jobRegister;
 
@@ -567,11 +624,39 @@ export async function runImport(uuid, body = {}) {
  */
 export async function loadUnlinked() {
   const [rows, customers] = await Promise.all([
-    mdb.INTERNAL.jobRegister.find({ customerCode: { $in: [null, ''] } }).select('_id client').lean(),
+    mdb.INTERNAL.jobRegister.find({ customerCode: { $in: [null, ''] } }).select('_id client quoteNumber projectNumber invoiceNumber').lean(),
     customerList(),
   ]);
-  const clients = sheetClients(rows).map((c, index) => ({ ...c, index, code: suggestCustomer(c.label, customers) }));
-  return { clients, customers, total: rows.length };
+  const withKf = applyKashflowCustomers(rows, await kashflowLookup(rows), customers);
+  const auto = withKf.filter((r) => r.customerCode);
+  const manual = withKf.filter((r) => !r.customerCode);
+  // Rows whose own quote/project/invoice in KashFlow names the customer, by customer
+  const byCode = new Map();
+  for (const r of auto) {
+    const c = byCode.get(r.customerCode) || byCode.set(r.customerCode, { code: r.customerCode, name: r.client, count: 0, from: new Set() }).get(r.customerCode);
+    c.count++;
+    c.from.add(clientKey(r.sheetClient));
+  }
+  const fromKashflow = [...byCode.values()].map((c) => ({ code: c.code, name: c.name, count: c.count, typed: c.from.size })).sort((a, b) => b.count - a.count);
+  const clients = sheetClients(manual).map((c, index) => ({ ...c, index, code: suggestCustomer(c.label, customers) }));
+  return { clients, customers, total: rows.length, fromKashflow, autoRows: auto, manualRows: manual };
+}
+
+/**
+ * Link every unlinked row whose own quote, project or invoice is in KashFlow
+ * to that record's customer. Returns { rows, customers }.
+ */
+export async function linkFromKashflow() {
+  const { autoRows } = await loadUnlinked();
+  const byCode = new Map();
+  for (const r of autoRows) (byCode.get(r.customerCode) || byCode.set(r.customerCode, { name: r.client, ids: [] }).get(r.customerCode)).ids.push(r._id);
+  let linked = 0;
+  for (const [code, { name, ids }] of byCode) {
+    const res = await mdb.INTERNAL.jobRegister.updateMany({ _id: { $in: ids } }, { $set: { customerCode: code, client: name } });
+    linked += res.modifiedCount ?? ids.length;
+  }
+  logger.info(`[jobRegister] Linked ${linked} row(s) to KashFlow customers from their quotes/projects/invoices`);
+  return { rows: linked, customers: byCode.size };
 }
 
 /**
@@ -581,10 +666,9 @@ export async function loadUnlinked() {
  * overwrite an imported row. Returns { rows, clients }.
  */
 export async function linkClients(body = {}) {
-  const { clients, customers } = await loadUnlinked();
+  const { clients, customers, manualRows: rows } = await loadUnlinked();
   const nameOf = new Map(customers.map((c) => [c.code, c.name]));
   const chosen = readClientChoices(body, clients, customers);
-  const rows = await mdb.INTERNAL.jobRegister.find({ customerCode: { $in: [null, ''] } }).select('_id client').lean();
   let linkedRows = 0;
   let linkedClients = 0;
   for (const c of clients) {
@@ -638,5 +722,6 @@ export async function flagImportedRows() {
 export default {
   cellText, cellInt, cellMoney, cellDate, siteKey, findSheets, parseRow, matchKey, pairQuotesWithJobs, mergePair,
   suggestPairs, applyChosenPairs, parseJobRegWorkbook, tickedPairs, saveForLater,
-  sheetClients, suggestCustomer, clientMapping, readClientChoices, applyClients, flagImportedRows, loadUnlinked, linkClients, planImport, summarisePlan, toModelFields, stageUpload, loadPreview, runImport,
+  sheetClients, suggestCustomer, clientMapping, readClientChoices, applyClients, flagImportedRows, loadUnlinked, linkClients, linkFromKashflow,
+  customerFromKashflow, applyKashflowCustomers, clientsNeeded, kashflowLookup, planImport, summarisePlan, toModelFields, stageUpload, loadPreview, runImport,
 };

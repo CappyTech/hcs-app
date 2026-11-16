@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.117.0] - 2026-11-16
+
+### Added
+- **Job Register: the client comes from KashFlow when the quote or job is there.** A row's own KashFlow project, quote or invoice (in that order) names its customer, so that's used instead of matching names:
+  - **Link clients** first offers **Link from KashFlow** for every unlinked row whose number is in KashFlow, listed by customer. Only the rows that aren't in KashFlow are left to link by client name.
+  - **Job Reg import:** rows whose number is in KashFlow take that customer; the "Clients on the sheet" list only asks about the rest.
+  - **Add/edit form:** the client can be left blank when the quote or project is in KashFlow, and the customer is taken from it.
+
 ## [6.116.0] - 2026-11-16
 
 ### Changed

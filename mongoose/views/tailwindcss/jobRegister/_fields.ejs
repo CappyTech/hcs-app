@@ -51,12 +51,13 @@
 <div>
   <label for="jr-customer" class="<%= label %>">Client (KashFlow customer)</label>
   <% const currentCode = String(v('customerCode')).trim().toUpperCase(); const known = customers.some((c) => c.code.toUpperCase() === currentCode); %>
-  <select id="jr-customer" name="customerCode" required class="<%= input %> w-full">
+  <select id="jr-customer" name="customerCode" class="<%= input %> w-full" aria-describedby="jr-customer-help">
     <option value=""><%= v('client') && !known ? `— Choose — (was: ${v('client')})` : '— Choose a customer —' %></option>
     <% customers.forEach((c) => { %>
       <option value="<%= c.code %>" <%= c.code.toUpperCase() === currentCode ? 'selected' : '' %>><%= c.name %> (<%= c.code %>)</option>
     <% }) %>
   </select>
+  <p id="jr-customer-help" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Left blank, it's taken from the quote or project in KashFlow.</p>
   <% if (!customers.length) { %><p class="mt-1 text-xs text-amber-700 dark:text-amber-400">No KashFlow customers have synced yet.</p><% } %>
 </div>
 <div>

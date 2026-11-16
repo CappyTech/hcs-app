@@ -20,6 +20,7 @@ router.post(
 // Link existing rows' clients to KashFlow customers. Before /:uuid.
 router.get('/job-register/link-clients', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.getLinkClients);
 router.post('/job-register/link-clients', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.postLinkClients);
+router.post('/job-register/link-clients/kashflow', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.postLinkFromKashflow);
 // Import the Job Reg workbook: upload, check, import. Admin only (a bulk
 // write). Before /:uuid, which would otherwise take "import" as an entry.
 router.get('/job-register/import', authService.ensureRole('admin'), importCtrl.getJobRegisterUpload);
