@@ -61,11 +61,15 @@ async function namesById(Model, ids, field) {
   return out;
 }
 
+/** True when the record is about an employee marked inactive. */
+export const isLeaver = (rec, names) => Boolean(rec.employeeId)
+  && names.employees.get(String(rec.employeeId))?.status === 'inactive';
+
 const uniq = (records, key) => [...new Set(records.filter((r) => r[key]).map((r) => String(r[key])))];
 
 async function loadNames(records) {
   const [employees, suppliers, contracts] = await Promise.all([
-    namesById(mdb.INTERNAL?.employee, uniq(records, 'employeeId'), 'name'),
+    namesById(mdb.INTERNAL?.employee, uniq(records, 'employeeId'), 'name status'),
     namesById(mdb.REST?.supplier, uniq(records, 'subcontractorId'), 'Name'),
     namesById(mdb.INTERNAL?.contract, uniq(records, 'contractId'), 'title siteManagers'),
   ]);
@@ -170,6 +174,9 @@ async function scanSource(source, { User, userIds, bookUserIds, now, horizon, st
   if (source.query) records = records.filter((rec) => dateOf(rec) <= horizon);
   // The accident book's people never get names; only book readers hear of it.
   const names = source.bookOnly ? { employees: new Map(), suppliers: new Map(), contracts: new Map() } : await loadNames(records);
+  // A leaver's lapsing cards or inductions need no action; leaving them out
+  // also closes any reminder already raised for them.
+  if (!source.bookOnly) records = records.filter((rec) => !isLeaver(rec, names));
   const baseIds = source.bookOnly ? bookUserIds : userIds;
 
   for (const rec of records) {

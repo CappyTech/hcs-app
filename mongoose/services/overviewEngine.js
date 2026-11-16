@@ -486,9 +486,11 @@ customPanels.holidayBalances = async (req, now) => {
   const EmployeeHoliday = modelFor('employeeHoliday');
   const Employee = modelFor('employee');
   if (!EmployeeHoliday || !Employee) return null;
-  const records = await EmployeeHoliday.find({ periodStart: { $lte: now }, periodEnd: { $gte: now } }).lean();
-  const emps = await Employee.find({ _id: { $in: records.map((r) => r.employeeId).filter(Boolean) } }).select('name').lean();
+  const periods = await EmployeeHoliday.find({ periodStart: { $lte: now }, periodEnd: { $gte: now } }).lean();
+  // Leavers' balances are history, not something to act on.
+  const emps = await Employee.find({ _id: { $in: periods.map((r) => r.employeeId).filter(Boolean) }, status: { $ne: 'inactive' } }).select('name').lean();
   const names = Object.fromEntries(emps.map((e) => [String(e._id), e.name]));
+  const records = periods.filter((h) => names[String(h.employeeId)]);
   const rows = records.map((h) => {
     const hours = h.entitlementType === 'hours';
     const entitlement = (hours ? h.entitlementHours : h.entitlementDays) || 0;
