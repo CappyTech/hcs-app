@@ -107,6 +107,21 @@ describe('buildWeekFlow', () => {
     // Sick days need no contract; only the work day is flagged
     assert.deepEqual(flow.checks.find((c) => c.key === 'noContract').items.map((i) => i.label), ['Emp Three, 2026-10-28']);
     assert.deepEqual(flow.unassignedPeople.map((p) => p.name), ['Emp Three']);
+    assert.deepEqual(flow.notes, []);
+  });
+
+  it('treats work by overhead people as overhead days, not checks', () => {
+    const E3 = '0000000000000000000000e3';
+    const f = fixture();
+    f.employeesById.set(E3, { _id: E3, uuid: 'e3', name: 'Emp Three', overhead: true });
+    f.attendance.push({ uuid: 'r3', date: at('2026-10-28'), type: 'work', status: 'pending', employeeId: E3 });
+    const flow = buildWeekFlow(f);
+    assert.deepEqual(flow.checks.find((c) => c.key === 'notAssigned').items, []);
+    assert.deepEqual(flow.checks.find((c) => c.key === 'noContract').items, []);
+    assert.deepEqual(flow.unassignedPeople, []);
+    assert.deepEqual(flow.checks.find((c) => c.key === 'overhead').items.map((i) => i.label), ['Emp Three, 2026-10-28']);
+    assert.ok(!flow.openChecks.some((c) => c.key === 'overhead'));
+    assert.deepEqual(flow.notes.map((c) => c.key), ['overhead']);
   });
 
   it('counts records by status and marks steps done', () => {

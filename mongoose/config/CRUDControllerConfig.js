@@ -297,6 +297,7 @@ export default {
     labelOverrides: {
       ir35: 'IR35',
       subcontractorSupplierId: 'Linked Supplier',
+      overhead: 'Overhead (work not costed to a job)',
     },
     middleware: {
       read: ['ensureRoles:admin,employee'],

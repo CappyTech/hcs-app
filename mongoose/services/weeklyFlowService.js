@@ -116,6 +116,8 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
         uuid: doc?.uuid || null,
         name: (kind === 'employee' ? doc?.name : doc?.Name) || '(removed)',
         defaultHours: kind === 'employee' ? defaultDailyHours(doc) : null,
+        // Overhead people's work is never costed to a job (subcontractors always are)
+        overhead: kind === 'employee' && !!doc?.overhead,
         recordsByDay: {},
         leaveByDay: kind === 'employee' ? leaveByEmployee.get(mongoId) || new Map() : new Map(),
         assignmentUuids: [],
@@ -126,6 +128,7 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
 
   const counts = { planned: 0, pending: 0, 'site-approved': 0, approved: 0, rejected: 0, total: 0 };
   const recordsWithoutContract = [];
+  const overheadDays = [];
   for (const rec of attendance) {
     const kind = rec.employeeId ? 'employee' : 'subcontractor';
     const mongoId = id(rec.employeeId || rec.subcontractorId);
@@ -135,7 +138,7 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
     (p.recordsByDay[day] ||= []).push(rec);
     counts.total++;
     counts[rec.status || 'pending'] = (counts[rec.status || 'pending'] || 0) + 1;
-    if (isWorkType(rec) && !rec.contractId) recordsWithoutContract.push({ person: p, day, rec });
+    if (isWorkType(rec) && !rec.contractId) (p.overhead ? overheadDays : recordsWithoutContract).push({ person: p, day, rec });
   }
 
   // ── Step 1: contracts running this week ──
@@ -221,7 +224,7 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
       label: 'Attendance from people not on any assignment',
       hint: 'Add them to the assignment they worked on so the hours land on the right job. Holiday, sick and off days need no assignment.',
       items: [...people.values()]
-        .filter((p) => !p.assignmentUuids.length && Object.values(p.recordsByDay).flat().some(isWorkType))
+        .filter((p) => !p.overhead && !p.assignmentUuids.length && Object.values(p.recordsByDay).flat().some(isWorkType))
         .map((p) => ({ label: p.name })),
     },
     {
@@ -235,8 +238,16 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
       key: 'noContract',
       severity: 'warning',
       label: 'Work recorded without a contract',
-      hint: 'Pick the contract on the weekly grid so the day is costed to a job.',
-      items: recordsWithoutContract.map(({ person: p, day }) => ({ label: `${p.name}, ${day}` })),
+      hint: "Pick the contract on the weekly grid so the day is costed to a job. If none of this person's work is for a job, tick Overhead on their record.",
+      items: recordsWithoutContract.map(({ person: p, day }) => ({ label: `${p.name}, ${day}`, href: p.kind === 'employee' && p.uuid ? `/employee/update/${p.uuid}` : undefined })),
+    },
+    {
+      // Shown for information only, so it never holds up the week
+      key: 'overhead',
+      severity: 'info',
+      label: 'Overhead days',
+      hint: 'Work by people marked Overhead is costed to overheads, not a job.',
+      items: overheadDays.map(({ person: p, day }) => ({ label: `${p.name}, ${day}` })),
     },
     {
       key: 'closedContract',
@@ -247,7 +258,8 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
     },
   ];
 
-  const openChecks = checks.filter((c) => c.items.length);
+  const openChecks = checks.filter((c) => c.items.length && c.severity !== 'info');
+  const notes = checks.filter((c) => c.items.length && c.severity === 'info');
   const steps = [
     { n: 1, key: 'contracts', label: 'Contracts', done: contractRows.length > 0 && !checks[0].items.length,
       summary: `${contractRows.length} running` },
@@ -266,10 +278,11 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
   return {
     contracts: contractRows,
     assignments: assignmentRows,
-    unassignedPeople: [...people.values()].filter((p) => !p.assignmentUuids.length && Object.values(p.recordsByDay).flat().some(isWorkType)),
+    unassignedPeople: [...people.values()].filter((p) => !p.overhead && !p.assignmentUuids.length && Object.values(p.recordsByDay).flat().some(isWorkType)),
     closures,
     checks,
     openChecks,
+    notes,
     counts,
     steps,
   };
@@ -315,7 +328,7 @@ async function loadWeek(yearParam, weekParam) {
     fetchWeekAssignments(week.days),
     mdb.INTERNAL.attendance.find({ date: { $gte: dayStart(days[0]), $lte: dayEnd(days[6]) } })
       .select('_id uuid date type status employeeId subcontractorId contractId projectId hoursWorked dayRate contractAssignmentId').lean(),
-    mdb.INTERNAL.employee.find({ status: 'active' }).select('_id uuid name contract').sort({ name: 1 }).lean(),
+    mdb.INTERNAL.employee.find({ status: 'active' }).select('_id uuid name contract overhead').sort({ name: 1 }).lean(),
     attendanceService.getLockedRunForDate(week.payrollWeekStart),
   ]);
   const [leave, closures] = await Promise.all([fetchApprovedLeave(days), fetchClosures(days)]);
@@ -334,7 +347,7 @@ async function loadWeek(yearParam, weekParam) {
     ...assignments.flatMap((a) => (a.assignedEmployees || []).map(id)),
   ])].filter((eid) => eid && !employeesById.has(eid));
   if (missingEmployeeIds.length) {
-    for (const e of await mdb.INTERNAL.employee.find({ _id: { $in: missingEmployeeIds } }).select('_id uuid name contract').lean()) {
+    for (const e of await mdb.INTERNAL.employee.find({ _id: { $in: missingEmployeeIds } }).select('_id uuid name contract overhead').lean()) {
       employeesById.set(id(e), e);
     }
   }
