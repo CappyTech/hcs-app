@@ -380,9 +380,23 @@ export function formEcho(body = {}) {
   return entry;
 }
 
-/** formEcho with the quote or project number set to `next`'s, for the Next buttons. */
-export function fillNext(body, next) {
+const DATE_FIELDS = ['quoteDate', 'jobDate', 'invoiceDate'];
+
+/** Today's date in the UK as YYYY-MM-DD. */
+export function ukToday(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(now);
+}
+
+/**
+ * formEcho with one field filled in, for the Next and Today buttons:
+ * fill=quote|project sets that number to `next`'s; fill=<date field> sets it to today.
+ */
+export function fillNext(body, next, now = new Date()) {
   const entry = formEcho(body);
+  if (DATE_FIELDS.includes(body?.fill)) {
+    entry[body.fill] = ukToday(now);
+    return entry;
+  }
   const kind = body?.fill === 'project' ? 'project' : 'quote';
   if (next?.[kind]) entry[`${kind}Number`] = String(next[kind]);
   return entry;
@@ -460,6 +474,6 @@ export async function jobsForAllocation() {
 export default {
   STAGES, STAGE_LABELS, STAGE_FILTERS,
   stageOf, clientKey, entryDate, taxYearOf, matchEntry, buildRegister, findUnregistered, nextNumber, parseEntryForm,
-  parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext,
+  parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext, ukToday,
   loadRegister, createEntry, updateEntry, findEntry, contractChoices, jobsForAllocation,
 };
