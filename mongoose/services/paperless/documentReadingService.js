@@ -36,7 +36,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Bump when the reader changes enough that stored readings should be redone
-export const READER_VERSION = 9; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25"); 5: day-by-day subcontractor lines, CIS deductions not VAT or the total; 6: headings with the currency ("Unit Price (£)"), reverse charge note ends the lines, "Payment due by …"; 7: VAT-inclusive unit prices become net (Screwfix), totals headings over two rows above the lines; 8: month-first dates ("November 11, 2026"); 9: "end of next month" terms, supplier due date arrangements
+export const READER_VERSION = 10; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25"); 5: day-by-day subcontractor lines, CIS deductions not VAT or the total; 6: headings with the currency ("Unit Price (£)"), reverse charge note ends the lines, "Payment due by …"; 7: VAT-inclusive unit prices become net (Screwfix), totals headings over two rows above the lines; 8: month-first dates ("November 11, 2026"); 9: "end of next month" terms, supplier due date arrangements; 10: totals table headings found above any number of lines
 export const MAX_PAGES = 5;
 export const HEADER_FIELDS = FIELDS.map((f) => f.field);
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));
