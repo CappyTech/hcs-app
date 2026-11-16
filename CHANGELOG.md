@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.120.0] - 2026-11-16
+
+### Added
+- **Weekly sheet: copy from yesterday, per person.** Each person's cell from Tuesday to Sunday has a small ↳ button that puts their place from the day before into that day. It works from the sheet as it is on screen (changes not yet saved included), marks the copied cell, and says so above the sheet; nothing is saved until **Save week**. A signed-off day before still copies its place; days that can't be changed (signed off, holiday, locked payroll) aren't copied onto.
+
 ## [6.119.1] - 2026-11-16
 
 ### Changed

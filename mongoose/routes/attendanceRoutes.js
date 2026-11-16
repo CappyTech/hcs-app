@@ -97,6 +97,12 @@ router.post(
   authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   sheet.postSheet,
 );
+// "Copy from yesterday" on one person's day: fills the form, saves nothing
+router.post(
+  "/weekly-sheet/:monday/copy-day",
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
+  sheet.postCopyDay,
+);
 // Who's on the sheet: add someone, or remove them, from this week onwards
 router.post(
   "/weekly-sheet/:monday/people/add",

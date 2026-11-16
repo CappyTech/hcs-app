@@ -75,6 +75,11 @@
       Nobody in this group.
     </div>
   <% } else { %>
+    <% if (typeof notice !== 'undefined' && notice) { %>
+      <div class="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 mb-3 text-sm text-gray-700 dark:text-gray-300" role="status">
+        <i class="bi bi-arrow-return-right text-amber-600" aria-hidden="true"></i> <%= notice %>
+      </div>
+    <% } %>
     <form method="POST" action="<%= base %>">
       <%- include('../partials/csrfHidden') %>
       <input type="hidden" name="group" value="<%= group %>">
@@ -117,15 +122,24 @@
                       <% if (cell.editable) { %>
                         <input type="hidden" name="was[<%= row.key %>][<%= cell.day %>]" value="<%= cell.value %>">
                         <label class="sr-only" for="c-<%= row.key %>-<%= cell.day %>"><%= row.name %>, <%= dayLabels[i] %></label>
-                        <select id="c-<%= row.key %>-<%= cell.day %>" name="<%= name %>" class="<%= cellSelect %> <%= cell.status === 'rejected' ? 'border-red-400 dark:border-red-600' : '' %>">
+                        <% const shownValue = cell.draft !== undefined ? cell.draft : cell.value; const copiedHere = cell.draft !== undefined && cell.draft !== cell.value; %>
+                        <div class="flex items-center gap-0.5">
+                        <select id="c-<%= row.key %>-<%= cell.day %>" name="<%= name %>" class="<%= cellSelect %> <%= cell.status === 'rejected' ? 'border-red-400 dark:border-red-600' : '' %> <%= copiedHere ? 'ring-2 ring-amber-400' : '' %>">
                           <option value=""></option>
-                          <% if (cell.extra) { %><option value="<%= cell.extra.value %>" selected><%= cell.extra.label %></option><% } %>
+                          <% if (cell.extra) { %><option value="<%= cell.extra.value %>" <%= shownValue === cell.extra.value ? 'selected' : '' %>><%= cell.extra.label %></option><% } %>
                           <% choiceGroups.forEach(([g, list]) => { %>
                             <optgroup label="<%= g %>">
-                              <% list.forEach((c) => { %><option value="<%= c.value %>" <%= c.value === cell.value ? 'selected' : '' %>><%= c.label %></option><% }) %>
+                              <% list.forEach((c) => { %><option value="<%= c.value %>" <%= c.value === shownValue ? 'selected' : '' %>><%= c.label %></option><% }) %>
                             </optgroup>
                           <% }) %>
                         </select>
+                        <% if (i > 0) { %>
+                          <button type="submit" formaction="<%= base %>/copy-day" name="copy" value="<%= row.key %>|<%= cell.day %>"
+                                  class="print:hidden shrink-0 text-gray-400 hover:text-green-700 dark:hover:text-green-400 px-0.5"
+                                  title="Copy <%= row.name %>'s <%= dayLabels[i - 1] %> into <%= dayLabels[i] %> (not saved until Save week)"
+                                  aria-label="Copy <%= row.name %>'s <%= dayLabels[i - 1] %> into <%= dayLabels[i] %>"><i class="bi bi-arrow-return-right text-xs" aria-hidden="true"></i></button>
+                        <% } %>
+                        </div>
                         <% if (cell.status === 'rejected') { %><span class="block text-[11px] text-red-700 dark:text-red-400">Rejected</span><% } %>
                       <% } else { %>
                         <a href="/daily/<%= cell.day %>" class="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs <%= tone[cell.tone] || tone.other %> hover:underline"
