@@ -5,6 +5,7 @@ import mdb from '../services/mongooseDatabaseService.js';
 import logger from '../../services/loggerService.js';
 import csrfService from '../../services/csrfService.js';
 import __policyDocument from '../models/mongoose/INTERNAL/policyDocument.js';
+import rbac from '../config/rolePermissionsConfig.js';
 const { POLICY_CATEGORIES } = __policyDocument;
 
 // contentHtml is pre-sanitised by the global xssSanitize middleware
@@ -244,12 +245,19 @@ export const getPolicyList = async (req, res, next) => {
 };
 
 // ── Create policy ────────────────────────────────────────────────────────────
-export const getCreatePolicy = async (_req, res, next) => {
+export const getCreatePolicy = async (req, res, next) => {
   try {
     const employees = await loadEmployeeOptions();
+    // ?employee=<uuid> (from an employee's page) preselects the assignee.
+    let preselectEmployee = null;
+    if (typeof req.query.employee === 'string' && req.query.employee) {
+      const emp = await mdb.INTERNAL.employee.findOne({ uuid: req.query.employee }, '_id').lean();
+      if (emp) preselectEmployee = emp._id.toString();
+    }
     res.render('tailwindcss/company-docs/policy-form', {
       title: 'New Policy',
       policy: null,
+      preselectEmployee,
       categories: POLICY_CATEGORIES,
       employees,
       quillEditor: true,
@@ -337,6 +345,50 @@ export const postDeletePolicy = async (req, res, next) => {
   }
 };
 
+// ── Employee page card ───────────────────────────────────────────────────────
+// Documents assigned to one employee, for the Policies card on their page.
+// Anyone with Documents view sees drafts too; the employee themself (reading
+// their own record) sees only published documents.
+export async function loadEmployeePolicies(employee, user) {
+  if (!employee?._id || !user) return null;
+  const canView = rbac.hasGroup(user, 'documents', 'view');
+  const canEdit = rbac.hasGroup(user, 'documents', 'edit');
+  const isSelf = user.employeeId && String(user.employeeId) === String(employee._id);
+  if (!canView && !isSelf) return null;
+  const filter = { employee: employee._id };
+  if (!canView) filter.isPublished = true;
+  const policies = await mdb.INTERNAL.policyDocument
+    .find(filter, 'uuid title category version isPublished reviewDate reviewIntervalMonths reviewWarningDays updatedAt')
+    .sort({ category: 1, title: 1 })
+    .lean();
+  const now = new Date();
+  for (const p of policies) {
+    const r = resolveReview(p, now);
+    p.reviewState = r.state;
+    p.reviewEffective = r.effective;
+  }
+  return { policies, canEdit, showStatus: canView };
+}
+
+// Print guard: Documents view as before, or the employee a published document
+// is assigned to (so staff can open their own contract from their page).
+export const ensureCanPrintPolicy = (viewGuard) => (req, res, next) => {
+  viewGuard(req, res, async (err) => {
+    if (!err) return next();
+    try {
+      const empId = req.user?.employeeId;
+      if (empId) {
+        const own = await mdb.INTERNAL.policyDocument
+          .exists({ uuid: req.params.uuid, employee: empId, isPublished: true });
+        if (own) return next();
+      }
+    } catch (e) {
+      logger.warn(`[companyDocs] own-policy print check failed: ${e.message}`);
+    }
+    next(err);
+  });
+};
+
 // ── Print view ───────────────────────────────────────────────────────────────
 export const getPrintPolicy = async (req, res, next) => {
   try {
@@ -355,4 +407,4 @@ export const getPrintPolicy = async (req, res, next) => {
   }
 };
 
-export default { getIndex, getLetterhead, getLetterheadLogo, postLetterhead, getPolicyList, getCreatePolicy, postCreatePolicy, getEditPolicy, postEditPolicy, postDeletePolicy, getPrintPolicy };
+export default { getIndex, getLetterhead, getLetterheadLogo, postLetterhead, getPolicyList, getCreatePolicy, postCreatePolicy, getEditPolicy, postEditPolicy, postDeletePolicy, getPrintPolicy, loadEmployeePolicies, ensureCanPrintPolicy };
