@@ -2,6 +2,22 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.113.0] - 2026-11-16
+
+### Added
+- **Import the Job Reg workbook into the Job Register** (`/job-register/import`, admin). Upload the .xlsx, check what will happen, then import. Reads the Quotes and Job Reg sheets; the pre-numbered blank rows are skipped.
+  - A job is matched to the quote it was copied from by site, client and value, and the two become one register row. Jobs that only nearly match a quote (same site and client at a different value, or same client and value at a site written differently) are listed with tick boxes; the likely ones are ticked.
+  - Text in a number or date column ("Cancelled", "INV done", a name) isn't lost: "Cancelled" marks the row cancelled, anything else goes into its notes.
+  - Rows already in the register are never overwritten, only their empty fields filled in, so uploading the same workbook again adds only what's new. A quote and job that are already separate rows are listed to check by hand.
+- **Import the WEEKLY ATTENDANCE workbook into attendance** (`/weekly-sheet/import`, admin). Upload the .xlsx, match every name on the sheet to an employee or subcontractor and every site to a contract or saved location (each comes with a suggestion; unmatched sites default to a new location with the sheet's name), then import.
+  - Every tab with a week of dates over MON … SAT is read, Monday to Saturday; the Sunday column (hours and pay) isn't. Sites become work days, OFF off and Sick/SSP sick. Holidays aren't imported: approved holiday requests are the record of leave, as on the weekly sheet page.
+  - Every record is pending, with the sheet's text in its notes. Days that already have attendance for that person, days in a locked payroll period and days after today are left alone.
+- An **Import workbook** button on the Job Register and the weekly sheet, for admins.
+- Uploads wait a day for their import (`workbookImport`, not audited; the records the import writes are).
+
+### Changed
+- New dependency `exceljs` to read .xlsx uploads.
+
 ## [6.112.0] - 2026-11-16
 
 ### Added

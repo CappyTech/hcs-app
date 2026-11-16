@@ -4,6 +4,7 @@ import authService from '../../services/authService.js';
 import ctrl from '../controllers/attendanceController.js';
 import flow from '../controllers/weeklyFlowController.js';
 import sheet from '../controllers/weeklySheetController.js';
+import importCtrl from '../controllers/workbookImportController.js';
 
 // Permission groups (accessGroupsConfig): Site Ops view reads the daily and
 // weekly views, edit records attendance and assignments, approve signs them
@@ -74,6 +75,13 @@ router.post(
 
 // Weekly sheet: the WEEKLY ATTENDANCE spreadsheet as one page (people by
 // days, a site in each cell). Same access as the weekly flow it feeds.
+// Import the WEEKLY ATTENDANCE workbook: upload, match names and sites,
+// import. Admin only (a bulk write). Before /weekly-sheet/:monday?, which
+// would otherwise take "import" as a week.
+router.get("/weekly-sheet/import", authService.ensureRole("admin"), importCtrl.getWeeklySheetUpload);
+router.post("/weekly-sheet/import", authService.ensureRole("admin"), importCtrl.postWeeklySheetUpload);
+router.get("/weekly-sheet/import/:uuid", authService.ensureRole("admin"), importCtrl.getWeeklySheetMapping);
+router.post("/weekly-sheet/import/:uuid", authService.ensureRole("admin"), importCtrl.postWeeklySheetImport);
 router.get(
   "/weekly-sheet/:monday?",
   authService.ensureGroup(

@@ -1,0 +1,144 @@
+<%#
+  Match the names and sites on an uploaded WEEKLY ATTENDANCE workbook, then import.
+  Locals: crumbs, staged (workbookImport, lean), choices { employees, subcontractors, contracts, locations },
+          people [{ index, label, count, suggestion }], places [{ index, label, count, suggestion }]
+%>
+<%
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
+  const h2 = 'font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
+  const th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap';
+  const td = 'px-3 py-2 text-gray-900 dark:text-gray-100 align-middle';
+  const fmt = (d) => d ? d.split('-').reverse().join('/') : '';
+  const parsed = staged.parsed;
+  const mondays = parsed.weeks.map((w) => w.monday).sort();
+  const sel = (a, b) => (a === b ? 'selected' : '');
+  const active = choices.employees.filter((e) => e.status !== 'inactive');
+  const inactive = choices.employees.filter((e) => e.status === 'inactive');
+  const openContracts = choices.contracts.filter((c) => c.status !== 'Completed');
+  const doneContracts = choices.contracts.filter((c) => c.status === 'Completed');
+  const unmatchedPeople = people.filter((p) => !p.suggestion).length;
+  const newPlaces = places.filter((p) => p.suggestion === 'new').length;
+  const days = (n) => `${n} day${n === 1 ? '' : 's'}`;
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs, current: 'Import' }) %>
+
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-calendar-week text-green-600 dark:text-green-400" aria-hidden="true"></i>
+        Match the weekly sheet
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <span class="font-mono text-xs"><%= staged.fileName %></span> ·
+        <%= parsed.weeks.length %> weeks, Monday <%= fmt(mondays[0]) %> to the week of <%= fmt(mondays[mondays.length - 1]) %> ·
+        <%= parsed.cells.length %> days to import.
+      </p>
+    </div>
+    <a href="/weekly-sheet/import" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-arrow-left" aria-hidden="true"></i> Upload a different file</a>
+  </div>
+
+  <% if (staged.importedAt) { %>
+    <div class="rounded-2xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i>
+      This upload was imported on <%= new Date(staged.importedAt).toLocaleString('en-GB') %>. <a href="/weekly-flow" class="text-green-700 dark:text-green-400 hover:underline">Approve the weeks in the weekly flow</a>.
+    </div>
+  <% } %>
+
+  <div class="rounded-2xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300 space-y-1">
+    <p><i class="bi bi-info-circle text-blue-600" aria-hidden="true"></i>
+      Not imported from the sheet: <%= days(parsed.counts.leave) %> of holiday (approved holiday requests are the record of leave),
+      <%= parsed.counts.note %> cells of hours or pay written in a day, and the Sunday column.
+      <% if (parsed.skippedSheets.length) { %>Tabs skipped: <%= parsed.skippedSheets.map((s) => `“${s.sheet}” (${s.reason})`).join(', ') %>.<% } %>
+    </p>
+    <p>Days that already have attendance, days in a locked payroll period and days after today are left alone. Everything imported is pending approval.</p>
+  </div>
+
+  <form method="POST" action="/weekly-sheet/import/<%= staged.uuid %>">
+    <%- include('../partials/csrfHidden') %>
+
+    <div class="grid lg:grid-cols-2 gap-6 items-start">
+      <!-- People -->
+      <div class="<%= card %>">
+        <div class="px-4 pt-4 pb-2">
+          <h2 class="<%= h2 %>">Names on the sheet</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Who each name is. Names with no match are skipped<%= unmatchedPeople ? ` (${unmatchedPeople} not matched yet)` : '' %>; two names can be the same person.
+          </p>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800"><tr><th class="<%= th %>">On the sheet</th><th class="<%= th %>">Days</th><th class="<%= th %>">Person</th></tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% people.forEach((p) => { const field = `person_${p.index}`; %>
+              <tr class="<%= p.suggestion ? '' : 'bg-amber-50 dark:bg-amber-900/20' %>">
+                <td class="<%= td %>"><label for="<%= field %>"><%= p.label %></label></td>
+                <td class="<%= td %> text-gray-500 dark:text-gray-400"><%= p.count %></td>
+                <td class="<%= td %>">
+                  <select id="<%= field %>" name="<%= field %>" class="<%= input %>">
+                    <option value="">Skip</option>
+                    <% if (active.length) { %><optgroup label="Employees">
+                      <% active.forEach((e) => { const v = `e:${e._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= e.name %></option><% }) %>
+                    </optgroup><% } %>
+                    <% if (inactive.length) { %><optgroup label="Former employees">
+                      <% inactive.forEach((e) => { const v = `e:${e._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= e.name %></option><% }) %>
+                    </optgroup><% } %>
+                    <% if (choices.subcontractors.length) { %><optgroup label="Subcontractors">
+                      <% choices.subcontractors.forEach((s) => { const v = `s:${s._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= s.Name %></option><% }) %>
+                    </optgroup><% } %>
+                  </select>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sites -->
+      <div class="<%= card %>">
+        <div class="px-4 pt-4 pb-2">
+          <h2 class="<%= h2 %>">Sites on the sheet</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Where each entry is: a contract or a saved location. “New location” saves the sheet's name as a location<%= newPlaces ? ` (${newPlaces} set to that now)` : '' %>, which you can tidy up later.
+          </p>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800"><tr><th class="<%= th %>">On the sheet</th><th class="<%= th %>">Days</th><th class="<%= th %>">Contract or location</th></tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% places.forEach((p) => { const field = `place_${p.index}`; %>
+              <tr class="<%= p.suggestion === 'new' ? 'bg-amber-50 dark:bg-amber-900/20' : '' %>">
+                <td class="<%= td %>"><label for="<%= field %>"><%= p.label %></label></td>
+                <td class="<%= td %> text-gray-500 dark:text-gray-400"><%= p.count %></td>
+                <td class="<%= td %>">
+                  <select id="<%= field %>" name="<%= field %>" class="<%= input %>">
+                    <option value="new" <%= sel('new', p.suggestion) %>>New location: <%= p.label %></option>
+                    <option value="" <%= sel('', p.suggestion) %>>Skip</option>
+                    <% if (choices.locations.length) { %><optgroup label="Saved locations">
+                      <% choices.locations.forEach((l) => { const v = `loc:${l._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= l.name %></option><% }) %>
+                    </optgroup><% } %>
+                    <% if (openContracts.length) { %><optgroup label="Contracts">
+                      <% openContracts.forEach((c) => { const v = `con:${c._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= c.title %></option><% }) %>
+                    </optgroup><% } %>
+                    <% if (doneContracts.length) { %><optgroup label="Completed contracts">
+                      <% doneContracts.forEach((c) => { const v = `con:${c._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= c.title %></option><% }) %>
+                    </optgroup><% } %>
+                  </select>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <% if (!staged.importedAt) { %>
+      <div class="flex flex-wrap items-center gap-3 mt-6">
+        <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Import attendance</button>
+        <a href="/weekly-sheet" class="<%= secondaryBtn %>">Cancel</a>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Records are created as pending. This upload expires after a day.</span>
+      </div>
+    <% } %>
+  </form>
+</div>

@@ -1,0 +1,155 @@
+<%#
+  Check a Job Reg workbook import before running it.
+  Locals: crumbs, staged (workbookImport, lean), plan[], suggestions[], counts { create, update, same, conflict }
+%>
+<%
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
+  const h2 = 'font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
+  const th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap';
+  const td = 'px-3 py-2 text-gray-900 dark:text-gray-100 align-top';
+  const fmt = (d) => d ? d.split('-').reverse().join('/') : '';
+  const money = (v) => v == null ? '' : '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const parsed = staged.parsed;
+  const byNumber = (field) => new Map(parsed.entries.filter((e) => e[field] != null).map((e) => [e[field], e]));
+  const quotes = byNumber('quoteNumber');
+  const jobs = byNumber('projectNumber');
+  const FIELD_LABELS = { quoteNumber: 'quote no.', quoteDate: 'quote date', projectNumber: 'project no.', jobDate: 'job date', site: 'site', client: 'client', contact: 'contact', value: 'value', description: 'description', clientRef: 'client ref', invoiceNumber: 'invoice no.', invoiceDate: 'invoice date', notes: 'notes', cancelled: 'cancelled' };
+  const groups = [
+    { action: 'create', title: 'To add', tone: 'text-green-700 dark:text-green-400', open: false },
+    { action: 'update', title: 'Already in the register: empty fields to fill in', tone: 'text-blue-700 dark:text-blue-400', open: true },
+    { action: 'conflict', title: "Can't import: check by hand", tone: 'text-red-700 dark:text-red-400', open: true },
+    { action: 'same', title: 'Already in the register, nothing to add', tone: 'text-gray-500 dark:text-gray-400', open: false },
+  ];
+  const tiles = [
+    { n: counts.create, label: 'to add', tone: 'text-green-700 dark:text-green-400' },
+    { n: counts.update, label: 'to fill in', tone: 'text-blue-700 dark:text-blue-400' },
+    { n: counts.same, label: 'already there', tone: 'text-gray-700 dark:text-gray-300' },
+    { n: counts.conflict + parsed.problems.length, label: "can't import", tone: 'text-red-700 dark:text-red-400' },
+  ];
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs, current: 'Import' }) %>
+
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi bi-journal-text text-green-600 dark:text-green-400" aria-hidden="true"></i>
+        Check the Job Reg import
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <span class="font-mono text-xs"><%= staged.fileName %></span> ·
+        <%= parsed.counts.quotes %> quotes<%= parsed.sheets.quotes ? ` from “${parsed.sheets.quotes}”` : '' %>,
+        <%= parsed.counts.jobs %> jobs<%= parsed.sheets.jobs ? ` from “${parsed.sheets.jobs}”` : '' %>;
+        <%= parsed.counts.pairs %> jobs matched to their quote by site, client and value.
+      </p>
+    </div>
+    <a href="/job-register/import" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-arrow-left" aria-hidden="true"></i> Upload a different file</a>
+  </div>
+
+  <% if (staged.importedAt) { %>
+    <div class="rounded-2xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i>
+      This upload was imported on <%= new Date(staged.importedAt).toLocaleString('en-GB') %>. <a href="/job-register" class="text-green-700 dark:text-green-400 hover:underline">Open the Job Register</a>.
+    </div>
+  <% } %>
+
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <% tiles.forEach((t) => { %>
+      <div class="<%= card %> p-4">
+        <div class="text-2xl font-bold <%= t.tone %>"><%= t.n %></div>
+        <div class="text-sm text-gray-500 dark:text-gray-400">rows <%= t.label %></div>
+      </div>
+    <% }) %>
+  </div>
+
+  <form method="POST" action="/job-register/import/<%= staged.uuid %>">
+    <%- include('../partials/csrfHidden') %>
+
+    <% if (suggestions.length) { %>
+      <div class="<%= card %> p-4 mb-6">
+        <h2 class="<%= h2 %> mb-1">Possible matches</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          These jobs didn't match a quote exactly. Tick the ones that are the same job so they import as one row; unticked ones import as a separate quote and job.
+          The counts above assume the ticked ones.
+        </p>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr><th class="<%= th %>">Same job?</th><th class="<%= th %>">Quote</th><th class="<%= th %>">Job</th><th class="<%= th %>">Why</th></tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% suggestions.forEach((s) => { const q = quotes.get(s.quoteNumber) || {}; const j = jobs.get(s.projectNumber) || {}; %>
+                <tr>
+                  <td class="<%= td %>">
+                    <input type="checkbox" name="pair" value="<%= s.value %>" id="pair-<%= s.value %>" <%= s.likely ? 'checked' : '' %>
+                           class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
+                    <label for="pair-<%= s.value %>" class="sr-only">Quote <%= s.quoteNumber %> and job <%= s.projectNumber %> are the same job</label>
+                  </td>
+                  <td class="<%= td %>"><span class="font-mono text-xs"><%= s.quoteNumber %></span> · <%= q.site %> · <%= q.client %> · <%= money(q.value) || 'no value' %></td>
+                  <td class="<%= td %>"><span class="font-mono text-xs"><%= s.projectNumber %></span> · <%= j.site %> · <%= j.client %> · <%= money(j.value) || 'no value' %></td>
+                  <td class="<%= td %> text-gray-500 dark:text-gray-400"><%= s.reason %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (parsed.problems.length) { %>
+      <div class="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 mb-6">
+        <h2 class="<%= h2 %> mb-2">Rows that won't be imported</h2>
+        <ul class="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+          <% parsed.problems.forEach((p) => { %>
+            <li><%= p.kind === 'quote' ? `Quotes sheet row ${p.row}, quote ${p.quoteNumber}` : `Job Reg sheet row ${p.row}, job ${p.projectNumber}` %>: <%= p.problem %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+
+    <% groups.forEach((g) => { const items = plan.filter((p) => p.action === g.action); if (!items.length) return; %>
+      <details class="<%= card %> mb-4" <%= g.open ? 'open' : '' %>>
+        <summary class="cursor-pointer px-4 py-3 font-semibold text-sm <%= g.tone %>"><%= g.title %> (<%= items.length %>)</summary>
+        <div class="overflow-x-auto border-t border-gray-200 dark:border-gray-700">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th class="<%= th %>">Quote</th><th class="<%= th %>">Job</th><th class="<%= th %>">Date</th><th class="<%= th %>">Site</th>
+                <th class="<%= th %>">Client</th><th class="<%= th %> text-right">Value</th><th class="<%= th %>">Invoice</th>
+                <th class="<%= th %>"><%= g.action === 'update' ? 'Fills in' : g.action === 'conflict' ? 'Why' : 'Notes' %></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% items.forEach((p) => { const e = p.entry; %>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td class="<%= td %> font-mono text-xs"><%= e.quoteNumber ?? '' %></td>
+                  <td class="<%= td %> font-mono text-xs"><%= e.projectNumber ?? '' %></td>
+                  <td class="<%= td %> whitespace-nowrap"><%= fmt(e.jobDate || e.quoteDate) %></td>
+                  <td class="<%= td %>"><%= e.site %></td>
+                  <td class="<%= td %>"><%= e.client %></td>
+                  <td class="<%= td %> text-right whitespace-nowrap"><%= money(e.value) %></td>
+                  <td class="<%= td %>"><%= e.invoiceNumber ?? '' %><%= e.cancelled ? ' Cancelled' : '' %></td>
+                  <td class="<%= td %> text-gray-500 dark:text-gray-400">
+                    <% if (g.action === 'update') { %><%= Object.keys(p.fill).map((k) => FIELD_LABELS[k] || k).join(', ') %>
+                    <% } else if (g.action === 'conflict') { %><%= p.reason %>
+                    <% } else { %><%= e.notes %><% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    <% }) %>
+
+    <% if (!staged.importedAt) { %>
+      <div class="flex flex-wrap items-center gap-3 mt-6">
+        <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Import into the Job Register</button>
+        <a href="/job-register" class="<%= secondaryBtn %>">Cancel</a>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Nothing in the register is overwritten. This upload expires after a day.</span>
+      </div>
+    <% } %>
+  </form>
+</div>
