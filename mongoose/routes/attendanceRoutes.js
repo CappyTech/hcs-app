@@ -97,6 +97,17 @@ router.post(
   authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
   sheet.postSheet,
 );
+// Who's on the sheet: add someone, or remove them, from this week onwards
+router.post(
+  "/weekly-sheet/:monday/people/add",
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
+  sheet.postAddPerson,
+);
+router.post(
+  "/weekly-sheet/:monday/people/remove",
+  authService.ensureGroup("siteOps", "edit", "admin", "accountant"),
+  sheet.postRemovePerson,
+);
 
 // Self-service attendance submission (employee / subcontractor)
 router.get(

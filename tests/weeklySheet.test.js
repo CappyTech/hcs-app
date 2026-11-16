@@ -171,7 +171,7 @@ describe('Weekly sheet page', () => {
       running: sheet.running.map((c) => ({ ...c, project: c.title === 'Windsor' ? { Number: 41250 } : null })),
       jobs: [{ uuid: 'j1', projectNumber: 41299, site: '7 Jasmine Gardens', client: 'Plus Dane', description: 'Gravel' }],
       vehicles: [{ uuid: 'v1', registrationNumber: 'RX 16 MTE', bodyType: 'Wagon', roadTaxExpiryDate: at('2026-06-01'), motExpiryDate: at('2026-06-30'), due: { tax: 'overdue', mot: 'overdue', insurance: null, breakdown: null } }],
-      group: '', groups: GROUPS, addSubcontractor: null, subcontractorChoices: [{ _id: 'x', Name: 'Bob Phenna' }],
+      group: '', groups: GROUPS, addChoices: { employees: [], subcontractors: [{ value: 's:x', label: 'Bob Phenna' }] },
       dayLabels: ['Mon 27/4', 'Tue 28/4', 'Wed 29/4', 'Thu 30/4', 'Fri 1/5', 'Sat 2/5', 'Sun 3/5'],
     });
     assert.match(html, /J Oldfield/);

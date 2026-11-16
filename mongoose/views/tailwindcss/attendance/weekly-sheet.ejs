@@ -2,8 +2,8 @@
   Weekly attendance sheet: the WEEKLY ATTENDANCE spreadsheet as one page.
   One row per person, Monday to Sunday; each cell picks a site, a location
   (Office), Off or Sick. Saving writes pending attendance records.
-  Locals: week, sheet, closures, running, jobs, vehicles, group, groups, addSubcontractor,
-          subcontractorChoices, dayLabels, crumbs
+  Locals: week, sheet, closures, running, jobs, vehicles, group, groups,
+          addChoices { employees, subcontractors } (people not on the sheet), dayLabels, crumbs
 %>
 <%
   const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
@@ -81,7 +81,6 @@
     <form method="POST" action="<%= base %>">
       <%- include('../partials/csrfHidden') %>
       <input type="hidden" name="group" value="<%= group %>">
-      <% if (addSubcontractor) { %><input type="hidden" name="addedSubcontractor" value="<%= addSubcontractor %>"><% } %>
       <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-3">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
           <thead class="bg-gray-50 dark:bg-gray-800">
@@ -103,7 +102,14 @@
               </tr>
               <% section.rows.forEach((row) => { %>
                 <tr class="border-t border-gray-100 dark:border-gray-700">
-                  <th scope="row" class="px-2 py-1.5 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap"><%= row.name %></th>
+                  <th scope="row" class="px-2 py-1.5 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1">
+                      <%= row.name %>
+                      <button type="submit" formaction="<%= base %>/people/remove" name="removePerson" value="<%= row.key %>"
+                              class="print:hidden text-gray-400 hover:text-red-600 dark:hover:text-red-400 px-1 rounded"
+                              title="Remove from this week and the weeks after (saves any changes first)" aria-label="Remove <%= row.name %> from this week and the weeks after"><i class="bi bi-x-lg text-[10px]" aria-hidden="true"></i></button>
+                    </span>
+                  </th>
                   <td class="px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                     <% if (row.holidayLeft != null) { %>
                       <span title="<%= row.holidayRenews ? 'Renews after ' + fmt(row.holidayRenews) : '' %>"><%= row.holidayLeft %></span>
@@ -150,18 +156,27 @@
     </form>
   <% } %>
 
-  <!-- Add a subcontractor row -->
-  <% if (subcontractorChoices.length && (!group || group === 'sub')) { %>
-    <form method="GET" action="<%= base %>" class="<%= card %> p-4 mb-6 flex flex-wrap items-end gap-3 print:hidden">
-      <% if (group) { %><input type="hidden" name="group" value="<%= group %>"><% } %>
-      <div>
-        <label for="add-sub" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Add a subcontractor to this week</label>
-        <select id="add-sub" name="add" class="<%= input %>">
-          <% subcontractorChoices.forEach((s) => { %><option value="<%= s._id %>"><%= s.Name %></option><% }) %>
+  <!-- Add someone to this week (and the weeks after) -->
+  <% const addEmp = (typeof addChoices !== 'undefined' && addChoices.employees) || []; const addSub = (typeof addChoices !== 'undefined' && addChoices.subcontractors) || []; %>
+  <% if (addEmp.length || addSub.length) { %>
+    <form method="POST" action="<%= base %>/people/add" class="<%= card %> p-4 mb-6 flex flex-wrap items-end gap-3 print:hidden">
+      <%- include('../partials/csrfHidden') %>
+      <input type="hidden" name="group" value="<%= group %>">
+      <div class="min-w-64">
+        <label for="add-person" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Add someone to this week</label>
+        <select id="add-person" name="person" required class="<%= input %> w-full">
+          <option value="">Choose…</option>
+          <% const active = addEmp.filter((e) => !e.inactive); const former = addEmp.filter((e) => e.inactive); %>
+          <% if (active.length) { %><optgroup label="Employees"><% active.forEach((e) => { %><option value="<%= e.value %>"><%= e.label %></option><% }) %></optgroup><% } %>
+          <% if (addSub.length) { %><optgroup label="Subcontractors"><% addSub.forEach((x) => { %><option value="<%= x.value %>"><%= x.label %></option><% }) %></optgroup><% } %>
+          <% if (former.length) { %><optgroup label="Former employees"><% former.forEach((e) => { %><option value="<%= e.value %>"><%= e.label %></option><% }) %></optgroup><% } %>
         </select>
       </div>
-      <button type="submit" class="<%= secondaryBtn %>">Add row</button>
-      <p class="text-xs text-gray-500 dark:text-gray-400 basis-full">Subcontractors with attendance in the last four weeks are listed already.</p>
+      <button type="submit" class="<%= secondaryBtn %>"><i class="bi bi-person-plus" aria-hidden="true"></i> Add</button>
+      <p class="text-xs text-gray-500 dark:text-gray-400 basis-full">
+        Each week starts with the people of the week before. Adding or removing someone (<i class="bi bi-x-lg text-[10px]" aria-hidden="true"></i> by their name) changes this week and the weeks after it.
+        Anyone with days recorded in a week always shows that week.
+      </p>
     </form>
   <% } %>
 
