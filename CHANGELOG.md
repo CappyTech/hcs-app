@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.124.0] - 2026-11-16
+
+### Added
+- **Due date arrangements per supplier.** A supplier's reading page (Paperless → reading → supplier) has a Due date arrangement card: end of next month, N days from the invoice date, N days after the end of the invoice month, or a day of next month. Once set, it gives the due date for that supplier's invoices on the entry screen and in the stored reading, over any payment terms the invoice prints, and their invoices still being entered are read again. The entry screen links to it under Due date. Clearing it goes back to reading the invoice; "Forget everything" keeps it.
+- Payment terms printed as "end of next month" or "end of the following month" are read (reader version 9).
+
 ## [6.123.2] - 2026-11-16
 
 ### Fixed

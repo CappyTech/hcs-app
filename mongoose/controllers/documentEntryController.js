@@ -33,6 +33,7 @@ import __paperlessClient from '../services/paperless/paperlessClient.js';
 import { parseCorrespondentName, correspondentLabel } from '../services/paperless/correspondentName.js';
 import * as organisation from '../../services/organisationService.js';
 import logger from '../../services/loggerService.js';
+import { describeTerms } from '../../public/js/invoice-line-finder.js';
 
 const notFound = (res, message = 'Document not found.') => res.status(404).render(path.join('tailwindcss', 'error'), {
   title: '404 - Not Found',
@@ -109,6 +110,8 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     // Not `layout`: express-ejs-layouts reads that as the layout file to render
     readerLayout: hints?.layout || null,
     labels: hints?.labels || null,
+    dueTerms: hints?.dueTerms || null,
+    dueTermsText: hints?.dueTerms ? describeTerms(hints.dueTerms) : null,
     doc,
     kind,
     subcontractor,

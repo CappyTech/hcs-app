@@ -92,6 +92,49 @@ describe('teaching the reader about a supplier', () => {
   });
 });
 
+describe('due date arrangements', () => {
+  it('are checked: kinds, day ranges, and end of next month needs no number', () => {
+    assert.deepEqual(svc.cleanDueTerms({ kind: 'eomFollowing', days: 99 }), { kind: 'eomFollowing', days: 0 });
+    assert.deepEqual(svc.cleanDueTerms({ kind: 'days', days: 30 }), { kind: 'days', days: 30 });
+    assert.equal(svc.cleanDueTerms({ kind: 'days', days: 181 }), null);
+    assert.equal(svc.cleanDueTerms({ kind: 'dayFollowing', days: 0 }), null);
+    assert.equal(svc.cleanDueTerms({ kind: 'weekly', days: 7 }), null);
+    assert.equal(svc.cleanDueTerms(null), null);
+  });
+
+  it('set on a supplier, give their invoices the due date, over printed terms', async () => {
+    const m = models();
+    // The invoice says 30 days; the arrangement is end of next month
+    const DATED = [['Invoice Date', 385, 636], ['12/11/2026', 508, 635], ['TERMS STRICTLY 30 DAYS NET.', 40, 42]];
+    const deps = { ...depsFor(m), fetchPdf: async () => makePdf([DATED]) };
+    const before = await svc.readDocument(1006, deps);
+    assert.equal(before.fields.dueDate.value, '2026-12-12');
+    const r = await svc.setDueTerms(9, { kind: 'eomFollowing' }, { name: 'Electricfix', actor: { userId: null, name: 'jo' } }, deps);
+    assert.equal(r.ok, true);
+    assert.equal(r.text, 'End of next month');
+    assert.equal(r.reread, 2);
+    assert.equal(m.SupplierLayout.docs[0].dueTerms.kind, 'eomFollowing');
+    assert.equal(m.SupplierLayout.docs[0].dueTerms.setBy.name, 'jo');
+    const after = await svc.readDocument(1006, deps);
+    assert.equal(after.fields.dueDate.value, '2026-12-31');
+    assert.equal(after.fields.dueDate.fromArrangement, 'End of next month');
+    assert.equal((await svc.supplierDetail(9, deps)).dueTerms.kind, 'eomFollowing');
+    const hints = await svc.hintsFor({ correspondent: { id: 9 } }, deps);
+    assert.deepEqual(hints.dueTerms, { kind: 'eomFollowing', days: 0 });
+    // Cleared: back to the printed terms
+    await svc.setDueTerms(9, { kind: '' }, {}, deps);
+    assert.equal(m.SupplierLayout.docs[0].dueTerms, null);
+    assert.equal((await svc.readDocument(1006, deps)).fields.dueDate.value, '2026-12-12');
+  });
+
+  it('refuses a number out of range', async () => {
+    const m = models();
+    assert.equal((await svc.setDueTerms(9, { kind: 'days', days: '400' }, {}, depsFor(m))).ok, false);
+    assert.equal((await svc.setDueTerms(9, { kind: 'dayFollowing', days: '' }, {}, depsFor(m))).ok, false);
+    assert.equal((await svc.setDueTerms(9, { kind: 'eom', days: '' }, {}, depsFor(m))).terms.days, 0);
+  });
+});
+
 describe('supplier reading page: routes and view', () => {
   it('every route is behind the Paperless guard and admin-only', () => {
     const routes = read('mongoose/routes/paperlessRoutes.js');
@@ -102,6 +145,7 @@ describe('supplier reading page: routes and view', () => {
       ['post', '/paperless/reading/supplier/:correspondentId/teach', 'postTeach', 'edit'],
       ['post', '/paperless/reading/supplier/:correspondentId/forget', 'postForget', 'edit'],
       ['post', '/paperless/reading/supplier/:correspondentId/labels', 'postLabels', 'edit'],
+      ['post', '/paperless/reading/supplier/:correspondentId/due-terms', 'postDueTerms', 'edit'],
     ]) {
       assert.ok(routes.includes(`router.${method}("${p}", ...docs("${level}"), readingCtrl.${fn})`), `${method} ${p}`);
       const line = perms.split('\n').find((l) => l.includes(`'${p}':`));
@@ -128,6 +172,8 @@ describe('supplier reading page: routes and view', () => {
     assert.match(html, />Charged to Account<\/textarea>/);
     assert.match(html, /action="\/paperless\/reading\/supplier\/9\/forget"/);
     assert.match(html, /data-src="\/paperless\/ocr\/1005\/file"/);
+    assert.match(html, /action="\/paperless\/reading\/supplier\/9\/due-terms"/);
+    assert.match(html, /None: the due date comes from the invoice/);
     assert.match(html, /1 field corrected when saved/);
     assert.match(html, /<script type="module" src="\/resources\/js\/supplier-teach\.js"><\/script>/);
     assert.ok(!/<script[^>]*>[^<]/.test(html), 'no inline script');

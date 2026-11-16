@@ -7,7 +7,8 @@
  *   - draws a box on the PDF around the text each guess came from;
  *   - under each field, says what the document says, with a "Use" button, or
  *     that the typed value matches it; a due date the invoice doesn't print is
- *     worked out from its payment terms ("STRICTLY 30 DAYS");
+ *     worked out from its payment terms ("STRICTLY 30 DAYS"), or from a due
+ *     date arrangement set for the supplier, which wins over both;
  *   - offers to fill the line items, and checks lines, VAT and totals add up
  *     as you type;
  *   - lists where the Paperless custom fields and the document disagree;
@@ -24,7 +25,7 @@
  * events, so it never touches rendering or text selection.
  */
 import { findFields, locateValue, normalise, toItems, charBox, FIELDS } from '/resources/js/invoice-field-finder.js';
-import { findLines, fillMissingRates, findPaymentTerms, findVatNumbers } from '/resources/js/invoice-line-finder.js';
+import { findLines, fillMissingRates, findPaymentTerms, findVatNumbers, dueFromTerms, describeTerms } from '/resources/js/invoice-line-finder.js';
 import { liveChecks, pickValue, sameLines } from '/resources/js/entry-checks.js';
 import { exactBox, placeBox, clickTarget } from '/resources/js/pdf-marks.js';
 
@@ -47,6 +48,8 @@ const paperlessId = form?.dataset.paperlessId;
 const layout = (() => { try { return JSON.parse(form?.dataset.layout || '{}'); } catch { return {}; } })();
 // Label words added for this supplier on its reading page
 const labels = (() => { try { return JSON.parse(form?.dataset.labels || '{}'); } catch { return {}; } })();
+// A due date arrangement set for this supplier on its reading page, or null
+const dueTerms = (() => { try { return JSON.parse(form?.dataset.dueTerms || 'null'); } catch { return null; } })();
 const pickStatus = document.getElementById('pdf-pick-status');
 const inputs = Object.fromEntries(
   [...document.querySelectorAll('[data-suggest-field]')].map((el) => [el.dataset.suggestField, el]),
@@ -93,6 +96,10 @@ const setValue = (input, value) => {
 
 /** The guess for a field, including a due date worked out from the payment terms. */
 function guessFor(field) {
+  if (field === 'dueDate' && dueTerms) {
+    const due = dueFromTerms(inputs.invoiceDate?.value || guesses.invoiceDate?.value, dueTerms);
+    if (due) return { value: due, page: null, box: null, arrangement: describeTerms(dueTerms) };
+  }
   if (field === 'dueDate' && !guesses.dueDate && terms) {
     const invoiceDate = inputs.invoiceDate?.value || guesses.invoiceDate?.value;
     const t = findPaymentTerms(items, invoiceDate);
@@ -118,7 +125,7 @@ function allMarks() {
   const out = [];
   for (const field of Object.keys(inputs)) {
     const m = markFor(field);
-    if (m) out.push({ key: field, label: m.derived ? `${LABEL[field]} (from terms)` : LABEL[field], page: m.page, box: m.box });
+    if (m?.box) out.push({ key: field, label: m.derived ? `${LABEL[field]} (from terms)` : LABEL[field], page: m.page, box: m.box });
   }
   docLines.forEach((l, i) => out.push({ key: `line:${i}`, label: `Line ${i + 1}`, page: l.page, box: l.box, line: true }));
   return out;
@@ -181,7 +188,7 @@ function useButton(label, onUse, text = 'Use') {
 /** Fill a header field from a guess, remembering where on the document it is. */
 function useGuess(field, g) {
   setValue(inputs[field], g.value);
-  if (g.box && !g.derived) picks[field] = g.box;
+  if (g.box && !g.derived && !g.arrangement) picks[field] = g.box;
   else delete picks[field];
 }
 
@@ -209,16 +216,17 @@ function renderHint(field) {
     return;
   }
   const same = typed && normalise(TYPE[field], typed) === normalise(TYPE[field], g.value);
-  const note = g.derived ? ` (worked out from “${g.derived}”)`
+  const note = g.arrangement ? ` (${g.arrangement.toLowerCase()})`
+    : g.derived ? ` (worked out from “${g.derived}”)`
     : g.customLabel ? ` (by your label “${g.customLabel}”)`
     : g.page > 1 ? ` (page ${g.page})` : '';
   if (same) {
     hint.className = `${HINT_BASE} text-green-700 dark:text-green-400`;
-    hint.append(el('span', {}, icon('check2'), ` Matches the document${note}`));
+    hint.append(el('span', {}, icon('check2'), ` Matches ${g.arrangement ? 'your arrangement' : 'the document'}${note}`));
   } else {
     const colour = typed ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400';
     hint.className = `${HINT_BASE} ${colour}`;
-    hint.append(el('span', {}, icon(typed ? 'exclamation-triangle' : 'stars'), ' Document says ', el('strong', { textContent: shown(field, g.value) }), note));
+    hint.append(el('span', {}, icon(typed ? 'exclamation-triangle' : 'stars'), g.arrangement ? ' Your arrangement gives ' : ' Document says ', el('strong', { textContent: shown(field, g.value) }), note));
     if (!input.disabled) hint.append(useField(field, g.value));
   }
   hint.hidden = false;
@@ -238,7 +246,7 @@ function renderDisagreements() {
   const rows = Object.keys(inputs).filter((f) => {
     const g = guessFor(f);
     const now = inputs[f].value.trim();
-    return g && fromPaperless[f] && now === fromPaperless[f] && normalise(TYPE[f], now) !== normalise(TYPE[f], g.value);
+    return g && !g.arrangement && fromPaperless[f] && now === fromPaperless[f] && normalise(TYPE[f], now) !== normalise(TYPE[f], g.value);
   });
   disagreeBox.replaceChildren();
   disagreeBox.hidden = !rows.length;

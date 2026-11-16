@@ -390,6 +390,7 @@ const routeAccess = {
   '/paperless/reading/supplier/:correspondentId/teach':  ['admin'],
   '/paperless/reading/supplier/:correspondentId/forget': ['admin'],
   '/paperless/reading/supplier/:correspondentId/labels': ['admin'],
+  '/paperless/reading/supplier/:correspondentId/due-terms': ['admin'],
   '/paperless/shadow-report':          ['admin'],
   '/paperless/mail-rules':             ['admin'],
   '/paperless/queues':                 ['admin'],

@@ -384,7 +384,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
     <%# ── Entry ── %>
     <div class="<%= COLS.form %> space-y-4">
       <% if (kind === 'invoice') { %>
-        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" data-suggest-form data-values-source="<%= values.source || '' %>" data-cis-rate="<%= locals.cis?.ratePct ?? '' %>" data-paperless-id="<%= doc.paperlessId %>" data-layout="<%= JSON.stringify(locals.readerLayout || {}) %>" data-labels="<%= JSON.stringify(locals.labels || {}) %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
+        <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/entry" data-suggest-form data-values-source="<%= values.source || '' %>" data-cis-rate="<%= locals.cis?.ratePct ?? '' %>" data-paperless-id="<%= doc.paperlessId %>" data-layout="<%= JSON.stringify(locals.readerLayout || {}) %>" data-labels="<%= JSON.stringify(locals.labels || {}) %>" data-due-terms="<%= JSON.stringify(locals.dueTerms || null) %>" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-4">
           <%- include('../partials/csrfHidden') %>
           <div class="flex items-center gap-2">
             <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mr-auto"><%= locals.subcontractor ? 'Subcontractor invoice' : 'Invoice' %></h2>
@@ -413,6 +413,9 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
               <label class="<%= labelCls %>" for="dueDate">Due date</label>
               <input id="dueDate" name="dueDate" type="date" value="<%= val(values.dueDate) %>" class="<%= inputCls('dueDate') %>" data-suggest-field="dueDate" <%= disabled %>>
               <p data-suggest-for="dueDate" hidden></p>
+              <% if (doc.correspondent?.id != null) { %>
+                <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>#due-terms" class="mt-1 inline-block text-xs text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-calendar-check"></i> <%= locals.dueTerms ? 'Arrangement: ' + locals.dueTermsText : 'Set a due date arrangement' %></a>
+              <% } %>
             </div>
             <div>
               <label class="<%= labelCls %>" for="totalGoods">Total goods £</label>

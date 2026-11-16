@@ -18,6 +18,10 @@ const SupplierLayoutSchema = new mongoose.Schema({
   // {x, w, page, y, h, label, at} }, openItems: true | false | null, updatedAt }.
   // The statement reader takes the column under each span ahead of its guess.
   statement:         { type: mongoose.Schema.Types.Mixed, default: null },
+  // A due-date arrangement agreed with the supplier, set on its reading page:
+  // { kind: 'days' | 'eom' | 'eomFollowing' | 'dayFollowing', days, setAt, setBy }.
+  // Wins over the payment terms the invoice prints. Kept by "Forget everything".
+  dueTerms:          { type: mongoose.Schema.Types.Mixed, default: null },
 }, { timestamps: true, minimize: false });
 
 export default {

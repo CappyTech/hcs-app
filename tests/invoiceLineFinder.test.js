@@ -198,6 +198,27 @@ describe('payment terms', () => {
     assert.equal(findPaymentTerms(at('Payment due end of month following'), '2026-09-15').dueDate, '2026-10-31');
     assert.equal(findPaymentTerms(at('Payment is due within 7 days'), '2026-10-01').days, 7);
   });
+  it('reads "end of next month" and "end of the following month"', () => {
+    assert.equal(findPaymentTerms(at('Payment: end of next month'), '2026-11-12').dueDate, '2026-12-31');
+    assert.equal(findPaymentTerms(at('Due by the end of the following month'), '2026-11-12').kind, 'eomFollowing');
+  });
+  it('works out due dates for every kind of arrangement', () => {
+    const { dueFromTerms, describeTerms } = lineFinder;
+    assert.equal(dueFromTerms('2026-11-12', { kind: 'eomFollowing' }), '2026-12-31');
+    assert.equal(dueFromTerms('2026-11-30', { kind: 'eomFollowing' }), '2026-12-31');
+    assert.equal(dueFromTerms('2027-01-15', { kind: 'eomFollowing' }), '2027-02-28');
+    assert.equal(dueFromTerms('2026-11-12', { kind: 'days', days: 30 }), '2026-12-12');
+    assert.equal(dueFromTerms('2026-11-12', { kind: 'eom', days: 30 }), '2026-12-30');
+    assert.equal(dueFromTerms('2026-11-12', { kind: 'eom', days: 0 }), '2026-11-30');
+    assert.equal(dueFromTerms('2026-11-12', { kind: 'dayFollowing', days: 20 }), '2026-12-20');
+    assert.equal(dueFromTerms('2027-01-12', { kind: 'dayFollowing', days: 31 }), '2027-02-28');
+    assert.equal(dueFromTerms('12/11/2026', { kind: 'eomFollowing' }), '2026-12-31');
+    assert.equal(dueFromTerms(null, { kind: 'days', days: 3 }), null);
+    assert.equal(dueFromTerms('2026-11-12', { kind: 'nope' }), null);
+    assert.equal(describeTerms({ kind: 'dayFollowing', days: 22 }), 'The 22nd of next month');
+    assert.equal(describeTerms({ kind: 'eom', days: 0 }), 'End of the invoice month');
+    assert.equal(describeTerms({ kind: 'days', days: 1 }), '1 day from the invoice date');
+  });
   it('ignores returns and complaints wording', () => {
     assert.equal(findPaymentTerms(at('please call or email online@screwfix.com within 28 days to arrange collection.')), null);
     assert.equal(findPaymentTerms(at('All queries must be notified within 7 days.')), null);
