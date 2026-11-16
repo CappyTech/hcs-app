@@ -109,6 +109,59 @@ describe('learning from saves', () => {
     assert.equal(again.fields.invoiceNumber.learned, true);
   });
 
+  // One line, no VAT: the line, the goods and the total all say 120.00
+  const ONE_LINE = [
+    ['Invoice No.', 385, 649], ['INV77', 524, 647], ['Date', 385, 636], ['02/11/2026', 508, 635],
+    ['Description', 137, 559], ['Qty', 417, 559], ['Price', 360, 559], ['Amount', 466, 559],
+    ['Line rental', 137, 543], ['1.00', 413, 542], ['120.00', 356, 542], ['120.00', 465, 543],
+    ['Sub Total', 360, 208], ['120.00', 513, 208], ['Total', 360, 159], ['120.00', 513, 159],
+  ];
+  const oneLineDeps = (m) => depsFor(m, { fetchPdf: async () => makePdf([ONE_LINE]) });
+  const oneLineEntry = { invoiceNumber: 'INV77', invoiceDate: new Date('2026-11-02'), totalGoods: 120, totalVat: 0, invoiceTotal: 120, savedAt: new Date() };
+
+  it('learns the total from where it was picked, not the line with the same amount', async () => {
+    const m = models();
+    await svc.readDocument(1110, oneLineDeps(m));
+    m.OcrDocument.docs[0].entry = oneLineEntry;
+    const picks = svc.parsePicks({ invoiceTotal: '1,513,156,30,15', totalGoods: '1,465,540,30,15' });
+    await svc.learnFromSave(1110, oneLineDeps(m), { picks });
+    const spots = m.SupplierLayout.docs[0].spots;
+    assert.ok(Math.abs(spots.invoiceTotal[0].y - 159) < 5); // the Total row, not the line at 543
+    assert.equal(Math.round(spots.invoiceTotal[0].x), 513);
+    // What was picked wins even where the guessing would choose otherwise
+    assert.equal(Math.round(spots.totalGoods[0].x), 465);
+  });
+
+  it('with nothing picked, a total is not learned from a line item', async () => {
+    const m = models();
+    await svc.readDocument(1110, oneLineDeps(m));
+    m.OcrDocument.docs[0].entry = oneLineEntry;
+    await svc.learnFromSave(1110, oneLineDeps(m));
+    const spots = m.SupplierLayout.docs[0].spots;
+    assert.ok(Math.abs(spots.invoiceTotal[0].y - 159) < 5); // the Total row, not the line at 543
+    assert.ok(Math.abs(spots.totalGoods[0].y - 208) < 5); // the Sub Total row
+  });
+
+  it('chooses a copy: picked, else the label guess, else the lowest amount off the lines', () => {
+    const m = (x, y) => ({ box: { page: 1, x, y, w: 30, h: 12 } });
+    const copies = [m(465, 543), m(513, 208), m(513, 159)];
+    const lines = [{ box: { page: 1, x: 130, y: 538, w: 370, h: 14 } }];
+    assert.equal(svc.chooseSpot(copies, { pick: { page: 1, x: 512, y: 207, w: 30, h: 12 }, lines, type: 'money' }), copies[1]);
+    // A pick nowhere near the value is ignored
+    assert.equal(svc.chooseSpot(copies, { pick: { page: 1, x: 100, y: 700, w: 30, h: 12 }, lines, type: 'money' }), copies[2]);
+    assert.equal(svc.chooseSpot(copies, { guess: { box: { page: 1, x: 513, y: 208, w: 30, h: 12 } }, lines, type: 'money' }), copies[1]);
+    // A guess from the learned layout doesn't vouch for itself
+    assert.equal(svc.chooseSpot(copies, { guess: { learned: true, box: { page: 1, x: 465, y: 543, w: 30, h: 12 } }, lines, type: 'money' }), copies[2]);
+    assert.equal(svc.chooseSpot([], {}), null);
+  });
+
+  it('reads picks from the form, dropping anything malformed', () => {
+    assert.deepEqual(svc.parsePicks({ invoiceTotal: '1,513,156.5,30,15', totalVat: 'x,1,2,3,4', bogus: '1,2,3,4,5', totalGoods: '0,1,2,3,4' }),
+      { invoiceTotal: { page: 1, x: 513, y: 156.5, w: 30, h: 15 } });
+    assert.deepEqual(svc.parsePicks(undefined), {});
+    assert.deepEqual(svc.parsePicks('1,2,3,4,5'), {});
+  });
+
   it('keeps a few spots per field, most seen first', () => {
     const box = (x, y) => ({ page: 1, x, y, w: 30, h: 12 });
     let spots = svc.mergeSpots({}, { invoiceNumber: box(500, 640) });

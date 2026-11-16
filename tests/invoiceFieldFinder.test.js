@@ -218,6 +218,8 @@ describe('invoice field finder', () => {
     assert.equal(Math.round(locateValue(DUTTONS, 'invoiceNumber', '260461').box.x), 524);
     assert.equal(locateValue(DUTTONS, 'invoiceDate', '2026-09-28').page, 1);
     assert.equal(locateValue(DUTTONS, 'invoiceNumber', 'NOPE1'), null);
+    // Every copy, not just the first: 25.00 is both a price and a line's goods
+    assert.deepEqual(finder.locateAll(DUTTONS, 'totalGoods', '25.00').map((m) => Math.round(m.box.x)), [356, 465]);
   });
 
   it('parsers', () => {
@@ -226,6 +228,12 @@ describe('invoice field finder', () => {
     assert.equal(parseDate('31/02/2026'), null);
     // Beers run the date together (#216)
     assert.equal(parseDate('16Dec25'), '2025-12-16');
+    // Month first
+    assert.equal(parseDate('November 11, 2026'), '2026-11-11');
+    assert.equal(parseDate('Nov 11 2026'), '2026-11-11');
+    assert.equal(parseDate('Sept. 3rd, 26'), '2026-09-03');
+    assert.equal(parseDate('February 30, 2026'), null);
+    assert.equal(parseDate('Unit 11, 2026'), null);
     assert.equal(parseDate('31Jan26'), '2026-01-31');
     assert.equal(parseDate('28-Sept-2026'), '2026-09-28');
     assert.equal(parseDate('5 March 2026'), '2026-03-05');

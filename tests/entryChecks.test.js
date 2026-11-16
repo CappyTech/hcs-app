@@ -73,6 +73,8 @@ describe('picking a value off the PDF', () => {
     assert.equal(pickValue('invoiceTotal', '£45.42'), '45.42');
     assert.equal(pickValue('invoiceTotal', 'Charged to Account: £45.42', '£45.42'), '45.42');
     assert.equal(pickValue('invoiceDate', '28/09/2026'), '2026-09-28');
+    assert.equal(pickValue('invoiceDate', 'November 11, 2026', 'November'), '2026-11-11');
+    assert.equal(pickValue('dueDate', 'Due on December 11, 2026 please', 'December'), '2026-12-11');
     // A date in a phrase, clicked on any word of it
     assert.equal(pickValue('dueDate', 'Payment due by 12 March 2026', 'March'), '2026-03-12');
     assert.equal(pickValue('dueDate', 'Due on 05/04/2026', 'on'), '2026-04-05');

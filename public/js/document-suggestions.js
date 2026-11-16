@@ -12,6 +12,9 @@
  *     as you type;
  *   - lists where the Paperless custom fields and the document disagree;
  *   - with a field focused, clicking a value on the PDF fills it in;
+ *   - sends where each value was picked from with the save, so the supplier's
+ *     layout is learned from that spot, not from wherever the same number
+ *     first appears (a one-line invoice's line total is also its total);
  *   - asks the server whether the VAT number is the supplier's and whether
  *     the invoice number is already in KashFlow or on another document, and
  *     reads with the layout learned from this supplier's earlier invoices.
@@ -20,7 +23,7 @@
  * Hooks into document-viewer.js through its hcs:pdf-loaded / hcs:pdf-page
  * events, so it never touches rendering or text selection.
  */
-import { findFields, locateValue, normalise, toItems, FIELDS } from '/resources/js/invoice-field-finder.js';
+import { findFields, locateValue, normalise, toItems, charBox, FIELDS } from '/resources/js/invoice-field-finder.js';
 import { findLines, fillMissingRates, findPaymentTerms, findVatNumbers } from '/resources/js/invoice-line-finder.js';
 import { liveChecks, pickValue, sameLines } from '/resources/js/entry-checks.js';
 import { exactBox, placeBox, clickTarget } from '/resources/js/pdf-marks.js';
@@ -61,6 +64,8 @@ let terms = null; // payment terms, for a due date the invoice doesn't print
 let docLines = []; // line items read off the document
 const pages = new Map(); // pageNumber → { pageEl, viewport, layer }
 let active = null; // key of the lit-up box: a field name or "line:N"
+// field → box the value was taken from (clicked, or a suggestion used); sent on save
+const picks = {};
 
 const readPref = () => { try { return localStorage.getItem(PREF_KEY) !== 'off'; } catch { return true; } };
 const writePref = (on) => { try { localStorage.setItem(PREF_KEY, on ? 'on' : 'off'); } catch { /* private mode */ } };
@@ -173,8 +178,17 @@ function useButton(label, onUse, text = 'Use') {
   return b;
 }
 
+/** Fill a header field from a guess, remembering where on the document it is. */
+function useGuess(field, g) {
+  setValue(inputs[field], g.value);
+  if (g.box && !g.derived) picks[field] = g.box;
+  else delete picks[field];
+}
+
 const useField = (field, value) => useButton(`Use ${shown(field, value)} for ${LABEL[field].toLowerCase()}`, () => {
-  setValue(inputs[field], value);
+  const g = guessFor(field);
+  if (g && normalise(TYPE[field], g.value) === normalise(TYPE[field], value)) useGuess(field, g);
+  else setValue(inputs[field], value);
   inputs[field].focus();
 });
 
@@ -215,7 +229,7 @@ function renderFillAll() {
   const empty = Object.keys(inputs).filter((f) => guessFor(f) && !inputs[f].value.trim() && !inputs[f].disabled);
   fillAllBtn.hidden = empty.length < 2;
   fillAllBtn.querySelector('[data-count]')?.replaceChildren(String(empty.length));
-  fillAllBtn.onclick = () => { for (const f of empty) setValue(inputs[f], guessFor(f).value); };
+  fillAllBtn.onclick = () => { for (const f of empty) useGuess(f, guessFor(f)); };
 }
 
 /** Where the Paperless custom fields and the document disagree (PB: fields keyed before hcs-app). */
@@ -240,7 +254,7 @@ function renderDisagreements() {
   }
   disagreeBox.append(list);
   if (rows.length > 1 && !inputs[rows[0]].disabled) {
-    disagreeBox.append(useButton('Use the document for all of these', () => { for (const f of rows) setValue(inputs[f], guessFor(f).value); }, 'Use the document for all'));
+    disagreeBox.append(useButton('Use the document for all of these', () => { for (const f of rows) useGuess(f, guessFor(f)); }, 'Use the document for all'));
   }
 }
 
@@ -374,14 +388,29 @@ function onPdfClick(e) {
     pickStatus?.replaceChildren(icon('x-circle'), el('span', { textContent: `That isn't a ${armed.label.replace(/^line \d+ /, '')}. Try another value, or Esc to stop.` }));
     return;
   }
-  const { input } = armed;
+  const { input, field } = armed;
   setValue(input, value);
+  if (inputs[field] === input) {
+    // The whole text if that was the value, else the word clicked
+    picks[field] = pickValue(field, it.str, null) != null ? charBox(it) : charBox(it, hit.wordFrom, hit.wordTo);
+  }
   disarm();
   refocusing = true;
   input.focus(); // Tab on to the next field, click the document again
   refocusing = false;
   input.classList.add('hcs-just-filled');
   setTimeout(() => input.classList.remove('hcs-just-filled'), 900);
+}
+
+/** Hidden picks[field] = "page,x,y,w,h" for the save; the server checks each against the text. */
+function writePicks() {
+  for (const old of form.querySelectorAll('input[data-pick]')) old.remove();
+  for (const [field, b] of Object.entries(picks)) {
+    if (!inputs[field]?.value.trim()) continue;
+    const input = el('input', { type: 'hidden', name: `picks[${field}]`, value: [b.page, b.x, b.y, b.w, b.h].map((n) => Math.round(n * 10) / 10).join(',') });
+    input.dataset.pick = '';
+    form.append(input);
+  }
 }
 
 // ── Supplier VAT number and duplicates (server) ──────────────────────
@@ -504,7 +533,8 @@ if (root && form && Object.keys(inputs).length) {
   for (const [field, input] of Object.entries(inputs)) {
     input.addEventListener('focus', () => setActive(field));
     input.addEventListener('blur', () => setActive(null, { scroll: false }));
-    input.addEventListener('input', () => {
+    input.addEventListener('input', (e) => {
+      if (e.isTrusted) delete picks[field]; // typed by hand: no longer the picked spot
       renderHint(field);
       if (field === 'invoiceDate') renderHint('dueDate'); // due date from terms follows it
       if (field === 'invoiceNumber') insightsSoon(); // is the new number a duplicate?
@@ -527,7 +557,7 @@ if (root && form && Object.keys(inputs).length) {
     else disarm();
   });
   form.addEventListener('input', () => { renderLinesButton(); renderChecks(); });
-  form.addEventListener('submit', disarm);
+  form.addEventListener('submit', () => { disarm(); writePicks(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && armed) disarm(); });
   document.addEventListener('mousedown', (e) => {
     if (armed && !root.contains(e.target) && !form.contains(e.target)) disarm();

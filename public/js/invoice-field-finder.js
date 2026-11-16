@@ -34,6 +34,11 @@ export function parseDate(text) {
     if (r && MONTH_WORD.test(r[2])) { d = Number(r[1]); m = MONTHS[r[2].slice(0, 3).toLowerCase()]; y = Number(r[3]); } else r = null;
   }
   if (!r) {
+    // Month first, as American-style invoices print it: "November 11, 2026", "Nov 11 26"
+    r = s.match(/^([a-z]{3,9})\.?[\s-]+(\d{1,2}),?[\s-]+(\d{2}|\d{4})$/i);
+    if (r && MONTH_WORD.test(r[1])) { m = MONTHS[r[1].slice(0, 3).toLowerCase()]; d = Number(r[2]); y = Number(r[3]); } else r = null;
+  }
+  if (!r) {
     r = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (r) [, y, m, d] = r.map(Number);
   }
@@ -540,13 +545,14 @@ export function normalise(type, value) {
   return String(value).trim().toUpperCase();
 }
 
-/** Where on the document a value (typed or from Paperless) appears, if anywhere. */
-export function locateValue(items, field, value) {
+/** Every place on the document a value (typed or from Paperless) appears, in reading order. */
+export function locateAll(items, field, value) {
   const def = FIELDS.find((f) => f.field === field);
-  if (!def) return null;
+  if (!def) return [];
   const want = normalise(def.type, value);
-  if (!want) return null;
+  if (!want) return [];
   const parse = PARSERS[def.type];
+  const out = [];
   for (const it of items) {
     const words = it.str.split(/\s+/).filter(Boolean);
     const tries = [it.str.trim(), ...words];
@@ -554,11 +560,17 @@ export function locateValue(items, field, value) {
       const got = parse(t);
       if (got != null && normalise(def.type, got) === want) {
         const at = it.str.indexOf(t);
-        return { field, value: got, text: t, page: it.page, box: charBox(it, at, at + t.length) };
+        out.push({ field, value: got, text: t, page: it.page, box: charBox(it, at, at + t.length) });
+        break; // once per item
       }
     }
   }
-  return null;
+  return out;
 }
 
-export default { FIELDS, customLabels, fitBox, toItems, groupRows, findCandidates, findFields, locateValue, normalise, parseDate, parseMoney, parseReference, unionBox, charBox, startsLabel };
+/** Where on the document a value (typed or from Paperless) first appears, if anywhere. */
+export function locateValue(items, field, value) {
+  return locateAll(items, field, value)[0] || null;
+}
+
+export default { FIELDS, customLabels, fitBox, toItems, groupRows, findCandidates, findFields, locateAll, locateValue, normalise, parseDate, parseMoney, parseReference, unionBox, charBox, startsLabel };
