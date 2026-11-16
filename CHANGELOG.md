@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.118.0] - 2026-11-16
+
+### Added
+- **Job Register: Create in KashFlow.** A row's KashFlow cards now offer an optional button to create the missing record in KashFlow, so it no longer has to be typed twice. Commercial edit and admin only, the same people who edit the register. Nothing is written to KashFlow unless the button is pressed.
+  - **Quote:** opens a Create quote page with the lines to send. It starts with one line (description and site at the row's net value), and lines can be added, changed or cleared. Each line has a quantity, net price, VAT (20%, 5%, 0% or reverse charge) and nominal, which defaults to the one most used on the synced quotes. The page shows the register value next to the lines' net, VAT and total, and warns when they don't agree. Add line and Update totals post the form back; there's no script.
+  - **Project:** a won row's button creates the project with its number, the site as its name, the row's customer, the job date as the start date, and the description and client's reference.
+  - **If the number is taken** in KashFlow by another customer, KashFlow picks the next number and the row changes to match. If it's taken by the same customer, it's taken to be this job entered there by hand, so nothing is created. If another register row already has the number KashFlow picks, the row keeps its number and the message says so.
+  - The row records when each was created (`quoteSentAt`, `projectSentAt`), so it isn't offered again, and holds a claim while sending, so a double press can't create two. hcs-sync is then asked to pull the new record, so the row shows as matched straight away when it can be reached.
+- API reference: notes on how the Job Register uses the quote and project creates.
+
 ## [6.117.0] - 2026-11-16
 
 ### Added
