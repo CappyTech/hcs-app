@@ -23,7 +23,8 @@ router.get('/job-register/import', authService.ensureRole('admin'), importCtrl.g
 router.post('/job-register/import', authService.ensureRole('admin'), importCtrl.postJobRegisterUpload);
 router.get('/job-register/import/:uuid', authService.ensureRole('admin'), importCtrl.getJobRegisterCheck);
 router.post('/job-register/import/:uuid', authService.ensureRole('admin'), importCtrl.postJobRegisterImport);
-// The Next buttons: show the form again with KashFlow's next number filled in.
+// The Next and Today buttons: show the form again with KashFlow's next number
+// or today's date filled in.
 // Before /:uuid, which would otherwise take "next" as an entry.
 router.post(
   '/job-register/next',

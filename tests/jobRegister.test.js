@@ -9,7 +9,7 @@ import rbac from '../mongoose/config/rolePermissionsConfig.js';
 import accessGroups from '../mongoose/config/accessGroupsConfig.js';
 import {
   stageOf, clientKey, taxYearOf, matchEntry, buildRegister, findUnregistered, nextNumber, parseEntryForm,
-  parseNextAvailable, suggestNext, formEcho, fillNext,
+  parseNextAvailable, suggestNext, formEcho, fillNext, ukToday,
 } from '../mongoose/services/jobRegisterService.js';
 import { readFilters } from '../mongoose/controllers/jobRegisterController.js';
 
@@ -194,6 +194,18 @@ describe('Job Register Next buttons', () => {
     // No number to give: leave the field as typed
     assert.equal(fillNext({ fill: 'quote', quoteNumber: '5' }, { quote: null }).quoteNumber, '5');
     assert.equal(formEcho().site, '');
+  });
+
+  it('fills a date field with today in the UK for the Today buttons', () => {
+    // 23:30 UTC on 31 Mar is 00:30 on 1 Apr in London (BST)
+    const now = new Date('2026-03-31T23:30:00Z');
+    assert.equal(ukToday(now), '2026-04-01');
+    const e = fillNext({ fill: 'jobDate', quoteNumber: '7', quoteDate: '2026-01-02' }, { quote: 2000 }, now);
+    assert.equal(e.jobDate, '2026-04-01');
+    assert.equal(e.quoteDate, '2026-01-02');
+    assert.equal(e.quoteNumber, '7');
+    assert.equal(fillNext({ fill: 'invoiceDate' }, {}, now).invoiceDate, '2026-04-01');
+    assert.equal(fillNext({ fill: 'quoteDate' }, {}, now).quoteDate, '2026-04-01');
   });
 });
 

@@ -5,7 +5,8 @@
   Locals: entry, next, clients, contracts, input, label, nextAction
 
   The Next buttons post the form as typed to nextAction, which shows it again
-  with KashFlow's next number filled in (forms only: no fetch, see
+  with KashFlow's next number filled in; the Today buttons do the same with
+  today's date (forms only: no fetch, see
   docs/UI-GUIDELINES.md).
 %>
 <%
@@ -23,7 +24,10 @@
 </div>
 <div>
   <label for="jr-quoteDate" class="<%= label %>">Quote date</label>
-  <input id="jr-quoteDate" type="date" name="quoteDate" value="<%= ymd(entry.quoteDate) %>" class="<%= input %> w-full">
+  <div class="flex gap-2">
+    <input id="jr-quoteDate" type="date" name="quoteDate" value="<%= ymd(entry.quoteDate) %>" class="<%= input %> w-full min-w-0">
+    <button type="submit" name="fill" value="quoteDate" formaction="<%= nextAction %>" formnovalidate title="Fill in today's date" class="<%= nextBtn %>">Today</button>
+  </div>
 </div>
 <div>
   <label for="jr-projectNumber" class="<%= label %>">Job / project no. (KashFlow)</label>
@@ -34,7 +38,10 @@
 </div>
 <div>
   <label for="jr-jobDate" class="<%= label %>">Job date</label>
-  <input id="jr-jobDate" type="date" name="jobDate" value="<%= ymd(entry.jobDate) %>" class="<%= input %> w-full">
+  <div class="flex gap-2">
+    <input id="jr-jobDate" type="date" name="jobDate" value="<%= ymd(entry.jobDate) %>" class="<%= input %> w-full min-w-0">
+    <button type="submit" name="fill" value="jobDate" formaction="<%= nextAction %>" formnovalidate title="Fill in today's date" class="<%= nextBtn %>">Today</button>
+  </div>
 </div>
 
 <div class="sm:col-span-2">
@@ -81,7 +88,10 @@
 </div>
 <div>
   <label for="jr-invoiceDate" class="<%= label %>">Invoice date</label>
-  <input id="jr-invoiceDate" type="date" name="invoiceDate" value="<%= ymd(entry.invoiceDate) %>" class="<%= input %> w-full">
+  <div class="flex gap-2">
+    <input id="jr-invoiceDate" type="date" name="invoiceDate" value="<%= ymd(entry.invoiceDate) %>" class="<%= input %> w-full min-w-0">
+    <button type="submit" name="fill" value="invoiceDate" formaction="<%= nextAction %>" formnovalidate title="Fill in today's date" class="<%= nextBtn %>">Today</button>
+  </div>
 </div>
 <div class="sm:col-span-2">
   <label for="jr-notes" class="<%= label %>">Notes</label>

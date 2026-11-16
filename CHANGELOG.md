@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.113.2] - 2026-11-16
+
+### Changed
+- **Job Register: Today buttons on the date fields.** Quote date, job date and invoice date each have a Today button beside them, like the Next buttons on the numbers, on both the add and edit forms. Today is the UK date.
+
 ## [6.113.1] - 2026-11-16
 
 ### Fixed
