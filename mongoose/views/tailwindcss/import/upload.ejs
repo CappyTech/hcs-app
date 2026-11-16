@@ -70,7 +70,7 @@
                 <% } %>
               </td>
               <td class="<%= td %> text-right whitespace-nowrap">
-                <a href="<%= action %>/<%= u.uuid %>" class="text-xs px-3 py-1.5 rounded-lg <%= u.importedAt ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-green-600 hover:bg-green-700 text-white shadow-sm' %> font-medium transition"><%= u.importedAt ? 'View' : u.saved ? 'Carry on' : 'Check and import' %></a>
+                <a href="<%= action %>/<%= u.uuid %>" class="text-xs px-3 py-1.5 rounded-lg <%= u.importedAt && !u.failed ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-green-600 hover:bg-green-700 text-white shadow-sm' %> font-medium transition"><%= u.importedAt ? (u.failed ? 'Import the missing days' : 'View') : u.saved ? 'Carry on' : 'Check and import' %></a>
                 <form method="POST" action="<%= action %>/<%= u.uuid %>/delete" class="inline">
                   <%- include('../partials/csrfHidden') %>
                   <button type="submit" class="text-xs px-2 py-1.5 text-red-700 dark:text-red-400 hover:underline" aria-label="Delete the upload <%= u.fileName %>"><i class="bi bi-trash" aria-hidden="true"></i></button>

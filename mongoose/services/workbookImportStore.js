@@ -16,7 +16,7 @@ export function describeUpload(doc, kind) {
   if (doc.importedAt) {
     summary = kind === 'jobRegister'
       ? `${plural(r.created || 0, 'row')} added, ${plural(r.updated || 0, 'row')} filled in`
-      : `${plural(r.created || 0, 'day')} imported${r.createdLocations ? `, ${plural(r.createdLocations, 'new location')}` : ''}`;
+      : `${plural(r.created || 0, 'day')} imported${r.createdLocations ? `, ${plural(r.createdLocations, 'new location')}` : ''}${Number(r.failed) ? `, ${plural(Number(r.failed), 'day')} not saved` : ''}`;
   }
   return {
     uuid: doc.uuid,
@@ -27,6 +27,7 @@ export function describeUpload(doc, kind) {
     saved: !!doc.saved && !doc.importedAt,
     savedAt: doc.savedAt || null,
     importedAt: doc.importedAt || null,
+    failed: Number(r.failed) || 0,
     summary,
   };
 }
@@ -72,11 +73,11 @@ export async function deleteUpload(uuid, kind) {
   if (!res.deletedCount) throw notFound();
 }
 
-/** Record the import's result; the upload then expires a day later. */
-export async function markImported(id, result, now = new Date()) {
+/** Record the import's result (and anything in extra, e.g. the choices used); the upload then expires a day later. */
+export async function markImported(id, result, now = new Date(), extra = {}) {
   await mdb.INTERNAL.workbookImport.updateOne(
     { _id: id },
-    { $set: { importedAt: now, result, saved: false, expiresAt: new Date(now.getTime() + UPLOAD_LIFETIME_MS) } },
+    { $set: { ...extra, importedAt: now, result, saved: false, expiresAt: new Date(now.getTime() + UPLOAD_LIFETIME_MS) } },
   );
 }
 

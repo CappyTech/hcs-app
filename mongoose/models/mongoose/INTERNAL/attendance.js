@@ -54,24 +54,22 @@ attendanceSchema.index({ date: 1 });
 attendanceSchema.index({ employeeId: 1, date: 1 });
 attendanceSchema.index({ subcontractorId: 1, date: 1 });
 attendanceSchema.index({ status: 1 });
-// Duplicate-prevention: one attendance per person per date per location/project
-attendanceSchema.index(
-    { employeeId: 1, date: 1, locationId: 1, projectId: 1 },
-    { unique: true, sparse: true, name: 'unique_employee_day_location_project' }
-);
-attendanceSchema.index(
-    { subcontractorId: 1, date: 1, locationId: 1, projectId: 1 },
-    { unique: true, sparse: true, name: 'unique_subcontractor_day_location_project' }
-);
-// Duplicate-prevention: one attendance per person per date per location/contract
-attendanceSchema.index(
-    { employeeId: 1, date: 1, locationId: 1, contractId: 1 },
-    { unique: true, sparse: true, name: 'unique_employee_day_location_contract' }
-);
-attendanceSchema.index(
-    { subcontractorId: 1, date: 1, locationId: 1, contractId: 1 },
-    { unique: true, sparse: true, name: 'unique_subcontractor_day_location_contract' }
-);
+// Duplicate-prevention: one attendance per person per date per location and
+// project, and per location and contract. Each index covers only its own kind
+// of record (partialFilterExpression): with `sparse` on a compound index, an
+// employee's record was indexed with subcontractorId null, so two employees
+// at one location on one day collided on the subcontractor index (and two
+// subcontractors on the employee one). See UNIQUE_INDEXES in
+// attendanceIndexMigration.js, which replaces the old sparse ones.
+export const UNIQUE_INDEXES = [
+    { name: 'unique_employee_day_location_project', person: 'employeeId', keys: { employeeId: 1, date: 1, locationId: 1, projectId: 1 } },
+    { name: 'unique_subcontractor_day_location_project', person: 'subcontractorId', keys: { subcontractorId: 1, date: 1, locationId: 1, projectId: 1 } },
+    { name: 'unique_employee_day_location_contract', person: 'employeeId', keys: { employeeId: 1, date: 1, locationId: 1, contractId: 1 } },
+    { name: 'unique_subcontractor_day_location_contract', person: 'subcontractorId', keys: { subcontractorId: 1, date: 1, locationId: 1, contractId: 1 } },
+];
+for (const ix of UNIQUE_INDEXES) {
+    attendanceSchema.index(ix.keys, { unique: true, name: ix.name, partialFilterExpression: { [ix.person]: { $type: 'objectId' } } });
+}
 
 // ── Pre-validate ─────────────────────────────────────────────────────────
 attendanceSchema.pre('validate', function (next) {

@@ -335,10 +335,12 @@ export async function loadMapping(uuid) {
   const choices = await loadChoices();
   const { people, places } = staged.parsed;
   // A saved choice wins over the suggestion; '' is a saved Skip
-  const saved = staged.saved ? staged.choices || {} : {};
+  // Saved for later, or used by an earlier import of this upload
+  const saved = staged.saved || staged.importedAt ? staged.choices || {} : {};
   const pick = (map, i, fallback) => (map && Object.prototype.hasOwnProperty.call(map, String(i)) ? map[String(i)] : fallback);
   return {
     staged,
+    canImport: canImport(staged),
     choices,
     // Index = the field number (person_<i>); a name with no importable days isn't asked about
     people: people.map((p, index) => ({ ...p, index, suggestion: pick(saved.person, index, suggestPerson(p.label, choices)) })).filter((p) => p.count > 0),
@@ -367,9 +369,15 @@ async function takenPersonDays(from, to) {
  * flat names, because the body parser compacts sparse bracket arrays).
  * Unknown ids count as skipped, never as errors. Returns the counts.
  */
+/** Can this upload be imported (again)? Not yet imported, or imported with days that couldn't be saved. Pure. */
+export function canImport(staged) {
+  return !staged.importedAt || Number(staged.result?.failed) > 0;
+}
+
 export async function runImport(uuid, body = {}, { today } = {}) {
   const staged = await findStaged(uuid);
-  if (staged.importedAt) throw Object.assign(new Error('That upload has already been imported.'), { status: 400 });
+  // Importing again is safe: days that already have attendance are skipped
+  if (!canImport(staged)) throw Object.assign(new Error('That upload has already been imported.'), { status: 400 });
   const { people, places, cells } = staged.parsed;
   const choices = await loadChoices();
 
@@ -446,12 +454,12 @@ export async function runImport(uuid, body = {}, { today } = {}) {
   }
 
   const result = { created, failed, createdLocations, skipped, notImported: staged.parsed.counts, weeks: staged.parsed.weeks.length };
-  await store.markImported(staged._id, result);
+  await store.markImported(staged._id, result, new Date(), { choices: readChoices(body, staged.parsed) });
   logger.info(`[weeklySheetImport] ${staged.fileName}: created ${created}, failed ${failed}, new locations ${createdLocations}, skipped ${JSON.stringify(skipped)}`);
   return result;
 }
 
 export default {
   text, keyOf, classifyCell, findHeaderRow, parseWeekSheet, parseAttendanceWorkbook, suggestPerson, suggestPlace,
-  readPersonChoice, readPlaceChoice, readChoices, saveForLater, planAttendance, loadChoices, stageUpload, loadMapping, runImport,
+  readPersonChoice, readPlaceChoice, readChoices, saveForLater, canImport, planAttendance, loadChoices, stageUpload, loadMapping, runImport,
 };

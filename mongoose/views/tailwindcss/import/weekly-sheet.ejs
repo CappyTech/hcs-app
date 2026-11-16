@@ -41,7 +41,14 @@
     <a href="/weekly-sheet/import" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-arrow-left" aria-hidden="true"></i> Upload a different file</a>
   </div>
 
-  <% if (staged.importedAt) { %>
+  <% const failedDays = Number(staged.result?.failed) || 0; const importable = typeof canImport === 'undefined' ? !staged.importedAt : canImport; %>
+  <% if (staged.importedAt && failedDays) { %>
+    <div class="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300">
+      <i class="bi bi-exclamation-triangle-fill text-amber-600" aria-hidden="true"></i>
+      Imported <%= new Date(staged.importedAt).toLocaleString('en-GB', { timeZone: 'Europe/London' }) %>: <%= staged.result.created || 0 %> days saved, but <strong><%= failedDays %> couldn't be saved</strong>.
+      Check the matches below and import again: days already imported are skipped, so only the missing ones are added.
+    </div>
+  <% } else if (staged.importedAt) { %>
     <div class="rounded-2xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300">
       <i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i>
       This upload was imported on <%= new Date(staged.importedAt).toLocaleString('en-GB') %>. <a href="/weekly-flow" class="text-green-700 dark:text-green-400 hover:underline">Approve the weeks in the weekly flow</a>.
@@ -140,10 +147,10 @@
       </div>
     </div>
 
-    <% if (!staged.importedAt) { %>
+    <% if (importable) { %>
       <div class="flex flex-wrap items-center gap-3 mt-6">
-        <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Import attendance</button>
-        <button type="submit" formaction="/weekly-sheet/import/<%= staged.uuid %>/save" class="<%= secondaryBtn %>"><i class="bi bi-bookmark" aria-hidden="true"></i> Save for later</button>
+        <button type="submit" class="<%= primaryBtn %>"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> <%= staged.importedAt ? 'Import the missing days' : 'Import attendance' %></button>
+        <% if (!staged.importedAt) { %><button type="submit" formaction="/weekly-sheet/import/<%= staged.uuid %>/save" class="<%= secondaryBtn %>"><i class="bi bi-bookmark" aria-hidden="true"></i> Save for later</button><% } %>
         <a href="/weekly-sheet/import" class="<%= secondaryBtn %>">Back to uploads</a>
         <span class="text-xs text-gray-500 dark:text-gray-400">Records are created as pending. <%= staged.saved ? 'Saved: kept until imported or deleted.' : 'Save keeps your matches; unsaved uploads expire after a day.' %></span>
       </div>

@@ -40,6 +40,7 @@ import __payrollTaxRatesSeedService from './mongoose/services/payrollTaxRatesSee
 import __emailTypesSeedService from './mongoose/services/emailTypesSeedService.js';
 import __workbookImportStore from './mongoose/services/workbookImportStore.js';
 import __jobRegisterImportService from './mongoose/services/jobRegisterImportService.js';
+import __attendanceIndexMigration from './mongoose/services/attendanceIndexMigration.js';
 import __configValidatorService from './mongoose/services/configValidatorService.js';
 import cisMappings from './mongoose/config/cisMappings.js';
 import __socketService from './services/socketService.js';
@@ -407,6 +408,14 @@ const main = async () => {
       await __workbookImportStore.migrateExpiry();
     } catch (migrationErr) {
       logger.error('[migration] Workbook upload expiry failed', { error: migrationErr.message });
+    }
+
+    // Attendance duplicate-prevention indexes: sparse → partial, so two
+    // employees at one location on one day no longer collide
+    try {
+      await __attendanceIndexMigration.fixAttendanceUniqueIndexes();
+    } catch (migrationErr) {
+      logger.error('[migration] Attendance index fix failed', { error: migrationErr.message });
     }
 
     // Job Register rows imported before rows recorded their import
