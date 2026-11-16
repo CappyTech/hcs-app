@@ -11,12 +11,13 @@ const attendanceSchema = new mongoose.Schema({
     },
 
     // ── Status / approval ───────────────────────────────────────────────
-    // Two-stage week approval (attendanceApprovalService): pending →
-    // site-approved (Site Manager, where the site names one) → approved
-    // (Contracts Manager). Payroll reads only `approved`.
+    // planned (the weekly sheet's plan) → pending (the person confirmed it)
+    // → site-approved (Site Manager, where the site names one) → approved
+    // (Contracts Manager). A Site Manager marking a planned day attended
+    // takes it straight to their step. Payroll reads only `approved`.
     status: {
         type: String,
-        enum: ['pending', 'site-approved', 'approved', 'rejected'],
+        enum: ['planned', 'pending', 'site-approved', 'approved', 'rejected'],
         default: 'pending'
     },
     siteApprovedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },

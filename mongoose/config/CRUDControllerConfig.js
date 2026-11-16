@@ -147,7 +147,7 @@ export default {
     validators: {
       date: value => !isNaN(Date.parse(value)),
       type: value => ['off', 'holiday', 'sick', 'work', 'training', 'leave'].includes(value),
-      status: value => ['pending', 'site-approved', 'approved', 'rejected'].includes(value),
+      status: value => ['planned', 'pending', 'site-approved', 'approved', 'rejected'].includes(value),
       hoursWorked: value => typeof value === 'number' && value >= 0,
       payRate: value => typeof value === 'number' && value >= 0,
       dayRate: value => typeof value === 'number' && value >= 0,

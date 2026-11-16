@@ -25,7 +25,9 @@
   <%
     // Two-stage approval: site-approved records still wait for the final step
     const siteApproved = (typeof siteApprovedCount === 'number' ? siteApprovedCount : 0);
-    const waitingCount = (pendingCount || 0) + siteApproved;
+    // Planned days that have come can be marked attended by the same button
+    const planned = (typeof plannedCount === 'number' ? plannedCount : 0);
+    const waitingCount = (pendingCount || 0) + siteApproved + planned;
   %>
   <!-- Stats Grid -->
   <% if (isManagementView) { %>
@@ -51,6 +53,9 @@
       <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-4 text-center">
         <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Pending Approval</h4>
         <p class="text-3xl font-bold <%= (pendingCount || 0) > 0 ? 'text-amber-500' : 'text-green-600' %>"><%= pendingCount || 0 %></p>
+        <% if (planned > 0) { %>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">plus <%= planned %> planned, not yet confirmed</p>
+        <% } %>
         <% if ((rejectedCount || 0) > 0) { %>
           <p class="text-xs text-red-500 mt-1"><%= rejectedCount %> rejected</p>
         <% } else { %>
@@ -115,7 +120,8 @@
             entries: _deptGroups[dept],
             daysOfWeek,
             startDate,
-            endDate,            isManagementView,
+            endDate,
+            isManagementView,
             dailyHeadcount: dailyHeadcount || {},
             showHeadcount: dept === 'Landscaping',
             sectionType: 'employee',
@@ -133,7 +139,8 @@
         entries: employeeEntries,
         daysOfWeek,
         startDate,
-        endDate,        isManagementView,
+        endDate,
+        isManagementView,
         dailyHeadcount: dailyHeadcount || {},
         showHeadcount: true,
         sectionType: 'employee',
@@ -151,7 +158,8 @@
       entries: subcontractorEntries,
       daysOfWeek,
       startDate,
-      endDate,      isManagementView,
+      endDate,
+      isManagementView,
       dailyHeadcount: dailyHeadcount || {},
       showHeadcount: false,
       sectionType: 'subcontractor',

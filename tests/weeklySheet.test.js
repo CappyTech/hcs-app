@@ -246,8 +246,9 @@ describe('Weekly sheet save', () => {
     assert.equal(existing.contractId, WINDSOR);
     assert.equal(existing.locationId, undefined);
     assert.equal(existing.hoursWorked, 8); // 40 hours over 5 days
+    assert.equal(existing.status, 'pending', 'a confirmed day stays confirmed');
     const sick = store.find((r) => r.type === 'sick');
-    assert.equal(sick.status, 'pending');
+    assert.equal(sick.status, 'planned', 'a new day is planned');
     assert.equal(sick.employeeId, E_OFFICE);
     assert.ok(!store.includes(offDay));
   });

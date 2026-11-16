@@ -160,6 +160,20 @@ router.post(
   authService.ensureGroup(SITE_APPROVE),
   ctrl.rejectAttendance,
 );
+// A planned or pending work day that didn't happen becomes Off, pending
+// (same approvers as the site step; the service checks the site).
+router.post(
+  "/attendance/:uuid/not-attended",
+  authService.ensureGroup(SITE_APPROVE),
+  ctrl.notAttendedAttendance,
+);
+// The person confirms their own planned day once it has come (the service
+// checks it's theirs: linked employee or subcontractor).
+router.post(
+  "/attendance/:uuid/confirm",
+  authService.ensureAuthenticated,
+  ctrl.confirmAttendance,
+);
 
 // Statement purchase management — admin only
 router.post(

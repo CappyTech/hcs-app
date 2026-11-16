@@ -27,6 +27,7 @@ export default {
   actions: [{ label: 'Log attendance', href: '/attendance/create', op: 'c' }],
 
   figures: {
+    planned: { label: 'Planned, day passed, not confirmed', severity: 'warning', where: { status: 'planned', date: { $withinPastDays: 60 } } },
     pending: { label: 'Awaiting approval', severity: 'warning', where: { status: 'pending' } },
     siteApproved: { label: 'Approved for the site, awaiting final approval', severity: 'warning', where: { status: 'site-approved' } },
     lastWeek: { label: 'Records in the last 7 days', where: { date: { $withinPastDays: 7 } } },
@@ -37,7 +38,7 @@ export default {
   summary: ['pending', 'lastWeek'],
 
   overview: {
-    figures: ['pending', 'siteApproved', 'lastWeek', 'sickMonth', 'rejected'],
+    figures: ['planned', 'pending', 'siteApproved', 'lastWeek', 'sickMonth', 'rejected'],
     breakdowns: [
       { label: 'Last 7 days by type', by: 'type', where: { date: { $withinPastDays: 7 } },
         labels: { work: 'Work', sick: 'Sick', holiday: 'Holiday', training: 'Training', off: 'Off', leave: 'Leave' } },

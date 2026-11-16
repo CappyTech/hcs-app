@@ -138,7 +138,7 @@ describe('decideReject and actionsFor', () => {
     assert.equal(approval.decideReject(ctx, elsewhere).ok, false);
 
     const actions = approval.actionsFor(ctx, [pending, siteDone, elsewhere]);
-    assert.deepEqual(actions[pending.uuid], { approve: true, approveLabel: 'Approve for the site', reject: true, waiting: null });
+    assert.deepEqual(actions[pending.uuid], { approve: true, approveLabel: 'Approve for the site', reject: true, notAttended: false, confirm: false, waiting: null });
     assert.equal(actions[siteDone.uuid].approve, false);
     assert.equal(actions[siteDone.uuid].reject, true);
     assert.match(actions[siteDone.uuid].waiting, /contracts manager/i);
@@ -249,12 +249,15 @@ describe('write scope', () => {
 
 describe('recordDay (POST /daily/:date/record)', () => {
   const saved = [];
+  let planned = [];
   let savedINTERNAL;
   const setup = () => {
     savedINTERNAL = mdb.INTERNAL;
     saved.length = 0;
+    planned = [];
     function Attendance(data) { this.data = data; }
     Attendance.prototype.save = async function save() { saved.push(this.data); };
+    Attendance.find = () => ({ limit: async () => planned });
     mdb.INTERNAL = {
       attendance: Attendance,
       contract: { findById: (id) => ({ select: () => ({ lean: async () => ({ _id: id, projectId: P_MANAGED, status: 'In Progress' }) }) }) },
@@ -333,7 +336,7 @@ describe('daily view', () => {
     const html = await render({
       attendance: [a, b],
       approvalActions: {
-        a1: { approve: true, approveLabel: 'Approve for the site', reject: true, waiting: null },
+        a1: { approve: true, approveLabel: 'Approve for the site', reject: true, notAttended: false, confirm: false, waiting: null },
         b1: { approve: false, approveLabel: 'Approve', reject: true, waiting: 'Waiting for a contracts manager to approve.' },
       },
       recordForm: { sitesOnly: true, contracts: [{ _id: 'c1', title: 'Job' }], people: [{ value: 'e:1', label: 'Person' }] },

@@ -71,7 +71,7 @@
                   <span class="capitalize"><%= record.type || 'N/A' %></span>
                 </td>
                 <td class="px-4 py-2 border-r border-gray-200 dark:border-gray-700">
-                  <% const statusColors = { approved: 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400', 'site-approved': 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-300', pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400', rejected: 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' }; %>
+                  <% const statusColors = { planned: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', approved: 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400', 'site-approved': 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-300', pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-400', rejected: 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400' }; %>
                   <% const statusLabels = { 'site-approved': 'site approved' }; %>
                   <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold <%= statusColors[record.status] || statusColors.approved %>">
                     <%= statusLabels[record.status] || record.status || 'approved' %>
@@ -117,6 +117,23 @@
                       <%- include('../partials/csrfHidden.ejs') %>
                       <button type="submit" class="inline-block rounded bg-blue-600 hover:bg-blue-700 text-white p-1" title="<%= act.approveLabel %>" aria-label="<%= act.approveLabel %>">
                         <i class="bi bi-check-lg"></i>
+                      </button>
+                    </form>
+                  <% } %>
+                  <% if (act && act.confirm) { %>
+                    <form method="POST" action="/attendance/<%= record.uuid %>/confirm" class="inline">
+                      <%- include('../partials/csrfHidden.ejs') %>
+                      <button type="submit" class="inline-flex items-center gap-1 rounded bg-green-600 hover:bg-green-700 text-white px-2 py-1 text-xs" title="I was here: confirm this planned day">
+                        <i class="bi bi-check2-circle" aria-hidden="true"></i> Confirm
+                      </button>
+                    </form>
+                  <% } %>
+                  <% if (act && act.notAttended) { %>
+                    <form method="POST" action="/attendance/<%= record.uuid %>/not-attended" class="inline">
+                      <%- include('../partials/csrfHidden.ejs') %>
+                      <button type="submit" class="inline-block rounded bg-amber-600 hover:bg-amber-700 text-white p-1" title="Not attended" aria-label="Not attended"
+                              data-confirm="Mark this day not attended? It becomes an Off day for a contracts manager to sign off.">
+                        <i class="bi bi-person-x"></i>
                       </button>
                     </form>
                   <% } %>

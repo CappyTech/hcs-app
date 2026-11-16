@@ -7,6 +7,7 @@
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '';
   const fmtDay = (key) => key.split('-').reverse().join('/');
   const statusPill = {
+    planned: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600',
     pending: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
     'site-approved': 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
     approved: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
@@ -314,8 +315,9 @@
 
       <div class="<%= card %> p-4">
         <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">This week's records</h3>
-        <% const waitingCount = (flow.counts.pending || 0) + (flow.counts['site-approved'] || 0); %>
-        <dl class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center mb-4">
+        <% const waitingCount = (flow.counts.planned || 0) + (flow.counts.pending || 0) + (flow.counts['site-approved'] || 0); %>
+        <dl class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center mb-4">
+          <div><dt class="text-xs text-gray-500">Planned</dt><dd class="text-xl font-semibold text-gray-700 dark:text-gray-300"><%= flow.counts.planned || 0 %></dd></div>
           <div><dt class="text-xs text-gray-500">Pending</dt><dd class="text-xl font-semibold text-amber-700 dark:text-amber-400"><%= flow.counts.pending %></dd></div>
           <div><dt class="text-xs text-gray-500">Site approved</dt><dd class="text-xl font-semibold text-blue-700 dark:text-blue-300"><%= flow.counts['site-approved'] || 0 %></dd></div>
           <div><dt class="text-xs text-gray-500">Approved</dt><dd class="text-xl font-semibold text-green-700 dark:text-green-400"><%= flow.counts.approved %></dd></div>
