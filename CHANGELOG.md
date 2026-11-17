@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.132.0] - 2026-11-17
+
+### Added
+- **Each job in the Job Register has its own page.** Click a job to see its KashFlow job, what it's quoted and invoiced, and tables of its quotes and invoices, each checked against KashFlow. From there you can add a quote (a variation) or an invoice (a stage payment), change or remove one, and create any quote in KashFlow. A won job's new quote goes on its KashFlow job.
+- **A job can hold several quotes and several invoices.** A job with stage payments stays Won and shows how much of it has been invoiced, for example "£500.00 of £1,250.00", until it's marked completed.
+
+### Changed
+- **The Job Register lists one row per job.** The columns are Job, Quotes, Site / Client, Stage, Quoted, Invoiced and KashFlow, and the totals are Quoted, Won and Invoiced. An enquiry is a job with a quote and no job number yet. Winning it keeps it the same job, so anyone booked on it stays booked.
+- **Existing register rows become jobs on start-up.** Each row's quote, invoice and their KashFlow links move onto the job, and every row keeps its stage.
+- **Editing a job changes the job's own details only.** Its quotes and invoices are changed on the job's page.
+- **The Job Reg import adds to jobs instead of overwriting rows.** A quote or invoice on the sheet is added to its job if it isn't there already, and nothing is ever taken off.
+- **The weekly sheet offers a job until it's marked completed.** A job with a stage payment invoiced is still offered.
+
 ## [6.131.0] - 2026-11-17
 
 ### Added
