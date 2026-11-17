@@ -48,6 +48,8 @@ const edit = authService.ensureGroup('commercial', 'edit', 'admin');
 router.get('/job-register/:uuid/kashflow-quote/:quoteId', edit, ctrl.getKashflowQuote);
 router.post('/job-register/:uuid/kashflow-quote/:quoteId', edit, ctrl.postKashflowQuote);
 router.post('/job-register/:uuid/kashflow-project', edit, ctrl.postKashflowProject);
+// Find the job's OneDrive folder and keep it on the job
+router.post('/job-register/:uuid/onedrive-folder', edit, ctrl.postFindFolder);
 // A job's quotes (variations) and invoices (stage payments)
 router.post('/job-register/:uuid/quotes', edit, ctrl.postAddQuote);
 router.post('/job-register/:uuid/quotes/:id', edit, ctrl.postUpdateQuote);
