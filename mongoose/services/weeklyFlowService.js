@@ -17,6 +17,7 @@ import mongoose from 'mongoose';
 import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
 import attendanceService from './attendanceService.js';
+import { stripSubcontractorPay } from '../models/mongoose/INTERNAL/attendance.js';
 import { HMRC_VERIFICATION_REGEX } from '../../services/cisService.js';
 
 const OPEN_STATUSES = ['Planned', 'In Progress'];
@@ -500,7 +501,8 @@ async function recordAttendance(yearParam, weekParam, { assignmentUuid, days = {
       if (contract?.projectId) doc.projectId = contract.projectId;
       if (contract?.locationId) doc.locationId = contract.locationId;
       if (who.employeeId && h > 0 && h <= 24) doc.hoursWorked = h;
-      docs.push(doc);
+      // Subcontractors: where and when only (paid on CIS invoices)
+      docs.push(stripSubcontractorPay(doc));
     }
   }
 

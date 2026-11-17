@@ -226,7 +226,7 @@ describe('Weekly sheet save', () => {
       jobRegister: model(() => []),
       employeeHoliday: model(() => []),
     };
-    mdb.REST = { supplier: model(() => []), project: model(() => []) };
+    mdb.REST = { supplier: model(() => [{ _id: SUB, uuid: 's1', Name: 'Dean Colton' }]), project: model(() => []) };
   });
   after(() => { mdb.INTERNAL = savedINTERNAL; mdb.REST = savedREST; });
 
@@ -251,6 +251,21 @@ describe('Weekly sheet save', () => {
     assert.equal(sick.status, 'planned', 'a new day is planned');
     assert.equal(sick.employeeId, E_OFFICE);
     assert.ok(!store.includes(offDay));
+  });
+
+  it('moves a subcontractor without giving their day hours or a day rate, and clears any left', async () => {
+    saved = [];
+    const subDay = new FakeAttendance({ _id: 'r9', date: at('2026-04-27'), type: 'work', status: 'planned', subcontractorId: SUB, contractId: MAPLE, hoursWorked: 8, dayRate: 150 });
+    store = [subDay];
+    const key = `s:${SUB}`;
+    const result = await weeklySheet.saveSheet('2026-04-27', {
+      cell: { [key]: { '2026-04-27': `con:${WINDSOR}` } },
+      was: { [key]: { '2026-04-27': `con:${MAPLE}` } },
+    });
+    assert.deepEqual(result, { saved: 1, skipped: 0 });
+    assert.equal(subDay.contractId, WINDSOR);
+    assert.equal('hoursWorked' in subDay, false);
+    assert.equal('dayRate' in subDay, false);
   });
 
   it('refuses a choice that was not on offer', async () => {

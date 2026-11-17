@@ -434,7 +434,8 @@
 
     function toggleWorkFields() {
       var show = typeSel.value === 'work' || typeSel.value === 'training';
-      hoursRow.style.display = show ? '' : 'none';
+      // Subcontractors record where and when only: no hours or day rate
+      hoursRow.style.display = show && !_state.isSubcontractor ? '' : 'none';
       locRow.style.display   = show ? '' : 'none';
       contRow.style.display  = show ? '' : 'none';
     }
@@ -461,9 +462,7 @@
       saveBtn.textContent = 'Save';
 
       typeSel.value = d.type || 'work';
-      hoursLbl.textContent = _state.isSubcontractor ? 'Day Rate (£)' : 'Hours';
-      hoursIn.step  = _state.isSubcontractor ? '0.01' : '0.25';
-      hoursIn.value = _state.isSubcontractor ? (d.dayRate || '') : (d.hours || '');
+      hoursIn.value = _state.isSubcontractor ? '' : (d.hours || '');
       locSel.value  = d.locationId  || '';
       contSel.value = d.contractId  || '';
       toggleWorkFields();
@@ -480,10 +479,7 @@
       if (_state.employeeId)      payload.employeeId      = _state.employeeId;
       if (_state.subcontractorId) payload.subcontractorId = _state.subcontractorId;
       if (typeSel.value === 'work' || typeSel.value === 'training') {
-        if (hoursIn.value !== '') {
-          if (_state.isSubcontractor) payload.dayRate     = Number(hoursIn.value);
-          else                        payload.hoursWorked = Number(hoursIn.value);
-        }
+        if (hoursIn.value !== '' && !_state.isSubcontractor) payload.hoursWorked = Number(hoursIn.value);
         if (locSel.value)  payload.locationId = locSel.value;
         if (contSel.value) payload.contractId = contSel.value;
       }

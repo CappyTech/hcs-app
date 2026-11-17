@@ -36,12 +36,11 @@ const attendanceSchema = new mongoose.Schema({
     subcontractorId: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
     contractAssignmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'assignment' },
 
-    // ── Hours & pay ─────────────────────────────────────────────────────
+    // ── Hours & pay (employees only) ────────────────────────────────────
+    // Payroll pays hoursWorked × the employee's hourlyRate, or dayRate when
+    // set. Subcontractors are paid on their CIS invoices, so their records
+    // hold only where and when: see SUBCONTRACTOR_PAY_FIELDS below.
     hoursWorked: { type: mongoose.Decimal128, min: 0 },
-    breakMinutes: { type: Number, min: 0, default: 0 },
-    overtimeHours: { type: mongoose.Decimal128, min: 0 },
-    overtimeRate: { type: mongoose.Decimal128, min: 0 },
-    payRate: { type: mongoose.Decimal128, min: 0 },
     dayRate: { type: mongoose.Decimal128, min: 0 },
 
     // ── Notes ────────────────────────────────────────────────────────────
@@ -72,11 +71,38 @@ for (const ix of UNIQUE_INDEXES) {
     attendanceSchema.index(ix.keys, { unique: true, name: ix.name, partialFilterExpression: { [ix.person]: { $type: 'objectId' } } });
 }
 
+// Fields a subcontractor's record never holds (they're paid via CIS
+// invoices, not payroll). The pre-validate hook below drops them.
+export const SUBCONTRACTOR_PAY_FIELDS = ['hoursWorked', 'dayRate'];
+
+// Fields removed from attendance altogether. Old documents may still carry
+// them until attendanceCleanupService clears them at start-up.
+export const REMOVED_FIELDS = ['breakMinutes', 'overtimeHours', 'overtimeRate', 'payRate'];
+
+/**
+ * Drop hoursWorked/dayRate from plain attendance data for a subcontractor.
+ * Mutates and returns `data`. For writers that skip document validation
+ * (insertMany of plain objects is validated, findOneAndUpdate isn't).
+ */
+export function stripSubcontractorPay(data) {
+    if (data && data.subcontractorId) {
+        for (const f of SUBCONTRACTOR_PAY_FIELDS) delete data[f];
+    }
+    return data;
+}
+
 // ── Pre-validate ─────────────────────────────────────────────────────────
 attendanceSchema.pre('validate', function (next) {
     // XOR: must be employee or subcontractor, not both or neither
     if ((this.employeeId && this.subcontractorId) || (!this.employeeId && !this.subcontractorId)) {
         return next(new Error('Attendance must reference either employee or subcontractor, not both or neither.'));
+    }
+
+    // A subcontractor's record holds where and when only, never hours or pay
+    if (this.subcontractorId) {
+        for (const f of SUBCONTRACTOR_PAY_FIELDS) {
+            if (this.get(f) != null) this.set(f, undefined);
+        }
     }
 
     // hoursWorked and dayRate are mutually exclusive
@@ -88,13 +114,6 @@ attendanceSchema.pre('validate', function (next) {
     const workTypes = ['work', 'training'];
     if (workTypes.includes(this.type) && !this.locationId && !this.projectId && !this.contractId) {
         return next(new Error('Work or training attendance must have at least a location, project, or contract.'));
-    }
-
-    // overtimeHours requires overtimeRate and vice versa
-    const hasOT = this.overtimeHours != null && Number(this.overtimeHours.toString ? this.overtimeHours.toString() : this.overtimeHours) > 0;
-    const hasOTRate = this.overtimeRate != null && Number(this.overtimeRate.toString ? this.overtimeRate.toString() : this.overtimeRate) > 0;
-    if (hasOT && !hasOTRate) {
-        return next(new Error('Overtime hours require an overtime rate.'));
     }
 
     next();

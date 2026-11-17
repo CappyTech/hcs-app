@@ -298,7 +298,7 @@ document.addEventListener('alpine:init', function () {
    *   uuid          {string|null}  â€” existing attendance UUID, null for new records
    *   isNew         {boolean}      â€” true when the cell is currently empty (create mode)
    *   isPending     {boolean}      â€” true when the record status is 'pending'
-   *   isSubcontractor {boolean}    â€” true for subcontractor rows (uses dayRate not hoursWorked)
+   *   isSubcontractor {boolean}    â€” true for subcontractor rows (no hours or day rate)
    *   employeeId    {string|null}  â€” mongo ObjectId string, for new records
    *   subcontractorId {string|null}
    *   date          {string}       â€” YYYY-MM-DD
@@ -427,11 +427,8 @@ document.addEventListener('alpine:init', function () {
           };
           if (props.employeeId) body.employeeId = props.employeeId;
           if (props.subcontractorId) body.subcontractorId = props.subcontractorId;
-          if (props.isSubcontractor) {
-            if (self.form.dayRate !== '') body.dayRate = Number(self.form.dayRate);
-          } else {
-            if (self.form.hours !== '') body.hoursWorked = Number(self.form.hours);
-          }
+          // Subcontractors record where and when only: no hours or day rate
+          if (!props.isSubcontractor && self.form.hours !== '') body.hoursWorked = Number(self.form.hours);
           if (self.form.locationId) body.locationId = self.form.locationId;
           if (self.form.contractId) body.contractId = self.form.contractId;
 
@@ -464,9 +461,7 @@ document.addEventListener('alpine:init', function () {
         } else {
           // â”€â”€ UPDATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           var updateBody = { type: self.form.type };
-          if (props.isSubcontractor) {
-            updateBody.dayRate = self.form.dayRate !== '' ? Number(self.form.dayRate) : null;
-          } else {
+          if (!props.isSubcontractor) {
             updateBody.hoursWorked = self.form.hours !== '' ? Number(self.form.hours) : null;
           }
           updateBody.locationId = self.form.locationId || null;

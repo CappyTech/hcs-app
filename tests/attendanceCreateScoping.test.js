@@ -34,19 +34,16 @@ describe('scopeAttendanceCreateToCaller', () => {
   });
 
   it('leaves an admin submission alone', () => {
-    const data = { employeeId: OTHER, status: 'approved', payRate: 20 };
+    const data = { employeeId: OTHER, status: 'approved', hoursWorked: 9 };
     scopeAttendanceCreateToCaller(data, reqFor({ role: 'admin' }));
-    assert.deepEqual(data, { employeeId: OTHER, status: 'approved', payRate: 20 });
+    assert.deepEqual(data, { employeeId: OTHER, status: 'approved', hoursWorked: 9 });
   });
 
-  it('forces an employee record onto the caller, pending, without pay fields', () => {
+  it('forces an employee record onto the caller, pending, keeping hours and day rate', () => {
     const data = {
       date: '2026-10-01',
       status: 'approved',
       hoursWorked: 8,
-      payRate: 99,
-      overtimeHours: 4,
-      overtimeRate: 50,
       dayRate: 150,
       notes: 'n',
     };
@@ -80,10 +77,10 @@ describe('scopeAttendanceCreateToCaller', () => {
     forbidden(() => scopeAttendanceCreateToCaller({ employeeId: EMP }, reqFor({ role: 'subcontractor', subcontractorId: SUB })));
   });
 
-  it('scopes a subcontractor to their own record and drops hoursWorked', () => {
+  it('scopes a subcontractor to their own record and drops hours and day rate', () => {
     const data = { hoursWorked: 8, dayRate: 150, status: 'approved' };
     scopeAttendanceCreateToCaller(data, reqFor({ role: 'subcontractor', subcontractorId: SUB }));
-    assert.deepEqual(data, { dayRate: 150, status: 'pending', subcontractorId: SUB });
+    assert.deepEqual(data, { status: 'pending', subcontractorId: SUB });
   });
 
   it('refuses a caller with no linked record', () => {

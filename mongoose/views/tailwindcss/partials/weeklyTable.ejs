@@ -165,6 +165,8 @@
             £<%= details.weeklyPay.toFixed(2) %><br>
             <% if (details.totalHoursWorked > 0) { %>
             <span class="text-xs font-normal text-gray-700 dark:text-gray-300"><%= details.totalHoursWorked %>h</span>
+            <% } else if (details.totalDaysWorked > 0) { %>
+            <span class="text-xs font-normal text-gray-700 dark:text-gray-300"><%= details.totalDaysWorked %> day<%= details.totalDaysWorked === 1 ? '' : 's' %></span>
             <% } %>
           </td>
         <% } %>

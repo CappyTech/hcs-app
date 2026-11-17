@@ -454,26 +454,26 @@ async function getGrossPayFromAttendance(employeeId, periodStart, periodEnd, emp
     date: { $gte: periodStart, $lte: periodEnd },
     status: 'approved',
     type: { $in: ['work', 'training'] }
-  }).lean();
+  }).select('hoursWorked dayRate').lean();
 
+  return grossPayFromRecords(records, employee);
+}
+
+/**
+ * Pure part of getGrossPayFromAttendance: each record pays its dayRate when
+ * set, otherwise hoursWorked × the employee's hourlyRate.
+ *
+ * @param {object[]} records — lean attendance records
+ * @param {object} employee
+ * @returns {number} gross pay in £
+ */
+function grossPayFromRecords(records, employee) {
+  const hourlyRate = toNum(employee?.hourlyRate);
   let total = 0;
-
   for (const rec of records) {
-    const hours    = toNum(rec.hoursWorked);
-    const dayRate  = toNum(rec.dayRate);
-    const payRate  = toNum(rec.payRate);
-    const overtime = toNum(rec.overtimeHours);
-    const otRate   = toNum(rec.overtimeRate);
-
-    if (dayRate > 0) {
-      total += dayRate;
-    } else {
-      const rate = payRate > 0 ? payRate : toNum(employee.hourlyRate);
-      total += hours * rate;
-      if (overtime > 0 && otRate > 0) total += overtime * otRate;
-    }
+    const dayRate = toNum(rec.dayRate);
+    total += dayRate > 0 ? dayRate : toNum(rec.hoursWorked) * hourlyRate;
   }
-
   return roundHalfUp(total);
 }
 
@@ -741,6 +741,7 @@ export default {
   computeEntryForEmployee,
   processPayrollRun,
   getGrossPayFromAttendance,
+  grossPayFromRecords,
   // Exported for testing helpers
   parseTaxCode,
   annualToPeriod,
@@ -748,4 +749,4 @@ export default {
   toNum
 };
 
-export { calculatePAYETax, calculateEmployeeNI, calculateEmployerNI, calculatePensionContributions, calculateStudentLoan, computeEntryForEmployee, processPayrollRun, getGrossPayFromAttendance, parseTaxCode, annualToPeriod, periodsInYear, toNum };
+export { calculatePAYETax, calculateEmployeeNI, calculateEmployerNI, calculatePensionContributions, calculateStudentLoan, computeEntryForEmployee, processPayrollRun, getGrossPayFromAttendance, grossPayFromRecords, parseTaxCode, annualToPeriod, periodsInYear, toNum };

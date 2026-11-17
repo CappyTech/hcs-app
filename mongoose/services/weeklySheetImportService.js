@@ -25,6 +25,7 @@
 import mongoose from 'mongoose';
 import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
+import { stripSubcontractorPay } from '../models/mongoose/INTERNAL/attendance.js';
 import attendanceService from './attendanceService.js';
 import { defaultDailyHours, listSubcontractors } from './weeklyFlowService.js';
 import { addDays } from './weeklySheetService.js';
@@ -438,7 +439,8 @@ export async function runImport(uuid, body = {}, { today, actorId = null } = {})
       const h = defaultDailyHours(employees.get(String(r.who.employeeId)));
       if (h) doc.hoursWorked = mongoose.Types.Decimal128.fromString(String(h));
     }
-    return doc;
+    // Subcontractors: where and when only (paid on CIS invoices)
+    return stripSubcontractorPay(doc);
   });
 
   let created = 0;

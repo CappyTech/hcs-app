@@ -255,7 +255,7 @@ export function notAttendedUpdate(record, userId, now = new Date()) {
     $set: { type: 'off', status: 'pending', notes },
     $unset: {
       contractId: 1, locationId: 1, projectId: 1, contractAssignmentId: 1,
-      hoursWorked: 1, dayRate: 1, overtimeHours: 1, overtimeRate: 1, payRate: 1,
+      hoursWorked: 1, dayRate: 1,
       siteApprovedBy: 1, siteApprovedAt: 1,
     },
   };

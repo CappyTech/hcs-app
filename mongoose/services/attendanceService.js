@@ -299,7 +299,9 @@ const groupAttendanceByPerson = (
     totalSubcontractorPay += amount;
   });
 
-  // Add subcontractor attendance records (created via inline edit)
+  // Add subcontractor attendance records. They hold where and when only:
+  // subcontractors are paid on their CIS invoices (the purchases above), so
+  // a record counts as a day worked and adds nothing to pay.
   attendanceRecords.forEach(record => {
     if (record.employeeId) return; // handled separately below
     const supplier = record.subcontractorId;
@@ -307,7 +309,7 @@ const groupAttendanceByPerson = (
 
     const name = supplier.Name;
     const dateKey = format(toDateAny(record.date), 'yyyy-MM-dd');
-    const dayRate = parseFloat(record.dayRate || 0);
+    const worked = record.type === 'work' || record.type === 'training';
 
     if (!groupedAttendance[name]) {
       groupedAttendance[name] = {
@@ -325,22 +327,26 @@ const groupAttendanceByPerson = (
     if (!groupedAttendance[name].dailyRecords[dateKey]) {
       groupedAttendance[name].dailyRecords[dateKey] = {};
     }
+    const day = groupedAttendance[name].dailyRecords[dateKey];
+    // One day worked per day, however many sites it was split across
+    const dayAlreadyWorked = Object.values(day).some(r => r.uuid && (r.type === 'work' || r.type === 'training'));
 
-    groupedAttendance[name].dailyRecords[dateKey][record._id] = {
+    day[record._id] = {
       uuid: record.uuid,
       location: record.locationId || null,
       type: record.type,
       status: record.status || 'pending',
-      hoursWorked: parseFloat(record.hoursWorked || 0) || null,
-      dayRate: dayRate || null,
-      weeklyPay: dayRate,
+      hoursWorked: null,
+      dayRate: null,
+      weeklyPay: 0,
       contractId: record.contractId ? String(record.contractId) : null,
       projectId: record.projectId ? String(record.projectId) : null,
       contractAssignmentId: record.contractAssignmentId || null
     };
 
-    groupedAttendance[name].weeklyPay += dayRate;
-    if (dayRate > 0) groupedAttendance[name].totalDaysWorked = (groupedAttendance[name].totalDaysWorked || 0) + 1;
+    if (worked && !dayAlreadyWorked) {
+      groupedAttendance[name].totalDaysWorked = (groupedAttendance[name].totalDaysWorked || 0) + 1;
+    }
   });
 
   // Add employee attendance
