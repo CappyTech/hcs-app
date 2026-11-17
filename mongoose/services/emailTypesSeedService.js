@@ -19,6 +19,10 @@ import logger from '../../services/loggerService.js';
 // senderType: 'system' | 'admin'
 // subscribable: recipients may unsubscribe
 // defaultOn: default subscription state when no explicit preference exists
+//            (the email channel's default)
+// channels: channels the type can be delivered on (default ['email']). Types
+//           sent through notifyService.notifyUsers list all three; their
+//           SMS / in-app defaults are smsDefaultOn / inAppDefaultOn.
 // `heading` / `intro` are the H2 and opening paragraph shown in the admin
 // preview and in admin-composed messages of this type. Automated system senders
 // build their own body, so revising these does not change their live emails.
@@ -89,6 +93,32 @@ const DEFAULT_TYPES = [
     description: 'Platform-wide announcements sent to many users at once.',
     heading: 'Announcement',
     intro: "There's a new platform announcement.",
+  },
+
+  // ── People notices (email, SMS and in-app, via notifyService) ───────
+  // Sent to users linked to an employee or subcontractor. On by default by
+  // email and in the app; SMS is opt-in, since texts cost money per message
+  // and the only SMS the platform sent before were sign-in codes.
+  {
+    key: 'attendance', label: 'Your weekly attendance', senderType: 'system', subscribable: true, defaultOn: true,
+    channels: ['email', 'sms', 'inApp'], smsDefaultOn: false, inAppDefaultOn: true,
+    description: 'Your attendance for the week, to check before it goes to payroll.',
+    heading: 'Your weekly attendance',
+    intro: 'Here is your attendance for the week.',
+  },
+  {
+    key: 'payroll', label: 'Payroll', senderType: 'system', subscribable: true, defaultOn: true,
+    channels: ['email', 'sms', 'inApp'], smsDefaultOn: false, inAppDefaultOn: true,
+    description: 'Notices about your pay, such as a payslip or statement being ready.',
+    heading: 'Payroll update',
+    intro: "There's an update about your pay.",
+  },
+  {
+    key: 'policy-update', label: 'Policy documents', senderType: 'system', subscribable: true, defaultOn: true,
+    channels: ['email', 'sms', 'inApp'], smsDefaultOn: false, inAppDefaultOn: true,
+    description: 'A company policy document has been published or has a new version.',
+    heading: 'Policy document updated',
+    intro: 'A company policy document has been published or updated.',
   },
 
   // ── Admin-originated ────────────────────────────────────────────────

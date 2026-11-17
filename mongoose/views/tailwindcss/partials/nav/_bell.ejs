@@ -1,0 +1,18 @@
+<%#
+  The notifications bell: a link to /notifications with the unread in-app
+  count as a badge. Rendered only when res.locals.notificationNav is set (by
+  app.js, for signed-in people), so signed-out headers are untouched.
+  Locals: bellClass, bellIconClass, bellShowLabel.
+%>
+<% const _bellNav = locals.notificationNav; %>
+<% if (_bellNav) { %>
+  <% const _unread = Number(_bellNav.unread) || 0; %>
+  <% const _unreadText = _unread > 99 ? '99+' : String(_unread); %>
+  <a href="<%= _bellNav.href || '/notifications' %>" class="<%= bellClass %>" aria-label="Notifications<%= _unread ? ` (${_unread} unread)` : '' %>" title="Notifications" <%- _bellNav.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="notifications">
+    <i class="bi <%= _unread ? 'bi-bell-fill' : 'bi-bell' %> <%= bellIconClass %>" aria-hidden="true"></i>
+    <% if (bellShowLabel) { %><span>Notifications</span><% } %>
+    <% if (_unread) { %>
+    <span class="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-semibold leading-none" data-unread-count><%= _unreadText %></span>
+    <% } %>
+  </a>
+<% } %>

@@ -5,9 +5,15 @@
       <div class="flex justify-between items-center mb-6">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><i class="bi bi-bell-fill text-green-600"></i> Notification Settings</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Choose which emails you receive at <strong><%= user ? user.email : '' %></strong>. Unsubscribe links in emails bring you back here.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Choose how you hear about each kind of notice: by email to <strong><%= user ? user.email : '' %></strong>, by text message<% if (user && user.phoneNumber) { %> to <strong><%= user.phoneNumber %></strong><% } %>, or in the app. Unsubscribe links in emails bring you back here.</p>
+          <% if (!(user && user.phoneNumber)) { %>
+            <p class="text-sm text-amber-700 dark:text-amber-400 mt-1" data-no-phone>There is no phone number on your account, so you cannot get text messages. Ask an administrator to add one.</p>
+          <% } %>
         </div>
-        <a href="/user/account" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm whitespace-nowrap">← Account</a>
+        <div class="flex flex-col items-end gap-1 whitespace-nowrap">
+          <a href="/user/account" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm">← Account</a>
+          <a href="/notifications" class="text-green-700 dark:text-green-400 hover:underline text-sm"><i class="bi bi-bell" aria-hidden="true"></i> Your notifications</a>
+        </div>
       </div>
 
       <!-- Master admin-contact switch -->
@@ -41,38 +47,69 @@
         </div>
       </div>
 
+      <%# One row per type, one column per channel. A channel the type cannot
+          use shows a dash; required types show "Always"; SMS without a phone
+          number shows "No phone". Every change is a POST form (no scripts). %>
+      <% const channelCols = [['email', 'Email'], ['sms', 'SMS'], ['inApp', 'In app']]; %>
       <% const sections = [['System notifications', groups.system], ['Admin notifications', groups.admin]]; %>
       <% sections.forEach(function (section) { const heading = section[0], list = section[1]; if (!list.length) return; %>
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1"><%= heading %></h2>
-        <div class="mb-8">
-          <% list.forEach(function (t) { %>
-          <div id="type-<%= t.key %>" class="flex items-start justify-between gap-4 py-4 border-b border-gray-100 dark:border-gray-800 last:border-0 scroll-mt-24">
-            <div class="min-w-0">
-              <div class="font-medium text-gray-900 dark:text-gray-100"><%= t.label %></div>
-              <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"><%= t.description %></p>
-              <a href="/user/account/settings/notifications/preview/<%= encodeURIComponent(t.key) %>" target="_blank" class="text-xs text-blue-600 dark:text-blue-400 hover:underline"><i class="bi bi-eye"></i> Preview</a>
-            </div>
-            <div class="flex flex-col items-end gap-2 whitespace-nowrap">
-              <% if (!t.subscribable) { %>
-                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">Required</span>
-              <% } else { %>
-                <form method="POST" action="/user/account/settings/notifications/toggle">
-                  <%- include('../partials/csrfHidden.ejs') %>
-                  <input type="hidden" name="typeKey" value="<%= t.key %>">
-                  <input type="hidden" name="subscribed" value="<%= t.subscribed ? 'false' : 'true' %>">
-                  <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-medium <%= t.subscribed ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200' %>">
-                    <%= t.subscribed ? 'Subscribed' : 'Unsubscribed' %>
-                  </button>
-                </form>
-              <% } %>
-              <form method="POST" action="/user/account/settings/notifications/send-test">
-                <%- include('../partials/csrfHidden.ejs') %>
-                <input type="hidden" name="typeKey" value="<%= t.key %>">
-                <button type="submit" class="text-xs text-gray-500 dark:text-gray-400 hover:underline">Send me a test</button>
-              </form>
-            </div>
-          </div>
-          <% }); %>
+        <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3"><%= heading %></h2>
+        <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm mb-8">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm" data-channel-table="<%= heading %>">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Notification</th>
+                <% channelCols.forEach(function (col) { %>
+                <th scope="col" class="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= col[1] %></th>
+                <% }); %>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+              <% list.forEach(function (t) { const ch = t.channels || {}; %>
+              <tr id="type-<%= t.key %>" class="hover:bg-gray-50 dark:hover:bg-gray-800 transition scroll-mt-24">
+                <td class="px-4 py-3 align-top">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-medium text-gray-900 dark:text-gray-100"><%= t.label %></span>
+                    <% if (!t.subscribable) { %>
+                      <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700">Required</span>
+                    <% } %>
+                  </div>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"><%= t.description %></p>
+                  <div class="flex flex-wrap items-center gap-3 mt-1">
+                    <a href="/user/account/settings/notifications/preview/<%= encodeURIComponent(t.key) %>" target="_blank" class="text-xs text-blue-600 dark:text-blue-400 hover:underline"><i class="bi bi-eye"></i> Preview</a>
+                    <form method="POST" action="/user/account/settings/notifications/send-test">
+                      <%- include('../partials/csrfHidden.ejs') %>
+                      <input type="hidden" name="typeKey" value="<%= t.key %>">
+                      <button type="submit" class="text-xs text-gray-500 dark:text-gray-400 hover:underline">Send me a test email</button>
+                    </form>
+                  </div>
+                </td>
+                <% channelCols.forEach(function (col) { const name = col[0], label = col[1]; const c = ch[name] || { supported: name === 'email', on: name === 'email' && t.subscribed, chosen: t.subscribed, locked: !t.subscribable, reason: t.subscribable ? null : 'required' }; %>
+                <td class="px-3 py-3 text-center align-top whitespace-nowrap" data-channel="<%= name %>" data-state="<%= !c.supported ? 'unavailable' : (c.reason === 'no-phone' ? 'no-phone' : (c.locked ? 'locked' : (c.on ? 'on' : 'off'))) %>">
+                  <% if (!c.supported) { %>
+                    <span class="text-gray-300 dark:text-gray-600" title="Not sent by <%= label.toLowerCase() %>" aria-label="Not available">—</span>
+                  <% } else if (c.reason === 'no-phone') { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700" title="Add a phone number to your account to get text messages">No phone</span>
+                  <% } else if (c.locked) { %>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full <%= c.on ? 'bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700' : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700' %>" title="This notification is required and cannot be changed"><%= c.on ? 'Always' : 'Off' %></span>
+                  <% } else { %>
+                    <form method="POST" action="/user/account/settings/notifications/channel">
+                      <%- include('../partials/csrfHidden.ejs') %>
+                      <input type="hidden" name="typeKey" value="<%= t.key %>">
+                      <input type="hidden" name="channel" value="<%= name %>">
+                      <input type="hidden" name="on" value="<%= c.chosen ? 'false' : 'true' %>">
+                      <button type="submit" aria-pressed="<%= c.chosen ? 'true' : 'false' %>" aria-label="<%= label %> for <%= t.label %>: <%= c.chosen ? 'on' : 'off' %>"
+                        class="text-xs px-3 py-1.5 rounded-lg shadow-sm font-medium transition <%= c.chosen ? 'bg-green-600 hover:bg-green-700 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' %>">
+                        <%= c.chosen ? 'On' : 'Off' %>
+                      </button>
+                    </form>
+                  <% } %>
+                </td>
+                <% }); %>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
         </div>
       <% }); %>
     </div>

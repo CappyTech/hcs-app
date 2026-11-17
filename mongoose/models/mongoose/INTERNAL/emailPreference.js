@@ -7,6 +7,13 @@ import crypto from 'crypto';
  * A row exists only once a user has explicitly toggled a type. Absence of a
  * row means "use the type's defaultOn" (see emailPreferenceService.isSubscribed),
  * so we never have to backfill preferences when a new emailType is added.
+ *
+ * Channels: `subscribed` is the EMAIL channel (its meaning predates SMS and
+ * in-app, and existing rows keep it unchanged — no migration). `sms` and
+ * `inApp` hold the person's choice for those channels; unset (undefined) means
+ * "use the type's smsDefaultOn / inAppDefaultOn". Likewise a row created only
+ * to record an SMS or in-app choice leaves `subscribed` unset, so email keeps
+ * following the type's defaultOn.
  */
 
 const emailPreferenceSchema = new mongoose.Schema(
@@ -24,7 +31,12 @@ const emailPreferenceSchema = new mongoose.Schema(
     // emailType.key this preference applies to.
     typeKey: { type: String, required: true, trim: true, lowercase: true },
 
-    subscribed: { type: Boolean, required: true },
+    // Email channel. Optional so a row can carry only an SMS / in-app choice.
+    subscribed: { type: Boolean },
+
+    // SMS and in-app channels; unset = the type's default.
+    sms:   { type: Boolean },
+    inApp: { type: Boolean },
   },
   { timestamps: true },
 );

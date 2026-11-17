@@ -1,0 +1,91 @@
+<%#
+  /notifications: the signed-in person's in-app notifications, newest first.
+  Locals: items, total, page, pages, unread (inAppNotificationService.list).
+%>
+<% const _items = typeof items !== 'undefined' && Array.isArray(items) ? items : []; %>
+<% const _unread = typeof unread !== 'undefined' ? Number(unread) || 0 : 0; %>
+<% const _page = typeof page !== 'undefined' ? page : 1; %>
+<% const _pages = typeof pages !== 'undefined' ? pages : 1; %>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div class="flex items-center gap-3">
+      <h1 class="text-xl font-bold"><i class="bi bi-bell text-green-600" aria-hidden="true"></i> Notifications</h1>
+      <% if (_unread) { %>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700" data-unread-total><%= _unread %> unread</span>
+      <% } %>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/user/account/settings/notifications"
+         class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">
+        <i class="bi bi-gear" aria-hidden="true"></i> Notification settings
+      </a>
+      <% if (_unread) { %>
+      <form method="POST" action="/notifications/read-all">
+        <%- include('../partials/csrfHidden') %>
+        <button type="submit" class="text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg shadow-sm font-medium transition">
+          Mark all as read
+        </button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+
+  <% if (!_items.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      You have no notifications.
+    </div>
+  <% } else { %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <% _items.forEach(function (n) { const isUnread = !n.readAt; %>
+        <div class="flex items-start gap-4 px-4 py-3 <%= isUnread ? 'bg-green-50/60 dark:bg-green-900/10' : '' %> hover:bg-gray-50 dark:hover:bg-gray-800" data-notification="<%= n.uuid %>" data-read="<%= isUnread ? 'false' : 'true' %>">
+          <span class="mt-1.5 w-2 h-2 rounded-full shrink-0 <%= isUnread ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600' %>" aria-hidden="true"></span>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-sm <%= isUnread ? 'font-semibold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300' %>"><%= n.title %></span>
+              <% if (isUnread) { %>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700">new</span>
+              <% } %>
+            </div>
+            <% if (n.body) { %>
+              <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5 whitespace-pre-line"><%= n.body %></p>
+            <% } %>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= new Date(n.createdAt).toLocaleString('en-GB') %></p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <% if (n.link) { %>
+            <form method="POST" action="/notifications/<%= encodeURIComponent(n.uuid) %>/open">
+              <%- include('../partials/csrfHidden') %>
+              <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm font-medium transition">
+                Open
+              </button>
+            </form>
+            <% } %>
+            <% if (isUnread) { %>
+            <form method="POST" action="/notifications/<%= encodeURIComponent(n.uuid) %>/read">
+              <%- include('../partials/csrfHidden') %>
+              <input type="hidden" name="page" value="<%= _page %>">
+              <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition">
+                Mark as read
+              </button>
+            </form>
+            <% } %>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+
+      <% if (_pages > 1) { %>
+        <div class="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+          <% if (_page > 1) { %>
+            <a href="?page=<%= _page - 1 %>" class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">← Newer</a>
+          <% } else { %><span></span><% } %>
+          <span class="text-xs text-gray-500">Page <%= _page %> of <%= _pages %></span>
+          <% if (_page < _pages) { %>
+            <a href="?page=<%= _page + 1 %>" class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white transition">Older →</a>
+          <% } else { %><span></span><% } %>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
+</div>
