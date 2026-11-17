@@ -113,6 +113,11 @@ router.post(
   settings.toggleNotification,
 );
 router.post(
+  "/user/account/settings/notifications/channel",
+  authService.ensureAnyRole(),
+  settings.setChannelPreference,
+);
+router.post(
   "/user/account/settings/notifications/allow-admin",
   authService.ensureAnyRole(),
   settings.setAllowAdminEmails,

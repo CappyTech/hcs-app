@@ -1,5 +1,6 @@
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
 import emailService from './emailService.js';
+import smsService from './smsService.js';
 import logger from './loggerService.js';
 import emailTypeService from '../mongoose/services/emailTypeService.js';
 import emailPreferenceService from '../mongoose/services/emailPreferenceService.js';
@@ -27,6 +28,11 @@ import org from './organisationService.js';
  *     "allow admins to email me".
  * It then appends the correct unsubscribe footer for the recipient before
  * queueing. Delivery happens asynchronously via the 'notification-outbox' job.
+ *
+ * SMS: enqueueSms() queues a text message on the same outbox (channel 'sms'),
+ * delivered by the same job through smsService with the same retry/backoff and
+ * dedupeKey idempotency. It does no preference gating of its own — callers go
+ * through notifyService.notifyUsers, which resolves the person's channels.
  */
 
 const BACKOFF_BASE_MS = 5 * 60 * 1000; // 5 min, doubles per attempt
@@ -279,6 +285,64 @@ async function enqueue({
   return doc;
 }
 
+// One SMS segment set is plenty for a notice; Twilio splits longer bodies into
+// several billed segments, so cap it.
+const SMS_MAX_LENGTH = 320;
+
+/**
+ * Queue an SMS on the outbox. Returns the created doc, or null when skipped
+ * (no model, no number, empty body, or the dedupeKey was already used).
+ * `subject` is not sent; it labels the message in the admin outbox.
+ */
+async function enqueueSms({
+  to, text, subject = null,
+  typeKey = null, category = null,
+  recipientUserId = null, refType = null, refId = null, dedupeKey = null,
+}) {
+  const Notification = mdb.INTERNAL?.notification;
+  if (!Notification) {
+    logger.warn('[notificationService] Notification model unavailable — dropping SMS');
+    return null;
+  }
+  const number = String(to || '').trim();
+  const body = String(text || '').trim();
+  if (!number || !body) return null;
+
+  if (dedupeKey) {
+    const existing = await Notification.findOne({ dedupeKey }).select('_id').lean();
+    if (existing) return null;
+  }
+
+  const key = typeKey || category || 'system';
+  return Notification.create({
+    channel: 'sms',
+    to: number,
+    subject: String(subject || body).slice(0, 300),
+    text: body.length > SMS_MAX_LENGTH ? `${body.slice(0, SMS_MAX_LENGTH - 1)}…` : body,
+    category: key,
+    typeKey: key,
+    senderType: 'system',
+    recipientUserId: recipientUserId != null ? String(recipientUserId) : null,
+    unsubscribable: false,
+    refType,
+    refId: refId != null ? String(refId) : null,
+    dedupeKey,
+  });
+}
+
+/** Hand one outbox doc to its channel's sender. Throws on failure (→ retry). */
+async function deliver(doc) {
+  if (doc.channel === 'sms') {
+    return smsService.sendSms({ to: doc.to, body: doc.text });
+  }
+  return emailService.sendMail({
+    to: doc.to,
+    subject: doc.subject,
+    html: doc.html,
+    text: doc.text,
+  });
+}
+
 /**
  * Queue the same notification to every user holding one of `roles`
  * (verified email required). Gating and the per-recipient footer are applied
@@ -306,7 +370,7 @@ async function enqueueForRoles(roles, { subject, html, text, category, typeKey, 
   return { queued, recipients: users.length };
 }
 
-/** Deliver due pending notifications. Runs as the 'notification-outbox' job. */
+/** Deliver due pending notifications (email and SMS). Runs as the 'notification-outbox' job. */
 async function processOutbox({ batchSize = 20 } = {}) {
   const Notification = mdb.INTERNAL?.notification;
   if (!Notification) return { sent: 0, failed: 0 };
@@ -320,12 +384,7 @@ async function processOutbox({ batchSize = 20 } = {}) {
   const stats = { sent: 0, retried: 0, failed: 0 };
   for (const doc of due) {
     try {
-      await emailService.sendMail({
-        to: doc.to,
-        subject: doc.subject,
-        html: doc.html,
-        text: doc.text,
-      });
+      await deliver(doc);
       doc.status = 'sent';
       doc.sentAt = new Date();
       doc.attempts += 1;
@@ -390,6 +449,7 @@ function renderPreviewDocument(type, branding = null) {
 
 export default {
   enqueue,
+  enqueueSms,
   enqueueForRoles,
   processOutbox,
   wrapTemplate,
@@ -400,4 +460,4 @@ export default {
   PREVIEW_CSP,
 };
 
-export { enqueue, enqueueForRoles, processOutbox, wrapTemplate, buildFooter, resolveBranding, baseUrl, renderPreviewDocument, PREVIEW_CSP };
+export { enqueue, enqueueSms, enqueueForRoles, processOutbox, wrapTemplate, buildFooter, resolveBranding, baseUrl, renderPreviewDocument, PREVIEW_CSP };

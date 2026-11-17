@@ -650,8 +650,8 @@ import __authService from '../../services/authService.js';
 export const getNotificationsPage = async (req, res, next) => {
   try {
     const userId = req.session.user.id;
-    const user = await mdb.INTERNAL.user.findById(userId).select("email allowAdminEmails").lean();
-    const preferences = await emailPreferenceService.getPreferencesForUser(userId);
+    const user = await mdb.INTERNAL.user.findById(userId).select("email phoneNumber allowAdminEmails").lean();
+    const preferences = await emailPreferenceService.getPreferencesForUser(userId, user);
     // Group by senderType for display.
     const groups = {
       system: preferences.filter((p) => p.senderType === "system"),
@@ -679,6 +679,24 @@ export const toggleNotification = async (req, res) => {
     else req.flash("error", "That notification type cannot be changed.");
   } catch (error) {
     logger.error(`Error toggling notification: ${error.message}`);
+    req.flash("error", "Could not update preference.");
+  }
+  res.redirect("/user/account/settings/notifications");
+};
+
+// One channel (email / SMS / in app) of one notification type.
+const CHANNEL_LABELS = { email: "Email", sms: "SMS", inApp: "In app" };
+export const setChannelPreference = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const typeKey = String(req.body.typeKey || "");
+    const channel = String(req.body.channel || "");
+    const on = req.body.on === "on" || req.body.on === "true";
+    const ok = await emailPreferenceService.setChannelPreference(userId, typeKey, channel, on);
+    if (ok) req.flash("success", `${CHANNEL_LABELS[channel]} turned ${on ? "on" : "off"} for "${typeKey}".`);
+    else req.flash("error", "That notification setting cannot be changed.");
+  } catch (error) {
+    logger.error(`Error updating notification channel: ${error.message}`);
     req.flash("error", "Could not update preference.");
   }
   res.redirect("/user/account/settings/notifications");
@@ -759,4 +777,4 @@ export const previewNotification = async (req, res, next) => {
   }
 };
 
-export default { getProfilePage, getAccountPage, updateAccountSettings, logoutSession, logoutAllOtherSessions, changePassword, verifyAndEnableTotp, disableTotp, regenerateBackupCodes, validateAccountSettings, validateChangePassword, getNotificationsPage, toggleNotification, setAllowAdminEmails, sendTestNotification, rotateNotificationToken, previewNotification };
+export default { getProfilePage, getAccountPage, updateAccountSettings, logoutSession, logoutAllOtherSessions, changePassword, verifyAndEnableTotp, disableTotp, regenerateBackupCodes, validateAccountSettings, validateChangePassword, getNotificationsPage, toggleNotification, setChannelPreference, setAllowAdminEmails, sendTestNotification, rotateNotificationToken, previewNotification };

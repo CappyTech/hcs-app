@@ -357,6 +357,8 @@ const routeAccess = {
 
   // Personal notification settings (all authenticated users)
   '/user/account/settings/notifications': '*',
+  // In-app notifications (each person sees only their own)
+  '/notifications': '*',
 
   // Internal API reference
   '/help/api': ['admin'],

@@ -4,7 +4,7 @@
     brand    the logo + company name link to Home
     create   the green Create button (only when this person may create)
     jump     the "Jump to" box: filters the nav items client-side, Ctrl+K focuses it
-    utility  Help, theme toggle and the account avatar
+    utility  Help, the notifications bell, theme toggle and the account avatar
   Every style keeps the theme toggle (#theme-toggle/#theme-icon, read by
   theme-toggle.js) and Help reachable, so they live here rather than in each file.
 %>
@@ -58,6 +58,7 @@
   <a href="/help" class="<%= _iconBtn %> <%= _nav.help.active ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30' : '' %>" aria-label="Help" title="Help" <%- _nav.help.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="help">
     <i class="bi bi-question-circle text-lg" aria-hidden="true"></i>
   </a>
+  <%- include('./_bell.ejs', { bellClass: _iconBtn + ' relative', bellIconClass: 'text-lg', bellShowLabel: false }) %>
   <button id="theme-toggle" type="button" aria-label="Toggle light or dark theme" title="Theme" class="<%= _iconBtn %> cursor-pointer">
     <i id="theme-icon" class="bi bi-moon-stars text-lg" aria-hidden="true"></i>
   </button>

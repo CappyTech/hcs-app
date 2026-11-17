@@ -8,7 +8,14 @@ import crypto from 'crypto';
  * directly; the notification-outbox job delivers them with retry/backoff so
  * an SMTP outage never loses a message. `dedupeKey` lets recurring reminder
  * jobs enqueue idempotently (e.g. 'cis-return-2026-06-user@x.com').
+ *
+ * Channels: 'email' (to = address, html/text body) and 'sms' (to = phone
+ * number, `text` is the message body, `subject` is kept for the outbox list).
+ * In-app notifications are not queued here; they are written straight to the
+ * inAppNotification store.
  */
+
+const CHANNELS = ['email', 'sms'];
 
 const STATUSES = ['pending', 'sent', 'failed', 'cancelled'];
 
@@ -21,7 +28,7 @@ const notificationSchema = new mongoose.Schema(
       default: () => crypto.randomUUID(),
     },
 
-    channel: { type: String, enum: ['email'], default: 'email' },
+    channel: { type: String, enum: CHANNELS, default: 'email' },
 
     to:      { type: String, required: true, trim: true },
     subject: { type: String, required: true, trim: true, maxlength: 300 },
@@ -68,4 +75,4 @@ const notificationSchema = new mongoose.Schema(
 // Worker query: pending notifications that are due
 notificationSchema.index({ status: 1, nextAttemptAt: 1 });
 
-export default { modelName: 'notification', schema: notificationSchema };
+export default { modelName: 'notification', schema: notificationSchema, CHANNELS };

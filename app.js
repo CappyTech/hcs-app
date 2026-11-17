@@ -72,6 +72,8 @@ import __loggerRoutes from './mongoose/routes/loggerRoutes.js';
 import __returnsRoutes from './mongoose/routes/returnsRoutes.js';
 import __settingsRoutes from './mongoose/routes/settingsRoutes.js';
 import __emailRoutes from './mongoose/routes/emailRoutes.js';
+import __inAppNotificationRoutes from './mongoose/routes/inAppNotificationRoutes.js';
+import __inAppNotificationService from './mongoose/services/inAppNotificationService.js';
 import __twoFARoutes from './mongoose/routes/twoFARoutes.js';
 import __subcontractorRoutes from './mongoose/routes/subcontractorRoutes.js';
 import __submissionRoutes from './mongoose/routes/submissionRoutes.js';
@@ -628,6 +630,19 @@ const main = async () => {
       next();
     });
 
+    // The bell in the header: link to /notifications with this person's unread
+    // in-app count. One indexed count per page; a failure just hides the badge.
+    appRouter.use(async (req, res, next) => {
+      if (!req.user) return next();
+      res.locals.notificationNav = { href: '/notifications', unread: 0, active: req.path === '/notifications' };
+      try {
+        res.locals.notificationNav.unread = await __inAppNotificationService.unreadCount(req.session?.user?.id || req.user._id);
+      } catch (err) {
+        logger.warn('[inAppNotification] unread count failed: ' + err.message);
+      }
+      next();
+    });
+
     // App-wide meta info (Mongo)
     appRouter.use(async (req, res, next) => {
       try {
@@ -668,6 +683,7 @@ const main = async () => {
     appRouter.use('/', __returnsRoutes);
     appRouter.use('/', __settingsRoutes);
     appRouter.use('/', __emailRoutes);
+    appRouter.use('/', __inAppNotificationRoutes);
     appRouter.use('/', __twoFARoutes);
     appRouter.use('/', __subcontractorRoutes);
     appRouter.use('/', __submissionRoutes);

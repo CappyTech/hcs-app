@@ -52,7 +52,7 @@ function registerAll() {
   });
 
   scheduler.register('notification-outbox', {
-    description: 'Deliver queued email notifications with retry/backoff.',
+    description: 'Deliver queued email and SMS notifications with retry/backoff.',
     intervalMs: MINUTE,
     initialDelayMs: 15_000,
     run: () => __notificationService.processOutbox(),

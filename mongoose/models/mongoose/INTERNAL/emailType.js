@@ -19,6 +19,11 @@ import crypto from 'crypto';
 
 const SENDER_TYPES = ['system', 'admin'];
 
+// Delivery channels a notification type can use. 'email' and 'sms' go through
+// the notification outbox (retry/backoff); 'inApp' is written straight to the
+// inAppNotification store. See services/notifyService.js.
+const CHANNELS = ['email', 'sms', 'inApp'];
+
 const emailTypeSchema = new mongoose.Schema(
   {
     uuid: {
@@ -48,7 +53,23 @@ const emailTypeSchema = new mongoose.Schema(
     subscribable: { type: Boolean, default: true },
 
     // Default subscription state when a user has no explicit emailPreference.
+    // This is the EMAIL channel's default (the field predates SMS / in-app).
     defaultOn: { type: Boolean, default: true },
+
+    // Channels this type can be delivered on. Types sent only through
+    // notificationService.enqueue (email) keep the default ['email']; types
+    // sent through notifyService.notifyUsers list every channel they support.
+    // The preferences page only offers a choice for supported channels.
+    channels: {
+      type: [{ type: String, enum: CHANNELS }],
+      default: () => ['email'],
+    },
+
+    // Default state of the SMS and in-app channels when a user has made no
+    // choice (email's default is `defaultOn`). Ignored for channels the type
+    // does not support.
+    smsDefaultOn:   { type: Boolean, default: false },
+    inAppDefaultOn: { type: Boolean, default: false },
 
     // Master switch: a disabled type never sends.
     enabled: { type: Boolean, default: true, index: true },
@@ -87,4 +108,4 @@ const emailTypeSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export default { modelName: 'emailType', schema: emailTypeSchema, SENDER_TYPES };
+export default { modelName: 'emailType', schema: emailTypeSchema, SENDER_TYPES, CHANNELS };
