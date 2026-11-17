@@ -42,15 +42,26 @@ router.post(
   authService.ensureGroup('commercial', 'edit', 'admin'),
   ctrl.postFillNextEdit,
 );
-// Create in KashFlow: the row's quote (with lines from the form) or project.
-// The same people who edit the register.
-router.get('/job-register/:uuid/kashflow-quote', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.getKashflowQuote);
-router.post('/job-register/:uuid/kashflow-quote', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.postKashflowQuote);
-router.post('/job-register/:uuid/kashflow-project', authService.ensureGroup('commercial', 'edit', 'admin'), ctrl.postKashflowProject);
+// Create in KashFlow: one of the job's quotes (with lines from the form) or
+// its project. The same people who edit the register.
+const edit = authService.ensureGroup('commercial', 'edit', 'admin');
+router.get('/job-register/:uuid/kashflow-quote/:quoteId', edit, ctrl.getKashflowQuote);
+router.post('/job-register/:uuid/kashflow-quote/:quoteId', edit, ctrl.postKashflowQuote);
+router.post('/job-register/:uuid/kashflow-project', edit, ctrl.postKashflowProject);
+// A job's quotes (variations) and invoices (stage payments)
+router.post('/job-register/:uuid/quotes', edit, ctrl.postAddQuote);
+router.post('/job-register/:uuid/quotes/:id', edit, ctrl.postUpdateQuote);
+router.post('/job-register/:uuid/quotes/:id/delete', edit, ctrl.postRemoveQuote);
+router.post('/job-register/:uuid/invoices', edit, ctrl.postAddInvoice);
+router.post('/job-register/:uuid/invoices/:id', edit, ctrl.postUpdateInvoice);
+router.post('/job-register/:uuid/invoices/:id/delete', edit, ctrl.postRemoveInvoice);
+// The job's own fields
+router.get('/job-register/:uuid/edit', edit, ctrl.getEdit);
+// The job page: read by the same people as the register
 router.get(
   '/job-register/:uuid',
   authService.ensureGroup([{ group: 'commercial', level: 'view' }, { group: 'finance', level: 'view' }], null, 'admin', 'accountant'),
-  ctrl.getEdit,
+  ctrl.getShow,
 );
 router.post(
   '/job-register/:uuid',

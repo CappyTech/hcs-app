@@ -1,8 +1,9 @@
 <%#
   Job Register: the plan of what will be in KashFlow (double entry), one row
-  per quote/job, as on the Job Reg workbook, with each number checked against
-  the synced KashFlow quote, project and invoice.
-  Locals: rows, counts, clients, years, totals, filters, unregistered, next, unlinkedCount,
+  per job (its quotes and invoices with it), each number checked against the
+  synced KashFlow quote, project and invoice. Each row opens the job's page.
+  Locals: rows ({ entry, stage, match, values }), counts, clients, years, totals { quoted, won, invoiced },
+          filters, unregistered, next, unlinkedCount,
           stageLabels, stages, contracts, crumbs
 %>
 <%
@@ -34,12 +35,13 @@
     ['all', 'All'], ...stages.map((s) => [s, stageLabels[s]]),
     ['unmatched', 'Not in KashFlow yet'], ['differs', "Doesn't match KashFlow"],
   ];
-  // One KashFlow check: tick, missing or differs
-  const sideBadge = (s, what, number) => {
+  // One KashFlow check: tick, missing or differs, e.g. "Quote 51234" (numbers only, so no escaping needed)
+  const sideBadge = (s, what) => {
     if (s.state === 'none') return '';
-    if (s.state === 'ok') return `<span class="inline-flex items-center gap-1 text-green-700 dark:text-green-400" title="${what} ${number} is in KashFlow and agrees"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>${what}</span>`;
-    if (s.state === 'missing') return `<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400" title="${what} ${number} isn't in KashFlow yet"><i class="bi bi-hourglass-split" aria-hidden="true"></i>${what}</span>`;
-    return `<span class="inline-flex items-center gap-1 text-red-700 dark:text-red-400" title="${s.issues.join('; ').replace(/"/g, '&quot;')}"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>${what}</span>`;
+    const name = s.number != null ? `${what} ${Number(s.number)}` : what;
+    if (s.state === 'ok') return `<span class="inline-flex items-center gap-1 text-green-700 dark:text-green-400" title="${name} is in KashFlow and agrees"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>${name}</span>`;
+    if (s.state === 'missing') return `<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400" title="${name} isn't in KashFlow yet"><i class="bi bi-hourglass-split" aria-hidden="true"></i>${name}</span>`;
+    return `<span class="inline-flex items-center gap-1 text-red-700 dark:text-red-400" title="${s.issues.join('; ').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>${name}</span>`;
   };
   const yearLabel = (y) => `${y}/${String(y + 1).slice(-2)}`;
 %>
@@ -53,14 +55,14 @@
         Job Register
       </h1>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        Quotes and jobs, entered here first and checked against KashFlow. A quote is won when it has a project number, and invoiced when it has an invoice number.
+        Jobs and their quotes and invoices, entered here first and checked against KashFlow. A job is won when it has a project number; open one to add a variation or a stage payment.
       </p>
     </div>
     <div class="flex flex-wrap gap-2">
       <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
         <a href="/job-register/import" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i> Import workbook</a>
       <% } %>
-      <a href="#add" class="<%= primaryBtn %> whitespace-nowrap"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a quote or job</a>
+      <a href="#add" class="<%= primaryBtn %> whitespace-nowrap"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a job</a>
     </div>
   </div>
 
@@ -109,13 +111,14 @@
   <!-- Totals -->
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
     <div class="<%= card %> p-4">
-      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Value shown</p>
-      <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(totals.value) || '£0.00' %></p>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Net, excluding cancelled</p>
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Quoted</p>
+      <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(totals.quoted) || '£0.00' %></p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Net, quotes not lost, excluding cancelled jobs</p>
     </div>
     <div class="<%= card %> p-4">
-      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Won, not invoiced</p>
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Won</p>
       <p class="text-2xl font-bold text-blue-700 dark:text-blue-400"><%= money(totals.won) || '£0.00' %></p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Won jobs' agreed value, invoiced or not</p>
     </div>
     <div class="<%= card %> p-4">
       <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Invoiced</p>
@@ -127,7 +130,7 @@
   <% if (typeof unlinkedCount !== 'undefined' && unlinkedCount) { %>
     <div class="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 mb-6 text-sm text-gray-700 dark:text-gray-300 flex flex-wrap items-center justify-between gap-3">
       <span><i class="bi bi-exclamation-triangle-fill text-amber-600" aria-hidden="true"></i>
-        <%= unlinkedCount %> row<%= unlinkedCount === 1 ? ' has a client' : 's have clients' %> typed in rather than chosen from the KashFlow customers.</span>
+        <%= unlinkedCount %> job<%= unlinkedCount === 1 ? ' has a client' : 's have clients' %> typed in rather than chosen from the KashFlow customers.</span>
       <a href="/job-register/link-clients" class="<%= secondaryBtn %> whitespace-nowrap"><i class="bi bi-link-45deg" aria-hidden="true"></i> Link clients</a>
     </div>
   <% } %>
@@ -140,11 +143,11 @@
       .sort((a, b) => (a[0] === 'none') - (b[0] === 'none') || b[0] - a[0])
       .map(([year, list]) => {
         const live = list.filter((r) => r.stage !== 'cancelled');
-        const sum = (xs) => xs.reduce((t, r) => t + (Number(r.entry.value) || 0), 0);
+        const sum = (xs, k) => xs.reduce((t, r) => t + (Number(r.values[k]) || 0), 0);
         return {
           year, rows: list,
           label: year === 'none' ? 'No date' : `Tax year ${yearLabel(year)}`,
-          value: sum(live), won: sum(live.filter((r) => r.stage === 'won')), invoiced: sum(live.filter((r) => r.stage === 'invoiced')),
+          quoted: sum(live, 'quoted'), won: sum(live.filter((r) => ['won', 'completed', 'invoiced'].includes(r.stage)), 'agreed'), invoiced: sum(live, 'invoiced'),
         };
       });
   %>
@@ -161,10 +164,10 @@
     <% yearGroups.forEach((g) => { %>
       <section id="ty-<%= g.year %>" class="mb-8 scroll-mt-20">
         <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 mb-2">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= g.label %> <span class="text-sm font-normal text-gray-500 dark:text-gray-400">· <%= g.rows.length %> row<%= g.rows.length === 1 ? '' : 's' %></span></h2>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100"><%= g.label %> <span class="text-sm font-normal text-gray-500 dark:text-gray-400">· <%= g.rows.length %> job<%= g.rows.length === 1 ? '' : 's' %></span></h2>
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            <%= money(g.value) || '£0.00' %> net ·
-            <span class="text-blue-700 dark:text-blue-400"><%= money(g.won) || '£0.00' %> won, not invoiced</span> ·
+            <%= money(g.quoted) || '£0.00' %> quoted ·
+            <span class="text-blue-700 dark:text-blue-400"><%= money(g.won) || '£0.00' %> won</span> ·
             <span class="text-green-700 dark:text-green-400"><%= money(g.invoiced) || '£0.00' %> invoiced</span>
           </p>
         </div>
@@ -172,49 +175,51 @@
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800">
           <tr>
-            <th class="<%= th %>">Quote</th>
             <th class="<%= th %>">Job</th>
-            <th class="<%= th %>">Date</th>
-            <th class="<%= th %>">Site</th>
-            <th class="<%= th %>">Client</th>
-            <th class="<%= th %>">Contact</th>
-            <th class="<%= th %> text-right">Value</th>
-            <th class="<%= th %>">Desc.</th>
-            <th class="<%= th %>">Invoice</th>
-            <th class="<%= th %>">Inv. date</th>
-            <th class="<%= th %>">Client ref</th>
-            <th class="<%= th %>">KashFlow</th>
+            <th class="<%= th %>">Quotes</th>
+            <th class="<%= th %>">Site / Client</th>
             <th class="<%= th %>">Stage</th>
+            <th class="<%= th %> text-right">Quoted</th>
+            <th class="<%= th %> text-right">Invoiced</th>
+            <th class="<%= th %>">KashFlow</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
-          <% g.rows.forEach(({ entry: e, stage, match }) => { %>
+          <% g.rows.forEach(({ entry: e, stage, match, values }) => { const href = `/job-register/${e.uuid}`; const quotes = e.quotes || []; const invoices = e.invoices || []; %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition <%= stage === 'cancelled' ? 'opacity-60' : '' %>">
-              <td class="<%= td %> font-mono text-xs"><a href="/job-register/<%= e.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= e.quoteNumber ?? '—' %></a></td>
-              <td class="<%= td %> font-mono text-xs"><a href="/job-register/<%= e.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= e.projectNumber ?? '—' %></a></td>
-              <td class="<%= td %> whitespace-nowrap"><%= fmt(e.jobDate || e.quoteDate) %></td>
-              <td class="<%= td %>"><%= e.site %></td>
-              <td class="<%= td %>"><%= e.client %></td>
-              <td class="<%= td %>"><%= e.contact || '' %></td>
-              <td class="<%= td %> text-right whitespace-nowrap"><%= money(e.value) %></td>
-              <td class="<%= td %>"><%= e.description || '' %></td>
-              <td class="<%= td %> font-mono text-xs"><%= e.invoiceNumber ?? '' %></td>
-              <td class="<%= td %> whitespace-nowrap"><%= fmt(e.invoiceDate) %></td>
-              <td class="<%= td %> font-mono text-xs"><%= e.clientRef || '' %></td>
-              <td class="<%= td %> text-xs whitespace-nowrap">
-                <div class="flex flex-col gap-0.5">
-                  <%- sideBadge(match.quote, 'Quote', e.quoteNumber) %>
-                  <%- sideBadge(match.project, 'Project', e.projectNumber) %>
-                  <%- sideBadge(match.invoice, 'Invoice', e.invoiceNumber) %>
-                </div>
-                <% [match.quote, match.project, match.invoice].flatMap((s) => s.issues).forEach((issue) => { %>
-                  <p class="text-red-700 dark:text-red-400 whitespace-normal mt-0.5"><%= issue %></p>
-                <% }) %>
+              <td class="<%= td %> whitespace-nowrap">
+                <a href="<%= href %>" class="font-mono text-xs text-green-700 dark:text-green-400 hover:underline"><%= e.projectNumber ?? 'Enquiry' %></a>
+                <p class="text-xs text-gray-500 dark:text-gray-400"><%= fmt(e.jobDate || (quotes[0] && quotes[0].date)) %></p>
+              </td>
+              <td class="<%= td %> font-mono text-xs">
+                <% if (!quotes.length) { %><span class="text-gray-400">—</span><% } %>
+                <% quotes.forEach((q) => { %><div class="<%= q.status === 'lost' ? 'line-through text-gray-400' : '' %>"><%= q.number ?? '(no number)' %></div><% }) %>
               </td>
               <td class="<%= td %>">
-                <span class="text-[11px] px-2 py-0.5 rounded-full border <%= stagePill[stage] %>"><%= stageLabels[stage] %></span>
+                <a href="<%= href %>" class="hover:underline"><%= e.site %></a>
+                <p class="text-xs text-gray-500 dark:text-gray-400"><%= [e.client, e.contact, e.description].filter(Boolean).join(' · ') %><%= e.clientRef ? ` · ref ${e.clientRef}` : '' %></p>
+              </td>
+              <td class="<%= td %>">
+                <span class="text-[11px] px-2 py-0.5 rounded-full border whitespace-nowrap <%= stagePill[stage] %>"><%= stageLabels[stage] %></span>
                 <% if (stage === 'won' && e.inKashflow) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-1 whitespace-nowrap">Entered in KashFlow</p><% } %>
                 <% if (e.notes) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= e.notes %></p><% } %>
+              </td>
+              <td class="<%= td %> text-right whitespace-nowrap"><%= money(values.quoted) %></td>
+              <td class="<%= td %> text-right whitespace-nowrap">
+                <% if (invoices.length) { %>
+                  <%= money(values.invoiced) %>
+                  <% if (stage === 'won' && values.agreed > values.invoiced) { %><p class="text-xs text-gray-500 dark:text-gray-400">of <%= money(values.agreed) %></p><% } %>
+                <% } %>
+              </td>
+              <td class="<%= td %> text-xs whitespace-nowrap">
+                <div class="flex flex-col gap-0.5">
+                  <%- sideBadge(match.project, 'Project') %>
+                  <% match.quotes.forEach((s) => { %><%- sideBadge(s, 'Quote') %><% }) %>
+                  <% match.invoices.forEach((s) => { %><%- sideBadge(s, 'Invoice') %><% }) %>
+                </div>
+                <% [match.project, ...match.quotes, ...match.invoices].flatMap((s) => s.issues).forEach((issue) => { %>
+                  <p class="text-red-700 dark:text-red-400 whitespace-normal mt-0.5"><%= issue %></p>
+                <% }) %>
               </td>
             </tr>
           <% }) %>
@@ -236,7 +241,7 @@
       <h2 class="<%= h2 %> mb-1">In KashFlow, not in the register (<%= yearLabel(unregistered.year) %>)</h2>
       <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
         <%= unregistered.quoteCount %> quote<%= unregistered.quoteCount === 1 ? '' : 's' %> and
-        <%= unregistered.projectCount %> project<%= unregistered.projectCount === 1 ? '' : 's' %> in KashFlow have no register row.
+        <%= unregistered.projectCount %> project<%= unregistered.projectCount === 1 ? '' : 's' %> in KashFlow aren't in the register.
         Add them so the two agree.
       </p>
       <div class="grid md:grid-cols-2 gap-4 text-sm">
@@ -264,17 +269,17 @@
 
   <!-- Add -->
   <div id="add" class="<%= card %> p-4 scroll-mt-24">
-    <h2 class="<%= h2 %> mb-1">Add a quote or job</h2>
+    <h2 class="<%= h2 %> mb-1">Add a job</h2>
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-      Give it the number it will have in KashFlow.
+      An enquiry is a job with a quote number and no project number yet; a job that's won has its project number. Give each the number it will have in KashFlow.
       <% if (next.quote) { %>Next quote number: <span class="font-mono"><%= next.quote %></span>.<% } %>
       <% if (next.project) { %>Next project number: <span class="font-mono"><%= next.project %></span>.<% } %>
       <% if ((next.quote || next.project) && (next.quoteSource === 'sync' || next.projectSource === 'sync')) { %><span class="text-amber-700 dark:text-amber-400">KashFlow didn't answer, so these are one past the last synced numbers; check them in KashFlow.</span><% } %>
-      Leave the project number blank until the quote is won.
+      Leave the project number blank until the quote is won. More quotes and the invoices are added on the job's page.
     </p>
     <form method="POST" action="/job-register" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <%- include('../partials/csrfHidden') %>
-      <%- include('_fields', { entry: locals.form || {}, next, clients, contracts, customers: locals.customers || [], input, label, nextAction: '/job-register/next#add' }) %>
+      <%- include('_fields', { entry: locals.form || {}, next, clients, contracts, customers: locals.customers || [], input, label, nextAction: '/job-register/next#add', withQuote: true }) %>
       <div class="sm:col-span-2 lg:col-span-4">
         <button type="submit" class="<%= primaryBtn %>">Add to register</button>
       </div>

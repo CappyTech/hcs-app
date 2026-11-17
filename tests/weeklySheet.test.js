@@ -365,15 +365,17 @@ describe('Weekly sheet save', () => {
 });
 
 describe('Won jobs not yet completed', () => {
-  it('are those with a project number, not cancelled, completed or invoiced', () => {
+  it('are those with a project number, not cancelled or completed', () => {
     assert.equal(isOpenJob({ projectNumber: 41000 }), true);
     assert.equal(isOpenJob({ projectNumber: 41000, won: true, contractId: 'c' }), true);
-    assert.equal(isOpenJob({ quoteNumber: 51000, won: true }), false); // won, no project number yet
+    assert.equal(isOpenJob({ quotes: [{ number: 51000, status: 'won' }], won: true }), false); // won, no project number yet
     assert.equal(isOpenJob({ projectNumber: 41000, cancelled: true }), false);
     assert.equal(isOpenJob({ projectNumber: 41000, completed: true }), false);
-    assert.equal(isOpenJob({ projectNumber: 41000, invoiceNumber: 1001 }), false);
+    assert.equal(isOpenJob({ projectNumber: 41000, completed: true, invoices: [{ number: 1001 }] }), false);
+    // A stage payment invoiced: still on site, still open
+    assert.equal(isOpenJob({ projectNumber: 41000, invoices: [{ number: 1001, value: 500 }] }), true);
     assert.deepEqual(jobRegisterService.OPEN_JOB_FILTER, {
-      projectNumber: { $type: 'number' }, cancelled: { $ne: true }, completed: { $ne: true }, invoiceNumber: { $not: { $type: 'number' } },
+      projectNumber: { $type: 'number' }, cancelled: { $ne: true }, completed: { $ne: true },
     });
   });
 

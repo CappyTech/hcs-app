@@ -40,6 +40,7 @@ import __payrollTaxRatesSeedService from './mongoose/services/payrollTaxRatesSee
 import __emailTypesSeedService from './mongoose/services/emailTypesSeedService.js';
 import __workbookImportStore from './mongoose/services/workbookImportStore.js';
 import __jobRegisterImportService from './mongoose/services/jobRegisterImportService.js';
+import __jobRegisterMigration from './mongoose/services/jobRegisterMigration.js';
 import __attendanceIndexMigration from './mongoose/services/attendanceIndexMigration.js';
 import __attendanceFieldCleanup from './mongoose/services/attendanceFieldCleanup.js';
 import __configValidatorService from './mongoose/services/configValidatorService.js';
@@ -427,6 +428,15 @@ const main = async () => {
       await __attendanceFieldCleanup.cleanupAttendanceFields();
     } catch (migrationErr) {
       logger.error('[migration] Attendance field clean-up failed', { error: migrationErr.message });
+    }
+
+    // Job Register rows (one quote + project + invoice each) → jobs holding
+    // quotes[] and invoices[]. Before the step below, which looks rows up by
+    // their quotes' numbers
+    try {
+      await __jobRegisterMigration.migrateRowsToJobs();
+    } catch (migrationErr) {
+      logger.error('[migration] Reshaping Job Register rows into jobs failed', { error: migrationErr.message });
     }
 
     // Job Register rows imported before rows recorded their import

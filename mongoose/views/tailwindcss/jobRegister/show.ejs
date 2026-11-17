@@ -1,0 +1,307 @@
+<%#
+  One job in the Job Register: the job (its KashFlow project), what it's
+  quoted and invoiced, its quotes (variations) and its invoices (stage
+  payments), each checked against KashFlow. No script: the forms post, and
+  ?quote=<id> / ?invoice=<id> opens one for editing.
+  Locals: job, stage, values { quoted, agreed, invoiced }, match { project, quotes[], invoices[] }, next,
+          stageLabels, quoteStatuses, quoteStatusLabels, canEdit, canCreate { project, quotes: { id: bool } },
+          editQuote, editInvoice, crumbs, title
+%>
+<%
+  const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
+  const h2 = 'font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400';
+  const input = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500';
+  const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
+  const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
+  const smallBtn = 'inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition whitespace-nowrap';
+  const th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap';
+  const td = 'px-3 py-2 text-gray-900 dark:text-gray-100 align-top';
+  const label = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '';
+  const ymd = (d) => d ? new Date(d).toISOString().slice(0, 10) : '';
+  const money = (v) => v == null ? '' : '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const stagePill = {
+    toQuote: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
+    quoted: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
+    won: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
+    completed: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/40 dark:text-teal-300 dark:border-teal-700',
+    invoiced: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
+    cancelled: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
+  };
+  const statusPill = { toQuote: stagePill.toQuote, quoted: stagePill.quoted, won: stagePill.won, lost: stagePill.cancelled };
+  const stateCard = {
+    ok: 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20',
+    missing: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20',
+    differs: 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20',
+    none: 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900',
+  };
+  const stateText = { ok: 'In KashFlow and agrees', missing: 'Not in KashFlow yet, or not synced', differs: 'In KashFlow but differs', none: 'No number yet' };
+  // One KashFlow check as an icon and words
+  const check = (s) => {
+    if (!s || s.state === 'none') return '<span class="text-gray-400">No number</span>';
+    if (s.state === 'ok') return '<span class="inline-flex items-center gap-1 text-green-700 dark:text-green-400"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Agrees</span>';
+    if (s.state === 'missing') return '<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400"><i class="bi bi-hourglass-split" aria-hidden="true"></i>Not in KashFlow</span>';
+    return '<span class="inline-flex items-center gap-1 text-red-700 dark:text-red-400"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>Differs</span>';
+  };
+  const quotes = job.quotes || [];
+  const invoices = job.invoices || [];
+  const sideFor = (list, x) => list.find((s) => s.id === String(x._id)) || null;
+  const can = locals.canCreate || { project: false, quotes: {} };
+  const partInvoiced = values.invoiced > 0 && stage === 'won';
+  const q = editQuote || {};
+  const inv = editInvoice || {};
+%>
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs, current: title }) %>
+
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %>: <%= job.site %></h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-2">
+        <span><%= job.client %></span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full border <%= stagePill[stage] %>"><%= stageLabels[stage] %></span>
+        <% if (job.inKashflow) { %><span>Entered in KashFlow</span><% } %>
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <% if (canEdit) { %><a href="/job-register/<%= job.uuid %>/edit" class="<%= secondaryBtn %>"><i class="bi bi-pencil" aria-hidden="true"></i> Edit job</a><% } %>
+      <a href="/job-register" class="<%= secondaryBtn %>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Job Register</a>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-4 mb-6">
+    <!-- The job -->
+    <div class="<%= card %> p-4 lg:col-span-2">
+      <h2 class="<%= h2 %> mb-3">Job</h2>
+      <dl class="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <div><dt class="<%= label %>">Project no. (KashFlow)</dt><dd class="font-mono"><%= job.projectNumber ?? 'Not won yet' %></dd></div>
+        <div><dt class="<%= label %>">Job date</dt><dd><%= fmt(job.jobDate) || '—' %></dd></div>
+        <div><dt class="<%= label %>">Client</dt><dd><%= job.client %><% if (job.customerCode) { %> <span class="font-mono text-xs text-gray-500">(<%= job.customerCode %>)</span><% } %></dd></div>
+        <div><dt class="<%= label %>">Contact</dt><dd><%= job.contact || '—' %></dd></div>
+        <div><dt class="<%= label %>">Description</dt><dd><%= job.description || '—' %></dd></div>
+        <div><dt class="<%= label %>">Client order / PO ref</dt><dd class="font-mono"><%= job.clientRef || '—' %></dd></div>
+        <div><dt class="<%= label %>">Contract on site</dt><dd><%= job.contractId?.title || 'None yet' %></dd></div>
+        <% if (!quotes.length) { %><div><dt class="<%= label %>">Agreed value (net)</dt><dd><%= money(job.value) || '—' %></dd></div><% } %>
+        <% if (job.notes) { %><div class="sm:col-span-2"><dt class="<%= label %>">Notes</dt><dd><%= job.notes %></dd></div><% } %>
+      </dl>
+    </div>
+
+    <!-- Its KashFlow project -->
+    <div class="rounded-2xl border p-4 <%= stateCard[match.project.state] %>">
+      <h2 class="<%= h2 %> mb-1">KashFlow project</h2>
+      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Project <span class="font-mono"><%= job.projectNumber ?? '' %></span></p>
+      <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5"><%= stateText[match.project.state] %></p>
+      <% if (match.project.record) { const r = match.project.record; %>
+        <p class="text-xs text-gray-700 dark:text-gray-300 mt-2"><%= r.Name || '' %> · <%= r.CustomerName || '' %><%= r.Status ? ' · ' + r.Status : '' %></p>
+        <a href="/project/read/<%= r.uuid %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Open in hcs-app</a>
+      <% } %>
+      <% match.project.issues.forEach((issue) => { %><p class="text-xs text-red-700 dark:text-red-400 mt-1"><%= issue %></p><% }) %>
+      <% if (job.projectSentAt) { %>
+        <p class="text-xs text-gray-600 dark:text-gray-400 mt-2"><i class="bi bi-cloud-check" aria-hidden="true"></i> Created in KashFlow from here on <%= fmt(job.projectSentAt) %>.</p>
+      <% } else if (match.project.state === 'missing' && can.project) { %>
+        <form method="POST" action="/job-register/<%= job.uuid %>/kashflow-project" class="mt-3">
+          <%- include('../partials/csrfHidden') %>
+          <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Creates project <span class="font-mono"><%= job.projectNumber %></span> named <em><%= job.site %></em> for <%= job.client %><%= job.jobDate ? `, starting ${fmt(job.jobDate)}` : '' %>. If the number is taken in KashFlow, KashFlow picks the next and this job changes to match.</p>
+          <button type="submit" class="<%= secondaryBtn %>"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Create in KashFlow</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Money -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+    <div class="<%= card %> p-4">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Quoted</p>
+      <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(values.quoted) %></p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Net, quotes not lost<% if (values.agreed && values.agreed !== values.quoted) { %> · <%= money(values.agreed) %> won<% } %></p>
+    </div>
+    <div class="<%= card %> p-4">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Invoiced</p>
+      <p class="text-2xl font-bold text-green-700 dark:text-green-400"><%= money(values.invoiced) %></p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <% if (partInvoiced) { %><%= money(values.invoiced) %> of <%= money(values.agreed) %> invoiced so far<% } else { %>Net, <%= invoices.length %> invoice<%= invoices.length === 1 ? '' : 's' %><% } %>
+      </p>
+    </div>
+  </div>
+
+  <!-- Quotes -->
+  <section id="quotes" class="mb-8 scroll-mt-20">
+    <div class="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Quotes <span class="text-sm font-normal text-gray-500 dark:text-gray-400">· <%= quotes.length %></span></h2>
+      <% if (canEdit && editQuote) { %><a href="/job-register/<%= job.uuid %>#quote-form" class="<%= secondaryBtn %>"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add quote</a><% } else if (canEdit) { %><a href="#quote-form" class="<%= secondaryBtn %>"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add quote</a><% } %>
+    </div>
+    <% if (!quotes.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">No quotes on this job.</div>
+    <% } else { %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="<%= th %>">Number</th><th class="<%= th %>">Date</th><th class="<%= th %>">Description</th>
+              <th class="<%= th %> text-right">Value</th><th class="<%= th %>">Status</th><th class="<%= th %>">KashFlow</th><th class="<%= th %>"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% quotes.forEach((x) => { const s = sideFor(match.quotes, x); const id = String(x._id); %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition <%= editQuote && String(editQuote._id) === id ? 'bg-green-50 dark:bg-green-900/20' : '' %>">
+                <td class="<%= td %> font-mono text-xs"><%= x.number ?? '—' %></td>
+                <td class="<%= td %> whitespace-nowrap"><%= fmt(x.date) %></td>
+                <td class="<%= td %>"><%= x.description || '' %><% if (x.notes) { %><p class="text-xs text-gray-500 dark:text-gray-400"><%= x.notes %></p><% } %></td>
+                <td class="<%= td %> text-right whitespace-nowrap"><%= money(x.value) %></td>
+                <td class="<%= td %>"><span class="text-[11px] px-2 py-0.5 rounded-full border <%= statusPill[x.status] || statusPill.quoted %>"><%= quoteStatusLabels[x.status] || x.status %></span></td>
+                <td class="<%= td %> text-xs">
+                  <%- check(s) %>
+                  <% if (s && s.record) { %> <a href="/quote/read/<%= s.record.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">Open</a><% } %>
+                  <% (s ? s.issues : []).forEach((issue) => { %><p class="text-red-700 dark:text-red-400 mt-0.5"><%= issue %></p><% }) %>
+                  <% if (x.sentAt) { %><p class="text-gray-500 dark:text-gray-400 mt-0.5"><i class="bi bi-cloud-check" aria-hidden="true"></i> Created from here on <%= fmt(x.sentAt) %></p><% } %>
+                </td>
+                <td class="<%= td %> text-right">
+                  <div class="flex flex-wrap justify-end gap-1">
+                    <% if (!x.sentAt && s && s.state === 'missing' && can.quotes[id]) { %>
+                      <a href="/job-register/<%= job.uuid %>/kashflow-quote/<%= id %>" class="<%= smallBtn %>"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Create in KashFlow</a>
+                    <% } %>
+                    <% if (canEdit) { %><a href="/job-register/<%= job.uuid %>?quote=<%= id %>#quote-form" class="<%= smallBtn %>"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a><% } %>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (canEdit) { %>
+      <div id="quote-form" class="<%= card %> p-4 mt-4 scroll-mt-24">
+        <h3 class="<%= h2 %> mb-1"><%= editQuote ? `Edit quote ${editQuote.number ?? ''}` : 'Add a quote' %></h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          <% if (editQuote) { %>Change this quote, or take it off the job.<% } else { %>A variation, or the job's first quote. Give it the number it will have in KashFlow<% if (next && next.quote) { %> (next: <span class="font-mono"><%= next.quote %></span>)<% } %>.<% } %>
+        </p>
+        <form method="POST" action="/job-register/<%= job.uuid %>/quotes<%= editQuote ? `/${editQuote._id}` : '' %>" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <%- include('../partials/csrfHidden') %>
+          <div>
+            <label for="q-number" class="<%= label %>">Quote no. (KashFlow)</label>
+            <input id="q-number" name="number" inputmode="numeric" value="<%= q.number ?? '' %>" placeholder="<%= next && next.quote ? next.quote : '' %>" class="<%= input %> font-mono">
+          </div>
+          <div>
+            <label for="q-date" class="<%= label %>">Date</label>
+            <input id="q-date" type="date" name="date" value="<%= ymd(q.date) %>" class="<%= input %>">
+          </div>
+          <div>
+            <label for="q-value" class="<%= label %>">Value (net £)</label>
+            <input id="q-value" name="value" inputmode="decimal" value="<%= q.value != null ? Number(q.value).toFixed(2) : '' %>" class="<%= input %>">
+          </div>
+          <div>
+            <label for="q-status" class="<%= label %>">Status</label>
+            <select id="q-status" name="status" class="<%= input %>">
+              <% quoteStatuses.forEach((st) => { %><option value="<%= st %>" <%= (q.status || 'quoted') === st ? 'selected' : '' %>><%= quoteStatusLabels[st] %></option><% }) %>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label for="q-description" class="<%= label %>">Description</label>
+            <input id="q-description" name="description" maxlength="300" value="<%= q.description || '' %>" placeholder="Extra fencing, revised scope…" class="<%= input %>">
+          </div>
+          <div class="sm:col-span-2">
+            <label for="q-notes" class="<%= label %>">Notes</label>
+            <input id="q-notes" name="notes" maxlength="2000" value="<%= q.notes || '' %>" class="<%= input %>">
+          </div>
+          <div class="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-3">
+            <button type="submit" class="<%= primaryBtn %>"><%= editQuote ? 'Save quote' : 'Add quote' %></button>
+            <% if (editQuote) { %><a href="/job-register/<%= job.uuid %>#quotes" class="<%= secondaryBtn %>">Cancel</a><% } %>
+          </div>
+        </form>
+        <% if (editQuote) { %>
+          <form method="POST" action="/job-register/<%= job.uuid %>/quotes/<%= editQuote._id %>/delete" class="mt-3">
+            <%- include('../partials/csrfHidden') %>
+            <button type="submit" class="text-xs text-red-700 dark:text-red-400 hover:underline"><i class="bi bi-trash" aria-hidden="true"></i> Remove this quote from the job</button>
+            <span class="text-xs text-gray-500 dark:text-gray-400">Only from the register: anything in KashFlow stays there.</span>
+          </form>
+        <% } %>
+      </div>
+    <% } %>
+  </section>
+
+  <!-- Invoices -->
+  <section id="invoices" class="mb-8 scroll-mt-20">
+    <div class="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Invoices <span class="text-sm font-normal text-gray-500 dark:text-gray-400">· <%= invoices.length %></span></h2>
+      <% if (canEdit && job.projectNumber != null) { %><a href="<%= editInvoice ? `/job-register/${job.uuid}` : '' %>#invoice-form" class="<%= secondaryBtn %>"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add invoice</a><% } %>
+    </div>
+    <% if (!invoices.length) { %>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">No invoices yet.</div>
+    <% } else { %>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="<%= th %>">Number</th><th class="<%= th %>">Date</th><th class="<%= th %> text-right">Value</th>
+              <th class="<%= th %>">Notes</th><th class="<%= th %>">KashFlow</th><th class="<%= th %>"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+            <% invoices.forEach((x) => { const s = sideFor(match.invoices, x); const id = String(x._id); %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                <td class="<%= td %> font-mono text-xs"><%= x.number %></td>
+                <td class="<%= td %> whitespace-nowrap"><%= fmt(x.date) %></td>
+                <td class="<%= td %> text-right whitespace-nowrap"><%= x.value != null ? money(x.value) : 'The rest' %></td>
+                <td class="<%= td %>"><%= x.notes || '' %></td>
+                <td class="<%= td %> text-xs">
+                  <%- check(s) %>
+                  <% if (s && s.record) { %> <a href="/invoice/read/<%= s.record.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">Open</a><% } %>
+                  <% (s ? s.issues : []).forEach((issue) => { %><p class="text-red-700 dark:text-red-400 mt-0.5"><%= issue %></p><% }) %>
+                </td>
+                <td class="<%= td %> text-right">
+                  <% if (canEdit) { %><a href="/job-register/<%= job.uuid %>?invoice=<%= id %>#invoice-form" class="<%= smallBtn %>"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a><% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (canEdit && job.projectNumber == null) { %>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-3">Give the job its project number (Edit job) before adding an invoice.</p>
+    <% } else if (canEdit) { %>
+      <div id="invoice-form" class="<%= card %> p-4 mt-4 scroll-mt-24">
+        <h3 class="<%= h2 %> mb-1"><%= editInvoice ? `Edit invoice ${editInvoice.number}` : 'Add an invoice' %></h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">The KashFlow invoice's number. A stage payment leaves the job won; tick Completed on the job when it's finished. Leave the value blank for an invoice that covers the rest of the job.</p>
+        <form method="POST" action="/job-register/<%= job.uuid %>/invoices<%= editInvoice ? `/${editInvoice._id}` : '' %>" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <%- include('../partials/csrfHidden') %>
+          <div>
+            <label for="i-number" class="<%= label %>">Invoice no. (KashFlow)</label>
+            <input id="i-number" name="number" inputmode="numeric" required value="<%= inv.number ?? '' %>" class="<%= input %> font-mono">
+          </div>
+          <div>
+            <label for="i-date" class="<%= label %>">Date</label>
+            <input id="i-date" type="date" name="date" value="<%= ymd(inv.date) %>" class="<%= input %>">
+          </div>
+          <div>
+            <label for="i-value" class="<%= label %>">Value (net £)</label>
+            <input id="i-value" name="value" inputmode="decimal" value="<%= inv.value != null ? Number(inv.value).toFixed(2) : '' %>" class="<%= input %>">
+          </div>
+          <div>
+            <label for="i-notes" class="<%= label %>">Notes</label>
+            <input id="i-notes" name="notes" maxlength="2000" value="<%= inv.notes || '' %>" placeholder="Stage 1 of 3…" class="<%= input %>">
+          </div>
+          <div class="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-3">
+            <button type="submit" class="<%= primaryBtn %>"><%= editInvoice ? 'Save invoice' : 'Add invoice' %></button>
+            <% if (editInvoice) { %><a href="/job-register/<%= job.uuid %>#invoices" class="<%= secondaryBtn %>">Cancel</a><% } %>
+          </div>
+        </form>
+        <% if (editInvoice) { %>
+          <form method="POST" action="/job-register/<%= job.uuid %>/invoices/<%= editInvoice._id %>/delete" class="mt-3">
+            <%- include('../partials/csrfHidden') %>
+            <button type="submit" class="text-xs text-red-700 dark:text-red-400 hover:underline"><i class="bi bi-trash" aria-hidden="true"></i> Remove this invoice from the job</button>
+            <span class="text-xs text-gray-500 dark:text-gray-400">Only from the register: the invoice stays in KashFlow.</span>
+          </form>
+        <% } %>
+      </div>
+    <% } %>
+  </section>
+
+  <p class="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-4">
+    <span><i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i> In KashFlow and agrees</span>
+    <span><i class="bi bi-hourglass-split text-amber-600" aria-hidden="true"></i> Not in KashFlow yet (or not synced)</span>
+    <span><i class="bi bi-exclamation-triangle-fill text-red-600" aria-hidden="true"></i> In KashFlow but differs</span>
+  </p>
+</div>

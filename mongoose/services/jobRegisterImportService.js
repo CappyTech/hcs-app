@@ -9,14 +9,18 @@
 //               J client's order ref · K, L notes
 //
 // A job is copied over from its quote, so a quote and a job with the same
-// site, client and value are one register row (quote number + project
-// number). Pairs that can't be told apart are left as separate rows.
+// site, client and value are one register job (its quote + its project
+// number). Pairs that can't be told apart are left as separate jobs. The
+// sheet holds one quote and one invoice per row, so parsing keeps the
+// sheet's shape (quoteNumber, invoiceNumber...); planning turns each entry
+// into a job with one quote and maybe one invoice, or into what to add to a
+// job already in the register.
 //
 // Row colours (the fill most of the row's cells have) carry the state:
 //
-//   Quotes   none/white → to survey and quote (quoteStatus 'toQuote')
-//            grey/black → quoted, awaiting an answer (quoteStatus 'quoted')
-//            yellow     → won (won)
+//   Quotes   none/white → to survey and quote (quote status 'toQuote')
+//            grey/black → quoted, awaiting an answer (quote status 'quoted')
+//            yellow     → won (quote status 'won', job won)
 //   Job Reg  yellow     → won, a live job to put on the weekly sheet
 //            green      → completed (completed)
 //            orange project number (column A) → entered in KashFlow (inKashflow)
@@ -24,22 +28,30 @@
 // Other colours are kept as a note. A colour that's been taken off on the
 // sheet only takes the flag off a row the import may overwrite.
 //
-// Re-importing is safe: a row whose quote or project number is already in
-// the register only has its empty fields filled in, never overwritten.
+// Re-importing is safe: a job whose quote or project number is already in
+// the register only has its empty fields filled in, never overwritten (unless
+// the import made it and nobody has edited it since). Quotes and invoices
+// are only ever added, never removed.
 //
 // Everything above "Database" is pure, for testing without a database.
+import mongoose from 'mongoose';
 import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
-import { clientKey, customerChoices, stageOf } from './jobRegisterService.js';
+import { clientKey, customerChoices, stageOf, quoteNumbersOf, invoiceNumbersOf } from './jobRegisterService.js';
 import store from './workbookImportStore.js';
 
 const QUOTE_COLS = { date: 1, number: 2, site: 3, client: 4, contact: 5, value: 6, description: 7, invoice: 8, invoiceDate: 9 };
 const JOB_COLS = { number: 0, date: 1, site: 2, client: 3, contact: 4, value: 5, description: 6, invoice: 7, invoiceDate: 8, clientRef: 9, notes: [10, 11] };
 const LIMITS = { site: 300, client: 200, contact: 200, description: 300, clientRef: 100, notes: 2000 };
 
-// Fields the import may fill in on a row already in the register
-const FILLABLE = ['quoteNumber', 'quoteDate', 'projectNumber', 'jobDate', 'site', 'customerCode', 'client', 'contact', 'value',
-  'description', 'clientRef', 'invoiceNumber', 'invoiceDate', 'notes', 'quoteStatus'];
+// A job's own fields the import may fill in on a job already in the register
+// (value only on a job with no quote: a job with quotes is worth its quotes)
+const JOB_FILLABLE = ['projectNumber', 'jobDate', 'site', 'customerCode', 'client', 'contact', 'value',
+  'description', 'clientRef', 'notes'];
+// The entry's fields that fill in its quote: entry field → quote field
+const QUOTE_FILLABLE = { quoteDate: 'date', value: 'value', description: 'description' };
+// Quote statuses in the order the sheet colours move a quote on
+const STATUS_RANK = { toQuote: 0, quoted: 1, won: 2 };
 // Yes/no states read from the row colours
 const FLAGS = ['won', 'completed', 'inKashflow'];
 // The sheet rows that say each one: a quote on its own says nothing about
@@ -48,7 +60,8 @@ const FLAG_KINDS = { won: ['quote', 'pair'], completed: ['job', 'pair'], inKashf
 const saysFlag = (entry, f) => !entry.kind || FLAG_KINDS[f].includes(entry.kind);
 // The columns whose fill gives the row's colour: all but the job's number (orange for "in KashFlow")
 const COLOUR_COLS = { quote: [1, 2, 3, 4, 5, 6, 7, 8, 9], job: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] };
-const DATE_FIELDS = ['quoteDate', 'jobDate', 'invoiceDate'];
+const DATE_FIELDS = ['jobDate'];
+const toDate = (v) => (v instanceof Date ? v : new Date(`${v}T12:00:00Z`));
 
 // ── Cells ───────────────────────────────────────────────────────────────
 
@@ -431,12 +444,29 @@ export function readClientChoices(body = {}, clients = [], customers = []) {
  * Map of Number → CustomerCode. Returns { code, source } or null. Pure.
  */
 export function customerFromKashflow(entry, lookup = {}) {
-  for (const [field, map, source] of [['projectNumber', lookup.projects, 'project'], ['quoteNumber', lookup.quotes, 'quote'], ['invoiceNumber', lookup.invoices, 'invoice']]) {
-    if (entry[field] == null || !map) continue;
-    const code = map.get(Number(entry[field]));
-    if (code) return { code, source };
+  const tries = [
+    [[entry.projectNumber], lookup.projects, 'project'],
+    [entryQuoteNumbers(entry), lookup.quotes, 'quote'],
+    [entryInvoiceNumbers(entry), lookup.invoices, 'invoice'],
+  ];
+  for (const [nums, map, source] of tries) {
+    if (!map) continue;
+    for (const n of nums) {
+      if (n == null) continue;
+      const code = map.get(Number(n));
+      if (code) return { code, source };
+    }
   }
   return null;
+}
+
+/** The quote numbers of a sheet entry (quoteNumber) or a register job (quotes[]). Pure. */
+export function entryQuoteNumbers(e) {
+  return Array.isArray(e?.quotes) ? quoteNumbersOf(e) : (e?.quoteNumber != null ? [Number(e.quoteNumber)] : []);
+}
+/** The invoice numbers of a sheet entry (invoiceNumber) or a register job (invoices[]). Pure. */
+export function entryInvoiceNumbers(e) {
+  return Array.isArray(e?.invoices) ? invoiceNumbersOf(e) : (e?.invoiceNumber != null ? [Number(e.invoiceNumber)] : []);
 }
 
 /**
@@ -484,23 +514,73 @@ const sameValue = (a, b) => {
   if (a instanceof Date || b instanceof Date) return new Date(a).toISOString().slice(0, 10) === new Date(b).toISOString().slice(0, 10);
   return String(a) === String(b);
 };
+const compact = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => !blank(v)));
+const listOf = (v) => (Array.isArray(v) ? v : []);
+
+/**
+ * The status a sheet entry gives its quote: won for a yellow quote or a quote
+ * paired with its job, else the colour's (to quote / quoted), else null (a
+ * colour that says nothing). Pure.
+ */
+export function entryQuoteStatus(entry) {
+  if (entry.won || entry.kind === 'pair') return 'won';
+  return entry.quoteStatus || null;
+}
+
+// What an entry says about each flag: an invoice on the sheet means the job
+// is finished (as the old "invoiced" stage did), whatever its colour
+const saysTrue = (entry, f) => (f === 'completed' ? !!entry.completed || entry.invoiceNumber != null : !!entry[f]);
+
+/** The quote a sheet entry describes, in register form (dates still yyyy-mm-dd), or null. Pure. */
+function entryQuote(entry) {
+  if (entry.quoteNumber == null) return null;
+  return compact({
+    number: entry.quoteNumber, date: entry.quoteDate, value: entry.value, description: entry.description,
+    status: entryQuoteStatus(entry) || 'quoted',
+  });
+}
+
+/** The invoice a sheet entry describes, or null. Pure. */
+function entryInvoice(entry) {
+  return entry.invoiceNumber != null ? compact({ number: entry.invoiceNumber, date: entry.invoiceDate }) : null;
+}
+
+/** A sheet entry shaped as a register job (for its stage on the preview). Pure. */
+export function entryAsJob(entry) {
+  const quote = entryQuote(entry);
+  const invoice = entryInvoice(entry);
+  return {
+    ...entry,
+    completed: saysTrue(entry, 'completed'),
+    quotes: quote ? [quote] : [],
+    invoices: invoice ? [invoice] : [],
+  };
+}
 
 /**
  * What the import would do with each entry, given the register as it is.
- * existing: register rows (lean) with quoteNumber/projectNumber.
- * Each plan item is { action: 'create' | 'update' | 'same' | 'conflict' | 'skip', entry, fill, existing, reason, overwrite }.
+ * existing: register jobs (lean) with projectNumber, quotes[], invoices[].
+ * Each plan item is { action: 'create' | 'update' | 'same' | 'conflict' | 'skip', entry, existing, reason, overwrite }
+ * and, for an update:
+ *   fill        the job's own fields to set
+ *   quoteFill   fields to set on the job's quote (quoteId), by quote field
+ *   addQuote    a quote to add (the sheet's quote on a job that has none)
+ *   addInvoice  an invoice to add (invoices are only ever added)
  * 'skip' is a row whose client wasn't matched to a KashFlow customer.
  *
- * An existing row that came from an import and hasn't been edited by hand
+ * An existing job that came from an import and hasn't been edited by hand
  * since (importId set, no editedAt) is overwritten with the sheet's values
- * where they differ (overwrite: true); any other row only has its empty
- * fields filled in. A blank on the sheet never clears a field.
+ * where they differ (overwrite: true); any other job only has its empty
+ * fields filled in. A blank on the sheet never clears a field. A quote on
+ * its own that matches a job with a project number only fills in (it's the
+ * quote half of a job paired by hand), and a flag is only taken off by the
+ * kind of row that sets it.
  */
 export function planImport(entries, existing) {
   const byQuote = new Map();
   const byProject = new Map();
   for (const e of existing) {
-    if (e.quoteNumber != null) byQuote.set(Number(e.quoteNumber), e);
+    for (const n of quoteNumbersOf(e)) byQuote.set(n, e);
     if (e.projectNumber != null) byProject.set(Number(e.projectNumber), e);
   }
   return entries.map((entry) => {
@@ -508,37 +588,74 @@ export function planImport(entries, existing) {
     const pRow = entry.projectNumber != null ? byProject.get(entry.projectNumber) : null;
     const qRow = entry.quoteNumber != null ? byQuote.get(entry.quoteNumber) : null;
     if (pRow && qRow && String(pRow._id) !== String(qRow._id)) {
-      return { action: 'conflict', entry, reason: `Quote ${entry.quoteNumber} and job ${entry.projectNumber} are separate rows in the register already` };
+      return { action: 'conflict', entry, reason: `Quote ${entry.quoteNumber} and job ${entry.projectNumber} are separate jobs in the register already` };
     }
     const row = pRow || qRow;
     if (!row) return { action: 'create', entry };
-    // A row that already has a different quote or project number is another job
-    for (const [field, label] of [['quoteNumber', 'quote'], ['projectNumber', 'project']]) {
-      if (entry[field] != null && row[field] != null && Number(row[field]) !== entry[field]) {
-        return { action: 'conflict', entry, existing: row, reason: `The register row has ${label} number ${row[field]}` };
-      }
+    // A job that already has a different project number is another job
+    if (entry.projectNumber != null && row.projectNumber != null && Number(row.projectNumber) !== entry.projectNumber) {
+      return { action: 'conflict', entry, existing: row, reason: `The register job has project number ${row.projectNumber}` };
     }
-    // A quote on its own that matches a row with a project number is the quote
-    // half of a job (paired by hand last time): the job's details win, so the
-    // quote only fills in
+    const rowQuotes = listOf(row.quotes);
+    // The quote the entry fills in: the one with its number, or (a job with
+    // no quote number on the sheet) the job's only quote
+    const quote = entry.quoteNumber != null
+      ? rowQuotes.find((q) => Number(q.number) === entry.quoteNumber) || null
+      : (rowQuotes.length === 1 ? rowQuotes[0] : null);
+    // The sheet pairs one quote with the job: a job here with another quote
+    // already is a different pairing, to sort out by hand
+    if (entry.quoteNumber != null && !quote && quoteNumbersOf(row).length) {
+      return { action: 'conflict', entry, existing: row, reason: `The register job has quote ${quoteNumbersOf(row).join(', ')}` };
+    }
+
     const overwrite = !!row.importId && !row.editedAt && !(entry.kind === 'quote' && row.projectNumber != null);
     const fill = {};
-    for (const k of FILLABLE) {
+    const hasQuotes = rowQuotes.length > 0 || entry.quoteNumber != null;
+    for (const k of JOB_FILLABLE) {
+      if (k === 'value' && hasQuotes) continue;
       if (blank(entry[k])) continue;
       if (blank(row[k]) || (overwrite && !sameValue(entry[k], row[k]))) fill[k] = entry[k];
     }
-    if (entry.cancelled && !row.cancelled && row.invoiceNumber == null) fill.cancelled = true;
-    if (overwrite && !entry.cancelled && row.cancelled) fill.cancelled = false;
-    // The colours move a row on (to quote → quoted → won → completed) on any row;
-    // taking a colour off only counts on a row the import may overwrite
-    if (entry.quoteStatus === 'quoted' && row.quoteStatus === 'toQuote') fill.quoteStatus = 'quoted';
-    for (const f of FLAGS) {
-      if (entry[f] && !row[f]) fill[f] = true;
-      else if (overwrite && !entry[f] && row[f] && saysFlag(entry, f)) fill[f] = false;
+
+    const quoteFill = {};
+    let addQuote = null;
+    if (quote) {
+      for (const [ek, qk] of Object.entries(QUOTE_FILLABLE)) {
+        if (blank(entry[ek])) continue;
+        if (blank(quote[qk]) || (overwrite && !sameValue(entry[ek], quote[qk]))) quoteFill[qk] = entry[ek];
+      }
+      // The colours move a quote on (to quote → quoted → won) on any job; a
+      // yellow taken off only counts on a job the import may overwrite, and
+      // only from a row that can say it (a quote or a pair)
+      const status = entryQuoteStatus(entry);
+      const rank = (s) => STATUS_RANK[s] ?? -1;
+      if (status && quote.status !== 'lost' && rank(status) > rank(quote.status)) quoteFill.status = status;
+      else if (overwrite && entry.quoteNumber != null && saysFlag(entry, 'won') && quote.status === 'won' && status !== 'won') quoteFill.status = status || 'quoted';
+    } else if (entry.quoteNumber != null) {
+      addQuote = entryQuote(entry);
     }
-    // An invoice number needs its project number on the row
-    if (fill.invoiceNumber != null && row.projectNumber == null && fill.projectNumber == null) delete fill.invoiceNumber;
-    return Object.keys(fill).length ? { action: 'update', entry, existing: row, fill, overwrite } : { action: 'same', entry, existing: row };
+
+    if (entry.cancelled && !row.cancelled && !listOf(row.invoices).length) fill.cancelled = true;
+    if (overwrite && !entry.cancelled && row.cancelled) fill.cancelled = false;
+    // The colours move a job on (won → completed) on any job; taking a colour
+    // off only counts on a job the import may overwrite, and never un-finishes
+    // a job with an invoice (invoices are never taken off)
+    for (const f of FLAGS) {
+      if (saysTrue(entry, f) && !row[f]) fill[f] = true;
+      else if (overwrite && !saysTrue(entry, f) && row[f] && saysFlag(entry, f) && !(f === 'completed' && listOf(row.invoices).length)) fill[f] = false;
+    }
+
+    // An invoice needs its project number on the job
+    let addInvoice = null;
+    if (entry.invoiceNumber != null && !invoiceNumbersOf(row).includes(entry.invoiceNumber)) {
+      if (row.projectNumber != null || fill.projectNumber != null) addInvoice = entryInvoice(entry);
+      else if (fill.completed && !row.completed) delete fill.completed;
+    }
+
+    const changed = Object.keys(fill).length || Object.keys(quoteFill).length || addQuote || addInvoice;
+    return changed
+      ? { action: 'update', entry, existing: row, fill, quoteFill, quoteId: quote?._id ?? null, addQuote, addInvoice, overwrite }
+      : { action: 'same', entry, existing: row };
   });
 }
 
@@ -549,22 +666,60 @@ export function summarisePlan(plan) {
   return counts;
 }
 
-/** An entry or fill as model fields: dates to noon UTC, blanks dropped. */
+/** A job's own fields from an entry or fill, as model fields: dates to noon UTC, blanks and false flags dropped. Pure. */
 export function toModelFields(src) {
   const out = {};
   for (const [k, v] of Object.entries(src)) {
-    if (!FILLABLE.includes(k) && k !== 'cancelled' && !FLAGS.includes(k)) continue;
+    if (!JOB_FILLABLE.includes(k) && k !== 'cancelled' && !FLAGS.includes(k)) continue;
     if (blank(v)) continue;
-    out[k] = DATE_FIELDS.includes(k) ? new Date(`${v}T12:00:00Z`) : v;
+    out[k] = DATE_FIELDS.includes(k) ? toDate(v) : v;
   }
   for (const k of ['cancelled', ...FLAGS]) if (out[k] === false) delete out[k];
   return out;
 }
 
+const quoteModel = (q) => ({ ...q, ...(q.date ? { date: toDate(q.date) } : {}) });
+
+/** A new register job from a sheet entry: its fields, its quote, its invoice. Pure. */
+export function newJobFromEntry(entry) {
+  const job = toModelFields(entry);
+  const quote = entryQuote(entry);
+  const invoice = entryInvoice(entry);
+  // A job with a quote is worth its quote: the value is on the quote
+  if (quote) delete job.value;
+  job.quotes = quote ? [quoteModel(quote)] : [];
+  job.invoices = invoice && entry.projectNumber != null ? [quoteModel(invoice)] : [];
+  if (saysTrue(entry, 'completed')) job.completed = true;
+  return job;
+}
+
+/**
+ * An update plan item as one updateOne: the job's fields $set, its quote's
+ * through the arrayFilter q, the new quote and invoice $push'd. Pure apart
+ * from the new subdocument _ids.
+ */
+export function importUpdate(p, newId = () => new mongoose.Types.ObjectId()) {
+  const $set = {};
+  for (const [k, v] of Object.entries(p.fill || {})) $set[k] = DATE_FIELDS.includes(k) && !blank(v) ? toDate(v) : v;
+  const arrayFilters = [];
+  const quoteFill = p.quoteFill || {};
+  if (Object.keys(quoteFill).length && p.quoteId != null) {
+    for (const [k, v] of Object.entries(quoteFill)) $set[`quotes.$[q].${k}`] = k === 'date' ? toDate(v) : v;
+    arrayFilters.push({ 'q._id': p.quoteId });
+  }
+  const $push = {};
+  if (p.addQuote) $push.quotes = { _id: newId(), ...quoteModel(p.addQuote) };
+  if (p.addInvoice) $push.invoices = { _id: newId(), ...quoteModel(p.addInvoice) };
+  const update = {};
+  if (Object.keys($set).length) update.$set = $set;
+  if (Object.keys($push).length) update.$push = $push;
+  return { filter: { _id: p.existing._id }, update, options: arrayFilters.length ? { arrayFilters } : {} };
+}
+
 // ── Database ────────────────────────────────────────────────────────────
 
 async function existingRows() {
-  return mdb.INTERNAL.jobRegister.find({}).select(`_id uuid cancelled importId editedAt ${FLAGS.join(' ')} ${FILLABLE.join(' ')}`).lean();
+  return mdb.INTERNAL.jobRegister.find({}).select(`_id uuid cancelled importId editedAt quotes invoices ${FLAGS.join(' ')} ${JOB_FILLABLE.join(' ')}`).lean();
 }
 
 /** Park a parsed workbook for its preview. Returns the import document. */
@@ -601,7 +756,7 @@ export async function loadPreview(uuid) {
   const needed = clientsNeeded(withKf);
   const clients = clientMapping(staged, customers).map((c) => ({ ...c, needed: needed.get(c.key) || 0 }));
   const plan = planImport(applyClients(withKf, clients, customers), await existingRows())
-    .map((p) => ({ ...p, stage: stageOf(p.entry) }));
+    .map((p) => ({ ...p, stage: stageOf(entryAsJob(p.entry)) }));
   const fromKashflow = withKf.filter((e) => e.customerFrom).length;
   return { staged, plan, suggestions, clients, customers, fromKashflow, counts: summarisePlan(plan) };
 }
@@ -613,12 +768,12 @@ const codeMap = (docs) => new Map(docs.filter((d) => d.Number != null && d.Custo
 
 /** The customer codes on the KashFlow projects, quotes and invoices with these entries' numbers. */
 export async function kashflowLookup(entries) {
-  const nums = (k) => [...new Set(entries.map((e) => e[k]).filter((n) => n != null).map(Number))];
+  const uniq = (list) => [...new Set(list.filter((n) => n != null).map(Number))];
   const find = (Model, numbers) => (numbers.length && Model ? Model.find({ Number: { $in: numbers } }).select('Number CustomerCode').lean() : []);
   const [projects, quotes, invoices] = await Promise.all([
-    find(mdb.REST.project, nums('projectNumber')),
-    find(mdb.REST.quote, nums('quoteNumber')),
-    find(mdb.REST.invoice, nums('invoiceNumber')),
+    find(mdb.REST.project, uniq(entries.map((e) => e.projectNumber))),
+    find(mdb.REST.quote, uniq(entries.flatMap(entryQuoteNumbers))),
+    find(mdb.REST.invoice, uniq(entries.flatMap(entryInvoiceNumbers))),
   ]);
   return { projects: codeMap(projects), quotes: codeMap(quotes), invoices: codeMap(invoices) };
 }
@@ -657,14 +812,12 @@ export async function runImport(uuid, body = {}) {
     const label = p.entry.projectNumber != null ? `Job ${p.entry.projectNumber}` : `Quote ${p.entry.quoteNumber}`;
     try {
       if (p.action === 'create') {
-        await Model.create({ ...toModelFields(p.entry), importId: staged.uuid, importedAt: new Date() });
+        await Model.create({ ...newJobFromEntry(p.entry), importId: staged.uuid, importedAt: new Date() });
         result.created++;
       } else if (p.action === 'update') {
-        const doc = await Model.findById(p.existing._id);
-        if (!doc) { result.failed.push({ label, reason: 'The register row was deleted during the import' }); continue; }
-        doc.set(toModelFields({ ...p.fill, cancelled: p.fill.cancelled }));
-        for (const k of ['cancelled', ...FLAGS]) if (p.fill[k] === false) doc[k] = false;
-        await doc.save();
+        const { filter, update, options } = importUpdate(p);
+        const res = await Model.updateOne(filter, update, options);
+        if (res && res.matchedCount === 0) { result.failed.push({ label, reason: 'The register job was deleted during the import' }); continue; }
         result.updated++;
       } else if (p.action === 'same') {
         result.unchanged++;
@@ -690,7 +843,7 @@ export async function runImport(uuid, body = {}) {
  */
 export async function loadUnlinked() {
   const [rows, customers] = await Promise.all([
-    mdb.INTERNAL.jobRegister.find({ customerCode: { $in: [null, ''] } }).select('_id client quoteNumber projectNumber invoiceNumber').lean(),
+    mdb.INTERNAL.jobRegister.find({ customerCode: { $in: [null, ''] } }).select('_id client projectNumber quotes.number invoices.number').lean(),
     customerList(),
   ]);
   const withKf = applyKashflowCustomers(rows, await kashflowLookup(rows), customers);
@@ -751,7 +904,7 @@ export async function linkClients(body = {}) {
 }
 
 /**
- * Start-up: rows imported before rows recorded their import (6.116.0) get
+ * Start-up (after migrateRowsToJobs): rows imported before rows recorded their import (6.116.0) get
  * importId/importedAt from the upload that made them, while that upload is
  * still kept (a day after its import). A row is that upload's when its quote
  * or project number is on the sheet and it was created in the hour before
@@ -773,7 +926,7 @@ export async function flagImportedRows() {
     const rows = await Rows.find({
       importId: { $in: [null, ''] },
       createdAt: { $gte: new Date(end.getTime() - 3600e3), $lte: end },
-      $or: [{ quoteNumber: { $in: quotes } }, { projectNumber: { $in: projects } }],
+      $or: [{ 'quotes.number': { $in: quotes } }, { projectNumber: { $in: projects } }],
     }).select('_id createdAt updatedAt').lean();
     for (const r of rows) {
       const edited = r.updatedAt && r.createdAt && new Date(r.updatedAt) - new Date(r.createdAt) > 60e3;
@@ -789,5 +942,6 @@ export default {
   cellText, cellInt, cellMoney, cellDate, siteKey, findSheets, rowColour, colourState, parseRow, matchKey, pairQuotesWithJobs, mergePair,
   suggestPairs, applyChosenPairs, parseJobRegWorkbook, tickedPairs, saveForLater,
   sheetClients, suggestCustomer, clientMapping, readClientChoices, applyClients, flagImportedRows, loadUnlinked, linkClients, linkFromKashflow,
-  customerFromKashflow, applyKashflowCustomers, clientsNeeded, kashflowLookup, planImport, summarisePlan, toModelFields, stageUpload, loadPreview, runImport,
+  customerFromKashflow, entryQuoteNumbers, entryInvoiceNumbers, applyKashflowCustomers, clientsNeeded, kashflowLookup, planImport, summarisePlan,
+  toModelFields, entryQuoteStatus, entryAsJob, newJobFromEntry, importUpdate, stageUpload, loadPreview, runImport,
 };

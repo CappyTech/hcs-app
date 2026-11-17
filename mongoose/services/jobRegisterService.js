@@ -1,14 +1,14 @@
 // Job Register: the plan of what will be in KashFlow, kept as double entry.
 //
-// Each register row is entered here first, then checked against the synced
-// KashFlow records with the same numbers:
+// Each job is entered here first, then checked against the synced KashFlow
+// records with the same numbers:
 //
-//   quoteNumber   → REST quote   (Number)   value and client should agree
-//   projectNumber → REST project (Number)   client should agree
-//   invoiceNumber → REST invoice (Number)   should be on the same project
+//   projectNumber    → REST project (Number)   client should agree
+//   quotes[].number  → REST quote   (Number)   value and client should agree
+//   invoices[].number → REST invoice (Number)  should be on the job's project
 //
 // The other half of the double entry is the reverse check: KashFlow quotes
-// and projects in the period that have no register row.
+// and projects in the period that aren't in the register.
 //
 // buildRegister and the helpers above it are pure, so the matching and the
 // filters can be tested without a database.
@@ -17,28 +17,70 @@ import mdb from './mongooseDatabaseService.js';
 import taxService from '../../services/taxService.js';
 import logger from '../../services/loggerService.js';
 import kfSession from '../../services/kashflowSessionService.js';
+import lifecycle from './jobRegisterLifecycleService.js';
+import { QUOTE_STATUSES, jobProblem } from '../models/mongoose/INTERNAL/jobRegister.js';
 
+export { QUOTE_STATUSES };
 export const STAGES = ['toQuote', 'quoted', 'won', 'completed', 'invoiced', 'cancelled'];
 export const STAGE_LABELS = {
   toQuote: 'To survey / quote', quoted: 'Quoted', won: 'Won', completed: 'Completed', invoiced: 'Invoiced', cancelled: 'Cancelled',
 };
-export const QUOTE_STATUSES = ['toQuote', 'quoted'];
+export const QUOTE_STATUS_LABELS = { toQuote: 'To survey / quote', quoted: 'Quoted', won: 'Won', lost: 'Lost' };
 // The stage filter also offers the double-entry checks
 export const STAGE_FILTERS = ['all', ...STAGES, 'unmatched', 'differs'];
 const VALUE_TOLERANCE = 0.01;
 const UNREGISTERED_LIMIT = 50;
 
+const quotesOf = (job) => (Array.isArray(job?.quotes) ? job.quotes : []);
+const invoicesOf = (job) => (Array.isArray(job?.invoices) ? job.invoices : []);
+const numbers = (list) => list.map((x) => x?.number).filter((n) => n != null).map(Number);
+
+/** A job's quote numbers. Pure. */
+export const quoteNumbersOf = (job) => numbers(quotesOf(job));
+/** A job's invoice numbers. Pure. */
+export const invoiceNumbersOf = (job) => numbers(invoicesOf(job));
+
 /**
- * to survey / quote → quoted → won (marked won, or has a project) →
- * completed → invoiced (has an invoice); cancelled overrides.
+ * to survey / quote → quoted → won (marked won, a won quote, or a project
+ * number) → completed → invoiced (completed with an invoice); cancelled
+ * overrides. A live job with stage payments invoiced stays won. A job whose
+ * quotes were all lost counts as cancelled.
  */
-export function stageOf(entry) {
-  if (entry.cancelled) return 'cancelled';
-  if (entry.invoiceNumber != null) return 'invoiced';
-  if (entry.completed) return 'completed';
-  if (entry.projectNumber != null || entry.won) return 'won';
-  if (entry.quoteStatus === 'toQuote') return 'toQuote';
-  return 'quoted';
+export function stageOf(job) {
+  if (job.cancelled) return 'cancelled';
+  const quotes = quotesOf(job);
+  if (job.completed && invoicesOf(job).length) return 'invoiced';
+  if (job.completed) return 'completed';
+  if (job.projectNumber != null || job.won || quotes.some((q) => q.status === 'won')) return 'won';
+  if (quotes.some((q) => q.status === 'quoted')) return 'quoted';
+  if (quotes.length && quotes.every((q) => q.status === 'lost')) return 'cancelled';
+  return 'toQuote';
+}
+
+const sumOf = (list) => list.reduce((t, x) => t + (Number(x?.value) || 0), 0);
+const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+
+/**
+ * A job's money, net. quoted: its quotes not lost (or, with no quotes, its
+ * agreed value). agreed: what it's worth once won: its won quotes; if it's
+ * won with no quote marked won, every quote not lost; with no quotes, its
+ * agreed value. invoiced: its invoices; an invoice with no value is taken to
+ * cover the rest of the agreed value. Pure.
+ */
+export function jobValues(job) {
+  const quotes = quotesOf(job);
+  const live = quotes.filter((q) => q.status !== 'lost');
+  const wonQuotes = quotes.filter((q) => q.status === 'won');
+  const jobValue = Number(job.value) || 0;
+  const quoted = quotes.length ? sumOf(live) : jobValue;
+  let agreed = 0;
+  if (!quotes.length) agreed = jobValue;
+  else if (wonQuotes.length) agreed = sumOf(wonQuotes);
+  else if (job.projectNumber != null || job.won) agreed = sumOf(live);
+  const invoices = invoicesOf(job);
+  const valued = sumOf(invoices.filter((i) => i.value != null));
+  const invoiced = invoices.some((i) => i.value == null) ? Math.max(valued, agreed) : valued;
+  return { quoted: round2(quoted), agreed: round2(agreed), invoiced: round2(invoiced) };
 }
 
 /** A client name as a filter key: "Plus dane " and "Plus Dane" are one client. */
@@ -46,9 +88,11 @@ export function clientKey(name) {
   return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-/** The date a row belongs to: when it was won, else when it was quoted. */
-export function entryDate(entry) {
-  return entry.jobDate || entry.quoteDate || entry.createdAt || null;
+/** The date a job belongs to: when it was won, else when it was first quoted. */
+export function entryDate(job) {
+  if (job.jobDate) return job.jobDate;
+  const dates = quotesOf(job).map((q) => q.date).filter(Boolean).map((d) => new Date(d)).sort((a, b) => a - b);
+  return dates[0] || job.createdAt || null;
 }
 
 /** The UK tax year (starting year) a date falls in. */
@@ -59,55 +103,74 @@ export function taxYearOf(date) {
   return d >= taxService.getTaxYearStartEnd(y).start ? y : y - 1;
 }
 
+/** The number a job sorts and is known by: its project number, else its highest quote number. Pure. */
+export function jobNumber(job) {
+  if (job?.projectNumber != null) return Number(job.projectNumber);
+  const q = quoteNumbersOf(job);
+  return q.length ? Math.max(...q) : null;
+}
+
+/** "Job 41234" or "Quote 51234" (an enquiry), for titles and flashes. Pure. */
+export function jobTitle(job) {
+  if (job?.projectNumber != null) return `Job ${job.projectNumber}`;
+  const q = quoteNumbersOf(job);
+  return q.length ? `Quote ${Math.max(...q)}` : 'Job';
+}
+
 const differsBy = (a, b) => a != null && b != null && Math.abs(Number(a) - Number(b)) > VALUE_TOLERANCE;
+const money2 = (v) => `£${Number(v).toFixed(2)}`;
 
 /**
- * Check one register row against its KashFlow records.
- * Each side is { state: 'ok' | 'missing' | 'differs' | 'none', record, issues[] }:
- * 'none' when the row has no number for it yet, 'missing' when the number
- * isn't in KashFlow (not entered there yet, or not synced).
+ * Check one job against its KashFlow records.
+ * Each side is { state: 'ok' | 'missing' | 'differs' | 'none', record, issues[], number, id }:
+ * 'none' when there's no number for it yet, 'missing' when the number isn't
+ * in KashFlow (not entered there yet, or not synced). quotes and invoices
+ * have one side each, in the job's order.
  */
-export function matchEntry(entry, { quote = null, project = null, invoice = null } = {}) {
-  const side = (number, record, check) => {
-    if (number == null) return { state: 'none', record: null, issues: [] };
-    if (!record) return { state: 'missing', record: null, issues: [] };
+export function matchJob(job, { project = null, quotesByNumber = new Map(), invoicesByNumber = new Map() } = {}) {
+  const side = (number, record, check, id = null) => {
+    const base = { number: number ?? null, id: id != null ? String(id) : null };
+    if (number == null) return { ...base, state: 'none', record: null, issues: [] };
+    if (!record) return { ...base, state: 'missing', record: null, issues: [] };
     const issues = check(record);
-    return { state: issues.length ? 'differs' : 'ok', record, issues };
+    return { ...base, state: issues.length ? 'differs' : 'ok', record, issues };
   };
   // By customer code where both have one, else by name
   const clientIssue = (r) => {
-    if (entry.customerCode && r.CustomerCode) {
-      return String(r.CustomerCode).trim().toUpperCase() !== String(entry.customerCode).trim().toUpperCase()
+    if (job.customerCode && r.CustomerCode) {
+      return String(r.CustomerCode).trim().toUpperCase() !== String(job.customerCode).trim().toUpperCase()
         ? [`Client in KashFlow is ${r.CustomerName || r.CustomerCode}`] : [];
     }
-    return r.CustomerName && clientKey(r.CustomerName) !== clientKey(entry.client) ? [`Client in KashFlow is ${r.CustomerName}`] : [];
+    return r.CustomerName && clientKey(r.CustomerName) !== clientKey(job.client) ? [`Client in KashFlow is ${r.CustomerName}`] : [];
   };
+  const get = (map, n) => (n != null ? map.get(Number(n)) || null : null);
 
-  const q = side(entry.quoteNumber, quote, (r) => [
-    ...(differsBy(entry.value, r.NetAmount) ? [`Value in KashFlow is £${Number(r.NetAmount).toFixed(2)}`] : []),
+  const quotes = quotesOf(job).map((q) => side(q.number, get(quotesByNumber, q.number), (r) => [
+    ...(differsBy(q.value, r.NetAmount) ? [`Value in KashFlow is ${money2(r.NetAmount)}`] : []),
     ...clientIssue(r),
-  ]);
-  const p = side(entry.projectNumber, project, (r) => clientIssue(r));
-  const i = side(entry.invoiceNumber, invoice, (r) => [
-    ...(r.ProjectNumber && entry.projectNumber != null && Number(r.ProjectNumber) !== Number(entry.projectNumber)
+  ], q._id));
+  const p = side(job.projectNumber, project, (r) => clientIssue(r));
+  const invoices = invoicesOf(job).map((i) => side(i.number, get(invoicesByNumber, i.number), (r) => [
+    ...(r.ProjectNumber && job.projectNumber != null && Number(r.ProjectNumber) !== Number(job.projectNumber)
       ? [`Invoice is on project ${r.ProjectNumber} in KashFlow`] : []),
+    ...(differsBy(i.value, r.NetAmount) ? [`Value in KashFlow is ${money2(r.NetAmount)}`] : []),
     ...clientIssue(r),
-  ]);
-  const sides = [q, p, i];
+  ], i._id));
+  const sides = [...quotes, p, ...invoices];
   return {
-    quote: q,
     project: p,
-    invoice: i,
+    quotes,
+    invoices,
     missing: sides.some((s) => s.state === 'missing'),
     differs: sides.some((s) => s.state === 'differs'),
   };
 }
 
 /**
- * The register page: rows with their KashFlow checks, filtered.
+ * The register page: jobs with their KashFlow checks, filtered.
  *
  * @param {object}   p
- * @param {object[]} p.entries          register rows (lean)
+ * @param {object[]} p.entries          jobs (lean)
  * @param {Map}      p.quotesByNumber   KashFlow quote Number → quote
  * @param {Map}      p.projectsByNumber KashFlow project Number → project
  * @param {Map}      p.invoicesByNumber KashFlow invoice Number → invoice
@@ -120,12 +183,12 @@ export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoi
   const q = String(filters.q || '').trim().toLowerCase();
 
   const all = entries.map((e) => {
-    const match = matchEntry(e, {
-      quote: e.quoteNumber != null ? quotesByNumber.get(Number(e.quoteNumber)) : null,
-      project: e.projectNumber != null ? projectsByNumber.get(Number(e.projectNumber)) : null,
-      invoice: e.invoiceNumber != null ? invoicesByNumber.get(Number(e.invoiceNumber)) : null,
+    const match = matchJob(e, {
+      project: e.projectNumber != null ? projectsByNumber.get(Number(e.projectNumber)) || null : null,
+      quotesByNumber,
+      invoicesByNumber,
     });
-    return { entry: e, stage: stageOf(e), match, clientKey: clientKey(e.client), taxYear: taxYearOf(entryDate(e)) };
+    return { entry: e, stage: stageOf(e), match, values: jobValues(e), clientKey: clientKey(e.client), taxYear: taxYearOf(entryDate(e)) };
   });
 
   // Clients by key, shown with the spelling used most often
@@ -153,33 +216,34 @@ export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoi
     if (r.stage !== 'cancelled' && r.match.differs) counts.differs++;
   }
 
+  const topQuote = (e) => Math.max(0, ...quoteNumbersOf(e));
   const rows = inScope.filter((r) => {
     if (stage === 'unmatched' && (r.stage === 'cancelled' || !r.match.missing)) return false;
     if (stage === 'differs' && (r.stage === 'cancelled' || !r.match.differs)) return false;
     if (STAGES.includes(stage) && r.stage !== stage) return false;
     if (q) {
-      const hay = [r.entry.site, r.entry.client, r.entry.contact, r.entry.description, r.entry.clientRef,
-        r.entry.quoteNumber, r.entry.projectNumber, r.entry.invoiceNumber].join(' ').toLowerCase();
+      const e = r.entry;
+      const hay = [e.site, e.client, e.contact, e.description, e.clientRef, e.projectNumber,
+        ...quotesOf(e).flatMap((x) => [x.number, x.description]), ...invoiceNumbersOf(e)].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
-  }).sort((a, b) => (Number(b.entry.projectNumber ?? b.entry.quoteNumber ?? 0) - Number(a.entry.projectNumber ?? a.entry.quoteNumber ?? 0))
-    || (Number(b.entry.quoteNumber ?? 0) - Number(a.entry.quoteNumber ?? 0)));
+  }).sort((a, b) => ((jobNumber(b.entry) ?? 0) - (jobNumber(a.entry) ?? 0)) || (topQuote(b.entry) - topQuote(a.entry)));
 
-  const sum = (list, pick) => list.reduce((t, r) => t + (Number(pick(r)) || 0), 0);
   const live = rows.filter((r) => r.stage !== 'cancelled');
+  const total = (list, k) => round2(list.reduce((t, r) => t + r.values[k], 0));
   const totals = {
-    value: sum(live, (r) => r.entry.value),
-    won: sum(live.filter((r) => r.stage === 'won'), (r) => r.entry.value),
-    invoiced: sum(live.filter((r) => r.stage === 'invoiced'), (r) => r.entry.value),
+    quoted: total(live, 'quoted'),
+    won: total(live.filter((r) => ['won', 'completed', 'invoiced'].includes(r.stage)), 'agreed'),
+    invoiced: total(live, 'invoiced'),
   };
 
   return { rows, counts, clients, years, totals, filters: { stage, client, year, q: filters.q || '' } };
 }
 
 /**
- * KashFlow quotes and projects with no register row: the other side of the
- * double entry. `numbers` are the register's quote and project numbers.
+ * KashFlow quotes and projects with no register job: the other side of the
+ * double entry. `quoteNumbers` and `projectNumbers` are the register's.
  */
 export function findUnregistered({ quotes, projects, quoteNumbers, projectNumbers }) {
   return {
@@ -263,9 +327,9 @@ export function suggestNext({ kashflow = null, register = [], synced = [] }) {
 }
 
 function combineNext({ entries, kf, topQuote, topProject }) {
-  const nums = (k) => entries.map((e) => e[k]).filter((n) => n != null).map(Number);
-  const quote = suggestNext({ kashflow: kf.quote, register: nums('quoteNumber'), synced: [topQuote?.Number ?? []].flat() });
-  const project = suggestNext({ kashflow: kf.project, register: nums('projectNumber'), synced: [topProject?.Number ?? []].flat() });
+  const quote = suggestNext({ kashflow: kf.quote, register: entries.flatMap(quoteNumbersOf), synced: [topQuote?.Number ?? []].flat() });
+  const projectNumbers = entries.map((e) => e.projectNumber).filter((n) => n != null).map(Number);
+  const project = suggestNext({ kashflow: kf.project, register: projectNumbers, synced: [topProject?.Number ?? []].flat() });
   return { quote: quote.number, project: project.number, quoteSource: quote.source, projectSource: project.source };
 }
 
@@ -276,9 +340,9 @@ const byNumber = (docs) => new Map(docs.map((d) => [Number(d.Number), d]));
 /** Everything the register page shows. */
 export async function loadRegister(filters = {}) {
   const entries = await mdb.INTERNAL.jobRegister.find({}).lean();
-  const quoteNumbers = new Set(entries.map((e) => e.quoteNumber).filter((n) => n != null).map(Number));
+  const quoteNumbers = new Set(entries.flatMap(quoteNumbersOf));
   const projectNumbers = new Set(entries.map((e) => e.projectNumber).filter((n) => n != null).map(Number));
-  const invoiceNumbers = [...new Set(entries.map((e) => e.invoiceNumber).filter((n) => n != null).map(Number))];
+  const invoiceNumbers = [...new Set(entries.flatMap(invoiceNumbersOf))];
 
   // The reverse check covers the chosen tax year, or the current one
   const year = Number.isInteger(filters.year) ? filters.year : taxService.getCurrentTaxYear();
@@ -321,7 +385,35 @@ export async function loadRegister(filters = {}) {
   };
 }
 
-// ── Saving ──────────────────────────────────────────────────────────────
+/**
+ * One job's page: the job with its KashFlow checks, values and stage, and
+ * the next numbers for its forms. Null if there's no such job.
+ */
+export async function loadJob(uuid) {
+  const job = await findEntry(uuid);
+  if (!job) return null;
+  const quoteNumbers = quoteNumbersOf(job);
+  const invoiceNumbers = invoiceNumbersOf(job);
+  const [quotes, project, invoices, topQuote, topProject, others, kf] = await Promise.all([
+    quoteNumbers.length ? mdb.REST.quote.find({ Number: { $in: quoteNumbers } }).select('uuid Number Date CustomerName CustomerCode NetAmount Status ProjectNumber').lean() : [],
+    job.projectNumber != null ? mdb.REST.project.findOne({ Number: job.projectNumber }).select('uuid Number Name CustomerName CustomerCode Status StartDate').lean() : null,
+    invoiceNumbers.length ? mdb.REST.invoice.find({ Number: { $in: invoiceNumbers } }).select('uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status').lean() : [],
+    mdb.REST.quote.findOne({}).sort({ Number: -1 }).select('Number').lean(),
+    mdb.REST.project.findOne({}).sort({ Number: -1 }).select('Number').lean(),
+    mdb.INTERNAL.jobRegister.find({}).select('projectNumber quotes.number').lean(),
+    kashflowNextNumbers(),
+  ]);
+  const match = matchJob(job, { project, quotesByNumber: byNumber(quotes), invoicesByNumber: byNumber(invoices) });
+  return {
+    job,
+    stage: stageOf(job),
+    values: jobValues(job),
+    match,
+    next: combineNext({ entries: others, kf, topQuote, topProject }),
+  };
+}
+
+// ── Forms ───────────────────────────────────────────────────────────────
 
 const int = (v) => {
   const s = String(v ?? '').trim();
@@ -344,15 +436,22 @@ const day = (v) => {
 };
 const text = (v) => String(v ?? '').trim();
 const tick = (v) => v === 'on' || v === 'true' || v === true;
+const bad = (message) => Object.assign(new Error(message), { status: 400 });
+const notFound = (message) => Object.assign(new Error(message), { status: 404 });
+
+function refuseNaN(fields, labels) {
+  for (const [k, label] of Object.entries(labels)) {
+    if (Number.isNaN(fields[k])) throw bad(`${label} isn't valid.`);
+  }
+}
 
 /**
- * A register row from a form body. Blank fields clear (null), so a number or
- * date can be removed again. Throws a 400 with the first problem.
+ * A job's own fields from a form body (not its quotes or invoices). Blank
+ * fields clear (null), so a number or date can be removed again. Throws a
+ * 400 with the first problem.
  */
-export function parseEntryForm(body = {}) {
+export function parseJobForm(body = {}) {
   const fields = {
-    quoteNumber: int(body.quoteNumber),
-    quoteDate: day(body.quoteDate),
     projectNumber: int(body.projectNumber),
     jobDate: day(body.jobDate),
     site: text(body.site),
@@ -362,37 +461,72 @@ export function parseEntryForm(body = {}) {
     value: money(body.value),
     description: text(body.description),
     clientRef: text(body.clientRef),
-    invoiceNumber: int(body.invoiceNumber),
-    invoiceDate: day(body.invoiceDate),
     notes: text(body.notes),
     cancelled: tick(body.cancelled),
-    quoteStatus: QUOTE_STATUSES.includes(text(body.quoteStatus)) ? text(body.quoteStatus) : null,
     won: tick(body.won),
     completed: tick(body.completed),
     inKashflow: tick(body.inKashflow),
   };
-  const labels = {
-    quoteNumber: 'The quote number', projectNumber: 'The project number', invoiceNumber: 'The invoice number',
-    quoteDate: 'The quote date', jobDate: 'The job date', invoiceDate: 'The invoice date', value: 'The value',
+  refuseNaN(fields, { projectNumber: 'The project number', jobDate: 'The job date', value: 'The value' });
+  fields.contractUuid = text(body.contractUuid) || null;
+  return fields;
+}
+
+/** One quote from a form body: number, date, value, description, status, notes. Throws a 400. */
+export function parseQuoteLine(body = {}) {
+  const fields = {
+    number: int(body.number),
+    date: day(body.date),
+    value: money(body.value),
+    description: text(body.description).slice(0, 300),
+    status: QUOTE_STATUSES.includes(text(body.status)) ? text(body.status) : 'quoted',
+    notes: text(body.notes).slice(0, 2000),
   };
-  for (const [k, label] of Object.entries(labels)) {
-    if (Number.isNaN(fields[k])) throw Object.assign(new Error(`${label} isn't valid.`), { status: 400 });
-  }
-  const contract = text(body.contractUuid);
-  fields.contractUuid = contract || null;
+  refuseNaN(fields, { number: 'The quote number', date: 'The quote date', value: 'The quote value' });
+  return fields;
+}
+
+/** One invoice from a form body: number (needed), date, value, notes. Throws a 400. */
+export function parseInvoiceLine(body = {}) {
+  const fields = {
+    number: int(body.number),
+    date: day(body.date),
+    value: money(body.value),
+    notes: text(body.notes).slice(0, 2000),
+  };
+  refuseNaN(fields, { number: 'The invoice number', date: 'The invoice date', value: 'The invoice value' });
+  if (fields.number == null) throw bad('Enter the invoice number.');
   return fields;
 }
 
 /**
- * The form as it was typed, shaped like a register row so the form can be
+ * The add form's first quote: quoteNumber, quoteDate, quoteStatus and the
+ * form's value and description. Null when no quote number was given (a
+ * job-only row, whose value stays on the job).
+ */
+function addFormQuote(body, job) {
+  if (!text(body.quoteNumber)) {
+    if (text(body.quoteDate)) parseQuoteLine({ date: body.quoteDate }); // still refuse a bad date
+    return null;
+  }
+  const quote = parseQuoteLine({
+    number: body.quoteNumber, date: body.quoteDate, value: body.value, description: body.description, status: body.quoteStatus,
+  });
+  // A job entered as won (a project number, or ticked) has its quote won
+  if ((job.projectNumber != null || job.won) && (quote.status === 'toQuote' || quote.status === 'quoted')) quote.status = 'won';
+  return quote;
+}
+
+/**
+ * The add form as it was typed, shaped like the form's fields so it can be
  * shown again (after a Next button) without losing anything. Nothing here is
  * saved; dates that aren't yyyy-mm-dd are dropped so the view can show them.
  */
 export function formEcho(body = {}) {
   const keep = ['quoteNumber', 'projectNumber', 'site', 'customerCode', 'client', 'contact', 'value', 'description',
-    'clientRef', 'invoiceNumber', 'notes'];
+    'clientRef', 'notes'];
   const entry = Object.fromEntries(keep.map((k) => [k, text(body[k])]));
-  for (const k of ['quoteDate', 'jobDate', 'invoiceDate']) {
+  for (const k of DATE_FIELDS) {
     const s = text(body[k]);
     entry[k] = /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(`${s}T12:00:00Z`).getTime()) ? s : '';
   }
@@ -402,7 +536,7 @@ export function formEcho(body = {}) {
   return entry;
 }
 
-const DATE_FIELDS = ['quoteDate', 'jobDate', 'invoiceDate'];
+const DATE_FIELDS = ['quoteDate', 'jobDate'];
 
 /** Today's date in the UK as YYYY-MM-DD. */
 export function ukToday(now = new Date()) {
@@ -428,21 +562,26 @@ async function applyContract(fields) {
   const { contractUuid, ...rest } = fields;
   if (!contractUuid) return { ...rest, contractId: null };
   const c = await mdb.INTERNAL.contract.findOne({ uuid: contractUuid }).select('_id').lean();
-  if (!c) throw Object.assign(new Error('That contract no longer exists.'), { status: 400 });
+  if (!c) throw bad('That contract no longer exists.');
   return { ...rest, contractId: c._id };
 }
 
-/** KashFlow customers a row's client can be, by name. */
+/** KashFlow customers a job's client can be, by name. */
 export async function customerChoices() {
   const docs = await mdb.REST.customer.find({ Code: { $nin: [null, ''] } }).select('Code Name').sort({ Name: 1 }).lean();
   return docs.map((c) => ({ code: String(c.Code).trim(), name: String(c.Name || c.Code).trim() }));
 }
 
-/** The customer code on the row's own KashFlow project, quote or invoice (in that order), or ''. */
-async function kashflowCustomerCode(fields) {
-  for (const [field, Model] of [['projectNumber', mdb.REST.project], ['quoteNumber', mdb.REST.quote], ['invoiceNumber', mdb.REST.invoice]]) {
-    if (fields[field] == null || !Model) continue;
-    const rec = await Model.findOne({ Number: fields[field] }).select('CustomerCode').lean();
+/** The customer code on the job's own KashFlow project, quotes or invoices (in that order), or ''. */
+async function kashflowCustomerCode({ projectNumber = null, quoteNumbers = [], invoiceNumbers = [] }) {
+  const tries = [
+    ...(projectNumber != null ? [[mdb.REST.project, projectNumber]] : []),
+    ...quoteNumbers.map((n) => [mdb.REST.quote, n]),
+    ...invoiceNumbers.map((n) => [mdb.REST.invoice, n]),
+  ];
+  for (const [Model, number] of tries) {
+    if (!Model) continue;
+    const rec = await Model.findOne({ Number: number }).select('CustomerCode').lean();
     if (rec?.CustomerCode) return String(rec.CustomerCode).trim();
   }
   return '';
@@ -450,83 +589,236 @@ async function kashflowCustomerCode(fields) {
 
 /**
  * The chosen customer's code and name onto the fields. With none chosen, the
- * customer on the row's own KashFlow project/quote/invoice is used; a 400 if
+ * customer on the job's own KashFlow project/quote/invoice is used; a 400 if
  * there's neither, or the code isn't a known customer.
  */
-async function applyCustomer(fields) {
-  const code = String(fields.customerCode || '').trim() || await kashflowCustomerCode(fields);
-  if (!code) throw Object.assign(new Error('Choose the client from the KashFlow customers.'), { status: 400 });
+async function applyCustomer(fields, numbersFrom = {}) {
+  const code = String(fields.customerCode || '').trim()
+    || await kashflowCustomerCode({ projectNumber: fields.projectNumber, ...numbersFrom });
+  if (!code) throw bad('Choose the client from the KashFlow customers.');
   const c = await mdb.REST.customer.findOne({ Code: code }).select('Code Name').lean();
-  if (!c) throw Object.assign(new Error("That client isn't a KashFlow customer (or hasn't synced yet)."), { status: 400 });
+  if (!c) throw bad("That client isn't a KashFlow customer (or hasn't synced yet).");
   return { ...fields, customerCode: String(c.Code).trim(), client: String(c.Name || c.Code).trim() };
 }
 
 function duplicateError(err) {
   if (err?.code !== 11000) return err;
-  const key = Object.keys(err.keyPattern || err.keyValue || {})[0];
-  const label = key === 'projectNumber' ? 'project' : 'quote';
-  return Object.assign(new Error(`That ${label} number is already in the register.`), { status: 400 });
+  const key = Object.keys(err.keyPattern || err.keyValue || {})[0] || '';
+  const label = key === 'projectNumber' ? 'project' : key.startsWith('quotes') ? 'quote' : 'quote';
+  return bad(`That ${label} number is already in the register.`);
 }
 function validationError(err) {
   if (err?.name === 'ValidationError') {
-    return Object.assign(new Error(Object.values(err.errors)[0]?.message || 'Check the entry.'), { status: 400 });
+    return bad(Object.values(err.errors)[0]?.message || 'Check the entry.');
   }
-  if (err instanceof Error && !err.status && /Enter a quote number|needs its project number/.test(err.message)) {
+  if (err?.name === 'CastError') return bad('Check the entry.');
+  if (err instanceof Error && !err.status && /Enter a quote number|needs its project number|on this job twice/.test(err.message)) {
     return Object.assign(err, { status: 400 });
   }
   return err;
 }
+const saveError = (err) => validationError(duplicateError(err));
 
-export async function createEntry(body) {
-  const fields = Object.fromEntries(Object.entries(await applyCustomer(await applyContract(parseEntryForm(body))))
-    .filter(([, v]) => v !== null && v !== ''));
+const drop = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== ''));
+
+/** POST /job-register: a new job, with its first quote when a quote number is given. */
+export async function createEntry(body = {}) {
+  const job = parseJobForm(body);
+  const quote = addFormQuote(body, job);
+  const fields = drop(await applyCustomer(await applyContract(job), { quoteNumbers: quote?.number != null ? [quote.number] : [] }));
+  // A job with a quote is worth its quote: the form's value went on it
+  if (quote) delete fields.value;
+  fields.quotes = quote ? [drop(quote)] : [];
+  let doc;
   try {
-    return await mdb.INTERNAL.jobRegister.create(fields);
+    doc = await mdb.INTERNAL.jobRegister.create(fields);
   } catch (err) {
-    throw validationError(duplicateError(err));
+    throw saveError(err);
   }
+  if (quote) await lifecycle.fireQuoteAdded(doc, doc.quotes?.[0] || quote);
+  await lifecycle.fireStageHooks(null, doc);
+  return doc;
 }
 
+/** POST /job-register/:uuid: the job's own fields. */
 export async function updateEntry(uuid, body) {
   const doc = await mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') });
-  if (!doc) throw Object.assign(new Error('That register entry no longer exists.'), { status: 404 });
-  const fields = await applyCustomer(await applyContract(parseEntryForm(body)));
+  if (!doc) throw notFound('That register entry no longer exists.');
+  const before = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
+  const fields = await applyCustomer(await applyContract(parseJobForm(body)), {
+    quoteNumbers: quoteNumbersOf(doc), invoiceNumbers: invoiceNumbersOf(doc),
+  });
+  // A job with quotes is worth its quotes, not a value of its own
+  if (quotesOf(doc).length && fields.value == null) delete fields.value;
   // Blank → unset, so the partial unique indexes don't see a null
   for (const [k, v] of Object.entries(fields)) doc.set(k, v === null || v === '' ? undefined : v);
-  // A hand edit: a re-import will no longer overwrite this row, only fill it in
-  doc.editedAt = new Date();
-  try {
-    return await doc.save();
-  } catch (err) {
-    throw validationError(duplicateError(err));
+  // Won now: a lone quote still open is the one that was won
+  const open = quotesOf(doc).filter((q) => q.status === 'toQuote' || q.status === 'quoted');
+  if (['toQuote', 'quoted'].includes(stageOf(before)) && stageOf(doc) === 'won' && quotesOf(doc).length === 1 && open.length === 1) {
+    open[0].status = 'won';
   }
+  // A hand edit: a re-import will no longer overwrite this job, only fill it in
+  doc.editedAt = new Date();
+  let saved;
+  try {
+    saved = await doc.save();
+  } catch (err) {
+    throw saveError(err);
+  }
+  await lifecycle.fireStageHooks(before, saved);
+  return saved;
 }
 
 export async function findEntry(uuid) {
   return mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') }).populate('contractId', 'uuid title').lean();
 }
 
-/** Contracts a row can be linked to: open ones, plus the one it already has. */
+// ── Quotes and invoices on a job ────────────────────────────────────────
+
+async function findJobLean(uuid) {
+  const job = await mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') }).lean();
+  if (!job) throw notFound('That register entry no longer exists.');
+  return job;
+}
+
+const sameId = (a, b) => a != null && b != null && String(a) === String(b);
+const validId = (id) => mongoose.Types.ObjectId.isValid(String(id || ''));
+
+function findLine(job, kind, id) {
+  const list = kind === 'quote' ? quotesOf(job) : invoicesOf(job);
+  const line = validId(id) ? list.find((x) => sameId(x._id, id)) : null;
+  if (!line) throw notFound(`That ${kind} is no longer on this job.`);
+  return line;
+}
+
+/** $set / $unset for a line's fields at `prefix` (e.g. 'quotes.$.'): blanks are unset. Pure. */
+export function lineUpdate(fields, prefix) {
+  const $set = {};
+  const $unset = {};
+  for (const [k, v] of Object.entries(fields)) {
+    if (v === null || v === '') $unset[`${prefix}${k}`] = 1;
+    else $set[`${prefix}${k}`] = v;
+  }
+  return { $set, $unset };
+}
+
+async function runUpdate(filter, update) {
+  if (update.$unset && !Object.keys(update.$unset).length) delete update.$unset;
+  try {
+    const res = await mdb.INTERNAL.jobRegister.updateOne(filter, update, { runValidators: true });
+    if (res && res.matchedCount === 0) throw notFound('That register entry no longer exists.');
+  } catch (err) {
+    throw saveError(err);
+  }
+}
+
+/** POST /job-register/:uuid/quotes: add a quote (a variation, or the job's first). */
+export async function addQuote(uuid, body) {
+  const job = await findJobLean(uuid);
+  const quote = drop(parseQuoteLine(body));
+  if (quote.number != null && quoteNumbersOf(job).includes(quote.number)) throw bad(`Quote ${quote.number} is on this job already.`);
+  quote._id = new mongoose.Types.ObjectId();
+  const set = { editedAt: new Date() };
+  if (quote.status === 'won') set.won = true;
+  await runUpdate({ uuid: job.uuid }, { $push: { quotes: quote }, $set: set });
+  const after = { ...job, ...set, quotes: [...quotesOf(job), quote] };
+  await lifecycle.fireQuoteAdded(after, quote);
+  await lifecycle.fireStageHooks(job, after);
+  return { job: after, quote };
+}
+
+/** POST /job-register/:uuid/quotes/:id: change a quote. */
+export async function updateQuote(uuid, id, body) {
+  const job = await findJobLean(uuid);
+  const current = findLine(job, 'quote', id);
+  const fields = parseQuoteLine(body);
+  const others = quotesOf(job).filter((q) => !sameId(q._id, current._id));
+  if (fields.number != null && numbers(others).includes(fields.number)) throw bad(`Quote ${fields.number} is on this job already.`);
+  const merged = { ...current, ...drop(fields) };
+  for (const [k, v] of Object.entries(fields)) if (v === null || v === '') delete merged[k];
+  const after = { ...job, quotes: quotesOf(job).map((q) => (sameId(q._id, current._id) ? merged : q)) };
+  const problem = jobProblem(after);
+  if (problem) throw bad(fields.number == null ? 'This quote number is the only number on the job: keep it, or give the job its project number first.' : problem);
+  const { $set, $unset } = lineUpdate(fields, 'quotes.$.');
+  $set.editedAt = new Date();
+  if (fields.status === 'won') { $set.won = true; after.won = true; }
+  await runUpdate({ uuid: job.uuid, 'quotes._id': current._id }, { $set, $unset });
+  await lifecycle.fireStageHooks(job, after);
+  return { job: after, quote: merged };
+}
+
+/** POST /job-register/:uuid/quotes/:id/delete: take a quote off the job. */
+export async function removeQuote(uuid, id) {
+  const job = await findJobLean(uuid);
+  const current = findLine(job, 'quote', id);
+  const after = { ...job, quotes: quotesOf(job).filter((q) => !sameId(q._id, current._id)) };
+  if (jobProblem(after)) throw bad("This quote's number is the only number on the job: cancel the job instead, or give it its project number first.");
+  await runUpdate({ uuid: job.uuid }, { $pull: { quotes: { _id: current._id } }, $set: { editedAt: new Date() } });
+  await lifecycle.fireStageHooks(job, after);
+  return { job: after, quote: current };
+}
+
+/** POST /job-register/:uuid/invoices: add an invoice (the job's, or a stage payment). */
+export async function addInvoice(uuid, body) {
+  const job = await findJobLean(uuid);
+  if (job.projectNumber == null) throw bad('Give the job its project number before adding an invoice.');
+  const invoice = drop(parseInvoiceLine(body));
+  if (invoiceNumbersOf(job).includes(invoice.number)) throw bad(`Invoice ${invoice.number} is on this job already.`);
+  invoice._id = new mongoose.Types.ObjectId();
+  await runUpdate({ uuid: job.uuid }, { $push: { invoices: invoice }, $set: { editedAt: new Date() } });
+  const after = { ...job, invoices: [...invoicesOf(job), invoice] };
+  await lifecycle.fireStageHooks(job, after);
+  return { job: after, invoice };
+}
+
+/** POST /job-register/:uuid/invoices/:id: change an invoice. */
+export async function updateInvoice(uuid, id, body) {
+  const job = await findJobLean(uuid);
+  const current = findLine(job, 'invoice', id);
+  const fields = parseInvoiceLine(body);
+  const others = invoicesOf(job).filter((i) => !sameId(i._id, current._id));
+  if (numbers(others).includes(fields.number)) throw bad(`Invoice ${fields.number} is on this job already.`);
+  const { $set, $unset } = lineUpdate(fields, 'invoices.$.');
+  $set.editedAt = new Date();
+  await runUpdate({ uuid: job.uuid, 'invoices._id': current._id }, { $set, $unset });
+  const merged = { ...current, ...drop(fields) };
+  for (const [k, v] of Object.entries(fields)) if (v === null || v === '') delete merged[k];
+  return { job: { ...job, invoices: invoicesOf(job).map((i) => (sameId(i._id, current._id) ? merged : i)) }, invoice: merged };
+}
+
+/** POST /job-register/:uuid/invoices/:id/delete: take an invoice off the job. */
+export async function removeInvoice(uuid, id) {
+  const job = await findJobLean(uuid);
+  const current = findLine(job, 'invoice', id);
+  await runUpdate({ uuid: job.uuid }, { $pull: { invoices: { _id: current._id } }, $set: { editedAt: new Date() } });
+  const after = { ...job, invoices: invoicesOf(job).filter((i) => !sameId(i._id, current._id)) };
+  await lifecycle.fireStageHooks(job, after);
+  return { job: after, invoice: current };
+}
+
+/** Contracts a job can be linked to: open ones, plus the one it already has. */
 export async function contractChoices(currentId = null) {
   const or = [{ status: { $in: ['Planned', 'In Progress'] } }];
   if (currentId && mongoose.Types.ObjectId.isValid(String(currentId))) or.push({ _id: currentId });
   return mdb.INTERNAL.contract.find({ $or: or }).select('uuid title status').sort({ title: 1 }).lean();
 }
 
+// ── Open jobs (the weekly sheet) ────────────────────────────────────────
+
 // Won but not completed: a project number, not cancelled, not marked
-// completed and not invoiced. These are the jobs people can be put on (the
-// weekly sheet's choices, the weekly sheet import's matches).
+// completed. These are the jobs people can be put on (the weekly sheet's
+// choices, the weekly sheet import's matches). A job part-invoiced with
+// stage payments is still open.
 export const OPEN_JOB_FILTER = {
   projectNumber: { $type: 'number' },
   cancelled: { $ne: true },
   completed: { $ne: true },
-  invoiceNumber: { $not: { $type: 'number' } },
 };
 const OPEN_JOB_FIELDS = '_id uuid projectNumber site client contact description contractId';
 
-/** Is this row a won job not yet completed (OPEN_JOB_FILTER)? Pure. */
+/** Is this job won and not yet completed (OPEN_JOB_FILTER)? Pure. */
 export function isOpenJob(entry) {
-  return !!entry && typeof entry.projectNumber === 'number' && !entry.cancelled && !entry.completed && entry.invoiceNumber == null;
+  return !!entry && typeof entry.projectNumber === 'number' && !entry.cancelled && !entry.completed;
 }
 
 /**
@@ -561,9 +853,9 @@ export async function jobsForAllocation() {
 
 /** The synced KashFlow project for each job's project number: Map of projectNumber → REST project _id. */
 export async function projectIdsByNumber(jobs = []) {
-  const numbers = [...new Set(jobs.map((j) => j?.projectNumber).filter((n) => typeof n === 'number'))];
-  if (!numbers.length || !mdb.REST?.project) return new Map();
-  const projects = await mdb.REST.project.find({ Number: { $in: numbers } }).select('_id Number').lean();
+  const nums = [...new Set(jobs.map((j) => j?.projectNumber).filter((n) => typeof n === 'number'))];
+  if (!nums.length || !mdb.REST?.project) return new Map();
+  const projects = await mdb.REST.project.find({ Number: { $in: nums } }).select('_id Number').lean();
   return new Map(projects.map((p) => [Number(p.Number), p._id]));
 }
 
@@ -581,9 +873,12 @@ export function jobTarget(job, { projectId = null, contract = null } = {}) {
 }
 
 export default {
-  STAGES, STAGE_LABELS, STAGE_FILTERS, QUOTE_STATUSES,
-  stageOf, clientKey, entryDate, taxYearOf, matchEntry, buildRegister, findUnregistered, nextNumber, parseEntryForm,
+  STAGES, STAGE_LABELS, STAGE_FILTERS, QUOTE_STATUSES, QUOTE_STATUS_LABELS,
+  stageOf, jobValues, clientKey, entryDate, taxYearOf, jobNumber, jobTitle, quoteNumbersOf, invoiceNumbersOf,
+  matchJob, buildRegister, findUnregistered, nextNumber,
+  parseJobForm, parseQuoteLine, parseInvoiceLine, lineUpdate,
   parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext, ukToday,
-  loadRegister, createEntry, updateEntry, findEntry, contractChoices, customerChoices, jobsForAllocation,
+  loadRegister, loadJob, createEntry, updateEntry, findEntry, contractChoices, customerChoices, jobsForAllocation,
+  addQuote, updateQuote, removeQuote, addInvoice, updateInvoice, removeInvoice,
   OPEN_JOB_FILTER, isOpenJob, jobLabel, openJobs, projectIdsByNumber, jobTarget,
 };
