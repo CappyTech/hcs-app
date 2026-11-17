@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.135.0] - 2026-11-17
+
+### Added
+- **Job Register quotes and jobs can go into KashFlow on their own.** With "Add Job Register quotes and jobs to KashFlow automatically" switched on (Admin → Config → KashFlow, off by default), adding a quote creates it in KashFlow with one line at its net value, 20% VAT and the usual sales nominal. Winning a job creates its KashFlow job and puts its quotes on it. If anything doesn't happen, the job is still saved, a message says what and why, and the Create quote and Create project buttons are still there to try again.
+
 ## [6.134.0] - 2026-11-17
 
 ### Added
