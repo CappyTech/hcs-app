@@ -2,7 +2,7 @@
  * connectionSettingsController.js
  *
  * Live connection tests for the external services hcs-app talks to:
- * KashFlow, SMTP, Paperless-ngx and Twilio.
+ * KashFlow, SMTP, Paperless-ngx, Twilio, Microsoft Graph and OneDrive.
  *
  * The settings pages themselves moved to appConfigController, which renders
  * every group from configRegistry and stores values in Mongo. This file kept
@@ -19,6 +19,7 @@ import kashflowSessionService from '../../services/kashflowSessionService.js';
 import smsService from '../../services/smsService.js';
 import emailService from '../../services/emailService.js';
 import paperlessClient from '../services/paperless/paperlessClient.js';
+import oneDriveFolderService from '../../services/oneDriveFolderService.js';
 
 // ── Live connection tests ────────────────────────────────────────────────────
 
@@ -69,6 +70,9 @@ const TESTS = {
     if (!data || !data.authorization_endpoint) throw new Error('Could not read the tenant OpenID configuration.');
     return `Tenant reachable — sign-in will use ${data.authorization_endpoint}. Ensure the app registration's Redirect URI matches this app's /auth/microsoft/callback.`;
   },
+
+  // Reads the top folder only; nothing is created or moved.
+  onedrive: () => oneDriveFolderService.testConnection(),
 
   // Through the same client the app uses, so a pass means the app can reach
   // Paperless: same address (scheme and /api added), Accept header, tunnel.

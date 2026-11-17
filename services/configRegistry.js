@@ -293,6 +293,26 @@ export const GROUPS = [
     ],
   },
   {
+    id: 'onedrive',
+    label: 'OneDrive (job folders)',
+    icon: 'bi-folder-symlink-fill',
+    description: 'Creates and moves job folders in one Microsoft 365 user\'s OneDrive: a quote gets "<quote no> <site>" in the quotes folder for its year, a won job is moved to the live jobs folder for its year and renamed "<job no> <site>", and a completed job goes into Completed Jobs inside that live jobs folder. Uses its own Entra app registration with the Microsoft Graph application permission Files.ReadWrite.All, granted admin consent. Test connection only reads the top folder.',
+    test: 'onedrive',
+    // The service caches an access token for the credentials it last used.
+    afterSave: 'onedrive',
+    keys: [
+      { key: 'ONEDRIVE_FOLDERS_ENABLED', label: 'Manage job folders', type: 'boolean', help: 'When on (and the fields below are set), the app creates and moves job folders in OneDrive. Off, it does nothing and calls nothing.' },
+      { key: 'ONEDRIVE_TENANT_ID', label: 'Tenant ID', type: 'text', help: 'Entra directory (tenant) ID of the app registration.' },
+      { key: 'ONEDRIVE_CLIENT_ID', label: 'Client ID', type: 'text', help: 'Application (client) ID of the Entra app registration. It needs the Microsoft Graph application permission Files.ReadWrite.All with admin consent.' },
+      { key: 'ONEDRIVE_CLIENT_SECRET', label: 'Client secret', type: 'secret', help: 'A client secret value from the app registration.' },
+      { key: 'ONEDRIVE_OWNER', label: 'OneDrive owner', type: 'text', help: 'Sign-in name (UPN) or email of the account whose OneDrive holds the job folders, e.g. admin@example.com.' },
+      { key: 'ONEDRIVE_ROOT_FOLDER', label: 'Top folder', type: 'text', help: 'Path of the folder holding the year folders, from the top of that OneDrive. Blank = "Jobs & Quotes". It must already exist; the app will not create it.' },
+      { key: 'ONEDRIVE_QUOTES_FOLDER', label: 'Quotes folder name', type: 'text', help: 'Name of each year\'s quotes folder; {year} is replaced by the calendar year of the quote date. Blank = "3. QUOTES {year}".' },
+      { key: 'ONEDRIVE_LIVE_FOLDER', label: 'Live jobs folder name', type: 'text', help: 'Name of each year\'s live jobs folder; {year} is the calendar year the quote was won. Blank = "1.1 LIVE JOBS {year}".' },
+      { key: 'ONEDRIVE_COMPLETED_FOLDER', label: 'Completed folder name', type: 'text', help: 'Folder inside a live jobs folder that completed jobs move to. Blank = "Completed Jobs".' },
+    ],
+  },
+  {
     id: 'sso',
     label: 'Sessions & SSO',
     icon: 'bi-box-arrow-in-right',
