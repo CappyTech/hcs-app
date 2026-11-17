@@ -205,7 +205,7 @@ export const postWeeklySheetDelete = deleteHandler(WS, 'weeklySheet');
 /** POST /weekly-sheet/import/:uuid */
 export const postWeeklySheetImport = async (req, res, next) => {
   try {
-    const r = await sheetImport.runImport(req.params.uuid, req.body || {});
+    const r = await sheetImport.runImport(req.params.uuid, req.body || {}, { actorId: req.user?._id });
     const s = r.skipped;
     let msg = `Imported ${plural(r.created, 'day')} of attendance across ${plural(r.weeks, 'week')}, all pending approval.`;
     if (r.createdLocations) msg += ` Added ${plural(r.createdLocations, 'location')}.`;

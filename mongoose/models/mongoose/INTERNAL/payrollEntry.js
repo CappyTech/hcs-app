@@ -67,6 +67,11 @@ const payrollEntrySchema = new mongoose.Schema({
   // List of field names that were manually overridden after auto-calculation
   overrideFlags: [{ type: String }],
 
+  // What the employee was last told about this entry (personNoticeService
+  // entryFingerprint): null until the run is first locked. A different
+  // fingerprint on a locked run means their pay changed: they're told again.
+  noticeFingerprint: { type: String, default: null },
+
   notes: { type: String, trim: true, maxlength: 2000 }
 }, {
   timestamps: true
