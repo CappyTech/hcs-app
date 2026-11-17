@@ -2974,6 +2974,7 @@ const apiDocs = [
         },
         notes: [
           'Request body fields are identical to POST /quotes. See the create operation for the full field list.',
+          'Used by the Job Register when a job is won and JOB_REGISTER_KASHFLOW_AUTO is on (jobRegisterKashflowService.autoJobWon): it GETs each of the job’s quotes and PUTs it back whole (the POST /quotes request fields only) with ProjectNumber set, since partial bodies are not documented.',
         ],
       },
       {

@@ -67,12 +67,19 @@ export const postFillNext = async (req, res, next) => {
   }
 };
 
+/** What the lifecycle hooks had to say after a save (KashFlow, OneDrive), as flashes. */
+function flashNotices(req, notices = []) {
+  for (const n of notices) req.flash(n.type === 'error' ? 'error' : 'success', n.text);
+}
+
 /** POST /job-register */
 export const postCreate = async (req, res, next) => {
   try {
-    const doc = await jobRegister.createEntry(req.body);
+    const notices = [];
+    const doc = await jobRegister.createEntry(req.body, notices);
     logger.info(`[jobRegisterController] Added register job ${doc.uuid}`);
     req.flash('success', `Added ${jobRegister.jobTitle(doc).toLowerCase()}.`);
+    flashNotices(req, notices);
     res.redirect(jobUrl(doc.uuid));
   } catch (err) {
     if (err.status === 400) {
@@ -157,8 +164,10 @@ export const postFillNextEdit = async (req, res, next) => {
 /** POST /job-register/:uuid */
 export const postUpdate = async (req, res, next) => {
   try {
-    const doc = await jobRegister.updateEntry(req.params.uuid, req.body);
+    const notices = [];
+    const doc = await jobRegister.updateEntry(req.params.uuid, req.body, notices);
     req.flash('success', 'Saved.');
+    flashNotices(req, notices);
     res.redirect(jobUrl(doc.uuid));
   } catch (err) {
     backOnError(req, res, next, err, `${jobUrl(req.params.uuid)}/edit`);
@@ -171,8 +180,10 @@ export const postUpdate = async (req, res, next) => {
 const lineAction = (run, done, anchor) => async (req, res, next) => {
   const back = `${jobUrl(req.params.uuid)}#${anchor}`;
   try {
-    const r = await run(req);
+    const notices = [];
+    const r = await run(req, notices);
     req.flash('success', done(r));
+    flashNotices(req, notices);
     res.redirect(back);
   } catch (err) {
     const retry = req.params.id ? `${jobUrl(req.params.uuid)}?${anchor === 'quotes' ? 'quote' : 'invoice'}=${encodeURIComponent(req.params.id)}#${anchor}` : back;
@@ -184,17 +195,17 @@ const lineAction = (run, done, anchor) => async (req, res, next) => {
 const named = (kind, line) => (line?.number != null ? `${kind} ${line.number}` : `the ${kind.toLowerCase()}`);
 
 /** POST /job-register/:uuid/quotes */
-export const postAddQuote = lineAction((req) => jobRegister.addQuote(req.params.uuid, req.body || {}), (r) => `Added ${named('quote', r.quote)}.`, 'quotes');
+export const postAddQuote = lineAction((req, notices) => jobRegister.addQuote(req.params.uuid, req.body || {}, notices), (r) => `Added ${named('quote', r.quote)}.`, 'quotes');
 /** POST /job-register/:uuid/quotes/:id */
-export const postUpdateQuote = lineAction((req) => jobRegister.updateQuote(req.params.uuid, req.params.id, req.body || {}), (r) => `Saved ${named('quote', r.quote)}.`, 'quotes');
+export const postUpdateQuote = lineAction((req, notices) => jobRegister.updateQuote(req.params.uuid, req.params.id, req.body || {}, notices), (r) => `Saved ${named('quote', r.quote)}.`, 'quotes');
 /** POST /job-register/:uuid/quotes/:id/delete */
-export const postRemoveQuote = lineAction((req) => jobRegister.removeQuote(req.params.uuid, req.params.id), (r) => `Removed ${named('quote', r.quote)} from the job.`, 'quotes');
+export const postRemoveQuote = lineAction((req, notices) => jobRegister.removeQuote(req.params.uuid, req.params.id, notices), (r) => `Removed ${named('quote', r.quote)} from the job.`, 'quotes');
 /** POST /job-register/:uuid/invoices */
-export const postAddInvoice = lineAction((req) => jobRegister.addInvoice(req.params.uuid, req.body || {}), (r) => `Added ${named('invoice', r.invoice)}.`, 'invoices');
+export const postAddInvoice = lineAction((req, notices) => jobRegister.addInvoice(req.params.uuid, req.body || {}, notices), (r) => `Added ${named('invoice', r.invoice)}.`, 'invoices');
 /** POST /job-register/:uuid/invoices/:id */
 export const postUpdateInvoice = lineAction((req) => jobRegister.updateInvoice(req.params.uuid, req.params.id, req.body || {}), (r) => `Saved ${named('invoice', r.invoice)}.`, 'invoices');
 /** POST /job-register/:uuid/invoices/:id/delete */
-export const postRemoveInvoice = lineAction((req) => jobRegister.removeInvoice(req.params.uuid, req.params.id), (r) => `Removed ${named('invoice', r.invoice)} from the job.`, 'invoices');
+export const postRemoveInvoice = lineAction((req, notices) => jobRegister.removeInvoice(req.params.uuid, req.params.id, notices), (r) => `Removed ${named('invoice', r.invoice)} from the job.`, 'invoices');
 
 /** POST /job-register/:uuid/kashflow-add: a KashFlow quote or invoice on this job in KashFlow, onto the job here. */
 export const postAddFromKashflow = async (req, res, next) => {
@@ -322,11 +333,7 @@ export const postKashflowProject = async (req, res, next) => {
 };
 
 function flashCreated(req, label, r) {
-  if (!r.picked) return req.flash('success', `${label} ${r.number} created in KashFlow.`);
-  if (r.rowNotUpdated) {
-    return req.flash('error', `${label} ${r.rowNumber} was taken in KashFlow, so it was created as ${r.number}. Another quote or job in the register already uses ${r.number}, so this one still says ${r.rowNumber}: fix the numbers.`);
-  }
-  return req.flash('success', `${label} ${r.rowNumber} was taken in KashFlow, so it was created as ${r.number}. The register now says ${r.number}.`);
+  flashNotices(req, [kfCreate.createdNotice(label, r)]);
 }
 
 export default {

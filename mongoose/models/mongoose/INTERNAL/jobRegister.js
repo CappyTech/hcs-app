@@ -19,7 +19,8 @@ import crypto from 'crypto';
 // out from these and the flags below (jobRegisterService.stageOf), so it
 // can't disagree with them. The register page matches each number against
 // the synced REST quotes, projects and invoices. KashFlow is only written by
-// the optional Create in KashFlow buttons (jobRegisterKashflowService).
+// the optional Create in KashFlow buttons, or automatically on a quote added
+// or a job won when JOB_REGISTER_KASHFLOW_AUTO is on (jobRegisterKashflowService).
 
 // A quote is to survey and quote (white on the old sheet), quoted and waiting
 // for an answer (grey/black), won (yellow) or lost.
