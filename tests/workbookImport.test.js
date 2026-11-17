@@ -435,14 +435,24 @@ describe('Weekly sheet suggestions', () => {
     assert.equal(suggestPerson('Nobody', { employees, subcontractors }), '');
   });
 
-  it('suggests a location by name, a contract by title, else a new location', () => {
-    const locations = [{ _id: 'l1', name: 'Office' }];
-    const contracts = [{ _id: 'c1', title: '27 Test Square, Townville' }, { _id: 'c2', title: 'Oak Court' }, { _id: 'c3', title: 'Oak Court Phase 2' }];
-    assert.equal(suggestPlace('office', { locations, contracts }), 'loc:l1');
-    assert.equal(suggestPlace('27 Test Square', { locations, contracts }), 'con:c1');
-    assert.equal(suggestPlace('Oak Court', { locations, contracts }), 'con:c2');
-    assert.equal(suggestPlace('27 Test', { locations, contracts }), 'con:c1');
-    assert.equal(suggestPlace('Elsewhere', { locations, contracts }), 'new');
+  it('suggests a location by name, else a job by number or site, else skip', () => {
+    const locations = [{ _id: 'l1', name: 'Office' }, { _id: 'l2', name: 'Garston Office' }];
+    const jobs = [
+      { _id: 'j1', projectNumber: 41250, site: '27 Test Square, Townville' },
+      { _id: 'j2', projectNumber: 41251, site: 'Oak Court' },
+      { _id: 'j3', projectNumber: 41252, site: 'Oak Court, Phase 2' }, // same site before the comma as j2
+      { _id: 'j4', projectNumber: 41253, site: 'St. Mary\'s Church' },
+    ];
+    assert.equal(suggestPlace('office', { locations, jobs }), 'loc:l1');
+    assert.equal(suggestPlace('GARSTON  OFFICE', { locations, jobs }), 'loc:l2');
+    assert.equal(suggestPlace('41250', { locations, jobs }), 'job:j1');
+    assert.equal(suggestPlace('Oak Court 41252', { locations, jobs }), 'job:j3'); // the number wins over the site
+    assert.equal(suggestPlace('27 test square', { locations, jobs }), 'job:j1'); // the site up to its comma
+    assert.equal(suggestPlace('St Marys Church', { locations, jobs }), 'job:j4'); // punctuation doesn't count
+    assert.equal(suggestPlace('st. mary’s church!', { locations, jobs }), 'job:j4');
+    assert.equal(suggestPlace('Oak Court', { locations, jobs }), ''); // two jobs: don't guess
+    assert.equal(suggestPlace('27 Test', { locations, jobs }), '');
+    assert.equal(suggestPlace('Elsewhere', { locations, jobs }), '');
   });
 
   it('reads the submitted choices strictly', () => {
@@ -450,9 +460,11 @@ describe('Weekly sheet suggestions', () => {
     assert.deepEqual(readPersonChoice(`e:${id}`), { employeeId: id });
     assert.deepEqual(readPersonChoice(`s:${id}`), { subcontractorId: id });
     assert.equal(readPersonChoice('e:nope'), null);
-    assert.deepEqual(readPlaceChoice(`con:${id}`), { contractId: id });
+    assert.deepEqual(readPlaceChoice(`job:${id}`), { jobRegisterId: id });
     assert.deepEqual(readPlaceChoice(`loc:${id}`), { locationId: id });
-    assert.deepEqual(readPlaceChoice('new'), { create: true });
+    // From older uploads: a contract or a new location is no longer a choice
+    assert.equal(readPlaceChoice(`con:${id}`), null);
+    assert.equal(readPlaceChoice('new'), null);
     assert.equal(readPlaceChoice(''), null);
   });
 });
@@ -494,6 +506,7 @@ describe('Running the imports', () => {
   const E1 = 'e'.repeat(24);
   const C1 = 'c'.repeat(24);
   const P1 = 'f'.repeat(24);
+  const J1 = 'd'.repeat(24);
 
   const workbookImport = {
     create: async (doc) => { staged = { ...doc, uuid: 'u1', _id: 'w1' }; return staged; },
@@ -517,28 +530,30 @@ describe('Running the imports', () => {
       },
       payrollRun: { findOne: () => query(null) },
       jobRegister: {
-        find: () => query([{ _id: 'r1', projectNumber: 41010, site: '1 Test St', client: 'Example Homes' }]),
+        find: () => query([{ _id: J1, projectNumber: 41010, site: '1 Test St', client: 'Example Homes', contractId: C1 }]),
         create: async (doc) => { created.push(doc); return doc; },
         findById: async () => ({ set(f) { this.fields = f; }, async save() { created.push({ updated: this.fields }); } }),
       },
     };
-    mdb.REST = { supplier: { find: () => query([]) }, customer: { find: () => query([{ Code: 'EX1', Name: 'Example Homes Ltd' }]) } };
+    mdb.REST = { supplier: { find: () => query([]) }, customer: { find: () => query([{ Code: 'EX1', Name: 'Example Homes Ltd' }]) }, project: { find: () => query([]) } };
   });
   after(() => { mdb.INTERNAL = saved.INTERNAL; mdb.REST = saved.REST; });
 
   it('imports the weekly sheet as pending records with the sheet text in the notes', async () => {
     inserted = []; created = []; locations = [{ _id: 'a'.repeat(24), name: 'Office' }];
     await sheetImport.stageUpload({
-      sheets: [weekTab('11 JAN 26', '2026-01-05', [['ALEX', 'Site One', 'Office', 'Site One', 'New Place', 'OFF', null], ['Visitor', 'Site One']])],
+      sheets: [weekTab('11 JAN 26', '2026-01-05', [['ALEX', '1 TEST ST', 'Office', '1 Test St', 'New Place', 'OFF', null], ['Visitor', '1 Test St']])],
       fileName: 'test.xlsx',
     });
     const mapping = await sheetImport.loadMapping('u1');
     const alex = mapping.people.find((p) => p.label === 'ALEX');
     assert.equal(alex.suggestion, `e:${E1}`);
+    assert.deepEqual(mapping.choices.jobs.map((j) => j.label), ['41010 1 Test St (Example Homes)']);
+    assert.equal(mapping.places.find((p) => p.label === 'New Place').suggestion, ''); // no new location: skip
     const body = {};
     for (const p of mapping.people) body[`person_${p.index}`] = p.suggestion;
     for (const p of mapping.places) body[`place_${p.index}`] = p.suggestion;
-    assert.equal(body[`place_${mapping.places.find((p) => p.label === 'Site One').index}`], `con:${C1}`);
+    assert.equal(body[`place_${mapping.places.find((p) => p.key === '1 test st').index}`], `job:${J1}`);
 
     // Alex is told once about the days written; the admin who ran it is not
     const told = [];
@@ -552,23 +567,42 @@ describe('Running the imports', () => {
     assert.equal(told.length, 1);
     assert.deepEqual(told[0].users.map((u) => u._id), ['ua']);
     assert.equal(told[0].type, 'attendance');
-    assert.match(told[0].text, /Mon 5 Jan: Site One\nTue 6 Jan: Office\nThu 8 Jan: New Place\nFri 9 Jan: Off/);
+    assert.match(told[0].text, /Mon 5 Jan: 41010 1 Test St \(Example Homes\)\nTue 6 Jan: Office\nFri 9 Jan: Off/);
     assert.match(told[0].dedupeKey, new RegExp(`^attendance:import:u1:[0-9a-f]{16}:e:${E1}$`));
-    assert.equal(r.created, 4); // Mon, Tue, Thu, Fri; Wed already has a record
+    assert.equal(r.created, 3); // Mon, Tue, Fri; Wed already has a record, Thu's site is skipped
     assert.equal(r.skipped.existing, 1);
+    assert.equal(r.skipped.place, 1);
     assert.equal(r.skipped.person, 1); // "Visitor" matched no one
-    assert.equal(r.createdLocations, 1);
-    assert.equal(created[0].name, 'New Place');
+    assert.equal('createdLocations' in r, false);
+    assert.equal(created.length, 0, 'no location made');
+    assert.equal(locations.length, 1);
     const mon = inserted.find((d) => d.date.getDate() === 5);
     assert.equal(mon.status, 'pending');
     assert.equal(mon.type, 'work');
+    // The job, its contract, and the contract's project (no synced project has 41010)
+    assert.equal(String(mon.jobRegisterId), J1);
     assert.equal(String(mon.contractId), C1);
     assert.equal(String(mon.projectId), P1);
     assert.equal(mon.hoursWorked.toString(), '8');
-    assert.match(mon.notes, /Imported from the weekly sheet: "Site One"/);
+    assert.match(mon.notes, /Imported from the weekly sheet: "1 TEST ST"/);
     assert.equal(inserted.find((d) => d.date.getDate() === 9).type, 'off');
     assert.ok(staged.importedAt);
     await assert.rejects(sheetImport.runImport('u1', body), /already been imported/);
+  });
+
+  it('shows an older upload saved with a contract or "new location" with today\'s suggestions instead', async () => {
+    locations = [{ _id: 'a'.repeat(24), name: 'Office' }];
+    await sheetImport.stageUpload({
+      sheets: [weekTab('11 JAN 26', '2026-01-05', [['ALEX', '1 Test St', 'Office', 'New Place']])],
+      fileName: 'old.xlsx',
+    });
+    const at = (label) => staged.parsed.places.findIndex((p) => p.label === label);
+    Object.assign(staged, { saved: true, choices: { person: {}, place: { [at('1 Test St')]: `con:${C1}`, [at('New Place')]: 'new', [at('Office')]: '' } } });
+    const mapping = await sheetImport.loadMapping('u1');
+    const suggestion = (label) => mapping.places.find((p) => p.label === label).suggestion;
+    assert.equal(suggestion('1 Test St'), `job:${J1}`);
+    assert.equal(suggestion('New Place'), '');
+    assert.equal(suggestion('Office'), '', 'a saved Skip is kept');
   });
 
   it('imports the Job Reg: new rows created, an existing job filled in', async () => {
@@ -635,14 +669,16 @@ describe('Import pages', () => {
     const parsed = parseAttendanceWorkbook([weekTab('11 JAN 26', '2026-01-05', [['ALEX', 'Site One', 'Office']])]);
     const html = await ejs.renderFile(view('weekly-sheet.ejs'), {
       title: 't', csrfToken: 'c', crumbs: [], staged: { uuid: 'u2', fileName: 'w.xlsx', parsed },
-      choices: { employees: [{ _id: 'e1', name: 'Alex Smith', status: 'active' }], subcontractors: [], contracts: [{ _id: 'c1', title: 'Site One', status: 'In Progress' }], locations: [{ _id: 'l1', name: 'Office' }] },
+      choices: { employees: [{ _id: 'e1', name: 'Alex Smith', status: 'active' }], subcontractors: [], jobs: [{ _id: 'j1', label: '41010 Site One (Example Homes)' }], locations: [{ _id: 'l1', name: 'Office' }] },
       people: parsed.people.map((x, index) => ({ ...x, index, suggestion: 'e:e1' })),
-      places: parsed.places.map((x, index) => ({ ...x, index, suggestion: x.label === 'Office' ? 'loc:l1' : 'new' })),
+      places: parsed.places.map((x, index) => ({ ...x, index, suggestion: x.label === 'Office' ? 'loc:l1' : 'job:j1' })),
     });
     assert.match(html, /name="person_0"/);
     assert.match(html, /<option value="e:e1" selected>Alex Smith/);
     assert.match(html, /name="place_1"/);
     assert.match(html, /<option value="loc:l1" selected>Office/);
+    assert.match(html, /<optgroup label="Jobs">\s*<option value="job:j1" selected>41010 Site One \(Example Homes\)<\/option>/);
+    assert.doesNotMatch(html, /New location|value="new"|value="con:/);
     assert.match(html, /action="\/weekly-sheet\/import\/u2"/);
     assert.match(html, /formaction="\/weekly-sheet\/import\/u2\/save"/);
     assert.match(html, /action="\/weekly-sheet\/import\/u2\/delete"/);
@@ -755,10 +791,10 @@ describe('Saved choices', () => {
   it('weekly sheet: keeps only well-formed matches, blank meaning skip', () => {
     const id = 'a'.repeat(24);
     const c = sheetImport.readChoices(
-      { person_0: `e:${id}`, person_1: '', person_2: 'junk', place_0: 'new', place_1: `con:${id}`, place_2: 'con:bad' },
-      { people: [{}, {}, {}], places: [{}, {}, {}] },
+      { person_0: `e:${id}`, person_1: '', person_2: 'junk', place_0: 'new', place_1: `con:${id}`, place_2: 'job:bad', place_3: `job:${id}`, place_4: `loc:${id}`, place_5: '' },
+      { people: [{}, {}, {}], places: [{}, {}, {}, {}, {}, {}] },
     );
-    assert.deepEqual(c, { person: { 0: `e:${id}`, 1: '' }, place: { 0: 'new', 1: `con:${id}` } });
+    assert.deepEqual(c, { person: { 0: `e:${id}`, 1: '' }, place: { 3: `job:${id}`, 4: `loc:${id}`, 5: '' } });
   });
 
   it('Job Reg: ticks the saved pairs instead of the likely ones', () => {
@@ -1028,9 +1064,9 @@ describe('Importing a weekly sheet again after failures', () => {
     const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/import/weekly-sheet.ejs'), {
       title: 't', csrfToken: 'c', crumbs: [], canImport: true,
       staged: { uuid: 'u3', fileName: 'w.xlsx', parsed, importedAt: new Date(), result: { created: 1, failed: 2 } },
-      choices: { employees: [], subcontractors: [], contracts: [], locations: [] },
+      choices: { employees: [], subcontractors: [], jobs: [], locations: [] },
       people: parsed.people.map((x, index) => ({ ...x, index, suggestion: '' })),
-      places: parsed.places.map((x, index) => ({ ...x, index, suggestion: 'new' })),
+      places: parsed.places.map((x, index) => ({ ...x, index, suggestion: '' })),
     });
     assert.match(html, /couldn't be saved/);
     assert.match(html, /Import the missing days/);

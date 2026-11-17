@@ -139,7 +139,8 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
     (p.recordsByDay[day] ||= []).push(rec);
     counts.total++;
     counts[rec.status || 'pending'] = (counts[rec.status || 'pending'] || 0) + 1;
-    if (isWorkType(rec) && !rec.contractId) (p.overhead ? overheadDays : recordsWithoutContract).push({ person: p, day, rec });
+    // A day on a Job Register job is for a job, though it may have no contract yet
+    if (isWorkType(rec) && !rec.contractId && !rec.jobRegisterId) (p.overhead ? overheadDays : recordsWithoutContract).push({ person: p, day, rec });
   }
 
   // ── Step 1: contracts running this week ──
@@ -238,8 +239,8 @@ function buildWeekFlow({ days, contracts, projectsById, assignments, attendance,
     {
       key: 'noContract',
       severity: 'warning',
-      label: 'Work recorded without a contract',
-      hint: "Pick the contract on the weekly grid so the day is costed to a job. If none of this person's work is for a job, tick Overhead on their record.",
+      label: 'Work recorded without a job or contract',
+      hint: "Pick the job on the weekly sheet so the day is costed to it. If none of this person's work is for a job, tick Overhead on their record.",
       items: recordsWithoutContract.map(({ person: p, day }) => ({ label: `${p.name}, ${day}`, href: p.kind === 'employee' && p.uuid ? `/employee/update/${p.uuid}` : undefined })),
     },
     {
@@ -328,7 +329,7 @@ async function loadWeek(yearParam, weekParam) {
       .select('_id uuid title location status startDate endDate projectId locationId').lean(),
     fetchWeekAssignments(week.days),
     mdb.INTERNAL.attendance.find({ date: { $gte: dayStart(days[0]), $lte: dayEnd(days[6]) } })
-      .select('_id uuid date type status employeeId subcontractorId contractId projectId hoursWorked dayRate contractAssignmentId').lean(),
+      .select('_id uuid date type status employeeId subcontractorId contractId projectId jobRegisterId hoursWorked dayRate contractAssignmentId').lean(),
     mdb.INTERNAL.employee.find({ status: 'active' }).select('_id uuid name contract overhead').sort({ name: 1 }).lean(),
     attendanceService.getLockedRunForDate(week.payrollWeekStart),
   ]);

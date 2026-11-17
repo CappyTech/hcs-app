@@ -202,7 +202,7 @@ describe('Weekly sheet save tells people', () => {
     store = [new FakeAttendance({ _id: 'r1', date: new Date(2026, 10, 23), type: 'work', status: 'planned', employeeId: E1, contractId: CENTRE, updatedAt: new Date(1000) })];
     const a = `e:${E1}`; const b = `e:${E2}`;
     const result = await weeklySheet.saveSheet('2026-11-23', {
-      cell: { [a]: { '2026-11-23': `loc:${OFFICE}`, '2026-11-24': 'off' }, [b]: { '2026-11-23': `con:${CENTRE}` } },
+      cell: { [a]: { '2026-11-23': `loc:${OFFICE}`, '2026-11-24': 'off' }, [b]: { '2026-11-23': `loc:${OFFICE}` } },
       was: { [a]: { '2026-11-23': `con:${CENTRE}`, '2026-11-24': '' }, [b]: { '2026-11-23': '' } },
     }, { actorId: 'u2' });
     assert.deepEqual(result, { saved: 3, skipped: 0 });

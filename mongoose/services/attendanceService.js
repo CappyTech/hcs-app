@@ -3,6 +3,7 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
 import taxService from '../../services/taxService.js';
+import { jobLabel } from './jobRegisterService.js';
 import { HMRC_VERIFICATION_REGEX } from '../../services/cisService.js';
 import { documentTypeQuery } from '../config/paperlessTypesConfig.js';
 
@@ -41,6 +42,7 @@ const getAttendanceForDay = async (date) => {
       .populate({ path: 'subcontractorId', model: mdb.REST.supplier })
       .populate('locationId')
       .populate({ path: 'projectId', model: mdb.REST.project })
+      .populate('jobRegisterId', '_id uuid projectNumber site client contact description')
       .populate('contractAssignmentId')
       .sort({ date: 1 });
   } catch (error) {
@@ -64,6 +66,7 @@ const fetchAttendanceForWeek = async (payrollWeekStart, endDate) => {
       .populate({ path: 'subcontractorId', model: mdb.REST.supplier })
       .populate('locationId')
       .populate('contractId')
+      .populate('jobRegisterId', '_id uuid projectNumber site client contact description')
       .populate('contractAssignmentId')
       .sort({ date: 1 });
 
@@ -334,6 +337,8 @@ const groupAttendanceByPerson = (
     day[record._id] = {
       uuid: record.uuid,
       location: record.locationId || null,
+      // A day on a Job Register job: its number and site, for where no location shows
+      job: record.jobRegisterId && typeof record.jobRegisterId === 'object' && record.jobRegisterId.site !== undefined ? { uuid: record.jobRegisterId.uuid, label: jobLabel(record.jobRegisterId).main } : null,
       type: record.type,
       status: record.status || 'pending',
       hoursWorked: null,
@@ -382,6 +387,8 @@ const groupAttendanceByPerson = (
     groupedAttendance[name].dailyRecords[dateKey][record._id] = {
       uuid: record.uuid,
       location: record.locationId || null,
+      // A day on a Job Register job: its number and site, for where no location shows
+      job: record.jobRegisterId && typeof record.jobRegisterId === 'object' && record.jobRegisterId.site !== undefined ? { uuid: record.jobRegisterId.uuid, label: jobLabel(record.jobRegisterId).main } : null,
       type: record.type,
       status: record.status || 'approved',
       hoursWorked,

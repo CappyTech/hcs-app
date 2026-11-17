@@ -9,11 +9,13 @@
 //
 // The names and sites on the sheet are free text, so the import works in
 // two steps: the upload lists every distinct name and site with a suggested
-// match (an employee or subcontractor; a contract or saved location), the
-// person importing checks the matches, and only then are records written.
+// match (an employee or subcontractor; a saved location or a job won in the
+// Job Register and not completed), the person importing checks the matches,
+// and only then are records written. No locations are made from the sheet: a
+// site that matches nothing is skipped.
 //
 // What's written follows the weekly sheet page (weeklySheetService):
-//   - a site or location → work; "OFF" → off; "Sick"/"SSP" → sick
+//   - a job or location → work; "OFF" → off; "Sick"/"SSP" → sick
 //   - holidays are not written: approved holiday requests are the record of
 //     leave, and the sheet page never writes holiday attendance over them
 //   - every record is pending, for the usual two-stage approval
@@ -31,6 +33,7 @@ import { defaultDailyHours, listSubcontractors } from './weeklyFlowService.js';
 import { addDays } from './weeklySheetService.js';
 import store from './workbookImportStore.js';
 import personNotices from './personNoticeService.js';
+import jobRegisterService, { jobLabel, jobTarget } from './jobRegisterService.js';
 
 const DAY_COLS = [3, 4, 5, 6, 7, 8]; // D–I: Monday to Saturday
 const DAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -183,6 +186,8 @@ export function parseAttendanceWorkbook(sheets) {
 // ── Suggested matches ───────────────────────────────────────────────────
 
 const words = (s) => keyOf(s).replace(/[^a-z0-9 ]+/g, ' ').split(' ').filter(Boolean);
+// A site as a key: case, spacing and punctuation don't count ("St. Mary's" is "st marys")
+const siteKey = (s) => words(keyOf(s).replace(/['’`]/g, '')).join(' ');
 
 /**
  * A sheet name's suggested person: 'e:<id>' / 's:<id>' or ''. Every word of
@@ -212,20 +217,25 @@ export function suggestPerson(name, { employees = [], subcontractors = [] } = {}
 }
 
 /**
- * A sheet site's suggested target: 'loc:<id>' for a saved location with that
- * name, 'con:<id>' for the one contract whose title is or starts with it
- * (word for word), else 'new' (a new saved location with the sheet's name).
+ * A sheet site's suggested target, or '' (skip). Locations are never made
+ * from the sheet, so it's one of:
+ *   'loc:<id>'  the saved location with that name
+ *   'job:<id>'  the one open job whose project number is in the text, else
+ *               the one whose site (up to its first comma) is the text
+ *               (case, spacing and punctuation don't count)
  */
-export function suggestPlace(label, { locations = [], contracts = [] } = {}) {
+export function suggestPlace(label, { locations = [], jobs = [] } = {}) {
   const k = words(label).join(' ');
   if (!k) return '';
   const loc = locations.find((l) => words(l.name).join(' ') === k);
   if (loc) return `loc:${loc._id}`;
-  const exact = contracts.filter((c) => words(c.title).join(' ') === k);
-  if (exact.length === 1) return `con:${exact[0]._id}`;
-  const prefix = contracts.filter((c) => (`${words(c.title).join(' ')} `).startsWith(`${k} `));
-  if (prefix.length === 1) return `con:${prefix[0]._id}`;
-  return 'new';
+  const numbers = new Set(String(label).match(/\d+/g) || []);
+  const byNumber = jobs.filter((j) => j.projectNumber != null && numbers.has(String(j.projectNumber)));
+  if (byNumber.length === 1) return `job:${byNumber[0]._id}`;
+  const site = siteKey(label);
+  const bySite = jobs.filter((j) => siteKey(String(j.site || '').split(',')[0]) === site);
+  if (bySite.length === 1) return `job:${bySite[0]._id}`;
+  return '';
 }
 
 // ── Planning ────────────────────────────────────────────────────────────
@@ -238,20 +248,22 @@ export function readPersonChoice(v) {
   return m[1] === 'e' ? { employeeId: m[2] } : { subcontractorId: m[2] };
 }
 
-/** A submitted place choice → { contractId } / { locationId } / { create: true } / null. */
+/**
+ * A submitted place choice → { jobRegisterId } / { locationId } / null.
+ * Older saved choices may say 'new' (make a location) or 'con:<id>' (a
+ * contract); neither is offered any more, so both read as null (skip).
+ */
 export function readPlaceChoice(v) {
-  const s = String(v || '');
-  if (s === 'new') return { create: true };
-  const m = s.match(/^(con|loc):([0-9a-f]{24})$/);
+  const m = String(v || '').match(/^(job|loc):([0-9a-f]{24})$/);
   if (!m) return null;
-  return m[1] === 'con' ? { contractId: m[2] } : { locationId: m[2] };
+  return m[1] === 'job' ? { jobRegisterId: m[2] } : { locationId: m[2] };
 }
 
 /**
  * The records to write. Pure.
  *   cells          parsed cells
  *   personFor[i]   readPersonChoice result for person i (null = skip)
- *   placeFor[i]    { contractId, projectId?, locationId? } | { locationId } | null for place i
+ *   placeFor[i]    { jobRegisterId, contractId?, projectId? } | { locationId } | null for place i
  *   taken          Set of "<e|s>:<id>|yyyy-mm-dd" that already have attendance
  *   lockedDays     Set of yyyy-mm-dd in locked payroll periods
  *   today          yyyy-mm-dd
@@ -290,13 +302,21 @@ const localDate = (key) => {
 
 /** Who and where can be chosen in the mapping. */
 export async function loadChoices() {
-  const [employees, subcontractors, contracts, locations] = await Promise.all([
+  const [employees, subcontractors, jobs, locations] = await Promise.all([
     mdb.INTERNAL.employee.find({}).select('_id uuid name status department contract').sort({ status: 1, name: 1 }).lean(),
     listSubcontractors(),
-    mdb.INTERNAL.contract.find({}).select('_id uuid title status projectId locationId').sort({ title: 1 }).lean(),
+    jobRegisterService.openJobs(),
     mdb.INTERNAL.location.find({ name: { $nin: [null, ''] } }).select('_id uuid name').sort({ name: 1 }).lean(),
   ]);
-  return { employees, subcontractors, contracts, locations };
+  return { employees, subcontractors, jobs: jobs.map((j) => ({ ...j, label: jobLabel(j).text })), locations };
+}
+
+/** A saved place choice still worth showing: a job or location still on offer. Pure. */
+export function placeChoiceStillOffered(v, { jobs = [], locations = [] } = {}) {
+  const c = readPlaceChoice(v);
+  if (!c) return v === '';
+  if (c.jobRegisterId) return jobs.some((j) => String(j._id) === c.jobRegisterId);
+  return locations.some((l) => String(l._id) === c.locationId);
 }
 
 /** Park a parsed workbook for the mapping step. Returns the import document. */
@@ -347,7 +367,13 @@ export async function loadMapping(uuid) {
     choices,
     // Index = the field number (person_<i>); a name with no importable days isn't asked about
     people: people.map((p, index) => ({ ...p, index, suggestion: pick(saved.person, index, suggestPerson(p.label, choices)) })).filter((p) => p.count > 0),
-    places: places.map((p, index) => ({ ...p, index, suggestion: pick(saved.place, index, suggestPlace(p.label, choices)) })),
+    // A saved site choice from before (a contract, or "new location") or one
+    // no longer on offer (a job since completed) gives way to the suggestion
+    places: places.map((p, index) => {
+      const fresh = suggestPlace(p.label, choices);
+      const kept = pick(saved.place, index, fresh);
+      return { ...p, index, suggestion: placeChoiceStillOffered(kept, choices) ? kept : fresh };
+    }),
   };
 }
 
@@ -390,7 +416,7 @@ export async function runImport(uuid, body = {}, { today, actorId = null } = {})
 
   const employees = new Map(choices.employees.map((e) => [String(e._id), e]));
   const subs = new Set(choices.subcontractors.map((s) => String(s._id)));
-  const contracts = new Map(choices.contracts.map((c) => [String(c._id), c]));
+  const jobs = new Map(choices.jobs.map((j) => [String(j._id), j]));
   const locations = new Map(choices.locations.map((l) => [String(l._id), l]));
 
   const personFor = people.map((_, i) => {
@@ -400,28 +426,23 @@ export async function runImport(uuid, body = {}, { today, actorId = null } = {})
     return null;
   });
 
-  // New locations for the sites marked "new" (reusing one with the same name)
-  let createdLocations = 0;
-  const locationByName = new Map(choices.locations.map((l) => [keyOf(l.name), l]));
-  const placeFor = [];
-  for (let i = 0; i < places.length; i++) {
-    const choice = readPlaceChoice(body[`place_${i}`]);
-    if (!choice) { placeFor.push(null); continue; }
-    if (choice.contractId) {
-      const c = contracts.get(choice.contractId);
-      placeFor.push(c ? { contractId: c._id, ...(c.projectId ? { projectId: c.projectId } : {}), ...(c.locationId ? { locationId: c.locationId } : {}) } : null);
-    } else if (choice.locationId) {
-      placeFor.push(locations.has(choice.locationId) ? { locationId: choice.locationId } : null);
-    } else {
-      let loc = locationByName.get(places[i].key);
-      if (!loc) {
-        loc = await mdb.INTERNAL.location.create({ name: places[i].label });
-        locationByName.set(places[i].key, loc);
-        createdLocations++;
-      }
-      placeFor.push({ locationId: loc._id });
+  // Each site: a saved location or an open job (never a new location). A job
+  // also brings its contract and its synced KashFlow project, when it has them.
+  const placeChoices = places.map((_, i) => readPlaceChoice(body[`place_${i}`]));
+  const chosenJobs = [...new Set(placeChoices.map((c) => c?.jobRegisterId).filter(Boolean))].map((jid) => jobs.get(jid)).filter(Boolean);
+  const projectByNumber = chosenJobs.length ? await jobRegisterService.projectIdsByNumber(chosenJobs) : new Map();
+  const contractIds = [...new Set(chosenJobs.map((j) => j.contractId && String(j.contractId)).filter(Boolean))];
+  const contracts = contractIds.length
+    ? new Map((await mdb.INTERNAL.contract.find({ _id: { $in: contractIds } }).select('_id projectId').lean()).map((c) => [String(c._id), c]))
+    : new Map();
+  const placeFor = placeChoices.map((choice) => {
+    if (!choice) return null;
+    if (choice.jobRegisterId) {
+      const job = jobs.get(choice.jobRegisterId);
+      return job ? jobTarget(job, { projectId: projectByNumber.get(Number(job.projectNumber)) || null, contract: contracts.get(String(job.contractId)) || null }) : null;
     }
-  }
+    return locations.has(choice.locationId) ? { locationId: choice.locationId } : null;
+  });
 
   const days = [...new Set(cells.map((c) => c.day))].sort();
   const todayKey = today || ymdLocal(new Date());
@@ -466,7 +487,6 @@ export async function runImport(uuid, body = {}, { today, actorId = null } = {})
 
   // Tell each person about their days (never throws)
   if (written.length) {
-    const locationNames = new Map([...locationByName.values()].map((l) => [String(l._id), l.name]));
     const TYPE_LABEL = { off: 'Off', sick: 'Sick' };
     await personNotices.importedDays({
       uploadId: staged.uuid || uuid,
@@ -474,19 +494,19 @@ export async function runImport(uuid, body = {}, { today, actorId = null } = {})
       days: written.map((d) => ({
         key: d.employeeId ? `e:${d.employeeId}` : `s:${d.subcontractorId}`,
         day: ymdLocal(new Date(d.date)),
-        label: TYPE_LABEL[d.type] || contracts.get(String(d.contractId))?.title || locationNames.get(String(d.locationId)) || 'Work',
+        label: TYPE_LABEL[d.type] || (d.jobRegisterId && jobs.has(String(d.jobRegisterId)) ? jobLabel(jobs.get(String(d.jobRegisterId))).text : '') || locations.get(String(d.locationId))?.name || 'Work',
         stamp: d._id ? String(d._id) : '',
       })),
     });
   }
 
-  const result = { created, failed, createdLocations, skipped, notImported: staged.parsed.counts, weeks: staged.parsed.weeks.length };
+  const result = { created, failed, skipped, notImported: staged.parsed.counts, weeks: staged.parsed.weeks.length };
   await store.markImported(staged._id, result, new Date(), { choices: readChoices(body, staged.parsed) });
-  logger.info(`[weeklySheetImport] ${staged.fileName}: created ${created}, failed ${failed}, new locations ${createdLocations}, skipped ${JSON.stringify(skipped)}`);
+  logger.info(`[weeklySheetImport] ${staged.fileName}: created ${created}, failed ${failed}, skipped ${JSON.stringify(skipped)}`);
   return result;
 }
 
 export default {
   text, keyOf, classifyCell, findHeaderRow, parseWeekSheet, parseAttendanceWorkbook, suggestPerson, suggestPlace,
-  readPersonChoice, readPlaceChoice, readChoices, saveForLater, canImport, planAttendance, loadChoices, stageUpload, loadMapping, runImport,
+  readPersonChoice, readPlaceChoice, placeChoiceStillOffered, readChoices, saveForLater, canImport, planAttendance, loadChoices, stageUpload, loadMapping, runImport,
 };

@@ -160,7 +160,7 @@ export const recordDay = async (req, res, next) => {
     const who = kind === "e" ? { employeeId: personId } : { subcontractorId: personId };
     const planned = await approval.plannedFor(who, day);
     if (planned) {
-      for (const k of ["contractId", "locationId", "projectId", "contractAssignmentId", "hoursWorked", "dayRate"]) planned.set(k, undefined);
+      for (const k of ["contractId", "locationId", "projectId", "jobRegisterId", "contractAssignmentId", "hoursWorked", "dayRate"]) planned.set(k, undefined);
       planned.set(data);
       await planned.save();
       logger.info(`[attendanceController] Recorded over planned attendance ${planned.uuid} on ${date} by ${req.user?._id}`);
@@ -671,7 +671,7 @@ export const submitAttendance = async (req, res, next) => {
       const movedSite = (data.projectId && String(data.projectId) !== String(planned.projectId || ""))
         || (data.locationId && String(data.locationId) !== String(planned.locationId || ""));
       if (movedSite || !["work", "training"].includes(data.type)) {
-        for (const k of ["contractId", "locationId", "projectId", "contractAssignmentId"]) planned.set(k, undefined);
+        for (const k of ["contractId", "locationId", "projectId", "jobRegisterId", "contractAssignmentId"]) planned.set(k, undefined);
       }
       if (data.hoursWorked != null || data.dayRate != null) {
         planned.set("hoursWorked", undefined);

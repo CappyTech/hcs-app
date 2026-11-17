@@ -1,7 +1,8 @@
 <%#
   Weekly attendance sheet: the WEEKLY ATTENDANCE spreadsheet as one page.
-  One row per person, Monday to Sunday; each cell picks a site, a location
-  (Office), Off or Sick. Saving writes planned attendance records.
+  One row per person, Monday to Sunday; each cell picks a job (won in the Job
+  Register, not completed), a location (Office), Off or Sick. A day already on
+  a contract shows it as "Current" and keeps it. Saving writes planned attendance records.
   Locals: week, sheet, closures, running, jobs, vehicles, group, groups,
           addChoices { employees, subcontractors } (people not on the sheet), dayLabels, crumbs
 %>
@@ -25,7 +26,7 @@
     other: 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
   };
   const toneIcon = { leave: 'bi-sun', approved: 'bi-check-circle-fill', locked: 'bi-lock-fill', multi: 'bi-stack', other: 'bi-dash-circle' };
-  const choiceGroups = ['Sites', 'Locations', 'Other'].map((g) => [g, sheet.choices.filter((c) => c.group === g)]).filter(([, list]) => list.length);
+  const choiceGroups = ['Jobs', 'Locations', 'Other'].map((g) => [g, sheet.choices.filter((c) => c.group === g)]).filter(([, list]) => list.length);
   const dueClass = { overdue: 'text-red-700 dark:text-red-400 font-semibold', soon: 'text-amber-700 dark:text-amber-400 font-semibold', ok: 'text-gray-700 dark:text-gray-300' };
   const hasLocations = sheet.choices.some((c) => c.group === 'Locations');
 %>
@@ -41,7 +42,7 @@
       </h1>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         Monday <%= fmtDay(week.days[0]) %> to Sunday <%= fmtDay(week.days[6]) %>.
-        Pick where each person is; days you add are planned. On the day, each person confirms theirs or the site manager marks it attended on the <a href="/daily" class="text-green-700 dark:text-green-400 hover:underline">daily page</a>, then it's approved as usual.
+        Pick where each person is: a job won in the <a href="/job-register?stage=won" class="text-green-700 dark:text-green-400 hover:underline">Job Register</a> and not completed, a location, Off or Sick. Days you add are planned. On the day, each person confirms theirs or the site manager marks it attended on the <a href="/daily" class="text-green-700 dark:text-green-400 hover:underline">daily page</a>, then it's approved as usual.
       </p>
     </div>
     <div class="flex flex-wrap gap-2 print:hidden">
@@ -212,15 +213,15 @@
     <div class="<%= card %> p-4">
       <h2 class="<%= h2 %> mb-3">Jobs for allocation</h2>
       <% if (!jobs.length) { %>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Every won job in the <a href="/job-register?stage=won" class="text-green-700 dark:text-green-400 hover:underline">Job Register</a> has a contract.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Every won job in the <a href="/job-register?stage=won" class="text-green-700 dark:text-green-400 hover:underline">Job Register</a> has a contract or someone booked on it.</p>
       <% } else { %>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Won in the Job Register, with no contract yet.</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Won in the Job Register and not completed, with no contract and nobody booked on it yet.</p>
         <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
-          <% jobs.forEach((j) => { %>
-            <li class="py-1.5 flex gap-3">
-              <a href="/job-register/<%= j.uuid %>" class="font-mono text-xs text-green-700 dark:text-green-400 hover:underline w-12"><%= j.projectNumber %></a>
-              <span class="flex-1 min-w-0 truncate text-gray-900 dark:text-gray-100"><%= j.site %></span>
-              <span class="text-xs text-gray-500 dark:text-gray-400 truncate"><%= j.client %><%= j.description ? ` · ${j.description}` : '' %></span>
+          <% jobs.forEach((j) => { const detail = [j.description, j.client, j.contact].map((x) => String(x == null ? '' : x).trim()).filter(Boolean).join(', '); %>
+            <li class="py-1.5">
+              <a href="/job-register/<%= j.uuid %>" class="font-mono text-xs text-green-700 dark:text-green-400 hover:underline"><%= j.projectNumber %></a>
+              <span class="text-gray-900 dark:text-gray-100"><%= j.site %></span>
+              <% if (detail) { %><small class="text-xs text-gray-500 dark:text-gray-400">(<%= detail %>)</small><% } %>
             </li>
           <% }) %>
         </ul>

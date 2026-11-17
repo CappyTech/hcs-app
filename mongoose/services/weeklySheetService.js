@@ -1,7 +1,9 @@
 // Weekly sheet: the WEEKLY ATTENDANCE spreadsheet as one page.
 //
 // One row per person, Monday to Sunday, each cell saying where they were:
-// a contract (site), a saved location (Office), Off or Sick. Saving writes
+// a job (a won, not completed Job Register row), a saved location (Office),
+// Off or Sick. Contracts aren't offered any more; a day already on one shows
+// as its own "Current" choice and is left as it is. Saving writes
 // planned attendance records: the person confirms each day once it comes, or
 // the Site Manager marks it attended, and it goes on through approval as
 // usual (attendanceApprovalService). Payroll reads only approved days. Beside the grid, as on the spreadsheet:
@@ -21,7 +23,7 @@ import mongoose from 'mongoose';
 import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
 import attendanceService from './attendanceService.js';
-import jobRegisterService from './jobRegisterService.js';
+import jobRegisterService, { jobLabel, jobTarget } from './jobRegisterService.js';
 import personNotices from './personNoticeService.js';
 import { SUBCONTRACTOR_PAY_FIELDS } from '../models/mongoose/INTERNAL/attendance.js';
 import {
@@ -70,6 +72,8 @@ export function cellValueOf(rec) {
   const type = rec.type || 'work';
   if (type === 'off' || type === 'sick') return type;
   if (type === 'work') {
+    // A job-linked day also carries the job's contract: the job is the choice
+    if (rec.jobRegisterId) return `job:${id(rec.jobRegisterId)}`;
     if (rec.contractId) return `con:${id(rec.contractId)}`;
     if (rec.locationId) return `loc:${id(rec.locationId)}`;
   }
@@ -103,6 +107,8 @@ export function dueState(date, today) {
  * @param {object[]} p.attendance      this week's attendance (lean, ids unpopulated)
  * @param {object[]} p.contracts       contracts (lean): open ones plus any the week's records use
  * @param {object[]} p.locations       saved locations (lean)
+ * @param {object[]} [p.jobs]          won, not completed Job Register rows (lean): the jobs offered
+ * @param {object[]} [p.otherJobs]     other Job Register rows the week's records use (for their labels)
  * @param {object[]} [p.leave]         approved holiday requests overlapping the week
  * @param {Map}      [p.closures]      day → bank or company holiday title
  * @param {Set}      [p.lockedDays]    days in a locked payroll period
@@ -111,20 +117,23 @@ export function dueState(date, today) {
  * @param {string}   [p.group]         one of GROUPS' keys, or '' for everyone
  */
 export function buildSheet({
-  week, employees, subcontractors, attendance, contracts, locations,
+  week, employees, subcontractors, attendance, contracts, locations, jobs = [], otherJobs = [],
   leave = [], closures = new Map(), lockedDays = new Set(), holidays = new Map(), isAdmin = false, group = '',
 }) {
   const { days } = week;
   const contractById = new Map(contracts.map((c) => [id(c), c]));
   const locationById = new Map(locations.map((l) => [id(l), l]));
+  const jobById = new Map([...otherJobs, ...jobs].map((j) => [id(j), j]));
   const leaveByEmployee = leaveDaysByEmployee(days, leave);
 
-  // Choices: contracts running this week, then saved locations, then Off/Sick
+  // Contracts running this week: a side panel only, no longer a choice
   const running = contracts
     .filter((c) => contractRunsInWeek(c, days[0], days[6]))
     .sort((a, b) => String(a.title).localeCompare(String(b.title)));
+  // Choices: won jobs not yet completed, then saved locations, then Off/Sick
   const choices = [
-    ...running.map((c) => ({ value: `con:${id(c)}`, label: c.title, group: 'Sites' })),
+    ...[...jobs].filter((j) => j.projectNumber != null).sort((a, b) => Number(b.projectNumber) - Number(a.projectNumber))
+      .map((j) => ({ value: `job:${id(j)}`, label: jobLabel(j).text, main: jobLabel(j).main, detail: jobLabel(j).detail, group: 'Jobs' })),
     ...[...locations].sort((a, b) => String(a.name).localeCompare(String(b.name)))
       .filter((l) => l.name).map((l) => ({ value: `loc:${id(l)}`, label: l.name, group: 'Locations' })),
     ...TYPE_CHOICES.map((t) => ({ ...t, group: 'Other' })),
@@ -134,7 +143,9 @@ export function buildSheet({
   const labelOf = (rec) => {
     const type = rec.type || 'work';
     if (type === 'work' || type === 'training') {
-      const place = contractById.get(id(rec.contractId))?.title || locationById.get(id(rec.locationId))?.name;
+      const job = rec.jobRegisterId ? jobById.get(id(rec.jobRegisterId)) : null;
+      const place = (job && jobLabel(job).text) || contractById.get(id(rec.contractId))?.title || locationById.get(id(rec.locationId))?.name
+        || (rec.jobRegisterId ? 'Job' : '');
       return type === 'training' ? `Training${place ? ` (${place})` : ''}` : (place || 'Work');
     }
     return TYPE_LABELS[type] || type;
@@ -338,10 +349,10 @@ export async function loadSheet(param, { isAdmin = false, group = '' } = {}) {
   const week = resolveWeek(param);
   const { days } = week;
   const overrides = await fetchOverrides(week.monday);
-  const [activeEmployees, attendance, openContracts, locations, leave, closures, lockedDays, recentSubs, vehicles, jobs] = await Promise.all([
+  const [activeEmployees, attendance, openContracts, locations, leave, closures, lockedDays, recentSubs, vehicles, jobs, openJobs] = await Promise.all([
     mdb.INTERNAL.employee.find({ status: 'active' }).select('_id uuid name department contract').sort({ name: 1 }).lean(),
     mdb.INTERNAL.attendance.find({ date: { $gte: dayStart(days[0]), $lte: dayEnd(days[6]) } })
-      .select('_id uuid date type status employeeId subcontractorId contractId locationId projectId hoursWorked').lean(),
+      .select('_id uuid date type status employeeId subcontractorId contractId locationId projectId jobRegisterId hoursWorked').lean(),
     mdb.INTERNAL.contract.find({ status: { $in: ['Planned', 'In Progress'] } }).select(CONTRACT_FIELDS).lean(),
     mdb.INTERNAL.location.find({}).select('_id uuid name').lean(),
     fetchApprovedLeave(days),
@@ -352,7 +363,15 @@ export async function loadSheet(param, { isAdmin = false, group = '' } = {}) {
       .select('uuid registrationNumber make model bodyType roadTaxExpiryDate motExpiryDate insuranceExpiryDate insuranceProvider breakdownExpiryDate breakdownProvider')
       .sort({ registrationNumber: 1 }).lean(),
     jobRegisterService.jobsForAllocation(),
+    jobRegisterService.openJobs(),
   ]);
+
+  // Jobs the week's records use that are no longer open (completed, say): fetch so labels resolve
+  const openJobIds = new Set(openJobs.map(id));
+  const usedJobIds = [...new Set(attendance.map((r) => id(r.jobRegisterId)).filter((jid) => jid && !openJobIds.has(jid)))];
+  const otherJobs = usedJobIds.length
+    ? await mdb.INTERNAL.jobRegister.find({ _id: { $in: usedJobIds } }).select('_id uuid projectNumber site client contact description contractId').lean()
+    : [];
 
   // Contracts the week's records use but that are no longer open: fetch so names resolve
   const contracts = [...openContracts];
@@ -380,7 +399,7 @@ export async function loadSheet(param, { isAdmin = false, group = '' } = {}) {
   const projects = projectIds.length ? await mdb.REST.project.find({ _id: { $in: projectIds } }).select('_id uuid Number Name').lean() : [];
   const projectsById = new Map(projects.map((p) => [id(p), p]));
 
-  const sheet = buildSheet({ week, employees, subcontractors, attendance, contracts, locations, leave, closures, lockedDays, holidays, isAdmin, group });
+  const sheet = buildSheet({ week, employees, subcontractors, attendance, contracts, locations, jobs: openJobs, otherJobs, leave, closures, lockedDays, holidays, isAdmin, group });
   return {
     week,
     sheet,
@@ -399,6 +418,7 @@ export async function loadSheet(param, { isAdmin = false, group = '' } = {}) {
     overrides,
     employeesById: new Map(employees.map((e) => [id(e), e])),
     contractsById: new Map(contracts.map((c) => [id(c), c])),
+    jobsById: new Map(openJobs.map((j) => [id(j), j])),
     attendance,
   };
 }
@@ -425,10 +445,20 @@ export async function saveSheet(param, body, { isAdmin = false, actorId = null }
   }
 }
 
-async function applyChanges({ sheet, employeesById, contractsById }, changes, applied) {
+async function applyChanges({ sheet, employeesById, contractsById, jobsById }, changes, applied) {
   const rowsByKey = new Map(sheet.sections.flatMap((s) => s.rows).map((r) => [r.key, r]));
   const allowed = new Set(sheet.choices.map((c) => c.value));
   const labels = new Map(sheet.choices.map((c) => [c.value, c.label]));
+
+  // The chosen jobs' synced KashFlow projects (by project number), and any
+  // of their contracts not already loaded (for the contract's project)
+  const chosenJobs = [...new Set(changes.map((c) => c.value).filter((v) => v.startsWith('job:')).map((v) => v.slice(4)))]
+    .map((jid) => jobsById.get(jid)).filter(Boolean);
+  const projectByNumber = chosenJobs.length ? await jobRegisterService.projectIdsByNumber(chosenJobs) : new Map();
+  const missingContracts = [...new Set(chosenJobs.map((j) => id(j.contractId)).filter((cid) => cid && !contractsById.has(cid)))];
+  if (missingContracts.length) {
+    for (const c of await mdb.INTERNAL.contract.find({ _id: { $in: missingContracts } }).select(CONTRACT_FIELDS).lean()) contractsById.set(id(c), c);
+  }
   let saved = 0;
   let skipped = 0;
 
@@ -459,7 +489,7 @@ async function applyChanges({ sheet, employeesById, contractsById }, changes, ap
       const doc = existing || new mdb.INTERNAL.attendance({ ...who, date: parseYMDLocal(change.day) });
       // A confirmed day stays confirmed; a new, planned or rejected one is (back in) the plan
       doc.status = existing?.status === 'pending' ? 'pending' : 'planned';
-      for (const k of ['contractId', 'locationId', 'projectId', 'contractAssignmentId']) doc.set(k, undefined);
+      for (const k of ['contractId', 'locationId', 'projectId', 'jobRegisterId', 'contractAssignmentId']) doc.set(k, undefined);
       if (value === 'off' || value === 'sick') {
         doc.type = value;
         doc.set('hoursWorked', undefined);
@@ -467,7 +497,13 @@ async function applyChanges({ sheet, employeesById, contractsById }, changes, ap
       } else {
         doc.type = 'work';
         const [kind, targetId] = value.split(':');
-        if (kind === 'con') {
+        if (kind === 'job') {
+          const job = jobsById.get(targetId);
+          if (!job) { skipped++; continue; }
+          const target = jobTarget(job, { projectId: projectByNumber.get(Number(job.projectNumber)) || null, contract: contractsById.get(id(job.contractId)) || null });
+          for (const [k, v] of Object.entries(target)) doc.set(k, v);
+        } else if (kind === 'con') {
+          // Only reachable for a cell's own "Current" contract, which the sheet keeps as it is
           const c = contractsById.get(targetId);
           doc.contractId = targetId;
           if (c?.projectId) doc.projectId = c.projectId;
