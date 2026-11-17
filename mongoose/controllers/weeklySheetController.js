@@ -83,7 +83,7 @@ export const postSheet = async (req, res, next) => {
   const group = readGroup(req.body.group);
   const monday = weeklySheet.resolveWeek(req.params.monday).monday;
   try {
-    const { saved, skipped } = await weeklySheet.saveSheet(req.params.monday, req.body, { isAdmin: req.user?.role === 'admin' });
+    const { saved, skipped } = await weeklySheet.saveSheet(req.params.monday, req.body, { isAdmin: req.user?.role === 'admin', actorId: req.user?._id });
     logger.info(`[weeklySheetController] Week ${monday}: saved ${saved}, skipped ${skipped}`);
     if (saved) req.flash('success', `Saved ${plural(saved, 'day')}. New days are planned until confirmed on the day.`);
     if (skipped) req.flash('error', `${plural(skipped, 'day')} not saved: changed by someone else since you opened the page, signed off, or in a locked payroll period. Reload to see them.`);
@@ -118,7 +118,7 @@ export const postRemovePerson = async (req, res, next) => {
   const group = readGroup(req.body.group);
   const monday = weeklySheet.resolveWeek(req.params.monday).monday;
   try {
-    const { saved } = await weeklySheet.saveSheet(monday, req.body, { isAdmin: req.user?.role === 'admin' });
+    const { saved } = await weeklySheet.saveSheet(monday, req.body, { isAdmin: req.user?.role === 'admin', actorId: req.user?._id });
     await weeklySheet.changePeople(monday, req.body.removePerson, 'remove', req.user?._id);
     req.flash('success', `Removed from this week and the weeks after it.${saved ? ` Saved ${plural(saved, 'day')} first.` : ''} Anyone with days recorded still shows in those weeks.`);
     res.redirect(backTo(monday, group));

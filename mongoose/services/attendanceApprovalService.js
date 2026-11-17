@@ -20,6 +20,10 @@
  * - Anyone who could approve the record's current step can reject it; a Site
  *   Manager can also take back a week they site-approved. Rejecting records
  *   who, when and why.
+ * - The person is told (personNoticeService) when their days reach the final
+ *   approval, are rejected (with the reason) or are marked not attended: one
+ *   notice per person per action, never for their own action. The site step
+ *   is not told: it is only half way.
  *
  * Payroll reads only `approved` (payrollCalculationService), and holiday
  * accrual runs only on the final step.
@@ -28,6 +32,7 @@ import mdb from './mongooseDatabaseService.js';
 import projectScope from './projectScopeService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import { matchesFilter } from '../../services/dataScopingService.js';
+import personNotices from './personNoticeService.js';
 
 export const AWAITING = ['pending', 'site-approved'];
 /** Statuses an approver can move on: the plan as well as what's waiting. */
@@ -51,6 +56,8 @@ export function isOwner(user, record) {
 }
 
 const refId = (v) => (v && typeof v === 'object' && v._id ? String(v._id) : v ? String(v) : null);
+/** A record as a plain object (a mongoose document or already lean). */
+const plain = (r) => (r && typeof r.toObject === 'function' ? r.toObject() : r);
 
 /**
  * Which of `records` sit on a site that names a site manager. A record is
@@ -218,6 +225,9 @@ export async function approveOne(req, uuid, db = mdb) {
     { new: true },
   );
   if (!updated) return { ok: false, reason: 'Someone else changed this record. Refresh and try again.', status: 409 };
+  if (d.next === 'approved') {
+    await personNotices.attendanceDecided({ action: 'approved', records: [plain(updated)], actorId: req.user._id, db });
+  }
   return { ok: true, next: d.next, record: updated };
 }
 
@@ -233,6 +243,7 @@ export async function rejectOne(req, uuid, reason, db = mdb) {
     { new: true },
   );
   if (!updated) return { ok: false, reason: 'Someone else changed this record. Refresh and try again.', status: 409 };
+  await personNotices.attendanceDecided({ action: 'rejected', records: [plain(updated)], actorId: req.user._id, db });
   return { ok: true, record: updated };
 }
 
@@ -262,6 +273,7 @@ export async function notAttendedOne(req, uuid, db = mdb) {
     { new: true },
   );
   if (!updated) return { ok: false, reason: 'Someone else changed this record. Refresh and try again.', status: 409 };
+  await personNotices.attendanceDecided({ action: 'not-attended', records: [plain(updated)], actorId: req.user._id, db });
   return { ok: true, record: updated };
 }
 
@@ -326,6 +338,10 @@ export async function approveRange(req, start, end, db = mdb) {
   const approved = approvedIds.length
     ? await db.INTERNAL.attendance.find({ _id: { $in: approvedIds }, status: 'approved' })
     : [];
+  // One notice per person for everything this approval moved to approved
+  if (approved.length) {
+    await personNotices.attendanceDecided({ action: 'approved', records: approved.map(plain), actorId: req.user._id, db });
+  }
   return { counts, approved };
 }
 

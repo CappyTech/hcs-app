@@ -22,6 +22,7 @@ import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
 import attendanceService from './attendanceService.js';
 import jobRegisterService from './jobRegisterService.js';
+import personNotices from './personNoticeService.js';
 import {
   contractRunsInWeek, defaultDailyHours, personKey, leaveDaysByEmployee, fetchApprovedLeave,
   fetchClosures, parseYMDLocal, dayStart, dayEnd, ymd,
@@ -405,15 +406,28 @@ export async function loadSheet(param, { isAdmin = false, group = '' } = {}) {
  * Save the cells that changed. Each change is checked against the sheet as
  * it is now: a cell someone else changed since the form was drawn, or one
  * the sheet can't edit, is skipped and counted. Returns { saved, skipped }.
+ * Each person whose days were saved is told once, listing their days
+ * (personNoticeService), unless they saved it themselves (`actorId`).
  */
-export async function saveSheet(param, body, { isAdmin = false } = {}) {
+export async function saveSheet(param, body, { isAdmin = false, actorId = null } = {}) {
   const loaded = await loadSheet(param, { isAdmin });
-  const { week, sheet, employeesById, contractsById } = loaded;
+  const { week } = loaded;
   const changes = changedCells(body, week.days);
   if (!changes.length) return { saved: 0, skipped: 0 };
 
+  const applied = [];
+  try {
+    return await applyChanges(loaded, changes, applied);
+  } finally {
+    // Whatever was saved is told, even if a later cell failed. Never throws.
+    if (applied.length) await personNotices.sheetSaved({ monday: week.monday, changes: applied, actorId });
+  }
+}
+
+async function applyChanges({ sheet, employeesById, contractsById }, changes, applied) {
   const rowsByKey = new Map(sheet.sections.flatMap((s) => s.rows).map((r) => [r.key, r]));
   const allowed = new Set(sheet.choices.map((c) => c.value));
+  const labels = new Map(sheet.choices.map((c) => [c.value, c.label]));
   let saved = 0;
   let skipped = 0;
 
@@ -426,9 +440,19 @@ export async function saveSheet(param, body, { isAdmin = false } = {}) {
 
     const who = row.kind === 'employee' ? { employeeId: row.mongoId } : { subcontractorId: row.mongoId };
     const existing = cell.records[0] ? await mdb.INTERNAL.attendance.findById(cell.records[0]._id) : null;
+    // For the person's notice: what the day was and is now, and a stamp that
+    // tells this change apart from an identical one made later
+    const priorStamp = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : '';
+    const note = (docId) => applied.push({
+      key: row.key,
+      day: change.day,
+      beforeLabel: change.before ? cell.label : '',
+      afterLabel: value ? (labels.get(value) || cell.extra?.label || value) : '',
+      stamp: `${docId || ''}|${priorStamp}`,
+    });
     try {
       if (!value) {
-        if (existing) { await existing.deleteOne(); saved++; }
+        if (existing) { await existing.deleteOne(); saved++; note(existing._id); }
         continue;
       }
       const doc = existing || new mdb.INTERNAL.attendance({ ...who, date: parseYMDLocal(change.day) });
@@ -457,6 +481,7 @@ export async function saveSheet(param, body, { isAdmin = false } = {}) {
       }
       await doc.save();
       saved++;
+      note(doc._id);
     } catch (err) {
       if (err.code === 11000 || err.name === 'ValidationError' || /Attendance must|Work or training/.test(err.message)) {
         logger.warn(`[weeklySheetService] Skipped ${change.key} ${change.day}: ${err.message}`);

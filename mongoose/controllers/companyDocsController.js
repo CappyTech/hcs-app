@@ -6,6 +6,7 @@ import logger from '../../services/loggerService.js';
 import csrfService from '../../services/csrfService.js';
 import __policyDocument from '../models/mongoose/INTERNAL/policyDocument.js';
 import rbac from '../config/rolePermissionsConfig.js';
+import personNotices from '../services/personNoticeService.js';
 const { POLICY_CATEGORIES } = __policyDocument;
 
 // contentHtml is pre-sanitised by the global xssSanitize middleware
@@ -272,7 +273,7 @@ export const postCreatePolicy = async (req, res, next) => {
     const safeHtml = req.body.contentHtml || '';
     const reviewIntervalMonths = parseNonNegInt(req.body.reviewIntervalMonths, 12);
     const reviewWarningDays = parseNonNegInt(req.body.reviewWarningDays, 30);
-    await mdb.INTERNAL.policyDocument.create({
+    const policy = await mdb.INTERNAL.policyDocument.create({
       title:       req.body.title,
       category:    req.body.category,
       employee:    req.body.employee || null,
@@ -285,6 +286,10 @@ export const postCreatePolicy = async (req, res, next) => {
       createdBy:   req.session.user.id,
       updatedBy:   req.session.user.id,
     });
+    // Published straight away: tell the people it applies to (never throws)
+    if (personNotices.policyNeedsNotice(null, policy)) {
+      await personNotices.policyPublished(policy, { actorId: req.user?._id || req.session.user.id });
+    }
     req.session.successMessage = 'Policy created.';
     res.redirect('/company-docs/policies');
   } catch (err) {
@@ -316,6 +321,7 @@ export const postEditPolicy = async (req, res, next) => {
     if (!policy) return next(Object.assign(new Error('Policy not found'), { statusCode: 404 }));
     const safeHtml = req.body.contentHtml || '';
     const reviewIntervalMonths = parseNonNegInt(req.body.reviewIntervalMonths, 12);
+    const before = { isPublished: policy.isPublished, version: policy.version, employee: policy.employee };
     policy.title                = req.body.title;
     policy.category             = req.body.category;
     policy.employee             = req.body.employee || null;
@@ -327,6 +333,10 @@ export const postEditPolicy = async (req, res, next) => {
     policy.reviewDate           = deriveReviewDate(req.body.reviewDate, reviewIntervalMonths);
     policy.updatedBy            = req.session.user.id;
     await policy.save();
+    // Newly published, or a new version (or owner) of a published one (never throws)
+    if (personNotices.policyNeedsNotice(before, policy)) {
+      await personNotices.policyPublished(policy, { actorId: req.user?._id || req.session.user.id });
+    }
     req.session.successMessage = 'Policy updated.';
     res.redirect('/company-docs/policies');
   } catch (err) {

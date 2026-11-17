@@ -19,6 +19,7 @@
 //   - every record is pending, for the usual two-stage approval
 //   - a day that already has attendance for that person is left alone, as
 //     are days in a locked payroll period and days after today
+//   - each person with days written is told once, listing them
 //
 // Everything above "Database" is pure, for testing without a database.
 import mongoose from 'mongoose';
@@ -28,6 +29,7 @@ import attendanceService from './attendanceService.js';
 import { defaultDailyHours, listSubcontractors } from './weeklyFlowService.js';
 import { addDays } from './weeklySheetService.js';
 import store from './workbookImportStore.js';
+import personNotices from './personNoticeService.js';
 
 const DAY_COLS = [3, 4, 5, 6, 7, 8]; // D–I: Monday to Saturday
 const DAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -374,7 +376,11 @@ export function canImport(staged) {
   return !staged.importedAt || Number(staged.result?.failed) > 0;
 }
 
-export async function runImport(uuid, body = {}, { today } = {}) {
+/**
+ * Write the attendance. Each person with days written is told once, listing
+ * them (personNoticeService), unless they ran the import (`actorId`).
+ */
+export async function runImport(uuid, body = {}, { today, actorId = null } = {}) {
   const staged = await findStaged(uuid);
   // Importing again is safe: days that already have attendance are skipped
   if (!canImport(staged)) throw Object.assign(new Error('That upload has already been imported.'), { status: 400 });
@@ -437,6 +443,7 @@ export async function runImport(uuid, body = {}, { today } = {}) {
 
   let created = 0;
   let failed = 0;
+  const written = [];
   const BATCH = 500;
   for (let i = 0; i < docs.length; i += BATCH) {
     const batch = docs.slice(i, i + BATCH);
@@ -445,12 +452,30 @@ export async function runImport(uuid, body = {}, { today } = {}) {
       const res = await mdb.INTERNAL.attendance.insertMany(batch, { ordered: false });
       created += res.length;
       failed += batch.length - res.length;
+      written.push(...res);
     } catch (err) {
       const ok = err.insertedDocs?.length ?? err.result?.insertedCount ?? 0;
       created += ok;
       failed += batch.length - ok;
+      if (Array.isArray(err.insertedDocs)) written.push(...err.insertedDocs);
       logger.warn(`[weeklySheetImport] ${batch.length - ok} records not written: ${err.message}`);
     }
+  }
+
+  // Tell each person about their days (never throws)
+  if (written.length) {
+    const locationNames = new Map([...locationByName.values()].map((l) => [String(l._id), l.name]));
+    const TYPE_LABEL = { off: 'Off', sick: 'Sick' };
+    await personNotices.importedDays({
+      uploadId: staged.uuid || uuid,
+      actorId,
+      days: written.map((d) => ({
+        key: d.employeeId ? `e:${d.employeeId}` : `s:${d.subcontractorId}`,
+        day: ymdLocal(new Date(d.date)),
+        label: TYPE_LABEL[d.type] || contracts.get(String(d.contractId))?.title || locationNames.get(String(d.locationId)) || 'Work',
+        stamp: d._id ? String(d._id) : '',
+      })),
+    });
   }
 
   const result = { created, failed, createdLocations, skipped, notImported: staged.parsed.counts, weeks: staged.parsed.weeks.length };

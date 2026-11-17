@@ -10,6 +10,7 @@ import hmrcRti from '../../services/hmrcRtiService.js';
 import { getClientIp } from '../../services/ipService.js';
 import peoplesPension from '../../services/peoplesPensionService.js';
 import ukTaxId from '../../services/ukTaxIdService.js';
+import personNotices from '../services/personNoticeService.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -198,7 +199,9 @@ export const renderRunDetail = async (req, res, next) => {
 
 export const calculateRun = async (req, res, next) => {
   try {
-    await payrollCalc.processPayrollRun(req.params.uuid);
+    const run = await payrollCalc.processPayrollRun(req.params.uuid);
+    // Recalculating a locked run: anyone whose pay changed is told (never throws)
+    if (run?.status === 'locked') await personNotices.payrollRunChanged(run._id);
     req.flash?.('success', 'Payroll run calculated successfully.');
     res.redirect(`/payroll/run/${req.params.uuid}`);
   } catch (err) {
@@ -239,6 +242,8 @@ export const overrideEntry = async (req, res, next) => {
 
     updates.overrideFlags = overrideFlags;
     await PayrollEntry.updateOne({ _id: entry._id }, { $set: updates });
+    // Amended after the run was locked: the employee is told (never throws)
+    if (run.status === 'locked') await personNotices.payrollRunChanged(run._id);
 
     logger.info(`payrollController: override entry ${entry.uuid} fields: ${Object.keys(updates).join(', ')}`);
     res.json({ success: true, overrideFlags });
@@ -266,6 +271,8 @@ export const lockRun = async (req, res, next) => {
     run.lockedAt = new Date();
     await run.save();
     logger.info(`payrollController: locked run ${run.uuid}`);
+    // Each employee in the run: pay settled, or updated since they were told (never throws)
+    await personNotices.payrollRunChanged(run._id);
     req.flash?.('success', 'Payroll run locked.');
     res.redirect(`/payroll/run/${run.uuid}`);
   } catch (err) { next(err); }

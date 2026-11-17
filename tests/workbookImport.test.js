@@ -1,12 +1,13 @@
 // Workbook imports: the Job Reg and weekly attendance spreadsheets.
 // All names, sites and numbers here are invented.
-import { describe, it, before, after } from 'node:test';
+import { describe, it, before, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ejs from 'ejs';
 import ExcelJS from 'exceljs';
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
+import notifyService from '../services/notifyService.js';
 import { readWorkbook, flattenValue, dayOf, isXlsxUpload, fillColour, colourName, themePalette } from '../mongoose/services/xlsxReaderService.js';
 import jobImport, {
   cellText, cellInt, cellMoney, cellDate, siteKey, parseRow, pairQuotesWithJobs, parseJobRegWorkbook,
@@ -539,7 +540,20 @@ describe('Running the imports', () => {
     for (const p of mapping.places) body[`place_${p.index}`] = p.suggestion;
     assert.equal(body[`place_${mapping.places.find((p) => p.label === 'Site One').index}`], `con:${C1}`);
 
-    const r = await sheetImport.runImport('u1', body, { today: '2026-01-31' });
+    // Alex is told once about the days written; the admin who ran it is not
+    const told = [];
+    mock.method(notifyService, 'notifyUsers', async (args) => { told.push(args); return { recipients: args.users.length }; });
+    mdb.INTERNAL.user = {
+      find: () => query([{ _id: 'ua', employeeId: E1 }, { _id: 'admin', employeeId: E1 }]),
+    };
+    const r = await sheetImport.runImport('u1', body, { today: '2026-01-31', actorId: 'admin' });
+    mock.restoreAll();
+    delete mdb.INTERNAL.user;
+    assert.equal(told.length, 1);
+    assert.deepEqual(told[0].users.map((u) => u._id), ['ua']);
+    assert.equal(told[0].type, 'attendance');
+    assert.match(told[0].text, /Mon 5 Jan: Site One\nTue 6 Jan: Office\nThu 8 Jan: New Place\nFri 9 Jan: Off/);
+    assert.match(told[0].dedupeKey, new RegExp(`^attendance:import:u1:[0-9a-f]{16}:e:${E1}$`));
     assert.equal(r.created, 4); // Mon, Tue, Thu, Fri; Wed already has a record
     assert.equal(r.skipped.existing, 1);
     assert.equal(r.skipped.person, 1); // "Visitor" matched no one
