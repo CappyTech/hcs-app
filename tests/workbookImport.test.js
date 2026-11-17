@@ -700,7 +700,8 @@ describe('Saved and recent uploads', () => {
   });
 
   it('saving keeps the choices and clears the expiry; importing sets it again', async () => {
-    docs = [{ _id: 'd1', uuid: 'u9', kind: 'weeklySheet', expiresAt: new Date('2026-11-17T00:00:00Z'), parsed: {} }];
+    // saveChoices checks the expiry against the real clock, so expire a day from now
+    docs = [{ _id: 'd1', uuid: 'u9', kind: 'weeklySheet', expiresAt: new Date(Date.now() + 864e5), parsed: {} }];
     updates = [];
     await store.saveChoices('u9', 'weeklySheet', { person: { 0: 'e:x' } }, 'admin');
     assert.equal(updates[0].u.$set.saved, true);
