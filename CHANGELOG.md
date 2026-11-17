@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.134.0] - 2026-11-17
+
+### Added
+- **The job page now shows what a job has cost and what's left.** It lists the purchase invoice lines on the job (number, date, supplier, lines and net, with a total) and the people who worked on it from attendance. Employees show days, hours and cost at payroll rates (the day rate, else hours × hourly rate) on approved days, with days not yet approved shown separately as an estimate. Subcontractors show their days and their purchase invoices on the job ("£x over N days"), which are already in the purchases and aren't counted twice. New tiles show Costs, Labour and Margin (invoiced, or the agreed value while nothing is invoiced, less purchases and employee labour), with KashFlow's own job figures as a cross-check. Older attendance with no job is counted by the job's contract or KashFlow job.
+- **The Job Register gains Costs, Labour and Margin columns**, with totals for each tax year and overall. If the purchase data can't be read, the register and job pages still show without them.
+
 ## [6.133.0] - 2026-11-17
 
 ### Added
