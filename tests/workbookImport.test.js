@@ -7,10 +7,10 @@ import { fileURLToPath } from 'node:url';
 import ejs from 'ejs';
 import ExcelJS from 'exceljs';
 import mdb from '../mongoose/services/mongooseDatabaseService.js';
-import { readWorkbook, flattenValue, dayOf, isXlsxUpload } from '../mongoose/services/xlsxReaderService.js';
+import { readWorkbook, flattenValue, dayOf, isXlsxUpload, fillColour, colourName, themePalette } from '../mongoose/services/xlsxReaderService.js';
 import jobImport, {
   cellText, cellInt, cellMoney, cellDate, siteKey, parseRow, pairQuotesWithJobs, parseJobRegWorkbook,
-  planImport, summarisePlan, toModelFields, applyChosenPairs, suggestPairs,
+  planImport, summarisePlan, toModelFields, applyChosenPairs, suggestPairs, rowColour, colourState, mergePair,
 } from '../mongoose/services/jobRegisterImportService.js';
 import sheetImport, {
   classifyCell, parseWeekSheet, parseAttendanceWorkbook, suggestPerson, suggestPlace,
@@ -56,6 +56,38 @@ describe('xlsx reader', () => {
     assert.deepEqual(sheets[0].rows[0], []);
   });
 
+  it('names fill colours, theme colours with their tint included', () => {
+    const solid = (fgColor) => ({ type: 'pattern', pattern: 'solid', fgColor });
+    assert.equal(fillColour(solid({ argb: 'FFFFFF00' })), 'yellow');
+    assert.equal(fillColour(solid({ argb: 'FF92D050' })), 'green');
+    assert.equal(fillColour(solid({ argb: 'FFFF0000' })), 'red');
+    assert.equal(fillColour(solid({ theme: 5 })), 'orange');
+    assert.equal(fillColour(solid({ theme: 2, tint: -0.4999 })), 'grey');
+    assert.equal(fillColour(solid({ theme: 2, tint: -0.7499 })), 'black');
+    assert.equal(fillColour(solid({ theme: 0 })), 'white');
+    assert.equal(fillColour({ type: 'pattern', pattern: 'none' }), null);
+    assert.equal(fillColour(undefined), null);
+    assert.equal(colourName([0, 112, 192]), 'blue');
+    // The workbook's own theme wins over Office's
+    const palette = themePalette('<a:accent2><a:srgbClr val="00B050"/></a:accent2>');
+    assert.equal(fillColour(solid({ theme: 5 }), palette), 'green');
+  });
+
+  it('gives each cell its fill colour alongside its value', async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Job Reg 26');
+    ws.getCell('A2').value = 41001;
+    ws.getCell('A2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFED7D31' } };
+    ws.getCell('C2').value = '1 Test Street';
+    ws.getCell('C2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } };
+    ws.getCell('D2').value = 'Example Homes';
+    const [sheet] = await readWorkbook(Buffer.from(await wb.xlsx.writeBuffer()));
+    assert.equal(sheet.fills[1][0], 'orange');
+    assert.equal(sheet.fills[1][2], 'green');
+    assert.equal(sheet.fills[1][3], null);
+    assert.deepEqual(sheet.fills[0], []);
+  });
+
   it('refuses a file that is not a workbook', async () => {
     await assert.rejects(readWorkbook(Buffer.from('not a zip')), (e) => e.status === 400);
   });
@@ -75,6 +107,82 @@ const jobRow = (n, site, client, value, extra = {}) => [
   n, extra.date ?? D('2026-02-01'), site, client, extra.contact ?? 'Pat', value, extra.desc ?? 'Paving',
   extra.invoice, extra.invDate, extra.ref, extra.k, extra.l,
 ];
+
+// A row's fills: every column from B the same colour
+const filled = (colour, n = 12) => Array.from({ length: n }, (_, i) => (i === 0 ? null : colour));
+
+describe('Job Reg colours', () => {
+  it("takes a row's colour from most of its cells", () => {
+    assert.equal(rowColour([null, 'yellow', 'yellow', 'red', null], [1, 2, 3, 4]), 'yellow');
+    assert.equal(rowColour([], [1, 2, 3]), 'none');
+  });
+
+  it('reads the Quotes colours as to quote, quoted and won', () => {
+    assert.deepEqual(colourState('quote', 'none'), { quoteStatus: 'toQuote' });
+    assert.deepEqual(colourState('quote', 'white'), { quoteStatus: 'toQuote' });
+    assert.deepEqual(colourState('quote', 'grey'), { quoteStatus: 'quoted' });
+    assert.deepEqual(colourState('quote', 'black'), { quoteStatus: 'quoted' });
+    assert.deepEqual(colourState('quote', 'yellow'), { quoteStatus: 'quoted', won: true });
+    assert.deepEqual(colourState('quote', 'red'), { note: 'Marked red on the Quotes sheet' });
+  });
+
+  it('reads the Job Reg colours as live, completed and in KashFlow', () => {
+    assert.deepEqual(colourState('job', 'yellow'), {});
+    assert.deepEqual(colourState('job', 'yellow', 'orange'), { inKashflow: true });
+    assert.deepEqual(colourState('job', 'green', 'orange'), { completed: true, inKashflow: true });
+    assert.deepEqual(colourState('job', 'red', 'orange'), { note: 'Marked red on the Job Reg sheet', inKashflow: true });
+  });
+
+  it('puts the colours on the parsed rows and keeps them when a quote and job pair', () => {
+    const q = parseRow(quoteRow(50010, '10 Test St', 'Example Homes', 900), 'quote', 3, filled('yellow'));
+    assert.equal(q.colour, 'yellow');
+    assert.equal(q.won, true);
+    assert.equal(q.quoteStatus, 'quoted');
+    const grey = parseRow(quoteRow(50011, '11 Test St', 'Example Homes', 900), 'quote', 4, filled('grey'));
+    assert.equal(grey.quoteStatus, 'quoted');
+    assert.equal(grey.won, undefined);
+    const white = parseRow(quoteRow(50012, '12 Test St', 'Example Homes', 900), 'quote', 5);
+    assert.equal(white.quoteStatus, 'toQuote');
+    const fills = filled('green');
+    fills[0] = 'orange';
+    const j = parseRow(jobRow(41010, '10 Test St', 'Example Homes', 900), 'job', 6, fills);
+    assert.equal(j.completed, true);
+    assert.equal(j.inKashflow, true);
+    const pair = mergePair(q, j);
+    assert.equal(pair.won, true);
+    assert.equal(pair.completed, true);
+    assert.equal(pair.inKashflow, true);
+    assert.equal(pair.quoteStatus, 'quoted');
+  });
+
+  it('moves a register row on by its colours, and only takes one off a row it may overwrite', () => {
+    const entry = { quoteNumber: 50020, site: '20 Test St', client: 'Example Homes', quoteStatus: 'quoted', won: true };
+    const edited = { _id: 'r1', quoteNumber: 50020, site: '20 Test St', client: 'Example Homes', quoteStatus: 'toQuote', editedAt: new Date() };
+    const [p] = planImport([entry], [edited]);
+    assert.equal(p.action, 'update');
+    assert.deepEqual(p.fill, { quoteStatus: 'quoted', won: true });
+
+    const imported = { _id: 'r2', quoteNumber: 50021, site: '21 Test St', client: 'Example Homes', quoteStatus: 'quoted', won: true, importId: 'u1' };
+    const [p2] = planImport([{ quoteNumber: 50021, site: '21 Test St', client: 'Example Homes', quoteStatus: 'quoted' }], [imported]);
+    assert.deepEqual(p2.fill, { won: false });
+    const [p3] = planImport([{ quoteNumber: 50021, site: '21 Test St', client: 'Example Homes', quoteStatus: 'quoted' }], [{ ...imported, editedAt: new Date() }]);
+    assert.equal(p3.action, 'same');
+
+    assert.deepEqual(toModelFields({ won: true, completed: false, inKashflow: true, quoteStatus: 'quoted' }), { won: true, inKashflow: true, quoteStatus: 'quoted' });
+  });
+
+  it("shows each row's colour and the stage it gives on the import preview", async () => {
+    const e = { kind: 'quote', quoteNumber: 50030, quoteDate: '2026-01-10', site: '30 Test St', client: 'Example Homes', value: 100, colour: 'yellow', quoteStatus: 'quoted', won: true, notes: '' };
+    const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/import/job-register.ejs'), {
+      title: 't', csrfToken: 'c', crumbs: [], fromKashflow: 0,
+      staged: { uuid: 'u1', fileName: 'Job Reg.xlsx', parsed: { sheets: {}, entries: [e], suggestions: [], problems: [], counts: { quotes: 1, jobs: 0, pairs: 0, ambiguous: 0 } } },
+      plan: [{ action: 'create', entry: e, stage: 'won' }], suggestions: [], clients: [], customers: [],
+      counts: { create: 1, update: 0, same: 0, conflict: 0, skip: 0 },
+    });
+    assert.match(html, /Sheet colour/);
+    assert.match(html, /yellow → Won/);
+  });
+});
 
 describe('Job Reg cells', () => {
   it('reads numbers, money, dates and text', () => {

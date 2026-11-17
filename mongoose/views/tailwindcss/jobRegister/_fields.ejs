@@ -102,10 +102,20 @@
   <label for="jr-notes" class="<%= label %>">Notes</label>
   <input id="jr-notes" name="notes" maxlength="2000" value="<%= v('notes') %>" placeholder="Paint to do, key 3142…" class="<%= input %> w-full">
 </div>
-<div class="sm:col-span-2 lg:col-span-4">
-  <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-    <input type="checkbox" name="cancelled" <%= entry.cancelled ? 'checked' : '' %> class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
-    Cancelled
-  </label>
+<div>
+  <label for="jr-quoteStatus" class="<%= label %>">Quote</label>
+  <select id="jr-quoteStatus" name="quoteStatus" class="<%= input %> w-full">
+    <option value="">—</option>
+    <option value="toQuote" <%= entry.quoteStatus === 'toQuote' ? 'selected' : '' %>>To survey / quote</option>
+    <option value="quoted" <%= entry.quoteStatus === 'quoted' ? 'selected' : '' %>>Quoted, awaiting answer</option>
+  </select>
+</div>
+<div class="sm:col-span-2 lg:col-span-3 flex flex-wrap items-end gap-x-6 gap-y-2 pb-2">
+  <% [['won', 'Won'], ['inKashflow', 'Entered in KashFlow'], ['completed', 'Completed'], ['cancelled', 'Cancelled']].forEach(([name, text]) => { %>
+    <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+      <input type="checkbox" name="<%= name %>" <%= entry[name] ? 'checked' : '' %> class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500">
+      <%= text %>
+    </label>
+  <% }) %>
 </div>
 
