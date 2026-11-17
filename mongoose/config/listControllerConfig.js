@@ -123,11 +123,8 @@ export default {
     hideFields: ['_id', 'createdAt', 'updatedAt', 'uuid',
       // contractAssignmentId — internal join key linking the attendance record to a
       // specific assignment; the resolved projectId/locationId are shown instead
-      'contractAssignmentId',
-      // overtimeRate & breakMinutes — payroll-detail fields surfaced in payroll
-      // summary reports; cluttering the attendance list with them adds noise
-      'overtimeRate', 'breakMinutes'],
-    fieldOrder: ['date', 'type', 'status', 'employeeId', 'subcontractorId', 'hoursWorked', 'overtimeHours', 'dayRate', 'payRate', 'locationId', 'projectId', 'notes'],
+      'contractAssignmentId'],
+    fieldOrder: ['date', 'type', 'status', 'employeeId', 'subcontractorId', 'hoursWorked', 'dayRate', 'locationId', 'projectId', 'notes'],
     sortField: 'date',
     sortOrder: -1,
     // The eponymous department, plus management, which reviews it. Tiles are
@@ -149,10 +146,7 @@ export default {
       employeeId: 'Employee',
       subcontractorId: 'Subcontractor',
       locationId: 'Location',
-      projectId: 'Project',
-      overtimeHours: 'OT Hours',
-      overtimeRate: 'OT Rate',
-      breakMinutes: 'Break (mins)'
+      projectId: 'Project'
     },
     fieldTransforms: {
       employeeId: {

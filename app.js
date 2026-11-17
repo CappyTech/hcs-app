@@ -41,6 +41,7 @@ import __emailTypesSeedService from './mongoose/services/emailTypesSeedService.j
 import __workbookImportStore from './mongoose/services/workbookImportStore.js';
 import __jobRegisterImportService from './mongoose/services/jobRegisterImportService.js';
 import __attendanceIndexMigration from './mongoose/services/attendanceIndexMigration.js';
+import __attendanceFieldCleanup from './mongoose/services/attendanceFieldCleanup.js';
 import __configValidatorService from './mongoose/services/configValidatorService.js';
 import cisMappings from './mongoose/config/cisMappings.js';
 import __socketService from './services/socketService.js';
@@ -418,6 +419,14 @@ const main = async () => {
       await __attendanceIndexMigration.fixAttendanceUniqueIndexes();
     } catch (migrationErr) {
       logger.error('[migration] Attendance index fix failed', { error: migrationErr.message });
+    }
+
+    // Attendance fields nothing uses any more (overtime, pay rate, break;
+    // a subcontractor's hours and day rate). Real values are kept and warned of
+    try {
+      await __attendanceFieldCleanup.cleanupAttendanceFields();
+    } catch (migrationErr) {
+      logger.error('[migration] Attendance field clean-up failed', { error: migrationErr.message });
     }
 
     // Job Register rows imported before rows recorded their import

@@ -23,6 +23,7 @@ import mdb from './mongooseDatabaseService.js';
 import attendanceService from './attendanceService.js';
 import jobRegisterService from './jobRegisterService.js';
 import personNotices from './personNoticeService.js';
+import { SUBCONTRACTOR_PAY_FIELDS } from '../models/mongoose/INTERNAL/attendance.js';
 import {
   contractRunsInWeek, defaultDailyHours, personKey, leaveDaysByEmployee, fetchApprovedLeave,
   fetchClosures, parseYMDLocal, dayStart, dayEnd, ymd,
@@ -474,9 +475,14 @@ async function applyChanges({ sheet, employeesById, contractsById }, changes, ap
         } else {
           doc.locationId = targetId;
         }
-        if (row.kind === 'employee' && doc.hoursWorked == null && doc.dayRate == null) {
-          const h = defaultDailyHours(employeesById.get(row.mongoId));
-          if (h) doc.hoursWorked = h;
+        if (row.kind === 'employee') {
+          if (doc.hoursWorked == null && doc.dayRate == null) {
+            const h = defaultDailyHours(employeesById.get(row.mongoId));
+            if (h) doc.hoursWorked = h;
+          }
+        } else {
+          // Subcontractors: where and when only (paid on CIS invoices)
+          for (const f of SUBCONTRACTOR_PAY_FIELDS) doc.set(f, undefined);
         }
       }
       await doc.save();

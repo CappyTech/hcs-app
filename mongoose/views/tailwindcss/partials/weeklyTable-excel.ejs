@@ -101,7 +101,6 @@
                 data-date="<%= day %>"
                 data-type="work"
                 data-hours=""
-                data-day-rate=""
                 data-location-id=""
                 data-contract-id=""
                 title="Add attendance">
@@ -136,7 +135,6 @@
                       data-date="<%= day %>"
                       data-type="<%= record.type || 'work' %>"
                       data-hours="<%= record.hoursWorked != null ? record.hoursWorked : '' %>"
-                      data-day-rate="<%= record.dayRate != null ? record.dayRate : '' %>"
                       data-location-id="<%= record.location && record.location._id ? record.location._id : (record.locationId || '') %>"
                       data-contract-id="<%= record.contractId || '' %>">
                       <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium <%= _badgeCls[record.type] || 'bg-gray-100 text-gray-700' %> mb-0.5">
@@ -218,6 +216,8 @@
             £<%= details.weeklyPay.toFixed(2) %><br>
             <% if (details.totalHoursWorked > 0) { %>
             <span class="text-xs font-normal text-gray-700 dark:text-gray-300"><%= details.totalHoursWorked %>h</span>
+            <% } else if (details.totalDaysWorked > 0) { %>
+            <span class="text-xs font-normal text-gray-700 dark:text-gray-300"><%= details.totalDaysWorked %> day<%= details.totalDaysWorked === 1 ? '' : 's' %></span>
             <% } %>
           </td>
         <% } %>

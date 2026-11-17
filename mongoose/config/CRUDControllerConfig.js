@@ -8,6 +8,7 @@ import { onlyPages } from '../../services/routeInventoryService.js';
 import rbac from './rolePermissionsConfig.js';
 import accessGroups from './accessGroupsConfig.js';
 import mdb from '../services/mongooseDatabaseService.js';
+import { stripSubcontractorPay } from '../models/mongoose/INTERNAL/attendance.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
 import __taskService from '../services/taskService.js';
 import __holidayRequestService from '../services/holidayRequestService.js';
@@ -27,16 +28,15 @@ const vehicleLabel = (vehicle) => {
  * owner to the logged-in user's linked employee or subcontractor and leaves
  * approval to an admin. The generic CRUD create route reaches the same
  * collection, so it applies the same rules: the owner field is the caller's
- * linked record (a different one is refused), the status is pending, and the
- * rate fields an admin sets on approval (payRate, overtimeHours, overtimeRate)
- * are dropped. Employees may give hoursWorked; anyone may give dayRate, as on
- * the self-service form. Admins are untouched.
+ * linked record (a different one is refused) and the status is pending.
+ * Employees may give hoursWorked or dayRate, as on the self-service form;
+ * a subcontractor's record holds neither (they're paid via CIS invoices).
+ * Admins are untouched.
  *
  * Throws an error with `statusCode` 403 so the generic error handler renders
  * a Forbidden page rather than a 500.
  */
 const ATTENDANCE_OWNER_FIELD = { employee: 'employeeId', subcontractor: 'subcontractorId' };
-const ATTENDANCE_ADMIN_ONLY_FIELDS = ['payRate', 'overtimeHours', 'overtimeRate'];
 // Set only by the approval routes (attendanceApprovalService), never a form.
 const ATTENDANCE_APPROVAL_FIELDS = [
   'siteApprovedBy', 'siteApprovedAt', 'approvedBy', 'approvedAt',
@@ -70,8 +70,7 @@ export function scopeAttendanceCreateToCaller(cleanedData, req) {
   cleanedData[ownerField] = ownerId;
 
   cleanedData.status = 'pending';
-  for (const field of ATTENDANCE_ADMIN_ONLY_FIELDS) delete cleanedData[field];
-  if (role !== 'employee') delete cleanedData.hoursWorked;
+  stripSubcontractorPay(cleanedData);
 
   return cleanedData;
 }
@@ -100,19 +99,18 @@ export default {
     title: 'Attendance',
     readOnly: ['uuid', 'createdAt', ...ATTENDANCE_APPROVAL_FIELDS],
     hideFields: ['_id', '__v'],
-    // Non-admins: own record only, pending, no admin-set pay fields; and no
-    // records inside a locked/submitted payroll run. Site Ops edit (a job role)
-    // records for anyone, keeping the pay fields only if it sees values; the
-    // payroll lock still applies. Only admin creates a record already past
-    // pending: everyone else goes through the approval routes.
+    // Non-admins: own record only, pending; and no records inside a
+    // locked/submitted payroll run. Site Ops edit (a job role) records for
+    // anyone; the payroll lock still applies. Only admin creates a record
+    // already past pending: everyone else goes through the approval routes.
+    // Nobody gives a subcontractor's record hours or a day rate (the model's
+    // pre-validate drops them too; useSave below runs it on update).
     beforeCreate: async (cleanedData, req) => {
+      stripSubcontractorPay(cleanedData);
       if (req.user?.role === 'admin') return;
       for (const field of ATTENDANCE_APPROVAL_FIELDS) delete cleanedData[field];
       if (rbac.hasGroup(req.user, 'siteOps', 'edit')) {
         cleanedData.status = 'pending';
-        if (!rbac.canSeeValues(req.user)) {
-          for (const field of ATTENDANCE_ADMIN_ONLY_FIELDS) delete cleanedData[field];
-        }
       } else {
         scopeAttendanceCreateToCaller(cleanedData, req);
       }
@@ -126,8 +124,7 @@ export default {
       'date', 'type', 'status',
       'employeeId', 'subcontractorId',
       'projectId', 'locationId', 'contractAssignmentId',
-      'hoursWorked', 'breakMinutes', 'overtimeHours', 'overtimeRate',
-      'payRate', 'dayRate',
+      'hoursWorked', 'dayRate',
       'notes',
       'uuid', 'createdAt', 'updatedAt'
     ],
@@ -138,10 +135,6 @@ export default {
       locationId: 'Location',
       contractAssignmentId: 'Contract Assignment',
       hoursWorked: 'Hours Worked',
-      breakMinutes: 'Break (minutes)',
-      overtimeHours: 'Overtime Hours',
-      overtimeRate: 'Overtime Rate',
-      payRate: 'Pay Rate',
       dayRate: 'Day Rate'
     },
     validators: {
@@ -149,12 +142,9 @@ export default {
       type: value => ['off', 'holiday', 'sick', 'work', 'training', 'leave'].includes(value),
       status: value => ['planned', 'pending', 'site-approved', 'approved', 'rejected'].includes(value),
       hoursWorked: value => typeof value === 'number' && value >= 0,
-      payRate: value => typeof value === 'number' && value >= 0,
       dayRate: value => typeof value === 'number' && value >= 0,
-      overtimeHours: value => typeof value === 'number' && value >= 0,
-      overtimeRate: value => typeof value === 'number' && value >= 0,
-      breakMinutes: value => Number.isInteger(value) && value >= 0,
     },
+    useSave: true, // findOne+save so pre-validate drops a subcontractor's hours/day rate on update
     middleware: {
       read: ['ensureRoles:admin,employee,subcontractor'],
       create: ['ensureRoles:admin,employee,subcontractor'],

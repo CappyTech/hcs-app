@@ -23,6 +23,7 @@ import approval from '../services/attendanceApprovalService.js';
 import __paperlessUpdateService from '../services/paperless/paperlessUpdateService.js';
 import __paperlessClient from '../services/paperless/paperlessClient.js';
 import mongoose from 'mongoose';
+import { stripSubcontractorPay, SUBCONTRACTOR_PAY_FIELDS } from '../models/mongoose/INTERNAL/attendance.js';
 
 /**
  * Filter attendance records array to only those the user owns.
@@ -141,7 +142,8 @@ export const recordDay = async (req, res, next) => {
     if (contract.projectId) data.projectId = contract.projectId;
     if (contract.locationId) data.locationId = contract.locationId;
     if (kind === "e") data.employeeId = personId; else data.subcontractorId = personId;
-    if (hoursWorked !== undefined && hoursWorked !== "") {
+    // A subcontractor's day records where and when only, never hours
+    if (kind === "e" && hoursWorked !== undefined && hoursWorked !== "") {
       const h = Number(hoursWorked);
       if (!Number.isFinite(h) || h < 0 || h > 24) return fail("Hours must be between 0 and 24.");
       data.hoursWorked = h;
@@ -430,7 +432,6 @@ function stripPayroll(record) {
   const clone = { ...record };
   delete clone.totalPay;
   delete clone.hoursWorked;
-  delete clone.payRate;
   delete clone.totalHours;
   delete clone.daysWorked;
   delete clone.cisDeductions;
@@ -635,11 +636,12 @@ export const submitAttendance = async (req, res, next) => {
     if (req.body.projectId) data.projectId = req.body.projectId;
     if (req.body.locationId) data.locationId = req.body.locationId;
 
-    // Hours/rate (employees only — subcontractors use dayRate set by admin)
+    // Hours/rate: employees only. Subcontractors are paid on their CIS
+    // invoices, so their record holds where and when only.
     if (isEmployee && req.body.hoursWorked) {
       data.hoursWorked = Number(req.body.hoursWorked);
     }
-    if (req.body.dayRate) {
+    if (isEmployee && req.body.dayRate) {
       data.dayRate = Number(req.body.dayRate);
     }
 
@@ -852,7 +854,12 @@ export const updateAttendance = async (req, res, next) => {
       });
     }
 
-    const { type, hoursWorked, dayRate, locationId, contractId } = req.body;
+    const { type, locationId, contractId } = req.body;
+    // A subcontractor's record never holds hours or a day rate (they're paid
+    // on CIS invoices): ignore any sent, and clear any left from before.
+    const isSubcontractor = !!record.subcontractorId;
+    const hoursWorked = isSubcontractor ? null : req.body.hoursWorked;
+    const dayRate = isSubcontractor ? null : req.body.dayRate;
 
     // A Supervisor or Site Manager edits only records on their sites, and
     // can't move one off them.
@@ -891,8 +898,8 @@ export const updateAttendance = async (req, res, next) => {
       update.dayRate = Number(dayRate);
       update.$unset = { hoursWorked: 1 };
     }
-    if (hoursWorked == null && dayRate == null && type !== undefined) {
-      // type-only change — don't touch pay fields
+    if (isSubcontractor) {
+      update.$unset = Object.fromEntries(SUBCONTRACTOR_PAY_FIELDS.map((f) => [f, 1]));
     }
     if (locationId !== undefined) update.locationId = locationId || null;
     if (contractId !== undefined) update.contractId = contractId || null;
@@ -965,7 +972,7 @@ export const inlineCreateAttendance = async (req, res, next) => {
       return res.status(400).json({ success: false, error: "Invalid type." });
     }
 
-    if (hoursWorked != null && dayRate != null) {
+    if (employeeId && hoursWorked != null && dayRate != null) {
       return res.status(400).json({
         success: false,
         error: "hoursWorked and dayRate are mutually exclusive.",
@@ -977,7 +984,7 @@ export const inlineCreateAttendance = async (req, res, next) => {
     if (scope !== null && !approval.contractInScope(scope, contractId)) {
       return res.status(403).json({ success: false, error: "Choose one of your sites' contracts." });
     }
-    if (dayRate != null && !rbac.canSeeValues(req.user)) {
+    if (dayRate != null && employeeId && !rbac.canSeeValues(req.user)) {
       return res.status(403).json({ success: false, error: "You can't set a day rate." });
     }
 
@@ -1010,6 +1017,8 @@ export const inlineCreateAttendance = async (req, res, next) => {
     if (dayRate != null) data.dayRate = Number(dayRate);
     if (locationId) data.locationId = locationId;
     if (contractId) data.contractId = contractId;
+    // Subcontractors: where and when only (paid on CIS invoices, not payroll)
+    stripSubcontractorPay(data);
 
     // Payroll lock: admins may correct locked periods, others may not
     if (req.user?.role !== "admin") {

@@ -288,6 +288,16 @@ describe('recordDay (POST /daily/:date/record)', () => {
     assert.equal('dayRate' in saved[0], false);
   });
 
+  it('records a subcontractor\'s day without the hours sent', async () => {
+    setup();
+    const sub = oid();
+    const { flashes } = await call(SUP, { person: `s:${sub}`, contractId: String(C_MANAGED), type: 'work', hoursWorked: '8' });
+    assert.equal(flashes[0][0], 'success');
+    assert.equal(String(saved[0].subcontractorId), String(sub));
+    assert.equal('hoursWorked' in saved[0], false);
+    assert.equal('dayRate' in saved[0], false);
+  });
+
   it('refuses a contract off their sites, and bad input', async () => {
     setup();
     const emp = oid();
