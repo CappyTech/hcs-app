@@ -737,7 +737,7 @@ const saveError = (err) => validationError(duplicateError(err));
 const drop = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== ''));
 
 /** POST /job-register: a new job, with its first quote when a quote number is given. */
-export async function createEntry(body = {}) {
+export async function createEntry(body = {}, notices = []) {
   const job = parseJobForm(body);
   const quote = addFormQuote(body, job);
   const fields = drop(await applyCustomer(await applyContract(job), { quoteNumbers: quote?.number != null ? [quote.number] : [] }));
@@ -750,13 +750,13 @@ export async function createEntry(body = {}) {
   } catch (err) {
     throw saveError(err);
   }
-  if (quote) await lifecycle.fireQuoteAdded(doc, doc.quotes?.[0] || quote);
-  await lifecycle.fireStageHooks(null, doc);
+  if (quote) await lifecycle.fireQuoteAdded(doc, doc.quotes?.[0] || quote, lifecycle, notices);
+  await lifecycle.fireStageHooks(null, doc, lifecycle, notices);
   return doc;
 }
 
 /** POST /job-register/:uuid: the job's own fields. */
-export async function updateEntry(uuid, body) {
+export async function updateEntry(uuid, body, notices = []) {
   const doc = await mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') });
   if (!doc) throw notFound('That register entry no longer exists.');
   const before = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
@@ -780,7 +780,7 @@ export async function updateEntry(uuid, body) {
   } catch (err) {
     throw saveError(err);
   }
-  await lifecycle.fireStageHooks(before, saved);
+  await lifecycle.fireStageHooks(before, saved, lifecycle, notices);
   return saved;
 }
 
@@ -830,9 +830,11 @@ async function runUpdate(filter, update) {
 /**
  * POST /job-register/:uuid/quotes: add a quote (a variation, or the job's
  * first). opts.fromKashflow: it came from KashFlow (Add to job), so the
- * onQuoteAdded hook is told it's there already.
+ * onQuoteAdded hook is told it's there already. opts.notices collects what
+ * the hooks did, for the flash (an array on its own is taken as notices).
  */
 export async function addQuote(uuid, body, opts = {}) {
+  const { fromKashflow = false, notices = [] } = Array.isArray(opts) ? { notices: opts } : opts;
   const job = await findJobLean(uuid);
   const quote = drop(parseQuoteLine(body));
   if (quote.number != null && quoteNumbersOf(job).includes(quote.number)) throw bad(`Quote ${quote.number} is on this job already.`);
@@ -841,13 +843,13 @@ export async function addQuote(uuid, body, opts = {}) {
   if (quote.status === 'won') set.won = true;
   await runUpdate({ uuid: job.uuid }, { $push: { quotes: quote }, $set: set });
   const after = { ...job, ...set, quotes: [...quotesOf(job), quote] };
-  await lifecycle.fireQuoteAdded(after, opts.fromKashflow ? { ...quote, fromKashflow: true } : quote);
-  await lifecycle.fireStageHooks(job, after);
+  await lifecycle.fireQuoteAdded(after, fromKashflow ? { ...quote, fromKashflow: true } : quote, lifecycle, notices);
+  await lifecycle.fireStageHooks(job, after, lifecycle, notices);
   return { job: after, quote };
 }
 
 /** POST /job-register/:uuid/quotes/:id: change a quote. */
-export async function updateQuote(uuid, id, body) {
+export async function updateQuote(uuid, id, body, notices = []) {
   const job = await findJobLean(uuid);
   const current = findLine(job, 'quote', id);
   const fields = parseQuoteLine(body);
@@ -862,23 +864,23 @@ export async function updateQuote(uuid, id, body) {
   $set.editedAt = new Date();
   if (fields.status === 'won') { $set.won = true; after.won = true; }
   await runUpdate({ uuid: job.uuid, 'quotes._id': current._id }, { $set, $unset });
-  await lifecycle.fireStageHooks(job, after);
+  await lifecycle.fireStageHooks(job, after, lifecycle, notices);
   return { job: after, quote: merged };
 }
 
 /** POST /job-register/:uuid/quotes/:id/delete: take a quote off the job. */
-export async function removeQuote(uuid, id) {
+export async function removeQuote(uuid, id, notices = []) {
   const job = await findJobLean(uuid);
   const current = findLine(job, 'quote', id);
   const after = { ...job, quotes: quotesOf(job).filter((q) => !sameId(q._id, current._id)) };
   if (jobProblem(after)) throw bad("This quote's number is the only number on the job: cancel the job instead, or give it its project number first.");
   await runUpdate({ uuid: job.uuid }, { $pull: { quotes: { _id: current._id } }, $set: { editedAt: new Date() } });
-  await lifecycle.fireStageHooks(job, after);
+  await lifecycle.fireStageHooks(job, after, lifecycle, notices);
   return { job: after, quote: current };
 }
 
 /** POST /job-register/:uuid/invoices: add an invoice (the job's, or a stage payment). */
-export async function addInvoice(uuid, body) {
+export async function addInvoice(uuid, body, notices = []) {
   const job = await findJobLean(uuid);
   if (job.projectNumber == null) throw bad('Give the job its project number before adding an invoice.');
   const invoice = drop(parseInvoiceLine(body));
@@ -886,7 +888,7 @@ export async function addInvoice(uuid, body) {
   invoice._id = new mongoose.Types.ObjectId();
   await runUpdate({ uuid: job.uuid }, { $push: { invoices: invoice }, $set: { editedAt: new Date() } });
   const after = { ...job, invoices: [...invoicesOf(job), invoice] };
-  await lifecycle.fireStageHooks(job, after);
+  await lifecycle.fireStageHooks(job, after, lifecycle, notices);
   return { job: after, invoice };
 }
 
@@ -906,12 +908,12 @@ export async function updateInvoice(uuid, id, body) {
 }
 
 /** POST /job-register/:uuid/invoices/:id/delete: take an invoice off the job. */
-export async function removeInvoice(uuid, id) {
+export async function removeInvoice(uuid, id, notices = []) {
   const job = await findJobLean(uuid);
   const current = findLine(job, 'invoice', id);
   await runUpdate({ uuid: job.uuid }, { $pull: { invoices: { _id: current._id } }, $set: { editedAt: new Date() } });
   const after = { ...job, invoices: invoicesOf(job).filter((i) => !sameId(i._id, current._id)) };
-  await lifecycle.fireStageHooks(job, after);
+  await lifecycle.fireStageHooks(job, after, lifecycle, notices);
   return { job: after, invoice: current };
 }
 
