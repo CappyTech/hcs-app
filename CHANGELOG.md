@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.130.0] - 2026-11-17
+
+### Added
+- **Groundwork for showing what each job has cost in purchases.** The app can now add up the net cost of the supplier invoices on each job from the synced KashFlow purchases. It counts only the lines on that job, so an invoice split across several jobs is shared out correctly. Credit notes count against the total and deleted purchases are left out. It can also list a job's purchases newest first and fetch KashFlow's own job totals to check against. Nothing shows this yet; the Job Register will use it next.
+
 ## [6.129.0] - 2026-11-17
 
 ### Added
