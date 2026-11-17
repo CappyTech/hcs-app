@@ -196,6 +196,19 @@ export const postUpdateInvoice = lineAction((req) => jobRegister.updateInvoice(r
 /** POST /job-register/:uuid/invoices/:id/delete */
 export const postRemoveInvoice = lineAction((req) => jobRegister.removeInvoice(req.params.uuid, req.params.id), (r) => `Removed ${named('invoice', r.invoice)} from the job.`, 'invoices');
 
+/** POST /job-register/:uuid/kashflow-add: a KashFlow quote or invoice on this job in KashFlow, onto the job here. */
+export const postAddFromKashflow = async (req, res, next) => {
+  const back = `${jobUrl(req.params.uuid)}#kashflow-extras`;
+  try {
+    const r = await jobRegister.addFromKashflow(req.params.uuid, req.body || {});
+    const line = r.kind === 'quote' ? r.quote : r.invoice;
+    req.flash('success', `Added ${named(r.kind, line)} from KashFlow.`);
+    res.redirect(`${jobUrl(req.params.uuid)}#${r.kind === 'quote' ? 'quotes' : 'invoices'}`);
+  } catch (err) {
+    backOnError(req, res, next, err, back);
+  }
+};
+
 // ── Linking clients ─────────────────────────────────────────────────────
 
 /** GET /job-register/link-clients: jobs whose client isn't a KashFlow customer yet, by client. */
@@ -319,5 +332,5 @@ function flashCreated(req, label, r) {
 export default {
   getKashflowQuote, postKashflowQuote, postKashflowProject, getLinkClients, postLinkClients, postLinkFromKashflow,
   getRegister, postFillNext, postFillNextEdit, postCreate, getShow, getEdit, postUpdate,
-  postAddQuote, postUpdateQuote, postRemoveQuote, postAddInvoice, postUpdateInvoice, postRemoveInvoice, readFilters,
+  postAddQuote, postUpdateQuote, postRemoveQuote, postAddInvoice, postUpdateInvoice, postRemoveInvoice, postAddFromKashflow, readFilters,
 };
