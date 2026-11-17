@@ -1,6 +1,6 @@
 <%#
   Match the names and sites on an uploaded WEEKLY ATTENDANCE workbook, then import.
-  Locals: crumbs, staged (workbookImport, lean), choices { employees, subcontractors, contracts, locations },
+  Locals: crumbs, staged (workbookImport, lean), choices { employees, subcontractors, jobs [{ _id, label }], locations },
           people [{ index, label, count, suggestion }], places [{ index, label, count, suggestion }]
 %>
 <%
@@ -17,10 +17,9 @@
   const sel = (a, b) => (a === b ? 'selected' : '');
   const active = choices.employees.filter((e) => e.status !== 'inactive');
   const inactive = choices.employees.filter((e) => e.status === 'inactive');
-  const openContracts = choices.contracts.filter((c) => c.status !== 'Completed');
-  const doneContracts = choices.contracts.filter((c) => c.status === 'Completed');
+  const jobs = choices.jobs || [];
   const unmatchedPeople = people.filter((p) => !p.suggestion).length;
-  const newPlaces = places.filter((p) => p.suggestion === 'new').length;
+  const unmatchedPlaces = places.filter((p) => !p.suggestion).length;
   const days = (n) => `${n} day${n === 1 ? '' : 's'}`;
 %>
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -115,28 +114,24 @@
         <div class="px-4 pt-4 pb-2">
           <h2 class="<%= h2 %>">Sites on the sheet</h2>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Where each entry is: a contract or a saved location. “New location” saves the sheet's name as a location<%= newPlaces ? ` (${newPlaces} set to that now)` : '' %>, which you can tidy up later.
+            Where each entry is: a saved location, or a job won in the <a href="/job-register?stage=won" class="text-green-700 dark:text-green-400 hover:underline">Job Register</a> and not completed. Sites with no match are skipped<%= unmatchedPlaces ? ` (${unmatchedPlaces} not matched yet)` : '' %>; no locations are added.
           </p>
         </div>
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-          <thead class="bg-gray-50 dark:bg-gray-800"><tr><th class="<%= th %>">On the sheet</th><th class="<%= th %>">Days</th><th class="<%= th %>">Contract or location</th></tr></thead>
+          <thead class="bg-gray-50 dark:bg-gray-800"><tr><th class="<%= th %>">On the sheet</th><th class="<%= th %>">Days</th><th class="<%= th %>">Job or location</th></tr></thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             <% places.forEach((p) => { const field = `place_${p.index}`; %>
-              <tr class="<%= p.suggestion === 'new' ? 'bg-amber-50 dark:bg-amber-900/20' : '' %>">
+              <tr class="<%= p.suggestion ? '' : 'bg-amber-50 dark:bg-amber-900/20' %>">
                 <td class="<%= td %>"><label for="<%= field %>"><%= p.label %></label></td>
                 <td class="<%= td %> text-gray-500 dark:text-gray-400"><%= p.count %></td>
                 <td class="<%= td %>">
                   <select id="<%= field %>" name="<%= field %>" class="<%= input %>">
-                    <option value="new" <%= sel('new', p.suggestion) %>>New location: <%= p.label %></option>
                     <option value="" <%= sel('', p.suggestion) %>>Skip</option>
-                    <% if (choices.locations.length) { %><optgroup label="Saved locations">
+                    <% if (jobs.length) { %><optgroup label="Jobs">
+                      <% jobs.forEach((j) => { const v = `job:${j._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= j.label %></option><% }) %>
+                    </optgroup><% } %>
+                    <% if (choices.locations.length) { %><optgroup label="Locations">
                       <% choices.locations.forEach((l) => { const v = `loc:${l._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= l.name %></option><% }) %>
-                    </optgroup><% } %>
-                    <% if (openContracts.length) { %><optgroup label="Contracts">
-                      <% openContracts.forEach((c) => { const v = `con:${c._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= c.title %></option><% }) %>
-                    </optgroup><% } %>
-                    <% if (doneContracts.length) { %><optgroup label="Completed contracts">
-                      <% doneContracts.forEach((c) => { const v = `con:${c._id}`; %><option value="<%= v %>" <%= sel(v, p.suggestion) %>><%= c.title %></option><% }) %>
                     </optgroup><% } %>
                   </select>
                 </td>

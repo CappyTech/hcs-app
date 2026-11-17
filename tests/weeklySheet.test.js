@@ -10,6 +10,13 @@ import accessGroups from '../mongoose/config/accessGroupsConfig.js';
 import {
   GROUPS, addDays, mondayOf, resolveWeek, cellValueOf, holidayLeft, dueState, buildSheet, changedCells,
 } from '../mongoose/services/weeklySheetService.js';
+import jobRegisterService, { jobLabel, isOpenJob, jobTarget } from '../mongoose/services/jobRegisterService.js';
+import attendanceModel from '../mongoose/models/mongoose/INTERNAL/attendance.js';
+import mongoose from 'mongoose';
+import fs from 'node:fs';
+import dateService from '../services/dateService.js';
+import { groupAttendanceByPerson } from '../mongoose/services/attendanceService.js';
+import { notAttendedUpdate } from '../mongoose/services/attendanceApprovalService.js';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const at = (day) => new Date(`${day}T00:00:00Z`);
@@ -23,6 +30,13 @@ const SUB = '0000000000000000000000a1';
 const WINDSOR = '0000000000000000000000c1';
 const MAPLE = '0000000000000000000000c2';
 const OFFICE = '0000000000000000000000f1';
+const JASMINE = '0000000000000000000000b1'; // a job on the Windsor contract
+const OAK = '0000000000000000000000b2'; // a job with no contract, description or contact
+const P_JASMINE = '0000000000000000000000d1'; // the synced KashFlow project 41299
+const JOBS = [
+  { _id: JASMINE, uuid: 'j1', projectNumber: 41299, site: '7 Jasmine Gardens, Liverpool', client: 'Plus Dane', contact: 'Ann', description: 'Gravel', contractId: WINDSOR },
+  { _id: OAK, uuid: 'j2', projectNumber: 41300, site: 'Oak Court', client: 'Example Homes', contact: '', description: '' },
+];
 
 function fixture(over = {}) {
   return {
@@ -45,6 +59,7 @@ function fixture(over = {}) {
       { _id: MAPLE, uuid: 'c2', title: 'Maple House', status: 'In Progress' },
     ],
     locations: [{ _id: OFFICE, uuid: 'l1', name: 'Office' }],
+    jobs: JOBS,
     leave: [{ uuid: 'h1', employeeId: E_HOL, startDate: at('2026-04-27'), endDate: at('2026-04-29'), leaveType: 'annual' }],
     closures: new Map([['2026-05-04', 'Early May bank holiday']]),
     ...over,
@@ -70,6 +85,8 @@ describe('Weekly sheet weeks', () => {
 describe('Weekly sheet cells', () => {
   it('reads a record as the choice it was made with', () => {
     assert.equal(cellValueOf({ type: 'work', contractId: WINDSOR }), `con:${WINDSOR}`);
+    // A job-linked day carries the job's contract too: the job is the choice
+    assert.equal(cellValueOf({ type: 'work', jobRegisterId: JASMINE, contractId: WINDSOR }), `job:${JASMINE}`);
     assert.equal(cellValueOf({ type: 'work', locationId: OFFICE }), `loc:${OFFICE}`);
     assert.equal(cellValueOf({ type: 'sick' }), 'sick');
     assert.equal(cellValueOf({ type: 'holiday' }), null);
@@ -89,9 +106,39 @@ describe('Weekly sheet cells', () => {
     assert.equal(buildSheet(fixture({ group: 'bogus' })).group, '');
   });
 
-  it('offers sites, locations, Off and Sick', () => {
+  it('offers jobs, locations, Off and Sick, and no contracts', () => {
     const { choices } = buildSheet(fixture());
-    assert.deepEqual(choices.map((c) => c.label), ['Maple House', 'Windsor', 'Office', 'Off', 'Sick']);
+    assert.deepEqual(choices.map((c) => c.label), [
+      '41300 Oak Court (Example Homes)',
+      '41299 7 Jasmine Gardens, Liverpool (Gravel, Plus Dane, Ann)',
+      'Office', 'Off', 'Sick',
+    ]);
+    assert.deepEqual(choices.map((c) => c.group), ['Jobs', 'Jobs', 'Locations', 'Other', 'Other']);
+    assert.deepEqual(choices.slice(0, 2).map((c) => c.value), [`job:${OAK}`, `job:${JASMINE}`]);
+    assert.ok(!choices.some((c) => c.value.startsWith('con:')));
+    // For HTML: the number and site, then the small bracket part
+    assert.deepEqual([choices[1].main, choices[1].detail], ['41299 7 Jasmine Gardens, Liverpool', 'Gravel, Plus Dane, Ann']);
+  });
+
+  it('labels a job with its empty parts left out', () => {
+    assert.deepEqual(jobLabel({ projectNumber: 41300, site: 'Oak Court', client: 'Example Homes', description: '', contact: null }),
+      { main: '41300 Oak Court', detail: 'Example Homes', text: '41300 Oak Court (Example Homes)' });
+    assert.deepEqual(jobLabel({ projectNumber: 41301, site: 'Elm Road', client: '', description: '  ', contact: '' }),
+      { main: '41301 Elm Road', detail: '', text: '41301 Elm Road' });
+    assert.equal(jobLabel({ projectNumber: 41302, site: 'Ash Way', client: 'Acme', description: 'Fencing', contact: 'Bo' }).text, '41302 Ash Way (Fencing, Acme, Bo)');
+  });
+
+  it('shows a day on a job as that job, and one on a closed job as its own choice', () => {
+    const attendance = [
+      { _id: 'j1', date: at('2026-04-28'), type: 'work', status: 'planned', employeeId: E_OFFICE, jobRegisterId: OAK },
+      { _id: 'j2', date: at('2026-04-29'), type: 'work', status: 'planned', employeeId: E_OFFICE, jobRegisterId: '0000000000000000000000b9', contractId: MAPLE },
+    ];
+    const otherJobs = [{ _id: '0000000000000000000000b9', projectNumber: 41001, site: 'Done Job', client: 'Old Client', completed: true }];
+    const cells = rowOf(buildSheet(fixture({ attendance, otherJobs })), 'J Oldfield').cells;
+    assert.equal(cells[1].value, `job:${OAK}`);
+    assert.equal(cells[1].extra, null);
+    assert.equal(cells[1].label, '41300 Oak Court (Example Homes)');
+    assert.deepEqual(cells[2].extra, { value: 'job:0000000000000000000000b9', label: '41001 Done Job (Old Client)', group: 'Current' });
   });
 
   it('fills cells from records, and leaves alone what it must not change', () => {
@@ -118,6 +165,14 @@ describe('Weekly sheet cells', () => {
     const locked = new Set(['2026-04-27']);
     assert.equal(rowOf(buildSheet(fixture({ lockedDays: locked })), 'J Oldfield').cells[0].editable, false);
     assert.equal(rowOf(buildSheet(fixture({ lockedDays: locked, isAdmin: true })), 'J Oldfield').cells[0].editable, true);
+  });
+
+  it('keeps a record on a contract, even an open one, as its own choice', () => {
+    const attendance = [{ _id: 'r8', date: at('2026-04-29'), type: 'work', status: 'pending', subcontractorId: SUB, contractId: WINDSOR }];
+    const cell = rowOf(buildSheet(fixture({ attendance })), 'Dean Colton').cells[2];
+    assert.ok(cell.editable);
+    assert.equal(cell.value, `con:${WINDSOR}`);
+    assert.deepEqual(cell.extra, { value: `con:${WINDSOR}`, label: 'Windsor', group: 'Current' });
   });
 
   it('keeps a record on a closed contract as its own choice', () => {
@@ -169,7 +224,7 @@ describe('Weekly sheet page', () => {
     const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/attendance/weekly-sheet.ejs'), {
       title: 't', csrfToken: 'c', crumbs: [], week: WEEK, sheet, closures: new Map([['2026-04-29', 'Company day']]),
       running: sheet.running.map((c) => ({ ...c, project: c.title === 'Windsor' ? { Number: 41250 } : null })),
-      jobs: [{ uuid: 'j1', projectNumber: 41299, site: '7 Jasmine Gardens', client: 'Plus Dane', description: 'Gravel' }],
+      jobs: [{ uuid: 'j9', projectNumber: 41310, site: 'Birch Close', client: 'Plus Dane', description: 'Gravel', contact: '' }],
       vehicles: [{ uuid: 'v1', registrationNumber: 'RX 16 MTE', bodyType: 'Wagon', roadTaxExpiryDate: at('2026-06-01'), motExpiryDate: at('2026-06-30'), due: { tax: 'overdue', mot: 'overdue', insurance: null, breakdown: null } }],
       group: '', groups: GROUPS, addChoices: { employees: [], subcontractors: [{ value: 's:x', label: 'Bob Phenna' }] },
       dayLabels: ['Mon 27/4', 'Tue 28/4', 'Wed 29/4', 'Thu 30/4', 'Fri 1/5', 'Sat 2/5', 'Sun 3/5'],
@@ -180,7 +235,12 @@ describe('Weekly sheet page', () => {
     assert.match(html, /2 entries/);
     assert.match(html, /On holiday/);
     assert.match(html, /Company day/);
-    assert.match(html, /41299/);
+    // Jobs for allocation: number, site, then the bracket part small (empty contact left out)
+    assert.match(html, /41310<\/a>\s*<span[^>]*>Birch Close<\/span>\s*<small[^>]*>\(Gravel, Plus Dane\)<\/small>/);
+    // Cell choices: jobs (plain text in an option), then locations, no contracts
+    assert.match(html, /<optgroup label="Jobs">/);
+    assert.match(html, new RegExp(`<option value="job:${JASMINE}" >41299 7 Jasmine Gardens, Liverpool \\(Gravel, Plus Dane, Ann\\)</option>`));
+    assert.doesNotMatch(html, /<optgroup label="Sites">/);
     assert.match(html, /RX 16 MTE/);
     assert.match(html, /Bob Phenna/);
     assert.match(html, /action="\/weekly-sheet\/2026-04-27"/);
@@ -223,10 +283,10 @@ describe('Weekly sheet save', () => {
       holidayCustom: model(() => []),
       payrollRun: model(() => []),
       vehicle: model(() => []),
-      jobRegister: model(() => []),
+      jobRegister: model(() => JOBS),
       employeeHoliday: model(() => []),
     };
-    mdb.REST = { supplier: model(() => [{ _id: SUB, uuid: 's1', Name: 'Dean Colton' }]), project: model(() => []) };
+    mdb.REST = { supplier: model(() => [{ _id: SUB, uuid: 's1', Name: 'Dean Colton' }]), project: model(() => [{ _id: P_JASMINE, Number: 41299 }]) };
   });
   after(() => { mdb.INTERNAL = savedINTERNAL; mdb.REST = savedREST; });
 
@@ -237,13 +297,16 @@ describe('Weekly sheet save', () => {
     store = [existing, offDay];
     const key = `e:${E_OFFICE}`;
     const result = await weeklySheet.saveSheet('2026-04-27', {
-      cell: { [key]: { '2026-04-27': `con:${WINDSOR}`, '2026-04-28': 'sick', '2026-04-29': '', '2026-04-30': 'off' } },
+      cell: { [key]: { '2026-04-27': `job:${JASMINE}`, '2026-04-28': 'sick', '2026-04-29': '', '2026-04-30': 'off' } },
       // 30 April is blank, but this form was drawn showing Sick: someone else changed it, so skip
       was: { [key]: { '2026-04-27': `loc:${OFFICE}`, '2026-04-28': '', '2026-04-29': 'off', '2026-04-30': 'sick' } },
     });
     assert.deepEqual(result, { saved: 3, skipped: 1 });
     assert.equal(existing.type, 'work');
+    // The job, with its contract and the synced project with its number
+    assert.equal(existing.jobRegisterId, JASMINE);
     assert.equal(existing.contractId, WINDSOR);
+    assert.equal(existing.projectId, P_JASMINE);
     assert.equal(existing.locationId, undefined);
     assert.equal(existing.hoursWorked, 8); // 40 hours over 5 days
     assert.equal(existing.status, 'pending', 'a confirmed day stays confirmed');
@@ -259,22 +322,132 @@ describe('Weekly sheet save', () => {
     store = [subDay];
     const key = `s:${SUB}`;
     const result = await weeklySheet.saveSheet('2026-04-27', {
-      cell: { [key]: { '2026-04-27': `con:${WINDSOR}` } },
+      cell: { [key]: { '2026-04-27': `job:${OAK}` } },
       was: { [key]: { '2026-04-27': `con:${MAPLE}` } },
     });
     assert.deepEqual(result, { saved: 1, skipped: 0 });
-    assert.equal(subDay.contractId, WINDSOR);
+    // A job with no contract and no synced project: just the job
+    assert.equal(subDay.jobRegisterId, OAK);
+    assert.equal('contractId' in subDay, false);
+    assert.equal('projectId' in subDay, false);
     assert.equal('hoursWorked' in subDay, false);
     assert.equal('dayRate' in subDay, false);
+  });
+
+  it('leaves a day on a contract as it is when the rest of the week is saved', async () => {
+    saved = [];
+    const onContract = new FakeAttendance({ _id: 'r7', date: at('2026-04-27'), type: 'work', status: 'pending', employeeId: E_OFFICE, contractId: MAPLE, projectId: 'p7', hoursWorked: 8 });
+    store = [onContract];
+    const key = `e:${E_OFFICE}`;
+    const result = await weeklySheet.saveSheet('2026-04-27', {
+      cell: { [key]: { '2026-04-27': `con:${MAPLE}`, '2026-04-28': `loc:${OFFICE}` } },
+      was: { [key]: { '2026-04-27': `con:${MAPLE}`, '2026-04-28': '' } },
+    });
+    assert.deepEqual(result, { saved: 1, skipped: 0 });
+    assert.equal(saved.some((s) => s._id === 'r7'), false, 'the contract day was not saved again');
+    assert.equal(onContract.contractId, MAPLE);
+    assert.equal(onContract.projectId, 'p7');
+    assert.equal(onContract.jobRegisterId, undefined);
+    assert.equal(store.find((r) => r._id !== 'r7').locationId, OFFICE);
   });
 
   it('refuses a choice that was not on offer', async () => {
     saved = []; store = [];
     const key = `e:${E_OFFICE}`;
     const result = await weeklySheet.saveSheet('2026-04-27', {
-      cell: { [key]: { '2026-04-28': 'con:0000000000000000000000ff' } }, was: { [key]: { '2026-04-28': '' } },
+      cell: { [key]: { '2026-04-28': 'con:0000000000000000000000ff', '2026-04-29': `con:${WINDSOR}`, '2026-04-30': 'job:0000000000000000000000bf' } },
+      was: { [key]: { '2026-04-28': '', '2026-04-29': '', '2026-04-30': '' } },
     });
-    assert.deepEqual(result, { saved: 0, skipped: 1 });
+    // Contracts aren't offered any more, even open ones; nor is a job that isn't open
+    assert.deepEqual(result, { saved: 0, skipped: 3 });
     assert.equal(store.length, 0);
+  });
+});
+
+describe('Won jobs not yet completed', () => {
+  it('are those with a project number, not cancelled, completed or invoiced', () => {
+    assert.equal(isOpenJob({ projectNumber: 41000 }), true);
+    assert.equal(isOpenJob({ projectNumber: 41000, won: true, contractId: 'c' }), true);
+    assert.equal(isOpenJob({ quoteNumber: 51000, won: true }), false); // won, no project number yet
+    assert.equal(isOpenJob({ projectNumber: 41000, cancelled: true }), false);
+    assert.equal(isOpenJob({ projectNumber: 41000, completed: true }), false);
+    assert.equal(isOpenJob({ projectNumber: 41000, invoiceNumber: 1001 }), false);
+    assert.deepEqual(jobRegisterService.OPEN_JOB_FILTER, {
+      projectNumber: { $type: 'number' }, cancelled: { $ne: true }, completed: { $ne: true }, invoiceNumber: { $not: { $type: 'number' } },
+    });
+  });
+
+  it('link an attendance day to the job, its contract and its project', () => {
+    assert.deepEqual(jobTarget(JOBS[0], { projectId: P_JASMINE }), { jobRegisterId: JASMINE, contractId: WINDSOR, projectId: P_JASMINE });
+    assert.deepEqual(jobTarget(JOBS[0], { contract: { projectId: 'pc' } }), { jobRegisterId: JASMINE, contractId: WINDSOR, projectId: 'pc' });
+    assert.deepEqual(jobTarget(JOBS[1]), { jobRegisterId: OAK });
+  });
+
+  describe('for allocation', () => {
+    let savedINTERNAL; let filters;
+    before(() => {
+      savedINTERNAL = mdb.INTERNAL;
+      filters = {};
+      mdb.INTERNAL = {
+        jobRegister: { find: (f) => { filters.job = f; return query(JOBS.filter((j) => !j.contractId)); } },
+        attendance: { distinct: async (field, f) => { filters.attendance = { field, f }; return [OAK]; } },
+      };
+    });
+    after(() => { mdb.INTERNAL = savedINTERNAL; });
+
+    it('are open jobs with no contract and no attendance booked on them', async () => {
+      assert.deepEqual(await jobRegisterService.jobsForAllocation(), []);
+      assert.deepEqual(filters.job, { ...jobRegisterService.OPEN_JOB_FILTER, contractId: { $in: [null] } });
+      assert.equal(filters.attendance.field, 'jobRegisterId');
+      mdb.INTERNAL.attendance.distinct = async () => [];
+      assert.deepEqual((await jobRegisterService.jobsForAllocation()).map((j) => j.projectNumber), [41300]);
+    });
+  });
+});
+
+describe('Other pages showing a day on a job', () => {
+  const job = { _id: JASMINE, uuid: 'j1', projectNumber: 41299, site: '7 Jasmine Gardens, Liverpool', client: 'Plus Dane' };
+
+  it('the daily page shows the job number and site', async () => {
+    const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/attendance/daily.ejs'), {
+      title: 'Daily', csrfToken: 't', fmtDate: dateService.fmtDate, date: '2026-04-27', canGroup: () => false,
+      attendance: [{ uuid: 'a1', status: 'planned', type: 'work', jobRegisterId: job }],
+    }, { async: false });
+    assert.match(html, /<span class="font-mono text-xs">41299<\/span> 7 Jasmine Gardens, Liverpool/);
+  });
+
+  it('the weekly attendance table gives the day the job number and site', () => {
+    const { groupedAttendance } = groupAttendanceByPerson(
+      [{ _id: 'a1', uuid: 'a1', date: at('2026-04-28'), type: 'work', status: 'pending', hoursWorked: 8, employeeId: { _id: E_SITE, uuid: 'e2', name: 'Martin' }, jobRegisterId: job }],
+      at('2026-04-25'), at('2026-05-01'), [{ _id: E_SITE, uuid: 'e2', name: 'Martin' }], [],
+    );
+    const day = Object.values(groupedAttendance.Martin.dailyRecords['2026-04-28'])[0];
+    assert.deepEqual(day.job, { uuid: 'j1', label: '41299 7 Jasmine Gardens, Liverpool' });
+  });
+
+  it('the weekly flow does not flag a job day as work without a contract', () => {
+    const src = fs.readFileSync(path.join(root, 'mongoose/services/weeklyFlowService.js'), 'utf8');
+    assert.match(src, /!rec\.contractId && !rec\.jobRegisterId/);
+  });
+
+  it('marking a day not attended clears its job too', () => {
+    assert.equal(notAttendedUpdate({ notes: '' }, 'u').$unset.jobRegisterId, 1);
+  });
+});
+
+describe('Attendance on a job', () => {
+  const Attendance = mongoose.models.attendanceJobTest || mongoose.model('attendanceJobTest', attendanceModel.schema);
+  const oid = () => new mongoose.Types.ObjectId();
+
+  it('is valid work with only a job', async () => {
+    await new Attendance({ date: new Date(), type: 'work', employeeId: oid(), jobRegisterId: oid() }).validate();
+  });
+
+  it('still needs somewhere: a location, project, contract or job', async () => {
+    await assert.rejects(new Attendance({ date: new Date(), type: 'work', employeeId: oid() }).validate(), /location, project, contract or job/);
+  });
+
+  it('is indexed by job and date', () => {
+    assert.ok(attendanceModel.schema.indexes().some(([keys]) => JSON.stringify(keys) === JSON.stringify({ jobRegisterId: 1, date: 1 })));
   });
 });

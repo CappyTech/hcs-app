@@ -97,7 +97,8 @@ export default {
   },
   attendance: {
     title: 'Attendance',
-    readOnly: ['uuid', 'createdAt', ...ATTENDANCE_APPROVAL_FIELDS],
+    // jobRegisterId is set by the weekly sheet (and its import), never typed in
+    readOnly: ['uuid', 'createdAt', 'jobRegisterId', ...ATTENDANCE_APPROVAL_FIELDS],
     hideFields: ['_id', '__v'],
     // Non-admins: own record only, pending; and no records inside a
     // locked/submitted payroll run. Site Ops edit (a job role) records for
@@ -133,6 +134,7 @@ export default {
       subcontractorId: 'Subcontractor',
       projectId: 'Project',
       locationId: 'Location',
+      jobRegisterId: 'Job',
       contractAssignmentId: 'Contract Assignment',
       hoursWorked: 'Hours Worked',
       dayRate: 'Day Rate'

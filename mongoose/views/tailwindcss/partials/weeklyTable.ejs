@@ -119,7 +119,7 @@
                       – £<%= record.weeklyPay.toFixed(2) %>
                     <% } %>
                   <% } else { %>
-                    <%= record.location?.name || '' %><% if (record.location?.name) { %> <% } %>
+                    <%= record.location?.name || record.job?.label || '' %>
                     <% if (!isManagementView && record.weeklyPay) { %>
                       £<%= record.weeklyPay.toFixed(2) %>
                     <% } %>

@@ -32,6 +32,10 @@ const attendanceSchema = new mongoose.Schema({
     locationId: { type: mongoose.Schema.Types.ObjectId, ref: 'location' },
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'project' },
     contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'contract' },
+    // The Job Register row (a won job) the day was worked on. The weekly
+    // sheet also fills in the job's contract and KashFlow project, when it
+    // has them, so approval and costing keyed on those keep working.
+    jobRegisterId: { type: mongoose.Schema.Types.ObjectId, ref: 'jobRegister' },
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'employee' },
     subcontractorId: { type: mongoose.Schema.Types.ObjectId, ref: 'supplier' },
     contractAssignmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'assignment' },
@@ -54,6 +58,7 @@ attendanceSchema.index({ date: 1 });
 attendanceSchema.index({ employeeId: 1, date: 1 });
 attendanceSchema.index({ subcontractorId: 1, date: 1 });
 attendanceSchema.index({ status: 1 });
+attendanceSchema.index({ jobRegisterId: 1, date: 1 });
 // Duplicate-prevention: one attendance per person per date per location and
 // project, and per location and contract. Each index covers only its own kind
 // of record (partialFilterExpression): with `sparse` on a compound index, an
@@ -61,6 +66,11 @@ attendanceSchema.index({ status: 1 });
 // at one location on one day collided on the subcontractor index (and two
 // subcontractors on the employee one). See UNIQUE_INDEXES in
 // attendanceIndexMigration.js, which replaces the old sparse ones.
+// jobRegisterId isn't part of them: a job-linked day also carries the job's
+// contract and project where it has them, and the weekly sheet and its import
+// write one record per person per day, so nothing yet needs two job-only
+// records for one person on one day. Adding it would mean rebuilding these
+// indexes on the live collection.
 export const UNIQUE_INDEXES = [
     { name: 'unique_employee_day_location_project', person: 'employeeId', keys: { employeeId: 1, date: 1, locationId: 1, projectId: 1 } },
     { name: 'unique_subcontractor_day_location_project', person: 'subcontractorId', keys: { subcontractorId: 1, date: 1, locationId: 1, projectId: 1 } },
@@ -110,10 +120,10 @@ attendanceSchema.pre('validate', function (next) {
         return next(new Error('Attendance should have hoursWorked or dayRate, not both.'));
     }
 
-    // For work/training types, require at least a location, project, or contract
+    // For work/training types, require at least a location, project, contract or job
     const workTypes = ['work', 'training'];
-    if (workTypes.includes(this.type) && !this.locationId && !this.projectId && !this.contractId) {
-        return next(new Error('Work or training attendance must have at least a location, project, or contract.'));
+    if (workTypes.includes(this.type) && !this.locationId && !this.projectId && !this.contractId && !this.jobRegisterId) {
+        return next(new Error('Work or training attendance must have at least a location, project, contract or job.'));
     }
 
     next();

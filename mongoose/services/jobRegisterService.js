@@ -513,16 +513,71 @@ export async function contractChoices(currentId = null) {
   return mdb.INTERNAL.contract.find({ $or: or }).select('uuid title status').sort({ title: 1 }).lean();
 }
 
-/** Won jobs, not cancelled, completed or invoiced, with no contract yet: the weekly sheet's "jobs for allocation". */
+// Won but not completed: a project number, not cancelled, not marked
+// completed and not invoiced. These are the jobs people can be put on (the
+// weekly sheet's choices, the weekly sheet import's matches).
+export const OPEN_JOB_FILTER = {
+  projectNumber: { $type: 'number' },
+  cancelled: { $ne: true },
+  completed: { $ne: true },
+  invoiceNumber: { $not: { $type: 'number' } },
+};
+const OPEN_JOB_FIELDS = '_id uuid projectNumber site client contact description contractId';
+
+/** Is this row a won job not yet completed (OPEN_JOB_FILTER)? Pure. */
+export function isOpenJob(entry) {
+  return !!entry && typeof entry.projectNumber === 'number' && !entry.cancelled && !entry.completed && entry.invoiceNumber == null;
+}
+
+/**
+ * A job as people know it: main '41234 7 Jasmine Gardens', detail
+ * 'Gravel, Plus Dane, Ann' (empty parts left out), and text, the two as one
+ * line for where HTML can't go (a <select> option). Pure.
+ */
+export function jobLabel(job) {
+  if (!job) return { main: '', detail: '', text: '' };
+  const main = [job.projectNumber, job.site].filter((x) => x != null && String(x).trim()).join(' ');
+  const detail = [job.description, job.client, job.contact].map((x) => String(x ?? '').trim()).filter(Boolean).join(', ');
+  return { main, detail, text: detail ? `${main} (${detail})` : main };
+}
+
+/** Won jobs not yet completed (OPEN_JOB_FILTER), newest project first. */
+export async function openJobs() {
+  return mdb.INTERNAL.jobRegister.find(OPEN_JOB_FILTER).select(OPEN_JOB_FIELDS).sort({ projectNumber: -1 }).lean();
+}
+
+/**
+ * The weekly sheet's "jobs for allocation": won jobs not yet completed, with
+ * no contract, that no attendance is booked against yet.
+ */
 export async function jobsForAllocation() {
-  const rows = await mdb.INTERNAL.jobRegister.find({
-    cancelled: { $ne: true },
-    completed: { $ne: true },
-    projectNumber: { $type: 'number' },
-    invoiceNumber: { $not: { $type: 'number' } },
-    contractId: { $in: [null] },
-  }).select('uuid projectNumber site client description').sort({ projectNumber: -1 }).lean();
-  return rows;
+  const rows = await mdb.INTERNAL.jobRegister.find({ ...OPEN_JOB_FILTER, contractId: { $in: [null] } })
+    .select(OPEN_JOB_FIELDS).sort({ projectNumber: -1 }).lean();
+  if (!rows.length) return rows;
+  const booked = await mdb.INTERNAL.attendance.distinct('jobRegisterId', { jobRegisterId: { $in: rows.map((r) => r._id) } });
+  const taken = new Set(booked.filter(Boolean).map(String));
+  return rows.filter((r) => !taken.has(String(r._id)));
+}
+
+/** The synced KashFlow project for each job's project number: Map of projectNumber → REST project _id. */
+export async function projectIdsByNumber(jobs = []) {
+  const numbers = [...new Set(jobs.map((j) => j?.projectNumber).filter((n) => typeof n === 'number'))];
+  if (!numbers.length || !mdb.REST?.project) return new Map();
+  const projects = await mdb.REST.project.find({ Number: { $in: numbers } }).select('_id Number').lean();
+  return new Map(projects.map((p) => [Number(p.Number), p._id]));
+}
+
+/**
+ * What an attendance record on `job` links to: the job, its contract when it
+ * has one, and its KashFlow project (the synced one with the job's number,
+ * else the contract's). Pure.
+ */
+export function jobTarget(job, { projectId = null, contract = null } = {}) {
+  const out = { jobRegisterId: job._id };
+  if (job.contractId) out.contractId = job.contractId._id || job.contractId;
+  const project = projectId || contract?.projectId || null;
+  if (project) out.projectId = project;
+  return out;
 }
 
 export default {
@@ -530,4 +585,5 @@ export default {
   stageOf, clientKey, entryDate, taxYearOf, matchEntry, buildRegister, findUnregistered, nextNumber, parseEntryForm,
   parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext, ukToday,
   loadRegister, createEntry, updateEntry, findEntry, contractChoices, customerChoices, jobsForAllocation,
+  OPEN_JOB_FILTER, isOpenJob, jobLabel, openJobs, projectIdsByNumber, jobTarget,
 };

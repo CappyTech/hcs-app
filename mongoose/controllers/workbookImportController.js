@@ -170,10 +170,10 @@ export const getWeeklySheetUpload = async (req, res, next) => {
     action: WS,
     heading: 'Import the weekly attendance workbook',
     icon: 'bi-calendar-week',
-    intro: 'Brings the weekly tabs of the WEEKLY ATTENDANCE spreadsheet into attendance. Next you\'ll match each name and site on the sheet to a person and a contract or location; nothing is saved until you import.',
+    intro: 'Brings the weekly tabs of the WEEKLY ATTENDANCE spreadsheet into attendance. Next you\'ll match each name and site on the sheet to a person and a saved location or a job won in the Job Register and not completed; nothing is saved until you import.',
     points: [
       'Reads every tab with a week of dates over MON … SAT. Monday to Saturday are imported; the Sunday column (hours and pay) isn\'t.',
-      'Sites and locations become work days, OFF becomes off and Sick becomes sick. Holidays aren\'t imported: approved holiday requests are the record of leave.',
+      'Jobs and locations become work days, OFF becomes off and Sick becomes sick. Sites matching neither are skipped; no locations are added. Holidays aren\'t imported: approved holiday requests are the record of leave.',
       'Every record is pending, for the usual approval. Days that already have attendance, days in a locked payroll period and days after today are left alone.',
     ],
   });
@@ -208,7 +208,6 @@ export const postWeeklySheetImport = async (req, res, next) => {
     const r = await sheetImport.runImport(req.params.uuid, req.body || {}, { actorId: req.user?._id });
     const s = r.skipped;
     let msg = `Imported ${plural(r.created, 'day')} of attendance across ${plural(r.weeks, 'week')}, all pending approval.`;
-    if (r.createdLocations) msg += ` Added ${plural(r.createdLocations, 'location')}.`;
     req.flash('success', msg);
     const left = [
       s.existing && `${s.existing} already recorded`,
