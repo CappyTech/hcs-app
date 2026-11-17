@@ -455,7 +455,11 @@ export async function loadRegister(filters = {}) {
   });
   const unregistered = findUnregistered({ quotes: periodQuotes, projects: periodProjects, quoteNumbers, projectNumbers });
   // Costs, labour and margin for the rows shown
-  const costs = await jobLabour.loadRegisterCosts(register.rows);
+  // Costs need the synced purchases; without them the register still shows
+  const costs = await jobLabour.loadRegisterCosts(register.rows).catch((err) => {
+    logger.warn(`[jobRegisterService] Register costs not loaded: ${err.message}`);
+    return null;
+  });
   return {
     ...register,
     costs,
@@ -499,7 +503,10 @@ export async function loadJob(uuid) {
   match.extras = markElsewhere(match.extras, others, job.uuid);
   const values = jobValues(job);
   // Purchases, labour and margin
-  const costs = await jobLabour.loadJobCosts(job, values, project?._id ?? null);
+  const costs = await jobLabour.loadJobCosts(job, values, project?._id ?? null).catch((err) => {
+    logger.warn(`[jobRegisterService] Costs for job ${job.uuid} not loaded: ${err.message}`);
+    return null;
+  });
   return {
     job,
     stage: stageOf(job),
