@@ -14,6 +14,13 @@ const purchaseSchema = new mongoose.Schema({
 
 purchase.indexes.forEach(idx => purchaseSchema.index(idx.fields, idx.options));
 
+// Job costs (jobCostService): purchases are tied to a job per line, with the
+// header's ProjectNumber as the fallback, so both are looked up. Built by
+// Mongoose's autoIndex like the shared indexes above; a failure is logged by
+// Mongoose and never stops start-up.
+purchaseSchema.index({ 'LineItems.ProjectNumber': 1 });
+purchaseSchema.index({ ProjectNumber: 1 });
+
 export default {
   modelName: 'purchase',
   schema: purchaseSchema
