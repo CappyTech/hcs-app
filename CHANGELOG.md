@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.127.0] - 2026-11-17
+
+### Added
+- **Employees and subcontractors are now told about changes that affect them, on the channels they chose.** When the weekly sheet or its import plans or changes someone's days, they get one notice listing those days, linked to their week. When their days get final approval, are rejected (with the reason) or are marked not attended, they get one notice for that action. Nobody is told about a change they made themselves.
+- **When a payroll run is locked, each employee in it is told their pay is settled**, and told again if their pay changes after that. The notice gives the period and payment date, never amounts.
+- **Publishing a policy, or giving a published one a new version, tells the people it applies to:** the employee for their own document, with a link to it, or everyone linked to an active employee for a company policy.
+
 ## [6.126.0] - 2026-11-17
 
 ### Added
