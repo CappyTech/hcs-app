@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.125.1] - 2026-11-17
+
+### Fixed
+- **The test suite passes again from 17 November 2026.** A workbook import test gave its upload a fixed expiry of 17 November 2026, so from that date the upload counted as expired and CI failed, which stopped 6.125.0 from being published. The test's upload now expires a day after the test runs. No change to the app.
+
 ## [6.125.0] - 2026-11-17
 
 ### Added
