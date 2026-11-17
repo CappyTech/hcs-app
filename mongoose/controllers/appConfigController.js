@@ -42,6 +42,9 @@ async function runAfterSave(group) {
     } else if (group.afterSave === 'mail') {
       const emailService = (await import('../../services/emailService.js')).default;
       emailService.resetTransporter?.();
+    } else if (group.afterSave === 'onedrive') {
+      const oneDrive = (await import('../../services/oneDriveFolderService.js')).default;
+      oneDrive.resetToken();
     }
   } catch (err) {
     logger.warn(`[appConfig] after-save hook for ${group.id} failed: ${err.message}`);
