@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.131.0] - 2026-11-17
+
+### Added
+- **The app can now create and move job folders in OneDrive.** A new "OneDrive (job folders)" section in Admin → Config takes the Microsoft app registration details (it needs the Microsoft Graph application permission Files.ReadWrite.All with admin consent), the account whose OneDrive holds the folders, and the folder names. When it is turned on, a quote gets a "<quote no> <site>" folder in that year's quotes folder, a won job's folder moves to that year's live jobs folder and is renamed "<job no> <site>", and a completed job's folder moves into Completed Jobs. Missing year folders are created when first needed. Test connection checks the details by reading the top folder only. Nothing is linked to the Job Register yet.
+
 ## [6.130.0] - 2026-11-17
 
 ### Added
