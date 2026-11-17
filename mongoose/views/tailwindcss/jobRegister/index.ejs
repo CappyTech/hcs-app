@@ -3,6 +3,7 @@
   per job (its quotes and invoices with it), each number checked against the
   synced KashFlow quote, project and invoice. Each row opens the job's page.
   Locals: rows ({ entry, stage, match, values }), counts, clients, years, totals { quoted, won, invoiced },
+          costs (optional: { byUuid: { uuid: { purchases, labour, margin, basis } | null }, totals, byYear }),
           filters, unregistered, next, unlinkedCount,
           stageLabels, stages, contracts, crumbs
 %>
@@ -44,6 +45,10 @@
     return `<span class="inline-flex items-center gap-1 text-red-700 dark:text-red-400" title="${s.issues.join('; ').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>${name}</span>`;
   };
   const yearLabel = (y) => `${y}/${String(y + 1).slice(-2)}`;
+  const costs = locals.costs || null;
+  const signed = (v) => (Number(v) < 0 ? '-' : '') + money(Math.abs(Number(v) || 0));
+  const costOf = (e) => (costs ? costs.byUuid[e.uuid] ?? null : null);
+  const marginClass = (v) => (v < 0 ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100');
 %>
 <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
   <%- include('../partials/breadcrumbs', { crumbs, current: 'Job Register' }) %>
@@ -125,6 +130,25 @@
       <p class="text-2xl font-bold text-green-700 dark:text-green-400"><%= money(totals.invoiced) || '£0.00' %></p>
     </div>
   </div>
+  <% if (costs) { const ct = costs.totals; %>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="<%= card %> p-4">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Costs (purchases)</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(ct.purchases) %></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Net purchase lines on these jobs' projects, excluding cancelled jobs</p>
+      </div>
+      <div class="<%= card %> p-4">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Labour (employees)</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(ct.labour) %></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Approved days at payroll rates; subcontractors are in purchases</p>
+      </div>
+      <div class="<%= card %> p-4">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Margin</p>
+        <p class="text-2xl font-bold <%= ct.margin < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>"><%= signed(ct.margin) %></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Invoiced (or agreed value while nothing is invoiced) − purchases − labour, jobs with a project number</p>
+      </div>
+    </div>
+  <% } %>
 
   <!-- Clients not linked to KashFlow customers yet -->
   <% if (typeof unlinkedCount !== 'undefined' && unlinkedCount) { %>
@@ -169,6 +193,10 @@
             <%= money(g.quoted) || '£0.00' %> quoted ·
             <span class="text-blue-700 dark:text-blue-400"><%= money(g.won) || '£0.00' %> won</span> ·
             <span class="text-green-700 dark:text-green-400"><%= money(g.invoiced) || '£0.00' %> invoiced</span>
+            <% const yc = costs ? costs.byYear[g.year] : null; if (yc) { %>
+              · <%= money(yc.purchases) %> costs · <%= money(yc.labour) %> labour ·
+              <span class="<%= marginClass(yc.margin) %>"><%= signed(yc.margin) %> margin</span>
+            <% } %>
           </p>
         </div>
         <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
@@ -181,6 +209,11 @@
             <th class="<%= th %>">Stage</th>
             <th class="<%= th %> text-right">Quoted</th>
             <th class="<%= th %> text-right">Invoiced</th>
+            <% if (costs) { %>
+            <th class="<%= th %> text-right">Costs</th>
+            <th class="<%= th %> text-right">Labour</th>
+            <th class="<%= th %> text-right">Margin</th>
+            <% } %>
             <th class="<%= th %>">KashFlow</th>
           </tr>
         </thead>
@@ -211,6 +244,21 @@
                   <% if (stage === 'won' && values.agreed > values.invoiced) { %><p class="text-xs text-gray-500 dark:text-gray-400">of <%= money(values.agreed) %></p><% } %>
                 <% } %>
               </td>
+              <% if (costs) { const c = costOf(e); %>
+                <% if (!c) { %>
+                  <td class="<%= td %> text-right text-gray-400">—</td><td class="<%= td %> text-right text-gray-400">—</td><td class="<%= td %> text-right text-gray-400">—</td>
+                <% } else { %>
+                  <td class="<%= td %> text-right whitespace-nowrap"><%= money(c.purchases) %></td>
+                  <td class="<%= td %> text-right whitespace-nowrap">
+                    <%= money(c.labour) %>
+                    <% if (c.pendingDays) { %><p class="text-xs text-amber-700 dark:text-amber-400" title="Not approved yet, not counted">+<%= c.pendingDays %> day<%= c.pendingDays === 1 ? '' : 's' %> pending</p><% } %>
+                  </td>
+                  <td class="<%= td %> text-right whitespace-nowrap">
+                    <span class="<%= marginClass(c.margin) %>"><%= signed(c.margin) %></span>
+                    <% if (c.basis === 'agreed') { %><p class="text-xs text-gray-500 dark:text-gray-400">on agreed</p><% } %>
+                  </td>
+                <% } %>
+              <% } %>
               <td class="<%= td %> text-xs whitespace-nowrap">
                 <div class="flex flex-col gap-0.5">
                   <%- sideBadge(match.project, 'Project') %>

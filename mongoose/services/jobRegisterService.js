@@ -23,6 +23,7 @@ import taxService from '../../services/taxService.js';
 import logger from '../../services/loggerService.js';
 import kfSession from '../../services/kashflowSessionService.js';
 import lifecycle from './jobRegisterLifecycleService.js';
+import jobLabour from './jobLabourService.js';
 import { QUOTE_STATUSES, jobProblem } from '../models/mongoose/INTERNAL/jobRegister.js';
 
 export { QUOTE_STATUSES };
@@ -453,8 +454,11 @@ export async function loadRegister(filters = {}) {
     filters,
   });
   const unregistered = findUnregistered({ quotes: periodQuotes, projects: periodProjects, quoteNumbers, projectNumbers });
+  // Costs, labour and margin for the rows shown
+  const costs = await jobLabour.loadRegisterCosts(register.rows);
   return {
     ...register,
+    costs,
     unregistered: {
       year,
       quoteCount: unregistered.quotes.length,
@@ -493,10 +497,14 @@ export async function loadJob(uuid) {
   const onJob = { quotes: byProject(quotes).get(onProject[0]) || [], invoices: byProject(invoices).get(onProject[0]) || [] };
   const match = matchJob(job, { project, quotesByNumber: byNumber(quotes), invoicesByNumber: byNumber(invoices), onJob });
   match.extras = markElsewhere(match.extras, others, job.uuid);
+  const values = jobValues(job);
+  // Purchases, labour and margin
+  const costs = await jobLabour.loadJobCosts(job, values, project?._id ?? null);
   return {
     job,
     stage: stageOf(job),
-    values: jobValues(job),
+    values,
+    costs,
     match,
     next: combineNext({ entries: others, kf, topQuote, topProject }),
   };
