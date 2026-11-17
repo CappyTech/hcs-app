@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.126.0] - 2026-11-17
+
+### Added
+- **People can now be told about things by email, text message and in the app.** On Notification Settings each kind of notice now has an Email, SMS and In app column, so you can choose how you hear about it. Text messages go to the phone number on your account; if there isn't one, the page says so. Required notices, such as security alerts, still can't be turned off.
+- **A new Notifications page lists your in-app notifications, newest first.** A bell in the header shows how many are unread. You can open a notification, mark it as read, or mark them all as read.
+- **Three new notification types: Your weekly attendance, Payroll and Policy documents.** Each is on by default by email and in the app, and text messages are off until you turn them on. Nothing sends them yet; that comes in a later release.
+
+### Changed
+- **The notification outbox now sends text messages as well as emails.** Text messages get the same retries as emails when sending fails. Your existing email choices are kept exactly as they were.
+
 ## [6.125.2] - 2026-11-17
 
 ### Fixed
