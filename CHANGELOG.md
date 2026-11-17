@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.128.0] - 2026-11-17
+
+### Changed
+- **Payroll pays attendance from hours and the employee's hourly rate, or the day's day rate.** A day's own pay rate and overtime are no longer read. Nothing in the app let anyone enter them, so pay is unchanged unless a record was given them another way.
+- **Subcontractor attendance records only where and when they worked.** Subcontractors are paid on their CIS invoices, so their days no longer hold hours or a day rate. The weekly grid no longer asks for a subcontractor's day rate, the daily page shows "Day worked", and the weekly view counts their days worked instead of adding day rates to pay. Saving a subcontractor's day clears any hours or day rate left on it.
+- **Editing an attendance record from the admin list now runs the same checks as everywhere else.** A record with no location, job or contract, or with both or neither of an employee and a subcontractor, is refused instead of saved.
+
+### Removed
+- **Break minutes, overtime hours, overtime rate and pay rate are gone from attendance**, along with the OT column on the daily page and the attendance list. On start-up, any of these that are empty (and any empty hours or day rate on a subcontractor's day) are cleared from existing records. A record holding a real figure is left as it is, and the start-up log warns how many there are for each field.
+
 ## [6.127.0] - 2026-11-17
 
 ### Added
