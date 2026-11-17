@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.133.0] - 2026-11-17
+
+### Added
+- **The job page lists KashFlow quotes and invoices that are on the job in KashFlow but not on the job here.** Each has an Add to job button that puts it on the job with its number, date and net value from KashFlow. A number that's already on another job is refused, with a link to that job.
+
+### Changed
+- **Each quote on a job is now checked to be on that job in KashFlow.** A quote on another job, or on none, is flagged, for example "Quote 51234 isn't on job 41012 in KashFlow". Invoices use the same wording, and an invoice that isn't on any job in KashFlow is now flagged too. Quotes on enquiries aren't checked.
+- **"Doesn't match KashFlow" on the Job Register now includes jobs with KashFlow quotes or invoices missing from them**, so they're easy to find.
+
 ## [6.132.0] - 2026-11-17
 
 ### Added
