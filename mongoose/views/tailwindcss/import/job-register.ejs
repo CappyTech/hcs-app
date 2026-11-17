@@ -17,10 +17,18 @@
   const quotes = byNumber('quoteNumber');
   const jobs = byNumber('projectNumber');
   const STAGE_NAMES = { toQuote: 'To survey / quote', quoted: 'Quoted', won: 'Won', completed: 'Completed', invoiced: 'Invoiced', cancelled: 'Cancelled' };
-  const FIELD_LABELS = { customerCode: 'customer', quoteNumber: 'quote no.', quoteDate: 'quote date', projectNumber: 'project no.', jobDate: 'job date', site: 'site', client: 'client', contact: 'contact', value: 'value', description: 'description', clientRef: 'client ref', invoiceNumber: 'invoice no.', invoiceDate: 'invoice date', notes: 'notes', cancelled: 'cancelled', quoteStatus: 'quote status', won: 'won', completed: 'completed', inKashflow: 'in KashFlow' };
+  const FIELD_LABELS = { customerCode: 'customer', projectNumber: 'project no.', jobDate: 'job date', site: 'site', client: 'client', contact: 'contact', value: 'value', description: 'description', clientRef: 'client ref', notes: 'notes', cancelled: 'cancelled', won: 'won', completed: 'completed', inKashflow: 'in KashFlow' };
+  const QUOTE_LABELS = { date: 'date', value: 'value', description: 'description', status: 'status' };
+  // What an update does to the job: its fields, its quote's, and any quote or invoice it adds
+  const changes = (p) => [
+    ...Object.keys(p.fill || {}).map((k) => FIELD_LABELS[k] || k),
+    ...Object.keys(p.quoteFill || {}).map((k) => `quote ${QUOTE_LABELS[k] || k}`),
+    ...(p.addQuote ? [`adds quote ${p.addQuote.number}`] : []),
+    ...(p.addInvoice ? [`adds invoice ${p.addInvoice.number}`] : []),
+  ].join(', ');
   const groups = [
     { action: 'create', title: 'To add', tone: 'text-green-700 dark:text-green-400', open: false },
-    { action: 'update', title: 'Already in the register: to update (imported, not edited since) or fill in', tone: 'text-blue-700 dark:text-blue-400', open: true },
+    { action: 'update', title: 'Already in the register: to update (imported, not edited since), fill in, or add a quote or invoice to', tone: 'text-blue-700 dark:text-blue-400', open: true },
     { action: 'conflict', title: "Can't import: check by hand", tone: 'text-red-700 dark:text-red-400', open: true },
     { action: 'skip', title: 'Left out: client not matched to a KashFlow customer', tone: 'text-amber-700 dark:text-amber-400', open: false },
     { action: 'same', title: 'Already in the register, nothing to add', tone: 'text-gray-500 dark:text-gray-400', open: false },
@@ -181,7 +189,7 @@
                   <td class="<%= td %>"><%= e.invoiceNumber ?? '' %><%= e.cancelled ? ' Cancelled' : '' %></td>
                   <td class="<%= td %> whitespace-nowrap"><%= e.colour && e.colour !== 'none' ? e.colour : 'no colour' %><%= e.inKashflow ? ', orange no.' : '' %><% if (p.stage) { %> → <%= STAGE_NAMES[p.stage] || p.stage %><% } %></td>
                   <td class="<%= td %> text-gray-500 dark:text-gray-400">
-                    <% if (g.action === 'update') { %><%= p.overwrite ? 'Updates' : 'Fills in' %>: <%= Object.keys(p.fill).map((k) => FIELD_LABELS[k] || k).join(', ') %>
+                    <% if (g.action === 'update') { %><%= p.overwrite ? 'Updates' : 'Fills in' %>: <%= changes(p) %>
                     <% } else if (g.action === 'conflict' || g.action === 'skip') { %><%= p.reason %>
                     <% } else { %><%= e.notes %><% } %>
                   </td>

@@ -1,8 +1,8 @@
 <%#
-  Create a Job Register row's quote in KashFlow: the lines, with the register's
-  price beside the lines' total so they can be made to agree before sending.
-  No script: Add line and Update totals post the form back.
-  Locals: entry, values { date, reference, lines[] }, errors, totals { net, vat, gross },
+  Create one of a Job Register job's quotes in KashFlow: the lines, with the
+  quote's price in the register beside the lines' total so they can be made
+  to agree before sending. No script: Add line and Update totals post the form back.
+  Locals: entry (the job), quote, values { date, reference, lines[] }, errors, totals { net, vat, gross },
   nominals [{ code, name }], defaultNominal, vatChoices, crumbs, title
 %>
 <%
@@ -16,7 +16,7 @@
   const money = (v) => v == null ? '' : '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const err = (key) => errors[key] ? `<p class="text-xs text-red-700 dark:text-red-400 mt-1">${errors[key]}</p>` : '';
   const lines = values.lines && values.lines.length ? values.lines : [{}];
-  const registerValue = entry.value != null ? Number(entry.value) : null;
+  const registerValue = quote.value != null ? Number(quote.value) : null;
   const diff = registerValue != null ? Math.round((totals.net - registerValue) * 100) / 100 : null;
 %>
 <div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -27,10 +27,10 @@
       <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %></h1>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><%= entry.site %> &middot; <%= entry.client %> <span class="font-mono">(<%= entry.customerCode %>)</span></p>
     </div>
-    <a href="/job-register/<%= entry.uuid %>" class="<%= secondaryBtn %>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to the row</a>
+    <a href="/job-register/<%= entry.uuid %>" class="<%= secondaryBtn %>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to the job</a>
   </div>
 
-  <form method="POST" action="/job-register/<%= entry.uuid %>/kashflow-quote" class="grid lg:grid-cols-3 gap-4">
+  <form method="POST" action="/job-register/<%= entry.uuid %>/kashflow-quote/<%= quote._id %>" class="grid lg:grid-cols-3 gap-4">
     <%- include('../partials/csrfHidden') %>
     <input type="hidden" name="defaultNominal" value="<%= defaultNominal ?? '' %>">
     <%# Enter in a box updates the totals, never creates the quote: the form's first submit button %>
@@ -42,7 +42,7 @@
         <div class="grid sm:grid-cols-3 gap-3">
           <div>
             <span class="<%= label %>">Number</span>
-            <p class="text-sm font-mono py-2 text-gray-900 dark:text-gray-100"><%= entry.quoteNumber %></p>
+            <p class="text-sm font-mono py-2 text-gray-900 dark:text-gray-100"><%= quote.number %></p>
           </div>
           <label class="block">
             <span class="<%= label %>">Date</span>
@@ -54,7 +54,7 @@
             <input name="reference" value="<%= values.reference %>" maxlength="100" class="<%= input('reference') %>">
           </label>
         </div>
-        <p class="text-xs text-gray-400 mt-2">If quote <%= entry.quoteNumber %> is taken in KashFlow by another client, KashFlow picks the next number and this row changes to match.</p>
+        <p class="text-xs text-gray-400 mt-2">If quote <%= quote.number %> is taken in KashFlow by another client, KashFlow picks the next number and the register changes to match.<% if (entry.projectNumber != null) { %> It goes on project <span class="font-mono"><%= entry.projectNumber %></span>.<% } %></p>
       </div>
 
       <div class="<%= card %> p-4" id="lines">

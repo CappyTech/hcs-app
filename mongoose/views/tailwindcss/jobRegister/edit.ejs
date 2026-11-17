@@ -1,7 +1,6 @@
 <%#
-  One Job Register row: its KashFlow checks and the form to change it.
-  Locals: entry, stage, stageLabels, match, next, clients, contracts, customers: locals.customers || [], crumbs, title,
-  canCreate ({ quote, project }: show the Create in KashFlow buttons)
+  Edit a job's own fields. Its quotes and invoices are changed on the job page.
+  Locals: entry, stage, stageLabels, next, contracts, customers, crumbs, title, form (as typed, after a Next button)
 %>
 <%
   const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm';
@@ -10,67 +9,25 @@
   const primaryBtn = 'text-sm bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition';
   const secondaryBtn = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm';
   const label = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
-  const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '';
-  const money = (v) => v == null ? '' : '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const stateCard = {
-    ok: 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20',
-    missing: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20',
-    differs: 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20',
-    none: 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900',
-  };
-  const stateText = { ok: 'In KashFlow and agrees', missing: "Not in KashFlow yet, or not synced", differs: 'In KashFlow but differs', none: 'No number yet' };
-  const can = locals.canCreate || {};
-  const sides = match ? [
-    ['Quote', entry.quoteNumber, match.quote, '/quote/read/', (r) => `${fmt(r.Date)} · ${r.CustomerName || ''} · ${money(r.NetAmount)}${r.Status ? ' · ' + r.Status : ''}`],
-    ['Project', entry.projectNumber, match.project, '/project/read/', (r) => `${r.Name || ''} · ${r.CustomerName || ''}${r.Status ? ' · ' + r.Status : ''}`],
-    ['Invoice', entry.invoiceNumber, match.invoice, '/invoice/read/', (r) => `${fmt(r.IssuedDate)} · ${r.CustomerName || ''} · ${money(r.NetAmount)}${r.Status ? ' · ' + r.Status : ''}`],
-  ] : [];
+  const hasQuotes = Array.isArray(entry.quotes) && entry.quotes.length > 0;
 %>
 <div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-  <%- include('../partials/breadcrumbs', { crumbs, current: title }) %>
+  <%- include('../partials/breadcrumbs', { crumbs, current: 'Edit' }) %>
 
   <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <div>
       <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= title %>: <%= entry.site %></h1>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><%= entry.client %> &middot; <%= stageLabels[stage] %></p>
     </div>
-    <a href="/job-register" class="<%= secondaryBtn %>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Job Register</a>
+    <a href="/job-register/<%= entry.uuid %>" class="<%= secondaryBtn %>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to the job</a>
   </div>
 
-  <% if (sides.length) { %>
-    <h2 class="<%= h2 %> mb-2">KashFlow</h2>
-    <div class="grid md:grid-cols-3 gap-4 mb-6">
-      <% sides.forEach(([name, number, s, href, describe]) => { %>
-        <div class="rounded-xl border p-4 <%= stateCard[s.state] %>">
-          <p class="text-sm font-medium text-gray-900 dark:text-gray-100"><%= name %> <span class="font-mono"><%= number ?? '' %></span></p>
-          <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5"><%= stateText[s.state] %></p>
-          <% if (s.record) { %>
-            <p class="text-xs text-gray-700 dark:text-gray-300 mt-2"><%= describe(s.record) %></p>
-            <a href="<%= href %><%= s.record.uuid %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Open in hcs-app</a>
-          <% } %>
-          <% s.issues.forEach((issue) => { %><p class="text-xs text-red-700 dark:text-red-400 mt-1"><%= issue %></p><% }) %>
-          <% const sentAt = name === 'Quote' ? entry.quoteSentAt : name === 'Project' ? entry.projectSentAt : null; %>
-          <% if (sentAt) { %>
-            <p class="text-xs text-gray-600 dark:text-gray-400 mt-2"><i class="bi bi-cloud-check" aria-hidden="true"></i> Created in KashFlow from here on <%= fmt(sentAt) %>.</p>
-          <% } else if (name === 'Quote' && s.state === 'missing' && can.quote) { %>
-            <a href="/job-register/<%= entry.uuid %>/kashflow-quote" class="<%= secondaryBtn %> mt-3"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Create in KashFlow</a>
-          <% } else if (name === 'Project' && s.state === 'missing' && can.project) { %>
-            <form method="POST" action="/job-register/<%= entry.uuid %>/kashflow-project" class="mt-3">
-              <%- include('../partials/csrfHidden') %>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Creates project <span class="font-mono"><%= entry.projectNumber %></span> named <em><%= entry.site %></em> for <%= entry.client %><%= entry.jobDate ? `, starting ${fmt(entry.jobDate)}` : '' %>. If the number is taken in KashFlow, KashFlow picks the next and this row changes to match.</p>
-              <button type="submit" class="<%= secondaryBtn %>"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Create in KashFlow</button>
-            </form>
-          <% } %>
-        </div>
-      <% }) %>
-    </div>
-  <% } %>
-
   <div class="<%= card %> p-4">
-    <h2 class="<%= h2 %> mb-4">Register entry</h2>
+    <h2 class="<%= h2 %> mb-1">Job</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Give the job its project number when it's won. Its quotes and invoices are on the job page.</p>
     <form method="POST" action="/job-register/<%= entry.uuid %>" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <%- include('../partials/csrfHidden') %>
-      <%- include('_fields', { entry: locals.form || entry, next, clients, contracts, customers: locals.customers || [], input, label, nextAction: `/job-register/${entry.uuid}/next` }) %>
+      <%- include('_fields', { entry: locals.form || entry, next, clients: [], contracts, customers: locals.customers || [], input, label, nextAction: `/job-register/${entry.uuid}/next`, withQuote: false, showValue: !hasQuotes }) %>
       <div class="sm:col-span-2 lg:col-span-4">
         <button type="submit" class="<%= primaryBtn %>">Save</button>
       </div>

@@ -1,8 +1,11 @@
 <%#
-  The register row's fields, shared by the add and edit forms. In the order of
-  the Job Reg workbook: quote, job, site, client, contact, value, description,
-  invoice, client ref.
-  Locals: entry, next, clients, contracts, customers [{ code, name }], input, label, nextAction
+  A job's own fields, shared by the add and edit forms: job, site, client,
+  contact, value, description, client ref, contract, notes, flags. The add
+  form also takes the job's first quote (withQuote: quote no., date, status;
+  its value and description are the form's). Quotes and invoices are added
+  and changed on the job page.
+  Locals: entry, next, clients, contracts, customers [{ code, name }], input, label, nextAction,
+          withQuote (the add form), showValue (default true: a job with quotes is worth its quotes)
 
   The Next buttons post the form as typed to nextAction, which shows it again
   with KashFlow's next number filled in; the Today buttons do the same with
@@ -13,8 +16,11 @@
   const ymd = (d) => d ? new Date(d).toISOString().slice(0, 10) : '';
   const v = (k) => entry[k] ?? '';
   const currentContract = entry.contractId?.uuid || '';
+  const withQuote = locals.withQuote === true;
+  const showValue = locals.showValue !== false;
   const nextBtn = 'shrink-0 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium transition disabled:opacity-50';
 %>
+<% if (withQuote) { %>
 <div>
   <label for="jr-quoteNumber" class="<%= label %>">Quote no. (KashFlow)</label>
   <div class="flex gap-2">
@@ -29,6 +35,7 @@
     <button type="submit" name="fill" value="quoteDate" formaction="<%= nextAction %>" formnovalidate title="Fill in today's date" class="<%= nextBtn %>">Today</button>
   </div>
 </div>
+<% } %>
 <div>
   <label for="jr-projectNumber" class="<%= label %>">Job / project no. (KashFlow)</label>
   <div class="flex gap-2">
@@ -65,10 +72,13 @@
   <input id="jr-contact" name="contact" maxlength="200" value="<%= v('contact') %>" class="<%= input %> w-full">
 </div>
 
+<% if (showValue) { %>
 <div>
-  <label for="jr-value" class="<%= label %>">Value (net £)</label>
-  <input id="jr-value" name="value" inputmode="decimal" value="<%= typeof entry.value === 'string' ? entry.value : (entry.value != null ? Number(entry.value).toFixed(2) : '') %>" class="<%= input %> w-full">
+  <label for="jr-value" class="<%= label %>"><%= withQuote ? 'Value (net £)' : 'Agreed value (net £)' %></label>
+  <input id="jr-value" name="value" inputmode="decimal" value="<%= typeof entry.value === 'string' ? entry.value : (entry.value != null ? Number(entry.value).toFixed(2) : '') %>" aria-describedby="jr-value-help" class="<%= input %> w-full">
+  <p id="jr-value-help" class="mt-1 text-xs text-gray-500 dark:text-gray-400"><%= withQuote ? "The quote's value; with no quote number, the job's agreed value." : 'For a job with no quote.' %></p>
 </div>
+<% } %>
 <div>
   <label for="jr-description" class="<%= label %>">Description</label>
   <input id="jr-description" name="description" maxlength="300" value="<%= v('description') %>" placeholder="Paving, fencing, structural…" class="<%= input %> w-full">
@@ -87,21 +97,11 @@
   </select>
 </div>
 
-<div>
-  <label for="jr-invoiceNumber" class="<%= label %>">Invoice no. (KashFlow)</label>
-  <input id="jr-invoiceNumber" name="invoiceNumber" inputmode="numeric" value="<%= v('invoiceNumber') %>" class="<%= input %> w-full font-mono">
-</div>
-<div>
-  <label for="jr-invoiceDate" class="<%= label %>">Invoice date</label>
-  <div class="flex gap-2">
-    <input id="jr-invoiceDate" type="date" name="invoiceDate" value="<%= ymd(entry.invoiceDate) %>" class="<%= input %> w-full min-w-0">
-    <button type="submit" name="fill" value="invoiceDate" formaction="<%= nextAction %>" formnovalidate title="Fill in today's date" class="<%= nextBtn %>">Today</button>
-  </div>
-</div>
 <div class="sm:col-span-2">
   <label for="jr-notes" class="<%= label %>">Notes</label>
   <input id="jr-notes" name="notes" maxlength="2000" value="<%= v('notes') %>" placeholder="Paint to do, key 3142…" class="<%= input %> w-full">
 </div>
+<% if (withQuote) { %>
 <div>
   <label for="jr-quoteStatus" class="<%= label %>">Quote</label>
   <select id="jr-quoteStatus" name="quoteStatus" class="<%= input %> w-full">
@@ -110,6 +110,7 @@
     <option value="quoted" <%= entry.quoteStatus === 'quoted' ? 'selected' : '' %>>Quoted, awaiting answer</option>
   </select>
 </div>
+<% } %>
 <div class="sm:col-span-2 lg:col-span-3 flex flex-wrap items-end gap-x-6 gap-y-2 pb-2">
   <% [['won', 'Won'], ['inKashflow', 'Entered in KashFlow'], ['completed', 'Completed'], ['cancelled', 'Cancelled']].forEach(([name, text]) => { %>
     <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">

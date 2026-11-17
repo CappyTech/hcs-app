@@ -12,7 +12,9 @@ import { readWorkbook, flattenValue, dayOf, isXlsxUpload, fillColour, colourName
 import jobImport, {
   cellText, cellInt, cellMoney, cellDate, siteKey, parseRow, pairQuotesWithJobs, parseJobRegWorkbook,
   planImport, summarisePlan, toModelFields, applyChosenPairs, suggestPairs, rowColour, colourState, mergePair,
+  newJobFromEntry, importUpdate, entryAsJob, entryQuoteStatus,
 } from '../mongoose/services/jobRegisterImportService.js';
+import { stageOf as jobStageOf, matchJob } from '../mongoose/services/jobRegisterService.js';
 import sheetImport, {
   classifyCell, parseWeekSheet, parseAttendanceWorkbook, suggestPerson, suggestPlace,
   readPersonChoice, readPlaceChoice, planAttendance,
@@ -156,27 +158,33 @@ describe('Job Reg colours', () => {
     assert.equal(pair.quoteStatus, 'quoted');
   });
 
-  it('moves a register row on by its colours, and only takes one off a row it may overwrite', () => {
+  it('moves a job and its quote on by the colours, and only takes one off a job it may overwrite', () => {
     const entry = { quoteNumber: 50020, site: '20 Test St', client: 'Example Homes', quoteStatus: 'quoted', won: true };
-    const edited = { _id: 'r1', quoteNumber: 50020, site: '20 Test St', client: 'Example Homes', quoteStatus: 'toQuote', editedAt: new Date() };
+    const edited = { _id: 'r1', site: '20 Test St', client: 'Example Homes', quotes: [{ _id: 'q1', number: 50020, status: 'toQuote' }], editedAt: new Date() };
     const [p] = planImport([entry], [edited]);
     assert.equal(p.action, 'update');
-    assert.deepEqual(p.fill, { quoteStatus: 'quoted', won: true });
+    assert.deepEqual(p.fill, { won: true });
+    assert.deepEqual(p.quoteFill, { status: 'won' });
+    assert.equal(p.quoteId, 'q1');
 
-    const imported = { _id: 'r2', quoteNumber: 50021, site: '21 Test St', client: 'Example Homes', quoteStatus: 'quoted', won: true, importId: 'u1' };
+    const imported = { _id: 'r2', site: '21 Test St', client: 'Example Homes', won: true, importId: 'u1', quotes: [{ _id: 'q2', number: 50021, status: 'won' }] };
     const [p2] = planImport([{ quoteNumber: 50021, site: '21 Test St', client: 'Example Homes', quoteStatus: 'quoted' }], [imported]);
     assert.deepEqual(p2.fill, { won: false });
+    assert.deepEqual(p2.quoteFill, { status: 'quoted' });
     const [p3] = planImport([{ quoteNumber: 50021, site: '21 Test St', client: 'Example Homes', quoteStatus: 'quoted' }], [{ ...imported, editedAt: new Date() }]);
     assert.equal(p3.action, 'same');
+    // A lost quote isn't moved on by a colour
+    const lost = { ...edited, quotes: [{ _id: 'q1', number: 50020, status: 'lost' }], won: true };
+    assert.equal(planImport([entry], [lost])[0].action, 'same');
 
-    assert.deepEqual(toModelFields({ won: true, completed: false, inKashflow: true, quoteStatus: 'quoted' }), { won: true, inKashflow: true, quoteStatus: 'quoted' });
+    assert.deepEqual(toModelFields({ won: true, completed: false, inKashflow: true, quoteStatus: 'quoted' }), { won: true, inKashflow: true });
   });
 
   it('leaves a row paired by hand alone when the same quote and job come in unpaired', () => {
     // Imported last time as one row from a ticked pair, not edited since
     const row = {
-      _id: 'r1', quoteNumber: 50040, projectNumber: 41040, site: '40 Test St', client: 'Example Homes', value: 1000,
-      quoteStatus: 'quoted', won: true, completed: true, inKashflow: true, importId: 'u1',
+      _id: 'r1', projectNumber: 41040, site: '40 Test St', client: 'Example Homes',
+      won: true, completed: true, inKashflow: true, importId: 'u1', quotes: [{ _id: 'q', number: 50040, value: 1000, status: 'won' }],
     };
     const quote = { kind: 'quote', quoteNumber: 50040, site: '40 Test St', client: 'Example Homes', value: 900, quoteStatus: 'quoted', won: true };
     const job = { kind: 'job', projectNumber: 41040, site: '40 Test St', client: 'Example Homes', value: 1000, completed: true, inKashflow: true };
@@ -185,7 +193,8 @@ describe('Job Reg colours', () => {
     const [p] = planImport([{ ...job, completed: false }], [row]);
     assert.deepEqual(p.fill, { completed: false });
     const [q] = planImport([{ ...quote, won: false }], [{ ...row, projectNumber: null }]);
-    assert.deepEqual(q.fill, { value: 900, won: false });
+    assert.deepEqual(q.fill, { won: false });
+    assert.deepEqual(q.quoteFill, { value: 900, status: 'quoted' });
   });
 
   it("shows each row's colour and the stage it gives on the import preview", async () => {
@@ -317,10 +326,10 @@ describe('Job Reg pairing', () => {
 describe('Job Reg planning', () => {
   const entry = (over) => ({ kind: 'job', site: 'A', client: 'C', value: 10, notes: '', cancelled: false, ...over });
 
-  it('creates new rows and fills only the empty fields of existing ones', () => {
+  it('creates new jobs and fills only the empty fields of existing ones', () => {
     const existing = [
-      { _id: 'x1', quoteNumber: 50001, site: 'A', client: 'C', value: 10 },
-      { _id: 'x2', projectNumber: 41002, site: 'B', client: 'C', value: 99, contact: 'Kept' },
+      { _id: 'x1', site: 'A', client: 'C', quotes: [{ _id: 'qa', number: 50001, value: 10, status: 'quoted' }] },
+      { _id: 'x2', projectNumber: 41002, site: 'B', client: 'C', value: 99, contact: 'Kept', quotes: [] },
     ];
     const plan = planImport([
       entry({ kind: 'pair', quoteNumber: 50001, projectNumber: 41001, jobDate: '2026-02-01', contact: 'Pat' }),
@@ -329,16 +338,82 @@ describe('Job Reg planning', () => {
     ], existing);
     assert.deepEqual(plan.map((p) => p.action), ['update', 'same', 'create']);
     assert.deepEqual(plan[0].fill, { projectNumber: 41001, jobDate: '2026-02-01', contact: 'Pat' });
+    assert.deepEqual(plan[0].quoteFill, { status: 'won' }, 'paired with its job: won');
+    assert.equal(plan[0].addQuote, null);
     assert.deepEqual(summarisePlan(plan), { create: 1, update: 1, same: 1, conflict: 0, skip: 0 });
   });
 
-  it('reports a quote and job that are separate register rows, or a row with another number', () => {
-    const existing = [{ _id: 'a', quoteNumber: 50001 }, { _id: 'b', projectNumber: 41001 }, { _id: 'c', quoteNumber: 50009, projectNumber: 41009 }];
+  it("a sheet quote on no job makes a job holding it; on a job with no quote it's added", () => {
+    const quote = entry({ kind: 'quote', quoteNumber: 50070, quoteDate: '2026-03-01', value: 450, description: 'Gate', quoteStatus: 'toQuote' });
+    assert.equal(planImport([quote], [])[0].action, 'create');
+    const job = newJobFromEntry(quote);
+    assert.equal(job.value, undefined, 'the value is on the quote');
+    assert.deepEqual({ ...job.quotes[0], date: job.quotes[0].date.toISOString() }, { number: 50070, date: '2026-03-01T12:00:00.000Z', value: 450, description: 'Gate', status: 'toQuote' });
+    assert.deepEqual(job.invoices, []);
+    assert.equal(jobStageOf(job), 'toQuote');
+    // A job-only sheet row keeps its value on the job; its invoice makes it finished
+    const jobRow = newJobFromEntry(entry({ projectNumber: 41070, value: 800, invoiceNumber: 1900, invoiceDate: '2026-04-01' }));
+    assert.equal(jobRow.value, 800);
+    assert.deepEqual(jobRow.quotes, []);
+    assert.equal(jobRow.invoices[0].number, 1900);
+    assert.equal(jobRow.completed, true);
+    assert.equal(jobStageOf(jobRow), 'invoiced');
+
+    const pair = entry({ kind: 'pair', quoteNumber: 50071, projectNumber: 41071, value: 300 });
+    const [p] = planImport([pair], [{ _id: 'j', projectNumber: 41071, site: 'A', client: 'C', quotes: [] }]);
+    assert.equal(p.action, 'update');
+    assert.deepEqual(p.addQuote, { number: 50071, value: 300, status: 'won' });
+  });
+
+  it('only ever adds invoices', () => {
+    const job = { _id: 'j', projectNumber: 41080, site: 'A', client: 'C', value: 10, quotes: [], invoices: [{ _id: 'i1', number: 1800 }], completed: true, importId: 'u1' };
+    const [add] = planImport([entry({ projectNumber: 41080, invoiceNumber: 1801, invoiceDate: '2026-05-01' })], [job]);
+    assert.deepEqual(add.addInvoice, { number: 1801, date: '2026-05-01' });
+    // The sheet no longer shows the invoice: nothing is taken off, and it stays finished
+    const [same] = planImport([entry({ projectNumber: 41080 })], [job]);
+    assert.equal(same.action, 'same');
+    // With no invoice, an imported, unedited job the sheet shows unfinished is un-finished
+    const [open] = planImport([entry({ projectNumber: 41080 })], [{ ...job, invoices: [] }]);
+    assert.deepEqual(open.fill, { completed: false });
+    // A job with no project number can't take an invoice
+    const [none] = planImport([entry({ kind: 'quote', quoteNumber: 50090, invoiceNumber: 1802 })], [{ _id: 'k', site: 'A', client: 'C', quotes: [{ _id: 'q', number: 50090, status: 'quoted', value: 10 }] }]);
+    assert.equal(none.addInvoice ?? null, null);
+    assert.equal(none.fill?.completed, undefined);
+  });
+
+  it('applies an update as one updateOne: job fields, the quote by arrayFilter, new quote and invoice pushed', () => {
+    let n = 0;
+    const u = importUpdate({
+      existing: { _id: 'j' }, fill: { jobDate: '2026-02-01', won: false }, quoteFill: { date: '2026-01-10', status: 'won' }, quoteId: 'q1',
+      addQuote: { number: 50100, value: 5, status: 'won' }, addInvoice: { number: 1900, date: '2026-03-01' },
+    }, () => `new${++n}`);
+    assert.deepEqual(u.filter, { _id: 'j' });
+    assert.equal(u.update.$set.jobDate.toISOString(), '2026-02-01T12:00:00.000Z');
+    assert.equal(u.update.$set.won, false);
+    assert.equal(u.update.$set['quotes.$[q].date'].toISOString(), '2026-01-10T12:00:00.000Z');
+    assert.equal(u.update.$set['quotes.$[q].status'], 'won');
+    assert.deepEqual(u.options, { arrayFilters: [{ 'q._id': 'q1' }] });
+    assert.deepEqual(u.update.$push.quotes, { _id: 'new1', number: 50100, value: 5, status: 'won' });
+    assert.equal(u.update.$push.invoices.number, 1900);
+    assert.deepEqual(importUpdate({ existing: { _id: 'j' }, fill: { contact: 'Pat' } }).options, {});
+  });
+
+  it("gives the preview each entry's stage as a job", () => {
+    assert.equal(entryQuoteStatus({ kind: 'pair' }), 'won');
+    assert.equal(entryQuoteStatus({ kind: 'quote', quoteStatus: 'toQuote' }), 'toQuote');
+    assert.equal(jobStageOf(entryAsJob({ kind: 'quote', quoteNumber: 1, quoteStatus: 'quoted' })), 'quoted');
+    assert.equal(jobStageOf(entryAsJob({ kind: 'pair', quoteNumber: 1, projectNumber: 2, invoiceNumber: 3 })), 'invoiced');
+    assert.equal(jobStageOf(entryAsJob({ kind: 'job', projectNumber: 2, completed: true })), 'completed');
+  });
+
+  it('reports a quote and job that are separate jobs, or a job holding another quote', () => {
+    const existing = [{ _id: 'a', quotes: [{ number: 50001 }] }, { _id: 'b', projectNumber: 41001 }, { _id: 'c', quotes: [{ number: 50009 }], projectNumber: 41009 }];
     const plan = planImport([
       entry({ kind: 'pair', quoteNumber: 50001, projectNumber: 41001 }),
       entry({ kind: 'pair', quoteNumber: 50008, projectNumber: 41009 }),
     ], existing);
     assert.deepEqual(plan.map((p) => p.action), ['conflict', 'conflict']);
+    assert.match(plan[1].reason, /has quote 50009/);
   });
 
   it('turns an entry into model fields with dates at noon UTC', () => {
@@ -532,7 +607,7 @@ describe('Running the imports', () => {
       jobRegister: {
         find: () => query([{ _id: J1, projectNumber: 41010, site: '1 Test St', client: 'Example Homes', contractId: C1 }]),
         create: async (doc) => { created.push(doc); return doc; },
-        findById: async () => ({ set(f) { this.fields = f; }, async save() { created.push({ updated: this.fields }); } }),
+        updateOne: async (filter, update, options) => { created.push({ updated: update, filter, options }); return { matchedCount: 1, modifiedCount: 1 }; },
       },
     };
     mdb.REST = { supplier: { find: () => query([]) }, customer: { find: () => query([{ Code: 'EX1', Name: 'Example Homes Ltd' }]) }, project: { find: () => query([]) } };
@@ -620,11 +695,18 @@ describe('Running the imports', () => {
     const r = await jobImport.runImport('u1', {});
     assert.equal(r.created, 1);
     assert.equal(r.updated, 1);
-    const q = created.find((c) => c.quoteNumber === 50011);
-    assert.equal(q.quoteDate.toISOString(), '2026-01-10T12:00:00.000Z');
+    const q = created.find((c) => c.quotes?.[0]?.number === 50011);
+    assert.equal(q.quotes[0].date.toISOString(), '2026-01-10T12:00:00.000Z');
+    assert.equal(q.quotes[0].value, 300);
+    assert.equal(q.value, undefined);
     assert.equal(q.customerCode, 'EX1');
     assert.equal(q.client, 'Example Homes Ltd'); // the KashFlow name
-    assert.equal(created.find((c) => c.updated).updated.quoteNumber, 50010);
+    assert.equal(q.importId, 'u1');
+    // The job already there gets the quote it was copied from
+    const u = created.find((c) => c.updated);
+    assert.deepEqual(u.filter, { _id: J1 });
+    assert.equal(u.updated.$push.quotes.number, 50010);
+    assert.equal(u.updated.$push.quotes.status, 'won');
   });
 });
 
@@ -663,6 +745,21 @@ describe('Import pages', () => {
     assert.match(html, /action="\/job-register\/import\/u1\/delete"/);
     assert.match(html, /1 Test St/);
     assert.doesNotMatch(html, /<script/);
+  });
+
+  it('says what an update does to a job: its fields, its quote, a quote or invoice added', async () => {
+    const p = parseJobRegWorkbook([
+      { name: 'Quotes 26', rows: [quoteRow(50010, '1 Test St', 'Example Homes', 1000)] },
+      { name: 'Job Reg 26', rows: [jobRow(41010, '1 Test St', 'Example Homes', 1000, { invoice: 1800, invDate: D('2026-04-01') })] },
+    ]);
+    const existing = [{ _id: 'j', projectNumber: 41010, site: '1 Test St', client: 'Example Homes', quotes: [] }];
+    const plan = planImport(p.entries, existing);
+    assert.equal(plan[0].action, 'update');
+    const html = await ejs.renderFile(view('job-register.ejs'), {
+      title: 't', csrfToken: 'c', crumbs: [], staged: { uuid: 'u1', fileName: 'f.xlsx', parsed: p }, plan, suggestions: [], counts: summarisePlan(plan), clients: [], customers: [],
+    });
+    assert.match(html, /Fills in: [^<]*adds quote 50010, adds invoice 1800/);
+    assert.match(html, /completed/);
   });
 
   it('draws the weekly sheet mapping with a select per name and site', async () => {
@@ -865,10 +962,11 @@ describe('Job Register client is a KashFlow customer', () => {
   });
 
   it('checks KashFlow records by customer code when both have one', () => {
-    const entry = { quoteNumber: 1, client: 'Example Homes Ltd', customerCode: 'EX1' };
-    assert.equal(jr.matchEntry(entry, { quote: { CustomerCode: 'ex1', CustomerName: 'Renamed Ltd' } }).quote.state, 'ok');
-    assert.equal(jr.matchEntry(entry, { quote: { CustomerCode: 'OTHER', CustomerName: 'Example Homes Ltd' } }).quote.state, 'differs');
-    assert.equal(jr.matchEntry({ quoteNumber: 1, client: 'Example Homes Ltd' }, { quote: { CustomerName: 'example homes ltd' } }).quote.state, 'ok');
+    const entry = { quotes: [{ number: 1 }], client: 'Example Homes Ltd', customerCode: 'EX1' };
+    const kf = (r) => ({ quotesByNumber: new Map([[1, r]]) });
+    assert.equal(matchJob(entry, kf({ CustomerCode: 'ex1', CustomerName: 'Renamed Ltd' })).quotes[0].state, 'ok');
+    assert.equal(matchJob(entry, kf({ CustomerCode: 'OTHER', CustomerName: 'Example Homes Ltd' })).quotes[0].state, 'differs');
+    assert.equal(matchJob({ ...entry, customerCode: '' }, kf({ CustomerName: 'example homes ltd' })).quotes[0].state, 'ok');
   });
 
   it('draws the form with a customer select, keeping an old typed client visible', async () => {
@@ -904,7 +1002,7 @@ describe('Re-importing over imported rows', () => {
 });
 
 describe('Marking and linking rows already imported', () => {
-  let svc; let saved; let rows; let updates;
+  let svc; let saved; let rows; let updates; let lastFind;
   before(async () => {
     svc = (await import('../mongoose/services/jobRegisterImportService.js')).default;
     saved = { INTERNAL: mdb.INTERNAL, REST: mdb.REST };
@@ -912,7 +1010,7 @@ describe('Marking and linking rows already imported', () => {
     mdb.INTERNAL = {
       workbookImport: { find: () => q(() => [{ uuid: 'up1', importedAt: new Date('2026-11-16T03:00:00Z'), parsed: { entries: [{ projectNumber: 41001 }, { quoteNumber: 50001 }] } }]) },
       jobRegister: {
-        find: (f) => q(() => rows.filter((r) => (f.importId ? !r.importId : true) && (f.customerCode ? !r.customerCode : true))),
+        find: (f) => { lastFind = f; return q(() => rows.filter((r) => (f.importId ? !r.importId : true) && (f.customerCode ? !r.customerCode : true))); },
         updateOne: async (f, u) => { updates.push({ f, u }); },
         updateMany: async (f, u) => { updates.push({ f, u }); return { modifiedCount: f._id.$in.length }; },
       },
@@ -928,6 +1026,7 @@ describe('Marking and linking rows already imported', () => {
     ];
     updates = [];
     assert.equal(await svc.flagImportedRows(), 2);
+    assert.deepEqual(lastFind.$or, [{ 'quotes.number': { $in: [50001] } }, { projectNumber: { $in: [41001] } }], "found by the jobs' quote numbers");
     assert.deepEqual(updates[0].u.$set, { importId: 'up1', importedAt: new Date('2026-11-16T03:00:00Z') });
     assert.equal(updates[1].u.$set.editedAt.toISOString(), '2026-11-16T03:20:00.000Z');
   });
@@ -949,8 +1048,8 @@ describe('Register by tax year', () => {
   it('draws a table per tax year, newest first, with the unlinked-clients banner', async () => {
     const jr = (await import('../mongoose/services/jobRegisterService.js')).default;
     const entries = [
-      { uuid: 'a', quoteNumber: 1, site: 'A', client: 'C', value: 100, quoteDate: new Date('2025-05-01T12:00:00Z') },
-      { uuid: 'b', quoteNumber: 2, site: 'B', client: 'C', value: 50, quoteDate: new Date('2026-05-01T12:00:00Z'), customerCode: 'X' },
+      { uuid: 'a', site: 'A', client: 'C', quotes: [{ number: 1, value: 100, status: 'quoted', date: new Date('2025-05-01T12:00:00Z') }] },
+      { uuid: 'b', site: 'B', client: 'C', customerCode: 'X', quotes: [{ number: 2, value: 50, status: 'quoted', date: new Date('2026-05-01T12:00:00Z') }] },
     ];
     const data = jr.buildRegister({ entries, quotesByNumber: new Map(), projectsByNumber: new Map(), invoicesByNumber: new Map() });
     const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/jobRegister/index.ejs'), {
@@ -974,6 +1073,9 @@ describe('Customer from the row\'s own KashFlow records', () => {
     assert.deepEqual(jobImport.customerFromKashflow({ projectNumber: 49999, quoteNumber: 50001 }, lookup), { code: 'QU1', source: 'quote' });
     assert.deepEqual(jobImport.customerFromKashflow({ invoiceNumber: 1700 }, lookup), { code: 'IN1', source: 'invoice' });
     assert.equal(jobImport.customerFromKashflow({ quoteNumber: 1 }, lookup), null);
+    // A register job: any of its quotes or invoices
+    assert.deepEqual(jobImport.customerFromKashflow({ quotes: [{ number: 1 }, { number: 50002 }], invoices: [] }, lookup), { code: 'QU2', source: 'quote' });
+    assert.deepEqual(jobImport.customerFromKashflow({ quotes: [], invoices: [{ number: 1700 }] }, lookup), { code: 'IN1', source: 'invoice' });
   });
 
   it('sets the customer on rows found in KashFlow (known customers only) and leaves the rest for the mapping', () => {
@@ -1018,8 +1120,8 @@ describe('Customer from the row\'s own KashFlow records', () => {
     it('the link page splits rows found in KashFlow from the rest, and links them by customer', async () => {
       rows = [
         { _id: 'a', client: 'Typed A', projectNumber: 41001 },
-        { _id: 'b', client: 'Typed B', quoteNumber: 50001 },
-        { _id: 'c', client: 'Typed C', quoteNumber: 9 },
+        { _id: 'b', client: 'Typed B', quotes: [{ number: 50001 }] },
+        { _id: 'c', client: 'Typed C', quotes: [{ number: 9 }] },
       ];
       updates = [];
       const page = await jobImport.loadUnlinked();

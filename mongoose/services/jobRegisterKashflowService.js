@@ -1,14 +1,17 @@
 // Job Register → KashFlow: the optional "Create in KashFlow" buttons.
 //
-// The register is double entry: a row is typed here, then checked against the
+// The register is double entry: a job is typed here, then checked against the
 // synced KashFlow records. These two actions write the KashFlow side from the
-// row instead of typing it again there:
+// job instead of typing it again there:
 //
-//   quote row → POST /quotes    lines built on the Create quote page
-//   won row   → POST /projects  Name = site, the row's customer and job date
+//   one of a job's quotes → POST /quotes    lines built on the Create quote
+//                                           page; on the job's project once
+//                                           it has one (a variation)
+//   a won job             → POST /projects  Name = site, the job's customer
+//                                           and job date
 //
-// If the row's number is already taken in KashFlow by another customer's
-// record, KashFlow picks the next number and the row is changed to match. If
+// If the number is already taken in KashFlow by another customer's record,
+// KashFlow picks the next number and the quote / job is changed to match. If
 // it's taken by the same customer, it's most likely this job entered by hand
 // and not synced yet, so nothing is created.
 //
@@ -37,20 +40,26 @@ const isDay = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(`${
 const ymd = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
 const sameCode = (a, b) => text(a).toUpperCase() === text(b).toUpperCase() && text(a) !== '';
 
-/** The text for a row's first quote line: what the job is, and where. */
-export function lineText(entry) {
-  return [text(entry.description), text(entry.site)].filter(Boolean).join(' — ');
+/** The text for a quote's first line: what it's for (the quote's description, else the job's), and where. */
+export function lineText(job, quote = null) {
+  return [text(quote?.description) || text(job.description), text(job.site)].filter(Boolean).join(' — ');
 }
 
-/** The Create quote form as first shown: one line for the whole job at the row's net value. */
-export function quoteFormDefaults(entry, { nominal = null, now = new Date() } = {}) {
+/** The quote on a job with this _id, or null. Pure. */
+export function findQuote(job, quoteId) {
+  if (!job || quoteId == null) return null;
+  return (Array.isArray(job.quotes) ? job.quotes : []).find((q) => String(q._id) === String(quoteId)) || null;
+}
+
+/** The Create quote form as first shown: one line for the whole quote at its net value. */
+export function quoteFormDefaults(job, quote, { nominal = null, now = new Date() } = {}) {
   return {
-    date: entry.quoteDate ? ymd(entry.quoteDate) : ukToday(now),
-    reference: text(entry.clientRef),
+    date: quote?.date ? ymd(quote.date) : ukToday(now),
+    reference: text(job.clientRef),
     lines: [{
-      description: lineText(entry),
+      description: lineText(job, quote),
       quantity: '1',
-      rate: entry.value != null ? Number(entry.value).toFixed(2) : '',
+      rate: quote?.value != null ? Number(quote.value).toFixed(2) : '',
       vat: DEFAULT_VAT,
       nominal: nominal != null ? String(nominal) : '',
     }],
@@ -118,11 +127,14 @@ export function quoteTotals(lines = []) {
   return { net: round2(net), vat: round2(vat), gross: round2(net + vat) };
 }
 
-/** The POST /quotes body. Without `number`, KashFlow picks one. */
-export function buildQuotePayload(entry, { date, reference, lines }, { number = entry.quoteNumber } = {}) {
+/**
+ * The POST /quotes body. Without `number`, KashFlow picks one. A job that
+ * has its project number puts the quote on that project.
+ */
+export function buildQuotePayload(job, quote, { date, reference, lines }, { number = quote?.number } = {}) {
   const payload = {
     Date: date,
-    CustomerCode: text(entry.customerCode),
+    CustomerCode: text(job.customerCode),
     LineItems: lines.map((l) => {
       const net = round2(l.quantity * l.rate);
       return {
@@ -137,6 +149,7 @@ export function buildQuotePayload(entry, { date, reference, lines }, { number = 
   };
   if (number != null) payload.Number = Number(number);
   if (reference) payload.CustomerReference = reference;
+  if (job.projectNumber != null) payload.ProjectNumber = Number(job.projectNumber);
   return payload;
 }
 
@@ -163,17 +176,19 @@ export function numberPlan(entry, existing) {
   return sameCode(existing.CustomerCode, entry.customerCode) ? 'stop' : 'pick';
 }
 
-/** Why a row can't have its quote / project created, or null if it can. */
-export function cannotCreate(entry, kind) {
+/** Why a job's quote (`quote`) or project can't be created, or null if it can. */
+export function cannotCreate(entry, kind, quote = null) {
   if (!entry) return 'That register entry no longer exists.';
-  if (entry.cancelled) return 'This row is cancelled.';
+  if (entry.cancelled) return 'This job is cancelled.';
+  if (kind === 'quote' && !quote) return 'That quote is no longer on this job.';
   if (!text(entry.customerCode)) return 'Choose the client from the KashFlow customers first.';
   if (kind === 'quote') {
-    if (entry.quoteSentAt) return `Quote ${entry.quoteNumber} was already created in KashFlow from here.`;
-    if (entry.quoteNumber == null) return 'This row has no quote number.';
+    if (quote.sentAt) return `Quote ${quote.number} was already created in KashFlow from here.`;
+    if (quote.number == null) return 'This quote has no number.';
+    if (quote.status === 'lost') return 'This quote is marked lost.';
   } else {
     if (entry.projectSentAt) return `Project ${entry.projectNumber} was already created in KashFlow from here.`;
-    if (entry.projectNumber == null) return 'This row has no project number: it isn\'t won yet.';
+    if (entry.projectNumber == null) return 'This job has no project number: it isn\'t won yet.';
     if (!text(entry.site)) return 'Enter the site: it\'s the project\'s name.';
   }
   return null;
@@ -220,24 +235,25 @@ export function kfError(err) {
 
 // ── Database ────────────────────────────────────────────────────────────
 
-const SENT = { quote: 'quoteSentAt', project: 'projectSentAt' };
-const CLAIM = { quote: 'quoteSendingAt', project: 'projectSendingAt' };
-const NUMBER = { quote: 'quoteNumber', project: 'projectNumber' };
+// Where each kind keeps its "sent" and "sending" marks and its number: the
+// project on the job, a quote on its element of quotes[] (positional $)
+const SENT = { quote: 'quotes.$.sentAt', project: 'projectSentAt' };
+const CLAIM = { quote: 'quotes.$.sendingAt', project: 'projectSendingAt' };
+const NUMBER = { quote: 'quotes.$.number', project: 'projectNumber' };
 
-/** Claim the row for one send, so a double press can't create two. */
-async function claim(uuid, kind) {
+/** The filter for the job, and for a quote its element (so $ points at it). */
+const target = (uuid, kind, quoteId) => (kind === 'quote' ? { uuid, 'quotes._id': quoteId } : { uuid });
+
+/** Claim the project or the quote for one send, so a double press can't create two. */
+async function claim(uuid, kind, quoteId) {
   const stale = new Date(Date.now() - CLAIM_STALE_MS);
-  return mdb.INTERNAL.jobRegister.findOneAndUpdate(
-    {
-      uuid: String(uuid || ''),
-      [SENT[kind]]: { $in: [null] },
-      $or: [{ [CLAIM[kind]]: { $in: [null] } }, { [CLAIM[kind]]: { $lt: stale } }],
-    },
-    { $set: { [CLAIM[kind]]: new Date() } },
-    { new: true },
-  ).lean();
+  const free = (sent, sending) => ({ [sent]: { $in: [null] }, $or: [{ [sending]: { $in: [null] } }, { [sending]: { $lt: stale } }] });
+  const filter = kind === 'quote'
+    ? { uuid: String(uuid || ''), quotes: { $elemMatch: { _id: quoteId, ...free('sentAt', 'sendingAt') } } }
+    : { uuid: String(uuid || ''), ...free('projectSentAt', 'projectSendingAt') };
+  return mdb.INTERNAL.jobRegister.findOneAndUpdate(filter, { $set: { [CLAIM[kind]]: new Date() } }, { new: true }).lean();
 }
-const release = (uuid, kind) => mdb.INTERNAL.jobRegister.updateOne({ uuid }, { $unset: { [CLAIM[kind]]: 1 } });
+const release = (uuid, kind, quoteId) => mdb.INTERNAL.jobRegister.updateOne(target(uuid, kind, quoteId), { $unset: { [CLAIM[kind]]: 1 } });
 
 /** Ask hcs-sync to pull the new record, so the register shows it as matched. Best effort. */
 async function pull(kind, number) {
@@ -249,32 +265,34 @@ async function pull(kind, number) {
 }
 
 /**
- * Create the row's quote or project in KashFlow. `makePayload(number)` builds
- * the body with that number (or none, for KashFlow to pick).
- * Returns { number, picked } where picked means the row's number was taken
- * and KashFlow chose `number`; also `rowNotUpdated` if the row couldn't take it.
+ * Create the job's project, or one of its quotes (quoteId), in KashFlow.
+ * `makePayload(job, number)` builds the body with that number (or none, for
+ * KashFlow to pick). Returns { number, picked } where picked means the
+ * number was taken and KashFlow chose `number`; also `rowNotUpdated` if the
+ * job couldn't take it.
  */
-async function create(uuid, kind, makePayload) {
+async function create(uuid, kind, makePayload, quoteId = null) {
   const current = await mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') }).lean();
-  const why = cannotCreate(current, kind);
-  if (why) throw Object.assign(new Error(why), { status: current ? 400 : 404 });
+  const quote = kind === 'quote' ? findQuote(current, quoteId) : null;
+  const why = cannotCreate(current, kind, quote);
+  if (why) throw Object.assign(new Error(why), { status: current && (kind !== 'quote' || quote) ? 400 : 404 });
 
-  const entry = await claim(uuid, kind);
-  if (!entry) throw Object.assign(new Error(`The ${LABEL[kind]} is already being created in KashFlow. Wait a moment and reload.`), { status: 400 });
+  const job = await claim(uuid, kind, quote?._id);
+  if (!job) throw Object.assign(new Error(`The ${LABEL[kind]} is already being created in KashFlow. Wait a moment and reload.`), { status: 400 });
 
-  const rowNumber = entry[NUMBER[kind]];
+  const rowNumber = kind === 'quote' ? findQuote(job, quote._id)?.number ?? quote.number : job.projectNumber;
   let created;
   try {
-    const plan = numberPlan(entry, await kfFind(kind, rowNumber));
+    const plan = numberPlan(job, await kfFind(kind, rowNumber));
     if (plan === 'stop') {
       await pull(kind, rowNumber);
       throw Object.assign(new Error(`${kind === 'quote' ? 'Quote' : 'Project'} ${rowNumber} is already in KashFlow for this client, so nothing was created. It should show as matched once it has synced.`), { status: 400 });
     }
-    created = await kfCreate(kind, makePayload(plan === 'use' ? rowNumber : null));
+    created = await kfCreate(kind, makePayload(job, plan === 'use' ? rowNumber : null));
   } catch (err) {
-    await release(entry.uuid, kind);
+    await release(job.uuid, kind, quote?._id);
     if (err.status) throw err;
-    logger.warn(`[jobRegisterKashflow] Creating ${kind} for register row ${entry.uuid} failed: ${kfError(err)}`);
+    logger.warn(`[jobRegisterKashflow] Creating ${kind} for register job ${job.uuid} failed: ${kfError(err)}`);
     throw Object.assign(new Error(`KashFlow didn't create the ${LABEL[kind]}: ${kfError(err)}`), { status: 400 });
   }
 
@@ -282,33 +300,37 @@ async function create(uuid, kind, makePayload) {
   const number = Number.isInteger(n) && n > 0 ? n : rowNumber;
   const set = { [SENT[kind]]: new Date(), editedAt: new Date() };
   if (number !== rowNumber) set[NUMBER[kind]] = number;
+  const where = target(job.uuid, kind, quote?._id);
   let rowNotUpdated = false;
+  // Another quote on this same job has it (the unique index only sees other jobs)
+  if (kind === 'quote' && number !== rowNumber && (job.quotes || []).some((q) => Number(q.number) === number && String(q._id) !== String(quote._id))) {
+    rowNotUpdated = true;
+    delete set[NUMBER[kind]];
+  }
   try {
-    await mdb.INTERNAL.jobRegister.updateOne({ uuid: entry.uuid }, { $set: set, $unset: { [CLAIM[kind]]: 1 } });
+    await mdb.INTERNAL.jobRegister.updateOne(where, { $set: set, $unset: { [CLAIM[kind]]: 1 } });
   } catch (err) {
-    // The number KashFlow picked is on another register row: keep the send, flag it
+    // The number KashFlow picked is on another register job: keep the send, flag it
     if (err?.code !== 11000) throw err;
     rowNotUpdated = true;
     delete set[NUMBER[kind]];
-    await mdb.INTERNAL.jobRegister.updateOne({ uuid: entry.uuid }, { $set: set, $unset: { [CLAIM[kind]]: 1 } });
+    await mdb.INTERNAL.jobRegister.updateOne(where, { $set: set, $unset: { [CLAIM[kind]]: 1 } });
   }
-  logger.info(`[jobRegisterKashflow] Created ${kind} ${number} in KashFlow from register row ${entry.uuid}${number !== rowNumber ? ` (row had ${rowNumber})` : ''}`);
+  logger.info(`[jobRegisterKashflow] Created ${kind} ${number} in KashFlow from register job ${job.uuid}${number !== rowNumber ? ` (it had ${rowNumber})` : ''}`);
   await pull(kind, number);
   return { number, rowNumber, picked: number !== rowNumber, rowNotUpdated };
 }
 
-/** The Create quote button: `body` is the Create quote form. */
-export async function createQuote(uuid, body) {
+/** The Create quote button for one of the job's quotes: `body` is the Create quote form. */
+export async function createQuote(uuid, quoteId, body) {
   const form = parseQuoteForm(body);
   if (!form.ok) throw Object.assign(new Error(Object.values(form.errors)[0]), { status: 400, form });
-  const entry = await mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') }).lean();
-  return create(uuid, 'quote', (number) => buildQuotePayload(entry, { ...form.values, lines: form.lines }, { number }));
+  return create(uuid, 'quote', (job, number) => buildQuotePayload(job, findQuote(job, quoteId), { ...form.values, lines: form.lines }, { number }), quoteId);
 }
 
 /** The Create project button. */
 export async function createProject(uuid) {
-  const entry = await mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') }).lean();
-  return create(uuid, 'project', (number) => buildProjectPayload(entry || {}, { number }));
+  return create(uuid, 'project', (job, number) => buildProjectPayload(job || {}, { number }));
 }
 
 /**
@@ -338,6 +360,6 @@ export async function nominalChoices() {
 }
 
 export default {
-  VAT_CHOICES, lineText, quoteFormDefaults, parseQuoteForm, quoteTotals, buildQuotePayload, buildProjectPayload,
+  VAT_CHOICES, lineText, findQuote, quoteFormDefaults, parseQuoteForm, quoteTotals, buildQuotePayload, buildProjectPayload,
   numberPlan, cannotCreate, kfError, createQuote, createProject, nominalChoices,
 };
