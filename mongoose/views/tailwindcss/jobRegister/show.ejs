@@ -3,7 +3,7 @@
   quoted and invoiced, its quotes (variations) and its invoices (stage
   payments), each checked against KashFlow. No script: the forms post, and
   ?quote=<id> / ?invoice=<id> opens one for editing.
-  Locals: job, stage, values { quoted, agreed, invoiced }, match { project, quotes[], invoices[] }, next,
+  Locals: job, stage, values { quoted, agreed, invoiced }, match { project, quotes[], invoices[], extras { quotes[], invoices[] } }, next,
           stageLabels, quoteStatuses, quoteStatusLabels, canEdit, canCreate { project, quotes: { id: bool } },
           editQuote, editInvoice, crumbs, title
 %>
@@ -123,6 +123,50 @@
       </p>
     </div>
   </div>
+
+  <!-- KashFlow quotes and invoices on this job's project, not on the job here -->
+  <% const extras = match.extras || { quotes: [], invoices: [] }; const extraRows = [
+       ...extras.quotes.map((r) => ({ kind: 'quote', Kind: 'Quote', r, date: r.Date, href: `/quote/read/${r.uuid}` })),
+       ...extras.invoices.map((r) => ({ kind: 'invoice', Kind: 'Invoice', r, date: r.IssuedDate, href: `/invoice/read/${r.uuid}` })),
+     ]; %>
+  <% if (extraRows.length) { %>
+    <div id="kashflow-extras" class="rounded-2xl border p-4 mb-6 scroll-mt-20 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20">
+      <h2 class="<%= h2 %> mb-1">In KashFlow on this job, not here</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">These are on job <span class="font-mono"><%= job.projectNumber %></span> in KashFlow but not on this job in the register.<% if (canEdit) { %> Add to job puts each one here with its number, date and net value from KashFlow.<% } %></p>
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm bg-white dark:bg-gray-900">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="<%= th %>">KashFlow</th><th class="<%= th %>">Date</th><th class="<%= th %>">Client</th>
+              <th class="<%= th %> text-right">Value</th><th class="<%= th %>"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <% extraRows.forEach((x) => { %>
+              <tr>
+                <td class="<%= td %> whitespace-nowrap"><%= x.Kind %> <span class="font-mono text-xs"><%= x.r.Number %></span><% if (x.r.uuid) { %> <a href="<%= x.href %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Open</a><% } %></td>
+                <td class="<%= td %> whitespace-nowrap"><%= fmt(x.date) %></td>
+                <td class="<%= td %>"><%= x.r.CustomerName || '' %></td>
+                <td class="<%= td %> text-right whitespace-nowrap"><%= money(x.r.NetAmount) %></td>
+                <td class="<%= td %> text-right">
+                  <% if (x.r.elsewhere) { %>
+                    <span class="text-xs text-gray-600 dark:text-gray-400">On <a href="/job-register/<%= x.r.elsewhere.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= x.r.elsewhere.title.toLowerCase() %></a> here</span>
+                  <% } else if (canEdit) { %>
+                    <form method="POST" action="/job-register/<%= job.uuid %>/kashflow-add" class="inline">
+                      <%- include('../partials/csrfHidden') %>
+                      <input type="hidden" name="kind" value="<%= x.kind %>">
+                      <input type="hidden" name="number" value="<%= x.r.Number %>">
+                      <button type="submit" class="<%= smallBtn %>"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add to job</button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
 
   <!-- Quotes -->
   <section id="quotes" class="mb-8 scroll-mt-20">

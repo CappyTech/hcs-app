@@ -12,7 +12,9 @@ import jr, {
   stageOf, jobValues, clientKey, taxYearOf, matchJob, buildRegister, findUnregistered, nextNumber,
   parseJobForm, parseQuoteLine, parseInvoiceLine, lineUpdate, jobNumber, jobTitle, entryDate,
   parseNextAvailable, suggestNext, formEcho, fillNext, ukToday, STAGE_LABELS, QUOTE_STATUSES, QUOTE_STATUS_LABELS,
+  kashflowExtras, markElsewhere, byProject, numbersOrProjects,
 } from '../mongoose/services/jobRegisterService.js';
+import kfSession from '../services/kashflowSessionService.js';
 import lifecycle, { stageHooks } from '../mongoose/services/jobRegisterLifecycleService.js';
 import { readFilters } from '../mongoose/controllers/jobRegisterController.js';
 
@@ -41,10 +43,10 @@ const entries = [
     invoices: [{ _id: I.f1, number: 1700, value: 500 }] },
 ];
 const quotes = new Map([
-  [51425, { uuid: 'q1', Number: 51425, CustomerName: 'Rigby Test', NetAmount: 750 }],
+  [51425, { uuid: 'q1', Number: 51425, CustomerName: 'Rigby Test', NetAmount: 750, ProjectNumber: 41158 }],
   [51437, { uuid: 'q2', Number: 51437, CustomerName: 'Plus Example', NetAmount: 3000 }],
-  [51800, { uuid: 'q3', Number: 51800, CustomerName: 'Rigby Test', NetAmount: 1000 }],
-  [51801, { uuid: 'q4', Number: 51801, CustomerName: 'Rigby Test', NetAmount: 250 }],
+  [51800, { uuid: 'q3', Number: 51800, CustomerName: 'Rigby Test', NetAmount: 1000, ProjectNumber: 41300 }],
+  [51801, { uuid: 'q4', Number: 51801, CustomerName: 'Rigby Test', NetAmount: 250, ProjectNumber: 41300 }],
 ]);
 const projects = new Map([
   [41158, { uuid: 'p1', Number: 41158, CustomerName: 'Rigby Test' }],
@@ -193,7 +195,7 @@ describe('Job Register matching', () => {
 
   it('flags an invoice on another project, or for a different value', () => {
     const wrong = matchJob(entries[5], { invoicesByNumber: new Map([[1700, { Number: 1700, ProjectNumber: 40000, NetAmount: 600 }]]) });
-    assert.match(wrong.invoices[0].issues.join(' '), /project 40000/);
+    assert.match(wrong.invoices[0].issues.join(' '), /Invoice 1700 isn't on job 41300 in KashFlow \(it's on job 40000\)/);
     assert.match(wrong.invoices[0].issues.join(' '), /£600\.00/);
     // An invoice with no value of its own isn't checked on value
     const noValue = matchJob(entries[0], { invoicesByNumber: new Map([[1622, { Number: 1622, ProjectNumber: 41158, NetAmount: 999 }]]) });
@@ -706,5 +708,246 @@ describe('The job page', () => {
       csrfToken: 'c', crumbs: [], title: 'Edit job 41299', entry: entries[3], stage: 'won', stageLabels: STAGE_LABELS, next: {}, contracts: [], customers: [],
     });
     assert.match(jobOnly, /Agreed value/);
+  });
+});
+
+// ── KashFlow job checks: quotes on the job, and KashFlow's extras ───────
+
+describe('KashFlow job checks', () => {
+  const live = { uuid: 'kf', projectNumber: 41012, site: '3 Check Lane', client: 'Rigby Test',
+    quotes: [{ _id: oid(), number: 51234, value: 100, status: 'won' }], invoices: [{ _id: oid(), number: 1800, value: 100 }] };
+  const kfQuote = (over) => new Map([[51234, { uuid: 'kq', Number: 51234, CustomerName: 'Rigby Test', NetAmount: 100, ...over }]]);
+
+  it("checks each quote is on the job in KashFlow: on it, on another job, or on none", () => {
+    const on = matchJob(live, { quotesByNumber: kfQuote({ ProjectNumber: 41012 }) });
+    assert.equal(on.quotes[0].state, 'ok');
+    const other = matchJob(live, { quotesByNumber: kfQuote({ ProjectNumber: 41000 }) });
+    assert.equal(other.quotes[0].state, 'differs');
+    assert.deepEqual(other.quotes[0].issues, ["Quote 51234 isn't on job 41012 in KashFlow (it's on job 41000)"]);
+    const none = matchJob(live, { quotesByNumber: kfQuote({ ProjectNumber: 0 }) });
+    assert.deepEqual(none.quotes[0].issues, ["Quote 51234 isn't on a job in KashFlow"]);
+    assert.ok(none.differs);
+  });
+
+  it("doesn't flag a quote on an enquiry, which has no job yet", () => {
+    const enquiry = { ...live, projectNumber: undefined, invoices: [] };
+    assert.equal(matchJob(enquiry, { quotesByNumber: kfQuote({}) }).quotes[0].state, 'ok');
+    assert.equal(matchJob(enquiry, { quotesByNumber: kfQuote({ ProjectNumber: 41000 }) }).quotes[0].state, 'ok');
+  });
+
+  it('words an invoice the same way', () => {
+    const inv = (r) => matchJob(live, { invoicesByNumber: new Map([[1800, { Number: 1800, NetAmount: 100, ...r }]]) }).invoices[0].issues;
+    assert.deepEqual(inv({ ProjectNumber: 41012 }), []);
+    assert.deepEqual(inv({ ProjectNumber: 41000 }), ["Invoice 1800 isn't on job 41012 in KashFlow (it's on job 41000)"]);
+    assert.deepEqual(inv({}), ["Invoice 1800 isn't on a job in KashFlow"]);
+  });
+
+  it("finds KashFlow quotes and invoices on the job's project that aren't on the job", () => {
+    const onJob = {
+      quotes: [{ Number: 51234, ProjectNumber: 41012 }, { Number: 51240, ProjectNumber: 41012 }, { Number: 51239, ProjectNumber: 41012 }, { Number: 51999, ProjectNumber: 40000 }],
+      invoices: [{ Number: 1800, ProjectNumber: 41012 }, { Number: 1801, ProjectNumber: 41012 }],
+    };
+    const ex = kashflowExtras(live, onJob);
+    assert.deepEqual(ex.quotes.map((r) => r.Number), [51239, 51240]);
+    assert.deepEqual(ex.invoices.map((r) => r.Number), [1801]);
+    const m = matchJob(live, { quotesByNumber: kfQuote({ ProjectNumber: 41012 }), invoicesByNumber: new Map([[1800, { Number: 1800, ProjectNumber: 41012, NetAmount: 100 }]]), onJob });
+    assert.equal(m.extra, true);
+    assert.equal(m.differs, true, 'extras count as not matching');
+    assert.equal(m.quotes[0].state, 'ok');
+    const clean = matchJob(live, { quotesByNumber: kfQuote({ ProjectNumber: 41012 }), onJob: { quotes: [{ Number: 51234, ProjectNumber: 41012 }] } });
+    assert.equal(clean.extra, false);
+    assert.deepEqual(kashflowExtras({ ...live, projectNumber: null }, onJob), { quotes: [], invoices: [] }, 'an enquiry has none');
+  });
+
+  it('notes an extra that another job here has, and groups records by project', () => {
+    const ex = markElsewhere({ quotes: [{ Number: 51239 }], invoices: [{ Number: 1801 }] },
+      [{ uuid: 'kf', projectNumber: 41012, quotes: [{ number: 51239 }] }, { uuid: 'o', projectNumber: 41013, quotes: [], invoices: [{ number: 1801 }] }], 'kf');
+    assert.equal(ex.quotes[0].elsewhere, undefined, 'this job itself is not elsewhere');
+    assert.deepEqual(ex.invoices[0].elsewhere, { uuid: 'o', title: 'Job 41013' });
+    const g = byProject([{ Number: 1, ProjectNumber: 41012 }, { Number: 2, ProjectNumber: 41012 }, { Number: 3, ProjectNumber: 0 }, { Number: 4 }]);
+    assert.deepEqual([...g.keys()], [41012]);
+    assert.equal(g.get(41012).length, 2);
+    assert.deepEqual(numbersOrProjects([1], [41012]), { $or: [{ Number: { $in: [1] } }, { ProjectNumber: { $in: [41012] } }] });
+    assert.deepEqual(numbersOrProjects([], [41012]), { ProjectNumber: { $in: [41012] } });
+    assert.equal(numbersOrProjects([], []), null);
+  });
+
+  it("counts a job with KashFlow extras under Doesn't match KashFlow", () => {
+    const before = build({});
+    const withExtra = buildRegister({
+      entries, quotesByNumber: quotes, projectsByNumber: projects, invoicesByNumber: invoices,
+      quotesByProject: new Map([[41299, [{ uuid: 'qx', Number: 51950, ProjectNumber: 41299, NetAmount: 50 }]]]),
+      invoicesByProject: new Map([[41300, [{ Number: 1700, ProjectNumber: 41300 }]]]), // already on job f
+      filters: { stage: 'differs' },
+    });
+    assert.equal(withExtra.counts.differs, before.counts.differs + 1);
+    assert.ok(withExtra.rows.some((r) => r.entry.uuid === 'd'));
+    assert.ok(!withExtra.rows.some((r) => r.entry.uuid === 'f'));
+  });
+});
+
+describe('Loading KashFlow records by job', () => {
+  let saved;
+  const job = { _id: oid(), uuid: 'kf', projectNumber: 41012, site: '3 Check Lane', client: 'Rigby Test', quotes: [{ _id: oid(), number: 51234, status: 'won' }], invoices: [] };
+  const query = (rows, log) => ({ select: () => query(rows, log), sort: () => query(rows, log), populate: () => query(rows, log), lean: async () => rows });
+  const model = (name, log, { many = [], one = null } = {}) => ({
+    find: (f) => { log.push([name, 'find', f]); return query(many, log); },
+    findOne: (f) => { log.push([name, 'findOne', f]); return query(one, log); },
+  });
+
+  before(() => { saved = { INTERNAL: mdb.INTERNAL, REST: mdb.REST }; mock.method(kfSession, 'withKfAuth', async () => { throw new Error('offline'); }); });
+  after(() => { mdb.INTERNAL = saved.INTERNAL; mdb.REST = saved.REST; mock.restoreAll(); });
+
+  it('loadJob fetches quotes and invoices by number or by the job\'s project, and lists the extras', async () => {
+    const log = [];
+    mdb.INTERNAL = { jobRegister: model('job', log, { one: job, many: [job, { uuid: 'o', projectNumber: 41013, quotes: [], invoices: [{ number: 1801 }] }] }) };
+    mdb.REST = {
+      quote: model('quote', log, { many: [{ uuid: 'q', Number: 51234, ProjectNumber: 41012, CustomerName: 'Rigby Test' }, { uuid: 'qx', Number: 51239, ProjectNumber: 41012 }] }),
+      invoice: model('invoice', log, { many: [{ uuid: 'ix', Number: 1801, ProjectNumber: 41012 }] }),
+      project: model('project', log),
+    };
+    const data = await jr.loadJob('kf');
+    const finds = log.filter(([, op]) => op === 'find');
+    assert.deepEqual(finds.find(([n]) => n === 'quote')[2], { $or: [{ Number: { $in: [51234] } }, { ProjectNumber: { $in: [41012] } }] });
+    assert.deepEqual(finds.find(([n]) => n === 'invoice')[2], { ProjectNumber: { $in: [41012] } });
+    assert.equal(data.match.quotes[0].state, 'ok');
+    assert.deepEqual(data.match.extras.quotes.map((r) => r.Number), [51239]);
+    assert.deepEqual(data.match.extras.invoices[0].elsewhere, { uuid: 'o', title: 'Job 41013' });
+  });
+
+  it('loadRegister asks each REST model once for every job on the page', async () => {
+    const log = [];
+    mdb.INTERNAL = { jobRegister: model('job', log, { many: [job, { uuid: 'e', site: 'x', client: 'y', quotes: [{ number: 51300 }], invoices: [] }] }) };
+    mdb.REST = {
+      quote: model('quote', log, { many: [{ uuid: 'qx', Number: 51239, ProjectNumber: 41012 }] }),
+      invoice: model('invoice', log),
+      project: model('project', log),
+    };
+    const data = await jr.loadRegister({ stage: 'differs' });
+    const quoteFinds = log.filter(([n, op, f]) => n === 'quote' && op === 'find' && !f.Date);
+    assert.equal(quoteFinds.length, 1);
+    assert.deepEqual(quoteFinds[0][2], { $or: [{ Number: { $in: [51234, 51300] } }, { ProjectNumber: { $in: [41012] } }] });
+    assert.deepEqual(log.filter(([n, op]) => n === 'invoice' && op === 'find')[0][2], { ProjectNumber: { $in: [41012] } });
+    assert.deepEqual(data.rows.map((r) => r.entry.uuid), ['kf']);
+    assert.deepEqual(data.rows[0].match.extras.quotes.map((r) => r.Number), [51239]);
+  });
+});
+
+describe('Add to job from KashFlow', () => {
+  let saved; let calls; let hooks;
+  const jobs = () => [
+    { _id: oid(), uuid: 'kf', projectNumber: 41012, site: '3 Check Lane', client: 'Rigby Test', quotes: [{ _id: oid(), number: 51234, status: 'won', value: 100 }], invoices: [] },
+    { _id: oid(), uuid: 'o', projectNumber: 41013, site: 'Other', client: 'Rigby Test', quotes: [{ _id: oid(), number: 51300, status: 'won' }], invoices: [{ _id: oid(), number: 1802 }] },
+    { _id: oid(), uuid: 'enq', site: 'Enquiry', client: 'Rigby Test', quotes: [{ _id: oid(), number: 51400, status: 'quoted' }], invoices: [] },
+  ];
+  const kf = {
+    quote: [{ uuid: 'qx', Number: 51239, ProjectNumber: 41012, Date: new Date('2026-03-29T23:00:00Z'), NetAmount: 450.5 },
+      { Number: 51300, ProjectNumber: 41012, NetAmount: 1 }, { Number: 51500, ProjectNumber: 40000 }],
+    invoice: [{ uuid: 'ix', Number: 1801, ProjectNumber: 41012, IssuedDate: '2026-11-02T00:00:00Z', NetAmount: 300 },
+      { Number: 1802, ProjectNumber: 41012, NetAmount: 1 }],
+  };
+  const lean = (v) => ({ select: () => lean(v), lean: async () => (v ? copy(v) : null) });
+  const rest = (list) => ({ findOne: ({ Number: n }) => lean(list.find((r) => r.Number === n)) });
+
+  before(() => { saved = { INTERNAL: mdb.INTERNAL, REST: mdb.REST, hooks: { ...lifecycle } }; });
+  after(() => { mdb.INTERNAL = saved.INTERNAL; mdb.REST = saved.REST; Object.assign(lifecycle, saved.hooks); });
+  beforeEach(() => {
+    const rows = jobs();
+    calls = [];
+    mdb.INTERNAL = { jobRegister: {
+      findOne: (f) => lean(rows.find((r) => {
+        if (f.uuid && typeof f.uuid === 'string') return r.uuid === f.uuid;
+        if (r.uuid === f.uuid?.$ne) return false;
+        if (f['quotes.number'] != null) return (r.quotes || []).some((q) => q.number === f['quotes.number']);
+        return (r.invoices || []).some((i) => i.number === f['invoices.number']);
+      })),
+      updateOne: async (filter, update) => { calls.push({ filter, update }); return { matchedCount: 1 }; },
+    } };
+    mdb.REST = { quote: rest(kf.quote), invoice: rest(kf.invoice) };
+    hooks = { onQuoteAdded: mock.fn(async () => {}), onJobWon: mock.fn(async () => {}), onJobCompleted: mock.fn(async () => {}) };
+    Object.assign(lifecycle, hooks);
+  });
+
+  it("adds a KashFlow quote with its number, date (UK) and net value, won like the job's other quotes", async () => {
+    const r = await jr.addFromKashflow('kf', { kind: 'quote', number: '51239' });
+    assert.equal(r.kind, 'quote');
+    const { filter, update } = calls[0];
+    assert.deepEqual(filter, { uuid: 'kf' });
+    assert.equal(update.$push.quotes.number, 51239);
+    assert.equal(update.$push.quotes.value, 450.5);
+    assert.equal(update.$push.quotes.date.toISOString().slice(0, 10), '2026-03-30');
+    assert.equal(update.$push.quotes.status, 'won');
+    assert.ok(update.$set.editedAt instanceof Date);
+    assert.equal(hooks.onQuoteAdded.mock.calls[0].arguments[1].fromKashflow, true);
+  });
+
+  it('adds a KashFlow invoice', async () => {
+    const r = await jr.addFromKashflow('kf', { kind: 'invoice', number: '1801' });
+    assert.equal(r.invoice.number, 1801);
+    assert.equal(calls[0].update.$push.invoices.value, 300);
+    assert.equal(calls[0].update.$push.invoices.date.toISOString().slice(0, 10), '2026-11-02');
+    assert.ok(calls[0].update.$set.editedAt);
+  });
+
+  it("refuses one already on another job, one not on this job in KashFlow, and the rest", async () => {
+    const no = (body, re, uuid = 'kf') => assert.rejects(jr.addFromKashflow(uuid, body), (e) => e.status === 400 && re.test(e.message));
+    await no({ kind: 'quote', number: '51300' }, /Quote 51300 is already on job 41013 in the register/);
+    await no({ kind: 'invoice', number: '1802' }, /Invoice 1802 is already on job 41013/);
+    await no({ kind: 'quote', number: '51500' }, /isn't on job 41012 in KashFlow \(it's on job 40000\)/);
+    await no({ kind: 'quote', number: '51234' }, /on this job already/);
+    await no({ kind: 'quote', number: '59999' }, /isn't in the synced KashFlow records/);
+    await no({ kind: 'quote', number: 'x' }, /isn't valid/);
+    await no({ kind: 'thing', number: '1' }, /quote or an invoice/);
+    await no({ kind: 'quote', number: '51239' }, /project number/, 'enq');
+    await assert.rejects(jr.addFromKashflow('gone', { kind: 'quote', number: '51239' }), (e) => e.status === 404);
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe('KashFlow extras on the pages', () => {
+  const show = path.join(root, 'mongoose/views/tailwindcss/jobRegister/show.ejs');
+  const job = entries[5];
+  const onJob = { quotes: [{ uuid: 'qx', Number: 51802, ProjectNumber: 41300, NetAmount: 75, CustomerName: 'Rigby Test', Date: d('2026-10-05') }],
+    invoices: [{ uuid: 'ix', Number: 1701, ProjectNumber: 41300, NetAmount: 20 }] };
+  const render = (match, over = {}) => ejs.renderFile(show, {
+    csrfToken: 'c', crumbs: [], title: jobTitle(job), job, stage: stageOf(job), values: jobValues(job), match, next: {},
+    stageLabels: STAGE_LABELS, quoteStatuses: QUOTE_STATUSES, quoteStatusLabels: QUOTE_STATUS_LABELS,
+    canEdit: true, canCreate: { project: false, quotes: {} }, editQuote: null, editInvoice: null, ...over,
+  });
+  const matched = () => matchJob(job, { project: projects.get(41300), quotesByNumber: new Map([...quotes, [51801, { ...quotes.get(51801), ProjectNumber: 40000 }]]), invoicesByNumber: invoices, onJob });
+
+  it('shows the card with Add to job forms, and the quote job issue', async () => {
+    const match = matched();
+    match.extras = markElsewhere(match.extras, [{ uuid: 'o', projectNumber: 41013, invoices: [{ number: 1701 }] }], 'f');
+    const html = await render(match);
+    assert.match(html, /id="kashflow-extras"/);
+    assert.match(html, /In KashFlow on this job, not here/);
+    assert.match(html, /action="\/job-register\/f\/kashflow-add"/);
+    assert.match(html, /name="kind" value="quote">\s*<input type="hidden" name="number" value="51802">/);
+    assert.match(html, /href="\/quote\/read\/qx"/);
+    assert.match(html, /£75\.00/);
+    assert.match(html, /On <a href="\/job-register\/o"[^>]*>job 41013<\/a> here/);
+    assert.doesNotMatch(html, /name="number" value="1701"/);
+    assert.match(html, /Quote 51801 isn&#39;t on job 41300 in KashFlow \(it&#39;s on job 40000\)/);
+    assert.doesNotMatch(html, /<script/);
+    const reader = await render(match, { canEdit: false });
+    assert.match(reader, /In KashFlow on this job, not here/);
+    assert.doesNotMatch(reader, /kashflow-add/);
+  });
+
+  it('shows no card when KashFlow has nothing more', async () => {
+    const html = await render(matchJob(job, { project: projects.get(41300), quotesByNumber: quotes, invoicesByNumber: invoices }));
+    assert.doesNotMatch(html, /kashflow-extras/);
+  });
+
+  it('names the extras on the list page', async () => {
+    const reg = buildRegister({ entries, quotesByNumber: quotes, projectsByNumber: projects, invoicesByNumber: invoices,
+      quotesByProject: new Map([[41300, onJob.quotes]]), filters: { stage: 'differs' } });
+    const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/jobRegister/index.ejs'), {
+      title: 'Job Register', csrfToken: 'c', crumbs: [], contracts: [], stageLabels: STAGE_LABELS, stages: jr.STAGES, form: {}, next: {},
+      unregistered: { year: 2026, quoteCount: 0, projectCount: 0, quotes: [], projects: [] }, ...reg,
+    });
+    assert.match(html, /Quote 51802 is on this job in KashFlow, not here/);
+    assert.match(html, /href="\/job-register\/f"/);
   });
 });

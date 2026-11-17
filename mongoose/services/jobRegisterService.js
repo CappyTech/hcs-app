@@ -4,8 +4,13 @@
 // records with the same numbers:
 //
 //   projectNumber    → REST project (Number)   client should agree
-//   quotes[].number  → REST quote   (Number)   value and client should agree
-//   invoices[].number → REST invoice (Number)  should be on the job's project
+//   quotes[].number  → REST quote   (Number)   value and client should agree,
+//                                              and on the job's project
+//   invoices[].number → REST invoice (Number)  value and client should agree,
+//                                              and on the job's project
+//
+// and the KashFlow quotes and invoices on the job's project (ProjectNumber)
+// should all be on the job here.
 //
 // The other half of the double entry is the reverse check: KashFlow quotes
 // and projects in the period that aren't in the register.
@@ -121,13 +126,50 @@ const differsBy = (a, b) => a != null && b != null && Math.abs(Number(a) - Numbe
 const money2 = (v) => `£${Number(v).toFixed(2)}`;
 
 /**
+ * The issue when a KashFlow quote or invoice isn't on the job's project:
+ * "Quote 51234 isn't on job 41012 in KashFlow (it's on job 41000)", or
+ * "... isn't on a job in KashFlow". None for an enquiry (no project number
+ * yet) or when it is on the job. Pure.
+ */
+export function jobIssue(what, number, job, record) {
+  if (job?.projectNumber == null || !record) return [];
+  const on = Number(record.ProjectNumber) || null;
+  if (on === Number(job.projectNumber)) return [];
+  const name = `${what} ${number}`;
+  return on
+    ? [`${name} isn't on job ${job.projectNumber} in KashFlow (it's on job ${on})`]
+    : [`${name} isn't on a job in KashFlow`];
+}
+
+/**
+ * The synced KashFlow quotes and invoices on the job's project that aren't
+ * on the job here. `onJob` is { quotes, invoices }: REST records whose
+ * ProjectNumber is the job's (any others are ignored). None for an enquiry. Pure.
+ */
+export function kashflowExtras(job, { quotes = [], invoices = [] } = {}) {
+  if (job?.projectNumber == null) return { quotes: [], invoices: [] };
+  const pn = Number(job.projectNumber);
+  const mine = (list, have) => {
+    const seen = new Set(have);
+    return (list || []).filter((r) => {
+      if (r?.Number == null || Number(r.ProjectNumber) !== pn || seen.has(Number(r.Number))) return false;
+      seen.add(Number(r.Number));
+      return true;
+    }).sort((a, b) => Number(a.Number) - Number(b.Number));
+  };
+  return { quotes: mine(quotes, quoteNumbersOf(job)), invoices: mine(invoices, invoiceNumbersOf(job)) };
+}
+
+/**
  * Check one job against its KashFlow records.
  * Each side is { state: 'ok' | 'missing' | 'differs' | 'none', record, issues[], number, id }:
  * 'none' when there's no number for it yet, 'missing' when the number isn't
  * in KashFlow (not entered there yet, or not synced). quotes and invoices
- * have one side each, in the job's order.
+ * have one side each, in the job's order. extras are the KashFlow quotes and
+ * invoices on the job's project that aren't on the job (from `onJob`, see
+ * kashflowExtras); extra is true when there are any. differs counts both.
  */
-export function matchJob(job, { project = null, quotesByNumber = new Map(), invoicesByNumber = new Map() } = {}) {
+export function matchJob(job, { project = null, quotesByNumber = new Map(), invoicesByNumber = new Map(), onJob = {} } = {}) {
   const side = (number, record, check, id = null) => {
     const base = { number: number ?? null, id: id != null ? String(id) : null };
     if (number == null) return { ...base, state: 'none', record: null, issues: [] };
@@ -146,24 +188,40 @@ export function matchJob(job, { project = null, quotesByNumber = new Map(), invo
   const get = (map, n) => (n != null ? map.get(Number(n)) || null : null);
 
   const quotes = quotesOf(job).map((q) => side(q.number, get(quotesByNumber, q.number), (r) => [
+    ...jobIssue('Quote', q.number, job, r),
     ...(differsBy(q.value, r.NetAmount) ? [`Value in KashFlow is ${money2(r.NetAmount)}`] : []),
     ...clientIssue(r),
   ], q._id));
   const p = side(job.projectNumber, project, (r) => clientIssue(r));
   const invoices = invoicesOf(job).map((i) => side(i.number, get(invoicesByNumber, i.number), (r) => [
-    ...(r.ProjectNumber && job.projectNumber != null && Number(r.ProjectNumber) !== Number(job.projectNumber)
-      ? [`Invoice is on project ${r.ProjectNumber} in KashFlow`] : []),
+    ...jobIssue('Invoice', i.number, job, r),
     ...(differsBy(i.value, r.NetAmount) ? [`Value in KashFlow is ${money2(r.NetAmount)}`] : []),
     ...clientIssue(r),
   ], i._id));
+  const extras = kashflowExtras(job, onJob);
+  const extra = extras.quotes.length + extras.invoices.length > 0;
   const sides = [...quotes, p, ...invoices];
   return {
     project: p,
     quotes,
     invoices,
+    extras,
+    extra,
     missing: sides.some((s) => s.state === 'missing'),
-    differs: sides.some((s) => s.state === 'differs'),
+    differs: extra || sides.some((s) => s.state === 'differs'),
   };
+}
+
+/** REST records grouped by ProjectNumber: Map of number → records. Pure. */
+export function byProject(docs = []) {
+  const m = new Map();
+  for (const d of docs) {
+    const n = Number(d?.ProjectNumber);
+    if (!n) continue;
+    if (!m.has(n)) m.set(n, []);
+    m.get(n).push(d);
+  }
+  return m;
 }
 
 /**
@@ -174,9 +232,11 @@ export function matchJob(job, { project = null, quotesByNumber = new Map(), invo
  * @param {Map}      p.quotesByNumber   KashFlow quote Number → quote
  * @param {Map}      p.projectsByNumber KashFlow project Number → project
  * @param {Map}      p.invoicesByNumber KashFlow invoice Number → invoice
+ * @param {Map}      [p.quotesByProject]   KashFlow ProjectNumber → quotes on it
+ * @param {Map}      [p.invoicesByProject] KashFlow ProjectNumber → invoices on it
  * @param {object}   [p.filters]        { stage, client, year, q }
  */
-export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoicesByNumber, filters = {} }) {
+export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoicesByNumber, quotesByProject = new Map(), invoicesByProject = new Map(), filters = {} }) {
   const stage = STAGE_FILTERS.includes(filters.stage) ? filters.stage : 'all';
   const client = clientKey(filters.client);
   const year = Number.isInteger(filters.year) ? filters.year : null;
@@ -187,6 +247,9 @@ export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoi
       project: e.projectNumber != null ? projectsByNumber.get(Number(e.projectNumber)) || null : null,
       quotesByNumber,
       invoicesByNumber,
+      onJob: e.projectNumber != null
+        ? { quotes: quotesByProject.get(Number(e.projectNumber)) || [], invoices: invoicesByProject.get(Number(e.projectNumber)) || [] }
+        : {},
     });
     return { entry: e, stage: stageOf(e), match, values: jobValues(e), clientKey: clientKey(e.client), taxYear: taxYearOf(entryDate(e)) };
   });
@@ -336,6 +399,20 @@ function combineNext({ entries, kf, topQuote, topProject }) {
 // ── Database ────────────────────────────────────────────────────────────
 
 const byNumber = (docs) => new Map(docs.map((d) => [Number(d.Number), d]));
+const QUOTE_FIELDS = 'uuid Number Date CustomerName CustomerCode NetAmount Status ProjectNumber';
+const INVOICE_FIELDS = 'uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status';
+
+/**
+ * One query's filter for REST records with these numbers or on these
+ * projects (ProjectNumber), or null when there are neither. Pure.
+ */
+export function numbersOrProjects(numbers = [], projectNumbers = []) {
+  const or = [];
+  if (numbers.length) or.push({ Number: { $in: numbers } });
+  if (projectNumbers.length) or.push({ ProjectNumber: { $in: projectNumbers } });
+  if (!or.length) return null;
+  return or.length === 1 ? or[0] : { $or: or };
+}
 
 /** Everything the register page shows. */
 export async function loadRegister(filters = {}) {
@@ -352,10 +429,13 @@ export async function loadRegister(filters = {}) {
   const Quote = mdb.REST.quote;
   const Project = mdb.REST.project;
   const Invoice = mdb.REST.invoice;
+  // Each job's own quotes and invoices, and every one on a job's project, in one query each
+  const quoteQuery = numbersOrProjects([...quoteNumbers], [...projectNumbers]);
+  const invoiceQuery = numbersOrProjects(invoiceNumbers, [...projectNumbers]);
   const [quotes, projects, invoices, periodQuotes, periodProjects, topQuote, topProject, kf] = await Promise.all([
-    quoteNumbers.size ? Quote.find({ Number: { $in: [...quoteNumbers] } }).select('uuid Number Date CustomerName CustomerCode NetAmount Status ProjectNumber').lean() : [],
+    quoteQuery ? Quote.find(quoteQuery).select(QUOTE_FIELDS).lean() : [],
     projectNumbers.size ? Project.find({ Number: { $in: [...projectNumbers] } }).select('uuid Number Name CustomerName CustomerCode Status StartDate').lean() : [],
-    invoiceNumbers.length ? Invoice.find({ Number: { $in: invoiceNumbers } }).select('uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status').lean() : [],
+    invoiceQuery ? Invoice.find(invoiceQuery).select(INVOICE_FIELDS).lean() : [],
     Quote.find({ Date: { $gte: from, $lt: to } }).select('uuid Number Date CustomerName NetAmount Status').sort({ Number: -1 }).lean(),
     Project.find({ StartDate: { $gte: from, $lt: to } }).select('uuid Number Name CustomerName Status StartDate').sort({ Number: -1 }).lean(),
     Quote.findOne({}).sort({ Number: -1 }).select('Number').lean(),
@@ -368,6 +448,8 @@ export async function loadRegister(filters = {}) {
     quotesByNumber: byNumber(quotes),
     projectsByNumber: byNumber(projects),
     invoicesByNumber: byNumber(invoices),
+    quotesByProject: byProject(quotes),
+    invoicesByProject: byProject(invoices),
     filters,
   });
   const unregistered = findUnregistered({ quotes: periodQuotes, projects: periodProjects, quoteNumbers, projectNumbers });
@@ -387,23 +469,30 @@ export async function loadRegister(filters = {}) {
 
 /**
  * One job's page: the job with its KashFlow checks, values and stage, and
- * the next numbers for its forms. Null if there's no such job.
+ * the next numbers for its forms. Null if there's no such job. Each of
+ * match.extras (KashFlow quotes/invoices on the job's project, not on the
+ * job) carries elsewhere: { uuid, title } when another job here has it.
  */
 export async function loadJob(uuid) {
   const job = await findEntry(uuid);
   if (!job) return null;
   const quoteNumbers = quoteNumbersOf(job);
   const invoiceNumbers = invoiceNumbersOf(job);
+  const onProject = job.projectNumber != null ? [Number(job.projectNumber)] : [];
+  const quoteQuery = numbersOrProjects(quoteNumbers, onProject);
+  const invoiceQuery = numbersOrProjects(invoiceNumbers, onProject);
   const [quotes, project, invoices, topQuote, topProject, others, kf] = await Promise.all([
-    quoteNumbers.length ? mdb.REST.quote.find({ Number: { $in: quoteNumbers } }).select('uuid Number Date CustomerName CustomerCode NetAmount Status ProjectNumber').lean() : [],
+    quoteQuery ? mdb.REST.quote.find(quoteQuery).select(QUOTE_FIELDS).lean() : [],
     job.projectNumber != null ? mdb.REST.project.findOne({ Number: job.projectNumber }).select('uuid Number Name CustomerName CustomerCode Status StartDate').lean() : null,
-    invoiceNumbers.length ? mdb.REST.invoice.find({ Number: { $in: invoiceNumbers } }).select('uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status').lean() : [],
+    invoiceQuery ? mdb.REST.invoice.find(invoiceQuery).select(INVOICE_FIELDS).lean() : [],
     mdb.REST.quote.findOne({}).sort({ Number: -1 }).select('Number').lean(),
     mdb.REST.project.findOne({}).sort({ Number: -1 }).select('Number').lean(),
-    mdb.INTERNAL.jobRegister.find({}).select('projectNumber quotes.number').lean(),
+    mdb.INTERNAL.jobRegister.find({}).select('uuid projectNumber quotes.number invoices.number').lean(),
     kashflowNextNumbers(),
   ]);
-  const match = matchJob(job, { project, quotesByNumber: byNumber(quotes), invoicesByNumber: byNumber(invoices) });
+  const onJob = { quotes: byProject(quotes).get(onProject[0]) || [], invoices: byProject(invoices).get(onProject[0]) || [] };
+  const match = matchJob(job, { project, quotesByNumber: byNumber(quotes), invoicesByNumber: byNumber(invoices), onJob });
+  match.extras = markElsewhere(match.extras, others, job.uuid);
   return {
     job,
     stage: stageOf(job),
@@ -411,6 +500,17 @@ export async function loadJob(uuid) {
     match,
     next: combineNext({ entries: others, kf, topQuote, topProject }),
   };
+}
+
+/** extras with elsewhere: { uuid, title } on each that another job (not `uuid`) has. Pure. */
+export function markElsewhere(extras, jobs = [], uuid = null) {
+  const holder = (kind, n) => jobs.find((j) => j.uuid !== uuid
+    && (kind === 'quote' ? quoteNumbersOf(j) : invoiceNumbersOf(j)).includes(Number(n)));
+  const mark = (kind) => (r) => {
+    const j = holder(kind, r.Number);
+    return j ? { ...r, elsewhere: { uuid: j.uuid, title: jobTitle(j) } } : r;
+  };
+  return { quotes: (extras?.quotes || []).map(mark('quote')), invoices: (extras?.invoices || []).map(mark('invoice')) };
 }
 
 // ── Forms ───────────────────────────────────────────────────────────────
@@ -712,8 +812,12 @@ async function runUpdate(filter, update) {
   }
 }
 
-/** POST /job-register/:uuid/quotes: add a quote (a variation, or the job's first). */
-export async function addQuote(uuid, body) {
+/**
+ * POST /job-register/:uuid/quotes: add a quote (a variation, or the job's
+ * first). opts.fromKashflow: it came from KashFlow (Add to job), so the
+ * onQuoteAdded hook is told it's there already.
+ */
+export async function addQuote(uuid, body, opts = {}) {
   const job = await findJobLean(uuid);
   const quote = drop(parseQuoteLine(body));
   if (quote.number != null && quoteNumbersOf(job).includes(quote.number)) throw bad(`Quote ${quote.number} is on this job already.`);
@@ -722,7 +826,7 @@ export async function addQuote(uuid, body) {
   if (quote.status === 'won') set.won = true;
   await runUpdate({ uuid: job.uuid }, { $push: { quotes: quote }, $set: set });
   const after = { ...job, ...set, quotes: [...quotesOf(job), quote] };
-  await lifecycle.fireQuoteAdded(after, quote);
+  await lifecycle.fireQuoteAdded(after, opts.fromKashflow ? { ...quote, fromKashflow: true } : quote);
   await lifecycle.fireStageHooks(job, after);
   return { job: after, quote };
 }
@@ -794,6 +898,49 @@ export async function removeInvoice(uuid, id) {
   const after = { ...job, invoices: invoicesOf(job).filter((i) => !sameId(i._id, current._id)) };
   await lifecycle.fireStageHooks(job, after);
   return { job: after, invoice: current };
+}
+
+/**
+ * POST /job-register/:uuid/kashflow-add: put a synced KashFlow quote or
+ * invoice that's on the job's project in KashFlow onto the job here, with
+ * its number, date and net value from KashFlow (through addQuote /
+ * addInvoice, so it's marked edited). A quote is won when the job already
+ * has a won quote (so it counts in the agreed value), else quoted. Refuses
+ * one that isn't on this job in KashFlow, or that another job here has.
+ * Returns { kind, job, quote | invoice }.
+ */
+export async function addFromKashflow(uuid, body = {}) {
+  const kind = body.kind === 'invoice' ? 'invoice' : body.kind === 'quote' ? 'quote' : null;
+  if (!kind) throw bad('Choose a quote or an invoice to add.');
+  const Kind = kind === 'quote' ? 'Quote' : 'Invoice';
+  const number = int(body.number);
+  if (number == null || Number.isNaN(number)) throw bad(`The ${kind} number isn't valid.`);
+  const job = await findJobLean(uuid);
+  if (job.projectNumber == null) throw bad(`Give the job its project number before adding ${kind}s from KashFlow.`);
+  const have = kind === 'quote' ? quoteNumbersOf(job) : invoiceNumbersOf(job);
+  if (have.includes(number)) throw bad(`${Kind} ${number} is on this job already.`);
+
+  const Model = kind === 'quote' ? mdb.REST.quote : mdb.REST.invoice;
+  const record = await Model.findOne({ Number: number }).select(kind === 'quote' ? QUOTE_FIELDS : INVOICE_FIELDS).lean();
+  if (!record) throw bad(`${Kind} ${number} isn't in the synced KashFlow records.`);
+  if (Number(record.ProjectNumber) !== Number(job.projectNumber)) {
+    throw bad(jobIssue(Kind, number, job, record)[0] || `${Kind} ${number} isn't on job ${job.projectNumber} in KashFlow.`);
+  }
+  const path = kind === 'quote' ? 'quotes.number' : 'invoices.number';
+  const other = await mdb.INTERNAL.jobRegister.findOne({ [path]: number, uuid: { $ne: job.uuid } })
+    .select('uuid projectNumber quotes.number').lean();
+  if (other) throw bad(`${Kind} ${number} is already on ${jobTitle(other).toLowerCase()} in the register: take it off that job first.`);
+
+  const when = kind === 'quote' ? record.Date : record.IssuedDate;
+  const date = when && !Number.isNaN(new Date(when).getTime()) ? ukToday(new Date(when)) : '';
+  const value = record.NetAmount != null && Number.isFinite(Number(record.NetAmount)) ? String(record.NetAmount) : '';
+  if (kind === 'quote') {
+    const status = quotesOf(job).some((q) => q.status === 'won') ? 'won' : 'quoted';
+    const r = await addQuote(job.uuid, { number: String(number), date, value, status }, { fromKashflow: true });
+    return { kind, ...r };
+  }
+  const r = await addInvoice(job.uuid, { number: String(number), date, value });
+  return { kind, ...r };
 }
 
 /** Contracts a job can be linked to: open ones, plus the one it already has. */
@@ -880,5 +1027,6 @@ export default {
   parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext, ukToday,
   loadRegister, loadJob, createEntry, updateEntry, findEntry, contractChoices, customerChoices, jobsForAllocation,
   addQuote, updateQuote, removeQuote, addInvoice, updateInvoice, removeInvoice,
+  jobIssue, kashflowExtras, byProject, numbersOrProjects, markElsewhere, addFromKashflow,
   OPEN_JOB_FILTER, isOpenJob, jobLabel, openJobs, projectIdsByNumber, jobTarget,
 };

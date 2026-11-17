@@ -55,6 +55,8 @@ router.post('/job-register/:uuid/quotes/:id/delete', edit, ctrl.postRemoveQuote)
 router.post('/job-register/:uuid/invoices', edit, ctrl.postAddInvoice);
 router.post('/job-register/:uuid/invoices/:id', edit, ctrl.postUpdateInvoice);
 router.post('/job-register/:uuid/invoices/:id/delete', edit, ctrl.postRemoveInvoice);
+// A KashFlow quote or invoice on the job's project in KashFlow, added to the job here
+router.post('/job-register/:uuid/kashflow-add', edit, ctrl.postAddFromKashflow);
 // The job's own fields
 router.get('/job-register/:uuid/edit', edit, ctrl.getEdit);
 // The job page: read by the same people as the register
