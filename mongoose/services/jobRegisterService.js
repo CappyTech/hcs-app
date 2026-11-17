@@ -18,18 +18,26 @@ import taxService from '../../services/taxService.js';
 import logger from '../../services/loggerService.js';
 import kfSession from '../../services/kashflowSessionService.js';
 
-export const STAGES = ['quoted', 'won', 'invoiced', 'cancelled'];
-export const STAGE_LABELS = { quoted: 'Quoted', won: 'Won', invoiced: 'Invoiced', cancelled: 'Cancelled' };
+export const STAGES = ['toQuote', 'quoted', 'won', 'completed', 'invoiced', 'cancelled'];
+export const STAGE_LABELS = {
+  toQuote: 'To survey / quote', quoted: 'Quoted', won: 'Won', completed: 'Completed', invoiced: 'Invoiced', cancelled: 'Cancelled',
+};
+export const QUOTE_STATUSES = ['toQuote', 'quoted'];
 // The stage filter also offers the double-entry checks
 export const STAGE_FILTERS = ['all', ...STAGES, 'unmatched', 'differs'];
 const VALUE_TOLERANCE = 0.01;
 const UNREGISTERED_LIMIT = 50;
 
-/** quoted → won (has a project) → invoiced (has an invoice); cancelled overrides. */
+/**
+ * to survey / quote → quoted → won (marked won, or has a project) →
+ * completed → invoiced (has an invoice); cancelled overrides.
+ */
 export function stageOf(entry) {
   if (entry.cancelled) return 'cancelled';
   if (entry.invoiceNumber != null) return 'invoiced';
-  if (entry.projectNumber != null) return 'won';
+  if (entry.completed) return 'completed';
+  if (entry.projectNumber != null || entry.won) return 'won';
+  if (entry.quoteStatus === 'toQuote') return 'toQuote';
   return 'quoted';
 }
 
@@ -335,6 +343,7 @@ const day = (v) => {
   return Number.isNaN(d.getTime()) ? NaN : d;
 };
 const text = (v) => String(v ?? '').trim();
+const tick = (v) => v === 'on' || v === 'true' || v === true;
 
 /**
  * A register row from a form body. Blank fields clear (null), so a number or
@@ -356,7 +365,11 @@ export function parseEntryForm(body = {}) {
     invoiceNumber: int(body.invoiceNumber),
     invoiceDate: day(body.invoiceDate),
     notes: text(body.notes),
-    cancelled: body.cancelled === 'on' || body.cancelled === 'true' || body.cancelled === true,
+    cancelled: tick(body.cancelled),
+    quoteStatus: QUOTE_STATUSES.includes(text(body.quoteStatus)) ? text(body.quoteStatus) : null,
+    won: tick(body.won),
+    completed: tick(body.completed),
+    inKashflow: tick(body.inKashflow),
   };
   const labels = {
     quoteNumber: 'The quote number', projectNumber: 'The project number', invoiceNumber: 'The invoice number',
@@ -384,7 +397,8 @@ export function formEcho(body = {}) {
     entry[k] = /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(`${s}T12:00:00Z`).getTime()) ? s : '';
   }
   entry.contractId = text(body.contractUuid) ? { uuid: text(body.contractUuid) } : null;
-  entry.cancelled = body.cancelled === 'on' || body.cancelled === 'true' || body.cancelled === true;
+  for (const k of ['cancelled', 'won', 'completed', 'inKashflow']) entry[k] = tick(body[k]);
+  entry.quoteStatus = QUOTE_STATUSES.includes(text(body.quoteStatus)) ? text(body.quoteStatus) : '';
   return entry;
 }
 
@@ -499,10 +513,11 @@ export async function contractChoices(currentId = null) {
   return mdb.INTERNAL.contract.find({ $or: or }).select('uuid title status').sort({ title: 1 }).lean();
 }
 
-/** Won jobs, not cancelled or invoiced, with no contract yet: the weekly sheet's "jobs for allocation". */
+/** Won jobs, not cancelled, completed or invoiced, with no contract yet: the weekly sheet's "jobs for allocation". */
 export async function jobsForAllocation() {
   const rows = await mdb.INTERNAL.jobRegister.find({
     cancelled: { $ne: true },
+    completed: { $ne: true },
     projectNumber: { $type: 'number' },
     invoiceNumber: { $not: { $type: 'number' } },
     contractId: { $in: [null] },
@@ -511,7 +526,7 @@ export async function jobsForAllocation() {
 }
 
 export default {
-  STAGES, STAGE_LABELS, STAGE_FILTERS,
+  STAGES, STAGE_LABELS, STAGE_FILTERS, QUOTE_STATUSES,
   stageOf, clientKey, entryDate, taxYearOf, matchEntry, buildRegister, findUnregistered, nextNumber, parseEntryForm,
   parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext, ukToday,
   loadRegister, createEntry, updateEntry, findEntry, contractChoices, customerChoices, jobsForAllocation,

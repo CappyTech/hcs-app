@@ -54,6 +54,15 @@ describe('Job Register stages and matching', () => {
     assert.equal(stageOf(entries[4]), 'cancelled');
   });
 
+  it('works in the states the sheet colours give', () => {
+    assert.equal(stageOf({ quoteNumber: 1, quoteStatus: 'toQuote' }), 'toQuote');
+    assert.equal(stageOf({ quoteNumber: 1, quoteStatus: 'quoted' }), 'quoted');
+    assert.equal(stageOf({ quoteNumber: 1, quoteStatus: 'quoted', won: true }), 'won');
+    assert.equal(stageOf({ projectNumber: 2, completed: true }), 'completed');
+    assert.equal(stageOf({ projectNumber: 2, completed: true, invoiceNumber: 3 }), 'invoiced');
+    assert.equal(stageOf({ projectNumber: 2, completed: true, cancelled: true }), 'cancelled');
+  });
+
   it('treats spellings of one client as one', () => {
     assert.equal(clientKey(' Plus  dane '), clientKey('Plus Dane'));
   });
@@ -168,6 +177,15 @@ describe('Job Register form', () => {
     assert.equal(f.site, '25 Platt Ave');
     assert.equal(f.cancelled, true);
     assert.equal(f.quoteDate.toISOString().slice(0, 10), '2026-11-11');
+  });
+
+  it('reads the quote status and the won, completed and in KashFlow ticks', () => {
+    const f = parseEntryForm({ quoteStatus: 'toQuote', won: 'on', inKashflow: 'on' });
+    assert.equal(f.quoteStatus, 'toQuote');
+    assert.equal(f.won, true);
+    assert.equal(f.completed, false);
+    assert.equal(f.inKashflow, true);
+    assert.equal(parseEntryForm({ quoteStatus: 'nonsense' }).quoteStatus, null);
   });
 
   it('refuses a bad number, value or date', () => {

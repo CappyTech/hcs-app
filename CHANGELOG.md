@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.125.0] - 2026-11-17
+
+### Added
+- **The Job Reg import reads the row colours.** On the Quotes sheet, a white row is "to survey / quote", grey or black is "quoted, awaiting an answer", and yellow is won. On the Job Reg sheet, yellow is a live job, green is completed and an orange project number means it has been entered in KashFlow. Other colours are kept as a note on the row. The import preview shows each row's colour and the stage it gives. A colour moves a row on (to quote → quoted → won → completed) even if the row was edited by hand. Taking a colour off on the sheet only changes a row the import may overwrite.
+- **Two new Job Register stages: To survey / quote and Completed**, each with its own filter. A won quote no longer needs a project number to show as Won. The edit form has a Quote status (to survey / quote, quoted) and Won, Entered in KashFlow and Completed ticks.
+
+### Changed
+- **Completed jobs are no longer offered as jobs for allocation on the weekly sheet**, even before they are invoiced.
+
 ## [6.124.2] - 2026-11-16
 
 ### Fixed

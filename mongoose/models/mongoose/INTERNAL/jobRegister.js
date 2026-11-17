@@ -9,9 +9,9 @@ import crypto from 'crypto';
 //   Job Reg 26 → projectNumber (the KashFlow project number, 41xxx), jobDate,
 //                invoiceNumber / invoiceDate (the KashFlow invoice), clientRef
 //
-// The stage (quoted, won, invoiced, cancelled) is worked out from which of
-// these are filled in (jobRegisterService.stageOf), so it can't disagree with
-// them. The register page matches each number against the synced REST
+// The stage (to quote, quoted, won, completed, invoiced, cancelled) is worked
+// out from which of these are filled in and the state below
+// (jobRegisterService.stageOf), so it can't disagree with them. The register page matches each number against the synced REST
 // quotes, projects and invoices. KashFlow is only written by the optional
 // Create in KashFlow buttons (jobRegisterKashflowService).
 const jobRegisterSchema = new mongoose.Schema({
@@ -40,6 +40,16 @@ const jobRegisterSchema = new mongoose.Schema({
 
   notes: { type: String, trim: true, maxlength: 2000 },
   cancelled: { type: Boolean, default: false },
+
+  // The state the workbook's row colours gave (or set on the form). A quote is
+  // to survey and quote (white on the sheet) or quoted, awaiting an answer
+  // (grey); won is a yellow quote, which may not have its project number yet;
+  // completed is a green job (done, maybe not invoiced yet); inKashflow is an
+  // orange project number (entered in KashFlow as a project).
+  quoteStatus: { type: String, enum: ['toQuote', 'quoted'] },
+  won: { type: Boolean, default: false },
+  completed: { type: Boolean, default: false },
+  inKashflow: { type: Boolean, default: false },
 
   // Where the row came from. importId is the workbook upload (workbookImport
   // uuid) that created it; none means it was entered by hand. editedAt is

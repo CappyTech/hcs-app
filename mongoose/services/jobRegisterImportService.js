@@ -12,13 +12,25 @@
 // site, client and value are one register row (quote number + project
 // number). Pairs that can't be told apart are left as separate rows.
 //
+// Row colours (the fill most of the row's cells have) carry the state:
+//
+//   Quotes   none/white → to survey and quote (quoteStatus 'toQuote')
+//            grey/black → quoted, awaiting an answer (quoteStatus 'quoted')
+//            yellow     → won (won)
+//   Job Reg  yellow     → won, a live job to put on the weekly sheet
+//            green      → completed (completed)
+//            orange project number (column A) → entered in KashFlow (inKashflow)
+//
+// Other colours are kept as a note. A colour that's been taken off on the
+// sheet only takes the flag off a row the import may overwrite.
+//
 // Re-importing is safe: a row whose quote or project number is already in
 // the register only has its empty fields filled in, never overwritten.
 //
 // Everything above "Database" is pure, for testing without a database.
 import logger from '../../services/loggerService.js';
 import mdb from './mongooseDatabaseService.js';
-import { clientKey, customerChoices } from './jobRegisterService.js';
+import { clientKey, customerChoices, stageOf } from './jobRegisterService.js';
 import store from './workbookImportStore.js';
 
 const QUOTE_COLS = { date: 1, number: 2, site: 3, client: 4, contact: 5, value: 6, description: 7, invoice: 8, invoiceDate: 9 };
@@ -27,7 +39,11 @@ const LIMITS = { site: 300, client: 200, contact: 200, description: 300, clientR
 
 // Fields the import may fill in on a row already in the register
 const FILLABLE = ['quoteNumber', 'quoteDate', 'projectNumber', 'jobDate', 'site', 'customerCode', 'client', 'contact', 'value',
-  'description', 'clientRef', 'invoiceNumber', 'invoiceDate', 'notes'];
+  'description', 'clientRef', 'invoiceNumber', 'invoiceDate', 'notes', 'quoteStatus'];
+// Yes/no states read from the row colours
+const FLAGS = ['won', 'completed', 'inKashflow'];
+// The columns whose fill gives the row's colour: all but the job's number (orange for "in KashFlow")
+const COLOUR_COLS = { quote: [1, 2, 3, 4, 5, 6, 7, 8, 9], job: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] };
 const DATE_FIELDS = ['quoteDate', 'jobDate', 'invoiceDate'];
 
 // ── Cells ───────────────────────────────────────────────────────────────
@@ -75,6 +91,32 @@ export function siteKey(site) {
 
 const clip = (s, n) => (s.length > n ? s.slice(0, n) : s);
 
+/** The colour most of these cells are filled with, or 'none' when they aren't. Pure. */
+export function rowColour(fills = [], cols = []) {
+  const n = new Map();
+  for (const c of cols) if (fills[c]) n.set(fills[c], (n.get(fills[c]) || 0) + 1);
+  let best = 'none';
+  let most = 0;
+  for (const [colour, count] of n) if (count > most) { best = colour; most = count; }
+  return best;
+}
+
+/** What a row's colours say, as register fields (and a note for a colour that means nothing). Pure. */
+export function colourState(kind, colour, numberColour = null) {
+  const out = {};
+  if (kind === 'quote') {
+    if (colour === 'none' || colour === 'white') out.quoteStatus = 'toQuote';
+    else if (colour === 'grey' || colour === 'black') out.quoteStatus = 'quoted';
+    else if (colour === 'yellow') { out.quoteStatus = 'quoted'; out.won = true; }
+    else out.note = `Marked ${colour} on the Quotes sheet`;
+  } else {
+    if (colour === 'green') out.completed = true;
+    else if (colour !== 'yellow' && colour !== 'none' && colour !== 'white') out.note = `Marked ${colour} on the Job Reg sheet`;
+    if (numberColour === 'orange') out.inKashflow = true;
+  }
+  return out;
+}
+
 // ── Sheets ──────────────────────────────────────────────────────────────
 
 /** The Quotes and Job Reg sheets of the workbook, by name. */
@@ -91,7 +133,7 @@ export function findSheets(sheets = []) {
  * number, or a number with nothing else: the pre-numbered blank rows).
  * kind: 'quote' | 'job'. `problem` is set when the row can't be imported.
  */
-export function parseRow(row, kind, rowNumber) {
+export function parseRow(row, kind, rowNumber, fills = []) {
   const c = kind === 'quote' ? QUOTE_COLS : JOB_COLS;
   const number = cellInt(row[c.number]);
   if (number == null) return null;
@@ -100,8 +142,12 @@ export function parseRow(row, kind, rowNumber) {
   if (!site && !client) return null;
 
   const notes = [];
+  const colour = rowColour(fills, COLOUR_COLS[kind]);
+  const { note: colourNote, ...state } = colourState(kind, colour, kind === 'job' ? fills[c.number] || null : null);
+  if (colourNote) notes.push(colourNote);
   const entry = {
-    kind, row: rowNumber,
+    kind, row: rowNumber, colour,
+    ...state,
     site, client,
     contact: clip(cellText(row[c.contact]), LIMITS.contact),
     description: clip(cellText(row[c.description]), LIMITS.description),
@@ -148,7 +194,7 @@ function parseSheet(sheet, kind) {
   if (!sheet) return [];
   const out = [];
   sheet.rows.forEach((row, i) => {
-    const e = parseRow(row || [], kind, i + 1);
+    const e = parseRow(row || [], kind, i + 1, sheet.fills?.[i] || []);
     if (e) out.push(e);
   });
   return out;
@@ -214,6 +260,11 @@ export function mergePair(quote, job) {
     ...(job.invoiceNumber != null ? { invoiceNumber: job.invoiceNumber, invoiceDate: job.invoiceDate || null } : {}),
     notes: notes.slice(0, LIMITS.notes),
     cancelled: job.cancelled,
+    colour: job.colour,
+    ...(quote.quoteStatus ? { quoteStatus: quote.quoteStatus } : {}),
+    won: true,
+    ...(job.completed ? { completed: true } : {}),
+    ...(job.inKashflow ? { inKashflow: true } : {}),
   };
 }
 
@@ -471,6 +522,13 @@ export function planImport(entries, existing) {
     }
     if (entry.cancelled && !row.cancelled && row.invoiceNumber == null) fill.cancelled = true;
     if (overwrite && !entry.cancelled && row.cancelled) fill.cancelled = false;
+    // The colours move a row on (to quote → quoted → won → completed) on any row;
+    // taking a colour off only counts on a row the import may overwrite
+    if (entry.quoteStatus === 'quoted' && row.quoteStatus === 'toQuote') fill.quoteStatus = 'quoted';
+    for (const f of FLAGS) {
+      if (entry[f] && !row[f]) fill[f] = true;
+      else if (overwrite && !entry[f] && row[f]) fill[f] = false;
+    }
     // An invoice number needs its project number on the row
     if (fill.invoiceNumber != null && row.projectNumber == null && fill.projectNumber == null) delete fill.invoiceNumber;
     return Object.keys(fill).length ? { action: 'update', entry, existing: row, fill, overwrite } : { action: 'same', entry, existing: row };
@@ -488,18 +546,18 @@ export function summarisePlan(plan) {
 export function toModelFields(src) {
   const out = {};
   for (const [k, v] of Object.entries(src)) {
-    if (!FILLABLE.includes(k) && k !== 'cancelled') continue;
+    if (!FILLABLE.includes(k) && k !== 'cancelled' && !FLAGS.includes(k)) continue;
     if (blank(v)) continue;
     out[k] = DATE_FIELDS.includes(k) ? new Date(`${v}T12:00:00Z`) : v;
   }
-  if (out.cancelled === false) delete out.cancelled;
+  for (const k of ['cancelled', ...FLAGS]) if (out[k] === false) delete out[k];
   return out;
 }
 
 // ── Database ────────────────────────────────────────────────────────────
 
 async function existingRows() {
-  return mdb.INTERNAL.jobRegister.find({}).select(`_id uuid cancelled importId editedAt ${FILLABLE.join(' ')}`).lean();
+  return mdb.INTERNAL.jobRegister.find({}).select(`_id uuid cancelled importId editedAt ${FLAGS.join(' ')} ${FILLABLE.join(' ')}`).lean();
 }
 
 /** Park a parsed workbook for its preview. Returns the import document. */
@@ -535,7 +593,8 @@ export async function loadPreview(uuid) {
   const withKf = applyKashflowCustomers(paired, await kashflowLookup(paired), customers);
   const needed = clientsNeeded(withKf);
   const clients = clientMapping(staged, customers).map((c) => ({ ...c, needed: needed.get(c.key) || 0 }));
-  const plan = planImport(applyClients(withKf, clients, customers), await existingRows());
+  const plan = planImport(applyClients(withKf, clients, customers), await existingRows())
+    .map((p) => ({ ...p, stage: stageOf(p.entry) }));
   const fromKashflow = withKf.filter((e) => e.customerFrom).length;
   return { staged, plan, suggestions, clients, customers, fromKashflow, counts: summarisePlan(plan) };
 }
@@ -597,7 +656,7 @@ export async function runImport(uuid, body = {}) {
         const doc = await Model.findById(p.existing._id);
         if (!doc) { result.failed.push({ label, reason: 'The register row was deleted during the import' }); continue; }
         doc.set(toModelFields({ ...p.fill, cancelled: p.fill.cancelled }));
-        if (p.fill.cancelled === false) doc.cancelled = false;
+        for (const k of ['cancelled', ...FLAGS]) if (p.fill[k] === false) doc[k] = false;
         await doc.save();
         result.updated++;
       } else if (p.action === 'same') {
@@ -720,7 +779,7 @@ export async function flagImportedRows() {
 }
 
 export default {
-  cellText, cellInt, cellMoney, cellDate, siteKey, findSheets, parseRow, matchKey, pairQuotesWithJobs, mergePair,
+  cellText, cellInt, cellMoney, cellDate, siteKey, findSheets, rowColour, colourState, parseRow, matchKey, pairQuotesWithJobs, mergePair,
   suggestPairs, applyChosenPairs, parseJobRegWorkbook, tickedPairs, saveForLater,
   sheetClients, suggestCustomer, clientMapping, readClientChoices, applyClients, flagImportedRows, loadUnlinked, linkClients, linkFromKashflow,
   customerFromKashflow, applyKashflowCustomers, clientsNeeded, kashflowLookup, planImport, summarisePlan, toModelFields, stageUpload, loadPreview, runImport,

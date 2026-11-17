@@ -16,7 +16,8 @@
   const byNumber = (field) => new Map(parsed.entries.filter((e) => e[field] != null).map((e) => [e[field], e]));
   const quotes = byNumber('quoteNumber');
   const jobs = byNumber('projectNumber');
-  const FIELD_LABELS = { customerCode: 'customer', quoteNumber: 'quote no.', quoteDate: 'quote date', projectNumber: 'project no.', jobDate: 'job date', site: 'site', client: 'client', contact: 'contact', value: 'value', description: 'description', clientRef: 'client ref', invoiceNumber: 'invoice no.', invoiceDate: 'invoice date', notes: 'notes', cancelled: 'cancelled' };
+  const STAGE_NAMES = { toQuote: 'To survey / quote', quoted: 'Quoted', won: 'Won', completed: 'Completed', invoiced: 'Invoiced', cancelled: 'Cancelled' };
+  const FIELD_LABELS = { customerCode: 'customer', quoteNumber: 'quote no.', quoteDate: 'quote date', projectNumber: 'project no.', jobDate: 'job date', site: 'site', client: 'client', contact: 'contact', value: 'value', description: 'description', clientRef: 'client ref', invoiceNumber: 'invoice no.', invoiceDate: 'invoice date', notes: 'notes', cancelled: 'cancelled', quoteStatus: 'quote status', won: 'won', completed: 'completed', inKashflow: 'in KashFlow' };
   const groups = [
     { action: 'create', title: 'To add', tone: 'text-green-700 dark:text-green-400', open: false },
     { action: 'update', title: 'Already in the register: to update (imported, not edited since) or fill in', tone: 'text-blue-700 dark:text-blue-400', open: true },
@@ -164,7 +165,7 @@
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th class="<%= th %>">Quote</th><th class="<%= th %>">Job</th><th class="<%= th %>">Date</th><th class="<%= th %>">Site</th>
-                <th class="<%= th %>">Client</th><th class="<%= th %> text-right">Value</th><th class="<%= th %>">Invoice</th>
+                <th class="<%= th %>">Client</th><th class="<%= th %> text-right">Value</th><th class="<%= th %>">Invoice</th><th class="<%= th %>">Sheet colour</th>
                 <th class="<%= th %>"><%= g.action === 'update' ? 'Changes' : (g.action === 'conflict' || g.action === 'skip') ? 'Why' : 'Notes' %></th>
               </tr>
             </thead>
@@ -178,6 +179,7 @@
                   <td class="<%= td %>"><%= e.client %></td>
                   <td class="<%= td %> text-right whitespace-nowrap"><%= money(e.value) %></td>
                   <td class="<%= td %>"><%= e.invoiceNumber ?? '' %><%= e.cancelled ? ' Cancelled' : '' %></td>
+                  <td class="<%= td %> whitespace-nowrap"><%= e.colour && e.colour !== 'none' ? e.colour : 'no colour' %><%= e.inKashflow ? ', orange no.' : '' %><% if (p.stage) { %> → <%= STAGE_NAMES[p.stage] || p.stage %><% } %></td>
                   <td class="<%= td %> text-gray-500 dark:text-gray-400">
                     <% if (g.action === 'update') { %><%= p.overwrite ? 'Updates' : 'Fills in' %>: <%= Object.keys(p.fill).map((k) => FIELD_LABELS[k] || k).join(', ') %>
                     <% } else if (g.action === 'conflict' || g.action === 'skip') { %><%= p.reason %>

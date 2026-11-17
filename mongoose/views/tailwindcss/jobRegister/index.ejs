@@ -17,8 +17,10 @@
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '';
   const money = (v) => v == null ? '' : '£' + Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const stagePill = {
+    toQuote: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
     quoted: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
     won: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
+    completed: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/40 dark:text-teal-300 dark:border-teal-700',
     invoiced: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
     cancelled: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
   };
@@ -29,7 +31,7 @@
     return '/job-register' + (parts.length ? '?' + parts.join('&') : '');
   };
   const chips = [
-    ['all', 'All'], ['quoted', 'Quoted'], ['won', 'Won'], ['invoiced', 'Invoiced'], ['cancelled', 'Cancelled'],
+    ['all', 'All'], ...stages.map((s) => [s, stageLabels[s]]),
     ['unmatched', 'Not in KashFlow yet'], ['differs', "Doesn't match KashFlow"],
   ];
   // One KashFlow check: tick, missing or differs
@@ -211,6 +213,7 @@
               </td>
               <td class="<%= td %>">
                 <span class="text-[11px] px-2 py-0.5 rounded-full border <%= stagePill[stage] %>"><%= stageLabels[stage] %></span>
+                <% if (stage === 'won' && e.inKashflow) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-1 whitespace-nowrap">Entered in KashFlow</p><% } %>
                 <% if (e.notes) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= e.notes %></p><% } %>
               </td>
             </tr>
