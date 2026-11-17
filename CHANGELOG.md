@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.129.0] - 2026-11-17
+
+### Added
+- **People can be booked on Job Register jobs from the weekly sheet.** Each day now offers the jobs that are won and not yet completed, shown as the job number and site with the description, client and contact in brackets, alongside saved locations, Off and Sick. Choosing a job also links the day to the job's contract and KashFlow job where it has them, so site approval works as before. The daily page and the weekly attendance table show a job day by its number and site.
+
+### Changed
+- **The weekly sheet no longer offers contracts.** A day already on a contract still shows and is left as it is when the week is saved.
+- **Jobs for allocation leaves out jobs someone is already booked on.** It lists won jobs with no contract and nobody booked on them yet.
+- **The weekly sheet import matches sites to saved locations or open jobs, and no longer adds locations.** It suggests a location with the same name, then a job whose number is in the text, then the one job whose site matches. Anything else is skipped. Uploads saved earlier with a contract or "new location" show the new suggestion instead.
+
 ## [6.128.0] - 2026-11-17
 
 ### Changed
