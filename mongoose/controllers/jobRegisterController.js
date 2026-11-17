@@ -3,6 +3,8 @@ import logger from '../../services/loggerService.js';
 import jobRegister from '../services/jobRegisterService.js';
 import jobImport from '../services/jobRegisterImportService.js';
 import kfCreate from '../services/jobRegisterKashflowService.js';
+import lifecycle from '../services/jobRegisterLifecycleService.js';
+import oneDrive from '../../services/oneDriveFolderService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import overviewEngine from '../services/overviewEngine.js';
 
@@ -116,6 +118,7 @@ export const getShow = async (req, res, next) => {
       quoteStatusLabels: jobRegister.QUOTE_STATUS_LABELS,
       canEdit: canEditRegister(req),
       canCreate: createChoices(req, job),
+      oneDriveOn: oneDrive.isConfigured(),
       editQuote: pick(job.quotes, req.query.quote),
       editInvoice: pick(job.invoices, req.query.invoice),
       crumbs: registerCrumbs(req),
@@ -332,12 +335,32 @@ export const postKashflowProject = async (req, res, next) => {
   }
 };
 
+// ── OneDrive folder ─────────────────────────────────────────────────────
+
+/** POST /job-register/:uuid/onedrive-folder: find the job's folder in OneDrive and keep it. */
+export const postFindFolder = async (req, res, next) => {
+  const back = jobUrl(req.params.uuid);
+  try {
+    const r = await lifecycle.findFolder(req.params.uuid);
+    if (r.skipped) req.flash('error', 'OneDrive job folders are switched off or not set up (Admin → Config → OneDrive).');
+    else if (r.already) req.flash('success', 'This job already has its OneDrive folder.');
+    else if (r.folder) req.flash('success', `Found the OneDrive folder: ${r.folder.path || r.folder.name}.`);
+    else req.flash('error', "No OneDrive folder was found for this job's project or quote number.");
+    res.redirect(back);
+  } catch (err) {
+    if (err.status === 404) return backOnError(req, res, next, err, back);
+    logger.warn(`[jobRegisterController] Find folder for ${req.params.uuid} failed: ${err.message}`);
+    req.flash('error', `The OneDrive folder couldn't be found: ${err.message}`);
+    res.redirect(back);
+  }
+};
+
 function flashCreated(req, label, r) {
   flashNotices(req, [kfCreate.createdNotice(label, r)]);
 }
 
 export default {
-  getKashflowQuote, postKashflowQuote, postKashflowProject, getLinkClients, postLinkClients, postLinkFromKashflow,
+  getKashflowQuote, postKashflowQuote, postKashflowProject, postFindFolder, getLinkClients, postLinkClients, postLinkFromKashflow,
   getRegister, postFillNext, postFillNextEdit, postCreate, getShow, getEdit, postUpdate,
   postAddQuote, postUpdateQuote, postRemoveQuote, postAddInvoice, postUpdateInvoice, postRemoveInvoice, postAddFromKashflow, readFilters,
 };

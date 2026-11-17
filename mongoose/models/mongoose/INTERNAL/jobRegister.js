@@ -99,6 +99,13 @@ const jobRegisterSchema = new mongoose.Schema({
   // two). Each quote holds its own.
   projectSentAt: { type: Date },
   projectSendingAt: { type: Date },
+
+  // The job's folder in OneDrive (oneDriveFolderService), set by the
+  // lifecycle hooks (quote folder, moved to live, moved to completed) or the
+  // job page's Find folder. The id follows the folder when it moves.
+  oneDriveFolderId: { type: String, trim: true, maxlength: 200 },
+  oneDriveFolderUrl: { type: String, trim: true, maxlength: 2000 },
+  oneDriveFolderPath: { type: String, trim: true, maxlength: 1000 },
 }, { timestamps: true });
 
 jobRegisterSchema.index({ projectNumber: 1 }, { unique: true, partialFilterExpression: { projectNumber: { $type: 'number' } } });
