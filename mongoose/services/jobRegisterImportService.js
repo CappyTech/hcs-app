@@ -42,6 +42,10 @@ const FILLABLE = ['quoteNumber', 'quoteDate', 'projectNumber', 'jobDate', 'site'
   'description', 'clientRef', 'invoiceNumber', 'invoiceDate', 'notes', 'quoteStatus'];
 // Yes/no states read from the row colours
 const FLAGS = ['won', 'completed', 'inKashflow'];
+// The sheet rows that say each one: a quote on its own says nothing about
+// completed or KashFlow, and a job on its own nothing about won
+const FLAG_KINDS = { won: ['quote', 'pair'], completed: ['job', 'pair'], inKashflow: ['job', 'pair'] };
+const saysFlag = (entry, f) => !entry.kind || FLAG_KINDS[f].includes(entry.kind);
 // The columns whose fill gives the row's colour: all but the job's number (orange for "in KashFlow")
 const COLOUR_COLS = { quote: [1, 2, 3, 4, 5, 6, 7, 8, 9], job: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] };
 const DATE_FIELDS = ['quoteDate', 'jobDate', 'invoiceDate'];
@@ -514,7 +518,10 @@ export function planImport(entries, existing) {
         return { action: 'conflict', entry, existing: row, reason: `The register row has ${label} number ${row[field]}` };
       }
     }
-    const overwrite = !!row.importId && !row.editedAt;
+    // A quote on its own that matches a row with a project number is the quote
+    // half of a job (paired by hand last time): the job's details win, so the
+    // quote only fills in
+    const overwrite = !!row.importId && !row.editedAt && !(entry.kind === 'quote' && row.projectNumber != null);
     const fill = {};
     for (const k of FILLABLE) {
       if (blank(entry[k])) continue;
@@ -527,7 +534,7 @@ export function planImport(entries, existing) {
     if (entry.quoteStatus === 'quoted' && row.quoteStatus === 'toQuote') fill.quoteStatus = 'quoted';
     for (const f of FLAGS) {
       if (entry[f] && !row[f]) fill[f] = true;
-      else if (overwrite && !entry[f] && row[f]) fill[f] = false;
+      else if (overwrite && !entry[f] && row[f] && saysFlag(entry, f)) fill[f] = false;
     }
     // An invoice number needs its project number on the row
     if (fill.invoiceNumber != null && row.projectNumber == null && fill.projectNumber == null) delete fill.invoiceNumber;
