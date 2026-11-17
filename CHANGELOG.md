@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.125.2] - 2026-11-17
+
+### Fixed
+- **Importing the Job Reg workbook again no longer undoes a quote and job you paired by hand.** If a suggested pair was ticked on one import and not on the next, the quote and the job came in separately and both matched the one register row. The quote then put its own value back over the job's, and cleared the row's Completed and Entered in KashFlow, and the job cleared Won. A quote on its own now only fills in a row that has a project number, and only a job can take Completed or Entered in KashFlow off a row (only a quote can take Won off).
+
 ## [6.125.1] - 2026-11-17
 
 ### Fixed

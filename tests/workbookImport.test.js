@@ -171,6 +171,22 @@ describe('Job Reg colours', () => {
     assert.deepEqual(toModelFields({ won: true, completed: false, inKashflow: true, quoteStatus: 'quoted' }), { won: true, inKashflow: true, quoteStatus: 'quoted' });
   });
 
+  it('leaves a row paired by hand alone when the same quote and job come in unpaired', () => {
+    // Imported last time as one row from a ticked pair, not edited since
+    const row = {
+      _id: 'r1', quoteNumber: 50040, projectNumber: 41040, site: '40 Test St', client: 'Example Homes', value: 1000,
+      quoteStatus: 'quoted', won: true, completed: true, inKashflow: true, importId: 'u1',
+    };
+    const quote = { kind: 'quote', quoteNumber: 50040, site: '40 Test St', client: 'Example Homes', value: 900, quoteStatus: 'quoted', won: true };
+    const job = { kind: 'job', projectNumber: 41040, site: '40 Test St', client: 'Example Homes', value: 1000, completed: true, inKashflow: true };
+    assert.deepEqual(planImport([quote, job], [row]).map((p) => p.action), ['same', 'same']);
+    // A job's colour taken off still counts; a quote can't take a job's flags off
+    const [p] = planImport([{ ...job, completed: false }], [row]);
+    assert.deepEqual(p.fill, { completed: false });
+    const [q] = planImport([{ ...quote, won: false }], [{ ...row, projectNumber: null }]);
+    assert.deepEqual(q.fill, { value: 900, won: false });
+  });
+
   it("shows each row's colour and the stage it gives on the import preview", async () => {
     const e = { kind: 'quote', quoteNumber: 50030, quoteDate: '2026-01-10', site: '30 Test St', client: 'Example Homes', value: 100, colour: 'yellow', quoteStatus: 'quoted', won: true, notes: '' };
     const html = await ejs.renderFile(path.join(root, 'mongoose/views/tailwindcss/import/job-register.ejs'), {
