@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.136.0] - 2026-11-17
+
+### Added
+- **Job Register folders follow the job in OneDrive.** With OneDrive job folders set up, a job's first quote gets its folder in the quotes folder, a won job's folder moves to the live jobs folder, and a completed job's moves to Completed Jobs. The job page links to the folder, and a Find folder button looks it up for jobs that don't have one yet. If a folder can't be created or moved, the job is still saved and a message says why.
+
 ## [6.135.0] - 2026-11-17
 
 ### Added
