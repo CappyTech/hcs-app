@@ -463,6 +463,13 @@ describe('payroll, policies and admin', () => {
     assert.deepStrictEqual((await engine.buildArea(accountant, 'admin')).cards, []);
     assert.deepStrictEqual((await engine.buildArea(accountant, 'policies')).cards, []);
   });
+
+  it('links Admin to the admin dashboard and its most-used tools, for admins only', async () => {
+    const area = await engine.buildArea(admin, 'admin');
+    assert.deepStrictEqual(area.actions.map((a) => a.href),
+      ['/admin', '/admin/config', '/audit', '/admin/security-events', '/admin/jobs']);
+    assert.deepStrictEqual((await engine.buildArea(accountant, 'admin')).actions, []);
+  });
 });
 
 describe('weekly attendance overview', () => {
