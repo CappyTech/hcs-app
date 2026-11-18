@@ -6,6 +6,7 @@ import listControllerConfig from '../config/listControllerConfig.js';
 import CRUDControllerConfig from '../config/CRUDControllerConfig.js';
 import { scopeQuery, matchesFilter } from '../../services/dataScopingService.js';
 import rbac from '../config/rolePermissionsConfig.js';
+import bulkDelete from '../services/bulkDeleteService.js';
 const denyGuard = (config, op) =>
   Array.isArray(config.deny) && config.deny.includes(op);
 const crudController = {};
@@ -950,6 +951,69 @@ for (const namespace of ["REST", "INTERNAL"]) {
           logger.error(`[CRUDController] Error deleting ${modelName}: ${err.message}`);
           req.flash('error', `Failed to delete ${baseName.toLowerCase()}.`);
           next(err);
+        }
+      };
+    }
+    if (bulkDelete.canBulkDelete(namespace, modelName, Model, config)) {
+      // BULK DELETE: POST /<model>/bulk-delete shows what was ticked and asks
+      // to confirm the count; POST /<model>/bulk-delete/confirm deletes them,
+      // one findOneAndDelete per record like the single delete above.
+      const label = config.title || baseName;
+      const actionBase = `/${(config.modelRename || modelName).toLowerCase()}/bulk-delete`;
+      crudController[`bulkDelete${baseName}`] = async (req, res, next) => {
+        const listPath = listPathFor(modelName);
+        const confirming = /\/confirm\/?$/.test(req.path || "");
+        const { uuids, tooMany } = bulkDelete.parseBulkUuids(req.body);
+        if (!uuids.length) {
+          req.flash('error', 'Tick at least one record to delete.');
+          return res.redirect(listPath);
+        }
+        if (tooMany) {
+          req.flash('error', `You can delete up to ${bulkDelete.BULK_DELETE_MAX} records at a time.`);
+          return res.redirect(listPath);
+        }
+        const keep = bulkDelete.protectedUuids(modelName, req.user);
+        try {
+          if (!confirming) {
+            const docs = await Model.find({ uuid: { $in: uuids } }).lean();
+            const records = docs
+              .filter((d) => !keep.has(d.uuid))
+              .map((d) => ({ uuid: d.uuid, label: bulkDelete.recordLabel(d, config.linkField) }));
+            const skippedSelf = docs.some((d) => keep.has(d.uuid));
+            if (!records.length) {
+              req.flash('error', skippedSelf ? 'You cannot delete your own account.' : 'None of the ticked records exist any more.');
+              return res.redirect(listPath);
+            }
+            return res.render(path.join("tailwindcss", "partials", "form-bulk-delete"), {
+              title: `Delete ${records.length} ${label} record${records.length === 1 ? '' : 's'}`,
+              records,
+              skippedSelf,
+              missingCount: uuids.length - docs.length,
+              formAction: `${actionBase}/confirm`,
+              cancelUrl: listPath,
+            });
+          }
+
+          // The confirmation page states a count; refuse if the posted list
+          // no longer matches it (a tampered or stale form).
+          if (String(req.body.count) !== String(uuids.length)) {
+            req.flash('error', 'The selection changed. Nothing was deleted; please try again.');
+            return res.redirect(listPath);
+          }
+          const toDelete = uuids.filter((u) => !keep.has(u));
+          const { deleted, missing } = await bulkDelete.deleteRecords(Model, toDelete);
+          logger.info(
+            `[CRUDController] Bulk delete ${modelName}: ${deleted} deleted, ${missing.length} not found, by ${req.user?.username || req.user?._id || 'unknown'}`,
+          );
+          req.flash('success', `${deleted} ${label} record${deleted === 1 ? '' : 's'} deleted.`);
+          if (missing.length) {
+            req.flash('error', `${missing.length} record${missing.length === 1 ? ' was' : 's were'} already gone.`);
+          }
+          return res.redirect(listPath);
+        } catch (err) {
+          logger.error(`[CRUDController] Error bulk deleting ${modelName}: ${err.message}`);
+          req.flash('error', `Failed to delete ${label.toLowerCase()} records.`);
+          return next(err);
         }
       };
     }

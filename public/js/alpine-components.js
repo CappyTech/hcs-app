@@ -505,4 +505,44 @@ document.addEventListener('alpine:init', function () {
     };
   });
 
+  /**
+   * bulkSelect – the checkboxes on an INTERNAL list page (listTable.ejs) that
+   * pick records for "Delete selected…". Purely presentational: it keeps the
+   * count, ticks every row from the header box and disables the button while
+   * nothing is ticked. The form posts normally; the server confirms the count.
+   * Usage:  <div x-data="bulkSelect">
+   *           <span x-bind="countText"></span> <button x-bind="submitBtn">
+   *           <input type="checkbox" x-bind="allBox">
+   *           <input type="checkbox" data-bulk-row x-bind="rowBox">
+   *         </div>
+   */
+  Alpine.data('bulkSelect', function () {
+    return {
+      count: 0,
+      _rows: function () {
+        return Array.prototype.slice.call(this.$root.querySelectorAll('input[data-bulk-row]'));
+      },
+      _recount: function () {
+        this.count = this._rows().filter(function (b) { return b.checked; }).length;
+      },
+      init: function () { this._recount(); },
+      rowBox: {
+        ['@change']: function () { this._recount(); }
+      },
+      allBox: {
+        ['@change']: function (e) {
+          var on = e.target.checked;
+          this._rows().forEach(function (b) { b.checked = on; });
+          this._recount();
+        }
+      },
+      countText: {
+        ['x-text']: function () { return this.count + ' selected'; }
+      },
+      submitBtn: {
+        [':disabled']: function () { return this.count === 0; }
+      }
+    };
+  });
+
 });

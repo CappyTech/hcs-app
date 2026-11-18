@@ -7,6 +7,8 @@ import overviewEngine from '../services/overviewEngine.js';
 import registry from '../config/overviews/index.js';
 import { withListControls } from '../services/listDefinitionService.js';
 import { ENTITIES as SEARCH_ENTITIES, buildFilter } from '../services/searchService.js';
+import CRUDControllerConfig from '../config/CRUDControllerConfig.js';
+import bulkDelete from '../services/bulkDeleteService.js';
 
 /**
  * The fields a list's search box matches: the list's own searchFields, else
@@ -223,6 +225,13 @@ function countActiveFilters(req, filterConfigs) {
 
     const functionName = `list${capitalize(modelName)}`;
     if (listController[functionName]) continue; // avoid duplicates if name exists in both namespaces
+
+    // Where the list's "Delete selected" posts, for INTERNAL models that
+    // offer bulk delete (see bulkDeleteService); null hides the checkboxes.
+    const crudCfg = { ...(listControllerConfig[modelName] || {}), ...(CRUDControllerConfig[modelName] || {}) };
+    const bulkDeleteAction = bulkDelete.canBulkDelete(ns, modelName, model, crudCfg)
+      ? `/${(crudCfg.modelRename || modelName).toLowerCase()}/bulk-delete`
+      : null;
 
     listController[functionName] = async (req, res, next) => {
       // Per request: Overview settings can change sort, tabs and filters at any time
@@ -609,6 +618,8 @@ function countActiveFilters(req, filterConfigs) {
           listLayout,
           filters: filterConfigs,
           activeFilterCount,
+          bulkDeleteAction,
+          bulkDeleteMax: bulkDelete.BULK_DELETE_MAX,
         });
       } catch (err) {
         logger.error(`Error listing ${modelName}:`, err);
