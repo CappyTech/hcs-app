@@ -14,12 +14,17 @@
  * says what went wrong, or return `{ skipped: 'not configured' }` without
  * calling anything when the feature is off or incomplete.
  *
+ * Every change it makes in OneDrive (a folder created or moved) and every
+ * Test connection is a security event (auditLogService, Admin → Security
+ * events), attributed to the user whose request did it.
+ *
  * The secret and the token are never logged.
  */
 
 import crypto from 'node:crypto';
 import configService from './configService.js';
 import logger from './loggerService.js';
+import auditLog from './auditLogService.js';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const SKIPPED = Object.freeze({ skipped: 'not configured' });
@@ -288,6 +293,7 @@ export async function createFolder(s, parentPath, name) {
       '@microsoft.graph.conflictBehavior': 'fail',
     }, `creating "${path}"`);
     logger.info(`[oneDrive] created folder "${path}"`);
+    auditLog.record('onedrive_folder_created', null, { meta: { owner: s.owner, path, itemId: item.id } });
     return { item, existed: false };
   } catch (err) {
     if (!(err instanceof OneDriveError) || err.status !== 409) throw err;
@@ -408,6 +414,7 @@ export async function moveToLive({ quoteNumber, projectNumber, site, quoteDate, 
   const moved = await moveItem(s, source.item.id, live.item.id, name);
   const path = joinPath(live.path, moved.name || name);
   logger.info(`[oneDrive] job ${projectNumber}: moved "${source.path}" to "${path}"`);
+  auditLog.record('onedrive_folder_moved', null, { meta: { owner: s.owner, from: source.path, to: path, itemId: source.item.id, step: 'won' } });
   return result({ ...source.item, ...moved }, path, { moved: true, created: false, from: source.path });
 }
 
@@ -455,6 +462,7 @@ export async function moveToCompleted({ projectNumber, site, wonDate, folderId }
   const moved = await moveItem(s, found.item.id, completed.item.id);
   const path = joinPath(completed.path, moved.name || found.item.name);
   logger.info(`[oneDrive] job ${number}: moved "${found.path}" to "${path}"`);
+  auditLog.record('onedrive_folder_moved', null, { meta: { owner: s.owner, from: found.path, to: path, itemId: found.item.id, step: 'completed' } });
   return result({ ...found.item, ...moved }, path, { moved: true, from: found.path });
 }
 
@@ -503,6 +511,17 @@ export async function findJobFolder({ quoteNumber, projectNumber } = {}) {
  */
 export async function testConnection() {
   const s = settings();
+  try {
+    const message = await checkConnection(s);
+    auditLog.record('onedrive_connection_tested', null, { meta: { ok: true, owner: s.owner, root: s.root, message } });
+    return message;
+  } catch (err) {
+    auditLog.record('onedrive_connection_tested', null, { meta: { ok: false, owner: s.owner || null, root: s.root, error: err.message } });
+    throw err;
+  }
+}
+
+async function checkConnection(s) {
   if (!hasCredentials(s)) throw new Error('OneDrive tenant / client ID / client secret / owner not configured.');
   let root;
   try {

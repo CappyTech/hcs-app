@@ -21,6 +21,7 @@
 // The workbook import doesn't call them: a bulk import of old jobs shouldn't
 // set off what a new win would.
 import logger from '../../services/loggerService.js';
+import auditLog from '../../services/auditLogService.js';
 import { stageOf } from './jobRegisterService.js';
 import kfCreate from './jobRegisterKashflowService.js';
 import mdb from './mongooseDatabaseService.js';
@@ -32,6 +33,17 @@ const WON_OR_LATER = new Set(['won', 'completed', 'invoiced']);
 const label = (job) => (job?.projectNumber != null ? `job ${job.projectNumber}` : `job ${job?.uuid || ''}`.trim());
 
 // ── OneDrive folders ────────────────────────────────────────────────────
+//
+// The folder service records each folder it creates or moves as a security
+// event; here a step that fails and a folder found for a job are recorded,
+// with the job they were for.
+
+/** A folder step that failed, as a security event. */
+function auditFailed(job, step, err) {
+  auditLog.record('onedrive_folder_failed', null, {
+    meta: { job: label(job), jobUuid: job?.uuid || null, step, error: err.message },
+  });
+}
 
 const sameId = (a, b) => a != null && b != null && String(a) === String(b);
 
@@ -69,6 +81,7 @@ async function folderStep(job, doing, run) {
     return [];
   } catch (err) {
     logger.warn(`[jobRegisterLifecycle] OneDrive folder for ${label(job)} couldn't be ${doing}: ${err.message}`);
+    auditFailed(job, doing, err);
     return [{ type: 'error', text: `The OneDrive folder couldn't be ${doing}: ${err.message}` }];
   }
 }
@@ -125,11 +138,20 @@ export async function findFolder(uuid) {
   if (job.oneDriveFolderId) return { already: true, folder: { id: job.oneDriveFolderId, webUrl: job.oneDriveFolderUrl, path: job.oneDriveFolderPath } };
   const q = folderQuote(job);
   if (job.projectNumber == null && !q) return { folder: null };
-  const folder = await oneDrive.findJobFolder({ quoteNumber: q?.number, projectNumber: job.projectNumber });
+  let folder;
+  try {
+    folder = await oneDrive.findJobFolder({ quoteNumber: q?.number, projectNumber: job.projectNumber });
+  } catch (err) {
+    auditFailed(job, 'found', err);
+    throw err;
+  }
   if (folder?.skipped) return { skipped: folder.skipped };
   if (!folder?.id) return { folder: null };
   await storeFolder(job.uuid, folder);
   logger.info(`[jobRegisterLifecycle] Found the OneDrive folder for ${label(job)}: "${folder.path}"`);
+  auditLog.record('onedrive_folder_linked', null, {
+    meta: { job: label(job), jobUuid: job.uuid, path: folder.path || null, itemId: folder.id },
+  });
   return { folder };
 }
 
