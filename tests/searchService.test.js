@@ -123,6 +123,17 @@ describe('searchService', () => {
       assert.equal(inv.more, false);
     });
 
+    it('offers the list page of each searchable type by its name, only when the person may list it', async () => {
+      const { svc, req } = env();
+      const r = await svc.search(req, 'customers');
+      const pages = r.groups.find((g) => g.key === 'page');
+      assert.deepEqual(pages.items, [{ title: 'Customers', subtitle: '', href: '/customers' }]);
+
+      const a = env({ role: 'accountant', canList: (m) => m !== 'customer' });
+      const ra = await a.svc.search(a.req, 'customers');
+      assert.ok(!ra.groups.some((g) => g.key === 'page'));
+    });
+
     it('narrows to one type and uses the larger limit', async () => {
       const { svc, customer, req } = env();
       const r = await svc.search(req, 'acme', { type: 'customer', limit: 50 });
