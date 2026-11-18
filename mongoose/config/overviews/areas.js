@@ -111,15 +111,12 @@ export default [
     path: '/overview/admin',
     label: 'Admin',
     icon: 'bi-shield-check',
-    description: 'Users, roles and two-factor sign-in.',
-    children: ['user'],
-    // The admin dashboard and its most-used tools. Shown only to those who can open the route (rolePermissionsConfig)
+    description: 'Users, security, background jobs, the outbox, the audit log and GDPR requests.',
+    children: ['user', 'securityEvent', 'jobState', 'notification', 'auditLog', 'gdprRequest'],
+    // The cards carry the tools; the header keeps the dashboard and settings. Shown only to those who can open the route (rolePermissionsConfig)
     actions: [
       { label: 'Admin dashboard', href: '/admin', route: '/admin', icon: 'bi-shield-lock' },
       { label: 'Configuration', href: '/admin/config', route: '/admin/config', icon: 'bi-sliders' },
-      { label: 'Audit log', href: '/audit', route: '/audit', icon: 'bi-journal-check' },
-      { label: 'Security events', href: '/admin/security-events', route: '/admin/security-events', icon: 'bi-shield-exclamation' },
-      { label: 'Background jobs', href: '/admin/jobs', route: '/admin/jobs', icon: 'bi-gear-wide-connected' },
     ],
   },
 ];
