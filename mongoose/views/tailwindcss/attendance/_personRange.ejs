@@ -1,0 +1,18 @@
+<%# The period picker for attendance by person: presets, or a from/to range (GET, no CSRF) %>
+<div class="flex flex-col lg:flex-row lg:items-end gap-3 mb-6">
+  <div class="flex flex-wrap gap-2">
+    <% range.presets.forEach((p) => { %>
+      <a href="<%= action %>?preset=<%= p.key %>"
+         class="text-sm px-3 py-2 rounded-lg border transition <%= range.preset === p.key ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800' %>"><%= p.label %></a>
+    <% }) %>
+  </div>
+  <form method="GET" action="<%= action %>" class="flex flex-wrap items-end gap-2 lg:ml-auto">
+    <label class="text-xs text-gray-500 dark:text-gray-400">From
+      <input type="date" name="from" value="<%= range.from %>" class="<%= inputCls %> block mt-1" />
+    </label>
+    <label class="text-xs text-gray-500 dark:text-gray-400">To
+      <input type="date" name="to" value="<%= range.to %>" class="<%= inputCls %> block mt-1" />
+    </label>
+    <button type="submit" class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 px-4 py-2 rounded-lg shadow-sm font-medium transition">Show</button>
+  </form>
+</div>

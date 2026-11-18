@@ -1,0 +1,130 @@
+<%
+  const fmt = (s) => s ? new Date(`${s}T12:00:00Z`).toLocaleDateString('en-GB') : '';
+  const dow = (s) => new Date(`${s}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
+  const hrs = (n) => (Math.round(n * 100) / 100).toString();
+  const inputCls = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent';
+  const badge = {
+    approved: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
+    'site-approved': 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
+    pending: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',
+    planned: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600',
+    rejected: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700',
+  };
+  const crumbs = [{ label: 'Home', href: '/' }, { label: 'Attendance', href: '/attendance' }];
+  if (canPick) crumbs.push({ label: 'By person', href: `/attendance/person${rangeQuery}` });
+  const typeOrder = ['work', 'training', 'holiday', 'sick', 'leave', 'off'].filter((t) => totals.byType[t]);
+%>
+<div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <%- include('../partials/breadcrumbs', { crumbs, current: person.name || label }) %>
+
+  <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i class="bi <%= kind === 'employee' ? 'bi-person' : 'bi-person-gear' %> text-green-600 dark:text-green-400" aria-hidden="true"></i>
+        <%= person.name || label %>
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <%= label %><% if (person.detail) { %> · <%= person.detail %><% } %> · <%= range.label || 'Custom period' %>, <%= fmt(range.from) %> to <%= fmt(range.to) %>
+      </p>
+    </div>
+    <a href="<%= recordHref %>" class="inline-flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm shrink-0">
+      <%= label %> record <i class="bi bi-arrow-right" aria-hidden="true"></i>
+    </a>
+  </div>
+
+  <%- include('_personRange', { range, action: basePath, inputCls }) %>
+
+  <%# Totals for the period %>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Days worked</div>
+      <div class="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white"><%= totals.worked %></div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Work and training, of <%= totals.days %> recorded</div>
+    </div>
+    <% if (showHours) { %>
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+        <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Hours</div>
+        <div class="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white"><%= hrs(totals.hours) %></div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">Recorded on these days</div>
+      </div>
+    <% } %>
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+      <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Approved</div>
+      <div class="mt-1 text-2xl font-bold tabular-nums text-green-700 dark:text-green-400"><%= totals.approved %></div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Final; payroll counts these</div>
+    </div>
+    <div class="bg-white dark:bg-gray-900 border <%= totals.waiting ? 'border-amber-300 dark:border-amber-700' : 'border-gray-200 dark:border-gray-700' %> rounded-2xl shadow-sm p-4">
+      <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Waiting for approval</div>
+      <div class="mt-1 text-2xl font-bold tabular-nums <%= totals.waiting ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-white' %>"><%= totals.waiting %></div>
+      <div class="text-xs text-gray-500 dark:text-gray-400"><%= totals.planned %> planned<% if (totals.rejected) { %>, <%= totals.rejected %> rejected<% } %></div>
+    </div>
+  </div>
+
+  <% if (typeOrder.length) { %>
+    <div class="flex flex-wrap gap-2 mb-6">
+      <% typeOrder.forEach((t) => { %>
+        <span class="text-xs px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+          <%= typeLabels[t] || t %>: <span class="font-semibold tabular-nums"><%= totals.byType[t] %></span>
+        </span>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% if (!weeks.length) { %>
+    <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+      No attendance in this period.
+    </div>
+  <% } %>
+
+  <div class="space-y-6">
+    <% weeks.forEach((w) => { %>
+      <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <h2 class="font-semibold text-sm text-gray-900 dark:text-gray-100">Week of <%= fmt(w.monday) %></h2>
+          <div class="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-x-4 gap-y-1">
+            <span><span class="font-semibold tabular-nums text-gray-900 dark:text-white"><%= w.totals.worked %></span> worked</span>
+            <% if (showHours) { %><span><span class="font-semibold tabular-nums text-gray-900 dark:text-white"><%= hrs(w.totals.hours) %></span> hours</span><% } %>
+            <span><span class="font-semibold tabular-nums text-green-700 dark:text-green-400"><%= w.totals.approved %></span> approved</span>
+            <% if (w.totals.waiting) { %><span><span class="font-semibold tabular-nums text-amber-700 dark:text-amber-400"><%= w.totals.waiting %></span> waiting</span><% } %>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+            <thead>
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Site</th>
+                <% if (showHours) { %><th class="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Hours</th><% } %>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Notes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% w.days.forEach((d) => { %>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                  <td class="px-4 py-2 whitespace-nowrap">
+                    <a href="/daily/<%= d.date %>" class="text-green-700 dark:text-green-400 hover:underline"><%= dow(d.date) %> <%= fmt(d.date) %></a>
+                  </td>
+                  <td class="px-4 py-2 text-gray-900 dark:text-white"><%= typeLabels[d.type] || d.type %></td>
+                  <td class="px-4 py-2 text-gray-600 dark:text-gray-300"><%= d.site || '—' %></td>
+                  <% if (showHours) { %><td class="px-4 py-2 text-right tabular-nums text-gray-900 dark:text-white"><%= d.hours === null ? '—' : hrs(d.hours) %></td><% } %>
+                  <td class="px-4 py-2">
+                    <span class="text-[11px] px-2 py-0.5 rounded-full border <%= badge[d.status] || badge.planned %>"><%= statusLabels[d.status] || d.status %></span>
+                  </td>
+                  <td class="px-4 py-2 text-gray-600 dark:text-gray-300">
+                    <%= d.notes %><% if (d.status === 'rejected' && d.rejectionReason) { %><span class="block text-xs text-red-700 dark:text-red-400">Rejected: <%= d.rejectionReason %></span><% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% }) %>
+  </div>
+
+  <% if (weeks.length) { %>
+    <p class="mt-6 text-xs text-gray-500 dark:text-gray-400">Approve or reject a day from its date (the daily page), or a whole week from the weekly flow.</p>
+  <% } %>
+</div>

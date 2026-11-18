@@ -5,6 +5,7 @@ import ctrl from '../controllers/attendanceController.js';
 import flow from '../controllers/weeklyFlowController.js';
 import sheet from '../controllers/weeklySheetController.js';
 import importCtrl from '../controllers/workbookImportController.js';
+import person from '../controllers/personAttendanceController.js';
 
 // Permission groups (accessGroupsConfig): Site Ops view reads the daily and
 // weekly views, edit records attendance and assignments, approve signs them
@@ -30,6 +31,19 @@ router.post(
   "/daily/:date/record",
   authService.ensureGroup(SITE_EDIT, null, "admin", "accountant"),
   ctrl.recordDay,
+);
+// Attendance by person: one employee's or subcontractor's days across weeks.
+// Same guard as /daily; the service scopes each query per record, so a
+// Site Manager sees days on their sites and a person sees their own.
+router.get(
+  "/attendance/person",
+  authService.ensureGroup([{ group: "siteOps", level: "view", project: true }], null, ...SITE_VIEW_ROLES),
+  person.getPeople,
+);
+router.get(
+  "/attendance/person/:kind(employee|subcontractor)/:uuid",
+  authService.ensureGroup([{ group: "siteOps", level: "view", project: true }], null, ...SITE_VIEW_ROLES),
+  person.getPerson,
 );
 router.get(
   "/weekly/:year?/:week?",

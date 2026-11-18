@@ -179,6 +179,7 @@ const routeAccess = {
   // their own records in the controller; the accountant is not, deliberately.
   '/daily':               ['admin', 'accountant', 'employee', 'subcontractor'],
   '/weekly':              ['admin', 'accountant', 'employee', 'subcontractor'],
+  '/attendance/person':   ['admin', 'accountant', 'employee', 'subcontractor'],
   '/weekly-management':   ['admin'],
   '/weekly-flow':         ['admin', 'accountant'],
   '/weekly-sheet':        ['admin', 'accountant'], // same as /weekly-flow

@@ -77,7 +77,7 @@ export const PROJECT_SCOPE_MAX_LEVEL = 'view';
 // routeAccess key, so their ensureGroup guard decides alone.)
 // /inductions/record and /rams/brief offer and accept only the viewer's
 // contracts.
-export const PROJECT_SCOPE_ROUTES = new Set(['/daily', '/attendance/bulk-approve', '/inductions/record', '/rams/brief']);
+export const PROJECT_SCOPE_ROUTES = new Set(['/daily', '/attendance/person', '/attendance/bulk-approve', '/inductions/record', '/rams/brief']);
 
 // Models no group may write through the generic CRUD routes, whatever the
 // level: the REST namespace is written by the sync adapter alone, and the
@@ -101,7 +101,7 @@ export const groups = {
     departments: ['attendance', 'management'],
     models: ['attendance', 'assignment', 'location', 'vehicleDeployment'],
     routes: {
-      view:    ['/daily', '/weekly', '/overview/attendance', '/overview/assignment'],
+      view:    ['/daily', '/attendance/person', '/weekly', '/overview/attendance', '/overview/assignment'],
       edit:    ['/weekly-flow', '/weekly-sheet'],
       approve: ['/attendance/approve', '/attendance/reject', '/attendance/bulk-approve', '/weekly-management'],
     },
