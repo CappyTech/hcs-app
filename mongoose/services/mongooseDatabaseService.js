@@ -17,7 +17,7 @@ const __dirname = _esmDirname(__filename);
 // and parked workbook uploads (the import itself is audited record by record).
 // In-app notifications are excluded too: one is written per person per notice
 // and every "mark as read" is an update, which would swamp the trail.
-const AUDIT_EXCLUDE_MODELS = (process.env.AUDIT_EXCLUDE_MODELS || 'auditLog,session,workbookImport,inAppNotification')
+export const AUDIT_EXCLUDE_MODELS = (process.env.AUDIT_EXCLUDE_MODELS || 'auditLog,session,workbookImport,inAppNotification')
   .split(',').map((s) => s.trim()).filter(Boolean);
 
 const mdb = { REST: {}, INTERNAL: {}, PAPERLESS: {}, WEB: {} };

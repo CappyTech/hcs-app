@@ -291,12 +291,39 @@
       <i class="bi bi-info-circle mr-1"></i> No records found.
     </div>
   <% } else if (!listLayout || listLayout !== 'rows') { %>
+    <%
+      // Bulk delete: INTERNAL models whose single delete this person may use.
+      // The checkboxes sit in the table and join the form by its id.
+      const _bulk = typeof bulkDeleteAction === 'string' && bulkDeleteAction
+        && typeof canModel === 'function' && canModel(modelName, 'd');
+    %>
+    <% if (_bulk) { %>
+    <div x-data="bulkSelect">
+      <form id="bulk-delete-form" method="POST" action="<%= bulkDeleteAction %>"
+            class="mb-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <%- include('./csrfHidden.ejs') %>
+        <span class="text-gray-500 dark:text-gray-400">
+          <span x-bind="countText">0 selected</span>
+          <span class="text-xs">· up to <%= typeof bulkDeleteMax !== 'undefined' ? bulkDeleteMax : 100 %> at a time</span>
+        </span>
+        <button type="submit" x-bind="submitBtn"
+          class="inline-flex items-center gap-1.5 text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg shadow-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="bi bi-trash"></i> Delete selected…
+        </button>
+      </form>
+    <% } %>
 
     <!-- Table -->
     <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
       <table class="min-w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
+            <% if (_bulk) { %>
+              <th class="w-8 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700">
+                <input type="checkbox" x-bind="allBox" aria-label="Select every record on this page"
+                       class="rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500">
+              </th>
+            <% } %>
             <% headers.forEach(h => { 
                 const isSorted = (typeof reqQuery !== 'undefined' ? reqQuery.sort : '') === h.key;
                 const isAsc = (typeof reqQuery !== 'undefined' ? reqQuery.order : '') === 'asc';
@@ -324,6 +351,15 @@
         <tbody class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
           <% rows.forEach(row => { %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+              <% if (_bulk) { %>
+                <td class="w-8 px-3 py-2.5 border-b border-gray-100 dark:border-gray-800">
+                  <% if (row.uuid) { %>
+                    <input type="checkbox" name="uuids" value="<%= row.uuid %>" form="bulk-delete-form"
+                           data-bulk-row x-bind="rowBox" aria-label="Select this record"
+                           class="rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500">
+                  <% } %>
+                </td>
+              <% } %>
               <% headers.forEach(h => { %>
                 <%
                   const val = row[h.key];
@@ -418,6 +454,9 @@
         </tbody>
       </table>
     </div>
+    <% if (_bulk) { %>
+    </div>
+    <% } %>
   <% } else if (modelName === 'task') { %>
     <!-- Task cards (purpose-built rows layout) — highlights overdue, priority and system tasks -->
     <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900">

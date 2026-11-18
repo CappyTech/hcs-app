@@ -59,6 +59,35 @@ export const defaultModelGuard = (model, operation) => {
     });
 };
 
+// The guards for one action on one model: the middleware its config lists,
+// or the RBAC matrix when it lists none.
+export const guardsFor = (originalModel, action) => {
+  const config = crudConfig[originalModel] || {};
+  const listConfig = __listControllerConfig[originalModel] || {};
+  const mergedConfig = { ...listConfig, ...config };
+  const grant = { model: originalModel, operation: ACTION_OPS[action] };
+  const resolved = (mergedConfig.middleware?.[action] || [])
+    .map((m) => resolveMiddleware(m, grant))
+    .filter(Boolean);
+  return resolved.length ? resolved : [defaultModelGuard(originalModel, ACTION_OPS[action])];
+};
+
+// Bulk delete (INTERNAL list pages): the same guards as the single delete,
+// so whoever can delete one record can delete several, and nobody else.
+for (const [key, handler] of Object.entries(crudController)) {
+  const match = key.match(/^bulkDelete([A-Z][a-zA-Z]*)$/);
+  if (!match) continue;
+  const originalModel = match[1].charAt(0).toLowerCase() + match[1].slice(1);
+  const mergedConfig = {
+    ...(__listControllerConfig[originalModel] || {}),
+    ...(crudConfig[originalModel] || {}),
+  };
+  const routePath = `/${(mergedConfig.modelRename || originalModel).toLowerCase()}/bulk-delete`;
+  const guards = guardsFor(originalModel, "delete");
+  router.post(routePath, ...guards, handler); // e.g. /employee/bulk-delete (confirm page)
+  router.post(`${routePath}/confirm`, ...guards, handler); // e.g. /employee/bulk-delete/confirm
+}
+
 for (const [key, handler] of Object.entries(crudController)) {
   const match = key.match(/^(create|read|update|delete)([A-Z][a-zA-Z]*)$/);
   if (!match) continue;
@@ -74,16 +103,10 @@ for (const [key, handler] of Object.entries(crudController)) {
   const routePath = `/${routeModel}`;
   const uuidPath = `${routePath}/:uuid`;
 
-  const middlewares = mergedConfig.middleware?.[action] || [];
-
-  const grant = { model: originalModel, operation: ACTION_OPS[action] };
-  let resolvedMiddleware = middlewares.map((m) => resolveMiddleware(m, grant)).filter(Boolean);
   // Deny by default: a model or action with no guard in its config used to be
   // open to every signed-in user (e.g. POST /appconfig, /payrollrun/read/:uuid).
-  // Fall back to the RBAC model matrix instead.
-  if (resolvedMiddleware.length === 0) {
-    resolvedMiddleware = [defaultModelGuard(originalModel, ACTION_OPS[action])];
-  }
+  // guardsFor falls back to the RBAC model matrix instead.
+  const resolvedMiddleware = guardsFor(originalModel, action);
 
   switch (action) {
     case "create":
