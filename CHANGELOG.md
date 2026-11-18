@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.141.0] - 2026-11-18
+
+### Changed
+- **Weekly is no longer in the People group of the nav.** The weekly attendance overview (`/overview/weekly`) is still a home tile, and is reached in the nav through Projects. On its page the nav lights up Projects. An area can now be left out of the nav with `nav: false`.
+
 ## [6.140.0] - 2026-11-18
 
 ### Added
