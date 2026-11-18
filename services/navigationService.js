@@ -74,7 +74,7 @@ function toItem(slug, dept, path) {
 function areaIdForPath(path) {
   const p = String(path || '/');
   const area = registry.getAreaByPath(p);
-  if (area) return area.id;
+  if (area && area.nav !== false) return area.id;
   let node = registry.getNodeByOverviewPath(p);
   for (let hops = 0; node && hops < 10; hops++) {
     const parent = (node.parents || [])[0];
@@ -132,7 +132,7 @@ export function build({ path = '/', user = null, pinned = null } = {}) {
     .filter(([slug, dept]) => dept.showInNav !== false && can(slug));
 
   const activeArea = user ? areaIdForPath(path) : null;
-  const shownAreas = user ? registry.listAreas().filter((a) => a.path && canUserOpenPath(user, a.path)) : [];
+  const shownAreas = user ? registry.listAreas().filter((a) => a.path && a.nav !== false && canUserOpenPath(user, a.path)) : [];
   const shownAreaIds = new Set(shownAreas.map((a) => a.id));
   const kept = departments.filter(([, dept]) => !(dept.navArea && shownAreaIds.has(dept.navArea)));
   const keptSlugs = new Set(kept.map(([slug]) => slug));

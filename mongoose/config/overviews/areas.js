@@ -14,7 +14,8 @@
  *
  * The navigation is this list too (services/navigationService): every area the
  * person can open, clustered by `group` (people | money | work | system; an
- * area without one, e.g. one added from the database, goes under Work).
+ * area without one, e.g. one added from the database, goes under Work). An
+ * area with `nav: false` is left out of the navigation and stays on home.
  *
  * See docs/OVERVIEW-HIERARCHY.md for the design.
  */
@@ -58,7 +59,8 @@ export default [
     ],
   },
   {
-    id: 'weeklyAttendance', group: 'people', navLabel: 'Weekly', path: '/overview/weekly', bespoke: true, opens: 'weekly',
+    // A home tile only: the nav reaches this week through Projects and HR
+    id: 'weeklyAttendance', group: 'people', nav: false, path: '/overview/weekly', bespoke: true, opens: 'weekly',
     label: 'Weekly attendance', icon: 'bi-calendar-check',
     description: 'This payroll week: contracts, assignments, days worked and approval.',
   },
