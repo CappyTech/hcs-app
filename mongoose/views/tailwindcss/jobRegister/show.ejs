@@ -3,7 +3,7 @@
   quoted and invoiced, its quotes (variations) and its invoices (stage
   payments), each checked against KashFlow. No script: the forms post, and
   ?quote=<id> / ?invoice=<id> opens one for editing.
-  Locals: job, stage, values { quoted, agreed, invoiced }, costs (optional: { purchases, labour, costs { materials, labour { employees, bought, total }, total }, margin, kashflow }), match { project, quotes[], invoices[], extras { quotes[], invoices[] } }, next,
+  Locals: job, stage, values { quoted, agreed, invoiced }, costs (optional: { purchases, labour, costs { materials, labour { employees, bought, total }, total }, margin, kashflow }), match { project, quotes[] (state converted: invoice { number, id, onJob }; deleted: KashFlow deleted it), invoices[], extras { quotes[], invoices[] (fromQuote: the quote it was converted from) } }, next,
           stageLabels, quoteStatuses, quoteStatusLabels, canEdit, canCreate { project, quotes: { id: bool } },
           editQuote, editInvoice, crumbs, title, oneDriveOn (OneDrive job folders set up: offer Find folder)
 %>
@@ -36,10 +36,16 @@
     none: 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900',
   };
   const stateText = { ok: 'In KashFlow and agrees', missing: 'Not in KashFlow yet, or not synced', differs: 'In KashFlow but differs', none: 'No number yet' };
-  // One KashFlow check as an icon and words
+  // One KashFlow check as an icon and words (numbers and uuids only, so no escaping needed)
   const check = (s) => {
     if (!s || s.state === 'none') return '<span class="text-gray-400">No number</span>';
     if (s.state === 'ok') return '<span class="inline-flex items-center gap-1 text-green-700 dark:text-green-400"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Agrees</span>';
+    if (s.state === 'converted') {
+      const n = Number(s.invoice.number);
+      const inv = s.invoice.id ? `<a href="/invoice/read/${encodeURIComponent(s.invoice.id)}" class="hover:underline">invoice ${n}</a>` : `invoice ${n}`;
+      return `<span class="inline-flex items-center gap-1 text-green-700 dark:text-green-400" title="Converted to invoice ${n} in KashFlow"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Quote ${Number(s.number)} → ${inv}</span>`;
+    }
+    if (s.state === 'missing' && s.deleted) return '<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400"><i class="bi bi-trash" aria-hidden="true"></i>Deleted in KashFlow</span>';
     if (s.state === 'missing') return '<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400"><i class="bi bi-hourglass-split" aria-hidden="true"></i>Not in KashFlow</span>';
     return '<span class="inline-flex items-center gap-1 text-red-700 dark:text-red-400"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>Differs</span>';
   };
@@ -196,7 +202,7 @@
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             <% extraRows.forEach((x) => { %>
               <tr>
-                <td class="<%= td %> whitespace-nowrap"><%= x.Kind %> <span class="font-mono text-xs"><%= x.r.Number %></span><% if (x.r.uuid) { %> <a href="<%= x.href %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Open</a><% } %></td>
+                <td class="<%= td %> whitespace-nowrap"><%= x.Kind %> <span class="font-mono text-xs"><%= x.r.Number %></span><% if (x.r.uuid) { %> <a href="<%= x.href %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Open</a><% } %><% if (x.r.fromQuote != null) { %><p class="text-xs text-gray-600 dark:text-gray-400">Quote <%= x.r.fromQuote %> became this invoice</p><% } %></td>
                 <td class="<%= td %> whitespace-nowrap"><%= fmt(x.date) %></td>
                 <td class="<%= td %>"><%= x.r.CustomerName || '' %></td>
                 <td class="<%= td %> text-right whitespace-nowrap"><%= money(x.r.NetAmount) %></td>
@@ -249,11 +255,18 @@
                   <%- check(s) %>
                   <% if (s && s.record) { %> <a href="/quote/read/<%= s.record.uuid %>" class="text-green-700 dark:text-green-400 hover:underline">Open</a><% } %>
                   <% (s ? s.issues : []).forEach((issue) => { %><p class="text-red-700 dark:text-red-400 mt-0.5"><%= issue %></p><% }) %>
+                  <% if (s && s.state === 'converted') { %>
+                    <p class="text-gray-600 dark:text-gray-400 mt-0.5">Converted to invoice <%= s.invoice.number %> in KashFlow, which deletes the quote.<% if (!s.invoice.onJob) { %> The invoice isn't on this job here yet<% if (job.projectNumber != null) { %>: <a href="#kashflow-extras" class="text-green-700 dark:text-green-400 hover:underline">add it</a><% } %>.<% } %></p>
+                  <% } else if (s && s.state === 'missing' && s.deleted) { %>
+                    <p class="text-gray-600 dark:text-gray-400 mt-0.5">It was in KashFlow, so it won't be created again. No invoice it could have become was found.</p>
+                  <% } else if (s && s.state === 'missing') { %>
+                    <p class="text-gray-500 dark:text-gray-400 mt-0.5">Not entered yet, deleted, or converted before it was synced.</p>
+                  <% } %>
                   <% if (x.sentAt) { %><p class="text-gray-500 dark:text-gray-400 mt-0.5"><i class="bi bi-cloud-check" aria-hidden="true"></i> Created from here on <%= fmt(x.sentAt) %></p><% } %>
                 </td>
                 <td class="<%= td %> text-right">
                   <div class="flex flex-wrap justify-end gap-1">
-                    <% if (!x.sentAt && s && s.state === 'missing' && can.quotes[id]) { %>
+                    <% if (!x.sentAt && s && s.state === 'missing' && !s.deleted && can.quotes[id]) { %>
                       <a href="/job-register/<%= job.uuid %>/kashflow-quote/<%= id %>" class="<%= smallBtn %>"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Create in KashFlow</a>
                     <% } %>
                     <% if (canEdit) { %><a href="/job-register/<%= job.uuid %>?quote=<%= id %>#quote-form" class="<%= smallBtn %>"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a><% } %>

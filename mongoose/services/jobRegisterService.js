@@ -15,6 +15,13 @@
 // The other half of the double entry is the reverse check: KashFlow quotes
 // and projects in the period that aren't in the register.
 //
+// KashFlow deletes a quote when it converts it to an invoice, and the invoice
+// carries no reference to it. So a register quote whose KashFlow quote is
+// deleted (hcs-sync's deletedAt, or DeletedAt) or not synced at all is looked
+// for among the invoices on the job (convertedCandidates): matched, it shows
+// as converted to that invoice; either way it's never created in KashFlow again
+// once we know it was there.
+//
 // buildRegister and the helpers above it are pure, so the matching and the
 // filters can be tested without a database.
 import mongoose from 'mongoose';
@@ -145,7 +152,7 @@ export function jobIssue(what, number, job, record) {
 /**
  * The synced KashFlow quotes and invoices on the job's project that aren't
  * on the job here. `onJob` is { quotes, invoices }: REST records whose
- * ProjectNumber is the job's (any others are ignored). None for an enquiry. Pure.
+ * ProjectNumber is the job's (any others, and deleted ones, are ignored). None for an enquiry. Pure.
  */
 export function kashflowExtras(job, { quotes = [], invoices = [] } = {}) {
   if (job?.projectNumber == null) return { quotes: [], invoices: [] };
@@ -153,7 +160,7 @@ export function kashflowExtras(job, { quotes = [], invoices = [] } = {}) {
   const mine = (list, have) => {
     const seen = new Set(have);
     return (list || []).filter((r) => {
-      if (r?.Number == null || Number(r.ProjectNumber) !== pn || seen.has(Number(r.Number))) return false;
+      if (r?.Number == null || Number(r.ProjectNumber) !== pn || seen.has(Number(r.Number)) || isDeleted(r)) return false;
       seen.add(Number(r.Number));
       return true;
     }).sort((a, b) => Number(a.Number) - Number(b.Number));
@@ -162,15 +169,136 @@ export function kashflowExtras(job, { quotes = [], invoices = [] } = {}) {
 }
 
 /**
+ * Is a synced KashFlow record deleted? hcs-sync marks a record that has gone
+ * from KashFlow with deletedAt (after missingSince and a grace period), and
+ * keeps KashFlow's own deletion date in DeletedAt: either, set to a date,
+ * means deleted. Pure.
+ */
+export function isDeleted(r) {
+  if (!r) return false;
+  return [r.deletedAt, r.DeletedAt].some((v) => (v instanceof Date || typeof v === 'string' || typeof v === 'number')
+    && v !== '' && !Number.isNaN(new Date(v).getTime()));
+}
+
+const londonDay = (d) => {
+  if (!d) return null;
+  const t = new Date(d);
+  return Number.isNaN(t.getTime()) ? null : t.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+};
+const dayGap = (a, b) => Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000;
+const lineDescriptions = (r) => (Array.isArray(r?.LineItems) ? r.LineItems : []).map((l) => clientKey(l?.Description)).filter(Boolean);
+const codeOf = (c) => String(c ?? '').trim().toUpperCase();
+
+/** Same customer: by code where both have one, else by name (clientKey). Neither: not the same. Pure. */
+export function sameCustomer(a = {}, b = {}) {
+  if (codeOf(a.code) && codeOf(b.code)) return codeOf(a.code) === codeOf(b.code);
+  const na = clientKey(a.name);
+  return Boolean(na) && na === clientKey(b.name);
+}
+
+/** Is a REST invoice (or purchase) on project `pn`: its header, or any of its lines. Pure. */
+export function touchesProject(r, pn) {
+  if (pn == null || !r) return false;
+  const n = Number(pn);
+  return Number(r.ProjectNumber) === n
+    || (Array.isArray(r.LineItems) && r.LineItems.some((l) => l && Number(l.ProjectNumber) === n));
+}
+
+/**
+ * The invoices a register quote whose KashFlow quote has gone (deleted, or
+ * not in the sync at all) could have been converted into: KashFlow deletes a
+ * quote when it's converted, and the invoice says nothing of the quote.
+ * `quoteRecord` is the REST quote (null when missing); a live one (not
+ * deleted) gives none. An invoice qualifies when it isn't deleted and is:
+ *   - the same customer as the job (and as the quote record, when it has one),
+ *   - on the job: the invoice's or one of its lines' ProjectNumber is the
+ *     job's project number (a job with no project number must match on line
+ *     descriptions instead, below),
+ *   - issued on or after the quote's date (London days), when both are known,
+ *   - the same net value, to the penny, when the quote has a value; a quote
+ *     worth nothing (or unknown) must instead have line descriptions (from
+ *     its deleted REST record) that all appear on the invoice.
+ * Best first: on the job here, then closest in date, then lowest number.
+ * Returns [{ invoice, onJob, gap }]. Pure.
+ */
+export function convertedCandidates(quote, quoteRecord, candidates = [], job = {}) {
+  if (quote?.number == null) return [];
+  if (quoteRecord && !isDeleted(quoteRecord)) return [];
+  const value = quoteRecord?.NetAmount ?? quote.value;
+  const valued = value != null && Number.isFinite(Number(value)) && Math.abs(Number(value)) > VALUE_TOLERANCE;
+  const descs = lineDescriptions(quoteRecord);
+  const needDescs = !valued || job.projectNumber == null;
+  if (needDescs && !descs.length) return [];
+  const quoteDay = londonDay(quoteRecord?.Date ?? quote.date);
+  const jobSide = { code: job.customerCode, name: job.client };
+  const recordSide = quoteRecord && (quoteRecord.CustomerCode || quoteRecord.CustomerName)
+    ? { code: quoteRecord.CustomerCode, name: quoteRecord.CustomerName } : null;
+  const own = new Set(invoiceNumbersOf(job));
+  const seen = new Set();
+  const out = [];
+  for (const inv of candidates || []) {
+    if (!inv || inv.Number == null || seen.has(Number(inv.Number)) || isDeleted(inv)) continue;
+    seen.add(Number(inv.Number));
+    const invSide = { code: inv.CustomerCode, name: inv.CustomerName };
+    if (!sameCustomer(jobSide, invSide) || (recordSide && !sameCustomer(recordSide, invSide))) continue;
+    if (job.projectNumber != null && !touchesProject(inv, job.projectNumber)) continue;
+    const invDay = londonDay(inv.IssuedDate);
+    if (quoteDay && invDay && invDay < quoteDay) continue;
+    if (valued && (inv.NetAmount == null || differsBy(value, inv.NetAmount))) continue;
+    if (needDescs) {
+      const have = new Set(lineDescriptions(inv));
+      if (!descs.every((x) => have.has(x))) continue;
+    }
+    out.push({ invoice: inv, onJob: own.has(Number(inv.Number)), gap: quoteDay && invDay ? dayGap(quoteDay, invDay) : Infinity });
+  }
+  return out.sort((a, b) => (Number(b.onJob) - Number(a.onJob)) || (a.gap - b.gap) || (Number(a.invoice.Number) - Number(b.invoice.Number)));
+}
+
+/** The invoice a gone quote was most likely converted into, or null. See convertedCandidates. Pure. */
+export function convertedInvoiceFor(quote, quoteRecord, candidates = [], job = {}) {
+  return convertedCandidates(quote, quoteRecord, candidates, job)[0]?.invoice || null;
+}
+
+/**
+ * Pair a job's gone quotes ([{ key, quote, record }]) with the invoices they
+ * became, each invoice explaining at most one quote. Every possible pair is
+ * ranked (on the job here first, then closest date, then lowest quote
+ * number, then lowest invoice number) and taken in turn while both are free.
+ * Returns Map key → { invoice, onJob }. Pure.
+ */
+export function matchConverted(job, gone = [], candidates = []) {
+  const pairs = gone.flatMap((g) => convertedCandidates(g.quote, g.record, candidates, job)
+    .map((c) => ({ ...c, key: g.key, quoteNumber: Number(g.quote.number) })));
+  pairs.sort((a, b) => (Number(b.onJob) - Number(a.onJob)) || (a.gap - b.gap)
+    || (a.quoteNumber - b.quoteNumber) || (Number(a.invoice.Number) - Number(b.invoice.Number)));
+  const out = new Map();
+  const used = new Set();
+  for (const p of pairs) {
+    if (out.has(p.key) || used.has(Number(p.invoice.Number))) continue;
+    out.set(p.key, { invoice: p.invoice, onJob: p.onJob });
+    used.add(Number(p.invoice.Number));
+  }
+  return out;
+}
+
+/**
  * Check one job against its KashFlow records.
- * Each side is { state: 'ok' | 'missing' | 'differs' | 'none', record, issues[], number, id }:
+ * Each side is { state: 'ok' | 'missing' | 'differs' | 'converted' | 'none', record, issues[], number, id }:
  * 'none' when there's no number for it yet, 'missing' when the number isn't
  * in KashFlow (not entered there yet, or not synced). quotes and invoices
  * have one side each, in the job's order. extras are the KashFlow quotes and
  * invoices on the job's project that aren't on the job (from `onJob`, see
  * kashflowExtras); extra is true when there are any. differs counts both.
+ *
+ * A quote whose KashFlow record is deleted (isDeleted) counts as gone, not
+ * live: its side has deleted: true and keeps the record. A gone quote (deleted,
+ * or missing) that matches the invoice it became (matchConverted, among
+ * `invoiceCandidates` and the job's own invoices) is 'converted', with
+ * invoice { number, id, onJob }; one that doesn't stays 'missing'. A converted
+ * invoice that isn't on the job here is listed in extras (fromQuote: the quote
+ * number) so it can be added.
  */
-export function matchJob(job, { project = null, quotesByNumber = new Map(), invoicesByNumber = new Map(), onJob = {} } = {}) {
+export function matchJob(job, { project = null, quotesByNumber = new Map(), invoicesByNumber = new Map(), onJob = {}, invoiceCandidates = null } = {}) {
   const side = (number, record, check, id = null) => {
     const base = { number: number ?? null, id: id != null ? String(id) : null };
     if (number == null) return { ...base, state: 'none', record: null, issues: [] };
@@ -188,11 +316,27 @@ export function matchJob(job, { project = null, quotesByNumber = new Map(), invo
   };
   const get = (map, n) => (n != null ? map.get(Number(n)) || null : null);
 
-  const quotes = quotesOf(job).map((q) => side(q.number, get(quotesByNumber, q.number), (r) => [
-    ...jobIssue('Quote', q.number, job, r),
-    ...(differsBy(q.value, r.NetAmount) ? [`Value in KashFlow is ${money2(r.NetAmount)}`] : []),
-    ...clientIssue(r),
-  ], q._id));
+  const ownInvoices = invoicesOf(job).map((i) => get(invoicesByNumber, i.number)).filter(Boolean);
+  const candidates = [...ownInvoices, ...(invoiceCandidates ?? onJob.invoices ?? [])];
+  const gone = quotesOf(job).map((q, i) => ({ key: i, quote: q, record: get(quotesByNumber, q.number) }))
+    .filter((g) => g.quote.number != null && (!g.record || isDeleted(g.record)));
+  const converted = gone.length ? matchConverted(job, gone, candidates) : new Map();
+
+  const quotes = quotesOf(job).map((q, i) => {
+    const record = get(quotesByNumber, q.number);
+    const deleted = isDeleted(record);
+    const c = converted.get(i);
+    const base = { number: q.number ?? null, id: q._id != null ? String(q._id) : null, deleted };
+    if (c) {
+      return { ...base, state: 'converted', record, issues: [], invoice: { number: Number(c.invoice.Number), id: c.invoice.uuid != null ? String(c.invoice.uuid) : null, onJob: c.onJob } };
+    }
+    if (deleted) return { ...base, state: 'missing', record, issues: [] };
+    return { ...side(q.number, record, (r) => [
+      ...jobIssue('Quote', q.number, job, r),
+      ...(differsBy(q.value, r.NetAmount) ? [`Value in KashFlow is ${money2(r.NetAmount)}`] : []),
+      ...clientIssue(r),
+    ], q._id), deleted };
+  });
   const p = side(job.projectNumber, project, (r) => clientIssue(r));
   const invoices = invoicesOf(job).map((i) => side(i.number, get(invoicesByNumber, i.number), (r) => [
     ...jobIssue('Invoice', i.number, job, r),
@@ -200,6 +344,17 @@ export function matchJob(job, { project = null, quotesByNumber = new Map(), invo
     ...clientIssue(r),
   ], i._id));
   const extras = kashflowExtras(job, onJob);
+  // A converted invoice not on the job here: in extras, saying which quote it was
+  if (job.projectNumber != null) {
+    for (const s of quotes) {
+      if (s.state !== 'converted' || s.invoice.onJob) continue;
+      const at = extras.invoices.findIndex((r) => Number(r.Number) === s.invoice.number);
+      const inv = candidates.find((r) => Number(r?.Number) === s.invoice.number);
+      if (at >= 0) extras.invoices[at] = { ...extras.invoices[at], fromQuote: Number(s.number) };
+      else if (inv) extras.invoices.push({ ...inv, fromQuote: Number(s.number) });
+    }
+    extras.invoices.sort((a, b) => Number(a.Number) - Number(b.Number));
+  }
   const extra = extras.quotes.length + extras.invoices.length > 0;
   const sides = [...quotes, p, ...invoices];
   return {
@@ -226,6 +381,23 @@ export function byProject(docs = []) {
 }
 
 /**
+ * REST records grouped by every project they touch, by header or by line
+ * ProjectNumber (touchesProject): Map of number → records. Pure.
+ */
+export function byProjectOrLine(docs = []) {
+  const m = new Map();
+  for (const d of docs) {
+    const ns = new Set([d?.ProjectNumber, ...(Array.isArray(d?.LineItems) ? d.LineItems.map((l) => l?.ProjectNumber) : [])]
+      .map(Number).filter((n) => n));
+    for (const n of ns) {
+      if (!m.has(n)) m.set(n, []);
+      m.get(n).push(d);
+    }
+  }
+  return m;
+}
+
+/**
  * The register page: jobs with their KashFlow checks, filtered.
  *
  * @param {object}   p
@@ -235,9 +407,11 @@ export function byProject(docs = []) {
  * @param {Map}      p.invoicesByNumber KashFlow invoice Number → invoice
  * @param {Map}      [p.quotesByProject]   KashFlow ProjectNumber → quotes on it
  * @param {Map}      [p.invoicesByProject] KashFlow ProjectNumber → invoices on it
+ * @param {Map}      [p.invoicesTouching]  KashFlow ProjectNumber → invoices with it on the header or a line (converted quotes)
+ * @param {object[]} [p.customerInvoices]  invoices that may explain a converted quote on a job with no project number
  * @param {object}   [p.filters]        { stage, client, year, q }
  */
-export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoicesByNumber, quotesByProject = new Map(), invoicesByProject = new Map(), filters = {} }) {
+export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoicesByNumber, quotesByProject = new Map(), invoicesByProject = new Map(), invoicesTouching = null, customerInvoices = [], filters = {} }) {
   const stage = STAGE_FILTERS.includes(filters.stage) ? filters.stage : 'all';
   const client = clientKey(filters.client);
   const year = Number.isInteger(filters.year) ? filters.year : null;
@@ -251,6 +425,9 @@ export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoi
       onJob: e.projectNumber != null
         ? { quotes: quotesByProject.get(Number(e.projectNumber)) || [], invoices: invoicesByProject.get(Number(e.projectNumber)) || [] }
         : {},
+      invoiceCandidates: e.projectNumber != null
+        ? (invoicesTouching || invoicesByProject).get(Number(e.projectNumber)) || []
+        : customerInvoices,
     });
     return { entry: e, stage: stageOf(e), match, values: jobValues(e), clientKey: clientKey(e.client), taxYear: taxYearOf(entryDate(e)) };
   });
@@ -400,19 +577,62 @@ function combineNext({ entries, kf, topQuote, topProject }) {
 // ── Database ────────────────────────────────────────────────────────────
 
 const byNumber = (docs) => new Map(docs.map((d) => [Number(d.Number), d]));
-const QUOTE_FIELDS = 'uuid Number Date CustomerName CustomerCode NetAmount Status ProjectNumber';
-const INVOICE_FIELDS = 'uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status';
+const QUOTE_FIELDS = 'uuid Number Date CustomerName CustomerCode NetAmount Status ProjectNumber LineItems.Description deletedAt DeletedAt';
+const INVOICE_FIELDS = 'uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status LineItems.ProjectNumber LineItems.Description deletedAt DeletedAt';
+// Not deleted in KashFlow (see isDeleted)
+const NOT_DELETED = { $nor: [{ DeletedAt: { $type: 'date' } }, { deletedAt: { $type: 'date' } }] };
 
 /**
  * One query's filter for REST records with these numbers or on these
- * projects (ProjectNumber), or null when there are neither. Pure.
+ * projects (ProjectNumber; with `lines`, a line's ProjectNumber too), or
+ * null when there are neither. Pure.
  */
-export function numbersOrProjects(numbers = [], projectNumbers = []) {
+export function numbersOrProjects(numbers = [], projectNumbers = [], { lines = false } = {}) {
   const or = [];
   if (numbers.length) or.push({ Number: { $in: numbers } });
   if (projectNumbers.length) or.push({ ProjectNumber: { $in: projectNumbers } });
+  if (projectNumbers.length && lines) or.push({ 'LineItems.ProjectNumber': { $in: projectNumbers } });
   if (!or.length) return null;
   return or.length === 1 ? or[0] : { $or: or };
+}
+
+/**
+ * The filter for invoices that could explain a deleted quote on a job with no
+ * project number (matched by customer and line descriptions), or null when
+ * no such quote has the lines to match. `jobs` are register jobs, `quotesByNumber`
+ * their REST quotes. Pure.
+ */
+export function customerInvoiceQuery(jobs = [], quotesByNumber = new Map()) {
+  const codes = new Set();
+  const names = new Set();
+  let from = null;
+  for (const job of jobs) {
+    if (job?.projectNumber != null) continue;
+    for (const q of quotesOf(job)) {
+      const r = q.number != null ? quotesByNumber.get(Number(q.number)) : null;
+      if (!r || !isDeleted(r) || !lineDescriptions(r).length) continue;
+      const code = String(r.CustomerCode || job.customerCode || '').trim();
+      if (code) codes.add(code);
+      else if (r.CustomerName || job.client) names.add(String(r.CustomerName || job.client).trim());
+      const d = r.Date ?? q.date;
+      if (d && (from == null || new Date(d) < from)) from = new Date(d);
+    }
+  }
+  const or = [];
+  if (codes.size) or.push({ CustomerCode: { $in: [...codes] } });
+  if (names.size) or.push({ CustomerName: { $in: [...names] } });
+  if (!or.length) return null;
+  const and = [or.length === 1 ? or[0] : { $or: or }, NOT_DELETED];
+  // A day early, so a time zone can't drop the invoice; convertedCandidates checks the day
+  if (from && !Number.isNaN(from.getTime())) and.push({ IssuedDate: { $gte: new Date(from.getTime() - 86400000) } });
+  return { $and: and };
+}
+
+const CUSTOMER_INVOICE_LIMIT = 200;
+async function loadCustomerInvoices(jobs, quotesByNumber) {
+  const query = customerInvoiceQuery(jobs, quotesByNumber);
+  if (!query) return [];
+  return mdb.REST.invoice.find(query).select(INVOICE_FIELDS).sort({ IssuedDate: 1 }).limit(CUSTOMER_INVOICE_LIMIT).lean();
 }
 
 /** Everything the register page shows. */
@@ -432,25 +652,29 @@ export async function loadRegister(filters = {}) {
   const Invoice = mdb.REST.invoice;
   // Each job's own quotes and invoices, and every one on a job's project, in one query each
   const quoteQuery = numbersOrProjects([...quoteNumbers], [...projectNumbers]);
-  const invoiceQuery = numbersOrProjects(invoiceNumbers, [...projectNumbers]);
+  const invoiceQuery = numbersOrProjects(invoiceNumbers, [...projectNumbers], { lines: true });
   const [quotes, projects, invoices, periodQuotes, periodProjects, topQuote, topProject, kf] = await Promise.all([
     quoteQuery ? Quote.find(quoteQuery).select(QUOTE_FIELDS).lean() : [],
     projectNumbers.size ? Project.find({ Number: { $in: [...projectNumbers] } }).select('uuid Number Name CustomerName CustomerCode Status StartDate').lean() : [],
     invoiceQuery ? Invoice.find(invoiceQuery).select(INVOICE_FIELDS).lean() : [],
-    Quote.find({ Date: { $gte: from, $lt: to } }).select('uuid Number Date CustomerName NetAmount Status').sort({ Number: -1 }).lean(),
+    Quote.find({ Date: { $gte: from, $lt: to }, ...NOT_DELETED }).select('uuid Number Date CustomerName NetAmount Status').sort({ Number: -1 }).lean(),
     Project.find({ StartDate: { $gte: from, $lt: to } }).select('uuid Number Name CustomerName Status StartDate').sort({ Number: -1 }).lean(),
     Quote.findOne({}).sort({ Number: -1 }).select('Number').lean(),
     Project.findOne({}).sort({ Number: -1 }).select('Number').lean(),
     kashflowNextNumbers(),
   ]);
 
+  const quotesByNumber = byNumber(quotes);
+  const customerInvoices = await loadCustomerInvoices(entries, quotesByNumber);
   const register = buildRegister({
     entries,
-    quotesByNumber: byNumber(quotes),
+    quotesByNumber,
     projectsByNumber: byNumber(projects),
     invoicesByNumber: byNumber(invoices),
     quotesByProject: byProject(quotes),
     invoicesByProject: byProject(invoices),
+    invoicesTouching: byProjectOrLine(invoices),
+    customerInvoices,
     filters,
   });
   const unregistered = findUnregistered({ quotes: periodQuotes, projects: periodProjects, quoteNumbers, projectNumbers });
@@ -488,7 +712,7 @@ export async function loadJob(uuid) {
   const invoiceNumbers = invoiceNumbersOf(job);
   const onProject = job.projectNumber != null ? [Number(job.projectNumber)] : [];
   const quoteQuery = numbersOrProjects(quoteNumbers, onProject);
-  const invoiceQuery = numbersOrProjects(invoiceNumbers, onProject);
+  const invoiceQuery = numbersOrProjects(invoiceNumbers, onProject, { lines: true });
   const [quotes, project, invoices, topQuote, topProject, others, kf] = await Promise.all([
     quoteQuery ? mdb.REST.quote.find(quoteQuery).select(QUOTE_FIELDS).lean() : [],
     job.projectNumber != null ? mdb.REST.project.findOne({ Number: job.projectNumber }).select('uuid Number Name CustomerName CustomerCode Status StartDate').lean() : null,
@@ -499,7 +723,11 @@ export async function loadJob(uuid) {
     kashflowNextNumbers(),
   ]);
   const onJob = { quotes: byProject(quotes).get(onProject[0]) || [], invoices: byProject(invoices).get(onProject[0]) || [] };
-  const match = matchJob(job, { project, quotesByNumber: byNumber(quotes), invoicesByNumber: byNumber(invoices), onJob });
+  const quotesByNumber = byNumber(quotes);
+  const invoiceCandidates = onProject.length
+    ? byProjectOrLine(invoices).get(onProject[0]) || []
+    : await loadCustomerInvoices([job], quotesByNumber);
+  const match = matchJob(job, { project, quotesByNumber, invoicesByNumber: byNumber(invoices), onJob, invoiceCandidates });
   match.extras = markElsewhere(match.extras, others, job.uuid);
   const values = jobValues(job);
   // Purchases, labour and margin
@@ -526,6 +754,39 @@ export function markElsewhere(extras, jobs = [], uuid = null) {
     return j ? { ...r, elsewhere: { uuid: j.uuid, title: jobTitle(j) } } : r;
   };
   return { quotes: (extras?.quotes || []).map(mark('quote')), invoices: (extras?.invoices || []).map(mark('invoice')) };
+}
+
+/**
+ * Has this register quote gone from KashFlow, converted or deleted? Looks up
+ * its REST quote and the invoices that could explain it (the job's own, those
+ * on its project, or for a job with no project number the customer's). Returns
+ * { deleted, invoice } (invoice: the REST invoice it became, or null), or null
+ * when the quote is live in KashFlow, or simply not there with nothing to
+ * explain it (it can still be created).
+ */
+export async function goneFromKashflow(job, quote) {
+  if (!job || quote?.number == null) return null;
+  const record = await mdb.REST.quote.findOne({ Number: Number(quote.number) }).select(QUOTE_FIELDS).lean();
+  if (record && !isDeleted(record)) return null;
+  const onProject = job.projectNumber != null ? [Number(job.projectNumber)] : [];
+  const query = numbersOrProjects(invoiceNumbersOf(job), onProject, { lines: true });
+  const quotesByNumber = new Map(record ? [[Number(quote.number), record]] : []);
+  const [own, byCustomer] = await Promise.all([
+    query ? mdb.REST.invoice.find(query).select(INVOICE_FIELDS).lean() : [],
+    onProject.length ? [] : loadCustomerInvoices([{ ...job, quotes: [quote] }], quotesByNumber),
+  ]);
+  const invoice = convertedInvoiceFor(quote, record, [...own, ...byCustomer], job);
+  if (!invoice && !record) return null;
+  return { deleted: isDeleted(record), invoice };
+}
+
+/** Why a quote mustn't be created in KashFlow again, given goneFromKashflow's answer, or null. Pure. */
+export function goneReason(quote, gone) {
+  if (!gone) return null;
+  const name = `Quote ${quote?.number ?? ''}`.trim();
+  if (gone.invoice) return `${name} was converted to invoice ${gone.invoice.Number} in KashFlow, so it won't be created again.`;
+  if (gone.deleted) return `${name} was deleted in KashFlow, so it won't be created again.`;
+  return null;
 }
 
 // ── Forms ───────────────────────────────────────────────────────────────
@@ -1045,5 +1306,7 @@ export default {
   loadRegister, loadJob, createEntry, updateEntry, findEntry, contractChoices, customerChoices, jobsForAllocation,
   addQuote, updateQuote, removeQuote, addInvoice, updateInvoice, removeInvoice,
   jobIssue, kashflowExtras, byProject, numbersOrProjects, markElsewhere, addFromKashflow,
+  isDeleted, sameCustomer, touchesProject, convertedCandidates, convertedInvoiceFor, matchConverted, byProjectOrLine,
+  customerInvoiceQuery, goneFromKashflow, goneReason,
   OPEN_JOB_FILTER, isOpenJob, jobLabel, openJobs, projectIdsByNumber, jobTarget,
 };

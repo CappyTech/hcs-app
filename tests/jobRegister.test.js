@@ -809,7 +809,7 @@ describe('Loading KashFlow records by job', () => {
     const data = await jr.loadJob('kf');
     const finds = log.filter(([, op]) => op === 'find');
     assert.deepEqual(finds.find(([n]) => n === 'quote')[2], { $or: [{ Number: { $in: [51234] } }, { ProjectNumber: { $in: [41012] } }] });
-    assert.deepEqual(finds.find(([n]) => n === 'invoice')[2], { ProjectNumber: { $in: [41012] } });
+    assert.deepEqual(finds.find(([n]) => n === 'invoice')[2], { $or: [{ ProjectNumber: { $in: [41012] } }, { 'LineItems.ProjectNumber': { $in: [41012] } }] });
     assert.equal(data.match.quotes[0].state, 'ok');
     assert.deepEqual(data.match.extras.quotes.map((r) => r.Number), [51239]);
     assert.deepEqual(data.match.extras.invoices[0].elsewhere, { uuid: 'o', title: 'Job 41013' });
@@ -827,7 +827,7 @@ describe('Loading KashFlow records by job', () => {
     const quoteFinds = log.filter(([n, op, f]) => n === 'quote' && op === 'find' && !f.Date);
     assert.equal(quoteFinds.length, 1);
     assert.deepEqual(quoteFinds[0][2], { $or: [{ Number: { $in: [51234, 51300] } }, { ProjectNumber: { $in: [41012] } }] });
-    assert.deepEqual(log.filter(([n, op]) => n === 'invoice' && op === 'find')[0][2], { ProjectNumber: { $in: [41012] } });
+    assert.deepEqual(log.filter(([n, op]) => n === 'invoice' && op === 'find')[0][2], { $or: [{ ProjectNumber: { $in: [41012] } }, { 'LineItems.ProjectNumber': { $in: [41012] } }] });
     assert.deepEqual(data.rows.map((r) => r.entry.uuid), ['kf']);
     assert.deepEqual(data.rows[0].match.extras.quotes.map((r) => r.Number), [51239]);
   });

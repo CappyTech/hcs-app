@@ -94,12 +94,20 @@ export const postCreate = async (req, res, next) => {
 
 // ── The job page ────────────────────────────────────────────────────────
 
-/** What the user may create in KashFlow from this job: the project, and each quote by _id. */
-function createChoices(req, job) {
+/**
+ * What the user may create in KashFlow from this job: the project, and each
+ * quote by _id. Never a quote that KashFlow converted to an invoice or
+ * deleted (its side in `match`): creating it would duplicate it.
+ */
+export function createChoices(req, job, match = null) {
   if (!canEditRegister(req)) return { project: false, quotes: {} };
+  const gone = (q) => {
+    const s = (match?.quotes || []).find((x) => x.id === String(q._id));
+    return Boolean(s && (s.state === 'converted' || s.deleted));
+  };
   return {
     project: !kfCreate.cannotCreate(job, 'project'),
-    quotes: Object.fromEntries((job.quotes || []).map((q) => [String(q._id), !kfCreate.cannotCreate(job, 'quote', q)])),
+    quotes: Object.fromEntries((job.quotes || []).map((q) => [String(q._id), !kfCreate.cannotCreate(job, 'quote', q) && !gone(q)])),
   };
 }
 
@@ -117,7 +125,7 @@ export const getShow = async (req, res, next) => {
       quoteStatuses: jobRegister.QUOTE_STATUSES,
       quoteStatusLabels: jobRegister.QUOTE_STATUS_LABELS,
       canEdit: canEditRegister(req),
-      canCreate: createChoices(req, job),
+      canCreate: createChoices(req, job, data.match),
       oneDriveOn: oneDrive.isConfigured(),
       editQuote: pick(job.quotes, req.query.quote),
       editInvoice: pick(job.invoices, req.query.invoice),
@@ -267,7 +275,7 @@ async function renderQuoteForm(req, res, next, values = null, errors = {}) {
   const entry = await jobRegister.findEntry(req.params.uuid);
   if (!entry) return next({ statusCode: 404, message: 'That register entry no longer exists.' });
   const quote = kfCreate.findQuote(entry, req.params.quoteId);
-  const why = kfCreate.cannotCreate(entry, 'quote', quote);
+  const why = kfCreate.cannotCreate(entry, 'quote', quote) || await kfCreate.quoteGoneReason(entry, quote);
   if (why) {
     req.flash('error', why);
     return res.redirect(jobUrl(entry.uuid));
