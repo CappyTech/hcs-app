@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.142.0] - 2026-11-18
+
+### Added
+- **Attendance by person** (`/attendance/person`): one employee's or subcontractor's days across weeks. Each week shows its days with the date, type, site, hours (employees only; subcontractors are paid on their CIS invoices), approval status and notes, plus the week's totals. The period totals are days worked, hours, approved, and waiting for approval (with planned and rejected), and a count by type. The period is the last 4 weeks, the last 13 weeks (the default) or this tax year, or any from/to range. Each date links to its daily page to approve or reject.
+  - `/attendance/person` lists everyone with attendance in the period, with days, approved and waiting counts. An employee or subcontractor goes straight to their own page.
+  - It's scoped like `/daily`. Admin, the accountant and all-records Site Ops grants see everyone, a Site Manager or Supervisor sees days on their sites, and a person sees their own.
+  - It's linked from an Attendance button on employee records and CIS subcontractor records, and from an Attendance by Person tile on the Attendance, Payroll and HR dashboards.
+
+### Changed
+- **The Admin overview (`/overview/admin`) shows the system's health in cards, beside Users:**
+  - **Security events:** failed sign-ins and lockouts in the last 7 days, two-factor turned off, and role changes.
+  - **Background jobs:** jobs whose last run failed, or that haven't run for a day.
+  - **Notifications:** emails given up on, waiting over an hour, waiting, and sent this week.
+  - **Audit log:** changes in the last 24 hours, deletions and sensitive reads.
+  - **GDPR requests:** open, past the 30-day deadline, and completed recently.
+  - Each card opens its admin page and shows only to those who can open it. The header keeps Admin dashboard and Configuration. Audit log, Security events and Background jobs moved onto their cards.
+
 ## [6.141.0] - 2026-11-18
 
 ### Changed
