@@ -16,13 +16,16 @@
 // rate) costs nothing and is counted as uncosted.
 //
 // Subcontractors are paid on their CIS invoices, so their days carry no pay.
-// What they've cost the job is their purchase-invoice lines on it, matched by
-// supplier: attendance subcontractorId → REST supplier Code → purchase
-// SupplierCode. That cost is already in the job's purchases, so it's shown
-// beside their days and never added to labour.
+// What they've cost the job is the labour lines of their purchase invoices on
+// it (jobCostService lineRole), matched by supplier: attendance
+// subcontractorId → REST supplier Code → purchase SupplierCode.
 //
-// Margin = income − purchases − employee labour (approved). Income is what's
-// invoiced, or the agreed (won) value while nothing is invoiced yet.
+// Costs = materials + labour:
+//   materials = the job's purchase lines sorted as materials
+//   labour    = approved employee labour + the job's purchase lines sorted as
+//               labour (subcontractors, and any other labour bought in)
+// Margin = income − costs. Income is what's invoiced, or the agreed (won)
+// value while nothing is invoiced yet.
 //
 // The helpers above "Database" are pure, so the sums can be tested without a
 // database. The aggregate's rows (groupsPipeline) and groupRecords() have the
@@ -206,15 +209,17 @@ export function labourForJob(groups = [], { employeesById = new Map(), suppliers
   for (const pur of purchases) {
     const k = codeKey(pur.supplierCode);
     if (!k) continue;
-    const s = bySupplier.get(k) || { net: 0, invoices: 0 };
-    s.net = roundPence(s.net + (Number(pur.net) || 0));
+    const s = bySupplier.get(k) || { labour: 0, materials: 0, invoices: 0 };
+    s.labour = roundPence(s.labour + (Number(pur.labour) || 0));
+    s.materials = roundPence(s.materials + (Number(pur.materials) || 0));
     s.invoices += 1;
     bySupplier.set(k, s);
   }
   for (const p of people.values()) {
     if (p.kind !== 'subcontractor') continue;
     const s = p.supplierCode ? bySupplier.get(codeKey(p.supplierCode)) : null;
-    p.purchaseCost = s ? s.net : 0;
+    p.purchaseCost = s ? s.labour : 0;
+    p.purchaseMaterials = s ? s.materials : 0;
     p.purchaseInvoices = s ? s.invoices : 0;
   }
 
@@ -268,50 +273,60 @@ export function employeeLabourByJob(groups = [], index, employeesById = new Map(
 }
 
 /**
- * A job's margin. Income is the invoiced value, or the agreed (won) value
- * while nothing is invoiced; basis says which ('invoiced' | 'agreed').
- * percent is of income, null when income is 0.
+ * A job's margin: income − (materials + labour). Income is the invoiced
+ * value, or the agreed (won) value while nothing is invoiced; basis says
+ * which ('invoiced' | 'agreed'). percent is of income, null when income is 0.
  *
  * @param {{ invoiced: number, agreed: number }} values - jobValues()
- * @param {number} purchases - net purchase costs
- * @param {number} labour - approved employee labour
+ * @param {number} materials - purchase lines sorted as materials
+ * @param {number} labour - approved employee labour + purchase lines sorted as labour
  */
-export function jobMargin(values = {}, purchases = 0, labour = 0) {
+export function jobMargin(values = {}, materials = 0, labour = 0) {
   const invoiced = Number(values.invoiced) || 0;
   const basis = invoiced > 0 ? 'invoiced' : 'agreed';
   const income = basis === 'invoiced' ? invoiced : (Number(values.agreed) || 0);
-  const costs = roundPence((Number(purchases) || 0) + (Number(labour) || 0));
+  const m = roundPence(Number(materials) || 0);
+  const l = roundPence(Number(labour) || 0);
+  const costs = roundPence(m + l);
   const margin = roundPence(income - costs);
-  return { basis, income: roundPence(income), costs, margin, percent: income ? Math.round((margin / income) * 1000) / 10 : null };
+  return {
+    basis, income: roundPence(income), materials: m, labour: l, costs, margin,
+    percent: income ? Math.round((margin / income) * 1000) / 10 : null,
+  };
 }
 
 /**
- * The register's cost columns for its rows: per job (by uuid) its purchases,
- * employee labour and margin, or null for a job with no project number; and
- * totals over the live (not cancelled) jobs, overall and per tax year.
+ * The register's cost columns for its rows: per job (by uuid) its materials,
+ * labour (employees + bought-in), costs and margin, or null for a job with no
+ * project number; and totals over the live (not cancelled) jobs, overall and
+ * per tax year.
  *
  * @param {object[]} rows - buildRegister() rows ({ entry, stage, values, taxYear })
- * @param {Map<number, {net:number}>} purchasesByNumber - purchaseCostsByProject()
+ * @param {Map<number, {materials:number, labour:number}>} purchasesByNumber - purchaseCostsByProject()
  * @param {Map<string, object>} labourByJobId - employeeLabourByJob()
  */
 export function registerCosts(rows = [], purchasesByNumber = new Map(), labourByJobId = new Map()) {
   const byUuid = {};
-  const blank = () => ({ purchases: 0, labour: 0, margin: 0, jobs: 0 });
+  const blank = () => ({ materials: 0, labour: 0, costs: 0, margin: 0, jobs: 0 });
   const totals = blank();
   const byYear = {};
   for (const r of rows) {
     const e = r.entry;
     if (e.projectNumber == null) { byUuid[e.uuid] = null; continue; }
-    const purchases = purchasesByNumber.get(Number(e.projectNumber))?.net || 0;
+    const bought = purchasesByNumber.get(Number(e.projectNumber)) || {};
     const lab = labourByJobId.get(idStr(e._id)) || emptyEmployeeTotals();
-    const m = jobMargin(r.values, purchases, lab.cost);
-    byUuid[e.uuid] = { purchases, labour: lab.cost, pendingLabour: lab.pendingCost, pendingDays: lab.pendingDays, margin: m.margin, basis: m.basis };
+    const m = jobMargin(r.values, bought.materials || 0, lab.cost + (bought.labour || 0));
+    byUuid[e.uuid] = {
+      materials: m.materials, labour: m.labour, employeeLabour: lab.cost, boughtLabour: roundPence(bought.labour || 0),
+      costs: m.costs, pendingLabour: lab.pendingCost, pendingDays: lab.pendingDays, margin: m.margin, basis: m.basis,
+    };
     if (r.stage === 'cancelled') continue;
     const y = r.taxYear ?? 'none';
     byYear[y] = byYear[y] || blank();
     for (const t of [totals, byYear[y]]) {
-      t.purchases = roundPence(t.purchases + purchases);
-      t.labour = roundPence(t.labour + lab.cost);
+      t.materials = roundPence(t.materials + m.materials);
+      t.labour = roundPence(t.labour + m.labour);
+      t.costs = roundPence(t.costs + m.costs);
       t.margin = roundPence(t.margin + m.margin);
       t.jobs += 1;
     }
@@ -334,8 +349,8 @@ async function peopleFor(groups) {
 }
 
 /**
- * One job's costs for its page: purchases (lines on the job), labour, the
- * margin and KashFlow's own project figures.
+ * One job's costs for its page: purchases (lines on the job), labour, costs
+ * (materials + labour), the margin and KashFlow's own project figures.
  *
  * @param {object} job - lean job with _id, projectNumber, contractId (populated or not)
  * @param {object} values - jobValues(job)
@@ -344,7 +359,7 @@ async function peopleFor(groups) {
 export async function loadJobCosts(job, values, projectId = null) {
   const contractId = job.contractId?._id ?? job.contractId ?? null;
   const [purchases, figures, contractJobs] = await Promise.all([
-    job.projectNumber != null ? jobCost.purchasesForProject(job.projectNumber) : { purchases: [], net: 0 },
+    job.projectNumber != null ? jobCost.purchasesForProject(job.projectNumber) : { purchases: [], net: 0, materials: 0, labour: 0 },
     job.projectNumber != null ? jobCost.kashflowProjectFigures([job.projectNumber]) : new Map(),
     contractId ? mdb.INTERNAL.jobRegister.countDocuments({ contractId }) : 0,
   ]);
@@ -357,10 +372,16 @@ export async function loadJobCosts(job, values, projectId = null) {
   const groups = await mdb.INTERNAL.attendance.aggregate(groupsPipeline(match));
   const people = await peopleFor(groups);
   const labour = labourForJob(groups, { ...people, purchases: purchases.purchases });
+  const margin = jobMargin(values, purchases.materials || 0, labour.employees.cost + (purchases.labour || 0));
   return {
     purchases,
     labour,
-    margin: jobMargin(values, purchases.net, labour.employees.cost),
+    costs: {
+      materials: margin.materials,
+      labour: { employees: labour.employees.cost, bought: roundPence(purchases.labour || 0), total: margin.labour },
+      total: margin.costs,
+    },
+    margin,
     kashflow: job.projectNumber != null ? figures.get(Number(job.projectNumber)) || null : null,
   };
 }

@@ -96,9 +96,9 @@ describe('jobLabourService', () => {
 
   describe('labourForJob', () => {
     const purchases = [
-      { number: 9001, supplierCode: 'suba01 ', net: 400 },
-      { number: 9002, supplierCode: 'SUBA01', net: 250.5 },
-      { number: 9003, supplierCode: 'MERCH', net: 99 },
+      { number: 9001, supplierCode: 'suba01 ', net: 400, labour: 400, materials: 0 },
+      { number: 9002, supplierCode: 'SUBA01', net: 250.5, labour: 200.5, materials: 50 },
+      { number: 9003, supplierCode: 'MERCH', net: 99, labour: 0, materials: 99 },
     ];
     const records = [
       rec({ employeeId: ann._id, dayRate: D(180) }),
@@ -136,13 +136,14 @@ describe('jobLabourService', () => {
       assert.equal(labour.employees.noHourlyRate, true);
     });
 
-    it('gives subcontractors their days and their purchase lines on the job, matched by supplier code', () => {
+    it('gives subcontractors their days and the labour lines of their purchases on the job, matched by supplier code', () => {
       const a = person('Sub A Ltd');
       assert.equal(a.kind, 'subcontractor');
       assert.equal(a.days, 2);
       assert.equal(a.pendingDays, 1);
       assert.equal(a.cost, 0, 'not costed as labour');
-      assert.equal(a.purchaseCost, 650.5);
+      assert.equal(a.purchaseCost, 600.5);
+      assert.equal(a.purchaseMaterials, 50, 'their materials lines are kept apart');
       assert.equal(a.purchaseInvoices, 2);
       const b = person('Sub B Ltd');
       assert.equal(b.hours, 3);
@@ -156,14 +157,16 @@ describe('jobLabourService', () => {
       );
       assert.equal(labour.subcontractors.days, 3);
       assert.equal(labour.subcontractors.pendingDays, 1);
-      assert.equal(labour.subcontractors.purchaseCost, 650.5);
+      assert.equal(labour.subcontractors.purchaseCost, 600.5);
       assert.deepEqual(labour.people.map((p) => p.kind), ['employee', 'employee', 'subcontractor', 'subcontractor']);
     });
   });
 
   describe('jobMargin', () => {
-    it('is invoiced − purchases − labour once anything is invoiced', () => {
-      assert.deepEqual(jobMargin({ invoiced: 1000, agreed: 5000 }, 300, 200), { basis: 'invoiced', income: 1000, costs: 500, margin: 500, percent: 50 });
+    it('is invoiced − (materials + labour) once anything is invoiced', () => {
+      assert.deepEqual(jobMargin({ invoiced: 1000, agreed: 5000 }, 300, 200), {
+        basis: 'invoiced', income: 1000, materials: 300, labour: 200, costs: 500, margin: 500, percent: 50,
+      });
     });
     it('uses the agreed value while nothing is invoiced', () => {
       const m = jobMargin({ invoiced: 0, agreed: 2000 }, 2100.4, 0);
@@ -189,17 +192,24 @@ describe('jobLabourService', () => {
         { entry: j3, stage: 'cancelled', taxYear: 2026, values: { invoiced: 0, agreed: 0 } },
         { entry: enquiry, stage: 'quoted', taxYear: 2026, values: { invoiced: 0, agreed: 0 } },
       ];
-      const purchases = new Map([[41300, { net: 300 }], [41301, { net: 100 }], [41302, { net: 50 }]]);
+      const purchases = new Map([
+        [41300, { net: 300, materials: 100, labour: 200 }],
+        [41301, { net: 100, materials: 100, labour: 0 }],
+        [41302, { net: 50, materials: 50, labour: 0 }],
+      ]);
       const labour = new Map([[String(j1._id), { cost: 200, pendingCost: 90, pendingDays: 1 }]]);
       const c = registerCosts(rows, purchases, labour);
-      assert.deepEqual(c.byUuid.j1, { purchases: 300, labour: 200, pendingLabour: 90, pendingDays: 1, margin: 500, basis: 'invoiced' });
+      assert.deepEqual(c.byUuid.j1, {
+        materials: 100, labour: 400, employeeLabour: 200, boughtLabour: 200, costs: 500,
+        pendingLabour: 90, pendingDays: 1, margin: 500, basis: 'invoiced',
+      });
       assert.equal(c.byUuid.j2.margin, 700);
       assert.equal(c.byUuid.j2.basis, 'agreed');
       assert.equal(c.byUuid.j3.margin, -50);
       assert.equal(c.byUuid.q, null);
-      assert.deepEqual(c.totals, { purchases: 400, labour: 200, margin: 1200, jobs: 2 });
-      assert.deepEqual(c.byYear[2026], { purchases: 300, labour: 200, margin: 500, jobs: 1 });
-      assert.deepEqual(c.byYear[2025], { purchases: 100, labour: 0, margin: 700, jobs: 1 });
+      assert.deepEqual(c.totals, { materials: 200, labour: 400, costs: 600, margin: 1200, jobs: 2 });
+      assert.deepEqual(c.byYear[2026], { materials: 100, labour: 400, costs: 500, margin: 500, jobs: 1 });
+      assert.deepEqual(c.byYear[2025], { materials: 100, labour: 0, costs: 100, margin: 700, jobs: 1 });
     });
 
     it('employee labour per job leaves subcontractors out', () => {
@@ -248,7 +258,8 @@ describe('jobLabourService', () => {
       assert.equal(costs.purchases.net, 400);
       assert.equal(costs.labour.employees.cost, 200);
       assert.equal(costs.labour.subcontractors.purchaseCost, 400);
-      assert.deepEqual(costs.margin, { basis: 'invoiced', income: 1000, costs: 600, margin: 400, percent: 40 });
+      assert.deepEqual(costs.costs, { materials: 0, labour: { employees: 200, bought: 400, total: 600 }, total: 600 });
+      assert.deepEqual(costs.margin, { basis: 'invoiced', income: 1000, materials: 0, labour: 600, costs: 600, margin: 400, percent: 40 });
       assert.deepEqual(costs.kashflow, { actualPurchases: 410, actualSales: 1000 });
       const match = aggregate.mock.calls[0].arguments[0][0].$match;
       assert.equal(match.$or.length, 2, 'contract shared with another job is left out');
@@ -258,7 +269,7 @@ describe('jobLabourService', () => {
     it('loadRegisterCosts runs one purchase aggregate and one attendance aggregate for the page', async () => {
       const j1 = { _id: JOB, uuid: 'j1', projectNumber: 41300, contractId: CONTRACT };
       const enquiry = { _id: oid(), uuid: 'q' };
-      const purchaseAgg = mock.fn(async () => [{ _id: 41300, net: 250, purchases: 1, lines: 1 }]);
+      const purchaseAgg = mock.fn(async () => [{ _id: 41300, net: 250, materials: 250, labour: 0, purchases: 1, lines: 1 }]);
       const attendanceAgg = mock.fn(async () => groupRecords([rec({ employeeId: ann._id, jobRegisterId: null, contractId: CONTRACT, hoursWorked: D(10) })]));
       mdb.REST = { purchase: { aggregate: purchaseAgg }, project: { find: mock.fn(() => q([{ _id: PROJECT, Number: 41300 }])) } };
       mdb.INTERNAL = {
@@ -273,7 +284,10 @@ describe('jobLabourService', () => {
       const c = await loadRegisterCosts(rows);
       assert.equal(purchaseAgg.mock.callCount(), 1);
       assert.equal(attendanceAgg.mock.callCount(), 1);
-      assert.deepEqual(c.byUuid.j1, { purchases: 250, labour: 150, pendingLabour: 0, pendingDays: 0, margin: 600, basis: 'agreed' });
+      assert.deepEqual(c.byUuid.j1, {
+        materials: 250, labour: 150, employeeLabour: 150, boughtLabour: 0, costs: 400,
+        pendingLabour: 0, pendingDays: 0, margin: 600, basis: 'agreed',
+      });
       assert.equal(c.byUuid.q, null);
       const match = attendanceAgg.mock.calls[0].arguments[0][0].$match;
       assert.ok(match.$or[1].contractId.$in[0] instanceof mongoose.Types.ObjectId, 'ObjectIds, as aggregate does not cast');
@@ -297,9 +311,9 @@ const job = {
 };
 const pageCosts = () => {
   const purchases = { purchases: [
-    { number: 9001, date: d('2026-10-05'), supplierCode: 'SUBA01', supplierName: 'Sub A Ltd', lines: [{ description: 'Groundworks labour', net: 400, nominal: 5000 }], net: 400 },
-    { number: 9002, date: d('2026-10-03'), supplierCode: 'MERCH', supplierName: 'Builders Merchant', lines: [{ description: 'Gravel', net: 120, nominal: 5000 }], net: 120 },
-  ], net: 520 };
+    { number: 9001, date: d('2026-10-05'), supplierCode: 'SUBA01', supplierName: 'Sub A Ltd', lines: [{ description: 'Groundworks labour', net: 400, nominal: 5000, role: 'labour' }], net: 400, materials: 0, labour: 400 },
+    { number: 9002, date: d('2026-10-03'), supplierCode: 'MERCH', supplierName: 'Builders Merchant', lines: [{ description: 'Gravel', net: 120, nominal: 5000, role: 'materials' }], net: 120, materials: 120, labour: 0 },
+  ], net: 520, materials: 120, labour: 400 };
   const labour = labourForJob(groupRecords([
     rec({ employeeId: ann._id, dayRate: D(180) }),
     rec({ employeeId: ann._id, hoursWorked: D(4), status: 'pending' }),
@@ -310,7 +324,16 @@ const pageCosts = () => {
     suppliersById: new Map([[String(subA._id), subA]]),
     purchases: purchases.purchases,
   });
-  return { purchases, labour, margin: jobMargin(jobValues(job), purchases.net, labour.employees.cost), kashflow: { actualPurchases: 520, actualSales: null } };
+  return withCosts({ purchases, labour, kashflow: { actualPurchases: 520, actualSales: null } }, jobValues(job));
+};
+// loadJobCosts()'s costs and margin from its purchases and labour
+const withCosts = (c, values) => {
+  const margin = jobMargin(values, c.purchases.materials, c.labour.employees.cost + c.purchases.labour);
+  return {
+    ...c,
+    costs: { materials: margin.materials, labour: { employees: c.labour.employees.cost, bought: c.purchases.labour, total: margin.labour }, total: margin.costs },
+    margin,
+  };
 };
 
 describe('Job page costs', () => {
@@ -323,12 +346,17 @@ describe('Job page costs', () => {
 
   it('shows the cost tiles, the purchase invoices and the labour', async () => {
     const html = await render({ costs: pageCosts() });
-    assert.match(html, /Costs \(purchases\)[\s\S]*£520\.00/);
-    assert.match(html, /KashFlow's project figure: £520\.00/);
-    assert.match(html, /Labour \(employees\)[\s\S]*£180\.00/);
+    assert.match(html, />Materials<\/p>\s*<p[^>]*>£120\.00/);
+    assert.match(html, />Labour<\/p>\s*<p[^>]*>£580\.00/);
+    assert.match(html, /Employees £180\.00 \(1 approved day\) · Subcontractors £400\.00 invoiced/);
+    assert.match(html, />Costs<\/p>\s*<p[^>]*>£700\.00/);
+    assert.match(html, /Materials \+ labour/);
+    assert.match(html, /Purchases £520\.00 · KashFlow's project figure £520\.00/);
     assert.match(html, /Not approved yet: 1 day, about £60\.00 \(not counted\)/);
     assert.match(html, />Margin<[\s\S]*£300\.00/);
-    assert.match(html, /Agreed value \(nothing invoiced yet\) − purchases − employee labour/);
+    assert.match(html, /Agreed value \(nothing invoiced yet\) − costs/);
+    assert.match(html, />Labour<\/span>Groundworks labour/);
+    assert.match(html, />Materials<\/span>Gravel/);
     assert.match(html, /id="purchases"/);
     for (const col of ['No', 'Date', 'Supplier', 'Lines on this job', 'Net', 'Person', 'Type', 'Days', 'Hours', 'Cost']) {
       assert.match(html, new RegExp(`>${col}</th>`), col);
@@ -336,24 +364,41 @@ describe('Job page costs', () => {
     assert.match(html, /9001[\s\S]*Sub A Ltd[\s\S]*Groundworks labour/);
     assert.match(html, /id="labour"/);
     assert.match(html, /Ann Example[\s\S]*Employee[\s\S]*about £60\.00 pending/);
-    assert.match(html, /Sub A Ltd[\s\S]*Subcontractor[\s\S]*£400\.00 over 2 days/);
-    assert.match(html, /Subcontractors \(cost is in purchases\)/);
+    assert.match(html, /Sub A Ltd[\s\S]*Subcontractor[\s\S]*£400\.00\s*<p[^>]*>Labour invoiced over 2 days \(1 invoice\)/);
+    assert.match(html, /Subcontractors \(labour invoiced\)/);
+    assert.match(html, />Labour<\/td>\s*<td[^>]*>£580\.00/);
+    assert.doesNotMatch(html, /Other labour invoiced|CIS deductions/);
     assert.match(html, /Employees, not approved yet \(estimate, not in the margin\)/);
     assert.doesNotMatch(html, /<script|onclick=/);
   });
 
   it('says when margin is on invoiced, and renders without costs', async () => {
     const invoicedJob = { ...job, invoices: [{ _id: oid(), number: 1700, value: 900 }] };
-    const costs = { ...pageCosts(), margin: jobMargin(jobValues(invoicedJob), 520, 180) };
+    const costs = withCosts(pageCosts(), jobValues(invoicedJob));
     const html = await render({ job: invoicedJob, values: jobValues(invoicedJob), match: matchJob(invoicedJob, {}), costs });
-    assert.match(html, /Invoiced − purchases − employee labour/);
-    assert.match(html, /£200\.00/);
+    assert.match(html, /Invoiced − costs/);
+    assert.match(html, />Margin<[\s\S]*£200\.00/);
     const none = await render();
-    assert.doesNotMatch(none, /id="labour"|Costs \(purchases\)/);
+    assert.doesNotMatch(none, /id="labour"|Materials \+ labour/);
+  });
+
+  it('shows labour bought from suppliers with no days, and CIS deduction lines', async () => {
+    const c = pageCosts();
+    c.purchases.purchases.push({ number: 9003, date: d('2026-10-06'), supplierCode: 'AGENCY', supplierName: 'Labour Agency', lines: [
+      { description: 'Labourer', net: 250, nominal: 5300, role: 'labour' },
+      { description: 'CIS', net: -50, nominal: 75600, role: 'cis' },
+    ], net: 200, materials: 0, labour: 250 });
+    c.purchases.net = 720;
+    c.purchases.labour = 650;
+    const html = await render({ costs: withCosts(c, jobValues(job)) });
+    assert.match(html, /Other labour invoiced \(suppliers with no days on this job\)<\/td>\s*<td[^>]*>£250\.00/);
+    assert.match(html, /CIS deductions \(not a cost to the job\)<\/td>\s*<td[^>]*>-£50\.00/);
+    assert.match(html, />CIS<\/span>CIS/);
+    assert.match(html, />Labour<\/p>\s*<p[^>]*>£830\.00/);
   });
 
   it('shows the empty states', async () => {
-    const empty = { purchases: { purchases: [], net: 0 }, labour: labourForJob([]), margin: jobMargin(jobValues(job), 0, 0), kashflow: null };
+    const empty = withCosts({ purchases: { purchases: [], net: 0, materials: 0, labour: 0 }, labour: labourForJob([]), kashflow: null }, jobValues(job));
     const html = await render({ costs: empty });
     assert.match(html, /No purchase invoices on this job in KashFlow/);
     assert.match(html, /No attendance on this job yet/);
@@ -368,21 +413,27 @@ describe('Job Register cost columns', () => {
     { _id: oid(), uuid: 'h', site: '2 Enquiry Rd', client: 'Plus Example', quotes: [{ _id: oid(), number: 51900, date: d('2026-11-01'), value: 300, status: 'quoted' }] },
   ];
   const register = buildRegister({ entries, quotesByNumber: new Map(), projectsByNumber: new Map(), invoicesByNumber: new Map(), filters: {} });
-  const costs = registerCosts(register.rows, new Map([[41300, { net: 520 }], [41250, { net: 650 }]]), new Map([[String(JOB), { cost: 180, pendingCost: 60, pendingDays: 1 }]]));
+  const costs = registerCosts(
+    register.rows,
+    new Map([[41300, { net: 520, materials: 120, labour: 400 }], [41250, { net: 650, materials: 650, labour: 0 }]]),
+    new Map([[String(JOB), { cost: 180, pendingCost: 60, pendingDays: 1 }]]),
+  );
   const base = {
     title: 'Job Register', csrfToken: 'c', crumbs: [], contracts: [], stageLabels: STAGE_LABELS, stages: STAGES, form: {},
     next: {}, unregistered: { year: 2026, quoteCount: 0, projectCount: 0, quotes: [], projects: [] },
   };
 
-  it('adds Costs, Labour and Margin per job, per tax year and overall', async () => {
+  it('adds Materials, Labour, Costs and Margin per job, per tax year and overall', async () => {
     const html = await ejs.renderFile(view, { ...base, ...register, costs });
-    for (const col of ['Costs', 'Labour', 'Margin']) assert.match(html, new RegExp(`>${col}</th>`), col);
-    assert.match(html, /£520\.00[\s\S]*£180\.00[\s\S]*\+1 day pending[\s\S]*£200\.00/);
-    assert.match(html, /£650\.00[\s\S]*£0\.00[\s\S]*-£150\.00[\s\S]*on agreed/);
+    for (const col of ['Materials', 'Labour', 'Costs', 'Margin']) assert.match(html, new RegExp(`>${col}</th>`), col);
+    assert.match(html, /£120\.00[\s\S]*£580\.00[\s\S]*£180\.00 staff · £400\.00 subs[\s\S]*\+1 day pending[\s\S]*£700\.00[\s\S]*£200\.00/);
+    assert.match(html, /£650\.00[\s\S]*£0\.00[\s\S]*£650\.00[\s\S]*-£150\.00[\s\S]*on agreed/);
     assert.match(html, /<td class="[^"]*text-gray-400">—<\/td>/, 'enquiry has no project number');
-    assert.match(html, /£520\.00 costs · £180\.00 labour ·\s*<span[^>]*>£200\.00 margin/);
-    assert.match(html, /£650\.00 costs · £0\.00 labour ·\s*<span[^>]*>-£150\.00 margin/);
-    assert.match(html, /Costs \(purchases\)<\/p>\s*<p[^>]*>£1,170\.00/);
+    assert.match(html, /£120\.00 materials \+ £580\.00 labour = £700\.00 costs ·\s*<span[^>]*>£200\.00 margin/);
+    assert.match(html, /£650\.00 materials \+ £0\.00 labour = £650\.00 costs ·\s*<span[^>]*>-£150\.00 margin/);
+    assert.match(html, />Materials<\/p>\s*<p[^>]*>£770\.00/);
+    assert.match(html, />Labour<\/p>\s*<p[^>]*>£580\.00/);
+    assert.match(html, />Costs<\/p>\s*<p[^>]*>£1,350\.00/);
     assert.match(html, />Margin<\/p>\s*<p[^>]*>£50\.00/);
   });
 

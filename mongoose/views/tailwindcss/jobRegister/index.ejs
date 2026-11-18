@@ -3,7 +3,7 @@
   per job (its quotes and invoices with it), each number checked against the
   synced KashFlow quote, project and invoice. Each row opens the job's page.
   Locals: rows ({ entry, stage, match, values }), counts, clients, years, totals { quoted, won, invoiced },
-          costs (optional: { byUuid: { uuid: { purchases, labour, margin, basis } | null }, totals, byYear }),
+          costs (optional: { byUuid: { uuid: { materials, labour, employeeLabour, boughtLabour, costs, margin, basis } | null }, totals, byYear }),
           filters, unregistered, next, unlinkedCount,
           stageLabels, stages, contracts, crumbs
 %>
@@ -131,21 +131,26 @@
     </div>
   </div>
   <% if (costs) { const ct = costs.totals; %>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <div class="<%= card %> p-4">
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Costs (purchases)</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(ct.purchases) %></p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Net purchase lines on these jobs' projects, excluding cancelled jobs</p>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Materials</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(ct.materials) %></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Purchase lines that aren't labour, excluding cancelled jobs</p>
       </div>
       <div class="<%= card %> p-4">
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Labour (employees)</p>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Labour</p>
         <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(ct.labour) %></p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Approved days at payroll rates; subcontractors are in purchases</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Employees' approved days at payroll rates + subcontractor labour invoiced</p>
+      </div>
+      <div class="<%= card %> p-4">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Costs</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(ct.costs) %></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Materials + labour</p>
       </div>
       <div class="<%= card %> p-4">
         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Margin</p>
         <p class="text-2xl font-bold <%= ct.margin < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>"><%= signed(ct.margin) %></p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Invoiced (or agreed value while nothing is invoiced) − purchases − labour, jobs with a project number</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Invoiced (or agreed value while nothing is invoiced) − costs, jobs with a project number</p>
       </div>
     </div>
   <% } %>
@@ -194,7 +199,7 @@
             <span class="text-blue-700 dark:text-blue-400"><%= money(g.won) || '£0.00' %> won</span> ·
             <span class="text-green-700 dark:text-green-400"><%= money(g.invoiced) || '£0.00' %> invoiced</span>
             <% const yc = costs ? costs.byYear[g.year] : null; if (yc) { %>
-              · <%= money(yc.purchases) %> costs · <%= money(yc.labour) %> labour ·
+              · <%= money(yc.materials) %> materials + <%= money(yc.labour) %> labour = <%= money(yc.costs) %> costs ·
               <span class="<%= marginClass(yc.margin) %>"><%= signed(yc.margin) %> margin</span>
             <% } %>
           </p>
@@ -210,8 +215,9 @@
             <th class="<%= th %> text-right">Quoted</th>
             <th class="<%= th %> text-right">Invoiced</th>
             <% if (costs) { %>
-            <th class="<%= th %> text-right">Costs</th>
+            <th class="<%= th %> text-right">Materials</th>
             <th class="<%= th %> text-right">Labour</th>
+            <th class="<%= th %> text-right">Costs</th>
             <th class="<%= th %> text-right">Margin</th>
             <% } %>
             <th class="<%= th %>">KashFlow</th>
@@ -246,13 +252,15 @@
               </td>
               <% if (costs) { const c = costOf(e); %>
                 <% if (!c) { %>
-                  <td class="<%= td %> text-right text-gray-400">—</td><td class="<%= td %> text-right text-gray-400">—</td><td class="<%= td %> text-right text-gray-400">—</td>
+                  <td class="<%= td %> text-right text-gray-400">—</td><td class="<%= td %> text-right text-gray-400">—</td><td class="<%= td %> text-right text-gray-400">—</td><td class="<%= td %> text-right text-gray-400">—</td>
                 <% } else { %>
-                  <td class="<%= td %> text-right whitespace-nowrap"><%= money(c.purchases) %></td>
+                  <td class="<%= td %> text-right whitespace-nowrap"><%= money(c.materials) %></td>
                   <td class="<%= td %> text-right whitespace-nowrap">
                     <%= money(c.labour) %>
+                    <% if (c.employeeLabour && c.boughtLabour) { %><p class="text-xs text-gray-500 dark:text-gray-400"><%= money(c.employeeLabour) %> staff · <%= money(c.boughtLabour) %> subs</p><% } %>
                     <% if (c.pendingDays) { %><p class="text-xs text-amber-700 dark:text-amber-400" title="Not approved yet, not counted">+<%= c.pendingDays %> day<%= c.pendingDays === 1 ? '' : 's' %> pending</p><% } %>
                   </td>
+                  <td class="<%= td %> text-right whitespace-nowrap"><%= money(c.costs) %></td>
                   <td class="<%= td %> text-right whitespace-nowrap">
                     <span class="<%= marginClass(c.margin) %>"><%= signed(c.margin) %></span>
                     <% if (c.basis === 'agreed') { %><p class="text-xs text-gray-500 dark:text-gray-400">on agreed</p><% } %>

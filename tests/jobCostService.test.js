@@ -17,6 +17,10 @@ import {
   normaliseProjectNumbers,
   costsPipeline,
   costsFromRows,
+  lineRole,
+  roleExpr,
+  codeKey,
+  subcontractorCodes,
   NOT_DELETED,
   purchaseListForProject,
   purchaseCostsByProject,
@@ -118,15 +122,71 @@ describe('jobCostService', () => {
         { Quantity: 1, Rate: 5, Description: 'Screws', NominalCode: 5001, ProjectNumber: 41002 },
       ] };
       assert.deepEqual(costLines(p), [
-        { project: 41001, net: 20, description: 'Timber', nominal: 5000 },
-        { project: 41002, net: 5, description: 'Screws', nominal: 5001 },
+        { project: 41001, net: 20, description: 'Timber', nominal: 5000, role: 'materials' },
+        { project: 41002, net: 5, description: 'Screws', nominal: 5001, role: 'materials' },
       ]);
     });
 
     it('counts a purchase with no LineItems as one line of its header net', () => {
       assert.deepEqual(costLines({ ProjectNumber: 41001, NetAmount: 99.999, LineItems: [] }), [
-        { project: 41001, net: 100, description: '', nominal: null },
+        { project: 41001, net: 100, description: '', nominal: null, role: 'materials' },
       ]);
+    });
+
+    it("gives a subcontractor's unsorted lines the labour role", () => {
+      const p = { SupplierCode: ' sub01 ', ProjectNumber: 41001, LineItems: [
+        { Quantity: 1, Rate: 300, Description: 'Week ending 7 Nov' },
+        { Quantity: 1, Rate: 40, Description: 'Materials: plasterboard' },
+      ] };
+      assert.deepEqual(costLines(p, { subcontractorCodes: new Set(['SUB01']) }).map((l) => l.role), ['labour', 'materials']);
+    });
+  });
+
+  describe('lineRole', () => {
+    const subs = new Set(['SUB01']);
+    const sub = { SupplierCode: 'SUB01' };
+    const other = { SupplierCode: 'TIM01' };
+
+    it('goes by ChargeType first', () => {
+      assert.equal(lineRole({ ChargeType: 18685896, Description: 'labour' }, sub, subs), 'materials');
+      assert.equal(lineRole({ ChargeType: '18685897', Description: 'materials' }, other, subs), 'labour');
+      assert.equal(lineRole({ ChargeType: 18685964 }, sub, subs), 'cis');
+    });
+
+    it('then by nominal code', () => {
+      assert.equal(lineRole({ NominalCode: 2700, Description: 'labour' }, sub, subs), 'materials');
+      assert.equal(lineRole({ NominalCode: 5300 }, other, subs), 'labour');
+      assert.equal(lineRole({ NominalCode: 75600 }, sub, subs), 'cis');
+    });
+
+    it('then by nominal name, else description', () => {
+      assert.equal(lineRole({ NominalName: 'Materials', Description: 'labour' }, sub, subs), 'materials');
+      assert.equal(lineRole({ NominalName: '', Description: 'Subcontract labour' }, other, subs), 'labour');
+      assert.equal(lineRole({ Description: 'Labor' }, other, subs), 'labour');
+    });
+
+    it("else labour for a CIS subcontractor and materials for anyone else", () => {
+      assert.equal(lineRole({ Description: 'Week 45' }, sub, subs), 'labour');
+      assert.equal(lineRole({ Description: 'Skip hire' }, other, subs), 'materials');
+      assert.equal(lineRole(null, sub, subs), 'labour');
+      assert.equal(lineRole(null, other), 'materials');
+    });
+
+    it('compares supplier codes trimmed and in upper case', () => {
+      assert.equal(codeKey(' sub01 '), 'SUB01');
+      assert.equal(lineRole({}, { SupplierCode: 'sub01' }, subs), 'labour');
+    });
+  });
+
+  describe('roleExpr', () => {
+    it('checks the same things in the same order as lineRole', () => {
+      const expr = roleExpr(['SUB01']);
+      const branches = expr.$switch.branches;
+      assert.deepEqual(branches.map((b) => (typeof b.then === 'string' ? b.then : 'fallback')),
+        ['fallback', 'materials', 'labour', 'cis', 'materials', 'labour', 'cis', 'materials', 'labour']);
+      assert.deepEqual(expr.$switch.default.$cond.slice(1), ['labour', 'materials']);
+      assert.deepEqual(expr.$switch.default.$cond[0].$in[1], ['SUB01']);
+      assert.match(JSON.stringify(branches[8]), /labour\|labor\|subcontract/);
     });
   });
 
@@ -158,11 +218,22 @@ describe('jobCostService', () => {
       assert.deepEqual(pipeline[3], { $match: { _project: { $in: [41001, 41002] } } });
     });
 
-    it('groups per purchase, then per job', () => {
-      assert.deepEqual(pipeline[4].$group._id, { project: '$_project', number: '$Number' });
-      assert.ok(pipeline[4].$group.net.$sum.$multiply, 'net is a signed, rounded expression');
-      assert.deepEqual(pipeline[5], { $group: { _id: '$_id.project', net: { $sum: '$net' }, purchases: { $sum: 1 }, lines: { $sum: '$lines' } } });
-      assert.equal(pipeline.length, 6);
+    it("works out each line's signed net and role", () => {
+      assert.ok(pipeline[4].$addFields._net.$multiply, 'net is a signed, rounded expression');
+      assert.deepEqual(pipeline[4].$addFields._role, roleExpr([]));
+      assert.deepEqual(costsPipeline([41001], ['SUB01'])[4].$addFields._role, roleExpr(['SUB01']));
+    });
+
+    it('groups per purchase, then per job, with materials and labour apart', () => {
+      assert.deepEqual(pipeline[5].$group._id, { project: '$_project', number: '$Number' });
+      assert.deepEqual(pipeline[5].$group.net, { $sum: '$_net' });
+      assert.deepEqual(pipeline[5].$group.materials, { $sum: { $cond: [{ $eq: ['$_role', 'materials'] }, '$_net', 0] } });
+      assert.deepEqual(pipeline[5].$group.labour, { $sum: { $cond: [{ $eq: ['$_role', 'labour'] }, '$_net', 0] } });
+      assert.deepEqual(pipeline[6], { $group: {
+        _id: '$_id.project', net: { $sum: '$net' }, materials: { $sum: '$materials' }, labour: { $sum: '$labour' },
+        purchases: { $sum: 1 }, lines: { $sum: '$lines' },
+      } });
+      assert.equal(pipeline.length, 7);
     });
 
     it('signs credit notes with the same pattern as isCreditType', () => {
@@ -175,25 +246,34 @@ describe('jobCostService', () => {
   describe('costsFromRows', () => {
     it('gives every job asked for an entry, zero when it has nothing', () => {
       const out = costsFromRows([41001, 41002], [
-        { _id: 41001, net: 120.004, purchases: 2, lines: 3 },
+        { _id: 41001, net: 120.004, materials: 20.004, labour: 100, purchases: 2, lines: 3 },
         { _id: 99999, net: 1, purchases: 1, lines: 1 },
       ]);
       assert.deepEqual([...out.entries()], [
-        [41001, { net: 120, purchases: 2, lines: 3 }],
-        [41002, { net: 0, purchases: 0, lines: 0 }],
+        [41001, { net: 120, materials: 20, labour: 100, purchases: 2, lines: 3 }],
+        [41002, { net: 0, materials: 0, labour: 0, purchases: 0, lines: 0 }],
       ]);
     });
   });
 
   describe('purchaseCostsByProject', () => {
     it('runs one aggregate over all the jobs and maps the rows', async () => {
-      const aggregate = mock.fn(async () => [{ _id: 41001, net: -50.5, purchases: 1, lines: 2 }]);
-      mdb.REST = { purchase: { aggregate } };
+      const aggregate = mock.fn(async () => [{ _id: 41001, net: -50.5, materials: -50.5, labour: 0, purchases: 1, lines: 2 }]);
+      const sq = fakeFind([{ Code: ' sub01 ' }, { Code: '' }]);
+      const supplierFind = mock.fn(() => sq);
+      mdb.REST = { purchase: { aggregate }, supplier: { find: supplierFind } };
       const out = await purchaseCostsByProject(['41001', 41002, 41001]);
       assert.equal(aggregate.mock.callCount(), 1);
-      assert.deepEqual(aggregate.mock.calls[0].arguments[0], costsPipeline([41001, 41002]));
-      assert.deepEqual(out.get(41001), { net: -50.5, purchases: 1, lines: 2 });
-      assert.deepEqual(out.get(41002), { net: 0, purchases: 0, lines: 0 });
+      assert.deepEqual(aggregate.mock.calls[0].arguments[0], costsPipeline([41001, 41002], ['SUB01']));
+      assert.deepEqual(out.get(41001), { net: -50.5, materials: -50.5, labour: 0, purchases: 1, lines: 2 });
+      assert.deepEqual(out.get(41002), { net: 0, materials: 0, labour: 0, purchases: 0, lines: 0 });
+    });
+
+    it('treats every supplier as not a subcontractor when suppliers are not synced', async () => {
+      const aggregate = mock.fn(async () => []);
+      mdb.REST = { purchase: { aggregate } };
+      await purchaseCostsByProject([41001]);
+      assert.deepEqual(aggregate.mock.calls[0].arguments[0], costsPipeline([41001], []));
     });
 
     it("doesn't query for no jobs", async () => {
@@ -229,17 +309,32 @@ describe('jobCostService', () => {
       assert.deepEqual(out.purchases.map((p) => p.number), [12, 11, 10]);
       assert.deepEqual(out.purchases[2], {
         number: 10, date: new Date('2026-03-01'), supplierCode: 'TIM01', supplierName: 'Timber Co',
-        lines: [{ description: 'Joists', net: 20, nominal: 5000 }], net: 20,
+        lines: [{ description: 'Joists', net: 20, nominal: 5000, role: 'materials' }], net: 20, materials: 20, labour: 0,
       });
       assert.equal(out.purchases[0].net, 3.35); // 3.345 rounded up
       assert.equal(out.purchases[1].net, -5);
       assert.equal(out.net, 18.35);
+      assert.equal(out.materials, 18.35);
+      assert.equal(out.labour, 0);
+    });
+
+    it("splits a subcontractor's invoice into labour and materials, leaving CIS deductions out of both", () => {
+      const out = purchaseListForProject(41001, [
+        { Number: 20, IssuedDate: new Date('2026-07-01'), SupplierCode: 'SUB01', ProjectNumber: 41001, LineItems: [
+          { Quantity: 1, Rate: 500, Description: 'Labour w/e 4 Jul' },
+          { Quantity: 1, Rate: 80, Description: 'Materials' },
+          { Quantity: 1, Rate: -100, ChargeType: 18685964, Description: 'CIS' },
+        ] },
+      ], { subcontractorCodes: new Set(['SUB01']) });
+      assert.deepEqual(out.purchases[0].lines.map((l) => l.role), ['labour', 'materials', 'cis']);
+      assert.deepEqual({ net: out.net, materials: out.materials, labour: out.labour }, { net: 480, materials: 80, labour: 500 });
     });
 
     it('queries the job by line or header, excluding deleted, and groups the result', async () => {
       const q = fakeFind(purchases);
       const find = mock.fn(() => q);
-      mdb.REST = { purchase: { find } };
+      const sq = fakeFind([]);
+      mdb.REST = { purchase: { find }, supplier: { find: mock.fn(() => sq) } };
       const out = await purchasesForProject('41002');
       assert.deepEqual(find.mock.calls[0].arguments[0], {
         $and: [{ $or: [{ 'LineItems.ProjectNumber': 41002 }, { ProjectNumber: 41002 }] }, NOT_DELETED],
@@ -250,7 +345,15 @@ describe('jobCostService', () => {
     });
 
     it('returns nothing for a missing job number', async () => {
-      assert.deepEqual(await purchasesForProject(null), { purchases: [], net: 0 });
+      assert.deepEqual(await purchasesForProject(null), { purchases: [], net: 0, materials: 0, labour: 0 });
+    });
+
+    it('looks up CIS subcontractors by the shared definition', async () => {
+      const sq = fakeFind([{ Code: 'SUB01' }]);
+      const find = mock.fn(() => sq);
+      mdb.REST = { supplier: { find } };
+      assert.deepEqual([...await subcontractorCodes()], ['SUB01']);
+      assert.ok(find.mock.calls[0].arguments[0].$or, 'cisSupplierQuery');
     });
   });
 
