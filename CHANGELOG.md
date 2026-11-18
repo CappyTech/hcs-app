@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.144.1] - 2026-11-18
+
+### Fixed
+- **A page you may not open says "Access Denied" again.** Most refused pages (the overviews, `/daily` and others the route check guards) showed "The application is starting" and retried every 10 seconds, because the error page broke before it had what its footer needs. They now show Access Denied with a 403.
+- **A list you may only see your own records in, when you're linked to none, is refused rather than an error.** For example an employee user with no Employee record opening `/employees` or `/vehicles` got a 500; it's now Access Denied.
+- **More than one user can be created without a phone number.** The second one failed with a database error (`duplicate key … phoneNumber: null`). A blank number is now stored as none, and on start-up any user already saved with an empty number has it removed.
+- **The account page's two-factor notice names the role that needs it.** A Director whose primary role is Employee was told "Your role (Employee) requires two-factor authentication"; it now says Director.
+
 ## [6.144.0] - 2026-11-18
 
 ### Added
