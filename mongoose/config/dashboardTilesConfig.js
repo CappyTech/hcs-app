@@ -181,6 +181,13 @@ export default {
         department: ['attendance'],
         buttonClass: 'bg-green-700 hover:bg-green-800'
     },
+    AttendanceByPerson: {
+        title: 'Attendance by Person',
+        description: "One employee's or subcontractor's days across weeks, with totals and approval.",
+        link: '/attendance/person',
+        department: ['attendance', 'payroll', 'human-resources'],
+        buttonClass: 'bg-green-700 hover:bg-green-800'
+    },
     DailyAttendance: {
         title: 'Daily Attendance',
         description: 'View daily attendance records',

@@ -79,6 +79,11 @@
             <% if (item.DefaultNominalCode != null) { %><span>Nominal <%= item.DefaultNominalCode %></span><% } %>
           </p>
         </div>
+        <% if (_isCis && typeof canRoute === 'function' && canRoute('/attendance/person')) { %>
+          <a href="/attendance/person/subcontractor/<%= encodeURIComponent(item.uuid) %>" class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-sm shrink-0">
+            <i class="bi bi-calendar-week"></i><span class="hidden sm:inline">Attendance</span>
+          </a>
+        <% } %>
         <% if (_isCis) { %>
           <a href="/subcontractor/assign" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition shadow-sm shrink-0">
             <i class="bi bi-pencil-square"></i><span class="hidden sm:inline">Edit CIS Details</span>
