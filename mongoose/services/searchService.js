@@ -234,7 +234,13 @@ export function createSearch({
     // Places in the app, ahead of the records. Not part of a one-type search.
     if (!type) {
       try {
-        const items = matchPages(pages(req), q);
+        // Each record type the person may search also has a list page ("Locations")
+        const known = pages(req);
+        const hrefs = new Set(known.map((p) => p.href));
+        const lists = targets
+          .filter(({ entity }) => entity.list && !hrefs.has(entity.list))
+          .map(({ entity }) => ({ title: entity.label, subtitle: '', href: entity.list }));
+        const items = matchPages([...known, ...lists], q);
         if (items.length) groups.push({ key: 'page', label: 'Pages', items, more: false });
       } catch (err) {
         logger.warn(`[search] pages failed: ${err.message}`);
