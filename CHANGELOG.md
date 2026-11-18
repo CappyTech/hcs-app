@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.143.1] - 2026-11-18
+
+### Fixed
+- **Search finds a list page by its name.** Searching "locations" (or "vehicles", "contracts" and so on) said nothing matched, because those lists have no overview or dashboard tile. Each kind of record you can search now also shows its list page under Pages, if you may open it.
+
 ## [6.143.0] - 2026-11-18
 
 ### Fixed
