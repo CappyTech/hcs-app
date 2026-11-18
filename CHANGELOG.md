@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.143.0] - 2026-11-18
+
+### Fixed
+- **The Job Register no longer says an invoice "isn't on a job in KashFlow" when KashFlow has the job on its lines.** KashFlow often puts an invoice's job on its lines rather than its header. The check, the "In KashFlow on this job, not here" card and Add to job now look at both. An invoice split across jobs is valued by its lines on this job, both when it's checked and when it's added.
+- **A KashFlow project used for another job is flagged.** The job's KashFlow project card now says "Name in KashFlow is …" when the project's name shares no word with the job's site, as well as "Client in KashFlow is …" when the client differs. The name check is lenient, because KashFlow names are typed by hand.
+- **A KashFlow quote or invoice for a different client can't be added to a job.** On the job page it shows "Not <client>" and "Different client: fix it in KashFlow" in place of Add to job, and the list page names the other client. Adding one is refused.
+
 ## [6.142.0] - 2026-11-18
 
 ### Added
