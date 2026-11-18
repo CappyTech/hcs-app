@@ -2,6 +2,16 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.137.0] - 2026-11-18
+
+### Changed
+- **A job's Costs are now Materials + Labour.** Each purchase invoice line on a job is sorted into materials or labour the same way the CIS returns sort a subcontractor's invoice: by its charge type, then its nominal code, then its nominal name or description. A line none of those decide counts as labour from a CIS subcontractor and as materials from anyone else. Labour is employees' approved days at payroll rates plus the labour invoiced on the job. Margin is invoiced (or the agreed value while nothing is invoiced) less Costs, so subcontractors are still counted once.
+- **The job page shows Materials, Labour, Costs and Margin tiles.** Each purchase line is tagged Materials or Labour, and the purchase table totals each. The Labour table shows each subcontractor's invoiced labour, any labour invoiced by suppliers with no days on the job, and a Labour total. KashFlow's own project purchases figure is shown beside the purchase total.
+- **The Job Register shows Materials, Labour, Costs and Margin columns and tiles**, with each tax year's line reading "materials + labour = costs".
+
+### Fixed
+- **CIS deduction lines on a purchase invoice no longer lower a job's costs.** The deduction is paid to HMRC, so it's left out of both materials and labour and shown on its own under the purchase table.
+
 ## [6.136.0] - 2026-11-17
 
 ### Added
