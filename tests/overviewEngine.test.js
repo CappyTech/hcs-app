@@ -467,8 +467,29 @@ describe('payroll, policies and admin', () => {
   it('links Admin to the admin dashboard and its most-used tools, for admins only', async () => {
     const area = await engine.buildArea(admin, 'admin');
     assert.deepStrictEqual(area.actions.map((a) => a.href),
-      ['/admin', '/admin/config', '/audit', '/admin/security-events', '/admin/jobs']);
+      ['/admin', '/admin/config']);
     assert.deepStrictEqual((await engine.buildArea(accountant, 'admin')).actions, []);
+  });
+
+  it('gives Admin a card per admin tool, each opening its page, with figures that flag trouble', async () => {
+    for (const m of ['securityEvent', 'jobState', 'notification', 'auditLog', 'gdprRequest']) mdb.INTERNAL[m] = mockModel(m, { count: 2 });
+    const area = await engine.buildArea(admin, 'admin');
+    assert.deepStrictEqual(area.cards.map((c) => [c.id, c.href]), [
+      ['user', '/overview/user'],
+      ['securityEvent', '/admin/security-events'],
+      ['jobState', '/admin/jobs'],
+      ['notification', '/admin/emails/outbox'],
+      ['auditLog', '/audit'],
+      ['gdprRequest', '/admin/gdpr/requests'],
+    ]);
+    const jobs = area.cards.find((c) => c.id === 'jobState');
+    assert.deepStrictEqual(jobs.figures.map((f) => [f.label, f.value]), [['Jobs', 2], ['Last run failed', 2], ['Not run for a day', 2]]);
+    const failing = calls.find((c) => c.name === 'jobState' && c.filter?.lastOutcome === 'error');
+    assert.ok(failing, 'counts jobs whose last run failed');
+    const overdue = calls.find((c) => c.name === 'gdprRequest' && c.filter?.deadline);
+    assert.ok(overdue.filter.deadline.$lt instanceof Date, 'overdue GDPR requests are past their deadline');
+    // Route-guarded: nobody without the admin pages gets the cards
+    assert.deepStrictEqual((await engine.buildArea(accountant, 'admin')).cards, []);
   });
 });
 
