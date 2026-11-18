@@ -86,6 +86,9 @@ const errorHandlerService = (error, req, res, next) => {
       // (auto-refresh recovers the user) and returns a true 503 with Retry-After
       return __maintenanceService.renderUnavailable(req, res, "unavailable");
     }
+    // With a callback, a template error stays here. Without one Express hands
+    // it to next(err), which is the pre-DB fallback handler in app.js: a 403
+    // whose page failed to render showed as "The application is starting".
     res.render(path.join("tailwindcss", "error"), {
       title,
       error: {
@@ -93,6 +96,10 @@ const errorHandlerService = (error, req, res, next) => {
         message,
         stack,
       },
+    }, (renderErr, html) => {
+      if (!renderErr) return res.send(html);
+      logger.error("Error rendering error page: " + renderErr.message);
+      res.type("text/plain").send(`${title}: ${message}`);
     });
   } catch (renderError) {
     // Fallback if res.render fails

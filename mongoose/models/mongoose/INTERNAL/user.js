@@ -3,6 +3,11 @@ import bcrypt from 'bcrypt';
 import encryptionService from '../../../../services/encryptionService.js';
 import crypto from 'crypto';
 
+/** null, '' and whitespace become undefined (no field). Exported for tests. */
+export function blankToUndefined(v) {
+    return v == null || String(v).trim() === '' ? undefined : v;
+}
+
 const userSchema = new mongoose.Schema({
     uuid: { type: String, unique: true, required: true, default: () => crypto.randomUUID() },
     username: {
@@ -18,12 +23,15 @@ const userSchema = new mongoose.Schema({
         lowercase: true,
         trim: true
     },
+    // Optional, unique when present. A sparse index only skips users with no
+    // field at all, not phoneNumber: null, so a blank number is stored as no
+    // field (never null): two users without a number must not collide.
     phoneNumber: {
         type: String,
-        default: null,
         trim: true,
         sparse: true,
-        unique: true
+        unique: true,
+        set: blankToUndefined,
     },
     password: {
         type: String,
