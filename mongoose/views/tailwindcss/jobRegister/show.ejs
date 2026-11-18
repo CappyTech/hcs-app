@@ -3,7 +3,7 @@
   quoted and invoiced, its quotes (variations) and its invoices (stage
   payments), each checked against KashFlow. No script: the forms post, and
   ?quote=<id> / ?invoice=<id> opens one for editing.
-  Locals: job, stage, values { quoted, agreed, invoiced }, costs (optional: { purchases, labour, margin, kashflow }), match { project, quotes[], invoices[], extras { quotes[], invoices[] } }, next,
+  Locals: job, stage, values { quoted, agreed, invoiced }, costs (optional: { purchases, labour, costs { materials, labour { employees, bought, total }, total }, margin, kashflow }), match { project, quotes[], invoices[], extras { quotes[], invoices[] } }, next,
           stageLabels, quoteStatuses, quoteStatusLabels, canEdit, canCreate { project, quotes: { id: bool } },
           editQuote, editInvoice, crumbs, title, oneDriveOn (OneDrive job folders set up: offer Find folder)
 %>
@@ -54,6 +54,12 @@
   const signed = (v) => (Number(v) < 0 ? '-' : '') + money(Math.abs(Number(v) || 0));
   const num = (v) => Number(v || 0).toLocaleString('en-GB', { maximumFractionDigits: 2 });
   const plural = (n, word) => `${num(n)} ${word}${Number(n) === 1 ? '' : 's'}`;
+  const roleLabel = { materials: 'Materials', labour: 'Labour', cis: 'CIS' };
+  const roleTag = {
+    materials: 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300',
+    labour: 'border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300',
+    cis: 'border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300',
+  };
 %>
 <div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
   <%- include('../partials/breadcrumbs', { crumbs, current: title }) %>
@@ -130,7 +136,7 @@
   </div>
 
   <!-- Money -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 <%= costs ? 'lg:grid-cols-5' : '' %> gap-4 mb-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 <%= costs ? 'lg:grid-cols-3' : '' %> gap-4 mb-6">
     <div class="<%= card %> p-4">
       <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Quoted</p>
       <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(values.quoted) %></p>
@@ -143,23 +149,28 @@
         <% if (partInvoiced) { %><%= money(values.invoiced) %> of <%= money(values.agreed) %> invoiced so far<% } else { %>Net, <%= invoices.length %> invoice<%= invoices.length === 1 ? '' : 's' %><% } %>
       </p>
     </div>
-    <% if (costs) { const lab = costs.labour.employees; const m = costs.margin; const kf = costs.kashflow; %>
+    <% if (costs) { const lab = costs.labour.employees; const C = costs.costs; const m = costs.margin; const kf = costs.kashflow; %>
       <div class="<%= card %> p-4">
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Costs (purchases)</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(costs.purchases.net) %></p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Net, <%= plural(costs.purchases.purchases.length, 'purchase invoice') %></p>
-        <% if (kf && kf.actualPurchases != null) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">KashFlow's project figure: <%= money(kf.actualPurchases) %></p><% } %>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Materials</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(C.materials) %></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Purchase lines that aren't labour, <%= plural(costs.purchases.purchases.length, 'purchase invoice') %></p>
       </div>
       <div class="<%= card %> p-4">
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Labour (employees)</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(lab.cost) %></p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Approved days, <%= plural(lab.days, 'day') %></p>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Labour</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(C.labour.total) %></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Employees <%= money(C.labour.employees) %> (<%= plural(lab.days, 'approved day') %>) · Subcontractors <%= money(C.labour.bought) %> invoiced</p>
         <% if (lab.pendingDays) { %><p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">Not approved yet: <%= plural(lab.pendingDays, 'day') %>, about <%= money(lab.pendingCost) %> (not counted)</p><% } %>
+      </div>
+      <div class="<%= card %> p-4">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Costs</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= money(C.total) %></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Materials + labour</p>
+        <% if (kf && kf.actualPurchases != null) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Purchases <%= money(costs.purchases.net) %> · KashFlow's project figure <%= money(kf.actualPurchases) %></p><% } %>
       </div>
       <div class="rounded-2xl border shadow-sm p-4 <%= m.margin < 0 ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900' %>">
         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Margin</p>
         <p class="text-2xl font-bold <%= m.margin < 0 ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400' %>"><%= signed(m.margin) %><% if (m.percent != null) { %> <span class="text-sm font-medium"><%= m.percent %>%</span><% } %></p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= m.basis === 'invoiced' ? 'Invoiced' : 'Agreed value (nothing invoiced yet)' %> − purchases − employee labour</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%= m.basis === 'invoiced' ? 'Invoiced' : 'Agreed value (nothing invoiced yet)' %> − costs</p>
         <% if (kf && kf.actualSales != null) { %><p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">KashFlow's project sales: <%= money(kf.actualSales) %></p><% } %>
       </div>
     <% } %>
@@ -411,13 +422,27 @@
                 <td class="<%= td %> whitespace-nowrap"><%= fmt(p.date) %></td>
                 <td class="<%= td %>"><%= p.supplierName || p.supplierCode %><% if (p.supplierName && p.supplierCode) { %> <span class="font-mono text-xs text-gray-500">(<%= p.supplierCode %>)</span><% } %></td>
                 <td class="<%= td %> text-xs">
-                  <% p.lines.forEach((l) => { %><div class="flex justify-between gap-3"><span><%= l.description || '(no description)' %></span><span class="whitespace-nowrap text-gray-500 dark:text-gray-400"><%= money(l.net) %></span></div><% }) %>
+                  <% p.lines.forEach((l) => { %><div class="flex justify-between gap-3"><span><span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border mr-1 <%= roleTag[l.role] || roleTag.materials %>"><%= roleLabel[l.role] || 'Materials' %></span><%= l.description || '(no description)' %></span><span class="whitespace-nowrap text-gray-500 dark:text-gray-400"><%= money(l.net) %></span></div><% }) %>
                 </td>
                 <td class="<%= td %> text-right whitespace-nowrap"><%= money(p.net) %></td>
               </tr>
             <% }) %>
           </tbody>
           <tfoot class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <td class="<%= td %> text-gray-500 dark:text-gray-400" colspan="4">Materials</td>
+              <td class="<%= td %> text-right text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= money(P.materials) %></td>
+            </tr>
+            <tr>
+              <td class="<%= td %> text-gray-500 dark:text-gray-400" colspan="4">Labour (in the Labour total)</td>
+              <td class="<%= td %> text-right text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= money(P.labour) %></td>
+            </tr>
+            <% const cisLines = Math.round((P.net - P.materials - P.labour) * 100) / 100; if (cisLines) { %>
+              <tr>
+                <td class="<%= td %> text-gray-500 dark:text-gray-400" colspan="4">CIS deductions (not a cost to the job)</td>
+                <td class="<%= td %> text-right text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= signed(cisLines) %></td>
+              </tr>
+            <% } %>
             <tr>
               <td class="<%= td %> font-semibold" colspan="4">Total</td>
               <td class="<%= td %> text-right font-semibold whitespace-nowrap"><%= money(P.net) %></td>
@@ -435,7 +460,7 @@
       <p class="text-xs text-gray-500 dark:text-gray-400">Work and training days from attendance. Employees cost what payroll pays (day rate, else hours × hourly rate) on approved days.</p>
     </div>
     <% if (!L.people.length) { %>
-      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">No attendance on this job yet.</div>
+      <div class="text-sm text-gray-400 dark:text-gray-500 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">No attendance on this job yet.<% if (costs.costs.labour.bought) { %> <%= money(costs.costs.labour.bought) %> of labour is invoiced on its purchase invoices.<% } %></div>
     <% } else { %>
       <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
@@ -462,8 +487,9 @@
                     <% if (p.uncostedDays) { %><p class="text-xs text-amber-700 dark:text-amber-400"><%= plural(p.uncostedDays, 'day') %> with no hours or day rate</p><% } %>
                     <% if (p.noHourlyRate) { %><p class="text-xs text-amber-700 dark:text-amber-400">No hourly rate on the employee</p><% } %>
                   <% } else if (p.purchaseInvoices) { %>
-                    <span class="text-gray-500 dark:text-gray-400"><%= money(p.purchaseCost) %> over <%= plural(p.days + p.pendingDays, 'day') %></span>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">In purchases (<%= plural(p.purchaseInvoices, 'invoice') %>)</p>
+                    <%= money(p.purchaseCost) %>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Labour invoiced over <%= plural(p.days + p.pendingDays, 'day') %> (<%= plural(p.purchaseInvoices, 'invoice') %>)</p>
+                    <% if (p.purchaseMaterials) { %><p class="text-xs text-gray-500 dark:text-gray-400">+ <%= money(p.purchaseMaterials) %> materials (in Materials)</p><% } %>
                   <% } else { %>
                     <span class="text-xs text-gray-500 dark:text-gray-400"><%= p.supplierCode ? 'No invoices on this job yet' : 'Not linked to a KashFlow supplier' %></span>
                   <% } %>
@@ -488,12 +514,22 @@
             <% } %>
             <% if (L.subcontractors.days || L.subcontractors.pendingDays) { %>
               <tr>
-                <td class="<%= td %> text-gray-500 dark:text-gray-400" colspan="2">Subcontractors (cost is in purchases)</td>
-                <td class="<%= td %> text-right text-gray-500 dark:text-gray-400"><%= num(L.subcontractors.days + L.subcontractors.pendingDays) %></td>
-                <td class="<%= td %> text-right text-gray-500 dark:text-gray-400"><%= L.subcontractors.hours ? num(L.subcontractors.hours) : '—' %></td>
-                <td class="<%= td %> text-right text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= money(L.subcontractors.purchaseCost) %></td>
+                <td class="<%= td %> font-semibold" colspan="2">Subcontractors (labour invoiced)</td>
+                <td class="<%= td %> text-right font-semibold"><%= num(L.subcontractors.days + L.subcontractors.pendingDays) %></td>
+                <td class="<%= td %> text-right font-semibold"><%= L.subcontractors.hours ? num(L.subcontractors.hours) : '—' %></td>
+                <td class="<%= td %> text-right font-semibold whitespace-nowrap"><%= money(L.subcontractors.purchaseCost) %></td>
               </tr>
             <% } %>
+            <% const otherLabour = Math.round((costs.costs.labour.bought - L.subcontractors.purchaseCost) * 100) / 100; if (otherLabour) { %>
+              <tr>
+                <td class="<%= td %> text-gray-500 dark:text-gray-400" colspan="4">Other labour invoiced (suppliers with no days on this job)</td>
+                <td class="<%= td %> text-right text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= money(otherLabour) %></td>
+              </tr>
+            <% } %>
+            <tr>
+              <td class="<%= td %> font-semibold" colspan="4">Labour</td>
+              <td class="<%= td %> text-right font-semibold whitespace-nowrap"><%= money(costs.costs.labour.total) %></td>
+            </tr>
           </tfoot>
         </table>
       </div>
