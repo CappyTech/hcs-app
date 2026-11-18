@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.138.0] - 2026-11-18
+
+### Added
+- **A quote that KashFlow converted to an invoice now shows as converted.** KashFlow deletes a quote when it converts it, and the invoice doesn't say which quote it came from. The Job Register now matches a quote that's gone from KashFlow to the invoice it became, and shows "Quote 51770 → Invoice 1776" with a green tick in the KashFlow column and on the job page, where the invoice is linked. A match needs the same customer, the invoice on the same job (on its header or any line), issued on or after the quote, and the same net value. A quote with no value matches on its line descriptions instead. Each invoice explains at most one quote. If the invoice isn't on the job in the register yet, it's offered with Add to job, labelled with the quote it came from. This needs hcs-sync 0.17.0, which marks quotes that disappear from KashFlow as deleted.
+
+### Changed
+- **A quote deleted in KashFlow with no matching invoice shows as deleted** ("Quote N deleted"), not as live or still to be entered.
+- **A quote that isn't in KashFlow at all** now explains it may not be entered yet, or was deleted or converted before it was synced.
+- **Create quote is no longer offered, and is refused, for a quote that was converted or deleted in KashFlow**, and adding quotes to KashFlow automatically skips them, so a converted quote is never created again.
+- **Deleted KashFlow quotes no longer show as "on this job in KashFlow, not here"**, or in the list of KashFlow quotes not in the register.
+
 ## [6.137.0] - 2026-11-18
 
 ### Changed
