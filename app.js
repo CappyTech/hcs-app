@@ -43,6 +43,7 @@ import __jobRegisterImportService from './mongoose/services/jobRegisterImportSer
 import __jobRegisterMigration from './mongoose/services/jobRegisterMigration.js';
 import __attendanceIndexMigration from './mongoose/services/attendanceIndexMigration.js';
 import __attendanceFieldCleanup from './mongoose/services/attendanceFieldCleanup.js';
+import __userPhoneCleanup from './mongoose/services/userPhoneCleanup.js';
 import __configValidatorService from './mongoose/services/configValidatorService.js';
 import cisMappings from './mongoose/config/cisMappings.js';
 import __socketService from './services/socketService.js';
@@ -430,6 +431,14 @@ const main = async () => {
       logger.error('[migration] Attendance field clean-up failed', { error: migrationErr.message });
     }
 
+    // Users stored with phoneNumber: null collide in the sparse unique index,
+    // so a second user without a number couldn't be created
+    try {
+      await __userPhoneCleanup.unsetBlankPhoneNumbers();
+    } catch (migrationErr) {
+      logger.error('[migration] Removing empty user phone numbers failed', { error: migrationErr.message });
+    }
+
     // Job Register rows (one quote + project + invoice each) → jobs holding
     // quotes[] and invoices[]. Before the step below, which looks rows up by
     // their quotes' numbers
@@ -517,44 +526,8 @@ const main = async () => {
     // handler so the reset page's own assets never look like leaving.
     appRouter.use(__passwordResetDraft.dropOnLeave);
     appRouter.use(authService.ensureAuthenticated);
-    appRouter.use(authService.ensureRouteAccess);
-    // BASE_URL, if nobody has set it, is how the first authenticated user
-    // reached the app. CSP's own-origin entries derive from it.
-    appRouter.use(firstRunService.seedBaseUrl(configStore));
-    // Bind the authenticated actor to async-local storage so the DB audit plugin
-    // can attribute writes (must run after auth populates req.session.user).
-    appRouter.use(__auditContextService.middleware);
-    appRouter.use(__logRequestDetailsService);
-    appRouter.use(__rateLimiterService);
-    // Maintenance/availability guard (friendly 503 when backing services restart mid-operation)
-    appRouter.use(maintenance);
-    // Session activity tracking (after auth)
-    appRouter.use(__sessionActivityService.touchSessionActivity);
-    appRouter.use(__sessionActivityService.trackPageVisit);
-
-    // Admin-only debug route to inspect forwarded headers and connection security
-    appRouter.get('/__debug/headers', __authService.ensureRole('admin'), (req, res) => {
-      const { getClientIp } = __ipService;
-      res.json({
-        secure: req.secure,
-        protocol: req.protocol,
-        ip: req.ip,
-        clientIp: getClientIp(req),
-        ips: req.ips,
-        headers: {
-          host: req.headers['host'],
-          'x-forwarded-for': req.headers['x-forwarded-for'] || null,
-          'x-forwarded-proto': req.headers['x-forwarded-proto'] || null,
-          'x-forwarded-host': req.headers['x-forwarded-host'] || null,
-          'x-real-ip': req.headers['x-real-ip'] || null,
-          'cf-connecting-ip': req.headers['cf-connecting-ip'] || null,
-          'x-csrf-token': req.headers['x-csrf-token'] || null,
-          'x-xsrf-token': req.headers['x-xsrf-token'] || null,
-        },
-      });
-    });
-
-    // Attach user info to templates
+    // Attach user info to templates. Before ensureRouteAccess: its 403 renders
+    // the error page, whose layout reads these (the footer's version, the nav).
     appRouter.use((req, res, next) => {
       res.locals.currentPath = req.path;
       res.locals.navActive = (href) =>
@@ -628,6 +601,43 @@ const main = async () => {
       res.locals.copyrightyear = new Date().getFullYear();
       next();
     });
+    appRouter.use(authService.ensureRouteAccess);
+    // BASE_URL, if nobody has set it, is how the first authenticated user
+    // reached the app. CSP's own-origin entries derive from it.
+    appRouter.use(firstRunService.seedBaseUrl(configStore));
+    // Bind the authenticated actor to async-local storage so the DB audit plugin
+    // can attribute writes (must run after auth populates req.session.user).
+    appRouter.use(__auditContextService.middleware);
+    appRouter.use(__logRequestDetailsService);
+    appRouter.use(__rateLimiterService);
+    // Maintenance/availability guard (friendly 503 when backing services restart mid-operation)
+    appRouter.use(maintenance);
+    // Session activity tracking (after auth)
+    appRouter.use(__sessionActivityService.touchSessionActivity);
+    appRouter.use(__sessionActivityService.trackPageVisit);
+
+    // Admin-only debug route to inspect forwarded headers and connection security
+    appRouter.get('/__debug/headers', __authService.ensureRole('admin'), (req, res) => {
+      const { getClientIp } = __ipService;
+      res.json({
+        secure: req.secure,
+        protocol: req.protocol,
+        ip: req.ip,
+        clientIp: getClientIp(req),
+        ips: req.ips,
+        headers: {
+          host: req.headers['host'],
+          'x-forwarded-for': req.headers['x-forwarded-for'] || null,
+          'x-forwarded-proto': req.headers['x-forwarded-proto'] || null,
+          'x-forwarded-host': req.headers['x-forwarded-host'] || null,
+          'x-real-ip': req.headers['x-real-ip'] || null,
+          'cf-connecting-ip': req.headers['cf-connecting-ip'] || null,
+          'x-csrf-token': req.headers['x-csrf-token'] || null,
+          'x-xsrf-token': req.headers['x-xsrf-token'] || null,
+        },
+      });
+    });
+
 
     // This person's navigation style and pinned list, and their page width
     // (their own choice, else the company default). One indexed read each per

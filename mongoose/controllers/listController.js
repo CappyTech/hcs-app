@@ -344,8 +344,14 @@ function countActiveFilters(req, filterConfigs) {
         // ── Data scoping: restrict results based on user role + linked entity ──
         if (req.user) {
           const ownerFilter = await scopeQuery(req, modelName, "l");
+          // null: own records only, but the user isn't linked to one (e.g. an
+          // employee user with no Employee record). Was a missing view → 500.
           if (ownerFilter === null) {
-            return res.status(403).render(path.join("mongoose", "error"));
+            return next({
+              statusCode: 403,
+              name: "ForbiddenError",
+              message: "You do not have permission to view this list.",
+            });
           }
           if (Object.keys(ownerFilter).length > 0) {
             if (Object.keys(mongoFilter).length > 0) {
