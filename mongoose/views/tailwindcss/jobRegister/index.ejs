@@ -36,11 +36,14 @@
     ['all', 'All'], ...stages.map((s) => [s, stageLabels[s]]),
     ['unmatched', 'Not in KashFlow yet'], ['differs', "Doesn't match KashFlow"],
   ];
-  // One KashFlow check: tick, missing or differs, e.g. "Quote 51234" (numbers only, so no escaping needed)
+  // One KashFlow check: tick, converted, missing, deleted or differs, e.g. "Quote 51234" (numbers only, so no escaping needed)
   const sideBadge = (s, what) => {
     if (s.state === 'none') return '';
     const name = s.number != null ? `${what} ${Number(s.number)}` : what;
     if (s.state === 'ok') return `<span class="inline-flex items-center gap-1 text-green-700 dark:text-green-400" title="${name} is in KashFlow and agrees"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>${name}</span>`;
+    if (s.state === 'converted') return `<span class="inline-flex items-center gap-1 text-green-700 dark:text-green-400" title="Converted to invoice ${Number(s.invoice.number)} in KashFlow"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>${name} → Invoice ${Number(s.invoice.number)}</span>`;
+    if (s.state === 'missing' && s.deleted) return `<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400" title="${name} was deleted in KashFlow, and no invoice it could have become was found"><i class="bi bi-trash" aria-hidden="true"></i>${name} deleted</span>`;
+    if (s.state === 'missing' && what === 'Quote') return `<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400" title="${name}: not in KashFlow (not entered yet, deleted, or converted before it was synced)"><i class="bi bi-hourglass-split" aria-hidden="true"></i>${name}</span>`;
     if (s.state === 'missing') return `<span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400" title="${name} isn't in KashFlow yet"><i class="bi bi-hourglass-split" aria-hidden="true"></i>${name}</span>`;
     return `<span class="inline-flex items-center gap-1 text-red-700 dark:text-red-400" title="${s.issues.join('; ').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>${name}</span>`;
   };
@@ -276,8 +279,8 @@
                 <% [match.project, ...match.quotes, ...match.invoices].flatMap((s) => s.issues).forEach((issue) => { %>
                   <p class="text-red-700 dark:text-red-400 whitespace-normal mt-0.5"><%= issue %></p>
                 <% }) %>
-                <% if (match.extras) { [...match.extras.quotes.map((r) => `Quote ${r.Number}`), ...match.extras.invoices.map((r) => `Invoice ${r.Number}`)].forEach((name) => { %>
-                  <p class="text-red-700 dark:text-red-400 whitespace-normal mt-0.5"><%= name %> is on this job in KashFlow, not here</p>
+                <% if (match.extras) { [...match.extras.quotes.map((r) => [`Quote ${r.Number}`, '']), ...match.extras.invoices.map((r) => [`Invoice ${r.Number}`, r.fromQuote != null ? ` (quote ${r.fromQuote} became it)` : ''])].forEach(([name, from]) => { %>
+                  <p class="text-red-700 dark:text-red-400 whitespace-normal mt-0.5"><%= name %> is on this job in KashFlow, not here<%= from %></p>
                 <% }) } %>
               </td>
             </tr>
@@ -289,7 +292,9 @@
     <% }) %>
     <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 flex flex-wrap gap-4">
       <span><i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i> In KashFlow and agrees</span>
-      <span><i class="bi bi-hourglass-split text-amber-600" aria-hidden="true"></i> Not in KashFlow yet (or not synced)</span>
+      <span><i class="bi bi-check-circle-fill text-green-600" aria-hidden="true"></i> Quote → Invoice: converted to that invoice in KashFlow</span>
+      <span><i class="bi bi-hourglass-split text-amber-600" aria-hidden="true"></i> Not in KashFlow yet (or not synced; a quote may have been deleted, or converted before it was synced)</span>
+      <span><i class="bi bi-trash text-amber-600" aria-hidden="true"></i> Deleted in KashFlow, no invoice found for it</span>
       <span><i class="bi bi-exclamation-triangle-fill text-red-600" aria-hidden="true"></i> In KashFlow but differs</span>
     </p>
   <% } %>

@@ -17,6 +17,10 @@
 // it's taken by the same customer, it's most likely this job entered by hand
 // and not synced yet, so nothing is created.
 //
+// A quote that has gone from KashFlow because it was converted to an invoice
+// (KashFlow deletes the quote), or that was deleted there, is never created
+// again: quoteGoneReason checks the synced copy first.
+//
 // The helpers above "KashFlow calls" are pure, so the form handling and the
 // payloads can be tested without a database or KashFlow.
 import mdb from './mongooseDatabaseService.js';
@@ -24,7 +28,7 @@ import logger from '../../services/loggerService.js';
 import kfSession from '../../services/kashflowSessionService.js';
 import hcsSyncService from './hcsSyncService.js';
 import configService from '../../services/configService.js';
-import { ukToday } from './jobRegisterService.js';
+import { ukToday, goneFromKashflow, goneReason } from './jobRegisterService.js';
 
 export const VAT_CHOICES = [
   { value: '20', label: '20%', level: 20 },
@@ -239,6 +243,22 @@ export function kfError(err) {
 
 // ── Database ────────────────────────────────────────────────────────────
 
+/**
+ * Why this quote mustn't be created in KashFlow (again): it was converted to
+ * an invoice or deleted there (jobRegisterService.goneFromKashflow), or null.
+ * Null too when the synced copy can't be read: KashFlow's own number check
+ * still runs.
+ */
+export async function quoteGoneReason(entry, quote) {
+  if (!entry || quote?.number == null || !mdb.REST?.quote || !mdb.REST?.invoice) return null;
+  try {
+    return goneReason(quote, await goneFromKashflow(entry, quote));
+  } catch (err) {
+    logger.warn(`[jobRegisterKashflow] Couldn't check whether quote ${quote.number} was converted or deleted in KashFlow: ${err.message}`);
+    return null;
+  }
+}
+
 // Where each kind keeps its "sent" and "sending" marks and its number: the
 // project on the job, a quote on its element of quotes[] (positional $)
 const SENT = { quote: 'quotes.$.sentAt', project: 'projectSentAt' };
@@ -280,6 +300,10 @@ async function create(uuid, kind, makePayload, quoteId = null) {
   const quote = kind === 'quote' ? findQuote(current, quoteId) : null;
   const why = cannotCreate(current, kind, quote);
   if (why) throw Object.assign(new Error(why), { status: current && (kind !== 'quote' || quote) ? 400 : 404 });
+  if (kind === 'quote') {
+    const gone = await quoteGoneReason(current, quote);
+    if (gone) throw Object.assign(new Error(gone), { status: 400, code: 'gone' });
+  }
 
   const job = await claim(uuid, kind, quote?._id);
   if (!job) throw Object.assign(new Error(`The ${LABEL[kind]} is already being created in KashFlow. Wait a moment and reload.`), { status: 400 });
@@ -446,6 +470,8 @@ export async function autoCreateQuote(job, quote) {
     const why = autoQuoteSkip(current, q);
     if (why) return skip(`quote ${n ?? '(no number)'}`, why);
     if (await synced('quote', q.number)) return skip(`quote ${q.number}`, 'it is already in KashFlow');
+    const gone = await quoteGoneReason(current, q);
+    if (gone) return skip(`quote ${q.number}`, gone);
 
     const { defaultCode } = await nominalChoices();
     if (defaultCode == null) {
@@ -456,6 +482,7 @@ export async function autoCreateQuote(job, quote) {
     return { notices: [createdNotice('Quote', r)], result: r };
   } catch (err) {
     if (err.code === 'exists') return skip(`quote ${n}`, 'it is already in KashFlow for this client');
+    if (err.code === 'gone') return skip(`quote ${n}`, err.message);
     logger.warn(`[jobRegisterKashflow] Automatic create of quote ${n} failed: ${err.message}`);
     return { notices: [{ type: 'error', text: `Quote ${n} was saved but not created in KashFlow: ${reasonOf(err)} Use Create quote to try again.` }] };
   }
@@ -559,6 +586,6 @@ export async function autoJobWon(job) {
 
 export default {
   VAT_CHOICES, lineText, findQuote, quoteFormDefaults, parseQuoteForm, quoteTotals, buildQuotePayload, buildProjectPayload,
-  numberPlan, cannotCreate, kfError, createQuote, createProject, nominalChoices, createdNotice,
+  numberPlan, cannotCreate, quoteGoneReason, kfError, createQuote, createProject, nominalChoices, createdNotice,
   autoEnabled, autoQuoteSkip, autoCreateQuote, quoteUpdatePayload, autoJobWon,
 };
