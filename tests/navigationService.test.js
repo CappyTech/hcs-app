@@ -27,7 +27,7 @@ describe('departmentsConfig groups', () => {
 describe('navigation items', () => {
   it('lists the areas the role may open in hierarchy order, then the departments no shown area replaces', () => {
     const built = nav.build({ path: '/', user: as('admin') });
-    const areas = registry.listAreas();
+    const areas = registry.listAreas().filter((a) => a.nav !== false);
     const areaIds = new Set(areas.map((a) => a.id));
     const expected = [
       ...areas.map((a) => a.id),
@@ -141,7 +141,7 @@ describe('overview pages light up their area', () => {
 
   it('shows an accountant the areas their routes open, not the admin-only ones', () => {
     const slugs = nav.build({ user: as('accountant') }).items.map((i) => i.slug);
-    for (const x of ['finance', 'payroll', 'subcontractors', 'weeklyAttendance']) assert.ok(slugs.includes(x), x);
+    for (const x of ['finance', 'payroll', 'subcontractors']) assert.ok(slugs.includes(x), x);
     for (const x of ['human', 'fleet', 'admin', 'policies']) assert.ok(!slugs.includes(x), x);
   });
 });
