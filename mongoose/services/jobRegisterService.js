@@ -134,25 +134,87 @@ const differsBy = (a, b) => a != null && b != null && Math.abs(Number(a) - Numbe
 const money2 = (v) => `£${Number(v).toFixed(2)}`;
 
 /**
- * The issue when a KashFlow quote or invoice isn't on the job's project:
- * "Quote 51234 isn't on job 41012 in KashFlow (it's on job 41000)", or
- * "... isn't on a job in KashFlow". None for an enquiry (no project number
- * yet) or when it is on the job. Pure.
+ * The projects a KashFlow quote or invoice is on: its header's ProjectNumber,
+ * then its lines' (KashFlow often puts an invoice's job on its lines only),
+ * in order, without repeats or 0. Pure.
+ */
+export function projectsOf(record) {
+  const lines = Array.isArray(record?.LineItems) ? record.LineItems.map((l) => l?.ProjectNumber) : [];
+  return [...new Set([record?.ProjectNumber, ...lines].map(Number).filter((n) => Number.isFinite(n) && n > 0))];
+}
+
+/**
+ * The issue when a KashFlow quote or invoice isn't on the job's project, on
+ * its header or any line (touchesProject): "Quote 51234 isn't on job 41012 in
+ * KashFlow (it's on job 41000)", or "... isn't on a job in KashFlow". None
+ * for an enquiry (no project number yet) or when it is on the job. Pure.
  */
 export function jobIssue(what, number, job, record) {
   if (job?.projectNumber == null || !record) return [];
-  const on = Number(record.ProjectNumber) || null;
-  if (on === Number(job.projectNumber)) return [];
+  if (touchesProject(record, job.projectNumber)) return [];
+  const on = projectsOf(record);
   const name = `${what} ${number}`;
-  return on
-    ? [`${name} isn't on job ${job.projectNumber} in KashFlow (it's on job ${on})`]
+  return on.length
+    ? [`${name} isn't on job ${job.projectNumber} in KashFlow (it's on job ${on.join(', ')})`]
     : [`${name} isn't on a job in KashFlow`];
 }
 
 /**
+ * A KashFlow invoice's net value on project `pn`: its NetAmount, unless its
+ * lines are split across projects, when it's the net (Quantity × Rate) of the
+ * lines on `pn`. Falls back to NetAmount when a line on `pn` has no quantity
+ * or rate. Pure.
+ */
+export function netOnProject(r, pn) {
+  if (!r || r.NetAmount == null) return r?.NetAmount ?? null;
+  const n = Number(pn);
+  const lines = Array.isArray(r.LineItems) ? r.LineItems.filter(Boolean) : [];
+  const split = projectsOf(r).some((x) => x !== n);
+  if (!split) return r.NetAmount;
+  const mine = lines.filter((l) => Number(l.ProjectNumber) === n);
+  if (!mine.length || mine.some((l) => !Number.isFinite(Number(l.Quantity)) || !Number.isFinite(Number(l.Rate)) || l.Quantity == null || l.Rate == null)) return r.NetAmount;
+  return round2(mine.reduce((t, l) => t + Number(l.Quantity) * Number(l.Rate), 0));
+}
+
+/**
+ * "Client in KashFlow is Other Ltd" when a KashFlow record's customer isn't
+ * the job's: by customer code where both have one, else by name (clientKey).
+ * None when the record names no customer. Pure.
+ */
+export function clientIssue(job, r) {
+  if (!r) return [];
+  if (job?.customerCode && r.CustomerCode) {
+    return String(r.CustomerCode).trim().toUpperCase() !== String(job.customerCode).trim().toUpperCase()
+      ? [`Client in KashFlow is ${r.CustomerName || r.CustomerCode}`] : [];
+  }
+  return r.CustomerName && clientKey(r.CustomerName) !== clientKey(job?.client) ? [`Client in KashFlow is ${r.CustomerName}`] : [];
+}
+
+// The words of a site or project name worth comparing: numbers, and words of three letters or more
+const nameWords = (s) => new Set((String(s ?? '').toLowerCase().match(/[a-z0-9]+/g) || []).filter((w) => /\d/.test(w) || w.length >= 3));
+
+/**
+ * "Name in KashFlow is Test Job" when the KashFlow project's name shares no
+ * word with the job's site: a project number used for another job. Lenient,
+ * since KashFlow names are typed by hand ("Dale Court" agrees with "9-16 Dale
+ * Court, Middlewich"). None when either has no name. Pure.
+ */
+export function projectNameIssue(job, r) {
+  const site = nameWords(job?.site);
+  const name = nameWords(r?.Name);
+  if (!site.size || !name.size) return [];
+  for (const w of name) if (site.has(w)) return [];
+  return [`Name in KashFlow is ${r.Name}`];
+}
+
+/**
  * The synced KashFlow quotes and invoices on the job's project that aren't
- * on the job here. `onJob` is { quotes, invoices }: REST records whose
- * ProjectNumber is the job's (any others, and deleted ones, are ignored). None for an enquiry. Pure.
+ * on the job here. `onJob` is { quotes, invoices }: REST records with the
+ * job's ProjectNumber on the header or a line (any others, and deleted ones,
+ * are ignored). An invoice split across projects has NetOnJob, its lines' net
+ * on this job (netOnProject). One
+ * for a different client has otherClient (its client issue): it can't be
+ * added. None for an enquiry. Pure.
  */
 export function kashflowExtras(job, { quotes = [], invoices = [] } = {}) {
   if (job?.projectNumber == null) return { quotes: [], invoices: [] };
@@ -160,13 +222,25 @@ export function kashflowExtras(job, { quotes = [], invoices = [] } = {}) {
   const mine = (list, have) => {
     const seen = new Set(have);
     return (list || []).filter((r) => {
-      if (r?.Number == null || Number(r.ProjectNumber) !== pn || seen.has(Number(r.Number)) || isDeleted(r)) return false;
+      if (r?.Number == null || !touchesProject(r, pn) || seen.has(Number(r.Number)) || isDeleted(r)) return false;
       seen.add(Number(r.Number));
       return true;
-    }).sort((a, b) => Number(a.Number) - Number(b.Number));
+    }).sort((a, b) => Number(a.Number) - Number(b.Number)).map((r) => withClient(job, withNetOnJob(r, pn)));
   };
   return { quotes: mine(quotes, quoteNumbersOf(job)), invoices: mine(invoices, invoiceNumbersOf(job)) };
 }
+
+// An invoice split across projects, with NetOnJob: its net on this job
+const withNetOnJob = (r, pn) => {
+  const net = netOnProject(r, pn);
+  return net != null && r.NetAmount != null && Math.abs(Number(net) - Number(r.NetAmount)) > VALUE_TOLERANCE ? { ...r, NetOnJob: net } : r;
+};
+
+// An extra with otherClient when it's for a different client
+const withClient = (job, r) => {
+  const issue = clientIssue(job, r)[0];
+  return issue ? { ...r, otherClient: issue } : r;
+};
 
 /**
  * Is a synced KashFlow record deleted? hcs-sync marks a record that has gone
@@ -306,14 +380,7 @@ export function matchJob(job, { project = null, quotesByNumber = new Map(), invo
     const issues = check(record);
     return { ...base, state: issues.length ? 'differs' : 'ok', record, issues };
   };
-  // By customer code where both have one, else by name
-  const clientIssue = (r) => {
-    if (job.customerCode && r.CustomerCode) {
-      return String(r.CustomerCode).trim().toUpperCase() !== String(job.customerCode).trim().toUpperCase()
-        ? [`Client in KashFlow is ${r.CustomerName || r.CustomerCode}`] : [];
-    }
-    return r.CustomerName && clientKey(r.CustomerName) !== clientKey(job.client) ? [`Client in KashFlow is ${r.CustomerName}`] : [];
-  };
+  const clientOf = (r) => clientIssue(job, r);
   const get = (map, n) => (n != null ? map.get(Number(n)) || null : null);
 
   const ownInvoices = invoicesOf(job).map((i) => get(invoicesByNumber, i.number)).filter(Boolean);
@@ -334,14 +401,14 @@ export function matchJob(job, { project = null, quotesByNumber = new Map(), invo
     return { ...side(q.number, record, (r) => [
       ...jobIssue('Quote', q.number, job, r),
       ...(differsBy(q.value, r.NetAmount) ? [`Value in KashFlow is ${money2(r.NetAmount)}`] : []),
-      ...clientIssue(r),
+      ...clientOf(r),
     ], q._id), deleted };
   });
-  const p = side(job.projectNumber, project, (r) => clientIssue(r));
+  const p = side(job.projectNumber, project, (r) => [...projectNameIssue(job, r), ...clientOf(r)]);
   const invoices = invoicesOf(job).map((i) => side(i.number, get(invoicesByNumber, i.number), (r) => [
     ...jobIssue('Invoice', i.number, job, r),
-    ...(differsBy(i.value, r.NetAmount) ? [`Value in KashFlow is ${money2(r.NetAmount)}`] : []),
-    ...clientIssue(r),
+    ...(differsBy(i.value, netOnProject(r, job.projectNumber ?? r.ProjectNumber)) ? [`Value in KashFlow is ${money2(netOnProject(r, job.projectNumber ?? r.ProjectNumber))}`] : []),
+    ...clientOf(r),
   ], i._id));
   const extras = kashflowExtras(job, onJob);
   // A converted invoice not on the job here: in extras, saying which quote it was
@@ -351,7 +418,7 @@ export function matchJob(job, { project = null, quotesByNumber = new Map(), invo
       const at = extras.invoices.findIndex((r) => Number(r.Number) === s.invoice.number);
       const inv = candidates.find((r) => Number(r?.Number) === s.invoice.number);
       if (at >= 0) extras.invoices[at] = { ...extras.invoices[at], fromQuote: Number(s.number) };
-      else if (inv) extras.invoices.push({ ...inv, fromQuote: Number(s.number) });
+      else if (inv) extras.invoices.push({ ...withClient(job, withNetOnJob(inv, job.projectNumber)), fromQuote: Number(s.number) });
     }
     extras.invoices.sort((a, b) => Number(a.Number) - Number(b.Number));
   }
@@ -423,7 +490,7 @@ export function buildRegister({ entries, quotesByNumber, projectsByNumber, invoi
       quotesByNumber,
       invoicesByNumber,
       onJob: e.projectNumber != null
-        ? { quotes: quotesByProject.get(Number(e.projectNumber)) || [], invoices: invoicesByProject.get(Number(e.projectNumber)) || [] }
+        ? { quotes: quotesByProject.get(Number(e.projectNumber)) || [], invoices: (invoicesTouching || invoicesByProject).get(Number(e.projectNumber)) || [] }
         : {},
       invoiceCandidates: e.projectNumber != null
         ? (invoicesTouching || invoicesByProject).get(Number(e.projectNumber)) || []
@@ -578,7 +645,7 @@ function combineNext({ entries, kf, topQuote, topProject }) {
 
 const byNumber = (docs) => new Map(docs.map((d) => [Number(d.Number), d]));
 const QUOTE_FIELDS = 'uuid Number Date CustomerName CustomerCode NetAmount Status ProjectNumber LineItems.Description deletedAt DeletedAt';
-const INVOICE_FIELDS = 'uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status LineItems.ProjectNumber LineItems.Description deletedAt DeletedAt';
+const INVOICE_FIELDS = 'uuid Number IssuedDate CustomerName CustomerCode NetAmount ProjectNumber Status LineItems.ProjectNumber LineItems.Description LineItems.Quantity LineItems.Rate deletedAt DeletedAt';
 // Not deleted in KashFlow (see isDeleted)
 const NOT_DELETED = { $nor: [{ DeletedAt: { $type: 'date' } }, { deletedAt: { $type: 'date' } }] };
 
@@ -722,7 +789,7 @@ export async function loadJob(uuid) {
     mdb.INTERNAL.jobRegister.find({}).select('uuid projectNumber quotes.number invoices.number').lean(),
     kashflowNextNumbers(),
   ]);
-  const onJob = { quotes: byProject(quotes).get(onProject[0]) || [], invoices: byProject(invoices).get(onProject[0]) || [] };
+  const onJob = { quotes: byProject(quotes).get(onProject[0]) || [], invoices: byProjectOrLine(invoices).get(onProject[0]) || [] };
   const quotesByNumber = byNumber(quotes);
   const invoiceCandidates = onProject.length
     ? byProjectOrLine(invoices).get(onProject[0]) || []
@@ -1184,7 +1251,8 @@ export async function removeInvoice(uuid, id, notices = []) {
  * its number, date and net value from KashFlow (through addQuote /
  * addInvoice, so it's marked edited). A quote is won when the job already
  * has a won quote (so it counts in the agreed value), else quoted. Refuses
- * one that isn't on this job in KashFlow, or that another job here has.
+ * one that isn't on this job in KashFlow, one for a different client, or one
+ * that another job here has.
  * Returns { kind, job, quote | invoice }.
  */
 export async function addFromKashflow(uuid, body = {}) {
@@ -1201,9 +1269,11 @@ export async function addFromKashflow(uuid, body = {}) {
   const Model = kind === 'quote' ? mdb.REST.quote : mdb.REST.invoice;
   const record = await Model.findOne({ Number: number }).select(kind === 'quote' ? QUOTE_FIELDS : INVOICE_FIELDS).lean();
   if (!record) throw bad(`${Kind} ${number} isn't in the synced KashFlow records.`);
-  if (Number(record.ProjectNumber) !== Number(job.projectNumber)) {
+  if (!touchesProject(record, job.projectNumber)) {
     throw bad(jobIssue(Kind, number, job, record)[0] || `${Kind} ${number} isn't on job ${job.projectNumber} in KashFlow.`);
   }
+  const otherClient = clientIssue(job, record)[0];
+  if (otherClient) throw bad(`${Kind} ${number} is for a different client (${otherClient.replace(/^Client in KashFlow is /, '')}): fix it in KashFlow rather than add it here.`);
   const path = kind === 'quote' ? 'quotes.number' : 'invoices.number';
   const other = await mdb.INTERNAL.jobRegister.findOne({ [path]: number, uuid: { $ne: job.uuid } })
     .select('uuid projectNumber quotes.number').lean();
@@ -1211,7 +1281,8 @@ export async function addFromKashflow(uuid, body = {}) {
 
   const when = kind === 'quote' ? record.Date : record.IssuedDate;
   const date = when && !Number.isNaN(new Date(when).getTime()) ? ukToday(new Date(when)) : '';
-  const value = record.NetAmount != null && Number.isFinite(Number(record.NetAmount)) ? String(record.NetAmount) : '';
+  const net = kind === 'invoice' ? netOnProject(record, job.projectNumber) : record.NetAmount;
+  const value = net != null && Number.isFinite(Number(net)) ? String(net) : '';
   if (kind === 'quote') {
     const status = quotesOf(job).some((q) => q.status === 'won') ? 'won' : 'quoted';
     const r = await addQuote(job.uuid, { number: String(number), date, value, status }, { fromKashflow: true });
@@ -1305,7 +1376,7 @@ export default {
   parseNextAvailable, suggestNext, kashflowNextNumbers, formEcho, fillNext, ukToday,
   loadRegister, loadJob, createEntry, updateEntry, findEntry, contractChoices, customerChoices, jobsForAllocation,
   addQuote, updateQuote, removeQuote, addInvoice, updateInvoice, removeInvoice,
-  jobIssue, kashflowExtras, byProject, numbersOrProjects, markElsewhere, addFromKashflow,
+  jobIssue, projectsOf, netOnProject, clientIssue, projectNameIssue, kashflowExtras, byProject, numbersOrProjects, markElsewhere, addFromKashflow,
   isDeleted, sameCustomer, touchesProject, convertedCandidates, convertedInvoiceFor, matchConverted, byProjectOrLine,
   customerInvoiceQuery, goneFromKashflow, goneReason,
   OPEN_JOB_FILTER, isOpenJob, jobLabel, openJobs, projectIdsByNumber, jobTarget,
