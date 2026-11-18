@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.144.0] - 2026-11-18
+
+### Added
+- **Bulk delete on INTERNAL list pages.** Lists such as employees, vehicles, tasks, contracts, assignments, locations, users and attendance have a tick box on each row, a box to tick the whole page, and **Delete selected…**. That opens a page listing the ticked records and saying how many will be deleted; nothing is deleted until you confirm there.
+  - Anyone who can delete one record of that kind can delete several, and nobody else: it uses the same permission check as the single delete.
+  - Each record is deleted just as a single delete does it, and the audit log records every one.
+  - Up to 100 records at a time. Your own user account is never deleted, even if ticked.
+  - It isn't offered for KashFlow (REST) or Paperless records, nor for the audit log, sessions or API logs.
+
 ## [6.143.1] - 2026-11-18
 
 ### Fixed
