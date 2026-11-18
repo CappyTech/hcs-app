@@ -190,7 +190,7 @@
   <% if (extraRows.length) { %>
     <div id="kashflow-extras" class="rounded-2xl border p-4 mb-6 scroll-mt-20 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20">
       <h2 class="<%= h2 %> mb-1">In KashFlow on this job, not here</h2>
-      <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">These are on job <span class="font-mono"><%= job.projectNumber %></span> in KashFlow but not on this job in the register.<% if (canEdit) { %> Add to job puts each one here with its number, date and net value from KashFlow.<% } %></p>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">These are on job <span class="font-mono"><%= job.projectNumber %></span> in KashFlow but not on this job in the register.<% if (canEdit) { %> Add to job puts each one here with its number, date and net value from KashFlow (for an invoice split across jobs, the lines on this one).<% } %><% if (extraRows.some((x) => x.r.otherClient)) { %> One for a different client is on the wrong project in KashFlow: move or remove it there.<% } %></p>
       <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm bg-white dark:bg-gray-900">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
           <thead class="bg-gray-50 dark:bg-gray-800">
@@ -204,11 +204,13 @@
               <tr>
                 <td class="<%= td %> whitespace-nowrap"><%= x.Kind %> <span class="font-mono text-xs"><%= x.r.Number %></span><% if (x.r.uuid) { %> <a href="<%= x.href %>" class="text-xs text-green-700 dark:text-green-400 hover:underline">Open</a><% } %><% if (x.r.fromQuote != null) { %><p class="text-xs text-gray-600 dark:text-gray-400">Quote <%= x.r.fromQuote %> became this invoice</p><% } %></td>
                 <td class="<%= td %> whitespace-nowrap"><%= fmt(x.date) %></td>
-                <td class="<%= td %>"><%= x.r.CustomerName || '' %></td>
-                <td class="<%= td %> text-right whitespace-nowrap"><%= money(x.r.NetAmount) %></td>
+                <td class="<%= td %>"><%= x.r.CustomerName || '' %><% if (x.r.otherClient) { %><p class="text-xs text-red-700 dark:text-red-400"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Not <%= job.client %></p><% } %></td>
+                <td class="<%= td %> text-right whitespace-nowrap"><% if (x.r.NetOnJob != null) { %><%= money(x.r.NetOnJob) %><p class="text-xs text-gray-600 dark:text-gray-400">of <%= money(x.r.NetAmount) %>, split across jobs</p><% } else { %><%= money(x.r.NetAmount) %><% } %></td>
                 <td class="<%= td %> text-right">
                   <% if (x.r.elsewhere) { %>
                     <span class="text-xs text-gray-600 dark:text-gray-400">On <a href="/job-register/<%= x.r.elsewhere.uuid %>" class="text-green-700 dark:text-green-400 hover:underline"><%= x.r.elsewhere.title.toLowerCase() %></a> here</span>
+                  <% } else if (x.r.otherClient) { %>
+                    <span class="text-xs text-gray-600 dark:text-gray-400">Different client: fix it in KashFlow</span>
                   <% } else if (canEdit) { %>
                     <form method="POST" action="/job-register/<%= job.uuid %>/kashflow-add" class="inline">
                       <%- include('../partials/csrfHidden') %>

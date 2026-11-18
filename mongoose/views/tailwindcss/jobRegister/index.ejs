@@ -279,7 +279,7 @@
                 <% [match.project, ...match.quotes, ...match.invoices].flatMap((s) => s.issues).forEach((issue) => { %>
                   <p class="text-red-700 dark:text-red-400 whitespace-normal mt-0.5"><%= issue %></p>
                 <% }) %>
-                <% if (match.extras) { [...match.extras.quotes.map((r) => [`Quote ${r.Number}`, '']), ...match.extras.invoices.map((r) => [`Invoice ${r.Number}`, r.fromQuote != null ? ` (quote ${r.fromQuote} became it)` : ''])].forEach(([name, from]) => { %>
+                <% if (match.extras) { [...match.extras.quotes.map((r) => [`Quote ${r.Number}`, r.otherClient ? ` (for ${r.CustomerName || r.CustomerCode}, a different client)` : '']), ...match.extras.invoices.map((r) => [`Invoice ${r.Number}`, r.fromQuote != null ? ` (quote ${r.fromQuote} became it)` : r.otherClient ? ` (for ${r.CustomerName || r.CustomerCode}, a different client)` : ''])].forEach(([name, from]) => { %>
                   <p class="text-red-700 dark:text-red-400 whitespace-normal mt-0.5"><%= name %> is on this job in KashFlow, not here<%= from %></p>
                 <% }) } %>
               </td>
