@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.140.0] - 2026-11-18
+
+### Added
+- **The Admin overview (`/overview/admin`) links to the admin dashboard and its most-used tools:** Admin dashboard (`/admin`), Configuration (`/admin/config`), Audit log (`/audit`), Security events (`/admin/security-events`) and Background jobs (`/admin/jobs`). Each button shows only to those who can open its page.
+
 ## [6.139.0] - 2026-11-18
 
 ### Added
