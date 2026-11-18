@@ -523,6 +523,22 @@ describe('OneDrive folders on quote, win and completion', () => {
     assert.equal(job('won').oneDriveFolderId, undefined);
   });
 
+  it('records a failed step and a folder found as security events, with the job', async () => {
+    const events = [];
+    mdb.INTERNAL.securityEvent = { create: async (doc) => { events.push(doc); return doc; } };
+    fakeOneDrive({ moveToLive: new Error('Graph says no'), findJobFolder: folder('F7', 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road') });
+    await lifecycle.onJobWon(job('won'));
+    await lifecycle.findFolder('won');
+    fakeOneDrive({ findJobFolder: new Error('Graph is down') });
+    await assert.rejects(lifecycle.findFolder('enq'));
+    await new Promise((r) => setImmediate(r));
+    assert.deepEqual(events.map((e) => [e.type, e.meta]), [
+      ['onedrive_folder_failed', { job: 'job 800201', jobUuid: 'won', step: 'moved to the live jobs folder', error: 'Graph says no' }],
+      ['onedrive_folder_linked', { job: 'job 800201', jobUuid: 'won', path: 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road', itemId: 'F7' }],
+      ['onedrive_folder_failed', { job: 'job enq', jobUuid: 'enq', step: 'found', error: 'Graph is down' }],
+    ]);
+  });
+
   it("keeps no link that isn't https", async () => {
     fakeOneDrive({ ensureQuoteFolder: { id: 'F9', webUrl: 'javascript:alert(1)', path: 'p' } });
     await lifecycle.onQuoteAdded(job('enq'), job('enq').quotes[0]);

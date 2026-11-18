@@ -498,3 +498,73 @@ describe('the OneDrive config group', () => {
     assert.match(flashed[0][1], /HTTP 403 accessDenied\): Either scp or roles claim.*Files\.ReadWrite\.All with admin consent\.$/);
   });
 });
+
+// ── Security events ─────────────────────────────────────────────────────────
+
+const mdb = (await import('../mongoose/services/mongooseDatabaseService.js')).default;
+const auditContext = (await import('../mongoose/services/auditContextService.js')).default;
+
+describe('security events', () => {
+  let savedInternal;
+  let events;
+  const settle = () => new Promise((r) => setImmediate(r));
+  beforeEach(() => {
+    savedInternal = mdb.INTERNAL;
+    events = [];
+    mdb.INTERNAL = { ...(mdb.INTERNAL || {}), securityEvent: { create: async (doc) => { events.push(doc); return doc; } } };
+    configure();
+    drive.add('Jobs & Quotes');
+  });
+  afterEach(() => { mdb.INTERNAL = savedInternal; });
+  const ofType = (t) => events.filter((e) => e.type === t);
+
+  it('records each folder created, with who did it', async () => {
+    const actor = { actorId: null, actorName: 'tester', actorEmail: '', ip: '10.0.0.1', method: 'POST', route: '/job-register/x' };
+    await auditContext.runAs(actor, () => svc.ensureQuoteFolder({ quoteNumber: 51761, site: '3 Centre Court', quoteDate: '2026-03-04' }));
+    await settle();
+    assert.deepEqual(ofType('onedrive_folder_created').map((e) => e.meta.path), [
+      'Jobs & Quotes/3. QUOTES 2026',
+      'Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court',
+    ]);
+    const e = ofType('onedrive_folder_created')[1];
+    assert.equal(e.actorName, 'tester');
+    assert.equal(e.ip, '10.0.0.1');
+    assert.equal(e.meta.owner, OWNER);
+    assert.ok(e.meta.itemId);
+  });
+
+  it('records nothing when a folder is already there', async () => {
+    drive.add('Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court');
+    await svc.ensureQuoteFolder({ quoteNumber: 51761, site: '3 Centre Court', quoteDate: '2026-03-04' });
+    await settle();
+    assert.deepEqual(events, []);
+  });
+
+  it('records each move, from and to', async () => {
+    const q = drive.add('Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court');
+    await svc.moveToLive({ quoteNumber: 51761, projectNumber: 41296, site: '3 Centre Court', quoteDate: '2026-03-04', wonDate: '2026-05-06' });
+    await svc.moveToCompleted({ projectNumber: 41296, site: '3 Centre Court', wonDate: '2026-05-06' });
+    await settle();
+    assert.deepEqual(ofType('onedrive_folder_moved').map((e) => e.meta), [
+      { owner: OWNER, from: 'Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court', to: 'Jobs & Quotes/1.1 LIVE JOBS 2026/41296 3 Centre Court', itemId: q.id, step: 'won' },
+      { owner: OWNER, from: 'Jobs & Quotes/1.1 LIVE JOBS 2026/41296 3 Centre Court', to: 'Jobs & Quotes/1.1 LIVE JOBS 2026/Completed Jobs/41296 3 Centre Court', itemId: q.id, step: 'completed' },
+    ]);
+    // The year and Completed Jobs folders made on the way are recorded too
+    assert.deepEqual(ofType('onedrive_folder_created').map((e) => e.meta.path), [
+      'Jobs & Quotes/1.1 LIVE JOBS 2026',
+      'Jobs & Quotes/1.1 LIVE JOBS 2026/Completed Jobs',
+    ]);
+  });
+
+  it('records each Test connection, passed or failed, never with the secret', async () => {
+    await svc.testConnection();
+    process.env.ONEDRIVE_ROOT_FOLDER = 'Missing';
+    await assert.rejects(svc.testConnection());
+    await settle();
+    const tests = ofType('onedrive_connection_tested');
+    assert.deepEqual(tests.map((e) => e.meta.ok), [true, false]);
+    assert.match(tests[0].meta.message, /^Found "Jobs & Quotes"/);
+    assert.match(tests[1].meta.error, /top folder "Missing" was not found/);
+    assert.ok(!JSON.stringify(events).includes(SECRET));
+  });
+});

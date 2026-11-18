@@ -2,6 +2,13 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.139.0] - 2026-11-18
+
+### Added
+- **What the app does in OneDrive is now in Admin → Security events.** Each folder it creates (including year folders and Completed Jobs) is an `onedrive_folder_created` event with its path, and each folder it moves is an `onedrive_folder_moved` event with where it moved from and to. A Find folder that links a job's folder is `onedrive_folder_linked`, a folder step that fails is `onedrive_folder_failed` (shown in red, with the job, the step and the error), and each Test connection is `onedrive_connection_tested`, passed or failed. Every event says who did it and from which IP address, and gives the OneDrive owner. The client secret is never recorded.
+
+### Changed
+- **Security events recorded deep inside a request now say who did it.** When the code recording an event has no request to hand, the user and IP address come from the request being served.
 ## [6.138.0] - 2026-11-18
 
 ### Added

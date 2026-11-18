@@ -43,6 +43,12 @@ const EVENT_TYPES = [
   'job_role_changed',
   'job_role_reset',
   'job_role_deleted',
+  // OneDrive job folders (oneDriveFolderService, jobRegisterLifecycleService)
+  'onedrive_folder_created',
+  'onedrive_folder_moved',
+  'onedrive_folder_linked',
+  'onedrive_folder_failed',
+  'onedrive_connection_tested',
 ];
 
 const securityEventSchema = new mongoose.Schema(
