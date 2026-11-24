@@ -33,6 +33,23 @@ export default {
   theme: {
     extend: {
       colors: {
+        // WCAG 2.2 AA contrast (1.4.3). Tailwind's default green-600 (#16a34a) is only
+        // 3.3:1 against white, and it is the app's accent for links, active nav and
+        // white-on-green buttons. Shift the accent one step darker so every existing
+        // green-600 / hover:green-700 pair passes 4.5:1 without touching templates.
+        green: {
+          600: '#15803d',
+          700: '#166534',
+          800: '#14532d'
+        },
+        // Gray-400 is used for light-mode helper text (2.5:1 on white) and dark:gray-500
+        // for dark-mode helper text (3.7:1 on gray-900). These two shades read their
+        // value from CSS variables in assets/tailwind.css so each mode gets a shade
+        // that passes 4.5:1, while dark:text-gray-400 keeps its original light value.
+        gray: {
+          400: 'rgb(var(--hcs-gray-400) / <alpha-value>)',
+          500: 'rgb(var(--hcs-gray-500) / <alpha-value>)'
+        },
         brand: {
           DEFAULT: '#047857',
           light: '#10b981',

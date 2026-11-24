@@ -174,8 +174,8 @@ Replace border/background with semantic colours:
 ## 7. Flash Messages
 
 **Do not render flash inline in views.** Flash partials are included once in `layout.ejs` and render globally as toast notifications:
-- Success: bottom-right, green, auto-dismiss 4 s
-- Error: top-right, red, auto-dismiss 5 s
+- Success: bottom-right, green, `role="status"`, auto-dismiss 8 s (paused while hovered or focused)
+- Error: top-right, red, `role="alert"`, stays until the user dismisses it (WCAG 2.2.1 / 4.1.3)
 
 In controllers, set flash before redirecting:
 ```js
@@ -292,6 +292,15 @@ Common icons: `bi-receipt`, `bi-people`, `bi-building`, `bi-cash-coin`, `bi-link
 ## 12. Colour System
 
 The brand accent is **green**. Use it for primary actions, active states, and positive indicators.
+
+**Accessibility (WCAG 2.2 AA).** `tailwind.config.js` remaps `green-600/700/800` one shade darker
+and reads `gray-400`/`gray-500` from CSS variables in `assets/tailwind.css`, so the classes below
+meet 4.5:1 text contrast in both themes. Keep using the class names as written; don't hard-code
+Tailwind's default hex values. Other rules every view follows:
+- Every input has a visible `<label for>` (or an `aria-label` when there's no room for one, such as a toolbar search box).
+- An icon-only link or button needs an `aria-label`. Icons (`<i class="bi …">`) are decorative: `ui-helpers.js` hides them from screen readers.
+- Mark the selected tab, chip, page or toggle with `aria-current`, and sorted `<th>` with `aria-sort`.
+- Don't remove the focus outline (`focus:outline-none`) without adding a `focus-visible:ring-*` in its place.
 
 | Role | Light | Dark |
 |------|-------|------|

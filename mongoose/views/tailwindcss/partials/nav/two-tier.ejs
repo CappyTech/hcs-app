@@ -13,7 +13,7 @@
   <%# Tier 1: utility bar %>
   <div class="border-b border-gray-200 dark:border-gray-700">
     <div class="max-w-7xl mx-auto flex items-center gap-2 px-2 sm:px-4 h-11">
-      <%- include('./_shared.ejs', { part: 'brand' }) %>
+      <%- include('./_shared.ejs', { part: 'brand', brandLabelClass: 'sr-only sm:not-sr-only' }) %>
       <div class="hidden sm:block flex-1 min-w-0 max-w-md mx-auto">
         <%- include('./_shared.ejs', { part: 'jump', jumpClass: 'w-full' }) %>
       </div>

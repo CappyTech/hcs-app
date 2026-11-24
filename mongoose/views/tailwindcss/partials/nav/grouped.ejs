@@ -16,7 +16,7 @@
      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400'); %>
 <nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm z-50 print:hidden" aria-label="Main navigation" data-nav-style="grouped">
   <div class="max-w-7xl mx-auto flex items-center gap-2 px-2 sm:px-4 h-14">
-    <%- include('./_shared.ejs', { part: 'brand' }) %>
+    <%- include('./_shared.ejs', { part: 'brand', brandLabelClass: 'sr-only sm:not-sr-only' }) %>
 
     <%# Desktop: Home + one menu per group %>
     <div class="hidden md:flex items-center gap-1 ml-2 flex-1 min-w-0" role="menubar" aria-label="Areas">

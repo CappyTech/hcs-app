@@ -116,13 +116,13 @@
           %>
           <a href="?<%= _csvParams.toString() %>" title="Download the current view as CSV"
              class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg shadow-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-            <i class="bi bi-download"></i> CSV
+            <i class="bi bi-download" aria-hidden="true"></i> CSV
           </a>
         </div>
         <div class="flex flex-wrap items-center gap-4">
       <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
         <!-- Pagination -->
-        <nav>
+        <nav aria-label="Pagination">
           <ul class="flex justify-center flex-wrap gap-2">
             <% const range = 2; %>
             <% for (let i = 1; i <= totalPages; i++) { %>
@@ -133,11 +133,11 @@
                      <%= i === page
                        ? 'bg-green-600 text-white border-green-600'
                        : 'bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400'
-                     %> transition">
+                     %> transition" <%- i === page ? 'aria-current="page"' : '' %> aria-label="Page <%= i %>">
                     <%= i %>
                   </a></li>
               <% } else if (i === page - range - 1 || i === page + range + 1) { %>
-                <li><span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">…</span></li>
+                <li aria-hidden="true"><span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">…</span></li>
               <% } %>
             <% } %>
           </ul>
@@ -164,8 +164,9 @@
           <input type="hidden" name="tab" value="<%= activeTab %>">
         <% } %>
 
-        <input type="text"
+        <input type="search"
               name="search"
+              aria-label="Search this list"
               placeholder="Search..."
               value="<%= typeof query === 'string' ? query : '' %>"
               class="text-sm border rounded-lg px-3 py-1.5 w-48 bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500">
@@ -176,13 +177,14 @@
         </button>
 
         <% if (typeof filters !== 'undefined' && Array.isArray(filters) && filters.some((f) => f.type !== 'ref')) { %>
-          <button type="button" id="filter-toggle"
+          <button type="button" id="filter-toggle" aria-controls="filter-panel"
+                  aria-expanded="<%= (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) ? 'true' : 'false' %>"
                   class="text-sm px-3 py-1.5 rounded-lg border transition inline-flex items-center gap-1.5
                          <%= (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) ? 'border-green-500 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:border-green-500 hover:text-green-700 dark:hover:text-green-400' %>">
-            <i class="bi bi-funnel<%= (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) ? '-fill' : '' %>"></i>
+            <i class="bi bi-funnel<%= (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) ? '-fill' : '' %>" aria-hidden="true"></i>
             Filters
             <% if (typeof activeFilterCount !== 'undefined' && activeFilterCount > 0) { %>
-              <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-600 text-white text-xs font-bold"><%= activeFilterCount %></span>
+              <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-600 text-white text-xs font-bold"><%= activeFilterCount %><span class="sr-only"> active</span></span>
             <% } %>
           </button>
         <% } %>
@@ -252,14 +254,14 @@
         </form>
       <% } %>
       <!-- Layout toggle -->
-      <div class="flex items-center gap-0.5 border border-gray-200 dark:border-gray-700 rounded-lg p-0.5 bg-white dark:bg-gray-800 shrink-0">
+      <div class="flex items-center gap-0.5 border border-gray-200 dark:border-gray-700 rounded-lg p-0.5 bg-white dark:bg-gray-800 shrink-0" role="group" aria-label="Layout">
         <% const _lqTable = '?' + new URLSearchParams({..._rq, layout: 'table', page: '1'}).toString(); %>
         <% const _lqRows  = '?' + new URLSearchParams({..._rq, layout: 'rows',  page: '1'}).toString(); %>
-        <a href="<%= _lqTable %>" title="Table view" class="flex items-center justify-center w-7 h-7 rounded transition <%= (!listLayout || listLayout === 'table') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
-          <i class="bi bi-table text-sm"></i>
+        <a href="<%= _lqTable %>" title="Table view" aria-label="Table view" <%- (!listLayout || listLayout === 'table') ? 'aria-current="true"' : '' %> class=""flex items-center justify-center w-7 h-7 rounded transition <%= (!listLayout || listLayout === 'table') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
+          <i class="bi bi-table text-sm" aria-hidden="true"></i>
         </a>
-        <a href="<%= _lqRows %>" title="List view" class="flex items-center justify-center w-7 h-7 rounded transition <%= (listLayout === 'rows') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
-          <i class="bi bi-list-ul text-sm"></i>
+        <a href="<%= _lqRows %>" title="List view" aria-label="List view" <%- (listLayout === 'rows') ? 'aria-current="true"' : '' %> class=""flex items-center justify-center w-7 h-7 rounded transition <%= (listLayout === 'rows') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
+          <i class="bi bi-list-ul text-sm" aria-hidden="true"></i>
         </a>
       </div>
     </div>
@@ -272,9 +274,9 @@
 
   <!-- Tab Buttons -->
   <% if (Array.isArray(tabs) && tabs.length > 0) { %>
-    <div class="mb-4 flex flex-wrap gap-2">
+    <nav class="mb-4 flex flex-wrap gap-2" aria-label="Filter by status">
       <% tabs.forEach(tab => { %>
-        <a href="?tab=<%= encodeURIComponent(tab.value) %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %><%= _lp %><%= _fqs %>"
+        <a <%- tab.isActive ? 'aria-current="page"' : '' %> href="?tab=<%= encodeURIComponent(tab.value) %>&limit=<%= limit %><%= query ? '&search=' + encodeURIComponent(query) : '' %><%= _lp %><%= _fqs %>"
            class="px-4 py-1.5 rounded-full text-sm font-medium border transition
                   <%= tab.isActive
                     ? 'bg-transparent text-green-600 border-green-600 shadow-sm dark:text-green-400 dark:border-green-400'
@@ -283,7 +285,7 @@
           <%= tab.label %>
         </a>
       <% }) %>
-    </div>
+    </nav>
   <% } %>
 
   <% if (!rows || rows.length === 0) { %>
@@ -319,7 +321,7 @@
         <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
           <tr>
             <% if (_bulk) { %>
-              <th class="w-8 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700">
+              <th scope="col" class="w-8 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700">
                 <input type="checkbox" x-bind="allBox" aria-label="Select every record on this page"
                        class="rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500">
               </th>
@@ -334,17 +336,17 @@
               const _sampleVal = rows.length ? rows[0][h.key] : undefined;
               const _sampleNum = (_sampleVal && _sampleVal._bsontype === 'Decimal128') ? parseFloat(_sampleVal.toString()) : _sampleVal;
               const _hIsNumeric = typeof _sampleNum === 'number' && !isNaN(_sampleNum) && !Array.isArray(_sampleNum);            %>
-              <th class="px-3 py-2.5 text-xs border-b border-gray-200 dark:border-gray-700 <%= _hIsNumeric ? 'text-right' : 'text-left' %> font-semibold uppercase tracking-wide">
+              <th scope="col" <%- isSorted ? `aria-sort="${isAsc ? 'ascending' : 'descending'}"` : '' %> class="px-3 py-2.5 text-xs border-b border-gray-200 dark:border-gray-700 <%= _hIsNumeric ? 'text-right' : 'text-left' %> font-semibold uppercase tracking-wide">
                 <a href="?<%= url.toString() %>" class="inline-flex items-center gap-1 hover:underline <%= _hIsNumeric ? 'justify-end w-full' : '' %>">
                   <span><%= h.label %></span>
                   <% if (isSorted) { %>
-                    <span><%= isAsc ? '▲' : '▼' %></span>
+                    <span aria-hidden="true"><%= isAsc ? '▲' : '▼' %></span>
                   <% } %>
                 </a>
               </th>
             <% }) %>
             <% if (hasActions) { %>
-              <th class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 font-semibold text-xs uppercase tracking-wide">Actions</th>
+              <th scope="col" class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 font-semibold text-xs uppercase tracking-wide">Actions</th>
             <% } %>
           </tr>
         </thead>
@@ -697,7 +699,8 @@
     const filterPanel  = document.getElementById('filter-panel');
     if (filterToggle && filterPanel) {
       filterToggle.addEventListener('click', () => {
-        filterPanel.classList.toggle('hidden');
+        const nowHidden = filterPanel.classList.toggle('hidden');
+        filterToggle.setAttribute('aria-expanded', nowHidden ? 'false' : 'true');
       });
     }
   });
