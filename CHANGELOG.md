@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.0] - 2026-11-24
+
+### Added
+- **Monthly CIS returns at a glance.** The CIS returns overview lists this tax month and the five before it, with each month's period, the date to submit by and how many days are left. Each month opens that month on the CIS dashboard.
+
+### Changed
+- **CIS is now an overview.** Opening CIS goes to the Construction Industry Scheme overview: subcontractors (active, not verified with HMRC, deducted at 30%) and the monthly returns, with buttons for the CIS dashboard, returns reports and editing CIS details. Subcontractors still see their own returns page as before.
+- **One CIS link in the menu.** The separate Subcontractors and CIS links are now a single CIS link. If you had CIS pinned, it stays pinned.
+
 ## [6.147.0] - 2026-11-24
 
 ### Added

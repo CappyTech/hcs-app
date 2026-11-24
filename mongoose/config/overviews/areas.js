@@ -65,12 +65,21 @@ export default [
     description: 'This payroll week: contracts, assignments, days worked and approval.',
   },
   {
-    id: 'subcontractors', group: 'money',
+    // The CIS overview. Its id and path are still 'subcontractors' (database
+    // changes and links are keyed on them); it stands in for the CIS
+    // department in the navigation (departmentsConfig navArea).
+    id: 'subcontractors', group: 'money', navLabel: 'CIS',
     path: '/overview/subcontractors',
-    label: 'Subcontractors',
-    icon: 'bi-person-gear',
-    description: 'Construction Industry Scheme subcontractors and their verification.',
-    children: ['subcontractor'],
+    label: 'Construction Industry Scheme',
+    icon: 'bi-building',
+    description: 'Subcontractors, their HMRC verification and deduction rates, and the monthly CIS returns.',
+    children: ['subcontractor', 'cisReturn'],
+    // Shown only to those who can open the route (rolePermissionsConfig)
+    actions: [
+      { label: 'CIS dashboard', href: '/CIS/Dashboard/', route: '/CIS/Dashboard', icon: 'bi-speedometer2' },
+      { label: 'Returns reports', href: '/CIS/returns/form', route: '/CIS/returns', icon: 'bi-file-earmark-text' },
+      { label: 'Edit CIS details', href: '/subcontractor/assign', route: '/subcontractor/assign', icon: 'bi-pencil-square' },
+    ],
   },
   {
     id: 'payroll', group: 'money',

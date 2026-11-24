@@ -472,7 +472,7 @@ const helpContent = [
         badge: 'Subcontractor',
         description: 'View the CIS deductions applied to your payments for any tax month or full tax year.',
         steps: [
-          'Go to CIS (/construction-industry-scheme) for the department landing page.',
+          'Go to CIS (/construction-industry-scheme): it opens the Construction Industry Scheme overview (/overview/subcontractors), with subcontractors, monthly returns and links to the CIS dashboard. Subcontractors see their own returns there instead.',
           'View your monthly return: /CIS/returns/:uuid/:year/:month — e.g. month 1 = April.',
           'View your full yearly return: /CIS/returns/:uuid/yearly/:year.',
           'Each return shows: gross payment, labour, materials, CIS deduction rate, amount deducted, and net received.',
@@ -1639,7 +1639,7 @@ const helpContent = [
           { name: 'Projects Overview', required: '', description: '/overview/projects — Contracts, Assignments and KashFlow projects, each with its own overview (/overview/contract, /overview/assignment, /overview/project): contracts past or near their end date, unstaffed assignments, projects below or meeting their income target. Run Financial Check and Mark Complete are on the KashFlow projects overview.' },
           { name: 'Admin Overview', required: '', description: '/overview/admin — Users overview (/overview/user): accounts waiting for a role, unverified email, users without two-factor sign-in, accounts idle for 90 days, and signed-in sessions.' },
           { name: 'Documents Overview', required: '', description: '/overview/documents — unlinked OCR documents and recent Paperless-ngx ingest activity.' },
-          { name: 'Subcontractors Overview', required: '', description: '/overview/subcontractors (area) and /overview/subcontractor (detail): subcontractors by deduction rate, HMRC verification, balances outstanding and purchases in the last 30 days. Accessible to admin, accountant and hmrc; figures for employees and users only show for roles that can open them.' },
+          { name: 'Construction Industry Scheme Overview', required: '', description: '/overview/subcontractors (area; CIS in the navigation), /overview/subcontractor (subcontractors) and /overview/cisReturn (monthly returns: each tax month, when it is due, and a link to that month on the CIS dashboard). Subcontractors overview: subcontractors by deduction rate, HMRC verification, balances outstanding and purchases in the last 30 days. Accessible to admin, accountant and hmrc; figures for employees and users only show for roles that can open them.' },
           { name: 'Payroll Overview', required: '', description: '/overview/payroll — Payroll runs (draft, locked but not submitted, year-to-date totals) and HMRC submissions (generated but not sent, rejected, accepted).' },
           { name: 'Holiday Overview', required: '', description: '/overview/holiday — requests to approve, who is off today, upcoming holiday, balances running low, and bank and company holidays coming up.' },
           { name: 'Weekly Attendance Overview', required: '', description: '/overview/weekly — how far this payroll week has got through the weekly attendance flow, and what still needs fixing.' },

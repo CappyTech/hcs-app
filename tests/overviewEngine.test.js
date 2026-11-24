@@ -197,7 +197,7 @@ describe('subcontractors (alias list + KashFlow join)', () => {
     const r = await engine.resolveListView({ ...admin, query: { view: 'subcontractor.unverified' } }, 'subcontractor');
     assert.equal(r.view.label, 'Not verified with HMRC');
     assert.ok(Array.isArray(r.filter.$nor));
-    assert.deepStrictEqual(r.crumbs.map((c) => c.label), ['Home', 'Subcontractors']);
+    assert.deepStrictEqual(r.crumbs.map((c) => c.label), ['Home', 'Construction Industry Scheme']);
     // the plain supplier list isn't the subcontractor node's list
     assert.equal((await engine.resolveListView({ ...admin, query: { view: 'subcontractor.unverified' } }, 'supplier')).filter, null);
   });
@@ -324,7 +324,7 @@ describe('finance (and a node with two parents)', () => {
     const viaFinance = await engine.buildNodeOverview({ ...admin, query: { from: 'finance' } }, 'subcontractor');
     assert.deepStrictEqual(viaFinance.crumbs.map((c) => c.label), ['Home', 'Finance']);
     const direct = await engine.buildNodeOverview(admin, 'subcontractor');
-    assert.deepStrictEqual(direct.crumbs.map((c) => c.label), ['Home', 'Subcontractors']);
+    assert.deepStrictEqual(direct.crumbs.map((c) => c.label), ['Home', 'Construction Industry Scheme']);
   });
 
   it('sums what customers owe from unpaid, unarchived invoices', async () => {
@@ -360,8 +360,8 @@ describe('home tiles', () => {
   });
 
   it('only shows a role the areas it can open', () => {
-    assert.deepStrictEqual(engine.homeTiles(as('accountant')).map((t) => t.label), ['Finance', 'Weekly attendance', 'Subcontractors', 'Payroll']);
-    assert.deepStrictEqual(engine.homeTiles(as('hmrc')).map((t) => t.label), ['Subcontractors']);
+    assert.deepStrictEqual(engine.homeTiles(as('accountant')).map((t) => t.label), ['Finance', 'Weekly attendance', 'Construction Industry Scheme', 'Payroll']);
+    assert.deepStrictEqual(engine.homeTiles(as('hmrc')).map((t) => t.label), ['Construction Industry Scheme']);
     assert.deepStrictEqual(engine.homeTiles(as('employee')), []);
   });
 
@@ -562,5 +562,42 @@ describe('weekly attendance home tile', () => {
   it('must sit on the path of the overview it opens', () => {
     const state = registry.buildState([{ kind: 'area', key: 'weeklyAttendance', override: { path: '/overview/elsewhere' } }]);
     assert.ok(registry.validate(state).some((p) => p.includes('path must be /overview/weekly')));
+  });
+});
+
+describe('CIS overview', () => {
+  const as = (role) => ({ user: { role, customPermissions: {} }, query: {} });
+
+  it('lists this tax month and the five before it, each opening its month on the CIS dashboard', async () => {
+    // 24 Nov 2026 is in tax month 8 (6 Nov – 5 Dec) of 2026/27
+    const panel = await engine.customPanels.cisReturnMonths(admin, new Date('2026-11-24T12:00:00Z'));
+    assert.equal(panel.rows.length, 6);
+    assert.deepStrictEqual(panel.rows.map((r) => r.href), [
+      '/CIS/Dashboard/2026/8', '/CIS/Dashboard/2026/7', '/CIS/Dashboard/2026/6',
+      '/CIS/Dashboard/2026/5', '/CIS/Dashboard/2026/4', '/CIS/Dashboard/2026/3',
+    ]);
+    assert.equal(panel.rows[0].cells[0], 'M8 Nov 2026/27');
+    assert.equal(panel.rows[0].cells[3], 'This month');
+  });
+
+  it('wraps back into the previous tax year', async () => {
+    const panel = await engine.customPanels.cisReturnMonths(admin, new Date('2026-05-20T12:00:00Z'));
+    assert.deepStrictEqual(panel.rows.slice(0, 3).map((r) => r.href), ['/CIS/Dashboard/2026/2', '/CIS/Dashboard/2026/1', '/CIS/Dashboard/2025/12']);
+    assert.equal(panel.rows[2].cells[0], 'M12 Mar 2025/26');
+  });
+
+  it('shows the months only to roles that can open the CIS dashboard', async () => {
+    assert.ok(await engine.customPanels.cisReturnMonths(as('hmrc'), new Date()));
+    assert.equal(await engine.customPanels.cisReturnMonths(as('subcontractor'), new Date()), null);
+    assert.equal(engine.canOpenPath(as('subcontractor'), '/overview/subcontractors'), false);
+  });
+
+  it('carries the CIS tools on the area page', async () => {
+    const page = await engine.buildArea(admin, 'subcontractors');
+    assert.equal(page.title, 'Construction Industry Scheme');
+    assert.deepStrictEqual(page.actions.map((a) => a.href), ['/CIS/Dashboard/', '/CIS/returns/form', '/subcontractor/assign']);
+    // Accountants don't get Edit CIS details (/subcontractor/assign is admin only)
+    const acc = await engine.buildArea(as('accountant'), 'subcontractors');
+    assert.deepStrictEqual(acc.actions.map((a) => a.href), ['/CIS/Dashboard/', '/CIS/returns/form']);
   });
 });

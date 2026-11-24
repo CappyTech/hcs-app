@@ -396,6 +396,44 @@ customPanels.subcontractorRecentPurchases = async (req, now) => {
   };
 };
 
+// CIS returns, one row per tax month: this month and the five before it, each
+// opening its month on the CIS dashboard (which works the figures out). The
+// dates are the dashboard's own (taxService), so the two never disagree.
+const TAX_MONTH_SHORT = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+customPanels.cisReturnMonths = async (req, now) => {
+  if (!canOpenPath(req, '/CIS/Dashboard')) return null;
+  const current = taxService.calculateTaxYearAndMonth(now);
+  const rows = [];
+  for (let back = 0; back < 6; back += 1) {
+    const idx = current.taxYear * 12 + (current.taxMonth - 1) - back;
+    const taxYear = Math.floor(idx / 12);
+    const taxMonth = (idx % 12) + 1;
+    const r = taxService.getCurrentMonthlyReturn(taxYear, taxMonth);
+    const days = r.submissionDeadlineInDays;
+    const status = back === 0 ? 'This month'
+      : days > 0 ? `Due in ${days} day${days === 1 ? '' : 's'}`
+        : days === 0 ? 'Due today' : 'Past';
+    rows.push({
+      href: `/CIS/Dashboard/${taxYear}/${taxMonth}`,
+      cells: [
+        `M${taxMonth} ${TAX_MONTH_SHORT[taxMonth - 1]} ${taxYear}/${String(taxYear + 1).slice(-2)}`,
+        `${formatValue(r.periodStart, 'date')} – ${formatValue(r.periodEnd, 'date')}`,
+        r.submissionDeadlineDisplay,
+        status,
+      ],
+    });
+  }
+  return {
+    title: 'Monthly returns',
+    severity: null,
+    columns: ['Tax month', 'Period', 'Submit by', 'Status'],
+    rows,
+    total: rows.length,
+    href: '/CIS/returns/form',
+    linkLabel: 'Returns reports',
+  };
+};
+
 // In-progress contracts with no Planned/In Progress assignment against them.
 customPanels.contractsWithoutAssignments = async (req) => {
   if (!canListModel(req, 'contract') || !canListModel(req, 'assignment')) return null;
@@ -589,6 +627,7 @@ function customPanelNames() { return Object.keys(customPanels); }
 const pinnablePanels = {
   unassignedEmployees: 'Active employees with no current assignment',
   subcontractorRecentPurchases: 'Subcontractor purchases in the last 30 days',
+  cisReturnMonths: 'CIS monthly returns',
   contractsWithoutAssignments: 'Contracts in progress with no current assignments',
   weeklyAttendanceSteps: "This week's attendance, step by step",
   weeklyAttendanceChecks: 'Weekly attendance: needs fixing',

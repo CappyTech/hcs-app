@@ -195,8 +195,8 @@ describe('active detection', () => {
 describe('pinned items (command rail)', () => {
   it('defaults to HR, Attendance, Documents, Finance and CIS for an admin, with the rest under More', () => {
     const built = nav.build({ path: '/', user: as('admin') });
-    // HR, Documents and Finance pin the areas that stand in for those departments
-    assert.deepEqual(built.pinned.map((i) => i.slug), ['human', 'attendance', 'documents', 'finance', 'construction-industry-scheme']);
+    // HR, Documents, Finance and CIS pin the areas that stand in for those departments
+    assert.deepEqual(built.pinned.map((i) => i.slug), ['human', 'attendance', 'documents', 'finance', 'subcontractors']);
     const moreSlugs = built.more.flatMap((g) => g.items.map((i) => i.slug));
     for (const p of built.pinned) assert.ok(!moreSlugs.includes(p.slug), `${p.slug} is not also under More`);
     assert.ok(moreSlugs.includes('admin'));

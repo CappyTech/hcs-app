@@ -10,6 +10,8 @@ import holidayService from '../services/holidayService.js';
 import { getFrequentPages } from '../services/sessionActivityService.js';
 import rbac from '../config/rolePermissionsConfig.js';
 import departments from '../config/departmentsConfig.js';
+import overviews from '../config/overviews/index.js';
+import { canUserOpenPath } from '../services/overviewAccess.js';
 import tileMeta from '../config/dashboardTileMetaConfig.js';
 import dashboardCountService from '../services/dashboardCountService.js';
 import { endOfToday, endOfWeek, endOfMonth } from 'date-fns';
@@ -269,6 +271,12 @@ export const renderDepartment = (slug) => {
   const dept = departments[slug];
   return async (req, res, next) => {
     try {
+      // A department whose overview replaced it sends those who can open the
+      // overview there; everyone else still gets the tiles below.
+      if (dept.overviewFirst && dept.navArea && req.user) {
+        const area = overviews.getArea(dept.navArea);
+        if (area?.path && !area.hidden && canUserOpenPath(req.user, area.path)) return res.redirect(area.path);
+      }
       // Every role held (primary + job roles); canAccess treats admin as all.
       const userRole = req.user ? rbac.rolesOf(req.user) : ["subcontractor"];
       const models =

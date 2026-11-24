@@ -276,6 +276,7 @@ const routeAccess = {
   '/overview/projects':       ['admin'],
   '/overview/subcontractors': ['admin', 'accountant', 'hmrc'],
   '/overview/subcontractor':  ['admin', 'accountant', 'hmrc'],
+  '/overview/cisReturn':      ['admin', 'accountant', 'hmrc'], // same as /CIS/Dashboard
   '/overview/supplier':       ['admin', 'accountant'],
   '/overview/task':           ['admin'],
   '/overview/user':           ['admin'],

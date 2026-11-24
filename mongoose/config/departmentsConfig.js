@@ -24,6 +24,8 @@
  *  - navArea     overview area (config/overviews/areas.js) that takes this
  *                department's place in the nav whenever the person can open
  *                it; the dashboard stays at its address
+ *  - overviewFirst  with navArea: the dashboard address sends anyone who can
+ *                open the area to it; the rest still get the tile page
  *  - special     'create' = tiles come from getCreateModels, not departments
  *
  * Object order defines nav + route order. Keep this file dependency-free
@@ -43,6 +45,10 @@ export default {
     navLabel: 'CIS',
     icon: 'bi-building',
     group: 'money',
+    // The CIS overview stands in for this page for everyone who can open it;
+    // subcontractors (who can't) keep the tile page for their own returns.
+    navArea: 'subcontractors',
+    overviewFirst: true,
     roles: ['admin', 'accountant', 'hmrc', 'subcontractor'],
   },
   management: {
