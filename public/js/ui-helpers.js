@@ -12,6 +12,7 @@
  *   data-modal-param-*               → sets a hidden input value inside a modal on click
  *   data-submit-once                 → disables the submit button and changes text on submit
  *   data-submit-once-text            → replacement text for the button (default: "Running…")
+ *   <i class="bi …">                  → hidden from screen readers unless it carries its own label
  */
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -116,5 +117,33 @@ document.addEventListener('DOMContentLoaded', function () {
       label.style.display = label.getAttribute('data-search').includes(term) ? '' : 'none';
     });
   });
+
+  // ── Decorative Bootstrap Icons ───────────────────────────────────────────
+  // Icon-font glyphs are private-use characters that some screen readers read out
+  // as junk. Hide every <i class="bi …"> that has no accessible name of its own;
+  // the control around it carries the text or aria-label (WCAG 1.1.1 / 4.1.2).
+  // The observer catches icons that Alpine or fetch-rendered fragments add later.
+  function hideDecorativeIcons(root) {
+    if (!root || !root.querySelectorAll) return;
+    var icons = root.querySelectorAll('i.bi:not([aria-hidden]):not([aria-label]):not([role])');
+    for (var i = 0; i < icons.length; i++) icons[i].setAttribute('aria-hidden', 'true');
+  }
+  hideDecorativeIcons(document);
+  if ('MutationObserver' in window) {
+    new MutationObserver(function (mutations) {
+      for (var m = 0; m < mutations.length; m++) {
+        var added = mutations[m].addedNodes;
+        for (var n = 0; n < added.length; n++) {
+          var node = added[n];
+          if (node.nodeType !== 1) continue;
+          if (node.matches && node.matches('i.bi:not([aria-hidden]):not([aria-label]):not([role])')) {
+            node.setAttribute('aria-hidden', 'true');
+          } else {
+            hideDecorativeIcons(node);
+          }
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
 
 });

@@ -8,6 +8,27 @@
     --brand: #047857;
     --brand-light: #10b981;
     --brand-dark: #065f46;
+    /* Contrast-safe grays (see tailwind.config.js). Space-separated RGB so Tailwind's
+       opacity modifiers (text-gray-400/50) keep working. */
+    --hcs-gray-400: 107 114 128; /* #6b7280: 4.8:1 on white (was #9ca3af, 2.5:1) */
+    --hcs-gray-500: 107 114 128; /* #6b7280: unchanged in light mode */
+  }
+  .dark {
+    --hcs-gray-400: 156 163 175; /* #9ca3af: Tailwind default, 7.0:1 on gray-900 */
+    --hcs-gray-500: 139 149 165; /* #8b95a5: 5.6:1 on gray-900, 4.7:1 on gray-800 (was 3.7:1) */
+  }
+
+  /* WCAG 2.3.3 / 2.2.2: honour the OS "reduce motion" setting for every transition,
+     animation and smooth scroll in the app. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 

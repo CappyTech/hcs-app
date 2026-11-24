@@ -3,18 +3,18 @@
     <div 
       id="successToast<%= index %>" 
       class="fixed bottom-20 right-4 mb-3 p-4 bg-green-600 dark:bg-green-700 text-white rounded-xl shadow-lg flex items-center space-x-4 max-w-xs z-[60]"
-      role="alert" aria-live="assertive" aria-atomic="true"
+      role="status" aria-live="polite" aria-atomic="true"
     >
       <div class="flex-1">
         <%= message %>
       </div>
       <button 
         type="button" 
-        aria-label="Close" 
-        class="text-white hover:text-green-200 dark:hover:text-green-300 focus:outline-none"
+        aria-label="Dismiss message" 
+        class="rounded text-white hover:text-green-200 dark:hover:text-green-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
         data-dismiss-target="successToast<%= index %>"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
       </button>
@@ -23,11 +23,17 @@
 
   <script nonce="<%= locals.cspNonce %>">
     window.addEventListener('load', function () {
-      // Auto-dismiss toasts after 4 seconds
+      // Auto-dismiss success toasts after 8 seconds, but never while the pointer
+      // or keyboard focus is on one (WCAG 2.2.1: users can pause it).
       document.querySelectorAll('[id^="successToast"]').forEach(toast => {
-        setTimeout(() => {
-          toast.remove();
-        }, 4000);
+        let timer;
+        const start = () => { timer = setTimeout(() => toast.remove(), 8000); };
+        const stop = () => clearTimeout(timer);
+        toast.addEventListener('mouseenter', stop);
+        toast.addEventListener('focusin', stop);
+        toast.addEventListener('mouseleave', start);
+        toast.addEventListener('focusout', start);
+        start();
       });
     });
   </script>

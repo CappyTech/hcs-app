@@ -20,7 +20,7 @@
         class="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
         <i class="bi bi-list text-xl" aria-hidden="true"></i>
       </button>
-      <%- include('./_shared.ejs', { part: 'brand' }) %>
+      <%- include('./_shared.ejs', { part: 'brand', brandLabelClass: 'sr-only sm:not-sr-only' }) %>
       <%# Breadcrumb. Pages that know their place in the overview hierarchy pass
           crumbs (list pages as overviewCrumbs, overview pages on page.crumbs); the
           header shows that trail, then the page title, so it matches the one on the
