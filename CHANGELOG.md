@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.6] - 2026-11-24
+
+### Fixed
+- **Documents overview reads properly on a phone.** On a phone, the Unlinked Documents explanation was squeezed into a column one word wide, with the Resolve Numbers and Match References buttons on top of it. The buttons now go below the text. Long titles under Recently Added end with "…" instead of being cut off at the edge.
+
 ## [6.148.5] - 2026-11-24
 
 ### Fixed

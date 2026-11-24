@@ -112,7 +112,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <% if (driftedDocs > 0) { %>
   <details class="mb-6 group border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-2xl" <%= driftedDocs <= 10 ? 'open' : '' %>>
     <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <div class="flex items-center gap-3 min-w-0 flex-1">
+      <div class="flex items-center gap-3 min-w-0 flex-1 basis-56">
         <span class="text-lg font-bold text-purple-700 dark:text-purple-400">&#9888; Custom Field Drift (<%= driftedDocs %>)</span>
         <span class="text-sm text-purple-600 dark:text-purple-300 hidden sm:block">MongoDB / Paperless custom field mismatch</span>
       </div>
@@ -157,7 +157,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <% if (deletedInPaperless > 0) { %>
   <details class="mb-6 group border border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 rounded-2xl" <%= deletedInPaperless <= 10 ? 'open' : '' %>>
     <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <div class="flex items-center gap-3 min-w-0 flex-1">
+      <div class="flex items-center gap-3 min-w-0 flex-1 basis-56">
         <div class="min-w-0">
           <span class="text-lg font-bold text-rose-700 dark:text-rose-400">&#9888; Deleted in Paperless (<%= deletedInPaperless %>)</span>
           <span class="text-sm text-rose-600 dark:text-rose-300 hidden sm:inline ml-2">Still in MongoDB but no longer exist in Paperless</span>
@@ -218,7 +218,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <% if (possibleReuploadCount > 0) { %>
   <details class="mb-6 group border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl" open>
     <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <div class="flex items-center gap-3 min-w-0 flex-1">
+      <div class="flex items-center gap-3 min-w-0 flex-1 basis-56">
         <span class="text-lg font-bold text-blue-700 dark:text-blue-400">&#8635; Possible Re-uploads (<%= possibleReuploadCount %>)</span>
         <span class="text-sm text-blue-600 dark:text-blue-300 hidden sm:block">Deleted documents with a matching content hash in a live document</span>
       </div>
@@ -395,7 +395,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <% if (unlinkedDocsList.length > 0) { %>
   <details class="mb-6 group border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl">
     <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <div class="flex items-center gap-3 min-w-0 flex-1">
+      <div class="flex items-center gap-3 min-w-0 flex-1 basis-56">
         <div class="min-w-0">
           <span class="text-lg font-bold text-yellow-700 dark:text-yellow-400">Unlinked Documents (<%= unlinkedDocs %>)</span>
           <% if (hasNumberNoId > 0) { %><span class="text-sm text-orange-600 dark:text-orange-400 hidden sm:inline ml-2"><%= hasNumberNoId %> have a KF number — resolvable</span><% } %>
@@ -460,9 +460,9 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
     </div>
     <div class="flex flex-wrap gap-2">
       <% for (const d of recentDocs) { %>
-        <a href="/paperless/ocr/<%= d.paperlessId %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 max-w-xs truncate">
-          <%= d.title || '—' %>
-          <% if (d.kashflowPurchaseNumber) { %><span class="text-xs text-green-600">#<%= d.kashflowPurchaseNumber %></span><% } %>
+        <a href="/paperless/ocr/<%= d.paperlessId %>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 max-w-full sm:max-w-xs min-w-0" title="<%= d.title || '' %>">
+          <span class="truncate"><%= d.title || '—' %></span>
+          <% if (d.kashflowPurchaseNumber) { %><span class="shrink-0 text-xs text-green-600 dark:text-green-400">#<%= d.kashflowPurchaseNumber %></span><% } %>
         </a>
       <% } %>
     </div>
