@@ -253,7 +253,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <% if (errorDocsList.length > 0) { %>
   <details class="mb-6 group border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl" open>
     <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <span class="text-lg font-bold text-red-700 dark:text-red-400">&#9888; Document Errors (<%= errorDocs %>)</span>
+      <span class="flex-1 min-w-0 text-lg font-bold text-red-700 dark:text-red-400">&#9888; Document Errors (<%= errorDocs %>)</span>
       <span class="text-red-400 text-sm group-open:hidden">▼</span><span class="text-red-400 text-sm hidden group-open:inline">▲</span>
     </summary>
     <div class="overflow-x-auto px-4 pb-4">
@@ -283,7 +283,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <% if (neverSentList.length > 0) { %>
   <details class="mb-6 group border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
     <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <div class="min-w-0">
+      <div class="min-w-0 flex-1">
         <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Never Sent to KashFlow (<%= neverSentEligible %>)</span>
         <% if (neverSentExcluded > 0) { %><span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5"><%= neverSentExcluded %> statements, subcontractor docs, credits/refunds, reference originals and manually-added-to-KashFlow docs are excluded — the app never sends them.</span><% } %>
       </div>
@@ -315,7 +315,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <% if (ingestErrorsList.length > 0) { %>
   <details class="mb-6 group border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 rounded-2xl" open>
     <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <span class="text-lg font-bold text-red-600 dark:text-red-400">&#9888; Ingest Errors (<%= ingestStats.error %>)</span>
+      <span class="flex-1 min-w-0 text-lg font-bold text-red-600 dark:text-red-400">&#9888; Ingest Errors (<%= ingestStats.error %>)</span>
       <span class="text-red-400 text-sm group-open:hidden">▼</span><span class="text-red-400 text-sm hidden group-open:inline">▲</span>
     </summary>
     <div class="overflow-x-auto px-4 pb-4">
@@ -346,7 +346,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <% if (staleLinkedList.length > 0) { %>
   <details class="mb-6 group border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl">
     <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
-      <div class="min-w-0">
+      <div class="min-w-0 flex-1 basis-56">
         <span class="text-lg font-bold text-orange-700 dark:text-orange-400">&#9888; Stale KashFlow Links (<%= orphanedDocs %>)</span>
         <span class="block text-xs text-orange-600 dark:text-orange-300 mt-0.5">KashFlow purchase no longer exists. Use Clear Now to remove the stale links. Documents sent within the last 48 hours are held (marked below) to allow hcs-sync time to pick up the new purchase.</span>
       </div>

@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.9] - 2026-11-24
+
+### Fixed
+- **Documents overview arrows stay beside their headings.** On a phone, the ▼ on Never Sent to KashFlow (and on Document Errors, Ingest Errors and Stale KashFlow Links) had dropped onto its own line.
+
 ## [6.148.8] - 2026-11-24
 
 ### Fixed
