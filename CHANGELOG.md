@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.7] - 2026-11-24
+
+### Fixed
+- **CIS dashboard month heading fits a phone.** On a phone, the month and its 6th-to-5th period were squeezed between the Previous and Next buttons, one word per line. They now sit above the buttons.
+
 ## [6.148.6] - 2026-11-24
 
 ### Fixed
