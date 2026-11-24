@@ -257,10 +257,10 @@
       <div class="flex items-center gap-0.5 border border-gray-200 dark:border-gray-700 rounded-lg p-0.5 bg-white dark:bg-gray-800 shrink-0" role="group" aria-label="Layout">
         <% const _lqTable = '?' + new URLSearchParams({..._rq, layout: 'table', page: '1'}).toString(); %>
         <% const _lqRows  = '?' + new URLSearchParams({..._rq, layout: 'rows',  page: '1'}).toString(); %>
-        <a href="<%= _lqTable %>" title="Table view" aria-label="Table view" <%- (!listLayout || listLayout === 'table') ? 'aria-current="true"' : '' %> class=""flex items-center justify-center w-7 h-7 rounded transition <%= (!listLayout || listLayout === 'table') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
+        <a href="<%= _lqTable %>" title="Table view" aria-label="Table view" <%- (!listLayout || listLayout === 'table') ? 'aria-current="true"' : '' %> class="flex items-center justify-center w-7 h-7 rounded transition <%= (!listLayout || listLayout === 'table') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
           <i class="bi bi-table text-sm" aria-hidden="true"></i>
         </a>
-        <a href="<%= _lqRows %>" title="List view" aria-label="List view" <%- (listLayout === 'rows') ? 'aria-current="true"' : '' %> class=""flex items-center justify-center w-7 h-7 rounded transition <%= (listLayout === 'rows') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
+        <a href="<%= _lqRows %>" title="List view" aria-label="List view" <%- (listLayout === 'rows') ? 'aria-current="true"' : '' %> class="flex items-center justify-center w-7 h-7 rounded transition <%= (listLayout === 'rows') ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300' %>">
           <i class="bi bi-list-ul text-sm" aria-hidden="true"></i>
         </a>
       </div>
@@ -589,7 +589,7 @@
       %>
         <article class="flex items-start gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0">
           <!-- Avatar -->
-          <div class="shrink-0 mt-0.5 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-gradient-to-br from-green-400 to-emerald-600 text-white select-none">
+          <div class="shrink-0 mt-0.5 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-gradient-to-br from-green-600 to-emerald-700 text-white select-none" aria-hidden="true">
             <%= _initials %>
           </div>
 

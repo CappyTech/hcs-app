@@ -7,7 +7,7 @@
       <% if (typeof commit !== 'undefined' && commit) { %>
         <span class="mx-1 text-gray-300 dark:text-gray-600" aria-hidden="true">&bull;</span>
         <a href="<%= commitUrl %>" target="_blank" rel="noopener noreferrer"
-           class="text-green-600 hover:underline font-mono" title="View commit <%= commit %> on GitHub">
+           class="text-green-600 dark:text-green-400 hover:underline font-mono" title="View commit <%= commit %> on GitHub">
           <%= commit %>
         </a>
       <% } %>
@@ -16,7 +16,7 @@
       <small>&copy; <%= copyrightyearstart %>–<%= copyrightyear %></small>
       <img src="/resources/images/HCS-Logo-v4-Icon32.png" alt="Logo" class="w-4 h-4" />
       <% if (locals.websiteUrl) { %>
-      <a href="<%= websiteUrl %>" class="text-green-600 hover:underline whitespace-nowrap"><%= locals.companyName || websiteHost %></a>
+      <a href="<%= websiteUrl %>" class="text-green-600 dark:text-green-400 hover:underline whitespace-nowrap"><%= locals.companyName || websiteHost %></a>
       <% } else if (locals.companyName) { %>
       <span class="whitespace-nowrap"><%= companyName %></span>
       <% } %>
@@ -25,7 +25,7 @@
     <div>
       <small>
         <% if (locals.companyVatNumber) { %>VAT: <span class="whitespace-nowrap"><%= companyVatNumber %></span><% } %>
-        <% if (locals.companyNumber) { %>Company: <a href="https://find-and-update.company-information.service.gov.uk/company/<%= encodeURIComponent(companyNumber) %>" class="text-green-600 hover:underline" rel="noopener"><%= companyNumber %></a><% } %>
+        <% if (locals.companyNumber) { %>Company: <a href="https://find-and-update.company-information.service.gov.uk/company/<%= encodeURIComponent(companyNumber) %>" class="text-green-600 dark:text-green-400 hover:underline" rel="noopener"><%= companyNumber %></a><% } %>
       </small>
     </div>
     <% } %>

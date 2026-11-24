@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.145.1] - 2026-11-24
+
+### Fixed
+- **The Table/List view switch on list pages is full size again.** In 6.145.0 a typo in its markup dropped its styling, so the two buttons shrank to a sliver and the selected one was no longer highlighted.
+- **More text is readable in dark mode and on coloured backgrounds.** The links in the footer (commit, company website, Companies House) are lighter in dark mode. The initials on the employee list's avatars are on a darker green. The red asterisk beside "Required fields" is darker in light mode.
+
 ## [6.145.0] - 2026-11-24
 
 ### Changed
