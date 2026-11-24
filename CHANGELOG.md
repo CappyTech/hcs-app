@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.8] - 2026-11-24
+
+### Fixed
+- **CIS dashboard header on desktop and phone.** 6.148.7 put the Next button on its own row on desktop; the header is back on one row. On a phone, Previous and Next now sit side by side under the month heading.
+
 ## [6.148.7] - 2026-11-24
 
 ### Fixed
