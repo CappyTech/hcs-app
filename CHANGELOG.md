@@ -2,6 +2,12 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.146.1] - 2026-11-24
+
+### Fixed
+- **Search works on a phone.** Below 640px wide the header has no room for the search box, so it was missing; the side menu now has a search field at the top.
+- **The "+" on the vehicle deployment grid is readable,** and the dots between links on the Daily attendance page are no longer read out by screen readers.
+
 ## [6.146.0] - 2026-11-24
 
 ### Added
