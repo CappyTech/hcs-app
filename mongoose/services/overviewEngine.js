@@ -266,7 +266,7 @@ function formatValue(value, format) {
   if (value === null || value === undefined || value === '') return '—';
   if (format === 'date' || value instanceof Date) {
     const d = new Date(value);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB');
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB', { timeZone: 'Europe/London' });
   }
   if (format === 'money') {
     const n = Number(value?._bsontype === 'Decimal128' ? value.toString() : value);
@@ -732,6 +732,6 @@ async function resolveListView(req, listName, now = new Date()) {
 }
 
 export default {
-  compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, computeList, customPanels, pinnablePanels, canSeeNode,
+  compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, formatValue, computeList, customPanels, pinnablePanels, canSeeNode,
 };
-export { compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, computeList, customPanels, pinnablePanels, canSeeNode };
+export { compileWhere, breadcrumbs, homeTiles, canOpenPath, customPanelNames, buildArea, buildNodeOverview, resolveListView, computeFigure, formatValue, computeList, customPanels, pinnablePanels, canSeeNode };

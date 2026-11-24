@@ -620,3 +620,12 @@ describe('CIS overview', () => {
     assert.deepStrictEqual(acc.actions.map((a) => a.href), ['/CIS/Dashboard/', '/CIS/returns/form']);
   });
 });
+
+describe('overview dates use UK time', () => {
+  it('shows a BST midnight date on its own day, whatever the server time zone', () => {
+    // 1 July 2026 00:00 BST is 30 June 23:00 UTC
+    assert.equal(engine.formatValue(new Date('2026-06-30T23:00:00Z'), 'date'), '01/07/2026');
+    assert.equal(engine.formatValue('2026-07-01', 'date'), '01/07/2026');
+    assert.equal(engine.formatValue(new Date('2026-12-01T00:00:00Z'), 'date'), '01/12/2026');
+  });
+});

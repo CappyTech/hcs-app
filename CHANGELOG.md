@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.3] - 2026-11-24
+
+### Fixed
+- **Overview dates no longer show a day early in summer.** Dates in overview lists, such as KashFlow purchase dates, contract end dates and upcoming holidays, could show the day before between April and October. They now use UK time.
+
 ## [6.148.2] - 2026-11-24
 
 ### Fixed
