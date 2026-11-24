@@ -220,7 +220,7 @@ export const postBulkConfirm = async (req, res, next) => {
     await mdb.connect();
     const uuids = [].concat(req.body.uuid || []).filter(Boolean);
     if (!uuids.length) {
-      req.flash('error', 'Select at least one line to confirm.');
+      req.flash('error', 'Nothing was ticked. Tick at least one line, then press Confirm selected again.');
       return res.redirect(backTo(req));
     }
 
@@ -346,7 +346,7 @@ export const postRuleCreate = async (req, res, next) => {
     const payload = ruleFromBody(req.body);
 
     if (!payload.name) {
-      req.flash('error', 'Give the rule a name.');
+      req.flash('error', 'Name is required. Give the rule a name, then save it again.');
       return res.redirect('/bank/rules');
     }
     // A rule with no conditions would match nothing, which is confusing to
@@ -355,7 +355,7 @@ export const postRuleCreate = async (req, res, next) => {
     const hasCondition = Boolean(c.typeEquals || c.typeContains || c.commentContains
       || c.accountId != null || c.amountEquals != null || c.amountMin != null || c.amountMax != null);
     if (!hasCondition) {
-      req.flash('error', 'A rule needs at least one condition, or it will never match anything.');
+      req.flash('error', 'Fill in at least one condition (Type, Description, Account or Amount), or the rule will never match anything.');
       return res.redirect('/bank/rules');
     }
 
@@ -497,7 +497,7 @@ export const postStatementGrab = async (req, res, next) => {
     auditLog.record('bank_statement_grab', req, { meta: r });
 
     if (r.error) {
-      req.flash('error', `Could not reach Paperless: ${r.error}`);
+      req.flash('error', `Could not reach Paperless (${r.error}). Try again in a minute.`);
     } else if (!r.fetched) {
       req.flash('success', 'No documents tagged bank-statement in Paperless yet.');
     } else {
@@ -522,19 +522,19 @@ export const postStatementUpload = async (req, res, next) => {
     await mdb.connect();
 
     if (!req.file) {
-      req.flash('error', 'Choose a CSV or OFX file to upload.');
+      req.flash('error', 'CSV or OFX file is required. Choose the statement file to upload.');
       return res.redirect('/bank/statements');
     }
 
     const accountId = Number(req.body.accountId);
     if (!Number.isFinite(accountId)) {
-      req.flash('error', 'Choose which account this statement belongs to.');
+      req.flash('error', 'Account is required. Choose which account this statement belongs to.');
       return res.redirect('/bank/statements');
     }
 
     const format = statements.detectFormat(req.file.originalname);
     if (!format) {
-      req.flash('error', 'Could not tell whether that file is CSV or OFX from its name.');
+      req.flash('error', 'Could not tell whether that file is CSV or OFX from its name. Choose a file ending .csv, .txt, .ofx or .qfx.');
       return res.redirect('/bank/statements');
     }
 
@@ -580,7 +580,7 @@ export const postStatementUpload = async (req, res, next) => {
         'The statement was read but its running balance does not reconcile, '
         + 'so its lines are not trusted. Open it to see where it breaks.');
     } else {
-      req.flash('error', 'That statement could not be read. Check the layout matches the file.');
+      req.flash('error', 'That statement could not be read. Check that CSV layout matches the file, then upload it again.');
     }
 
     return res.redirect(`/bank/statements/${result.import.uuid}`);

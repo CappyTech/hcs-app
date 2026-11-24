@@ -31,8 +31,10 @@
       <button type="button" x-bind="trigger" id="nav-menu-more" aria-haspopup="true" aria-expanded="false" aria-controls="nav-menu-more-panel"
         class="<%= _chip(_moreActive) %>">
         <i class="bi bi-grid-3x3-gap text-base" aria-hidden="true"></i>
-        <span>More</span>
-        <i class="bi bi-chevron-down text-[10px]" aria-hidden="true"></i>
+        <%# Text and chevron hide below sm so the header fits on a 320px screen; the
+            name stays for screen readers. %>
+        <span class="sr-only sm:not-sr-only">More</span>
+        <i class="bi bi-chevron-down text-[10px] hidden sm:inline" aria-hidden="true"></i>
       </button>
       <div x-bind="panel" x-cloak id="nav-menu-more-panel" role="menu" aria-labelledby="nav-menu-more"
         class="absolute left-0 top-full mt-1 w-[calc(100vw-1rem)] sm:w-auto sm:min-w-[32rem] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-2 z-50 grid grid-cols-1 <%= ({ 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2' })[_nav.more.length] || 'sm:grid-cols-3' %> gap-2">
@@ -68,6 +70,7 @@
 
     <div class="flex items-center gap-1 ml-auto shrink-0">
       <%- include('./_shared.ejs', { part: 'create', createLabelClass: 'hidden sm:inline' }) %>
+      <%- include('./_shared.ejs', { part: 'searchLink', searchLinkClass: 'sm:hidden' }) %>
       <%- include('./_shared.ejs', { part: 'utility' }) %>
     </div>
   </div>

@@ -131,9 +131,13 @@ export const getGroup = async (req, res, next) => {
     const mailRules = group.id === 'paperless'
       ? await (await import('../services/paperless/mailRuleService.js')).default.getOverview().catch(() => null)
       : null;
+    // A refused save flashes each problem keyed by its input id (field-<KEY>)
+    const flashed = typeof req.flash === 'function' ? req.flash('configFieldErrors') : null;
+    const fieldErrors = Array.isArray(flashed) && flashed[0] && typeof flashed[0] === 'object' ? flashed[0] : {};
     res.render(path.join('tailwindcss', 'admin', 'configGroup'), {
       title: group.label,
       group: groupView(group),
+      fieldErrors,
       userEmails: needsUsers ? await userEmailOptions().catch(() => []) : [],
       mailRules,
     });
@@ -150,6 +154,7 @@ export const postGroup = async (req, res, next) => {
 
     let saved = 0;
     let restartNeeded = false;
+    const fieldErrors = {};
     for (const entry of group.keys) {
       const raw = req.body[entry.key];
       if (raw === undefined) continue;
@@ -158,7 +163,9 @@ export const postGroup = async (req, res, next) => {
       if (entry.type === 'email' && value === OTHER_EMAIL) {
         value = String(req.body[`${entry.key}__other`] ?? '').trim();
         if (!value) {
-          req.flash('error', `${entry.label}: "Other" was chosen but no address was typed, so it wasn't saved.`);
+          const msg = `${entry.label}: "Other" was chosen but no address was typed, so it wasn't saved. Type the address in the box under it, or pick a person from the list.`;
+          req.flash('error', msg);
+          fieldErrors[`field-${entry.key}-other`] = msg;
           continue;
         }
       }
@@ -168,11 +175,15 @@ export const postGroup = async (req, res, next) => {
       if (value === '') continue;
       if (registry.isSecret(entry.key) && value === MASK) continue;
       if (entry.type === 'email' && !EMAIL_RE.test(value)) {
-        req.flash('error', `${entry.label}: "${value}" isn't a valid email address, so it wasn't saved.`);
+        const msg = `${entry.label}: "${value}" isn't a valid email address, so it wasn't saved. Enter one address, like accounts@example.com.`;
+        req.flash('error', msg);
+        fieldErrors[req.body[entry.key] === OTHER_EMAIL ? `field-${entry.key}-other` : `field-${entry.key}`] = msg;
         continue;
       }
       if (entry.type === 'select' && !(entry.options || []).some((o) => o.value === value)) {
-        req.flash('error', `${entry.label}: "${value}" isn't one of the choices, so it wasn't saved.`);
+        const msg = `${entry.label}: "${value}" isn't one of the choices, so it wasn't saved. Pick one from the list.`;
+        req.flash('error', msg);
+        fieldErrors[`field-${entry.key}`] = msg;
         continue;
       }
       await configStore.set(entry.key, value, req.session?.user?.username || null);
@@ -187,13 +198,14 @@ export const postGroup = async (req, res, next) => {
       if (restartNeeded) {
         req.flash('warning', 'One or more of those are read at startup — restart the container for them to take effect.');
       }
-    } else {
+    } else if (!Object.keys(fieldErrors).length) {
       req.flash('info', 'No changes — every field was left blank.');
     }
+    if (Object.keys(fieldErrors).length) req.flash('configFieldErrors', fieldErrors);
     res.redirect(`/admin/config/${group.id}`);
   } catch (err) {
     logger.error(`[appConfig] save error: ${err.message}`);
-    req.flash('error', `Could not save: ${err.message}`);
+    req.flash('error', `Could not save: ${err.message}. Check the values and try again in a minute.`);
     res.redirect(`/admin/config/${req.params.group}`);
   }
 };

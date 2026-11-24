@@ -130,7 +130,9 @@ export const testConnection = async (req, res) => {
     req.flash('success', message);
   } catch (err) {
     logger.warn(`[connectionSettings] test ${service}: FAILED — ${err.message}`);
-    req.flash('error', `${service} test failed: ${err.message}`);
+    // Say what to do next, unless the service message already does
+    const hint = /\bcheck\b/i.test(err.message) ? '' : ' Check the settings on this page, save them, then test again.';
+    req.flash('error', `${service} test failed: ${err.message}${hint}`);
   }
   res.redirect(back);
 };

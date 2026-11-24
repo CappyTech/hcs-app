@@ -2,6 +2,23 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.147.0] - 2026-11-24
+
+### Added
+- **A warning before you're signed out.** Sessions last 8 hours. Two minutes before the end, a dialog offers **Stay signed in**, so nobody loses a half-filled form. If the time runs out, it says you've been signed out.
+- **Search on a phone in every menu style.** The command, two-tier and grouped menus show a search icon wherever the search box doesn't fit.
+
+### Changed
+- **Form problems say which field and what to do.**
+  - Payroll runs, attendance, bank statements and rules, bulk payments, account details and the settings pages all name the field concerned and how to fix it. For example: "Payment Date and Tax Year are required." or "Tax Month must be a number from 1 to 12 (1 is April)."
+  - On the attendance form, the settings pages, company policies and new website items, the message is also shown under the field itself and screen readers announce the field as invalid.
+- **A wrong date or number no longer ends on the error page** when adding attendance, creating a payroll run, or saving a company policy or website item. You go back to the form with what you typed.
+
+### Fixed
+- **Screen readers read the account button as "Jack, your account",** matching the name shown on screen (it was "Your account").
+- **The weekly sheet no longer makes the whole page scroll sideways** when zoomed in. Only the grid scrolls.
+- **Multi-select tick lists** (assigned employees, subcontractors, site managers) are labelled correctly for screen readers.
+
 ## [6.146.1] - 2026-11-24
 
 ### Fixed

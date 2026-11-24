@@ -50,7 +50,7 @@ describe('Test connection', () => {
   it('says what is missing, and what went wrong', async () => {
     delete process.env.PAPERLESS_TOKEN;
     process.env.PAPERLESS_BASE_URL = 'https://docs.heroncs.co.uk';
-    assert.deepEqual((await run()).flashed, [['error', 'paperless test failed: Paperless base URL or token not configured.']]);
+    assert.deepEqual((await run()).flashed, [['error', 'paperless test failed: Paperless base URL or token not configured. Check the settings on this page, save them, then test again.']]);
 
     process.env.PAPERLESS_TOKEN = 't';
     mockPaperless.mockPaperlessState().failNext.add('listDocuments');

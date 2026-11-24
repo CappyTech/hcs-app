@@ -1,0 +1,11 @@
+<%
+  /**
+   * The message under one input of a custom form. Locals: id (the input's id),
+   * fieldErrors. Pair it with `aria-invalid="true" aria-describedby="<id>-error"`
+   * on the input in the calling view.
+   */
+  const _msg = locals.fieldErrors && locals.fieldErrors[id];
+%>
+<% if (_msg) { %>
+  <p id="<%= id %>-error" class="mt-1.5 text-sm text-red-700 dark:text-red-300"><span class="sr-only">Error: </span><%= _msg %></p>
+<% } %>

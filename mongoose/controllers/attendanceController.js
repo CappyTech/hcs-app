@@ -588,6 +588,10 @@ export const renderSubmitAttendance = async (req, res, next) => {
       if (sub) entityName = sub.Name;
     }
 
+    // After a refused submission: what was typed, and the problem under its field
+    const [formValues] = req.flash("attendanceForm");
+    const [fieldErrors] = req.flash("attendanceFieldErrors");
+
     res.render(path.join("tailwindcss", "attendance", "submit"), {
       title: "Submit Attendance",
       projects,
@@ -595,11 +599,48 @@ export const renderSubmitAttendance = async (req, res, next) => {
       entityName,
       isEmployee,
       today: format(new Date(), "yyyy-MM-dd"),
+      formValues: formValues || null,
+      fieldErrors: fieldErrors || {},
     });
   } catch (err) {
     next(err);
   }
 };
+
+// Send a refused submission back to the form with the message under the field
+// it is about (fieldId is the input's id in attendance/submit.ejs) and what was
+// typed kept. The flash cookie is small, so long notes are not carried back.
+function refuseSubmission(req, res, message, fieldId) {
+  req.flash("error", message);
+  if (fieldId) req.flash("attendanceFieldErrors", { [fieldId]: message });
+  const b = req.body || {};
+  const notes = String(b.notes || "");
+  req.flash("attendanceForm", {
+    date: String(b.date || "").slice(0, 10),
+    type: String(b.type || "").slice(0, 20),
+    projectId: String(b.projectId || "").slice(0, 40),
+    locationId: String(b.locationId || "").slice(0, 40),
+    hoursWorked: String(b.hoursWorked || "").slice(0, 10),
+    notes: notes.length <= 1000 ? notes : "",
+  });
+  return res.redirect("/attendance/submit");
+}
+
+// A Mongoose validation/cast problem, named by its on-screen label.
+function attendanceInputProblem(err) {
+  const entries = err?.name === "CastError" && err.path ? [[err.path, err]] : Object.entries(err?.errors || {});
+  const [p, e] = entries[0] || [];
+  if (p === "date") {
+    return e?.kind === "required"
+      ? { id: "date", msg: "Date is required. Choose the day you worked." }
+      : { id: "date", msg: "Date is not a real date. Pick one from the calendar." };
+  }
+  if (p === "hoursWorked") return { id: "hoursWorked", msg: "Hours worked must be a number from 0 to 24, for example 8 or 7.5." };
+  if (p === "type") return { id: "type", msg: "Type must be one of the listed options." };
+  if (p === "projectId") return { id: "projectId", msg: "Project: choose one from the list, or leave it as None." };
+  if (p === "locationId") return { id: "locationId", msg: "Location: choose one from the list, or leave it as None." };
+  return null;
+}
 
 export const submitAttendance = async (req, res, next) => {
   try {
@@ -617,7 +658,7 @@ export const submitAttendance = async (req, res, next) => {
     // Force ownership from the logged-in user's linked entity
     if (isEmployee) {
       if (!req.user.employeeId) {
-        req.flash("error", "Your account is not linked to an employee record.");
+        req.flash("error", "Your account is not linked to an employee record, so attendance can't be submitted yet. Ask an administrator to link it.");
         return res.redirect("/attendance/submit");
       }
       data.employeeId = req.user.employeeId;
@@ -625,7 +666,7 @@ export const submitAttendance = async (req, res, next) => {
       if (!req.user.subcontractorId) {
         req.flash(
           "error",
-          "Your account is not linked to a subcontractor record.",
+          "Your account is not linked to a subcontractor record, so attendance can't be submitted yet. Ask an administrator to link it.",
         );
         return res.redirect("/attendance/submit");
       }
@@ -648,13 +689,14 @@ export const submitAttendance = async (req, res, next) => {
     // Payroll lock: reject submissions for dates already in a locked/submitted run
     const lockedRun = await attendanceService.getLockedRunForDate(data.date);
     if (lockedRun) {
-      req.flash(
-        "error",
-        `Attendance for this date can no longer be submitted — the payroll period ` +
+      return refuseSubmission(
+        req,
+        res,
+        `Date: attendance for this day can no longer be submitted — the payroll period ` +
           `${format(new Date(lockedRun.periodStart), "d MMM")} – ${format(new Date(lockedRun.periodEnd), "d MMM yyyy")} ` +
-          `has been ${lockedRun.status}. Contact an administrator if a correction is needed.`,
+          `has been ${lockedRun.status}. Choose another date, or ask an administrator if a correction is needed.`,
+        "date",
       );
-      return res.redirect("/attendance/submit");
     }
 
     // A day planned on the weekly sheet: the submission confirms (and
@@ -664,8 +706,7 @@ export const submitAttendance = async (req, res, next) => {
     const planned = day ? await approval.plannedFor(who, day) : null;
     if (planned) {
       if (!approval.isDue(planned)) {
-        req.flash("error", "That day is planned and hasn't come yet. Submit it on the day.");
-        return res.redirect("/attendance/submit");
+        return refuseSubmission(req, res, "Date: that day is planned and hasn't come yet. Choose today or an earlier date, or submit it on the day.", "date");
       }
       // Keep the planned site unless they say they were somewhere else
       const movedSite = (data.projectId && String(data.projectId) !== String(planned.projectId || ""))
@@ -695,11 +736,17 @@ export const submitAttendance = async (req, res, next) => {
   } catch (err) {
     if (err.code === 11000) {
       // Duplicate key — attendance already exists for this date/location/project
-      req.flash(
-        "error",
-        "You already have an attendance record for this date/location/project combination.",
+      return refuseSubmission(
+        req,
+        res,
+        "Date: you already have attendance recorded for this date at this project and location. Choose a different date, project or location, or change the existing day from the daily view.",
+        "date",
       );
-      return res.redirect("/attendance/submit");
+    }
+    // Something typed that the record can't hold (missing or unreal date, bad number)
+    if (err?.name === "ValidationError" || err?.name === "CastError") {
+      const problem = attendanceInputProblem(err);
+      if (problem) return refuseSubmission(req, res, problem.msg, problem.id);
     }
     logger.error(`[attendanceController] Self-service attendance error: ${err.message}`, { stack: err.stack });
     next(err);

@@ -45,13 +45,15 @@
     </div>
   <% } %>
 
+  <%- include('../partials/_errorSummary') %>
+
   <form method="POST" action="<%= action %>">
     <%- include('../partials/csrfHidden') %>
 
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-5">
       <% cfg.fields.forEach(function (field) { %>
         <div>
-          <%- include('_field', { field: field, value: record ? record[field.name] : undefined, media: media }) %>
+          <%- include('_field', { field: field, value: record ? record[field.name] : (locals.formValues ? formValues[field.name] : undefined), media: media }) %>
         </div>
       <% }); %>
     </div>

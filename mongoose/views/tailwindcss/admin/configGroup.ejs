@@ -1,5 +1,8 @@
 <%
 const csrf = typeof csrfToken !== 'undefined' ? csrfToken : '';
+// Problems from the last save, keyed by input id (field-<KEY>, or field-<KEY>-other)
+const _fe = locals.fieldErrors || {};
+const _inv = (id) => _fe[id] ? `aria-invalid="true" aria-describedby="${id}-error"` : '';
 function sourcePill(f) {
   const map = {
     store: ['bi-database-fill-check', 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300', 'Managed here'],
@@ -94,7 +97,7 @@ function sourcePill(f) {
             </div>
 
             <% if (f.type === 'boolean') { %>
-              <select id="field-<%= f.key %>" name="<%= f.key %>"
+              <select id="field-<%= f.key %>" name="<%= f.key %>" <%- _inv('field-' + f.key) %>
                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                 <option value="">No change (currently <%= f.display || 'unset' %>)</option>
                 <option value="true">true</option>
@@ -103,7 +106,7 @@ function sourcePill(f) {
             <% } else if (f.type === 'email') { %>
               <%# A user's email, or "Other…" with a typed address. Without JS the typed box is always shown. %>
               <div x-data="emailPicker" class="space-y-2">
-                <select id="field-<%= f.key %>" name="<%= f.key %>" x-bind="picker"
+                <select id="field-<%= f.key %>" name="<%= f.key %>" <%- _inv('field-' + f.key) %> x-bind="picker"
                   class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                   <option value="">No change (currently <%= f.display || 'unset' %>)</option>
                   <% (locals.userEmails || []).forEach(u => { %>
@@ -113,13 +116,13 @@ function sourcePill(f) {
                 </select>
                 <div x-bind="otherBox">
                   <label for="field-<%= f.key %>-other" class="sr-only"><%= f.label %>: other address</label>
-                  <input id="field-<%= f.key %>-other" name="<%= f.key %>__other" type="email" autocomplete="off"
+                  <input id="field-<%= f.key %>-other" name="<%= f.key %>__other" type="email" <%- _inv('field-' + f.key + '-other') %> autocomplete="off"
                     placeholder="Other address, e.g. accounts@example.com"
                     class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                 </div>
               </div>
             <% } else if (f.type === 'select') { %>
-              <select id="field-<%= f.key %>" name="<%= f.key %>"
+              <select id="field-<%= f.key %>" name="<%= f.key %>" <%- _inv('field-' + f.key) %>
                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                 <option value="">No change (currently <%= (f.options || []).find(o => o.value === f.display)?.label || f.display || 'unset' %>)</option>
                 <% (f.options || []).forEach(o => { %>
@@ -127,13 +130,15 @@ function sourcePill(f) {
                 <% }) %>
               </select>
             <% } else { %>
-              <input id="field-<%= f.key %>" name="<%= f.key %>"
+              <input id="field-<%= f.key %>" name="<%= f.key %>" <%- _inv('field-' + f.key) %>
                 type="<%= f.type === 'secret' ? 'password' : (f.type === 'number' ? 'number' : 'text') %>"
                 autocomplete="off"
                 placeholder="<%= f.display || 'not set' %>"
                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <% } %>
 
+            <%- include('../partials/_fieldError', { id: 'field-' + f.key }) %>
+            <%- include('../partials/_fieldError', { id: 'field-' + f.key + '-other' }) %>
             <%# Help text is plain text from configRegistry; `backticks` mark code. Escape first, then style the code spans. %>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><%- String(f.help || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]).replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">$1</code>') %></p>
             <% if (f.shadowsEnv) { %>

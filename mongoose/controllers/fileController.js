@@ -121,7 +121,7 @@ export const uploadFiles = async (req, res, next) => {
     res.redirect(`/${modelName}/read/${uuid}`);
   } catch (err) {
     logger.error(`[fileController] Upload error for ${modelName}: ${err.message}`);
-    req.flash('error', 'Failed to upload file.');
+    req.flash('error', 'The file could not be uploaded. Try again in a minute; if it keeps failing, try a smaller file.');
     next(err);
   }
 };

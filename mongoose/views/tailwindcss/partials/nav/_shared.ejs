@@ -10,7 +10,7 @@
 %>
 <% const _nav = locals.nav || { items: [], home: { href: '/', active: false }, help: { href: '/help', active: false }, create: null, account: null }; %>
 <% const _part = typeof part !== 'undefined' ? part : ''; %>
-<% const _iconBtn = 'inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition shrink-0'; %>
+<% const _iconBtn = 'inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition shrink-0'; %>
 
 <% if (_part === 'brand') { %>
   <a href="/" class="inline-flex items-center gap-2 shrink-0 rounded-lg px-1 py-1 <%= _nav.home.active ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100 hover:text-green-600 dark:hover:text-green-400' %>" <%- _nav.home.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="home">
@@ -54,6 +54,14 @@
     </ul>
   </form>
 
+<% } else if (_part === 'searchLink') { %>
+  <%# Where a style hides the search box (narrow screens), this icon opens the full
+      search page instead, so no function is lost on a 320px screen (WCAG 1.4.10).
+      searchLinkClass hides it again at the width the box comes back. %>
+  <a href="/search" class="<%= _iconBtn %> <%= typeof searchLinkClass !== 'undefined' ? searchLinkClass : '' %>" aria-label="Search" title="Search" data-nav-item data-nav-label="search">
+    <i class="bi bi-search text-lg" aria-hidden="true"></i>
+  </a>
+
 <% } else if (_part === 'utility') { %>
   <a href="/help" class="<%= _iconBtn %> <%= _nav.help.active ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30' : '' %>" aria-label="Help" title="Help" <%- _nav.help.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="help">
     <i class="bi bi-question-circle text-lg" aria-hidden="true"></i>
@@ -63,7 +71,7 @@
     <i id="theme-icon" class="bi bi-moon-stars text-lg" aria-hidden="true"></i>
   </button>
   <% if (_nav.account) { %>
-  <a href="<%= _nav.account.href %>" class="inline-flex items-center gap-2 pl-1 pr-1 sm:pr-2 py-1 rounded-full border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-500 transition shrink-0 <%= _nav.account.active ? 'ring-2 ring-green-500' : '' %>" aria-label="Your account" title="Your account" <%- _nav.account.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="<%= _nav.account.label.toLowerCase() %>">
+  <a href="<%= _nav.account.href %>" class="inline-flex items-center gap-2 pl-1 pr-1 sm:pr-2 py-1 rounded-full border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-500 transition shrink-0 <%= _nav.account.active ? 'ring-2 ring-green-500' : '' %>" aria-label="<%= locals.firstName ? locals.firstName + ', your account' : 'Your account' %>" title="Your account" <%- _nav.account.active ? 'aria-current="page"' : '' %> data-nav-item data-nav-label="<%= _nav.account.label.toLowerCase() %>">
     <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-600 text-white text-xs font-semibold" aria-hidden="true"><%= String(locals.firstName || 'U').charAt(0).toUpperCase() %></span>
     <span class="hidden sm:inline text-sm text-gray-700 dark:text-gray-200 max-w-[8rem] truncate"><%= locals.firstName || _nav.account.label %></span>
   </a>

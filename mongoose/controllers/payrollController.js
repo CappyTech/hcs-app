@@ -125,7 +125,13 @@ export const createRun = async (req, res, next) => {
     const { frequency, periodStart, periodEnd, paymentDate, taxYear, taxMonth, taxWeek } = req.body;
 
     if (!frequency || !periodStart || !periodEnd || !paymentDate || !taxYear) {
-      req.flash?.('error', 'All fields are required to create a payroll run.');
+      // Name each empty field by its label on the New Payroll Run form
+      const missing = [
+        [frequency, 'Frequency'], [periodStart, 'Period Start'], [periodEnd, 'Period End'],
+        [paymentDate, 'Payment Date'], [taxYear, 'Tax Year'],
+      ].filter(([v]) => !v).map(([, label]) => label);
+      const list = missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(', ')} and ${missing.at(-1)}`;
+      req.flash?.('error', `${list} ${missing.length === 1 ? 'is' : 'are'} required. Fill ${missing.length === 1 ? 'it' : 'them'} in on the New Payroll Run form and try again.`);
       return res.redirect('/payroll/runs');
     }
 
@@ -137,7 +143,7 @@ export const createRun = async (req, res, next) => {
       ...(taxWeek  ? { taxWeek:  Number(taxWeek)  } : {})
     });
     if (existing) {
-      req.flash?.('error', `A ${frequency} payroll run for this period already exists.`);
+      req.flash?.('error', `A ${frequency} payroll run for this Tax Year${taxMonth ? ' and Tax Month' : ''}${taxWeek ? ' and Tax Week' : ''} already exists. Open it from the list, or change the Tax Month or Tax Week.`);
       return res.redirect('/payroll/runs');
     }
 
@@ -155,6 +161,24 @@ export const createRun = async (req, res, next) => {
     logger.info(`payrollController: created run ${run.uuid} (${frequency} ${taxYear})`);
     res.redirect(`/payroll/run/${run.uuid}`);
   } catch (err) {
+    // Something typed on the New Payroll Run form that a run can't hold
+    if (err?.name === 'ValidationError' || err?.name === 'CastError') {
+      const RUN_FIELD_HELP = {
+        frequency:   'Frequency must be Weekly, Fortnightly or Monthly.',
+        periodStart: 'Period Start is not a real date. Pick it from the calendar.',
+        periodEnd:   'Period End is not a real date. Pick it from the calendar.',
+        paymentDate: 'Payment Date is not a real date. Pick it from the calendar.',
+        taxMonth:    'Tax Month must be a number from 1 to 12 (1 is April).',
+        taxWeek:     'Tax Week must be a number from 1 to 56.',
+        taxYear:     'Tax Year must look like 2025/26.',
+      };
+      const paths = err.name === 'CastError' && err.path ? [err.path] : Object.keys(err.errors || {});
+      const msgs = paths.map((p) => RUN_FIELD_HELP[p]).filter(Boolean);
+      if (msgs.length) {
+        req.flash?.('error', msgs.join(' '));
+        return res.redirect('/payroll/runs');
+      }
+    }
     next(err);
   }
 };

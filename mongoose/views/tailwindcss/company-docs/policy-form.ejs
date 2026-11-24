@@ -1,3 +1,16 @@
+<%
+  // On a failed save the controller passes formValues (what was typed) and
+  // fieldErrors (input id -> message); `policy` still drives the action/heading.
+  const p = locals.formValues || policy || null;
+  const _fe = locals.fieldErrors || {};
+  const _inv = (id) => _fe[id] ? `aria-invalid="true" aria-describedby="${id}-error"` : '';
+  const _dateValue = (d) => {
+    if (!d) return '';
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    const t = new Date(d);
+    return Number.isNaN(t.getTime()) ? '' : t.toISOString().split('T')[0];
+  };
+%>
 <div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
 
   <div class="flex items-center gap-3 mb-2">
@@ -5,6 +18,8 @@
     <span class="text-gray-400">/</span>
     <h1 class="text-xl font-bold"><%= policy ? 'Edit Policy' : 'New Policy' %></h1>
   </div>
+
+  <%- include('../partials/_errorSummary') %>
 
   <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
     <form method="POST"
@@ -17,69 +32,76 @@
         <!-- Title -->
         <div class="sm:col-span-2">
           <label for="f-title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title <span class="text-red-500">*</span></label>
-          <input id="f-title" type="text" name="title" required
-            value="<%= policy ? policy.title : '' %>"
+          <input id="f-title" <%- _inv('f-title') %> type="text" name="title" required
+            value="<%= p ? p.title : '' %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <%- include('../partials/_fieldError', { id: 'f-title' }) %>
         </div>
 
         <!-- Category -->
         <div>
           <label for="f-category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-          <select id="f-category" name="category"
+          <select id="f-category" <%- _inv('f-category') %> name="category"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
             <% categories.forEach(cat => { %>
-              <option value="<%= cat %>" <%= policy && policy.category === cat ? 'selected' : '' %>><%= cat %></option>
+              <option value="<%= cat %>" <%= p && p.category === cat ? 'selected' : '' %>><%= cat %></option>
             <% }) %>
           </select>
+          <%- include('../partials/_fieldError', { id: 'f-category' }) %>
         </div>
 
         <!-- Assign to employee -->
         <div class="sm:col-span-3">
           <label for="f-employee" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign to employee <span class="text-gray-400">(optional)</span></label>
-          <select id="f-employee" name="employee"
+          <select id="f-employee" <%- _inv('f-employee') %> name="employee"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
             <option value="">Company-wide (no specific employee)</option>
             <% employees.forEach(emp => { %>
               <% const empId = emp._id.toString(); %>
-              <option value="<%= empId %>" <%= (policy && policy.employee && policy.employee.toString() === empId) || (!policy && typeof preselectEmployee !== 'undefined' && preselectEmployee === empId) ? 'selected' : '' %>><%= emp.name %></option>
+              <option value="<%= empId %>" <%= (p && p.employee && p.employee.toString() === empId) || (!policy && typeof preselectEmployee !== 'undefined' && preselectEmployee === empId) ? 'selected' : '' %>><%= emp.name %></option>
             <% }) %>
           </select>
+          <%- include('../partials/_fieldError', { id: 'f-employee' }) %>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">For individual documents like a contract or onboarding pack. Leave as company-wide for general policies.</p>
         </div>
 
         <!-- Version -->
         <div>
           <label for="f-version" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Version</label>
-          <input id="f-version" type="text" name="version"
-            value="<%= policy ? policy.version : '1.0' %>"
+          <input id="f-version" <%- _inv('f-version') %> type="text" name="version"
+            value="<%= p ? p.version : '1.0' %>"
             placeholder="e.g. 1.0"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <%- include('../partials/_fieldError', { id: 'f-version' }) %>
         </div>
 
         <!-- Review cycle -->
         <div>
           <label for="f-reviewIntervalMonths" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Review every (months)</label>
-          <input id="f-reviewIntervalMonths" type="number" name="reviewIntervalMonths" min="0" step="1"
-            value="<%= policy && (policy.reviewIntervalMonths || policy.reviewIntervalMonths === 0) ? policy.reviewIntervalMonths : 12 %>"
+          <input id="f-reviewIntervalMonths" <%- _inv('f-reviewIntervalMonths') %> type="number" name="reviewIntervalMonths" min="0" step="1"
+            value="<%= p && (p.reviewIntervalMonths || p.reviewIntervalMonths === 0) ? p.reviewIntervalMonths : 12 %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <%- include('../partials/_fieldError', { id: 'f-reviewIntervalMonths' }) %>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Flagged out of date this many months after each save. <strong>0</strong> = never expires.</p>
         </div>
 
         <!-- Due-soon warning window -->
         <div>
           <label for="f-reviewWarningDays" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Flag "due soon" (days before)</label>
-          <input id="f-reviewWarningDays" type="number" name="reviewWarningDays" min="0" step="1"
-            value="<%= policy && (policy.reviewWarningDays || policy.reviewWarningDays === 0) ? policy.reviewWarningDays : 30 %>"
+          <input id="f-reviewWarningDays" <%- _inv('f-reviewWarningDays') %> type="number" name="reviewWarningDays" min="0" step="1"
+            value="<%= p && (p.reviewWarningDays || p.reviewWarningDays === 0) ? p.reviewWarningDays : 30 %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <%- include('../partials/_fieldError', { id: 'f-reviewWarningDays' }) %>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">How many days before the review date the policy shows as "due soon".</p>
         </div>
 
         <!-- Review date (override) -->
         <div>
           <label for="f-reviewDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Next review date <span class="text-gray-400">(optional)</span></label>
-          <input type="date" id="f-reviewDate" name="reviewDate"
-            value="<%= policy && policy.reviewDate ? new Date(policy.reviewDate).toISOString().split('T')[0] : '' %>"
+          <input type="date" id="f-reviewDate" <%- _inv('f-reviewDate') %> name="reviewDate"
+            value="<%= p ? _dateValue(p.reviewDate) : '' %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <%- include('../partials/_fieldError', { id: 'f-reviewDate' }) %>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Overrides the cycle above. Admins are emailed 30 days before. Leave blank to use the review cycle.</p>
         </div>
 
@@ -87,7 +109,7 @@
         <div class="flex items-center gap-3 pt-6">
           <input type="checkbox" name="isPublished" id="isPublished"
             class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-            <%= policy && policy.isPublished ? 'checked' : '' %>>
+            <%= p && p.isPublished ? 'checked' : '' %>>
           <label for="isPublished" class="text-sm font-medium text-gray-700 dark:text-gray-300">Published</label>
         </div>
       </div>
@@ -129,7 +151,7 @@
         <!-- Quill editor area -->
         <div id="quill-editor" role="group" aria-labelledby="f-content-label"
           class="min-h-64 rounded-b-lg border border-t-0 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-          style="min-height:260px"><%- policy ? policy.contentHtml : '' %></div>
+          style="min-height:260px"><%- p ? p.contentHtml : '' %></div>
         <!-- Hidden input submitted with the form -->
         <input type="hidden" name="contentHtml" id="contentHtml-input">
       </div>

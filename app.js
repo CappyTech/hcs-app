@@ -106,6 +106,7 @@ import __searchRoutes from './mongoose/routes/searchRoutes.js';
 import __payrollRoutes from './mongoose/routes/payrollRoutes.js';
 import __gdprRoutes from './mongoose/routes/gdprRoutes.js';
 import __legalRoutes from './mongoose/routes/legalRoutes.js';
+import __sessionTimeoutRoutes, { exposeSessionExpiry } from './mongoose/routes/sessionTimeoutRoutes.js';
 import __rolesGuideRoutes from './mongoose/routes/rolesGuideRoutes.js';
 import __companyDocsRoutes from './mongoose/routes/companyDocsRoutes.js';
 import __auditRoutes from './mongoose/routes/auditRoutes.js';
@@ -526,6 +527,10 @@ const main = async () => {
     // handler so the reset page's own assets never look like leaving.
     appRouter.use(__passwordResetDraft.dropOnLeave);
     appRouter.use(authService.ensureAuthenticated);
+    // Session time limit: the layout warns before the session ends and offers to
+    // extend it (WCAG 2.2.1). Mounted early so every page knows its expiry.
+    appRouter.use(exposeSessionExpiry);
+    appRouter.use('/', __sessionTimeoutRoutes);
     // Attach user info to templates. Before ensureRouteAccess: its 403 renders
     // the error page, whose layout reads these (the footer's version, the nav).
     appRouter.use((req, res, next) => {

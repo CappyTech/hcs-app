@@ -486,7 +486,7 @@ describe('the OneDrive config group', () => {
   });
 
   it('Test connection reports what is missing and Graph errors', async () => {
-    assert.deepEqual(await run(), [['error', 'onedrive test failed: OneDrive tenant / client ID / client secret / owner not configured.']]);
+    assert.deepEqual(await run(), [['error', 'onedrive test failed: OneDrive tenant / client ID / client secret / owner not configured. Check the settings on this page, save them, then test again.']]);
     assert.equal(drive.calls.length, 0);
 
     configure();

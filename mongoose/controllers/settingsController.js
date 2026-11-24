@@ -270,7 +270,7 @@ export const updateAccountSettings = async (req, res) => {
         _id: { $ne: user._id },
       });
       if (existingUser) {
-        req.flash("error", "That username is already taken.");
+        req.flash("error", "Username: that name is already taken. Choose a different username.");
         return res.redirect("/user/account");
       }
     }
@@ -283,7 +283,7 @@ export const updateAccountSettings = async (req, res) => {
         _id: { $ne: user._id },
       });
       if (existingEmail) {
-        req.flash("error", "That email is already in use.");
+        req.flash("error", "Email: that address is already used by another account. Enter a different email address.");
         return res.redirect("/user/account");
       }
     }
@@ -321,7 +321,17 @@ export const updateAccountSettings = async (req, res) => {
     res.redirect("/user/account");
   } catch (error) {
     logger.error(`Error updating account settings: ${error.message}`);
-    req.flash("error", "Failed to update account settings.");
+    if (error?.name === "ValidationError") {
+      // Name the field the person typed into, by its label on the Account page
+      const LABELS = { username: "Username", email: "Email" };
+      const [p, e] = Object.entries(error.errors || {})[0] || [];
+      const label = LABELS[p] || "Account settings";
+      req.flash("error", e?.kind === "required"
+        ? `${label} is required.`
+        : `${label} isn't valid. Check what you typed and save again.`);
+    } else {
+      req.flash("error", "Your account settings could not be saved. Try again in a minute.");
+    }
     res.redirect("/user/account");
   }
 };
@@ -462,13 +472,13 @@ export const changePassword = async (req, res) => {
       user.password,
     );
     if (!isMatch) {
-      req.flash("error", "Current password is incorrect.");
+      req.flash("error", "Current Password is incorrect. Type the password you use to log in now.");
       return res.redirect("/user/account");
     }
 
     // Check new passwords match
     if (req.body.newPassword !== req.body.confirmNewPassword) {
-      req.flash("error", "New passwords do not match.");
+      req.flash("error", "Confirm New Password does not match New Password. Type the same new password in both boxes.");
       return res.redirect("/user/account");
     }
 
@@ -493,7 +503,7 @@ export const changePassword = async (req, res) => {
     res.redirect("/user/account");
   } catch (error) {
     logger.error(`Error changing password: ${error.message}`);
-    req.flash("error", "Failed to change password.");
+    req.flash("error", "Your password could not be changed. Try again in a minute.");
     res.redirect("/user/account");
   }
 };
@@ -502,7 +512,7 @@ export const verifyAndEnableTotp = async (req, res) => {
   try {
     const { totpToken } = req.body;
     if (!totpToken || totpToken.length !== 6) {
-      req.flash("error", "Please enter a valid 6-digit authentication code.");
+      req.flash("error", "Enter the 6-digit authentication code from your authenticator app, with no spaces.");
       return res.redirect("/user/account");
     }
 
@@ -517,7 +527,7 @@ export const verifyAndEnableTotp = async (req, res) => {
     const isValid = totpService.verifyTOTP(decryptedSecret, totpToken);
 
     if (!isValid) {
-      req.flash("error", "Invalid authentication code. Please try again.");
+      req.flash("error", "That authentication code is wrong or has expired. Enter the newest 6-digit code from your authenticator app.");
       return res.redirect("/user/account");
     }
 

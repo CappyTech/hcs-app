@@ -132,6 +132,62 @@ function parseNonNegInt(raw, fallback) {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
+// A policy that fails validation goes back to the form with each problem under
+// its field (WCAG 3.3.1 / 3.3.3). Keys are the inputs' ids in policy-form.ejs.
+const POLICY_FIELDS = {
+  title:                { id: 'f-title', label: 'Title' },
+  category:             { id: 'f-category', label: 'Category' },
+  employee:             { id: 'f-employee', label: 'Assign to employee' },
+  version:              { id: 'f-version', label: 'Version' },
+  reviewIntervalMonths: { id: 'f-reviewIntervalMonths', label: 'Review every (months)' },
+  reviewWarningDays:    { id: 'f-reviewWarningDays', label: 'Flag "due soon" (days before)' },
+  reviewDate:           { id: 'f-reviewDate', label: 'Next review date' },
+};
+
+export function policyFieldErrors(err) {
+  const entries = err?.name === 'CastError' && err.path ? [[err.path, err]] : Object.entries(err?.errors || {});
+  const fieldErrors = {};
+  for (const [p, e] of entries) {
+    const f = POLICY_FIELDS[p] || { id: 'f-title', label: p };
+    let msg;
+    if (e?.kind === 'required') msg = `${f.label} is required.`;
+    else if (p === 'reviewDate') msg = 'Next review date is not a real date. Pick one from the calendar, or leave it blank to use the review cycle.';
+    else if (e?.kind === 'enum') msg = `${f.label} must be one of the listed options.`;
+    else if (p === 'employee') msg = 'Assign to employee: choose someone from the list, or leave it company-wide.';
+    else msg = `${f.label}: ${String(e?.message || 'this value is not valid.').replace(/^Path `[^`]+` /, '')}`;
+    fieldErrors[f.id] = msg;
+  }
+  return fieldErrors;
+}
+
+// What the person typed, so the form comes back as they left it.
+function policyFormValues(body) {
+  return {
+    title: body.title || '',
+    category: body.category || '',
+    employee: body.employee || null,
+    version: body.version || '',
+    contentHtml: body.contentHtml || '',
+    isPublished: body.isPublished === 'on',
+    reviewIntervalMonths: body.reviewIntervalMonths,
+    reviewWarningDays: body.reviewWarningDays,
+    reviewDate: body.reviewDate || '',
+  };
+}
+
+async function renderPolicyFormWithErrors(req, res, err, policy) {
+  const employees = await loadEmployeeOptions(policy?.employee);
+  return res.status(400).render('tailwindcss/company-docs/policy-form', {
+    title: policy ? `Edit: ${policy.title}` : 'New Policy',
+    policy,
+    formValues: policyFormValues(req.body),
+    fieldErrors: policyFieldErrors(err),
+    categories: POLICY_CATEGORIES,
+    employees,
+    quillEditor: true,
+  });
+}
+
 // An explicit review date wins; otherwise derive one from the cadence rule
 // (now + interval). A 0-month interval with no explicit date means no expiry.
 function deriveReviewDate(rawDate, intervalMonths) {
@@ -293,6 +349,9 @@ export const postCreatePolicy = async (req, res, next) => {
     req.session.successMessage = 'Policy created.';
     res.redirect('/company-docs/policies');
   } catch (err) {
+    if (err?.name === 'ValidationError' || err?.name === 'CastError') {
+      try { return await renderPolicyFormWithErrors(req, res, err, null); } catch (e) { return next(e); }
+    }
     next(err);
   }
 };
@@ -316,9 +375,11 @@ export const getEditPolicy = async (req, res, next) => {
 };
 
 export const postEditPolicy = async (req, res, next) => {
+  let original = null;
   try {
     const policy = await mdb.INTERNAL.policyDocument.findOne({ uuid: req.params.uuid });
     if (!policy) return next(Object.assign(new Error('Policy not found'), { statusCode: 404 }));
+    original = { uuid: policy.uuid, title: policy.title, employee: policy.employee };
     const safeHtml = req.body.contentHtml || '';
     const reviewIntervalMonths = parseNonNegInt(req.body.reviewIntervalMonths, 12);
     const before = { isPublished: policy.isPublished, version: policy.version, employee: policy.employee };
@@ -340,6 +401,9 @@ export const postEditPolicy = async (req, res, next) => {
     req.session.successMessage = 'Policy updated.';
     res.redirect('/company-docs/policies');
   } catch (err) {
+    if (original && (err?.name === 'ValidationError' || err?.name === 'CastError')) {
+      try { return await renderPolicyFormWithErrors(req, res, err, original); } catch (e) { return next(e); }
+    }
     next(err);
   }
 };

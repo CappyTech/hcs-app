@@ -1,0 +1,23 @@
+<%
+  /**
+   * Error summary for a custom form that is re-rendered after a validation
+   * problem (WCAG 3.3.1 / 3.3.3). Same markup as form-create.ejs: role="alert"
+   * plus data-error-summary, which ui-helpers.js focuses on load.
+   *
+   * Locals: fieldErrors (input id -> message). Each entry links to its input,
+   * and the input itself shows the message under it via `<id>-error`.
+   */
+  const _fe = locals.fieldErrors || {};
+  const _keys = Object.keys(_fe);
+%>
+<% if (_keys.length) { %>
+  <div id="form-error-summary" role="alert" tabindex="-1" aria-labelledby="form-error-summary-title" data-error-summary
+       class="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-4 rounded-xl mb-6 text-sm border border-red-200 dark:border-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
+    <p id="form-error-summary-title" class="font-semibold mb-1"><%= _keys.length === 1 ? 'There is a problem' : `There are ${_keys.length} problems` %></p>
+    <ul class="list-disc pl-5 space-y-0.5">
+      <% _keys.forEach(k => { %>
+        <li><a href="#<%= k %>" class="underline hover:no-underline"><%= _fe[k] %></a></li>
+      <% }) %>
+    </ul>
+  </div>
+<% } %>

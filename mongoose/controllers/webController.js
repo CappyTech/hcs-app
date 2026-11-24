@@ -181,11 +181,33 @@ export const getCreate = async (req, res, next) => {
   }
 };
 
+// A create that fails validation goes back to the form with each problem under
+// its field (WCAG 3.3.1 / 3.3.3), keyed by the input id `f-<name>` in _field.ejs.
+function webFieldErrors(cfg, err) {
+  const entries = err?.name === 'CastError' && err.path ? [[err.path, err]] : Object.entries(err?.errors || {});
+  const fieldErrors = {};
+  for (const [p, e] of entries) {
+    const name = String(p).split('.')[0];
+    const field = cfg.fields.find((f) => f.name === name);
+    if (!field) continue;
+    let msg;
+    if (e?.kind === 'required') msg = `${field.label} is required.`;
+    else if (field.type === 'date') msg = `${field.label} is not a real date. Pick one from the calendar, or leave it blank.`;
+    else if (field.type === 'number') msg = `${field.label} must be a number.`;
+    else if (e?.kind === 'enum') msg = `${field.label} must be one of the listed options.`;
+    else msg = `${field.label}: ${String(e?.message || 'this value is not valid.').replace(/^Path `[^`]+` /, '')}`;
+    fieldErrors[`f-${name}`] = msg;
+  }
+  return fieldErrors;
+}
+
 export const postCreate = async (req, res, next) => {
+  let cfg = null;
+  let update = null;
   try {
-    const cfg = typeOr404(req.params.type);
+    cfg = typeOr404(req.params.type);
     const Model = modelFor(cfg);
-    const update = updateFromBody(cfg, req.body);
+    update = updateFromBody(cfg, req.body);
     update.slug = await uniqueSlug(cfg, Model, update.slug, update[titleField(cfg)]);
     update.createdBy = req.user?._id;
     update.updatedBy = req.user?._id;
@@ -193,6 +215,25 @@ export const postCreate = async (req, res, next) => {
     req.flash('success', `${cfg.label} created as a draft. Publish it when it is ready.`);
     res.redirect(`/website/${req.params.type}/${created.uuid}/edit`);
   } catch (err) {
+    if (cfg && update && (err?.name === 'ValidationError' || err?.name === 'CastError')) {
+      const fieldErrors = webFieldErrors(cfg, err);
+      if (Object.keys(fieldErrors).length) {
+        try {
+          return res.status(400).render('tailwindcss/website/form', {
+            title: `New ${cfg.label}`,
+            type: req.params.type,
+            cfg,
+            record: null,
+            formValues: update,
+            fieldErrors,
+            media: await mediaChoices(),
+            quillEditor: cfg.fields.some((f) => f.type === 'richtext'),
+          });
+        } catch (e) {
+          return next(e);
+        }
+      }
+    }
     next(err);
   }
 };

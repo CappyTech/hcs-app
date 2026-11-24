@@ -114,19 +114,19 @@ export const postPreview = async (req, res, next) => {
     const items = parseLines(req.body);
 
     if (!items.length) {
-      req.flash('error', 'Select at least one invoice to pay.');
+      req.flash('error', 'Nothing was ticked. Tick at least one invoice to pay, then try again.');
       return res.redirect('/payments/bulk');
     }
     if (!Number.isFinite(accountId)) {
-      req.flash('error', 'Choose the bank account to pay from.');
+      req.flash('error', 'Pay from account is required. Choose the bank account to pay from.');
       return res.redirect('/payments/bulk');
     }
     if (!Number.isFinite(method)) {
-      req.flash('error', 'Enter the payment method.');
+      req.flash('error', 'Method is required. Enter the KashFlow payment method code, for example 5.');
       return res.redirect('/payments/bulk');
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      req.flash('error', 'Enter a valid payment date.');
+      req.flash('error', 'Payment date must be a real date. Pick one from the calendar.');
       return res.redirect('/payments/bulk');
     }
 
@@ -210,7 +210,7 @@ export const postConfirm = async (req, res, next) => {
       const body = err?.response?.data;
       logger.error(`[bulkPay] createBulkPayment failed: ${status || ''} ${err.message}`);
       if (body) logger.error(`[bulkPay] error body: ${typeof body === 'object' ? JSON.stringify(body).slice(0, 2000) : String(body).slice(0, 2000)}`);
-      req.flash('error', `KashFlow rejected the bulk payment${status ? ` (${status})` : ''}: ${err.message}`);
+      req.flash('error', `KashFlow rejected the bulk payment${status ? ` (${status})` : ''}: ${err.message} Check the Method and Payment date, then try again. If KashFlow is down, try again in a minute.`);
       return res.redirect('/payments/bulk');
     }
 

@@ -18,7 +18,13 @@
   const SUBLABEL = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
 
   const v = value === undefined || value === null ? '' : value;
-  const dateValue = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+  const dateValue = (d) => {
+    const t = d ? new Date(d) : null;
+    return t && !Number.isNaN(t.getTime()) ? t.toISOString().slice(0, 10) : '';
+  };
+  // A refused create passes fieldErrors keyed by input id (f-<name>)
+  const _errId = `f-${field.name}`;
+  const _inv = (locals.fieldErrors && locals.fieldErrors[_errId]) ? `aria-invalid="true" aria-describedby="${_errId}-error"` : '';
   const blankRows = 2;
 %>
 
@@ -59,23 +65,23 @@
 
 <% } else if (field.type === 'textarea') { %>
   <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
-  <textarea id="f-<%= field.name %>" name="<%= field.name %>" rows="3" class="<%= INPUT %>"><%= v %></textarea>
+  <textarea id="f-<%= field.name %>" <%- _inv %> name="<%= field.name %>" rows="3" class="<%= INPUT %>"><%= v %></textarea>
 
 <% } else if (field.type === 'number') { %>
   <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
-  <input id="f-<%= field.name %>" type="number" name="<%= field.name %>" value="<%= v === '' ? 0 : v %>" class="<%= INPUT %>">
+  <input id="f-<%= field.name %>" <%- _inv %> type="number" name="<%= field.name %>" value="<%= v === '' ? 0 : v %>" class="<%= INPUT %>">
 
 <% } else if (field.type === 'date') { %>
   <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
-  <input id="f-<%= field.name %>" type="date" name="<%= field.name %>" value="<%= dateValue(v) %>" class="<%= INPUT %>">
+  <input id="f-<%= field.name %>" <%- _inv %> type="date" name="<%= field.name %>" value="<%= dateValue(v) %>" class="<%= INPUT %>">
 
 <% } else if (field.type === 'url') { %>
   <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
-  <input id="f-<%= field.name %>" type="url" name="<%= field.name %>" value="<%= v %>" class="<%= INPUT %>">
+  <input id="f-<%= field.name %>" <%- _inv %> type="url" name="<%= field.name %>" value="<%= v %>" class="<%= INPUT %>">
 
 <% } else if (field.type === 'tags') { %>
   <label class="<%= LABEL %>" for="f-<%= field.name %>"><%= field.label %></label>
-  <input id="f-<%= field.name %>" type="text" name="<%= field.name %>"
+  <input id="f-<%= field.name %>" <%- _inv %> type="text" name="<%= field.name %>"
     value="<%= Array.isArray(v) ? v.join(', ') : v %>" class="<%= INPUT %>">
 
 <% } else if (field.type === 'image' || field.type === 'panel') { %>
@@ -181,9 +187,11 @@
   <label class="<%= LABEL %>" for="f-<%= field.name %>">
     <%= field.label %><% if (field.required) { %> <span class="text-red-600">*</span><% } %>
   </label>
-  <input id="f-<%= field.name %>" type="text" name="<%= field.name %>" value="<%= v %>"
+  <input id="f-<%= field.name %>" <%- _inv %> type="text" name="<%= field.name %>" value="<%= v %>"
     <%= field.required ? 'required' : '' %> class="<%= INPUT %>">
 <% } %>
+
+<%- include('../partials/_fieldError', { id: _errId }) %>
 
 <% if (field.help) { %>
   <p class="<%= HELP %>"><%= field.help %></p>

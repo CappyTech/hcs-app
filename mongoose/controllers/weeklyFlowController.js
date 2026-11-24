@@ -73,7 +73,7 @@ export const postRecord = async (req, res, next) => {
     logger.info(`[weeklyFlowController] Recorded ${created} attendance rows for assignment ${assignmentUuid}`);
     if (created) req.flash('success', `Recorded ${plural(created, 'day')} as pending.`);
     if (skipped.length) req.flash('error', `${plural(skipped.length, 'day')} skipped: already recorded, on approved holiday, or in a locked payroll period.`);
-    if (!created && !skipped.length) req.flash('error', 'No days were ticked.');
+    if (!created && !skipped.length) req.flash('error', 'Nothing was ticked. Tick at least one day, then save again.');
     res.redirect(back(req, 'step-3'));
   } catch (err) {
     if (err.status === 400) {

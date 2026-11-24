@@ -1,3 +1,11 @@
+<%
+  // After a refused submission the controller flashes back what was typed
+  // (formValues) and the problem under its field (fieldErrors, keyed by input id).
+  const fv = locals.formValues || {};
+  const _fe = locals.fieldErrors || {};
+  const _inv = (id) => _fe[id] ? `aria-invalid="true" aria-describedby="${id}-error"` : '';
+  const _type = fv.type || 'work';
+%>
 <div class="max-w-lg mx-auto py-10 px-4 sm:px-6 lg:px-8">
   <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
     <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
@@ -18,64 +26,67 @@
       <!-- Date -->
       <div>
         <label for="date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
-        <input type="date" id="date" name="date" value="<%= today %>" required
+        <input type="date" id="date" name="date" value="<%= fv.date || today %>" required <%- _inv('date') %>
           class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+        <%- include('../partials/_fieldError', { id: 'date' }) %>
       </div>
 
       <!-- Type -->
       <div>
         <label for="type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-        <select id="type" name="type" required
+        <select id="type" name="type" required <%- _inv('type') %>
           class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
-          <option value="work" selected>Work</option>
-          <option value="training">Training</option>
-          <option value="sick">Sick</option>
-          <option value="holiday">Holiday</option>
-          <option value="leave">Leave</option>
-          <option value="off">Off</option>
+          <% [['work', 'Work'], ['training', 'Training'], ['sick', 'Sick'], ['holiday', 'Holiday'], ['leave', 'Leave'], ['off', 'Off']].forEach(([val, text]) => { %>
+            <option value="<%= val %>" <%= _type === val ? 'selected' : '' %>><%= text %></option>
+          <% }) %>
         </select>
+        <%- include('../partials/_fieldError', { id: 'type' }) %>
       </div>
 
       <!-- Project -->
       <div>
         <label for="projectId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project <span class="text-gray-400">(optional)</span></label>
-        <select id="projectId" name="projectId"
+        <select id="projectId" name="projectId" <%- _inv('projectId') %>
           class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
           <option value="">— None —</option>
           <% projects.forEach(p => { %>
-            <option value="<%= p._id %>">
+            <option value="<%= p._id %>" <%= String(p._id) === fv.projectId ? 'selected' : '' %>>
               <%= p.Number ? '#' + p.Number + ' – ' : '' %><%= p.Name %>
             </option>
           <% }) %>
         </select>
+        <%- include('../partials/_fieldError', { id: 'projectId' }) %>
       </div>
 
       <!-- Location -->
       <div>
         <label for="locationId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location <span class="text-gray-400">(optional)</span></label>
-        <select id="locationId" name="locationId"
+        <select id="locationId" name="locationId" <%- _inv('locationId') %>
           class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
           <option value="">— None —</option>
           <% locations.forEach(l => { %>
-            <option value="<%= l._id %>"><%= l.name %></option>
+            <option value="<%= l._id %>" <%= String(l._id) === fv.locationId ? 'selected' : '' %>><%= l.name %></option>
           <% }) %>
         </select>
+        <%- include('../partials/_fieldError', { id: 'locationId' }) %>
       </div>
 
       <% if (isEmployee) { %>
         <!-- Hours Worked (employees only) -->
         <div>
           <label for="hoursWorked" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hours Worked</label>
-          <input type="number" id="hoursWorked" name="hoursWorked" step="0.25" min="0" max="24" placeholder="8"
+          <input type="number" id="hoursWorked" name="hoursWorked" step="0.25" min="0" max="24" placeholder="8" value="<%= fv.hoursWorked || '' %>" <%- _inv('hoursWorked') %>
             class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+        <%- include('../partials/_fieldError', { id: 'hoursWorked' }) %>
         </div>
       <% } %>
 
       <!-- Notes -->
       <div>
         <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes <span class="text-gray-400">(optional)</span></label>
-        <textarea id="notes" name="notes" rows="3" maxlength="2000" placeholder="Any additional details..."
-          class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-y"></textarea>
+        <textarea id="notes" name="notes" rows="3" maxlength="2000" placeholder="Any additional details..." <%- _inv('notes') %>
+          class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-y"><%= fv.notes || '' %></textarea>
+        <%- include('../partials/_fieldError', { id: 'notes' }) %>
       </div>
 
       <!-- Submit -->
