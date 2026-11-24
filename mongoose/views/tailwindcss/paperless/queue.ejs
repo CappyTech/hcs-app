@@ -69,7 +69,7 @@ const waitClass = (days) => days == null ? 'text-gray-400'
         <div class="flex items-center gap-2 mt-2 text-xs">
           <span class="text-gray-500 dark:text-gray-400">Order:</span>
           <a href="?sort=oldest" class="<%= order === 'read' ? 'text-green-700 dark:text-green-400 hover:underline' : 'font-semibold text-gray-700 dark:text-gray-200' %>">Oldest first</a>
-          <span class="text-gray-300">·</span>
+          <span class="text-gray-300" aria-hidden="true">·</span>
           <a href="?sort=read" class="<%= order === 'read' ? 'font-semibold text-gray-700 dark:text-gray-200' : 'text-green-700 dark:text-green-400 hover:underline' %>">Best read first</a>
         </div>
       <% } %>

@@ -154,7 +154,7 @@
     <input type="hidden" id="vdep-date">
 
     <div class="flex items-center gap-3">
-      <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Driver</label>
+      <label for="vdep-driver-ref" class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Driver</label>
       <select id="vdep-driver-ref" class="flex-1 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
         <option value="">"” Unassigned "”</option>
         <optgroup label="Employees">
@@ -171,7 +171,7 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Usage</label>
+      <label for="vdep-usage" class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Usage</label>
       <select id="vdep-usage" class="flex-1 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
         <option value="site">Site</option>
         <option value="delivery">Delivery</option>
@@ -182,7 +182,7 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Location</label>
+      <label for="vdep-location" class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Location</label>
       <select id="vdep-location" class="flex-1 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
         <option value="">"” None "”</option>
         <% _locs.forEach(function(loc) { %>
@@ -192,7 +192,7 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Contract</label>
+      <label for="vdep-contract" class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Contract</label>
       <select id="vdep-contract" class="flex-1 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
         <option value="">"” None "”</option>
         <% _conts.forEach(function(c) { %>
@@ -202,11 +202,11 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <label class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Mileage</label>
-      <input type="number" id="vdep-start-mi" min="0" placeholder="Start"
+      <label for="vdep-start-mi" class="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">Mileage</label>
+      <input type="number" id="vdep-start-mi" min="0" aria-label="Start mileage" placeholder="Start"
         class="w-28 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
       <span class="text-xs text-gray-400"></span>
-      <input type="number" id="vdep-end-mi" min="0" placeholder="End"
+      <input type="number" id="vdep-end-mi" min="0" aria-label="End mileage" placeholder="End"
         class="w-28 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
     </div>
 

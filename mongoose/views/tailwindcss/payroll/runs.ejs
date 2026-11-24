@@ -24,19 +24,19 @@
 
       <!-- Filters -->
       <form method="GET" action="/payroll/runs" class="flex flex-wrap gap-3 mb-6">
-        <select name="taxYear" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        <select name="taxYear" aria-label="Filter by tax year" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           <option value="">All Tax Years</option>
           <% ['2026/27','2025/26','2024/25'].forEach(y => { %>
             <option value="<%= y %>" <%= query.taxYear === y ? 'selected' : '' %>><%= y %></option>
           <% }) %>
         </select>
-        <select name="frequency" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        <select name="frequency" aria-label="Filter by frequency" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           <option value="">All Frequencies</option>
           <option value="weekly" <%= query.frequency === 'weekly' ? 'selected' : '' %>>Weekly</option>
           <option value="fortnightly" <%= query.frequency === 'fortnightly' ? 'selected' : '' %>>Fortnightly</option>
           <option value="monthly" <%= query.frequency === 'monthly' ? 'selected' : '' %>>Monthly</option>
         </select>
-        <select name="status" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        <select name="status" aria-label="Filter by status" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           <option value="">All Statuses</option>
           <option value="draft" <%= query.status === 'draft' ? 'selected' : '' %>>Draft</option>
           <option value="locked" <%= query.status === 'locked' ? 'selected' : '' %>>Locked</option>
@@ -127,8 +127,8 @@
       <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency</label>
-          <select name="frequency" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <label for="newRunFrequency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency</label>
+          <select id="newRunFrequency" name="frequency" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <option value="">Select…</option>
             <option value="weekly">Weekly</option>
             <option value="fortnightly">Fortnightly</option>
@@ -137,30 +137,30 @@
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period Start</label>
-            <input type="date" name="periodStart" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="newRunPeriodStart" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period Start</label>
+            <input id="newRunPeriodStart" type="date" name="periodStart" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period End</label>
-            <input type="date" name="periodEnd" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="newRunPeriodEnd" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period End</label>
+            <input id="newRunPeriodEnd" type="date" name="periodEnd" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Date</label>
-          <input type="date" name="paymentDate" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <label for="newRunPaymentDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Date</label>
+          <input id="newRunPaymentDate" type="date" name="paymentDate" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
         </div>
         <div class="grid grid-cols-3 gap-3">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Year</label>
-            <input type="text" name="taxYear" placeholder="2025/26" required pattern="\d{4}/\d{2}" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="newRunTaxYear" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Year</label>
+            <input id="newRunTaxYear" type="text" name="taxYear" placeholder="2025/26" required pattern="\d{4}/\d{2}" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Month (1–12)</label>
-            <input type="number" name="taxMonth" min="1" max="12" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="newRunTaxMonth" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Month (1–12)</label>
+            <input id="newRunTaxMonth" type="number" name="taxMonth" min="1" max="12" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Week (1–56)</label>
-            <input type="number" name="taxWeek" min="1" max="56" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="newRunTaxWeek" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Week (1–56)</label>
+            <input id="newRunTaxWeek" type="number" name="taxWeek" min="1" max="56" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
         </div>
       </div>

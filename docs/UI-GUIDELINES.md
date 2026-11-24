@@ -301,6 +301,11 @@ Tailwind's default hex values. Other rules every view follows:
 - An icon-only link or button needs an `aria-label`. Icons (`<i class="bi …">`) are decorative: `ui-helpers.js` hides them from screen readers.
 - Mark the selected tab, chip, page or toggle with `aria-current`, and sorted `<th>` with `aria-sort`.
 - Don't remove the focus outline (`focus:outline-none`) without adding a `focus-visible:ring-*` in its place.
+- `red/amber/yellow/orange` -500/-600 are also remapped one shade darker, so they pass as text. Don't put white text on any `-400`/`-500` background; use `-600` or darker.
+- Targets are at least 24×24px. Wrap a bare checkbox in a `w-6 h-6` label; give a small standalone text link `inline-block py-1 -my-1`. A label wrapping a checkbox gets a 24px minimum height automatically.
+- Validation errors: generic CRUD forms receive `fieldErrors` (path → message) from `describeValidationError` in `CRUDController.js`; `_formField.ejs` shows each one under its input with `aria-invalid`/`aria-describedby`, and `form-create`/`form-update` list them in a focused summary. A custom form should do the same.
+- Modals opened with `data-modal-open` get `role="dialog"`, focus moves in, Tab stays inside, and Escape closes and returns focus (`ui-helpers.js`). Give each modal a heading.
+- The accessibility statement is `/legal/accessibility`: update its `lastReviewed` date in `legalRoutes.js` after each audit.
 
 | Role | Light | Dark |
 |------|-------|------|

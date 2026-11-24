@@ -38,20 +38,20 @@ function srcBadge(f) {
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div class="sm:col-span-2">
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_BASE_URL</label>
+              <label for="f-PAPERLESS_BASE_URL" class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_BASE_URL</label>
               <%- srcBadge(fields.PAPERLESS_BASE_URL) %>
             </div>
-            <input type="url" name="PAPERLESS_BASE_URL"
+            <input id="f-PAPERLESS_BASE_URL" type="url" name="PAPERLESS_BASE_URL"
               placeholder="<%= fields.PAPERLESS_BASE_URL.display || 'http://paperless:8000/api' %>"
               <% if (fields.PAPERLESS_BASE_URL.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_PORT</label>
+              <label for="f-PAPERLESS_PORT" class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_PORT</label>
               <%- srcBadge(fields.PAPERLESS_PORT) %>
             </div>
-            <input type="number" name="PAPERLESS_PORT" min="1" max="65535"
+            <input id="f-PAPERLESS_PORT" type="number" name="PAPERLESS_PORT" min="1" max="65535"
               placeholder="<%= fields.PAPERLESS_PORT.display || '8000' %>"
               <% if (fields.PAPERLESS_PORT.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -59,10 +59,10 @@ function srcBadge(f) {
         </div>
         <div class="mb-6">
           <div class="flex items-center justify-between mb-1">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_TOKEN</label>
+            <label for="f-PAPERLESS_TOKEN" class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_TOKEN</label>
             <%- srcBadge(fields.PAPERLESS_TOKEN) %>
           </div>
-          <input type="password" name="PAPERLESS_TOKEN" autocomplete="new-password"
+          <input id="f-PAPERLESS_TOKEN" type="password" name="PAPERLESS_TOKEN" autocomplete="new-password"
             placeholder="<%= fields.PAPERLESS_TOKEN.isSet ? '••••••••' : 'Paperless-ngx API token' %>"
             <% if (fields.PAPERLESS_TOKEN.fromEnv) { %>disabled<% } %>
             class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -72,10 +72,10 @@ function srcBadge(f) {
         <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">SSH Tunnel</h2>
         <div class="mb-6">
           <div class="flex items-center justify-between mb-1">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_SSH_TUNNEL_ENABLED</label>
+            <label for="f-PAPERLESS_SSH_TUNNEL_ENABLED" class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_SSH_TUNNEL_ENABLED</label>
             <%- srcBadge(fields.PAPERLESS_SSH_TUNNEL_ENABLED) %>
           </div>
-          <select name="PAPERLESS_SSH_TUNNEL_ENABLED"
+          <select id="f-PAPERLESS_SSH_TUNNEL_ENABLED" name="PAPERLESS_SSH_TUNNEL_ENABLED"
             <% if (fields.PAPERLESS_SSH_TUNNEL_ENABLED.fromEnv) { %>disabled<% } %>
             class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
             <option value="">— keep existing (<%= fields.PAPERLESS_SSH_TUNNEL_ENABLED.display || 'false' %>) —</option>
@@ -93,30 +93,30 @@ function srcBadge(f) {
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_PAGE_SIZE</label>
+              <label for="f-PAPERLESS_PAGE_SIZE" class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_PAGE_SIZE</label>
               <%- srcBadge(fields.PAPERLESS_PAGE_SIZE) %>
             </div>
-            <input type="number" name="PAPERLESS_PAGE_SIZE" min="1" max="1000"
+            <input id="f-PAPERLESS_PAGE_SIZE" type="number" name="PAPERLESS_PAGE_SIZE" min="1" max="1000"
               placeholder="<%= fields.PAPERLESS_PAGE_SIZE.display || '50' %>"
               <% if (fields.PAPERLESS_PAGE_SIZE.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_CONCURRENCY</label>
+              <label for="f-PAPERLESS_CONCURRENCY" class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_CONCURRENCY</label>
               <%- srcBadge(fields.PAPERLESS_CONCURRENCY) %>
             </div>
-            <input type="number" name="PAPERLESS_CONCURRENCY" min="1" max="20"
+            <input id="f-PAPERLESS_CONCURRENCY" type="number" name="PAPERLESS_CONCURRENCY" min="1" max="20"
               placeholder="<%= fields.PAPERLESS_CONCURRENCY.display || '5' %>"
               <% if (fields.PAPERLESS_CONCURRENCY.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_ACCEPT</label>
+              <label for="f-PAPERLESS_ACCEPT" class="text-sm font-medium text-gray-700 dark:text-gray-300">PAPERLESS_ACCEPT</label>
               <%- srcBadge(fields.PAPERLESS_ACCEPT) %>
             </div>
-            <input type="text" name="PAPERLESS_ACCEPT"
+            <input id="f-PAPERLESS_ACCEPT" type="text" name="PAPERLESS_ACCEPT"
               placeholder="<%= fields.PAPERLESS_ACCEPT.display || 'application/json; version=6' %>"
               <% if (fields.PAPERLESS_ACCEPT.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -127,10 +127,10 @@ function srcBadge(f) {
         <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">People's Pension API</h2>
         <div class="mb-8">
           <div class="flex items-center justify-between mb-1">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">PEOPLES_PENSION_API_KEY</label>
+            <label for="f-PEOPLES_PENSION_API_KEY" class="text-sm font-medium text-gray-700 dark:text-gray-300">PEOPLES_PENSION_API_KEY</label>
             <%- srcBadge(fields.PEOPLES_PENSION_API_KEY) %>
           </div>
-          <input type="password" name="PEOPLES_PENSION_API_KEY" autocomplete="new-password"
+          <input id="f-PEOPLES_PENSION_API_KEY" type="password" name="PEOPLES_PENSION_API_KEY" autocomplete="new-password"
             placeholder="<%= fields.PEOPLES_PENSION_API_KEY.isSet ? '••••••••' : 'API key from People\'s Pension portal' %>"
             <% if (fields.PEOPLES_PENSION_API_KEY.fromEnv) { %>disabled<% } %>
             class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">

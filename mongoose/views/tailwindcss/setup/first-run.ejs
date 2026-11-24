@@ -19,20 +19,20 @@
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label for="f-adminUsername" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
         Username <span class="text-red-500">*</span>
       </label>
-      <input type="text" name="adminUsername" required minlength="3" maxlength="64"
+      <input id="f-adminUsername" type="text" name="adminUsername" required minlength="3" maxlength="64"
         pattern="[a-z0-9._-]+" placeholder="jane.smith" value="<%= values.adminUsername || '' %>"
         autocomplete="username"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
       <p class="mt-1 text-xs text-gray-400">Lowercase, no spaces.</p>
     </div>
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label for="f-adminEmail" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
         Email <span class="text-red-500">*</span>
       </label>
-      <input type="email" name="adminEmail" required
+      <input id="f-adminEmail" type="email" name="adminEmail" required
         placeholder="you@example.com" value="<%= values.adminEmail || '' %>"
         autocomplete="email"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
@@ -41,19 +41,19 @@
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label for="f-adminPassword" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
         Password <span class="text-red-500">*</span>
       </label>
-      <input type="password" name="adminPassword" required minlength="12"
+      <input id="f-adminPassword" type="password" name="adminPassword" required minlength="12"
         autocomplete="new-password"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
       <p class="mt-1 text-xs text-gray-400">At least 12 characters.</p>
     </div>
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label for="f-adminPasswordConfirm" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
         Confirm password <span class="text-red-500">*</span>
       </label>
-      <input type="password" name="adminPasswordConfirm" required minlength="12"
+      <input id="f-adminPasswordConfirm" type="password" name="adminPasswordConfirm" required minlength="12"
         autocomplete="new-password"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     </div>
@@ -65,45 +65,45 @@
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Company name</label>
-      <input type="text" name="companyName" placeholder="Example Construction LTD" value="<%= values.companyName || '' %>"
+      <label for="f-companyName" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Company name</label>
+      <input id="f-companyName" type="text" name="companyName" placeholder="Example Construction LTD" value="<%= values.companyName || '' %>"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     </div>
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Short name</label>
-      <input type="text" name="companyShortName" placeholder="Example" value="<%= values.companyShortName || '' %>"
+      <label for="f-companyShortName" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Short name</label>
+      <input id="f-companyShortName" type="text" name="companyShortName" placeholder="Example" value="<%= values.companyShortName || '' %>"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     </div>
   </div>
 
   <div>
-    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Postal address</label>
-    <input type="text" name="companyAddress" placeholder="1 Example Street, Town, AB1 2CD" value="<%= values.companyAddress || '' %>"
+    <label for="f-companyAddress" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Postal address</label>
+    <input id="f-companyAddress" type="text" name="companyAddress" placeholder="1 Example Street, Town, AB1 2CD" value="<%= values.companyAddress || '' %>"
       class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
     <div class="sm:col-span-2">
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Contact email</label>
-      <input type="email" name="supportEmail" placeholder="office@example.com" value="<%= values.supportEmail || '' %>"
+      <label for="f-supportEmail" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Contact email</label>
+      <input id="f-supportEmail" type="email" name="supportEmail" placeholder="office@example.com" value="<%= values.supportEmail || '' %>"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     </div>
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Incorporated</label>
-      <input type="number" name="incorporationYear" min="1800" max="2100" placeholder="2015" value="<%= values.incorporationYear || '' %>"
+      <label for="f-incorporationYear" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Incorporated</label>
+      <input id="f-incorporationYear" type="number" name="incorporationYear" min="1800" max="2100" placeholder="2015" value="<%= values.incorporationYear || '' %>"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm">
     </div>
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Website</label>
-      <input type="text" name="companyWebsite" placeholder="https://www.example.com" value="<%= values.companyWebsite || '' %>"
+      <label for="f-companyWebsite" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Website</label>
+      <input id="f-companyWebsite" type="text" name="companyWebsite" placeholder="https://www.example.com" value="<%= values.companyWebsite || '' %>"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
     </div>
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">This app's public URL</label>
-      <input type="text" name="baseUrl" value="<%= values.baseUrl || suggestedBaseUrl || '' %>"
+      <label for="f-baseUrl" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">This app's public URL</label>
+      <input id="f-baseUrl" type="text" name="baseUrl" value="<%= values.baseUrl || suggestedBaseUrl || '' %>"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
       <p class="mt-1 text-xs text-gray-400">Pre-filled from how you reached this page. Used for links in emails and the security policy.</p>
     </div>

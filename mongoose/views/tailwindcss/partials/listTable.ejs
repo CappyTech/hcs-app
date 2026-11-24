@@ -322,8 +322,11 @@
           <tr>
             <% if (_bulk) { %>
               <th scope="col" class="w-8 px-3 py-2.5 border-b border-gray-200 dark:border-gray-700">
+                <%# 24px label around the 16px box: the whole label is the click target (WCAG 2.5.8). %>
+                <label class="inline-flex items-center justify-center w-6 h-6 -m-1 cursor-pointer">
                 <input type="checkbox" x-bind="allBox" aria-label="Select every record on this page"
                        class="rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500">
+                </label>
               </th>
             <% } %>
             <% headers.forEach(h => { 
@@ -356,9 +359,11 @@
               <% if (_bulk) { %>
                 <td class="w-8 px-3 py-2.5 border-b border-gray-100 dark:border-gray-800">
                   <% if (row.uuid) { %>
+                    <label class="inline-flex items-center justify-center w-6 h-6 -m-1 cursor-pointer">
                     <input type="checkbox" name="uuids" value="<%= row.uuid %>" form="bulk-delete-form"
                            data-bulk-row x-bind="rowBox" aria-label="Select this record"
                            class="rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500">
+                    </label>
                   <% } %>
                 </td>
               <% } %>

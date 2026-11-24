@@ -10,12 +10,26 @@
     --brand-dark: #065f46;
     /* Contrast-safe grays (see tailwind.config.js). Space-separated RGB so Tailwind's
        opacity modifiers (text-gray-400/50) keep working. */
-    --hcs-gray-400: 107 114 128; /* #6b7280: 4.8:1 on white (was #9ca3af, 2.5:1) */
-    --hcs-gray-500: 107 114 128; /* #6b7280: unchanged in light mode */
+    --hcs-gray-400: 99 106 119; /* #636a77: 5.4:1 on white, 4.95:1 on gray-100 (was #9ca3af, 2.5:1) */
+    --hcs-gray-500: 99 106 119; /* #636a77: 4.95:1 on gray-100 table headers (Tailwind's #6b7280 was 4.39:1) */
   }
   .dark {
-    --hcs-gray-400: 156 163 175; /* #9ca3af: Tailwind default, 7.0:1 on gray-900 */
+    --hcs-gray-400: 168 176 188; /* #a8b0bc: 4.7:1 on gray-700 badges (Tailwind's #9ca3af was 4.06:1), 8.1:1 on gray-900 */
     --hcs-gray-500: 139 149 165; /* #8b95a5: 5.6:1 on gray-900, 4.7:1 on gray-800 (was 3.7:1) */
+  }
+
+  /* A field the server rejected (aria-invalid, set by _formField.ejs) gets a red
+     border as well as its message, so the problem isn't shown by text colour alone. */
+  [aria-invalid="true"] {
+    border-color: rgb(220 38 38) !important;
+    border-width: 2px;
+  }
+
+  /* WCAG 2.5.8 target size: a 16px checkbox or radio is fine when the label
+     around it (which toggles it too) is at least 24px tall. */
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    min-height: 1.5rem;
   }
 
   /* WCAG 2.3.3 / 2.2.2: honour the OS "reduce motion" setting for every transition,

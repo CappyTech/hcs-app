@@ -30,12 +30,12 @@ const qs = (over = {}) => {
 
   <!-- Filters -->
   <form method="GET" action="/accountant/accounts/<%= account.accountId %>" class="flex gap-2 flex-wrap mb-4">
-    <input name="search" value="<%= filters.search %>" placeholder="Search description, party or number&hellip;"
+    <input name="search" value="<%= filters.search %>" aria-label="Search transactions" placeholder="Search description, party or number&hellip;"
       class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
              bg-white dark:bg-gray-800 text-gray-900 dark:text-white
              focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
 
-    <select name="state"
+    <select name="state" aria-label="Filter by review state"
       class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
              bg-white dark:bg-gray-800 text-gray-900 dark:text-white
              focus:outline-none focus:ring-2 focus:ring-green-500">

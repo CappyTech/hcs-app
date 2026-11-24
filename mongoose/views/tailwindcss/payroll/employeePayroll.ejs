@@ -28,16 +28,16 @@
         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 mt-2">HMRC Identifiers</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NI Number</label>
-            <input type="text" name="niNumber" value="<%= niDisplay %>" placeholder="AB123456C"
+            <label for="f-niNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NI Number</label>
+            <input id="f-niNumber" type="text" name="niNumber" value="<%= niDisplay %>" placeholder="AB123456C"
               autocomplete="off"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono tracking-widest"
               title="Leave unchanged to keep existing value. Enter new value to update.">
             <p class="text-xs text-gray-400 mt-1">Stored encrypted. Leave unchanged to keep current value.</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NI Category</label>
-            <select name="niCategory"
+            <label for="f-niCategory" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NI Category</label>
+            <select id="f-niCategory" name="niCategory"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <% ['A','B','C','H','J','M','Z'].forEach(cat => { %>
                 <option value="<%= cat %>" <%= (employee.payroll?.niCategory || 'A') === cat ? 'selected' : '' %>><%= cat %></option>
@@ -45,32 +45,32 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Code</label>
-            <input type="text" name="taxCode" value="<%= employee.payroll?.taxCode || '1257L' %>" placeholder="1257L"
+            <label for="f-taxCode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Code</label>
+            <input id="f-taxCode" type="text" name="taxCode" value="<%= employee.payroll?.taxCode || '1257L' %>" placeholder="1257L"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Basis</label>
-            <select name="taxBasis"
+            <label for="f-taxBasis" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Basis</label>
+            <select id="f-taxBasis" name="taxBasis"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <option value="cumulative" <%= (employee.payroll?.taxBasis || 'cumulative') === 'cumulative' ? 'selected' : '' %>>Cumulative</option>
               <option value="week1/month1" <%= employee.payroll?.taxBasis === 'week1/month1' ? 'selected' : '' %>>Week1 / Month1</option>
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PAYE Start Date</label>
-            <input type="date" name="payeStartDate"
+            <label for="f-payeStartDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PAYE Start Date</label>
+            <input id="f-payeStartDate" type="date" name="payeStartDate"
               value="<%= employee.payroll?.payeStartDate ? new Date(employee.payroll.payeStartDate).toISOString().split('T')[0] : '' %>"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payroll ID</label>
-            <input type="text" name="payrollId" value="<%= employee.payroll?.payrollId || '' %>"
+            <label for="f-payrollId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payroll ID</label>
+            <input id="f-payrollId" type="text" name="payrollId" value="<%= employee.payroll?.payrollId || '' %>"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Starter Declaration</label>
-            <select name="starterDeclaration"
+            <label for="f-starterDeclaration" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Starter Declaration</label>
+            <select id="f-starterDeclaration" name="starterDeclaration"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <option value="" <%= !employee.payroll?.starterDeclaration ? 'selected' : '' %>>— None —</option>
               <option value="A" <%= employee.payroll?.starterDeclaration === 'A' ? 'selected' : '' %>>A — First job since last 6 April</option>
@@ -86,8 +86,8 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           <% [['ytdGrossPay','Gross Pay'],['ytdTaxPaid','Tax Paid'],['ytdEmployeeNI','Employee NI'],['ytdEmployerNI','Employer NI']].forEach(([field, label]) => { %>
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><%= label %></label>
-              <input type="number" step="0.01" min="0" name="<%= field %>"
+              <label for="f-<%= field %>" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><%= label %></label>
+              <input type="number" step="0.01" min="0" id="f-<%= field %>" name="<%= field %>"
                 value="<%= employee.payroll?.[field] != null ? Number(employee.payroll[field].toString ? employee.payroll[field].toString() : employee.payroll[field]).toFixed(2) : '0.00' %>"
                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm">
             </div>
@@ -98,8 +98,8 @@
         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 mt-6">Student &amp; Postgraduate Loans</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student Loan Plan</label>
-            <select name="studentLoanPlan"
+            <label for="f-studentLoanPlan" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student Loan Plan</label>
+            <select id="f-studentLoanPlan" name="studentLoanPlan"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <% ['none','Plan1','Plan2','Plan4','Postgrad'].forEach(plan => { %>
                 <option value="<%= plan %>" <%= (employee.payroll?.studentLoanPlan || 'none') === plan ? 'selected' : '' %>><%= plan === 'none' ? '— None —' : plan %></option>
@@ -130,21 +130,21 @@
             <label for="salarySacrifice" class="text-sm font-medium text-gray-700 dark:text-gray-300">Salary sacrifice arrangement</label>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opt-Out Date</label>
-            <input type="date" name="pensionOptOutDate"
+            <label for="f-pensionOptOutDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opt-Out Date</label>
+            <input id="f-pensionOptOutDate" type="date" name="pensionOptOutDate"
               value="<%= employee.payroll?.pensionOptOutDate ? new Date(employee.payroll.pensionOptOutDate).toISOString().split('T')[0] : '' %>"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Rate Override (%)</label>
-            <input type="number" step="0.01" min="0" max="100" name="employeePensionRate"
+            <label for="f-employeePensionRate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Rate Override (%)</label>
+            <input id="f-employeePensionRate" type="number" step="0.01" min="0" max="100" name="employeePensionRate"
               value="<%= employee.payroll?.employeePensionRate != null ? Number(employee.payroll.employeePensionRate.toString ? employee.payroll.employeePensionRate.toString() : employee.payroll.employeePensionRate).toFixed(2) : '' %>"
               placeholder="Leave blank to use scheme default"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Rate Override (%)</label>
-            <input type="number" step="0.01" min="0" max="100" name="employerPensionRate"
+            <label for="f-employerPensionRate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Rate Override (%)</label>
+            <input id="f-employerPensionRate" type="number" step="0.01" min="0" max="100" name="employerPensionRate"
               value="<%= employee.payroll?.employerPensionRate != null ? Number(employee.payroll.employerPensionRate.toString ? employee.payroll.employerPensionRate.toString() : employee.payroll.employerPensionRate).toFixed(2) : '' %>"
               placeholder="Leave blank to use scheme default"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">

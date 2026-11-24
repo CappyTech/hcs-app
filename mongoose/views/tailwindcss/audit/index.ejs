@@ -8,8 +8,8 @@
   <!-- Filters -->
   <form method="GET" action="/audit" class="flex flex-wrap items-end gap-3 text-sm">
     <div>
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Collection</label>
-      <select name="collection" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm">
+      <label for="auditCollection" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Collection</label>
+      <select id="auditCollection" name="collection" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm">
         <option value="">All</option>
         <% collections.forEach(c => { %>
           <option value="<%= c %>" <%= filters.collection === c ? 'selected' : '' %>><%= c %></option>
@@ -17,16 +17,16 @@
       </select>
     </div>
     <div>
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Operation</label>
-      <select name="op" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm">
+      <label for="auditOp" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Operation</label>
+      <select id="auditOp" name="op" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm">
         <% ['', 'create', 'update', 'delete', 'read'].forEach(o => { %>
           <option value="<%= o %>" <%= filters.op === o ? 'selected' : '' %>><%= o ? o.charAt(0).toUpperCase() + o.slice(1) : 'All' %></option>
         <% }) %>
       </select>
     </div>
     <div class="flex-1 min-w-48">
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search (actor / record id)</label>
-      <input type="text" name="q" value="<%= filters.q %>" placeholder="name, email or uuid"
+      <label for="auditQ" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search (actor / record id)</label>
+      <input type="text" id="auditQ" name="q" value="<%= filters.q %>" placeholder="name, email or uuid"
         class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm">
     </div>
     <button type="submit" class="px-4 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition">Filter</button>

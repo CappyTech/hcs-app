@@ -24,12 +24,12 @@ const qs = (over = {}) => {
 
   <!-- Filters -->
   <form method="GET" action="/bank/accounts/<%= account.accountId %>" class="flex gap-2 flex-wrap mb-4">
-    <input name="search" value="<%= filters.search %>" placeholder="Search description, party or number&hellip;"
+    <input name="search" value="<%= filters.search %>" aria-label="Search transactions" placeholder="Search description, party or number&hellip;"
       class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
              bg-white dark:bg-gray-800 text-gray-900 dark:text-white
              focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
 
-    <select name="state"
+    <select name="state" aria-label="Filter by review state"
       class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
              bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
       <option value="outstanding" <%= filters.state === 'outstanding' ? 'selected' : '' %>>Awaiting review</option>
@@ -39,7 +39,7 @@ const qs = (over = {}) => {
       <option value="all"         <%= filters.state === 'all'         ? 'selected' : '' %>>All</option>
     </select>
 
-    <select name="entity"
+    <select name="entity" aria-label="Filter by record type"
       class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
              bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
       <option value="">All kinds</option>
@@ -51,10 +51,10 @@ const qs = (over = {}) => {
       <option value="journal"              <%= filters.entity === 'journal' ? 'selected' : '' %>>Journal</option>
     </select>
 
-    <input type="date" name="from" value="<%= filters.from %>"
+    <input type="date" name="from" value="<%= filters.from %>" aria-label="From date"
       class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
              bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
-    <input type="date" name="to" value="<%= filters.to %>"
+    <input type="date" name="to" value="<%= filters.to %>" aria-label="To date"
       class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
              bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
 

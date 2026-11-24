@@ -17,7 +17,7 @@
 
   <!-- MongoDB URI -->
   <div>
-    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+    <label for="mongoUri" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
       MongoDB URI <span class="text-gray-400 text-xs">(optional — overrides fields below)</span>
     </label>
     <input type="text" name="mongoUri" id="mongoUri" placeholder="mongodb://user:pass@host:27017/"
@@ -34,14 +34,14 @@
   <!-- Host + Port -->
   <div class="grid grid-cols-3 gap-3">
     <div class="col-span-2">
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Host</label>
-      <input type="text" name="mongoHost" placeholder="localhost"
+      <label for="f-mongoHost" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Host</label>
+      <input id="f-mongoHost" type="text" name="mongoHost" placeholder="localhost"
         value="<%= values.mongoHost || '' %>"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
     </div>
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Port</label>
-      <input type="number" name="mongoPort" placeholder="27017"
+      <label for="f-mongoPort" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Port</label>
+      <input id="f-mongoPort" type="number" name="mongoPort" placeholder="27017"
         value="<%= values.mongoPort || '27017' %>"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
     </div>
@@ -50,15 +50,15 @@
   <!-- Username + Password -->
   <div class="grid grid-cols-2 gap-3">
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
-      <input type="text" name="mongoUser" placeholder="admin"
+      <label for="f-mongoUser" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+      <input id="f-mongoUser" type="text" name="mongoUser" placeholder="admin"
         value="<%= values.mongoUser || '' %>"
         autocomplete="off"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
     </div>
     <div>
-      <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-      <input type="password" name="mongoPass"
+      <label for="f-mongoPass" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+      <input id="f-mongoPass" type="password" name="mongoPass"
         value="<%= values.mongoPass || '' %>"
         autocomplete="new-password"
         class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
@@ -67,8 +67,8 @@
 
   <!-- Auth source -->
   <div>
-    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Auth Source</label>
-    <input type="text" name="mongoAuthSource" placeholder="admin"
+    <label for="f-mongoAuthSource" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Auth Source</label>
+    <input id="f-mongoAuthSource" type="text" name="mongoAuthSource" placeholder="admin"
       value="<%= values.mongoAuthSource || 'admin' %>"
       class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
   </div>
@@ -77,30 +77,30 @@
 
   <!-- Database names per namespace -->
   <div>
-    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Database Names</label>
+    <p id="db-names-label" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Database Names</p>
     <p class="mb-2 text-xs text-gray-400">The databases this app uses on the server above. Test Connection lists the databases it can see.</p>
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-2 gap-3" role="group" aria-labelledby="db-names-label">
       <div>
-        <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">REST (KashFlow)</label>
-        <input type="text" name="mongoDbRest" placeholder="rest"
+        <label for="f-mongoDbRest" class="block mb-1 text-xs text-gray-500 dark:text-gray-400">REST (KashFlow)</label>
+        <input id="f-mongoDbRest" type="text" name="mongoDbRest" placeholder="rest"
           value="<%= values.mongoDbRest || '' %>"
           class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
       </div>
       <div>
-        <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Internal</label>
-        <input type="text" name="mongoDbInternal" placeholder="internal"
+        <label for="f-mongoDbInternal" class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Internal</label>
+        <input id="f-mongoDbInternal" type="text" name="mongoDbInternal" placeholder="internal"
           value="<%= values.mongoDbInternal || '' %>"
           class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
       </div>
       <div>
-        <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Paperless</label>
-        <input type="text" name="mongoDbPaperless" placeholder="paperless"
+        <label for="f-mongoDbPaperless" class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Paperless</label>
+        <input id="f-mongoDbPaperless" type="text" name="mongoDbPaperless" placeholder="paperless"
           value="<%= values.mongoDbPaperless || '' %>"
           class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
       </div>
       <div>
-        <label class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Website content</label>
-        <input type="text" name="mongoDbWeb" placeholder="hcs-webdb"
+        <label for="f-mongoDbWeb" class="block mb-1 text-xs text-gray-500 dark:text-gray-400">Website content</label>
+        <input id="f-mongoDbWeb" type="text" name="mongoDbWeb" placeholder="hcs-webdb"
           value="<%= values.mongoDbWeb || '' %>"
           class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 dark:bg-gray-800 text-sm font-mono">
       </div>

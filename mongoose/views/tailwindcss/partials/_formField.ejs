@@ -45,8 +45,14 @@
     : /^(phone|phonenumber|mobile|mobilenumber|telephone|tel)$/i.test(_keyLeaf) ? 'tel'
     : /^(postcode|postalcode|zip)$/i.test(_keyLeaf) ? 'postal-code'
     : '';
+  // A server-side validation message for this field (CRUDController passes
+  // fieldErrors keyed by path). It is shown under the input and tied to it with
+  // aria-describedby + aria-invalid (WCAG 3.3.1).
+  const _fieldError = (locals.fieldErrors && locals.fieldErrors[key]) || null;
+  const _errId = `${key}-error`;
   const _a11y = (field.required ? 'aria-required="true" ' : '')
-    + (_autocomplete ? `autocomplete="${_autocomplete}" ` : '');
+    + (_autocomplete ? `autocomplete="${_autocomplete}" ` : '')
+    + (_fieldError ? `aria-invalid="true" aria-describedby="${_errId}" ` : '');
 %>
 <% if (readOnlyField) { %>
   <% /* 1) Special case: Assignments array pretty table */ %>
@@ -515,6 +521,11 @@
         placeholder="<%= field.default ? `Default: ${field.default}` : '' %>"
         class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
       >
+    <% } %>
+    <% if (_fieldError) { %>
+      <p id="<%= _errId %>" class="mt-1.5 text-sm text-red-700 dark:text-red-300 flex items-start gap-1.5">
+        <i class="bi bi-exclamation-circle mt-0.5" aria-hidden="true"></i><span><span class="sr-only">Error: </span><%= _fieldError %></span>
+      </p>
     <% } %>
   </div>
 <% } %>

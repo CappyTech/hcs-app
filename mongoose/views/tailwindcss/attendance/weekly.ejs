@@ -357,7 +357,7 @@
               <%/* Add purchase form */%>
               <form action="/statement/<%= entry.statement.paperlessId %>/add-purchase" method="POST" class="inline-flex items-center gap-1 mt-1 print:hidden">
                 <%- include('../partials/csrfHidden.ejs') %>
-                <input type="text" name="purchaseNumber" placeholder="Purchase #" class="w-24 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" required>
+                <input type="text" name="purchaseNumber" aria-label="Purchase number" placeholder="Purchase #" class="w-24 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" required>
                 <button type="submit" class="inline-flex items-center px-1.5 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-medium hover:bg-green-200 dark:hover:bg-green-900/50">
                   <i class="bi bi-plus-lg mr-0.5"></i> Add
                 </button>

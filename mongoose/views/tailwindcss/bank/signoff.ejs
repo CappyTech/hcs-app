@@ -133,7 +133,7 @@
                 <% if (s.status === 'signed' && typeof user !== 'undefined' && user && user.role === 'admin') { %>
                   <form method="POST" action="/bank/signoff/<%= s.uuid %>/reopen" class="flex gap-1 justify-end">
                     <%- include('../partials/csrfHidden') %>
-                    <input name="reason" required placeholder="Reason" maxlength="1000"
+                    <input name="reason" required aria-label="Reason" placeholder="Reason" maxlength="1000"
                       class="w-40 text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1
                              bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                              focus:outline-none focus:ring-2 focus:ring-green-500" />

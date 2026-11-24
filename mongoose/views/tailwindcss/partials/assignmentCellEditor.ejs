@@ -23,24 +23,24 @@
 
   <!-- Title -->
   <div class="flex items-center gap-2 flex-wrap">
-    <label class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0">Title</label>
-    <input type="text" x-model="form.title" @keydown="handleKey($event)"
+    <span class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0" aria-hidden="true">Title</span>
+    <input type="text" x-model="form.title" @keydown="handleKey($event)" aria-label="Assignment title"
       placeholder="Assignment title"
       class="flex-1 min-w-[140px] text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
-    <select x-model="form.status" class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
+    <select x-model="form.status" aria-label="Assignment status" class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
       <option value="Planned">Planned</option>
       <option value="In Progress">In Progress</option>
       <option value="Done">Done</option>
     </select>
-    <input type="number" x-model="form.estimatedHours" min="0" step="0.5"
+    <input type="number" x-model="form.estimatedHours" min="0" step="0.5" aria-label="Estimated hours"
       placeholder="Est. hrs"
       class="w-20 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
   </div>
 
   <!-- Employees -->
   <div class="flex items-start gap-2 flex-wrap">
-    <label class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0 pt-0.5">Employees</label>
-    <div class="flex flex-wrap gap-1 flex-1">
+    <span class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0 pt-0.5" aria-hidden="true">Employees</span>
+    <div class="flex flex-wrap gap-1 flex-1" role="group" aria-label="Employees">
       <template x-for="emp in employees" :key="emp._id">
         <label class="inline-flex items-center gap-1 cursor-pointer select-none">
           <input type="checkbox"
@@ -56,8 +56,8 @@
 
   <!-- Subcontractors -->
   <div class="flex items-start gap-2 flex-wrap">
-    <label class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0 pt-0.5">Subcons</label>
-    <div class="flex flex-wrap gap-1 flex-1">
+    <span class="text-xs text-gray-500 dark:text-gray-400 w-16 shrink-0 pt-0.5" aria-hidden="true">Subcons</span>
+    <div class="flex flex-wrap gap-1 flex-1" role="group" aria-label="Subcontractors">
       <template x-for="sub in subcontractors" :key="sub._id">
         <label class="inline-flex items-center gap-1 cursor-pointer select-none">
           <input type="checkbox"

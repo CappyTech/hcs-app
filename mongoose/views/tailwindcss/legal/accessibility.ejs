@@ -1,0 +1,85 @@
+<%# ─── Accessibility Statement ──────────────────────────────────────────────── %>
+<%
+  const _h2 = 'text-base font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-2 border-b border-gray-200 dark:border-gray-700 pb-2';
+  const _p = 'text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3';
+  const _ul = 'list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4';
+  const _link = 'text-green-700 dark:text-green-400 underline hover:no-underline';
+  const _company = (typeof companyName !== 'undefined' && companyName) ? companyName : 'the company';
+  const _email = typeof contactEmail !== 'undefined' ? contactEmail : null;
+%>
+<div class="max-w-3xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
+    <div class="h-1.5 bg-gradient-to-r from-green-500 to-emerald-400"></div>
+    <div class="p-8">
+
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Accessibility Statement</h1>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Last reviewed: <%= lastReviewed %></p>
+      </div>
+
+      <p class="<%= _p %>">
+        This statement covers the <strong><%= _company %></strong> management platform
+        (&ldquo;the Platform&rdquo;). We want everyone who uses it to be able to do their work,
+        including people who use a keyboard instead of a mouse, a screen reader, screen magnification,
+        voice control, or high-contrast and reduced-motion settings.
+      </p>
+
+      <h2 class="<%= _h2 %>">How accessible the Platform is</h2>
+      <p class="<%= _p %>">
+        We aim to meet the <a href="https://www.w3.org/TR/WCAG22/" class="<%= _link %>">Web Content Accessibility Guidelines (WCAG) 2.2</a>
+        at level AA. You should be able to:
+      </p>
+      <ul class="<%= _ul %>">
+        <li>use every page with a keyboard, with a visible focus outline, and skip past the menu with <strong>Skip to main content</strong>;</li>
+        <li>use a screen as narrow as 320 pixels (the same as zooming a desktop browser to 400%) without scrolling sideways;</li>
+        <li>read all text against its background in both the light and dark themes;</li>
+        <li>hear form labels, required fields, errors, sort order and selected tabs with a screen reader;</li>
+        <li>turn off animations by switching on &ldquo;reduce motion&rdquo; in your device settings.</li>
+      </ul>
+
+      <h2 class="<%= _h2 %>">Compliance status</h2>
+      <p class="<%= _p %>">
+        The Platform is <strong>partially compliant</strong> with WCAG 2.2 level AA, because of the
+        known issues listed below.
+      </p>
+
+      <h2 class="<%= _h2 %>">Known issues</h2>
+      <ul class="<%= _ul %>">
+        <li>Scanned documents and PDFs that come from suppliers, HMRC and other third parties are shown as they were received. Many are images without a text layer, so a screen reader cannot read them. Ask us and we will read one to you or provide the details another way.</li>
+        <li>The weekly attendance spreadsheet views are large editable grids. They work with a keyboard, but we have not yet tested them fully with screen readers.</li>
+        <li>Maps (from OpenStreetMap) and charts are visual. The same information is in the tables and lists beside them.</li>
+        <li>Sign-in may show a Cloudflare security check, which we do not control.</li>
+      </ul>
+
+      <h2 class="<%= _h2 %>">Feedback and getting help</h2>
+      <p class="<%= _p %>">
+        If you find a part of the Platform you cannot use, or you need information in a different
+        format, tell us and we will help you get the task done another way and fix the problem.
+        <% if (_email) { %>
+          Email <a href="mailto:<%= _email %>" class="<%= _link %>"><%= _email %></a>
+          with the page address and what happened.
+        <% } else { %>
+          Contact your administrator with the page address and what happened.
+        <% } %>
+        We aim to reply within 5 working days.
+      </p>
+
+      <h2 class="<%= _h2 %>">How we test the Platform</h2>
+      <p class="<%= _p %>">
+        We last checked the Platform on <%= lastReviewed %>, with automated and manual checks of
+        about 160 pages in both themes: keyboard use, labels and names, headings, colour contrast,
+        target size, reflow at 320 pixels and page titles. Our interface guidelines include
+        accessibility rules that new pages follow, and we review this statement at least once a year.
+      </p>
+
+      <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <a href="/legal/privacy-policy" class="text-sm <%= _link %>">Privacy Policy</a>
+        <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">&bull;</span>
+        <a href="/legal/cookie-policy" class="text-sm <%= _link %>">Cookie Policy</a>
+        <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">&bull;</span>
+        <a href="/legal/terms" class="text-sm <%= _link %>">Terms of Use</a>
+      </div>
+
+    </div>
+  </div>
+</div>

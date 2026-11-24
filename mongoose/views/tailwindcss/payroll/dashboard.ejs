@@ -100,7 +100,7 @@
           </table>
         </div>
         <div class="mt-3 text-right">
-          <a href="/payroll/runs" class="text-indigo-600 hover:underline dark:text-indigo-400 text-sm">View all runs →</a>
+          <a href="/payroll/runs" class="inline-block py-1 -my-1 text-indigo-600 hover:underline dark:text-indigo-400 text-sm">View all runs →</a>
         </div>
       <% } %>
     </div>
@@ -115,8 +115,8 @@
       <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency</label>
-          <select name="frequency" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <label for="f-frequency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency</label>
+          <select id="f-frequency" name="frequency" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <option value="">Select…</option>
             <option value="weekly">Weekly</option>
             <option value="fortnightly">Fortnightly</option>
@@ -125,30 +125,30 @@
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period Start</label>
-            <input type="date" name="periodStart" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="f-periodStart" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period Start</label>
+            <input id="f-periodStart" type="date" name="periodStart" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period End</label>
-            <input type="date" name="periodEnd" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="f-periodEnd" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period End</label>
+            <input id="f-periodEnd" type="date" name="periodEnd" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Date</label>
-          <input type="date" name="paymentDate" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <label for="f-paymentDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Date</label>
+          <input id="f-paymentDate" type="date" name="paymentDate" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
         </div>
         <div class="grid grid-cols-3 gap-3">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Year</label>
-            <input type="text" name="taxYear" placeholder="2025/26" required pattern="\d{4}/\d{2}" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="f-taxYear" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Year</label>
+            <input id="f-taxYear" type="text" name="taxYear" placeholder="2025/26" required pattern="\d{4}/\d{2}" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Month (1–12)</label>
-            <input type="number" name="taxMonth" min="1" max="12" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="f-taxMonth" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Month (1–12)</label>
+            <input id="f-taxMonth" type="number" name="taxMonth" min="1" max="12" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Week (1–56)</label>
-            <input type="number" name="taxWeek" min="1" max="56" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="f-taxWeek" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Week (1–56)</label>
+            <input id="f-taxWeek" type="number" name="taxWeek" min="1" max="56" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
         </div>
       </div>

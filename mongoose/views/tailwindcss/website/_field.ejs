@@ -25,10 +25,10 @@
 <% if (field.type === 'richtext') { %>
   <%# The Quill toolbar/editor/hidden-input trio. layout.ejs binds these by id,
       so there can only ever be one on the page — see webContentConfig. %>
-  <label class="<%= LABEL %>"><%= field.label %></label>
-  <div id="quill-toolbar" class="rounded-t-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+  <p id="f-<%= field.name %>-label" class="<%= LABEL %>"><%= field.label %></p>
+  <div id="quill-toolbar" role="toolbar" aria-label="<%= field.label %> formatting" class="rounded-t-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
     <span class="ql-formats">
-      <select class="ql-header">
+      <select class="ql-header" aria-label="Heading level">
         <option selected></option>
         <option value="1"></option>
         <option value="2"></option>
@@ -36,23 +36,23 @@
       </select>
     </span>
     <span class="ql-formats">
-      <button class="ql-bold"></button>
-      <button class="ql-italic"></button>
-      <button class="ql-underline"></button>
+      <button class="ql-bold" aria-label="Bold"></button>
+      <button class="ql-italic" aria-label="Italic"></button>
+      <button class="ql-underline" aria-label="Underline"></button>
     </span>
     <span class="ql-formats">
-      <button class="ql-list" value="ordered"></button>
-      <button class="ql-list" value="bullet"></button>
+      <button class="ql-list" value="ordered" aria-label="Numbered list"></button>
+      <button class="ql-list" value="bullet" aria-label="Bulleted list"></button>
     </span>
     <span class="ql-formats">
-      <button class="ql-blockquote"></button>
-      <button class="ql-link"></button>
+      <button class="ql-blockquote" aria-label="Quote"></button>
+      <button class="ql-link" aria-label="Link"></button>
     </span>
     <span class="ql-formats">
-      <button class="ql-clean"></button>
+      <button class="ql-clean" aria-label="Clear formatting"></button>
     </span>
   </div>
-  <div id="quill-editor"
+  <div id="quill-editor" role="group" aria-labelledby="f-<%= field.name %>-label"
     class="min-h-64 rounded-b-lg border border-t-0 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
     style="min-height:260px"><%- v %></div>
   <input type="hidden" name="<%= field.name %>" id="contentHtml-input">
@@ -83,7 +83,7 @@
     const img = v && typeof v === 'object' ? v : {};
     const isPanel = field.type === 'panel';
   %>
-  <label class="<%= LABEL %>"><%= field.label %></label>
+  <label class="<%= LABEL %>" for="f-<%= field.name %>-media"><%= field.label %></label>
   <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-3">
     <div class="flex gap-3 items-start">
       <% if (img.media) { %>
@@ -96,7 +96,7 @@
         </div>
       <% } %>
       <div class="flex-1 space-y-2">
-        <select name="<%= field.name %>[media]" class="<%= INPUT %>">
+        <select id="f-<%= field.name %>-media" name="<%= field.name %>[media]" class="<%= INPUT %>">
           <option value="">— No image —</option>
           <% media.forEach(function (m) { %>
             <option value="<%= m.uuid %>" <%= img.media === m.uuid ? 'selected' : '' %>>
@@ -120,7 +120,8 @@
 
 <% } else if (field.type === 'gallery') { %>
   <% const rows = (Array.isArray(v) ? v : []).concat(Array.from({ length: blankRows }, () => ({}))); %>
-  <label class="<%= LABEL %>"><%= field.label %></label>
+  <fieldset>
+  <legend class="<%= LABEL %>"><%= field.label %></legend>
   <div class="space-y-3">
     <% rows.forEach(function (row, i) { %>
       <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex gap-3 items-start">
@@ -129,47 +130,52 @@
             class="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-gray-700">
         <% } %>
         <div class="flex-1 grid gap-2 sm:grid-cols-3">
-          <select name="<%= field.name %>[<%= i %>][media]" class="<%= INPUT %>">
+          <select name="<%= field.name %>[<%= i %>][media]" aria-label="Image <%= i + 1 %>" class="<%= INPUT %>">
             <option value="">— Empty —</option>
             <% media.forEach(function (m) { %>
               <option value="<%= m.uuid %>" <%= row.media === m.uuid ? 'selected' : '' %>><%= m.filename %></option>
             <% }); %>
           </select>
-          <input type="text" name="<%= field.name %>[<%= i %>][alt]" value="<%= row.alt || '' %>" placeholder="Alt text" class="<%= INPUT %>">
-          <input type="text" name="<%= field.name %>[<%= i %>][caption]" value="<%= row.caption || '' %>" placeholder="Caption" class="<%= INPUT %>">
+          <input type="text" name="<%= field.name %>[<%= i %>][alt]" value="<%= row.alt || '' %>" aria-label="Image <%= i + 1 %> alt text" placeholder="Alt text" class="<%= INPUT %>">
+          <input type="text" name="<%= field.name %>[<%= i %>][caption]" value="<%= row.caption || '' %>" aria-label="Image <%= i + 1 %> caption" placeholder="Caption" class="<%= INPUT %>">
         </div>
       </div>
     <% }); %>
   </div>
+  </fieldset>
 
 <% } else if (field.type === 'hours') { %>
   <% const rows = (Array.isArray(v) ? v : []).concat(Array.from({ length: blankRows }, () => ({}))); %>
-  <label class="<%= LABEL %>"><%= field.label %></label>
+  <fieldset>
+  <legend class="<%= LABEL %>"><%= field.label %></legend>
   <div class="space-y-2">
     <% rows.forEach(function (row, i) { %>
       <div class="grid gap-2 sm:grid-cols-2">
-        <input type="text" name="<%= field.name %>[<%= i %>][days]" value="<%= row.days || '' %>" placeholder="Monday – Friday" class="<%= INPUT %>">
-        <input type="text" name="<%= field.name %>[<%= i %>][time]" value="<%= row.time || '' %>" placeholder="8:00am – 5:00pm" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][days]" value="<%= row.days || '' %>" aria-label="Row <%= i + 1 %> days" placeholder="Monday – Friday" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][time]" value="<%= row.time || '' %>" aria-label="Row <%= i + 1 %> times" placeholder="8:00am – 5:00pm" class="<%= INPUT %>">
       </div>
     <% }); %>
   </div>
+  </fieldset>
 
 <% } else if (field.type === 'offices') { %>
   <% const rows = (Array.isArray(v) ? v : []).concat(Array.from({ length: blankRows }, () => ({}))); %>
-  <label class="<%= LABEL %>"><%= field.label %></label>
+  <fieldset>
+  <legend class="<%= LABEL %>"><%= field.label %></legend>
   <div class="space-y-3">
     <% rows.forEach(function (row, i) { const a = row.address || {}; %>
       <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-3 grid gap-2 sm:grid-cols-2">
-        <input type="text" name="<%= field.name %>[<%= i %>][label]" value="<%= row.label || '' %>" placeholder="Liverpool office" class="<%= INPUT %>">
-        <input type="text" name="<%= field.name %>[<%= i %>][phone]" value="<%= row.phone || '' %>" placeholder="0151 475 1217" class="<%= INPUT %>">
-        <input type="text" name="<%= field.name %>[<%= i %>][address][line1]" value="<%= a.line1 || '' %>" placeholder="Address line 1" class="<%= INPUT %>">
-        <input type="text" name="<%= field.name %>[<%= i %>][address][line2]" value="<%= a.line2 || '' %>" placeholder="Address line 2" class="<%= INPUT %>">
-        <input type="text" name="<%= field.name %>[<%= i %>][address][line3]" value="<%= a.line3 || '' %>" placeholder="Town / city" class="<%= INPUT %>">
-        <input type="text" name="<%= field.name %>[<%= i %>][address][line4]" value="<%= a.line4 || '' %>" placeholder="County" class="<%= INPUT %>">
-        <input type="text" name="<%= field.name %>[<%= i %>][address][postcode]" value="<%= a.postcode || '' %>" placeholder="Postcode" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][label]" value="<%= row.label || '' %>" aria-label="Office <%= i + 1 %> name" placeholder="Liverpool office" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][phone]" value="<%= row.phone || '' %>" aria-label="Office <%= i + 1 %> phone" placeholder="0151 475 1217" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][line1]" value="<%= a.line1 || '' %>" aria-label="Office <%= i + 1 %> address line 1" placeholder="Address line 1" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][line2]" value="<%= a.line2 || '' %>" aria-label="Office <%= i + 1 %> address line 2" placeholder="Address line 2" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][line3]" value="<%= a.line3 || '' %>" aria-label="Office <%= i + 1 %> town or city" placeholder="Town / city" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][line4]" value="<%= a.line4 || '' %>" aria-label="Office <%= i + 1 %> county" placeholder="County" class="<%= INPUT %>">
+        <input type="text" name="<%= field.name %>[<%= i %>][address][postcode]" value="<%= a.postcode || '' %>" aria-label="Office <%= i + 1 %> postcode" placeholder="Postcode" class="<%= INPUT %>">
       </div>
     <% }); %>
   </div>
+  </fieldset>
 
 <% } else { %>
   <label class="<%= LABEL %>" for="f-<%= field.name %>">

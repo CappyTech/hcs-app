@@ -16,16 +16,16 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <!-- Title -->
         <div class="sm:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title <span class="text-red-500">*</span></label>
-          <input type="text" name="title" required
+          <label for="f-title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title <span class="text-red-500">*</span></label>
+          <input id="f-title" type="text" name="title" required
             value="<%= policy ? policy.title : '' %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
         </div>
 
         <!-- Category -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-          <select name="category"
+          <label for="f-category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+          <select id="f-category" name="category"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
             <% categories.forEach(cat => { %>
               <option value="<%= cat %>" <%= policy && policy.category === cat ? 'selected' : '' %>><%= cat %></option>
@@ -35,8 +35,8 @@
 
         <!-- Assign to employee -->
         <div class="sm:col-span-3">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign to employee <span class="text-gray-400">(optional)</span></label>
-          <select name="employee"
+          <label for="f-employee" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign to employee <span class="text-gray-400">(optional)</span></label>
+          <select id="f-employee" name="employee"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
             <option value="">Company-wide (no specific employee)</option>
             <% employees.forEach(emp => { %>
@@ -49,8 +49,8 @@
 
         <!-- Version -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Version</label>
-          <input type="text" name="version"
+          <label for="f-version" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Version</label>
+          <input id="f-version" type="text" name="version"
             value="<%= policy ? policy.version : '1.0' %>"
             placeholder="e.g. 1.0"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
@@ -58,8 +58,8 @@
 
         <!-- Review cycle -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Review every (months)</label>
-          <input type="number" name="reviewIntervalMonths" min="0" step="1"
+          <label for="f-reviewIntervalMonths" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Review every (months)</label>
+          <input id="f-reviewIntervalMonths" type="number" name="reviewIntervalMonths" min="0" step="1"
             value="<%= policy && (policy.reviewIntervalMonths || policy.reviewIntervalMonths === 0) ? policy.reviewIntervalMonths : 12 %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Flagged out of date this many months after each save. <strong>0</strong> = never expires.</p>
@@ -67,8 +67,8 @@
 
         <!-- Due-soon warning window -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Flag "due soon" (days before)</label>
-          <input type="number" name="reviewWarningDays" min="0" step="1"
+          <label for="f-reviewWarningDays" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Flag "due soon" (days before)</label>
+          <input id="f-reviewWarningDays" type="number" name="reviewWarningDays" min="0" step="1"
             value="<%= policy && (policy.reviewWarningDays || policy.reviewWarningDays === 0) ? policy.reviewWarningDays : 30 %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">How many days before the review date the policy shows as "due soon".</p>
@@ -76,8 +76,8 @@
 
         <!-- Review date (override) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Next review date <span class="text-gray-400">(optional)</span></label>
-          <input type="date" name="reviewDate"
+          <label for="f-reviewDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Next review date <span class="text-gray-400">(optional)</span></label>
+          <input type="date" id="f-reviewDate" name="reviewDate"
             value="<%= policy && policy.reviewDate ? new Date(policy.reviewDate).toISOString().split('T')[0] : '' %>"
             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Overrides the cycle above. Admins are emailed 30 days before. Leave blank to use the review cycle.</p>
@@ -94,11 +94,11 @@
 
       <!-- Rich text editor -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Content</label>
+        <p id="f-content-label" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Content</p>
         <!-- Quill toolbar container -->
-        <div id="quill-toolbar" class="rounded-t-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+        <div id="quill-toolbar" role="toolbar" aria-label="Content formatting" class="rounded-t-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
           <span class="ql-formats">
-            <select class="ql-header">
+            <select class="ql-header" aria-label="Heading level">
               <option selected></option>
               <option value="1"></option>
               <option value="2"></option>
@@ -106,28 +106,28 @@
             </select>
           </span>
           <span class="ql-formats">
-            <button class="ql-bold"></button>
-            <button class="ql-italic"></button>
-            <button class="ql-underline"></button>
-            <button class="ql-strike"></button>
+            <button class="ql-bold" aria-label="Bold"></button>
+            <button class="ql-italic" aria-label="Italic"></button>
+            <button class="ql-underline" aria-label="Underline"></button>
+            <button class="ql-strike" aria-label="Strikethrough"></button>
           </span>
           <span class="ql-formats">
-            <button class="ql-list" value="ordered"></button>
-            <button class="ql-list" value="bullet"></button>
+            <button class="ql-list" value="ordered" aria-label="Numbered list"></button>
+            <button class="ql-list" value="bullet" aria-label="Bulleted list"></button>
           </span>
           <span class="ql-formats">
-            <select class="ql-align"></select>
+            <select class="ql-align" aria-label="Text alignment"></select>
           </span>
           <span class="ql-formats">
-            <button class="ql-blockquote"></button>
-            <button class="ql-link"></button>
+            <button class="ql-blockquote" aria-label="Quote"></button>
+            <button class="ql-link" aria-label="Link"></button>
           </span>
           <span class="ql-formats">
-            <button class="ql-clean"></button>
+            <button class="ql-clean" aria-label="Clear formatting"></button>
           </span>
         </div>
         <!-- Quill editor area -->
-        <div id="quill-editor"
+        <div id="quill-editor" role="group" aria-labelledby="f-content-label"
           class="min-h-64 rounded-b-lg border border-t-0 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
           style="min-height:260px"><%- policy ? policy.contentHtml : '' %></div>
         <!-- Hidden input submitted with the form -->

@@ -278,6 +278,45 @@ export function applyClearWhenBlank(cleaned, config) {
   return cleaned;
 }
 
+/**
+ * Turn a Mongoose ValidationError (or a top-level CastError) into messages a
+ * person can act on, keyed by field path so the form can show each one beside
+ * its field (WCAG 3.3.1 / 3.3.3). `errors` keeps the flat list for the summary.
+ */
+export function describeValidationError(err, schema = {}) {
+  const fieldErrors = {};
+  const entries = err?.name === 'CastError' && err.path
+    ? [[err.path, err]]
+    : Object.entries(err?.errors || {});
+  for (const [p, e] of entries) {
+    const rawLabel = schema?.[p]?.label || p;
+    const label = String(rawLabel).includes('.') ? String(rawLabel).split('.').pop().trim() : String(rawLabel);
+    let msg;
+    if (e?.kind === 'required') msg = `${label} is required.`;
+    else if (e?.name === 'CastError') msg = `${label} isn't a valid ${String(e.kind || 'value').toLowerCase()}. Check the format and try again.`;
+    else if (e?.kind === 'enum') msg = `${label} must be one of the listed options.`;
+    else if (e?.kind === 'min' || e?.kind === 'max') msg = `${label}: ${String(e.message).replace(/^Path `[^`]+` \(([^)]*)\) is /, 'the value $1 is ')}`;
+    else msg = String(e?.message || 'Invalid value.').replace(/^Path `[^`]+`/, label);
+    fieldErrors[p] = msg;
+  }
+  return { errors: Object.values(fieldErrors), fieldErrors };
+}
+
+/**
+ * One record's name for page titles (WCAG 2.4.2): list configs are titled in the
+ * plural ("Employees", "Holiday Requests"), which read wrongly on a single
+ * record's create, update, read or delete page.
+ */
+export function singularTitle(title) {
+  const t = String(title || '').trim();
+  if (/ies$/i.test(t)) return t.replace(/ies$/i, 'y');
+  if (/(ss|us|is)$/i.test(t)) return t;
+  if (/(ches|shes|xes|sses)$/i.test(t)) return t.replace(/es$/i, '');
+  return t.replace(/s$/i, '');
+}
+
+const isValidationError = (err) => err?.name === 'ValidationError' || (err?.name === 'CastError' && !!err.path);
+
 function validateXorGroups(data, xorGroups) {
   const errors = [];
 
@@ -590,7 +629,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
           }
 
           res.render(viewPath, {
-            title: `${config.title || baseName} Details`,
+            title: `${singularTitle(config.title || baseName)} details`,
             listPath: listPathFor(modelName),
             item,
             schema,
@@ -656,7 +695,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
           return res.render(
             path.join("tailwindcss", "partials", "form-create"),
             {
-              title: `Create ${config.title || baseName}`,
+              title: `Create ${singularTitle(config.title || baseName)}`,
               formData,
               schema,
               referenceData,
@@ -678,7 +717,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
               return res
                 .status(400)
                 .render(path.join("tailwindcss", "partials", "form-create"), {
-                  title: `Create ${config.title || baseName}`,
+                  title: `Create ${singularTitle(config.title || baseName)}`,
                   formData: req.body,
                   schema,
                   referenceData,
@@ -721,14 +760,14 @@ for (const namespace of ["REST", "INTERNAL"]) {
           req.flash('success', `${baseName} created successfully.`);
           res.redirect(listPathFor(modelName));
         } catch (err) {
-          if (err.name === 'ValidationError') {
-            const errors = Object.values(err.errors).map(e => e.message);
+          if (isValidationError(err)) {
             const schema = extractSchema(Model, config);
+            const { errors, fieldErrors } = describeValidationError(err, schema);
             const referenceData = await fetchReferenceData(schema, config);
             return res.status(400).render(
               path.join('tailwindcss', 'partials', 'form-create'),
               {
-                title: `Create ${config.title || baseName}`,
+                title: `Create ${singularTitle(config.title || baseName)}`,
                 formData: req.body,
                 schema,
                 referenceData,
@@ -736,6 +775,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
                 basePath: modelName,
                 config,
                 errors,
+                fieldErrors,
               },
             );
           }
@@ -772,7 +812,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
             }
 
             return res.render(updateViewPath, {
-              title: `Update ${config.title || baseName}`,
+              title: `Update ${singularTitle(config.title || baseName)}`,
               formData: item,
               schema,
               referenceData,
@@ -802,7 +842,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
               return res
                 .status(400)
                 .render(path.join("tailwindcss", "partials", "form-update"), {
-                  title: `Update ${config.title || baseName}`,
+                  title: `Update ${singularTitle(config.title || baseName)}`,
                   formData: req.body,
                   schema,
                   referenceData,
@@ -900,6 +940,32 @@ for (const namespace of ["REST", "INTERNAL"]) {
           req.flash('success', `${baseName} updated successfully.`);
           res.redirect(listPathFor(modelName));
         } catch (err) {
+          if (isValidationError(err)) {
+            // Re-show the form with what was typed and each problem beside its
+            // field, rather than the error page (which loses the person's input).
+            try {
+              const schema = extractSchema(Model, config);
+              const { errors, fieldErrors } = describeValidationError(err, schema);
+              const current = await Model.findOne({ uuid: req.params.uuid }).lean();
+              const referenceData = await fetchReferenceData(schema, config, { keep: current });
+              return res
+                .status(400)
+                .render(path.join("tailwindcss", "partials", "form-update"), {
+                  title: `Update ${singularTitle(config.title || baseName)}`,
+                  formData: req.body,
+                  schema,
+                  referenceData,
+                  formAction: `/${modelName}/${req.params.uuid}`,
+                  basePath: modelName,
+                  listControllerConfig: listControllerConfig[modelName] || {},
+                  config,
+                  errors,
+                  fieldErrors,
+                });
+            } catch (renderErr) {
+              logger.error(`[CRUDController] Could not re-show ${modelName} form: ${renderErr.message}`);
+            }
+          }
           logger.error(`[CRUDController] Error updating ${modelName}: ${err.message}`);
           req.flash('error', `Failed to update ${baseName.toLowerCase()}.`);
           next(err);
@@ -924,7 +990,7 @@ for (const namespace of ["REST", "INTERNAL"]) {
             return res.render(
               path.join("tailwindcss", "partials", "form-delete"),
               {
-                title: `Delete ${config.title || baseName}`,
+                title: `Delete ${singularTitle(config.title || baseName)}`,
                 item,
                 schema,
                 referenceData,

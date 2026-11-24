@@ -107,7 +107,7 @@
         <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
         <form method="POST" action="/paperless/ocr/<%= doc.paperlessId %>/reassign" class="flex gap-2 flex-wrap items-center">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <input name="newPaperlessId" type="number" min="1" step="1" required placeholder="New Paperless ID"
+          <input name="newPaperlessId" aria-label="New Paperless ID" type="number" min="1" step="1" required placeholder="New Paperless ID"
                  class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                         focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
@@ -129,7 +129,7 @@
       <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
         <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Search Purchases</h2>
         <form method="GET" action="/paperless/ocr/<%= doc.paperlessId %>/match" class="flex gap-2 flex-wrap">
-          <input name="q" value="<%= q %>" placeholder="Purchase number, supplier name or reference"
+          <input name="q" value="<%= q %>" aria-label="Search purchases" placeholder="Purchase number, supplier name or reference"
                  class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                         focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />

@@ -136,7 +136,7 @@
                         </select>
                         <% if (i > 0) { %>
                           <button type="submit" formaction="<%= base %>/copy-day" name="copy" value="<%= row.key %>|<%= cell.day %>"
-                                  class="print:hidden shrink-0 text-gray-400 hover:text-green-700 dark:hover:text-green-400 px-0.5"
+                                  class="print:hidden shrink-0 inline-flex items-center justify-center w-6 h-6 -my-1 rounded text-gray-400 hover:text-green-700 dark:hover:text-green-400"
                                   title="Copy <%= row.name %>'s <%= dayLabels[i - 1] %> into <%= dayLabels[i] %> (not saved until Save week)"
                                   aria-label="Copy <%= row.name %>'s <%= dayLabels[i - 1] %> into <%= dayLabels[i] %>"><i class="bi bi-arrow-return-right text-xs" aria-hidden="true"></i></button>
                         <% } %>

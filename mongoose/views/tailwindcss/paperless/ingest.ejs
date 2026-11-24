@@ -6,8 +6,8 @@
 
   <form method="get" class="mb-4 flex flex-wrap gap-3 items-end" id="list-controls">
     <div>
-      <label class="block text-sm mb-1">Status</label>
-      <select name="status" class="text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+      <label for="f-status" class="block text-sm mb-1">Status</label>
+      <select id="f-status" name="status" class="text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
         <option value="" <%= !status ? 'selected' : '' %>>All</option>
         <option value="fetched" <%= status==='fetched'?'selected':'' %>>Fetched</option>
         <option value="skipped" <%= status==='skipped'?'selected':'' %>>Skipped</option>
@@ -23,20 +23,20 @@
     <h2 class="font-semibold mb-2">Trigger grab</h2>
     <div class="grid md:grid-cols-4 gap-3">
       <div>
-        <label class="block text-sm mb-1">Since (ISO-8601)</label>
-        <input name="since" placeholder="2025-01-01T00:00:00Z" class="w-full text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
+        <label for="f-since" class="block text-sm mb-1">Since (ISO-8601)</label>
+        <input id="f-since" name="since" placeholder="2025-01-01T00:00:00Z" class="w-full text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
       </div>
       <div>
-        <label class="block text-sm mb-1">Query (Paperless search)</label>
-        <input name="query" placeholder="document_type:Invoice" class="w-full text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
+        <label for="f-query" class="block text-sm mb-1">Query (Paperless search)</label>
+        <input id="f-query" name="query" placeholder="document_type:Invoice" class="w-full text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
       </div>
       <div>
-        <label class="block text-sm mb-1">Page size</label>
-        <input name="pageSize" type="number" min="1" max="500" value="50" class="w-full text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
+        <label for="f-pageSize" class="block text-sm mb-1">Page size</label>
+        <input id="f-pageSize" name="pageSize" type="number" min="1" max="500" value="50" class="w-full text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
       </div>
       <div>
-        <label class="block text-sm mb-1">Concurrency</label>
-        <input name="concurrency" type="number" min="1" max="20" value="5" class="w-full text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
+        <label for="f-concurrency" class="block text-sm mb-1">Concurrency</label>
+        <input id="f-concurrency" name="concurrency" type="number" min="1" max="20" value="5" class="w-full text-sm rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
       </div>
     </div>
     <div class="mt-3">

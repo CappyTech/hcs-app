@@ -63,7 +63,7 @@
         <button type="button" class="text-sm bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Danger</button>
         <button type="button" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Indigo</button>
         <button type="button" class="text-sm bg-violet-600 hover:bg-violet-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Violet</button>
-        <button type="button" class="text-sm bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Amber</button>
+        <button type="button" class="text-sm bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg shadow-sm font-medium transition">Amber</button>
       </div>
       <div class="flex flex-wrap gap-3 items-center mb-4">
         <button type="button"
@@ -186,7 +186,7 @@
       <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 space-y-4">
         <h3 class="font-medium text-sm text-gray-700 dark:text-gray-300">Search form (GET — no CSRF)</h3>
         <form method="GET" action="#" class="flex gap-2 flex-wrap">
-          <input name="q" value="" placeholder="Search..."
+          <input name="q" value="" aria-label="Search" placeholder="Search..."
             class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
@@ -198,19 +198,19 @@
 
         <h3 class="font-medium text-sm text-gray-700 dark:text-gray-300 pt-2">Inputs</h3>
         <div class="space-y-3">
-          <input type="text" placeholder="Text input"
+          <input type="text" aria-label="Text input" placeholder="Text input"
             class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-          <input type="date"
+          <input type="date" aria-label="Date input"
             class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-          <textarea rows="2" placeholder="Textarea"
+          <textarea rows="2" aria-label="Textarea" placeholder="Textarea"
             class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"></textarea>
-          <select
+          <select aria-label="Select"
             class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                    focus:outline-none focus:ring-2 focus:ring-green-500">
@@ -226,15 +226,15 @@
         <form method="POST" action="#" class="space-y-3">
           <%- include('../partials/csrfHidden') %>
           <div>
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Label</label>
-            <input type="text" name="field" placeholder="Value"
+            <label for="f-field" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Label</label>
+            <input id="f-field" type="text" name="field" placeholder="Value"
               class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Select</label>
-            <select name="choice"
+            <label for="f-choice" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Select</label>
+            <select id="f-choice" name="choice"
               class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-green-500">

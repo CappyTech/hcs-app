@@ -111,11 +111,11 @@
       <%= filtered ? 'Matching decisions' : 'Recent decisions' %>
     </h2>
     <form method="GET" action="/mail" class="flex gap-2 flex-wrap mb-6">
-      <input name="q" value="<%= q %>" placeholder="Sender, recipient, IP, message-id or filtering id&hellip;"
+      <input name="q" value="<%= q %>" aria-label="Search mail log" placeholder="Sender, recipient, IP, message-id or filtering id&hellip;"
         class="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-      <select name="days"
+      <select name="days" aria-label="Time range"
         class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                focus:outline-none focus:ring-2 focus:ring-green-500">
@@ -128,7 +128,7 @@
           class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500" />
         Stopped only
       </label>
-      <select name="limit"
+      <select name="limit" aria-label="Results to show"
         class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2
                bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                focus:outline-none focus:ring-2 focus:ring-green-500">

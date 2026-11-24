@@ -50,6 +50,14 @@ export default {
           400: 'rgb(var(--hcs-gray-400) / <alpha-value>)',
           500: 'rgb(var(--hcs-gray-500) / <alpha-value>)'
         },
+        // Status colours used as text (counts, badges, "Delete", "Is Archived") were
+        // 2.8–4.4:1 on white and their tinted -50 backgrounds. Each is moved to the
+        // next shade down, which passes 4.5:1 on white, gray-50 and its own -50 tint,
+        // and also carries white text on a -600 button. Hovers move down with them.
+        red: { 500: '#dc2626', 600: '#b91c1c', 700: '#991b1b' },
+        amber: { 600: '#b45309', 700: '#92400e' },
+        yellow: { 600: '#a16207', 700: '#854d0e' },
+        orange: { 500: '#c2410c', 600: '#c2410c', 700: '#9a3412' },
         brand: {
           DEFAULT: '#047857',
           light: '#10b981',

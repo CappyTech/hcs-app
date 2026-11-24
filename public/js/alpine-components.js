@@ -62,8 +62,18 @@ document.addEventListener('alpine:init', function () {
    * the links. Clicking outside closes. aria-expanded follows the state.
    */
   Alpine.data('navMenu', function () {
+    var wideQuery = window.matchMedia ? window.matchMedia('(min-width: 1024px)') : null;
     return {
       open: false,
+      // lg+ shows the sidebar drawer permanently; below lg it is off-screen until opened.
+      wide: wideQuery ? wideQuery.matches : true,
+
+      init: function () {
+        var self = this;
+        if (wideQuery && wideQuery.addEventListener) {
+          wideQuery.addEventListener('change', function (e) { self.wide = e.matches; });
+        }
+      },
 
       links: function () {
         return Array.prototype.slice.call(this.$root.querySelectorAll('[x-bind="panel"] a, [x-bind="drawer"] a'));
@@ -86,7 +96,15 @@ document.addEventListener('alpine:init', function () {
       prev: function () { this.focusLink(this.links().indexOf(document.activeElement) - 1); },
 
       trigger: {
-        ['@click']: function () { this.toggle(); },
+        ['@click']: function () {
+          var self = this;
+          this.toggle();
+          // Opening the off-screen drawer moves focus into it, so keyboard users
+          // don't have to tab past the header to reach what they just opened.
+          if (this.open && !this.wide && this.$root.querySelector('[x-bind="drawer"]')) {
+            this.$nextTick(function () { self.focusLink(0); });
+          }
+        },
         // Escape anywhere on the page closes an open menu (focus is usually on
         // the trigger itself, which is outside the panel).
         ['@keydown.escape.window']: function () { this.close(true); },
@@ -110,6 +128,13 @@ document.addEventListener('alpine:init', function () {
         // Object form, so the markup's static -translate-x-full is removed on
         // open (a string binding only ever adds classes, leaving both in place).
         [':class']: function () { return { 'translate-x-0': this.open, '-translate-x-full': !this.open }; },
+        // Closed and off-screen (below lg), its links must not take keyboard focus:
+        // they would be invisible (WCAG 2.4.7 / 2.4.11). inert also hides them from
+        // screen readers until the drawer is opened.
+        ['x-effect']: function () {
+          if (!this.open && !this.wide) this.$el.setAttribute('inert', '');
+          else this.$el.removeAttribute('inert');
+        },
         // Unlike a hidden panel, the drawer always has a size, so Alpine reports
         // the opening click on the toggle as "outside": ignore that one.
         ['@click.outside']: function (e) {
@@ -144,6 +169,7 @@ document.addEventListener('alpine:init', function () {
     return {
       q: '',
       open: false,
+      keepClosed: false,
 
       init: function () {
         var self = this;
@@ -187,8 +213,17 @@ document.addEventListener('alpine:init', function () {
 
       input: {
         ['@input']: function (e) { this.q = e.target.value; this.filter(); },
-        ['@focus']: function () { if (this.q) this.open = true; },
-        ['@keydown.escape.prevent']: function (e) { this.clear(); e.target.blur(); },
+        ['@focus']: function () {
+          if (this.keepClosed) { this.keepClosed = false; return; }
+          if (this.q) this.open = true;
+        },
+        // Escape closes the suggestions, then a second Escape clears the box. Focus
+        // stays in the box either way, so keyboard users keep their place (WCAG 2.4.3).
+        ['@keydown.escape.prevent']: function () {
+          if (this.open) { this.open = false; return; }
+          this.clear();
+          this.open = false;
+        },
         ['@keydown.arrow-down.prevent']: function () { this.move(1); },
         [':aria-expanded']: function () { return this.open ? 'true' : 'false'; }
       },
@@ -197,6 +232,7 @@ document.addEventListener('alpine:init', function () {
         ['@click.outside']: function () { this.open = false; },
         ['@keydown.escape.prevent']: function () {
           this.open = false;
+          this.keepClosed = true; // returning focus must not reopen the list
           var input = this.$root.querySelector('input');
           if (input) input.focus();
         },

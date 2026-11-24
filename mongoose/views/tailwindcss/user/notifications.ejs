@@ -87,7 +87,7 @@
                 <% channelCols.forEach(function (col) { const name = col[0], label = col[1]; const c = ch[name] || { supported: name === 'email', on: name === 'email' && t.subscribed, chosen: t.subscribed, locked: !t.subscribable, reason: t.subscribable ? null : 'required' }; %>
                 <td class="px-3 py-3 text-center align-top whitespace-nowrap" data-channel="<%= name %>" data-state="<%= !c.supported ? 'unavailable' : (c.reason === 'no-phone' ? 'no-phone' : (c.locked ? 'locked' : (c.on ? 'on' : 'off'))) %>">
                   <% if (!c.supported) { %>
-                    <span class="text-gray-300 dark:text-gray-600" title="Not sent by <%= label.toLowerCase() %>" aria-label="Not available">—</span>
+                    <span class="text-gray-500 dark:text-gray-400" title="Not sent by <%= label.toLowerCase() %>" aria-label="Not available">—</span>
                   <% } else if (c.reason === 'no-phone') { %>
                     <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700" title="Add a phone number to your account to get text messages">No phone</span>
                   <% } else if (c.locked) { %>

@@ -275,7 +275,7 @@ const securityHeaders = [
     contentSecurityPolicy: { directives: cspDirectives },
     referrerPolicy: { policy: "no-referrer" },
     crossOriginEmbedderPolicy: false, // adjust if you need COEP
-    hsts: enableHsts ? { maxAge: 15552000, includeSubDomains: true } : false,
+    hsts: enableHsts ? { maxAge: 31536000, includeSubDomains: true } : false, // 1 year: the minimum browsers and the HSTS preload list expect
   }),
 ];
 

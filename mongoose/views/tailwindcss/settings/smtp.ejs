@@ -37,20 +37,20 @@ function srcBadge(f) {
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div class="sm:col-span-2">
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_HOST</label>
+              <label for="f-SMTP_HOST" class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_HOST</label>
               <%- srcBadge(fields.SMTP_HOST) %>
             </div>
-            <input type="text" name="SMTP_HOST"
+            <input id="f-SMTP_HOST" type="text" name="SMTP_HOST"
               placeholder="<%= fields.SMTP_HOST.display || 'smtp.example.com' %>"
               <% if (fields.SMTP_HOST.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_PORT</label>
+              <label for="f-SMTP_PORT" class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_PORT</label>
               <%- srcBadge(fields.SMTP_PORT) %>
             </div>
-            <input type="number" name="SMTP_PORT" min="1" max="65535"
+            <input id="f-SMTP_PORT" type="number" name="SMTP_PORT" min="1" max="65535"
               placeholder="<%= fields.SMTP_PORT.display || '587' %>"
               <% if (fields.SMTP_PORT.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -62,20 +62,20 @@ function srcBadge(f) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_USER</label>
+              <label for="f-SMTP_USER" class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_USER</label>
               <%- srcBadge(fields.SMTP_USER) %>
             </div>
-            <input type="text" name="SMTP_USER" autocomplete="off"
+            <input id="f-SMTP_USER" type="text" name="SMTP_USER" autocomplete="off"
               placeholder="<%= fields.SMTP_USER.display || 'smtp-user@example.com' %>"
               <% if (fields.SMTP_USER.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_PASS</label>
+              <label for="f-SMTP_PASS" class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_PASS</label>
               <%- srcBadge(fields.SMTP_PASS) %>
             </div>
-            <input type="password" name="SMTP_PASS" autocomplete="new-password"
+            <input id="f-SMTP_PASS" type="password" name="SMTP_PASS" autocomplete="new-password"
               placeholder="<%= fields.SMTP_PASS.isSet ? '••••••••' : 'SMTP password' %>"
               <% if (fields.SMTP_PASS.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -87,10 +87,10 @@ function srcBadge(f) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_FROM</label>
+              <label for="f-SMTP_FROM" class="text-sm font-medium text-gray-700 dark:text-gray-300">SMTP_FROM</label>
               <%- srcBadge(fields.SMTP_FROM) %>
             </div>
-            <input type="email" name="SMTP_FROM"
+            <input id="f-SMTP_FROM" type="email" name="SMTP_FROM"
               placeholder="<%= fields.SMTP_FROM.display || 'noreply@example.com' %>"
               <% if (fields.SMTP_FROM.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -98,10 +98,10 @@ function srcBadge(f) {
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">BASE_URL</label>
+              <label for="f-BASE_URL" class="text-sm font-medium text-gray-700 dark:text-gray-300">BASE_URL</label>
               <%- srcBadge(fields.BASE_URL) %>
             </div>
-            <input type="url" name="BASE_URL"
+            <input id="f-BASE_URL" type="url" name="BASE_URL"
               placeholder="<%= fields.BASE_URL.display || 'https://app.example.com' %>"
               <% if (fields.BASE_URL.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">

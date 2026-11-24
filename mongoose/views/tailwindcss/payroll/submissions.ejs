@@ -19,12 +19,12 @@
         <form method="POST" id="epsForm" class="flex flex-wrap gap-3 items-end">
           <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
           <div>
-            <label class="block text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Tax Year</label>
+            <label for="epsYear" class="block text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Tax Year</label>
             <input type="text" id="epsYear" placeholder="2025/26" pattern="\d{4}/\d{2}"
               class="border border-blue-300 dark:border-blue-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-28">
           </div>
           <div>
-            <label class="block text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Tax Month (1–12)</label>
+            <label for="epsMonth" class="block text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Tax Month (1–12)</label>
             <input type="number" id="epsMonth" min="1" max="12"
               class="border border-blue-300 dark:border-blue-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-20">
           </div>

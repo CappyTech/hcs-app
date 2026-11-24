@@ -35,29 +35,29 @@
               <%- include('../partials/csrfHidden.ejs') %>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Label</label>
-                  <input type="text" name="label" value="<%= t.label %>" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                  <label for="et-<%= t.key %>-label" class="text-sm font-medium text-gray-700 dark:text-gray-300">Label</label>
+                  <input id="et-<%= t.key %>-label" type="text" name="label" value="<%= t.label %>" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                 </div>
                 <div>
-                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Sender type</label>
-                  <select name="senderType" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                  <label for="et-<%= t.key %>-senderType" class="text-sm font-medium text-gray-700 dark:text-gray-300">Sender type</label>
+                  <select id="et-<%= t.key %>-senderType" name="senderType" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                     <option value="system" <%= t.senderType === 'system' ? 'selected' : '' %>>System</option>
                     <option value="admin" <%= t.senderType === 'admin' ? 'selected' : '' %>>Admin</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-                <textarea name="description" rows="2" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= t.description %></textarea>
+                <label for="et-<%= t.key %>-description" class="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                <textarea id="et-<%= t.key %>-description" name="description" rows="2" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= t.description %></textarea>
               </div>
               <div>
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Email heading <span class="text-gray-400 font-normal">(optional)</span></label>
-                <input type="text" name="heading" maxlength="120" value="<%= t.heading || '' %>" placeholder="Falls back to the type label / message subject" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <label for="et-<%= t.key %>-heading" class="text-sm font-medium text-gray-700 dark:text-gray-300">Email heading <span class="text-gray-400 font-normal">(optional)</span></label>
+                <input id="et-<%= t.key %>-heading" type="text" name="heading" maxlength="120" value="<%= t.heading || '' %>" placeholder="Falls back to the type label / message subject" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                 <p class="text-xs text-gray-400 mt-1">Shown as the large heading at the top of this type's emails.</p>
               </div>
               <div>
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Intro paragraph <span class="text-gray-400 font-normal">(optional)</span></label>
-                <textarea name="intro" rows="2" maxlength="1000" placeholder="Opening line shown before the message body" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= t.intro || '' %></textarea>
+                <label for="et-<%= t.key %>-intro" class="text-sm font-medium text-gray-700 dark:text-gray-300">Intro paragraph <span class="text-gray-400 font-normal">(optional)</span></label>
+                <textarea id="et-<%= t.key %>-intro" name="intro" rows="2" maxlength="1000" placeholder="Opening line shown before the message body" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"><%= t.intro || '' %></textarea>
               </div>
               <%- include('../partials/emailActionRows.ejs', { t: t }) %>
               <div class="flex flex-wrap gap-6">
@@ -103,34 +103,34 @@
         <%- include('../partials/csrfHidden.ejs') %>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Key</label>
-            <input type="text" name="key" required placeholder="e.g. project-updates" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="et-new-key" class="text-sm font-medium text-gray-700 dark:text-gray-300">Key</label>
+            <input id="et-new-key" type="text" name="key" required placeholder="e.g. project-updates" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <p class="text-xs text-gray-400 mt-1">Lowercase, hyphenated.</p>
           </div>
           <div>
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Label</label>
-            <input type="text" name="label" required class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="et-new-label" class="text-sm font-medium text-gray-700 dark:text-gray-300">Label</label>
+            <input id="et-new-label" type="text" name="label" required class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Sender type</label>
-            <select name="senderType" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="et-new-senderType" class="text-sm font-medium text-gray-700 dark:text-gray-300">Sender type</label>
+            <select id="et-new-senderType" name="senderType" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <option value="system">System</option>
               <option value="admin">Admin</option>
             </select>
           </div>
         </div>
         <div>
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-          <textarea name="description" rows="2" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+          <label for="et-new-description" class="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+          <textarea id="et-new-description" name="description" rows="2" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Email heading <span class="text-gray-400 font-normal">(optional)</span></label>
-            <input type="text" name="heading" maxlength="120" placeholder="Falls back to the label / subject" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="et-new-heading" class="text-sm font-medium text-gray-700 dark:text-gray-300">Email heading <span class="text-gray-400 font-normal">(optional)</span></label>
+            <input id="et-new-heading" type="text" name="heading" maxlength="120" placeholder="Falls back to the label / subject" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
           <div>
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Intro paragraph <span class="text-gray-400 font-normal">(optional)</span></label>
-            <input type="text" name="intro" maxlength="1000" placeholder="Opening line before the body" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <label for="et-new-intro" class="text-sm font-medium text-gray-700 dark:text-gray-300">Intro paragraph <span class="text-gray-400 font-normal">(optional)</span></label>
+            <input id="et-new-intro" type="text" name="intro" maxlength="1000" placeholder="Opening line before the body" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           </div>
         </div>
         <%- include('../partials/emailActionRows.ejs', { t: {} }) %>
@@ -149,8 +149,8 @@
 
 <template id="action-row-template">
   <div class="js-action-row flex gap-2 items-center">
-    <input type="text" name="actionLabel[]" placeholder="Button label" maxlength="60" class="w-1/3 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm">
-    <input type="text" name="actionUrl[]" placeholder="https://… or /path" maxlength="500" class="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm">
+    <input type="text" name="actionLabel[]" aria-label="Button label" placeholder="Button label" maxlength="60" class="w-1/3 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm">
+    <input type="text" name="actionUrl[]" aria-label="Button link" placeholder="https://… or /path" maxlength="500" class="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm">
     <button type="button" class="js-action-remove px-2.5 py-2 rounded-lg text-sm bg-gray-100 hover:bg-red-100 dark:bg-gray-700 dark:hover:bg-red-900/40 text-gray-500 hover:text-red-600" title="Remove"><i class="bi bi-x-lg"></i></button>
   </div>
 </template>

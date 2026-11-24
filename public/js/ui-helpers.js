@@ -54,17 +54,60 @@ document.addEventListener('DOMContentLoaded', function () {
   // ── data-modal-open / data-modal-close ───────────────────────────────────
   // Usage: <button data-modal-open="myModal">
   //        <button data-modal-close="myModal">
+  // Opening a modal makes it a dialog for assistive tech, moves focus into it and
+  // keeps Tab inside it; Escape or a close button shuts it and returns focus to
+  // the button that opened it (WCAG 2.1.2, 2.4.3, 4.1.2).
+  var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  var openModal = null, modalOpener = null;
+  function focusables(modal) {
+    return Array.prototype.filter.call(modal.querySelectorAll(FOCUSABLE), function (el) { return el.offsetParent !== null; });
+  }
+  function showModal(modal, opener) {
+    if (!modal.getAttribute('role')) modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    if (!modal.getAttribute('aria-labelledby') && !modal.getAttribute('aria-label')) {
+      var heading = modal.querySelector('h1, h2, h3, h4');
+      if (heading) {
+        if (!heading.id) heading.id = modal.id + '-title';
+        modal.setAttribute('aria-labelledby', heading.id);
+      }
+    }
+    modal.classList.remove('hidden');
+    openModal = modal;
+    modalOpener = opener || null;
+    var first = focusables(modal)[0];
+    if (first) first.focus();
+    else { modal.setAttribute('tabindex', '-1'); modal.focus(); }
+  }
+  function hideModal(modal) {
+    modal.classList.add('hidden');
+    if (openModal === modal) {
+      openModal = null;
+      if (modalOpener && document.body.contains(modalOpener)) modalOpener.focus();
+      modalOpener = null;
+    }
+  }
   document.addEventListener('click', function (e) {
     var opener = e.target.closest('[data-modal-open]');
     if (opener) {
       var modal = document.getElementById(opener.getAttribute('data-modal-open'));
-      if (modal) modal.classList.remove('hidden');
+      if (modal) showModal(modal, opener);
     }
     var closer = e.target.closest('[data-modal-close]');
     if (closer) {
       var modal = document.getElementById(closer.getAttribute('data-modal-close'));
-      if (modal) modal.classList.add('hidden');
+      if (modal) hideModal(modal);
     }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!openModal || openModal.classList.contains('hidden')) return;
+    if (e.key === 'Escape') { e.preventDefault(); hideModal(openModal); return; }
+    if (e.key !== 'Tab') return;
+    var items = focusables(openModal);
+    if (!items.length) { e.preventDefault(); return; }
+    var first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !openModal.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (document.activeElement === last || !openModal.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
   });
 
   // ── data-modal-param-* ────────────────────────────────────────────────────
@@ -116,6 +159,39 @@ document.addEventListener('DOMContentLoaded', function () {
     list.querySelectorAll('label[data-search]').forEach(function (label) {
       label.style.display = label.getAttribute('data-search').includes(term) ? '' : 'none';
     });
+  });
+
+  // ── Form error summary ───────────────────────────────────────────────────
+  // When a form comes back with problems, move focus to the summary so keyboard
+  // and screen-reader users land on it (WCAG 3.3.1). Its links jump to the field.
+  var errorSummary = document.querySelector('[data-error-summary]');
+  if (errorSummary) {
+    errorSummary.focus();
+    errorSummary.addEventListener('click', function (e) {
+      var link = e.target.closest('a[href^="#"]');
+      if (!link) return;
+      var field = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+      if (!field) return;
+      e.preventDefault();
+      field.scrollIntoView({ block: 'center' });
+      field.focus();
+    });
+  }
+
+  // ── Links that open a new tab ────────────────────────────────────────────
+  // Tell screen-reader users before they lose their place (WCAG G201). Links that
+  // already say so in their name are left alone.
+  document.querySelectorAll('a[target="_blank"]').forEach(function (a) {
+    var name = (a.getAttribute('aria-label') || a.textContent || '').toLowerCase();
+    if (/new (tab|window)/.test(name)) return;
+    if (a.getAttribute('aria-label')) {
+      a.setAttribute('aria-label', a.getAttribute('aria-label') + ' (opens in a new tab)');
+    } else {
+      var hint = document.createElement('span');
+      hint.className = 'sr-only';
+      hint.textContent = ' (opens in a new tab)';
+      a.appendChild(hint);
+    }
   });
 
   // ── Decorative Bootstrap Icons ───────────────────────────────────────────

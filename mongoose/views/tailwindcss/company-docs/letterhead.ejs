@@ -15,23 +15,23 @@
         <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Company Identity</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name</label>
-            <input type="text" name="companyName" value="<%= letterhead.companyName || '' %>"
+            <label for="f-companyName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name</label>
+            <input id="f-companyName" type="text" name="companyName" value="<%= letterhead.companyName || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tagline</label>
-            <input type="text" name="tagline" value="<%= letterhead.tagline || '' %>"
+            <label for="f-tagline" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tagline</label>
+            <input id="f-tagline" type="text" name="tagline" value="<%= letterhead.tagline || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Registration No.</label>
-            <input type="text" name="registrationNumber" value="<%= letterhead.registrationNumber || '' %>"
+            <label for="f-registrationNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Registration No.</label>
+            <input id="f-registrationNumber" type="text" name="registrationNumber" value="<%= letterhead.registrationNumber || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">VAT Registration No.</label>
-            <input type="text" name="vatNumber" value="<%= letterhead.vatNumber || '' %>"
+            <label for="f-vatNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">VAT Registration No.</label>
+            <input id="f-vatNumber" type="text" name="vatNumber" value="<%= letterhead.vatNumber || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
         </div>
@@ -42,28 +42,28 @@
         <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Address</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 1</label>
-            <input type="text" name="addressLine1" value="<%= letterhead.addressLine1 || '' %>"
+            <label for="f-addressLine1" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 1</label>
+            <input id="f-addressLine1" type="text" name="addressLine1" value="<%= letterhead.addressLine1 || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 2</label>
-            <input type="text" name="addressLine2" value="<%= letterhead.addressLine2 || '' %>"
+            <label for="f-addressLine2" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 2</label>
+            <input id="f-addressLine2" type="text" name="addressLine2" value="<%= letterhead.addressLine2 || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Town / City</label>
-            <input type="text" name="town" value="<%= letterhead.town || '' %>"
+            <label for="f-town" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Town / City</label>
+            <input id="f-town" type="text" name="town" value="<%= letterhead.town || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">County</label>
-            <input type="text" name="county" value="<%= letterhead.county || '' %>"
+            <label for="f-county" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">County</label>
+            <input id="f-county" type="text" name="county" value="<%= letterhead.county || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Postcode</label>
-            <input type="text" name="postcode" value="<%= letterhead.postcode || '' %>"
+            <label for="f-postcode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Postcode</label>
+            <input id="f-postcode" type="text" name="postcode" value="<%= letterhead.postcode || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
         </div>
@@ -74,18 +74,18 @@
         <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Contact Details</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-            <input type="tel" name="phone" value="<%= letterhead.phone || '' %>"
+            <label for="f-phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+            <input id="f-phone" type="tel" name="phone" value="<%= letterhead.phone || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-            <input type="email" name="email" value="<%= letterhead.email || '' %>"
+            <label for="f-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+            <input id="f-email" type="email" name="email" value="<%= letterhead.email || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
           <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
-            <input type="url" name="website" value="<%= letterhead.website || '' %>"
+            <label for="f-website" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
+            <input id="f-website" type="url" name="website" value="<%= letterhead.website || '' %>"
               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
           </div>
         </div>
@@ -100,20 +100,20 @@
             <span class="text-xs text-gray-500 dark:text-gray-400">Current logo</span>
           </div>
         <% } %>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label for="f-logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           <%= letterhead.logoPath ? 'Replace logo' : 'Upload logo' %> <span class="text-gray-400">(JPEG, PNG, SVG — max 2 MB)</span>
         </label>
-        <input type="file" name="logo" accept="image/*"
+        <input id="f-logo" type="file" name="logo" accept="image/*"
           class="block text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-green-50 file:text-green-700 dark:file:bg-green-900/30 dark:file:text-green-300 hover:file:bg-green-100 dark:hover:file:bg-green-900/50">
       </div>
 
       <!-- Footer text -->
       <div>
         <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Document Footer</h2>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label for="f-footerText" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Footer text <span class="text-gray-400">(e.g. registered address, small print)</span>
         </label>
-        <textarea name="footerText" rows="2"
+        <textarea id="f-footerText" name="footerText" rows="2"
           class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"><%= letterhead.footerText || '' %></textarea>
       </div>
 

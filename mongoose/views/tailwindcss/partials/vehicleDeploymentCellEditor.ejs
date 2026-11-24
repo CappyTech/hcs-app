@@ -33,8 +33,8 @@
 
   <!-- Driver type -->
   <div class="flex items-center gap-1.5">
-    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Driver</label>
-    <select x-model="form.driverType"
+    <span class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0" aria-hidden="true">Driver</span>
+    <select x-model="form.driverType" aria-label="Driver type"
       class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
       <option value="none">Unassigned</option>
       <option value="employee">Employee</option>
@@ -44,8 +44,8 @@
 
   <!-- Employee picker -->
   <div x-show="form.driverType === 'employee'" class="flex items-center gap-1.5">
-    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0"></label>
-    <select x-model="form.driverEmployeeId"
+    <span class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0" aria-hidden="true"></span>
+    <select x-model="form.driverEmployeeId" aria-label="Driver (employee)"
       class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
       <option value="">— Select employee —</option>
       <template x-for="emp in employees" :key="emp._id">
@@ -56,8 +56,8 @@
 
   <!-- Subcontractor picker -->
   <div x-show="form.driverType === 'subcontractor'" class="flex items-center gap-1.5">
-    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0"></label>
-    <select x-model="form.driverSubId"
+    <span class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0" aria-hidden="true"></span>
+    <select x-model="form.driverSubId" aria-label="Driver (subcontractor)"
       class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
       <option value="">— Select subcontractor —</option>
       <template x-for="sub in subcontractors" :key="sub._id">
@@ -68,8 +68,8 @@
 
   <!-- Usage type -->
   <div class="flex items-center gap-1.5">
-    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Usage</label>
-    <select x-model="form.usageType"
+    <span class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0" aria-hidden="true">Usage</span>
+    <select x-model="form.usageType" aria-label="Usage"
       class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
       <option value="site">Site</option>
       <option value="delivery">Delivery</option>
@@ -81,8 +81,8 @@
 
   <!-- Location / Contract -->
   <div class="flex items-center gap-1.5">
-    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Location</label>
-    <select x-model="form.locationId"
+    <span class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0" aria-hidden="true">Location</span>
+    <select x-model="form.locationId" aria-label="Location"
       class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
       <option value="">— None —</option>
       <template x-for="loc in locations" :key="loc._id">
@@ -91,8 +91,8 @@
     </select>
   </div>
   <div class="flex items-center gap-1.5">
-    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Contract</label>
-    <select x-model="form.contractId"
+    <span class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0" aria-hidden="true">Contract</span>
+    <select x-model="form.contractId" aria-label="Contract"
       class="flex-1 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
       <option value="">— None —</option>
       <template x-for="c in contracts" :key="c._id">
@@ -103,11 +103,11 @@
 
   <!-- Mileage -->
   <div class="flex items-center gap-1.5">
-    <label class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0">Mileage</label>
-    <input type="number" x-model="form.startMileage" min="0" placeholder="Start"
+    <span class="text-[10px] text-gray-500 dark:text-gray-400 w-12 shrink-0" aria-hidden="true">Mileage</span>
+    <input type="number" x-model="form.startMileage" aria-label="Start mileage" min="0" placeholder="Start"
       class="w-16 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
     <span class="text-[10px] text-gray-400">→</span>
-    <input type="number" x-model="form.endMileage" min="0" placeholder="End"
+    <input type="number" x-model="form.endMileage" aria-label="End mileage" min="0" placeholder="End"
       class="w-16 text-xs px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-green-500 focus:outline-none">
   </div>
 

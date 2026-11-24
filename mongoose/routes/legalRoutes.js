@@ -26,4 +26,13 @@ router.get('/legal/terms', (req, res) => {
   });
 });
 
+// Accessibility statement (WCAG 2.2 AA conformance, known issues, how to get help).
+// Update lastReviewed whenever the Platform is re-audited.
+router.get('/legal/accessibility', (req, res) => {
+  res.render(path.join('tailwindcss', 'legal', 'accessibility'), {
+    title: 'Accessibility Statement',
+    lastReviewed: '24 November 2026',
+  });
+});
+
 export default router;

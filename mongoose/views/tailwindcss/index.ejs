@@ -62,7 +62,7 @@
     <div class="bg-white dark:bg-gray-900 shadow-lg rounded-2xl overflow-hidden">
       <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center justify-between gap-2">
         <span class="flex items-center gap-2"><i class="bi bi-speedometer2 text-green-600 dark:text-green-400"></i> Overviews</span>
-        <a href="/home/customise" class="text-xs font-medium text-green-700 dark:text-green-400 hover:underline inline-flex items-center gap-1"><i class="bi bi-sliders" aria-hidden="true"></i> Customise home</a>
+        <a href="/home/customise" class="text-xs font-medium text-green-700 dark:text-green-400 hover:underline inline-flex items-center gap-1 py-1 -my-1"><i class="bi bi-sliders" aria-hidden="true"></i> Customise home</a>
       </div>
       <% if (_home.tiles.length) { %>
       <div class="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -113,7 +113,7 @@
           <% } %>
         </div>
         <div class="flex items-center gap-2">
-          <a href="/tasks" class="text-xs text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:underline">View all</a>
+          <a href="/tasks" class="inline-block py-1 -my-1 text-xs text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:underline">View all</a>
           <a href="/task/create" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition"><i class="bi bi-plus-lg"></i> New Task</a>
         </div>
       </div>

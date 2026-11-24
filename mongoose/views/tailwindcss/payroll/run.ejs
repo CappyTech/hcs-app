@@ -74,7 +74,7 @@
           <% if (canGroup('payroll', 'manage')) { %>
           <form method="POST" action="/payroll/run/<%= run.uuid %>/unlock">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
-            <button type="submit" class="inline-flex items-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            <button type="submit" class="inline-flex items-center gap-1.5 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
               <i class="bi bi-unlock"></i> Unlock
             </button>
           </form>
@@ -179,7 +179,7 @@
                       <i class="bi bi-pencil-square"></i> <%= entry.overrideFlags.length %>
                     </span>
                   <% } else { %>
-                    <span class="text-gray-300 dark:text-gray-600">—</span>
+                    <span class="text-gray-500 dark:text-gray-400">—</span>
                   <% } %>
                 </td>
                 <% if (run.status === 'draft') { %>
@@ -250,14 +250,14 @@
         { key: 'netPay', label: 'Net Pay' }
       ].forEach(f => { %>
       <div>
-        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"><%= f.label %></label>
-        <input type="number" step="0.01" name="<%= f.key %>" data-field="<%= f.key %>"
+        <label for="override-<%= f.key %>" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"><%= f.label %></label>
+        <input type="number" step="0.01" id="override-<%= f.key %>" name="<%= f.key %>" data-field="<%= f.key %>"
           class="override-field w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       </div>
       <% }) %>
     </div>
     <div class="mt-4">
-      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
+      <label for="overrideNotes" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
       <textarea id="overrideNotes" rows="2" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
     </div>
     <div class="flex justify-end gap-3 mt-6">

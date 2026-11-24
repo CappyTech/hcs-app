@@ -38,10 +38,10 @@ function srcBadge(f) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_ACCOUNT_SID</label>
+              <label for="f-TWILIO_ACCOUNT_SID" class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_ACCOUNT_SID</label>
               <%- srcBadge(fields.TWILIO_ACCOUNT_SID) %>
             </div>
-            <input type="text" name="TWILIO_ACCOUNT_SID" autocomplete="off"
+            <input id="f-TWILIO_ACCOUNT_SID" type="text" name="TWILIO_ACCOUNT_SID" autocomplete="off"
               placeholder="<%= fields.TWILIO_ACCOUNT_SID.display || 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' %>"
               <% if (fields.TWILIO_ACCOUNT_SID.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed">
@@ -49,10 +49,10 @@ function srcBadge(f) {
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_AUTH_TOKEN</label>
+              <label for="f-TWILIO_AUTH_TOKEN" class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_AUTH_TOKEN</label>
               <%- srcBadge(fields.TWILIO_AUTH_TOKEN) %>
             </div>
-            <input type="password" name="TWILIO_AUTH_TOKEN" autocomplete="new-password"
+            <input id="f-TWILIO_AUTH_TOKEN" type="password" name="TWILIO_AUTH_TOKEN" autocomplete="new-password"
               placeholder="<%= fields.TWILIO_AUTH_TOKEN.isSet ? '••••••••' : 'Auth token' %>"
               <% if (fields.TWILIO_AUTH_TOKEN.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -64,10 +64,10 @@ function srcBadge(f) {
         <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Sender</h2>
         <div class="mb-8">
           <div class="flex items-center justify-between mb-1">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_FROM_NUMBER</label>
+            <label for="f-TWILIO_FROM_NUMBER" class="text-sm font-medium text-gray-700 dark:text-gray-300">TWILIO_FROM_NUMBER</label>
             <%- srcBadge(fields.TWILIO_FROM_NUMBER) %>
           </div>
-          <input type="tel" name="TWILIO_FROM_NUMBER"
+          <input id="f-TWILIO_FROM_NUMBER" type="tel" name="TWILIO_FROM_NUMBER"
             placeholder="<%= fields.TWILIO_FROM_NUMBER.display || '+441234567890' %>"
             <% if (fields.TWILIO_FROM_NUMBER.fromEnv) { %>disabled<% } %>
             class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">

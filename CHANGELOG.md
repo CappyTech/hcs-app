@@ -2,6 +2,35 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.146.0] - 2026-11-24
+
+### Added
+- **Accessibility statement** at `/legal/accessibility`, linked from the footer. It says how accessible the app is (partially compliant with WCAG 2.2 AA), lists the known issues, and tells people how to get help.
+
+### Changed
+- **Form problems are shown beside the field.** When a create or edit form is rejected, a summary at the top says how many problems there are and links to each field. Each field shows its own message underneath, in plain words such as "Name is required." or "Hire Date isn't a valid date." The field gets a red border, and screen readers announce it as invalid.
+- **Editing a record no longer loses what you typed when something is wrong.** A rejected edit used to show the error page; it now returns to the form with your changes and the problems marked.
+- **Page titles name one record.** For example "Create Employee", "Update Employee" and "Employee details", not "Create Employees".
+- **Status colours are easier to read.** Amber, yellow, orange and red text (counts, badges, "Delete", "Is Archived") and the light-grey text in table headers are one shade darker, and white buttons that were on light green or amber are on a darker shade. Grey badges are lighter in dark mode.
+- **HTTPS is remembered for a year** (`Strict-Transport-Security` max-age 31536000, was 180 days).
+
+### Fixed
+- **Keyboard:**
+  - Closed on a phone or narrow window, the side menu's links no longer take keyboard focus while hidden off-screen. Opening the menu moves focus into it.
+  - Pop-up dialogs (`data-modal-open`) move focus inside when they open and keep Tab inside. Escape closes them, and focus goes back to the button that opened them.
+  - Escape in the search box closes the suggestions without losing your place. Pressing it again clears the box.
+- **Small click targets:**
+  - The list checkboxes, the weekly sheet's "copy day" buttons, and the small "View all" and "Customise home" links are at least 24 pixels.
+  - A checkbox's label is at least 24 pixels tall, so it is easy to tick.
+- **Fields labelled for screen readers** on about 50 pages, including:
+  - the filter bars on bank accounts, statements, payroll runs, audit, mail, media and help;
+  - the weekly attendance and assignment editors;
+  - the website settings (offices, opening hours, gallery);
+  - payroll submissions and settings, and setup;
+  - the email and KashFlow settings.
+- **One main heading per page** on Account settings (was five) and Edit CIS details (was none).
+- **Screen readers say when a link opens a new tab.**
+
 ## [6.145.1] - 2026-11-24
 
 ### Fixed

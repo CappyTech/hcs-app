@@ -39,10 +39,10 @@ function srcBadge(f) {
         <div class="mb-6">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_BASE_URL</label>
+              <label for="f-KASHFLOW_API_BASE_URL" class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_BASE_URL</label>
               <%- srcBadge(fields.KASHFLOW_API_BASE_URL) %>
             </div>
-            <input type="url" name="KASHFLOW_API_BASE_URL"
+            <input id="f-KASHFLOW_API_BASE_URL" type="url" name="KASHFLOW_API_BASE_URL"
               placeholder="<%= fields.KASHFLOW_API_BASE_URL.display || 'https://api.kashflow.com/v2' %>"
               <% if (fields.KASHFLOW_API_BASE_URL.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -55,30 +55,30 @@ function srcBadge(f) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_USERNAME</label>
+              <label for="f-KASHFLOW_API_USERNAME" class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_USERNAME</label>
               <%- srcBadge(fields.KASHFLOW_API_USERNAME) %>
             </div>
-            <input type="text" name="KASHFLOW_API_USERNAME" autocomplete="off"
+            <input id="f-KASHFLOW_API_USERNAME" type="text" name="KASHFLOW_API_USERNAME" autocomplete="off"
               placeholder="<%= fields.KASHFLOW_API_USERNAME.display || 'KashFlow username' %>"
               <% if (fields.KASHFLOW_API_USERNAME.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_PASSWORD</label>
+              <label for="f-KASHFLOW_API_PASSWORD" class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_API_PASSWORD</label>
               <%- srcBadge(fields.KASHFLOW_API_PASSWORD) %>
             </div>
-            <input type="password" name="KASHFLOW_API_PASSWORD" autocomplete="new-password"
+            <input id="f-KASHFLOW_API_PASSWORD" type="password" name="KASHFLOW_API_PASSWORD" autocomplete="new-password"
               placeholder="<%= fields.KASHFLOW_API_PASSWORD.isSet ? '••••••••' : 'Enter password' %>"
               <% if (fields.KASHFLOW_API_PASSWORD.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
           </div>
           <div class="sm:col-span-2">
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_MEMORABLE</label>
+              <label for="f-KASHFLOW_MEMORABLE" class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_MEMORABLE</label>
               <%- srcBadge(fields.KASHFLOW_MEMORABLE) %>
             </div>
-            <input type="password" name="KASHFLOW_MEMORABLE" autocomplete="new-password"
+            <input id="f-KASHFLOW_MEMORABLE" type="password" name="KASHFLOW_MEMORABLE" autocomplete="new-password"
               placeholder="<%= fields.KASHFLOW_MEMORABLE.isSet ? '••••••••' : 'Memorable word' %>"
               <% if (fields.KASHFLOW_MEMORABLE.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -89,10 +89,10 @@ function srcBadge(f) {
         <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Session Token (Alternative)</h2>
         <div class="mb-6">
           <div class="flex items-center justify-between mb-1">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_SESSION_TOKEN</label>
+            <label for="f-KASHFLOW_SESSION_TOKEN" class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_SESSION_TOKEN</label>
             <%- srcBadge(fields.KASHFLOW_SESSION_TOKEN) %>
           </div>
-          <input type="password" name="KASHFLOW_SESSION_TOKEN" autocomplete="new-password"
+          <input id="f-KASHFLOW_SESSION_TOKEN" type="password" name="KASHFLOW_SESSION_TOKEN" autocomplete="new-password"
             placeholder="<%= fields.KASHFLOW_SESSION_TOKEN.isSet ? '••••••••' : 'Pre-obtained session token (optional)' %>"
             <% if (fields.KASHFLOW_SESSION_TOKEN.fromEnv) { %>disabled<% } %>
             class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -104,10 +104,10 @@ function srcBadge(f) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_DEBUG_SESSION</label>
+              <label for="f-KASHFLOW_DEBUG_SESSION" class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_DEBUG_SESSION</label>
               <%- srcBadge(fields.KASHFLOW_DEBUG_SESSION) %>
             </div>
-            <select name="KASHFLOW_DEBUG_SESSION"
+            <select id="f-KASHFLOW_DEBUG_SESSION" name="KASHFLOW_DEBUG_SESSION"
               <% if (fields.KASHFLOW_DEBUG_SESSION.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">— keep existing (<%= fields.KASHFLOW_DEBUG_SESSION.display || 'not set' %>) —</option>
@@ -117,10 +117,10 @@ function srcBadge(f) {
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_DEFER_DEFAULTS</label>
+              <label for="f-KASHFLOW_DEFER_DEFAULTS" class="text-sm font-medium text-gray-700 dark:text-gray-300">KASHFLOW_DEFER_DEFAULTS</label>
               <%- srcBadge(fields.KASHFLOW_DEFER_DEFAULTS) %>
             </div>
-            <select name="KASHFLOW_DEFER_DEFAULTS"
+            <select id="f-KASHFLOW_DEFER_DEFAULTS" name="KASHFLOW_DEFER_DEFAULTS"
               <% if (fields.KASHFLOW_DEFER_DEFAULTS.fromEnv) { %>disabled<% } %>
               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
               <option value="">— keep existing (<%= fields.KASHFLOW_DEFER_DEFAULTS.display || 'not set' %>) —</option>

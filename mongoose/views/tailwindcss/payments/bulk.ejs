@@ -26,7 +26,7 @@ const INPUT = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px
 
   <!-- Filters (GET) -->
   <form method="GET" action="/payments/bulk" class="flex gap-2 flex-wrap mb-4">
-    <select name="supplierId" class="<%= INPUT %>">
+    <select name="supplierId" aria-label="Filter by supplier" class="<%= INPUT %>">
       <option value="">All suppliers</option>
       <% (suppliers || []).forEach(s => { %>
         <option value="<%= s.SupplierId %>" <%= String(filters.supplierId) === String(s.SupplierId) ? 'selected' : '' %>>
@@ -34,9 +34,9 @@ const INPUT = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px
         </option>
       <% }); %>
     </select>
-    <input name="search" value="<%= filters.search %>" placeholder="Invoice #, supplier or reference&hellip;" class="flex-1 min-w-0 <%= INPUT %>" />
-    <input type="date" name="from" value="<%= filters.from %>" class="<%= INPUT %>" title="Issued from" />
-    <input type="date" name="to" value="<%= filters.to %>" class="<%= INPUT %>" title="Issued to" />
+    <input name="search" value="<%= filters.search %>" aria-label="Search invoices" placeholder="Invoice #, supplier or reference&hellip;" class="flex-1 min-w-0 <%= INPUT %>" />
+    <input type="date" name="from" value="<%= filters.from %>" class="<%= INPUT %>" title="Issued from" aria-label="Issued from" />
+    <input type="date" name="to" value="<%= filters.to %>" class="<%= INPUT %>" title="Issued to" aria-label="Issued to" />
     <button type="submit" class="text-sm font-medium px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600">Filter</button>
     <% if (filters.supplierId || filters.search || filters.from || filters.to) { %>
       <a href="/payments/bulk" class="text-sm px-3 py-2 text-gray-500 hover:underline self-center">Clear</a>
@@ -97,7 +97,7 @@ const INPUT = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px
               <td class="px-3 py-2 text-right whitespace-nowrap text-gray-500"><%= gbp(r.TotalPaidAmount) %></td>
               <td class="px-3 py-2 text-right whitespace-nowrap font-semibold"><%= gbp(r.outstanding) %></td>
               <td class="px-3 py-2 text-right">
-                <input type="number" name="amount" step="0.01" min="0" max="<%= r.outstanding %>"
+                <input type="number" name="amount" aria-label="Amount to pay" step="0.01" min="0" max="<%= r.outstanding %>"
                        value="<%= Number(r.outstanding).toFixed(2) %>"
                        class="pay-amount w-28 text-right <%= INPUT %>" />
               </td>
@@ -158,7 +158,7 @@ const INPUT = 'text-sm border border-gray-300 dark:border-gray-600 rounded-lg px
           <span class="font-semibold">Total <span id="sel-total">£0.00</span></span>
         </div>
         <button type="submit" id="review-btn" disabled
-                class="text-sm font-semibold px-5 py-2.5 rounded-lg bg-green-600 text-white hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed">
+                class="text-sm font-semibold px-5 py-2.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed">
           Review payment &rarr;
         </button>
       </div>

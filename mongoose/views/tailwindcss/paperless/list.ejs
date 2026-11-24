@@ -13,7 +13,7 @@
   </div>
 
   <form method="get" class="mb-4 flex flex-wrap gap-3 items-center" id="list-controls">
-    <input name="q" value="<%= q %>" placeholder="Search title/OCR/correspondent/type"
+    <input name="q" value="<%= q %>" aria-label="Search documents" placeholder="Search title/OCR/correspondent/type"
            class="text-sm border rounded px-3 py-1 w-64 bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600" />
     <% if (tag) { %><input type="hidden" name="tag" value="<%= tag %>" /><% } %>
     <% if (noKfNumber) { %><input type="hidden" name="noKfNumber" value="1" /><% } %>
@@ -71,13 +71,13 @@
               <% if (typeof it.kashflowPurchaseNumber === 'number') { %>
                 <a href="https://app.kashflow.com/#purchases/<%= it.kashflowPurchaseNumber %>" target="_blank" class="text-green-600 dark:text-green-400 hover:underline">#<%= it.kashflowPurchaseNumber %></a>
               <% } else { %>
-                <span class="text-slate-400">-</span>
+                <span class="text-slate-500">-</span>
               <% } %>
             </td>
             <td class="px-3 py-2 border-b dark:border-gray-700">
               <% const _tags = Array.isArray(it.tags) ? it.tags : []; const _tagNames = _tags.map(t => (t && (t.name || t.Name)) || (typeof t === 'string' ? t : null)).filter(Boolean); %>
               <% if (_tagNames.length === 0) { %>
-                <span class="text-slate-400">-</span>
+                <span class="text-slate-500">-</span>
               <% } else { %>
                 <div class="flex flex-wrap gap-1">
                   <% _tagNames.forEach(n => { %>

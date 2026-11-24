@@ -278,7 +278,7 @@
           <% rates.forEach(r => { %>
             <div class="relative bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 <%= r.key === definedRate ? 'ring-2 ring-green-500/60' : '' %>">
               <% if (r.key === definedRate) { %>
-                <span class="absolute -top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-500 text-white">Primary</span>
+                <span class="absolute -top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-600 text-white">Primary</span>
               <% } %>
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide"><%= r.label %></p>
               <p class="mt-1 text-base font-semibold text-gray-800 dark:text-gray-200"><%- r.value || dash %></p>
