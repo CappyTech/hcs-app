@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.5] - 2026-11-24
+
+### Fixed
+- **Three more pages fit a small phone.** On a 320px screen, the Documents overview section headers, the OCR documents page buttons and the management weekly attendance week buttons now wrap instead of making the page scroll sideways.
+
 ## [6.148.4] - 2026-11-24
 
 ### Fixed

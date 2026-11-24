@@ -115,7 +115,7 @@
     const pagerBtnMuted = 'px-3 py-1.5 rounded-lg border text-xs border-gray-100 dark:border-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed';
   %>
   <div class="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm">
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
       <span>Page <%= page %> of <%= pages %></span>
       <span class="text-gray-400 dark:text-gray-500">·</span>
       <span class="text-xs text-gray-500 dark:text-gray-400">Show</span>
@@ -127,7 +127,7 @@
         <% } %>
       <% }); %>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <% if (page > 1) { %>
         <a class="<%= pagerBtn %>" href="<%= pagerLink(1) %>" title="First page">&laquo;</a>
         <a class="<%= pagerBtn %>" href="<%= pagerLink(page - 1) %>">Prev</a>

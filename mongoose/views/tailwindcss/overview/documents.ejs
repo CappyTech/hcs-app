@@ -111,7 +111,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <!-- ── CF Drift ──────────────────────────────────────────────────────────── -->
   <% if (driftedDocs > 0) { %>
   <details class="mb-6 group border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 rounded-2xl" <%= driftedDocs <= 10 ? 'open' : '' %>>
-    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+    <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="flex items-center gap-3 min-w-0 flex-1">
         <span class="text-lg font-bold text-purple-700 dark:text-purple-400">&#9888; Custom Field Drift (<%= driftedDocs %>)</span>
         <span class="text-sm text-purple-600 dark:text-purple-300 hidden sm:block">MongoDB / Paperless custom field mismatch</span>
@@ -156,7 +156,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <!-- ── Deleted in Paperless ─────────────────────────────────────────────── -->
   <% if (deletedInPaperless > 0) { %>
   <details class="mb-6 group border border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 rounded-2xl" <%= deletedInPaperless <= 10 ? 'open' : '' %>>
-    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+    <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="flex items-center gap-3 min-w-0 flex-1">
         <div class="min-w-0">
           <span class="text-lg font-bold text-rose-700 dark:text-rose-400">&#9888; Deleted in Paperless (<%= deletedInPaperless %>)</span>
@@ -217,7 +217,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <!-- ── Possible Re-uploads ──────────────────────────────────────────────── -->
   <% if (possibleReuploadCount > 0) { %>
   <details class="mb-6 group border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 rounded-2xl" open>
-    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+    <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="flex items-center gap-3 min-w-0 flex-1">
         <span class="text-lg font-bold text-blue-700 dark:text-blue-400">&#8635; Possible Re-uploads (<%= possibleReuploadCount %>)</span>
         <span class="text-sm text-blue-600 dark:text-blue-300 hidden sm:block">Deleted documents with a matching content hash in a live document</span>
@@ -252,7 +252,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <!-- ── Document Errors ───────────────────────────────────────────────────── -->
   <% if (errorDocsList.length > 0) { %>
   <details class="mb-6 group border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 rounded-2xl" open>
-    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+    <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <span class="text-lg font-bold text-red-700 dark:text-red-400">&#9888; Document Errors (<%= errorDocs %>)</span>
       <span class="text-red-400 text-sm group-open:hidden">▼</span><span class="text-red-400 text-sm hidden group-open:inline">▲</span>
     </summary>
@@ -282,7 +282,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <!-- ── Never Sent ────────────────────────────────────────────────────────── -->
   <% if (neverSentList.length > 0) { %>
   <details class="mb-6 group border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
-    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+    <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="min-w-0">
         <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Never Sent to KashFlow (<%= neverSentEligible %>)</span>
         <% if (neverSentExcluded > 0) { %><span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5"><%= neverSentExcluded %> statements, subcontractor docs, credits/refunds, reference originals and manually-added-to-KashFlow docs are excluded — the app never sends them.</span><% } %>
@@ -314,7 +314,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <!-- ── Ingest Errors ─────────────────────────────────────────────────────── -->
   <% if (ingestErrorsList.length > 0) { %>
   <details class="mb-6 group border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 rounded-2xl" open>
-    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+    <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <span class="text-lg font-bold text-red-600 dark:text-red-400">&#9888; Ingest Errors (<%= ingestStats.error %>)</span>
       <span class="text-red-400 text-sm group-open:hidden">▼</span><span class="text-red-400 text-sm hidden group-open:inline">▲</span>
     </summary>
@@ -345,7 +345,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <!-- ── Stale Links ───────────────────────────────────────────────────────── -->
   <% if (staleLinkedList.length > 0) { %>
   <details class="mb-6 group border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 rounded-2xl">
-    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+    <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="min-w-0">
         <span class="text-lg font-bold text-orange-700 dark:text-orange-400">&#9888; Stale KashFlow Links (<%= orphanedDocs %>)</span>
         <span class="block text-xs text-orange-600 dark:text-orange-300 mt-0.5">KashFlow purchase no longer exists. Use Clear Now to remove the stale links. Documents sent within the last 48 hours are held (marked below) to allow hcs-sync time to pick up the new purchase.</span>
@@ -394,7 +394,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
   <!-- ── Unlinked ──────────────────────────────────────────────────────────── -->
   <% if (unlinkedDocsList.length > 0) { %>
   <details class="mb-6 group border border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl">
-    <summary class="flex items-center justify-between gap-4 p-4 cursor-pointer list-none">
+    <summary class="flex flex-wrap items-center justify-between gap-4 p-4 cursor-pointer list-none">
       <div class="flex items-center gap-3 min-w-0 flex-1">
         <div class="min-w-0">
           <span class="text-lg font-bold text-yellow-700 dark:text-yellow-400">Unlinked Documents (<%= unlinkedDocs %>)</span>
@@ -402,7 +402,7 @@ const kfUrl = (d) => d.kashflowPurchaseNumber
           <% if (unlinkedExcluded > 0) { %><span class="block text-xs text-yellow-600 dark:text-yellow-500 mt-0.5"><%= unlinkedExcluded %> statements, subcontractor docs, credits/refunds and reference originals ("original/multiple invoice one pdf") are excluded — they are never entered into KashFlow.</span><% } %>
         </div>
       </div>
-      <div class="flex items-center gap-3 shrink-0">
+      <div class="flex flex-wrap items-center gap-3">
         <% if (hasNumberNoId > 0) { %>
         <% if (typeof canGroup === 'function' && canGroup('documents', 'manage')) { %>
         <form method="POST" action="/paperless/resolve-numbers" data-submit-once>
