@@ -1,9 +1,13 @@
 # The Node base image comes from Google's Docker Hub mirror, the same one the CI
 # workflow already uses for buildkit. Anonymous pulls from Docker Hub were
 # rate-limited (6.66.0) and public ECR then hit its anonymous data cap (6.73.0),
-# failing every build twice in an hour.
+# failing every build twice in an hour. mirror.gcr.io in turn rate-limits now and
+# then (6.146.1, 6.148.0), so CI passes NODE_IMAGE to retry the same Node image
+# from Docker Hub and then public ECR when one registry refuses.
+ARG NODE_IMAGE=mirror.gcr.io/library/node:24-alpine
+
 # ── Stage 1: build CSS ────────────────────────────────────────────────────────
-FROM mirror.gcr.io/library/node:24-alpine AS builder
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -29,7 +33,7 @@ COPY scripts ./scripts
 RUN npm run build:vendor && npm run build:css
 
 # ── Stage 2: production image ─────────────────────────────────────────────────
-FROM mirror.gcr.io/library/node:24-alpine
+FROM ${NODE_IMAGE}
 WORKDIR /app
 
 RUN apk add --no-cache dumb-init curl tailscale

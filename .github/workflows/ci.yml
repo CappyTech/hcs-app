@@ -67,13 +67,43 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # The builder image comes from Google's Docker Hub mirror: anonymous pulls
-      # from Docker Hub were rate-limited or timing out on the shared runners.
-      - uses: docker/setup-buildx-action@v3
+      # Registry fallbacks. Every anonymous registry has refused us at some point:
+      # Docker Hub rate-limited (6.66.0), public ECR hit its data cap (6.73.0) and
+      # mirror.gcr.io returned 429s (6.146.1, 6.148.0). A refusal is usually brief
+      # and only hits one registry, so each pull is tried from mirror.gcr.io first,
+      # then Docker Hub, then public ECR, with a short pause in between. A genuine
+      # build error fails all three, and the job fails as before.
+
+      # BuildKit builder image
+      - name: Set up Buildx (mirror.gcr.io)
+        id: buildx_gcr
+        continue-on-error: true
+        uses: docker/setup-buildx-action@v3
         with:
           driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
-      - name: Build and push Docker image
+      - name: Wait before retrying Buildx
+        if: steps.buildx_gcr.outcome == 'failure'
+        run: sleep 20
+
+      - name: Set up Buildx (Docker Hub)
+        id: buildx_hub
+        if: steps.buildx_gcr.outcome == 'failure'
+        continue-on-error: true
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: image=moby/buildkit:buildx-stable-1
+
+      - name: Set up Buildx (public ECR)
+        if: steps.buildx_gcr.outcome == 'failure' && steps.buildx_hub.outcome == 'failure'
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: image=public.ecr.aws/vend/moby/buildkit:buildx-stable-1
+
+      # Node base image (Dockerfile ARG NODE_IMAGE)
+      - name: Build and push Docker image (mirror.gcr.io)
+        id: build_gcr
+        continue-on-error: true
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -81,6 +111,51 @@ jobs:
           platforms: linux/amd64
           build-args: |
             GIT_COMMIT=${{ env.SHORT_SHA }}
+            NODE_IMAGE=mirror.gcr.io/library/node:24-alpine
+          tags: |
+            ${{ env.IMAGE }}:${{ env.EXTRA_TAG }}
+            ${{ env.IMAGE }}:sha-${{ env.SHORT_SHA }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Wait before retrying the build
+        if: steps.build_gcr.outcome == 'failure'
+        run: sleep 30
+
+      - name: Build and push Docker image (Docker Hub)
+        id: build_hub
+        if: steps.build_gcr.outcome == 'failure'
+        continue-on-error: true
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          build-args: |
+            GIT_COMMIT=${{ env.SHORT_SHA }}
+            NODE_IMAGE=docker.io/library/node:24-alpine
+          tags: |
+            ${{ env.IMAGE }}:${{ env.EXTRA_TAG }}
+            ${{ env.IMAGE }}:sha-${{ env.SHORT_SHA }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Docker image (public ECR)
+        if: steps.build_gcr.outcome == 'failure' && steps.build_hub.outcome == 'failure'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          build-args: |
+            GIT_COMMIT=${{ env.SHORT_SHA }}
+            NODE_IMAGE=public.ecr.aws/docker/library/node:24-alpine
           tags: |
             ${{ env.IMAGE }}:${{ env.EXTRA_TAG }}
             ${{ env.IMAGE }}:sha-${{ env.SHORT_SHA }}
@@ -93,6 +168,7 @@ jobs:
       - name: Summary
         run: |
           echo "Published: ${{ env.IMAGE }}:${{ env.EXTRA_TAG }}, sha-${{ env.SHORT_SHA }}" >> $GITHUB_STEP_SUMMARY
+          echo "Buildx from: ${{ steps.buildx_gcr.outcome == 'success' && 'mirror.gcr.io' || (steps.buildx_hub.outcome == 'success' && 'Docker Hub' || 'public ECR') }}; Node image from: ${{ steps.build_gcr.outcome == 'success' && 'mirror.gcr.io' || (steps.build_hub.outcome == 'success' && 'Docker Hub' || 'public ECR') }}" >> $GITHUB_STEP_SUMMARY
 
   # ------------------------------------------------------------- deploy ---
   # After a master build has passed its tests and pushed :latest, roll the
