@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.1] - 2026-11-24
+
+### Fixed
+- **A busy image mirror no longer stops a release.** Builds used to fail when `mirror.gcr.io` refused to hand over the Docker build image (6.146.1 and 6.148.0 both had to be re-run). The build now waits briefly and fetches the same image from Docker Hub, then public ECR.
+
 ## [6.148.0] - 2026-11-24
 
 ### Added
