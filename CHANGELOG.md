@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.2] - 2026-11-24
+
+### Fixed
+- **CIS monthly returns show the right start dates.** Summer months showed the 5th instead of the 6th. Each month's status now also says how many days are left until the return is due.
+
 ## [6.148.1] - 2026-11-24
 
 ### Fixed

@@ -10,6 +10,7 @@ import payrollOverviewService from './payrollOverviewService.js';
 import currencyService from '../../services/currencyService.js';
 import { cisSupplierQuery } from '../../services/cisService.js';
 import taxService from '../../services/taxService.js';
+import { formatInTimeZone } from 'date-fns-tz';
 import weeklyFlowService from './weeklyFlowService.js';
 
 /**
@@ -400,6 +401,10 @@ customPanels.subcontractorRecentPurchases = async (req, now) => {
 // opening its month on the CIS dashboard (which works the figures out). The
 // dates are the dashboard's own (taxService), so the two never disagree.
 const TAX_MONTH_SHORT = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+// Period dates are midnight UK time, which in summer is 23:00 UTC the day
+// before; formatted in the server's zone (UTC in production) they showed the 5th.
+const ukDate = (d) => formatInTimeZone(d, 'Europe/London', 'dd/MM/yyyy');
+const daysText = (n) => `${n} day${n === 1 ? '' : 's'}`;
 customPanels.cisReturnMonths = async (req, now) => {
   if (!canOpenPath(req, '/CIS/Dashboard')) return null;
   const current = taxService.calculateTaxYearAndMonth(now);
@@ -409,15 +414,15 @@ customPanels.cisReturnMonths = async (req, now) => {
     const taxYear = Math.floor(idx / 12);
     const taxMonth = (idx % 12) + 1;
     const r = taxService.getCurrentMonthlyReturn(taxYear, taxMonth);
-    const days = r.submissionDeadlineInDays;
-    const status = back === 0 ? 'This month'
-      : days > 0 ? `Due in ${days} day${days === 1 ? '' : 's'}`
+    const days = Math.trunc((r.submissionDeadline.getTime() - now.getTime()) / DAY_MS);
+    const status = back === 0 ? `This month, due in ${daysText(days)}`
+      : days > 0 ? `Due in ${daysText(days)}`
         : days === 0 ? 'Due today' : 'Past';
     rows.push({
       href: `/CIS/Dashboard/${taxYear}/${taxMonth}`,
       cells: [
         `M${taxMonth} ${TAX_MONTH_SHORT[taxMonth - 1]} ${taxYear}/${String(taxYear + 1).slice(-2)}`,
-        `${formatValue(r.periodStart, 'date')} – ${formatValue(r.periodEnd, 'date')}`,
+        `${ukDate(r.periodStart)} – ${ukDate(r.periodEnd)}`,
         r.submissionDeadlineDisplay,
         status,
       ],

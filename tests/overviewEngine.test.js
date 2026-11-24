@@ -577,7 +577,26 @@ describe('CIS overview', () => {
       '/CIS/Dashboard/2026/5', '/CIS/Dashboard/2026/4', '/CIS/Dashboard/2026/3',
     ]);
     assert.equal(panel.rows[0].cells[0], 'M8 Nov 2026/27');
-    assert.equal(panel.rows[0].cells[3], 'This month');
+    // Submit by 11 Dec: 17 whole days from midday on 24 Nov
+    assert.equal(panel.rows[0].cells[3], 'This month, due in 17 days');
+    assert.equal(panel.rows[1].cells[3], 'Past');
+  });
+
+  it('starts every month on the 6th in UK time, summer months included', async () => {
+    // M7 (6 Oct – 5 Nov) and M3 (6 Jun – 5 Jul) start in British Summer Time,
+    // when midnight UK time is 23:00 UTC on the 5th
+    const panel = await engine.customPanels.cisReturnMonths(admin, new Date('2026-11-24T12:00:00Z'));
+    const periods = Object.fromEntries(panel.rows.map((r) => [r.cells[0], r.cells[1]]));
+    assert.equal(periods['M8 Nov 2026/27'], '06/11/2026 – 05/12/2026');
+    assert.equal(periods['M7 Oct 2026/27'], '06/10/2026 – 05/11/2026');
+    assert.equal(periods['M3 Jun 2026/27'], '06/06/2026 – 05/07/2026');
+  });
+
+  it("counts down to the last month's return while it is still due", async () => {
+    // 8 Dec: M8 has ended and its return is due on 11 Dec
+    const panel = await engine.customPanels.cisReturnMonths(admin, new Date('2026-12-08T12:00:00Z'));
+    assert.equal(panel.rows[1].cells[0], 'M8 Nov 2026/27');
+    assert.equal(panel.rows[1].cells[3], 'Due in 3 days');
   });
 
   it('wraps back into the previous tax year', async () => {
