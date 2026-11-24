@@ -14,7 +14,7 @@
     <% } %>
     <a href="/paperless/ocr" class="text-green-700 dark:text-green-400 hover:underline"><%= _queue ? 'All documents' : '← All documents' %></a>
   </nav>
-  <h1 class="text-2xl font-bold mt-2 mb-4"><%= title %></h1>
+  <h1 class="text-2xl font-bold mt-2 mb-4 break-words"><%= title %></h1>
 
   <% if (doc.deletedInPaperlessAt) { %>
     <div class="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 text-sm text-red-800 dark:text-red-300">

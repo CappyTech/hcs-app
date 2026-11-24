@@ -2,6 +2,17 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.4] - 2026-11-24
+
+### Fixed
+- **Phones no longer zoom in when you tap a form field.** On iPhones, tapping a box with small text zoomed the page and left it zoomed. Form fields now use 16px text on small screens.
+- **Fewer pages scroll sideways on a phone.** Lists with a link that opens in a new tab (such as the OCR documents list) were stretched wide by hidden screen-reader text. The Documents overview buttons, the document queues header, the bank statements account filter, weekly attendance's week buttons and the weekly flow's "Copy last week's assignments" button now wrap or shrink to fit. Long document titles and job descriptions wrap.
+- **Easier to read and tap the footer on a phone.** Footer text is 12px instead of under 10px, and its links have more room to tap. The menu's section headings are slightly larger.
+- **Breadcrumb links are easier to tap.** Each one now has more room above and below.
+
+### Security
+- **Updated a library used by Excel exports.** `exceljs` relied on an old version of `uuid` with a known moderate-severity flaw (GitHub alert 55). It now uses `uuid` 11.1.1. Excel exports work as before.
+
 ## [6.148.3] - 2026-11-24
 
 ### Fixed

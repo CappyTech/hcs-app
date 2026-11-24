@@ -41,7 +41,7 @@
         <% if (_nav.pinned.length) { %>
         <%# Phone only: the chip row is hidden below sm, so the pinned areas live here too %>
         <div class="sm:hidden">
-          <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pinned</div>
+          <div class="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pinned</div>
           <% _nav.pinned.forEach((item) => { %>
           <a href="<%= item.href %>" role="menuitem" class="<%= _entryCls(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
             <i class="bi <%= item.icon %> text-base w-5 text-center" aria-hidden="true"></i><span><%= item.label %></span>
@@ -51,7 +51,7 @@
         <% } %>
         <% _nav.more.forEach((g) => { %>
         <div>
-          <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= g.label %></div>
+          <div class="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><%= g.label %></div>
           <% g.items.forEach((item) => { %>
           <a href="<%= item.href %>" role="menuitem" class="<%= _entryCls(item.active) %>" <%- item.active ? 'aria-current="page"' : '' %>>
             <i class="bi <%= item.icon %> text-base w-5 text-center" aria-hidden="true"></i><span><%= item.label %></span>

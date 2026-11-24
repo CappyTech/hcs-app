@@ -191,6 +191,9 @@ document.addEventListener('DOMContentLoaded', function () {
       hint.className = 'sr-only';
       hint.textContent = ' (opens in a new tab)';
       a.appendChild(hint);
+      // sr-only is position:absolute; anchor it to the link so it can't escape a
+      // scrolling table and widen the page on phones.
+      if (window.getComputedStyle(a).position === 'static') a.classList.add('relative');
     }
   });
 
