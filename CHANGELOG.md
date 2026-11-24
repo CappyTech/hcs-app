@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.145.0] - 2026-11-24
+
+### Changed
+- **Easier-to-read colours (WCAG 2.2 AA).** The green used for buttons, links and the active menu item is one shade darker, and light-grey helper text is darker, so text is readable against its background (at least 4.5:1). In dark mode the dimmest grey text is a little lighter for the same reason.
+- **Error messages stay until you close them.** They used to vanish after 5 seconds. Success messages now last 8 seconds and stay while the mouse or keyboard is on them.
+- **Motion is reduced when your device asks for it.** With "reduce motion" switched on in Windows, macOS, iOS or Android, the app's slide-in and fade animations are switched off.
+
+### Fixed
+- **Keyboard users can skip the menu.** Pressing Tab on any page first shows **Skip to main content**, which jumps past the sidebar.
+- **Screen readers announce error and success messages.** They also now say which form fields are required, which column a list is sorted by, which status tab, page and Table/List view is selected, and whether the Filters panel is open. List search boxes and the "+ create" buttons beside form fields have names, and icons are no longer read out as stray characters.
+- **Email, phone and postcode fields can be autofilled** by the browser.
+- **The top bar fits on a narrow phone.** At 320px wide the theme switch and account button were cut off; below the small-screen breakpoint the company name is now hidden from view (screen readers still read it).
+
 ## [6.144.1] - 2026-11-18
 
 ### Fixed
