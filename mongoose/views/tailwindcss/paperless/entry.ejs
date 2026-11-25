@@ -111,7 +111,7 @@ const KIND_LABELS = { new_doc: 'New document (Discord)', invoice: 'Invoice email
 const STATUS_LABEL = { shadow: 'would send', recorded: 'from Paperless', claimed: 'sending' };
 const STATUS_COLOUR = { sent: 'green', shadow: 'slate', failed: 'red', claimed: 'amber', recorded: 'blue' };
 const notifyList = locals.notifications || [];
-const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate-400', notify: 'bg-amber-500' };
+const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate-400', notify: 'bg-amber-500', sync: 'bg-purple-500' };
 %>
 <link rel="stylesheet" href="/resources/vendor/pdfjs/pdf_viewer.css">
 <div class="max-w-screen-2xl mx-auto py-6 px-4 sm:px-6 lg:px-8" <%- hasAudit ? 'x-data="profileTabs"' : '' %>>
@@ -768,6 +768,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
           <span><i class="inline-block w-2 h-2 rounded-full bg-green-500"></i> entry saves</span>
           <span><i class="inline-block w-2 h-2 rounded-full bg-slate-400"></i> read by hcs-app</span>
           <span><i class="inline-block w-2 h-2 rounded-full bg-amber-500"></i> notifications</span>
+          <span><i class="inline-block w-2 h-2 rounded-full bg-purple-500"></i> KashFlow sync</span>
         </span>
       </div>
       <% if (!audit.length) { %>

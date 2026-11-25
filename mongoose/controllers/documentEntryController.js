@@ -135,7 +135,9 @@ async function render(req, res, doc, { values = null, errors = {}, status = 200,
     paperlessUiBase: paperlessUiBase(),
     notifications,
     // The Audit log tab, admins only
-    audit: isAdmin ? entry.auditTimeline(doc, notifications) : null,
+    audit: isAdmin ? entry.auditTimeline(doc, notifications, await entry.kashflowSyncHistory(
+      mdb.REST?.connection?.db?.collection('audit_log'), doc.kashflowPurchaseId,
+    )) : null,
     notifyMode: notifySvc.notifyMode(),
     documentTypes: await documentTypeOptions().catch(() => []),
     // The KashFlow supplier picker, for anything with a supplier

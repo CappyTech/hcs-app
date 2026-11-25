@@ -343,6 +343,39 @@ describe('auditTimeline (the admin Audit log tab)', () => {
     ]);
     assert.deepEqual(auditTimeline({}, []), []);
   });
+
+  it('adds what the KashFlow sync changed on the linked purchase', () => {
+    const rows = auditTimeline({}, [], [
+      { action: 'create', timestamp: new Date('2026-11-02T19:00:00Z') },
+      {
+        action: 'update', timestamp: new Date('2026-11-10T09:00:00Z'), changes: [
+          { path: 'Status', before: 'Unpaid', after: 'Paid', type: 'changed' },
+          { path: 'TotalPaidAmount', before: 0, after: 120.5, type: 'changed' },
+          { path: 'PaymentLines[Id=9]', before: null, after: { Id: 9, Amount: 120.5, Date: '2026-11-09T00:00:00' }, type: 'added' },
+          { path: 'LineItems[Id=501].Quantity', before: 1, after: 2, type: 'changed' },
+          { path: 'PaidDate', before: null, after: '2026-11-09T00:00:00', type: 'added' },
+        ],
+      },
+    ]);
+    assert.deepEqual(rows.map((r) => [r.who, r.what, r.detail, r.kind]), [
+      ['KashFlow sync', 'Changed in KashFlow', 'Status Unpaid → Paid; Paid 0 → 120.50; payment added: 120.50 on 09/11/2026; line quantity 1 → 2; Paid date set to 09/11/2026', 'sync'],
+      ['KashFlow sync', 'First synced from KashFlow', '', 'sync'],
+    ]);
+  });
+
+  it('cuts a long sync change list short', () => {
+    const changes = Array.from({ length: 8 }, (_, i) => ({ path: `Field${i}`, before: i, after: i + 1, type: 'changed' }));
+    assert.match(entrySvc.describeSyncChanges(changes), /; and 2 more$/);
+  });
+
+  it('reads the linked purchase rows from audit_log, and nothing when unlinked', async () => {
+    let query;
+    const col = { find: (q) => { query = q; return { project: () => ({ sort: () => ({ limit: () => ({ toArray: async () => [{ action: 'create' }] }) }) }) }; } };
+    assert.deepEqual(await entrySvc.kashflowSyncHistory(col, 4321), [{ action: 'create' }]);
+    assert.deepEqual(query, { collection: 'purchases', documentId: 4321 });
+    assert.deepEqual(await entrySvc.kashflowSyncHistory(col, null), []);
+    assert.deepEqual(await entrySvc.kashflowSyncHistory(null, 4321), []);
+  });
 });
 
 describe('actions against the mock Paperless', () => {

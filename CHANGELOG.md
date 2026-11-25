@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.149.0] - 2026-11-25
+
+### Added
+- **A document's Audit log shows what KashFlow changed on its purchase.** Once a document is linked to a KashFlow purchase, each sync that changed that purchase appears as a purple "KashFlow sync" row, in words: status, totals, dates, payments added or removed and line changes (the first six, then "and N more"). The first sync of the purchase shows as "First synced from KashFlow". Read from hcs-sync's `audit_log`; single-record pulls aren't recorded there, so they don't appear.
+
 ## [6.148.10] - 2026-11-25
 
 ### Changed
