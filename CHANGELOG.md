@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.149.2] - 2026-11-25
+
+### Changed
+- **Entry screen header and rail match the redesigned details page.** The header shows the title, then the Paperless ID, supplier, type and date on one line, then the status and KashFlow purchase badges, with KashFlow draft, Details and Open in Paperless on the right. The back link names the queue the document is in (for example "← Ready for KashFlow") and sits next to an All documents link. The rail's Progress, Supplier, Checks, Also and Notifications sections are now separate cards with readable headings.
+
 ## [6.149.1] - 2026-11-25
 
 ### Changed

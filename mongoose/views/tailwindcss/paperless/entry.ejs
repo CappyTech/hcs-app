@@ -30,7 +30,7 @@ const val = (v) => (v == null ? '' : v);
 const inputCls = (name) => `w-full text-sm border ${err(name) ? 'border-red-400 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-60`;
 const labelCls = 'block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1';
 const smallBtn = 'inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition';
-const railHead = 'text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2';
+const railHead = 'text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2';
 const disabled = locked ? 'disabled' : '';
 const queueBack = excludedLabel ? '' : state === 'entered' ? 'ready' : kind === 'statement' ? 'statements' : 'needs-entry';
 const when = (d, opts) => (d ? new Date(d).toLocaleString('en-GB', { timeZone: 'Europe/London', ...(opts || {}) }) : '');
@@ -115,22 +115,37 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
 %>
 <link rel="stylesheet" href="/resources/vendor/pdfjs/pdf_viewer.css">
 <div class="max-w-screen-2xl mx-auto py-6 px-4 sm:px-6 lg:px-8" <%- hasAudit ? 'x-data="profileTabs"' : '' %>>
-  <div class="flex flex-wrap items-center gap-3 mb-4">
-    <a href="/paperless/queues<%= queueBack ? `/${queueBack}` : '' %>" class="text-sm text-green-700 dark:text-green-400 hover:underline">← Queues</a>
-    <span class="text-gray-400">/</span>
-    <h1 class="text-xl font-bold break-all"><%= title %></h1>
-    <span class="<%= badge(stateColour) %>"><%= stateLabel %></span>
-    <span class="font-mono text-xs text-gray-400">#<%= doc.paperlessId %></span>
-    <div class="ml-auto flex gap-2">
-      <a href="/paperless/ocr/<%= doc.paperlessId %>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">Details</a>
+  <% const QUEUE_LABELS = { 'needs-entry': 'Needs Data Entry', ready: 'Ready for KashFlow', statements: 'Statements to Review' }; %>
+  <nav class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+    <a href="/paperless/queues<%= queueBack ? `/${queueBack}` : '' %>" class="text-green-700 dark:text-green-400 hover:underline">← <%= QUEUE_LABELS[queueBack] || 'Queues' %></a>
+    <a href="/paperless/ocr" class="text-green-700 dark:text-green-400 hover:underline">All documents</a>
+  </nav>
+
+  <%# Header: same shape as the details page — what it is, where it stands, what to do next %>
+  <header class="mt-2 mb-4 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3" data-entry-header>
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold break-words"><%= title %></h1>
+      <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+        <span class="font-mono text-xs">#<%= doc.paperlessId %></span>
+        <% if (doc.correspondent?.name) { %><span aria-hidden="true">·</span><span><%= doc.correspondent.name %></span><% } %>
+        <% if (doc.documentType?.name) { %><span aria-hidden="true">·</span><span><%= doc.documentType.name %></span><% } %>
+        <% if (doc.created) { %><span aria-hidden="true">·</span><span><%= day(doc.created) %></span><% } %>
+      </div>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <span class="<%= badge(stateColour) %> font-medium" data-state-badge><%= stateLabel %></span>
+        <% if (doc.kashflowPurchaseNumber) { %><span class="<%= badge('green') %> font-medium">Purchase #<%= doc.kashflowPurchaseNumber %></span><% } %>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 lg:justify-end lg:shrink-0">
       <% if (state === 'entered' && !locals.excluded) { %>
         <a href="/paperless/ocr/<%= doc.paperlessId %>/draft" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition shadow-sm"><i class="bi bi-send"></i> KashFlow draft</a>
       <% } %>
+      <a href="/paperless/ocr/<%= doc.paperlessId %>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm"><i class="bi bi-info-circle"></i> Details</a>
       <% if (plUrl) { %>
-        <a href="<%= plUrl %>" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm">Open in Paperless <i class="bi bi-box-arrow-up-right"></i></a>
+        <a href="<%= plUrl %>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition shadow-sm"><i class="bi bi-box-arrow-up-right text-xs"></i> Open in Paperless</a>
       <% } %>
     </div>
-  </div>
+  </header>
 
   <% if (hasAudit) { %>
     <nav class="flex gap-1 border-b border-gray-200 dark:border-gray-700 mb-4" role="tablist" aria-label="Document views">
@@ -141,8 +156,8 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
 
   <div <%- panelAttr('entry') %> class="grid gap-4 lg:grid-cols-12 items-start">
     <%# ── Rail: where it is, who it's from, what needs attention ── %>
-    <aside class="lg:col-span-3 xl:col-span-2 lg:sticky lg:top-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm divide-y divide-gray-100 dark:divide-gray-700 text-sm text-gray-700 dark:text-gray-300" data-rail>
-      <section class="p-4">
+    <aside class="lg:col-span-3 xl:col-span-2 lg:sticky lg:top-20 space-y-4 text-sm text-gray-700 dark:text-gray-300" data-rail>
+      <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
         <h2 class="<%= railHead %>">Progress</h2>
         <ol class="space-y-2">
           <% steps.forEach((s) => { %>
@@ -158,7 +173,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
         </ol>
       </section>
 
-      <section class="p-4 space-y-1.5">
+      <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-1.5">
         <h2 class="<%= railHead %>">Supplier</h2>
         <div class="font-medium text-gray-900 dark:text-white break-words"><%= doc.correspondent?.name || '—' %></div>
         <% if (kind === 'invoice' && doc.correspondent?.id != null) { %>
@@ -215,7 +230,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
         <% } %>
       </section>
 
-      <section class="p-4 space-y-2" data-checks>
+      <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-2" data-checks>
         <h2 class="<%= railHead %>">Checks</h2>
         <% if (!checks.length) { %>
           <p class="text-xs text-gray-400"><i class="bi bi-check2-circle text-green-600"></i> Nothing flagged.</p>
@@ -239,7 +254,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
       </section>
 
       <% if (kind === 'invoice') { %>
-        <section class="p-4 space-y-3 text-xs" data-more-actions>
+        <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4 space-y-3 text-xs" data-more-actions>
           <h2 class="<%= railHead %>">Also</h2>
 
           <%# Credit note (PB-9, PB-12) %>
@@ -322,7 +337,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
         </section>
       <% } %>
 
-      <section class="p-4" data-notifications>
+      <section class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4" data-notifications>
         <h2 class="<%= railHead %>">Notifications</h2>
         <% if ((locals.notifyMode || 'shadow') === 'shadow') { %>
           <p class="text-xs text-gray-400 mb-2">Shadow mode: hcs-app records what it would send, and Paperless still does the sending.<% if (locals.isAdmin) { %> <a href="/admin/config/document-notifications" class="underline hover:no-underline">Configure</a><% } %></p>
