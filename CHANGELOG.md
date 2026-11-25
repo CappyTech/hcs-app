@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.151.0] - 2026-11-25
+
+### Added
+- **Clear entry button on the invoice entry screen.** It sits next to Add line and empties every box (invoice number, dates, totals and every line's description, quantity, price, total and VAT %), so an invoice read wrongly can be typed in again from scratch. It also forgets the spots picked on the PDF. Nothing changes until you save, and blank lines are dropped then. Reloading the page brings the saved entry back. The line labour/materials choice is left as it is.
+
 ## [6.150.1] - 2026-11-25
 
 ### Fixed

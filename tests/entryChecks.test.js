@@ -108,7 +108,7 @@ describe('picking a value off the PDF', () => {
 describe('entry screen hooks for lines, checks and picking', () => {
   const view = read('mongoose/views/tailwindcss/paperless/entry.ejs');
   it('has the elements document-suggestions.js looks for', () => {
-    for (const hook of ['data-lines', 'data-line="<%= i %>"', 'data-line-label', 'id="suggest-fill-lines"', 'data-suggest-checks', 'data-suggest-disagree', 'id="pdf-pick-status"', 'data-values-source=']) {
+    for (const hook of ['data-lines', 'data-line="<%= i %>"', 'data-line-label', 'id="suggest-fill-lines"', 'data-suggest-checks', 'data-suggest-disagree', 'id="pdf-pick-status"', 'data-values-source=', 'data-clear-entry']) {
       assert.ok(view.includes(hook), hook);
     }
   });
@@ -117,5 +117,10 @@ describe('entry screen hooks for lines, checks and picking', () => {
     assert.match(sugg, /from '\/resources\/js\/invoice-line-finder\.js'/);
     assert.match(sugg, /from '\/resources\/js\/entry-checks\.js'/);
     assert.ok(!/innerHTML/.test(sugg), 'builds DOM with textContent only');
+  });
+  it('Clear entry is a plain button (no submit) that document-suggestions.js empties the boxes from', () => {
+    assert.match(view, /<button type="button" data-clear-entry/);
+    const sugg = read('public/js/document-suggestions.js');
+    assert.match(sugg, /\[data-clear-entry\]/);
   });
 });
