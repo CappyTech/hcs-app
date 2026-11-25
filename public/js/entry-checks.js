@@ -95,11 +95,15 @@ export function liveChecks(header, lines, { labour = null, cisPct = null } = {})
   });
   const off = (a, b, tol = 0.01) => Math.abs(a - b) > tol + 1e-9;
   const withTotals = ls.filter((l) => l.t != null && Number.isFinite(l.t));
+  let incVat = false;
   if (goods != null && withTotals.length) {
     const sum = withTotals.reduce((s, l) => s + l.t, 0);
-    if (off(sum, goods)) out.push(`Lines add up to ${money(sum)}, but total goods is ${money(goods)}.`);
+    // Line totals that include VAT add up to goods + VAT (Toolstation)
+    incVat = off(sum, goods) && vat > 0 && !off(sum, goods + vat, Math.max(0.01, 0.01 * withTotals.length));
+    if (incVat) out.push(`Lines add up to ${money(sum)}, which is goods + VAT: the line totals include VAT. Enter each line without VAT (at 20%, divide by 1.2) so they add up to total goods ${money(goods)}.`);
+    else if (off(sum, goods)) out.push(`Lines add up to ${money(sum)}, but total goods is ${money(goods)}.`);
   }
-  if (vat != null && !cis.vatIsCis && withTotals.length && withTotals.every((l) => l.rate != null)) {
+  if (vat != null && !incVat && !cis.vatIsCis && withTotals.length && withTotals.every((l) => l.rate != null)) {
     const lineVat = withTotals.reduce((s, l) => s + (l.t * l.rate) / 100, 0);
     // Suppliers round VAT per line or on the total, so allow a penny a line
     if (off(lineVat, vat, Math.max(0.02, 0.01 * withTotals.length))) {

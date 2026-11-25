@@ -22,7 +22,7 @@ const COLUMN_TYPES = [
   ['discount', /^disc(ount)?\.?(\s*(amt|amount|%|value))?$/i],
   ['price', /^(unit\s*)?(price|rate|cost)(\s*\/\s*rate)?(\s*(£|gbp))?$|^each$|^price\s*each$/i],
   ['qty', /^(qty|quantity|qty\s*\/\s*hrs|hrs|hours|no\.?\s*of\s*units)$/i],
-  ['net', /^(net(\s*(amt|amount|value|total))?|goods(\s*value)?|amount(\s*(gbp|£))?|amt|line\s*total|total(\s*net)?|value|charge|sub\s*-?\s*total)$/i],
+  ['net', /^(net(\s*(amt|amount|value|total))?|goods(\s*value)?|amount(\s*(gbp|£))?|amt|line\s*total|totals?(\s*net)?|value|charge|sub\s*-?\s*total)$/i],
   ['gross', /^gross(\s*(amt|amount|value))?$/i],
   ['uom', /^(unit|uom|per)$/i],
   ['code', /^((part|item|stock|product)\s*(no\.?|code|number|#)|code|ref(erence)?|sku|line)$/i],
@@ -333,6 +333,36 @@ export function fillMissingRates(lines, totalGoods, totalVat) {
   return lines.map((l) => (l.vatRate == null ? { ...l, vatRate: rate, vatRateFrom: 'totals' } : l));
 }
 
+/**
+ * Lines whose totals include VAT (Toolstation: Price and Totals are VAT
+ * inclusive, only the VAT analysis gives the net). Spotted when the line totals
+ * add up to goods + VAT rather than goods. Each line's total and price become
+ * net at its rate, and any penny of rounding goes on the biggest line so the
+ * lines add up to total goods. Run after fillMissingRates, so every line has a
+ * rate. Returns new line objects; `vatInclusive: true` marks them.
+ */
+export function netOfVat(lines, totalGoods, totalVat) {
+  const g = Number(totalGoods);
+  const v = Number(totalVat);
+  if (!lines.length || !(g > 0) || !(v > 0)) return lines;
+  if (lines.some((l) => !Number.isFinite(l.total) || l.vatRate == null)) return lines;
+  const sum = lines.reduce((s, l) => s + l.total, 0);
+  if (sameMoney(sum, g) || !sameMoney(sum, g + v)) return lines;
+  const out = lines.map((l) => {
+    const f = 1 + l.vatRate / 100;
+    const total = Math.round((l.total / f) * 100) / 100;
+    const price = l.quantity > 0 && l.price != null ? Math.round((l.price / f) * 10000) / 10000 : l.price;
+    return { ...l, total, price, vatInclusive: true };
+  });
+  const diff = Math.round((g - out.reduce((s, l) => s + l.total, 0)) * 100) / 100;
+  if (diff && Math.abs(diff) <= 0.01 * out.length) {
+    const big = out.reduce((a, l) => (l.total > a.total ? l : a));
+    big.total = Math.round((big.total + diff) * 100) / 100;
+    if (big.quantity > 0 && big.price != null) big.price = Math.round((big.total / big.quantity) * 10000) / 10000;
+  }
+  return out;
+}
+
 // ── Payment terms → due date ─────────────────────────────────────────
 
 const TERMS = [
@@ -467,4 +497,4 @@ export function findVatNumbersInText(text) {
   return out;
 }
 
-export default { findLines, findDayLines, fillMissingRates, findPaymentTerms, dueFromTerms, describeTerms, DUE_KINDS, findVatNumbers, findVatNumbersInText, normaliseVatNumber, parseNumber };
+export default { findLines, findDayLines, fillMissingRates, netOfVat, findPaymentTerms, dueFromTerms, describeTerms, DUE_KINDS, findVatNumbers, findVatNumbersInText, normaliseVatNumber, parseNumber };

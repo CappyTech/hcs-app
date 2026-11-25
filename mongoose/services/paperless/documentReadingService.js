@@ -29,14 +29,14 @@ import {
   findFields, locateAll, normalise, toItems, FIELDS,
 } from '../../../public/js/invoice-field-finder.js';
 import {
-  findLines, fillMissingRates, findPaymentTerms, findVatNumbers, normaliseVatNumber,
+  findLines, fillMissingRates, netOfVat, findPaymentTerms, findVatNumbers, normaliseVatNumber,
   dueFromTerms, describeTerms, DUE_KINDS,
 } from '../../../public/js/invoice-line-finder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Bump when the reader changes enough that stored readings should be redone
-export const READER_VERSION = 10; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25"); 5: day-by-day subcontractor lines, CIS deductions not VAT or the total; 6: headings with the currency ("Unit Price (£)"), reverse charge note ends the lines, "Payment due by …"; 7: VAT-inclusive unit prices become net (Screwfix), totals headings over two rows above the lines; 8: month-first dates ("November 11, 2026"); 9: "end of next month" terms, supplier due date arrangements; 10: totals table headings found above any number of lines
+export const READER_VERSION = 11; // 2: per-hundred and per-thousand prices; 3: bare "VAT" label past the rate (Beers); 4: run-together dates ("16Dec25"); 5: day-by-day subcontractor lines, CIS deductions not VAT or the total; 6: headings with the currency ("Unit Price (£)"), reverse charge note ends the lines, "Payment due by …"; 7: VAT-inclusive unit prices become net (Screwfix), totals headings over two rows above the lines; 8: month-first dates ("November 11, 2026"); 9: "end of next month" terms, supplier due date arrangements; 10: totals table headings found above any number of lines; 11: VAT-inclusive line totals become net (Toolstation)
 export const MAX_PAGES = 5;
 export const HEADER_FIELDS = FIELDS.map((f) => f.field);
 const TYPE = Object.fromEntries(FIELDS.map((f) => [f.field, f.type]));
@@ -108,7 +108,7 @@ export function summarise(items, { pageWidth = 595, pages = null, layout = null,
   // A due-date arrangement with the supplier wins over whatever the invoice prints
   const arranged = dueTerms && dueFromTerms(fields.invoiceDate?.value, dueTerms);
   if (arranged) fields.dueDate = { value: arranged, page: null, box: null, fromArrangement: describeTerms(dueTerms) };
-  const lines = fillMissingRates(findLines(items), fields.totalGoods?.value, fields.totalVat?.value)
+  const lines = netOfVat(fillMissingRates(findLines(items), fields.totalGoods?.value, fields.totalVat?.value), fields.totalGoods?.value, fields.totalVat?.value)
     .map((l) => ({
       description: l.description, quantity: l.quantity, price: l.price, total: l.total, vatRate: l.vatRate,
       page: l.page, box: roundBox(l.box),

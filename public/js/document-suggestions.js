@@ -25,7 +25,7 @@
  * events, so it never touches rendering or text selection.
  */
 import { findFields, locateValue, normalise, toItems, charBox, FIELDS } from '/resources/js/invoice-field-finder.js';
-import { findLines, fillMissingRates, findPaymentTerms, findVatNumbers, dueFromTerms, describeTerms } from '/resources/js/invoice-line-finder.js';
+import { findLines, fillMissingRates, netOfVat, findPaymentTerms, findVatNumbers, dueFromTerms, describeTerms } from '/resources/js/invoice-line-finder.js';
 import { liveChecks, pickValue, sameLines } from '/resources/js/entry-checks.js';
 import { exactBox, placeBox, clickTarget } from '/resources/js/pdf-marks.js';
 
@@ -517,7 +517,7 @@ if (root && form && Object.keys(inputs).length) {
       guesses = Object.fromEntries(Object.entries(findFields(items, { pageWidth: width, layout, labels })).filter(([f, g]) => g && inputs[f]));
       vatNumbers = findVatNumbers(items).map((v) => v.number);
       terms = findPaymentTerms(items);
-      docLines = fillMissingRates(findLines(items), guesses.totalGoods?.value, guesses.totalVat?.value);
+      docLines = netOfVat(fillMissingRates(findLines(items), guesses.totalGoods?.value, guesses.totalVat?.value), guesses.totalGoods?.value, guesses.totalVat?.value);
       renderHints();
       renderLinesButton();
       renderChecks();

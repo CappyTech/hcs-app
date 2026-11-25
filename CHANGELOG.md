@@ -2,6 +2,15 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.149.6] - 2026-11-25
+
+### Fixed
+- **The document reader got invoices whose line totals include VAT wrong.** Some layouts print the price and line total with VAT and give the net only in a VAT analysis. The lines were taken as net, so they added up to the invoice total, not total goods, and the entry screen showed two mismatches.
+  - When the line totals add up to goods + VAT rather than goods, each line's total and price are now made net at its VAT rate. Any penny of rounding goes on the biggest line, so the lines add up to total goods (`netOfVat` in `invoice-line-finder.js`, used by the server reading and the entry screen).
+  - A "Totals" column heading is now read as the line total.
+  - The live check on the entry screen now says when the lines add up to goods + VAT: the line totals include VAT and need entering without it. Before, it reported the lines and the line-rate VAT as two separate mismatches.
+  - `READER_VERSION` 11, so stored readings are read again. Lines already saved on an entry aren't changed.
+
 ## [6.149.5] - 2026-11-25
 
 ### Fixed

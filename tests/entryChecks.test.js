@@ -25,6 +25,16 @@ describe('live checks on the entry form', () => {
     ]);
   });
 
+  it('says when the line totals include VAT, instead of two mismatches', () => {
+    const lines = [
+      { description: 'a', quantity: '1', price: '', total: '7.48', vatRate: '20' },
+      { description: 'b', quantity: '1', price: '', total: '10.49', vatRate: '20' },
+    ];
+    assert.deepEqual(liveChecks({ totalGoods: '14.97', totalVat: '3', invoiceTotal: '17.97' }, lines), [
+      'Lines add up to £17.97, which is goods + VAT: the line totals include VAT. Enter each line without VAT (at 20%, divide by 1.2) so they add up to total goods £14.97.',
+    ]);
+  });
+
   it('works a line total out from qty × price, and skips the VAT check when a rate is missing', () => {
     const lines = [{ description: 'x', quantity: '3', price: '4.28', total: '', vatRate: '' }];
     assert.deepEqual(liveChecks({ totalGoods: '12.84', totalVat: '9.99' }, lines), []);

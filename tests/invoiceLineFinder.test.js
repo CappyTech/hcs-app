@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { toItems, findFields } from '../public/js/invoice-field-finder.js';
 import lineFinder from '../public/js/invoice-line-finder.js';
 
-const { findLines, fillMissingRates, findPaymentTerms, findVatNumbers, normaliseVatNumber, parseNumber } = lineFinder;
+const { findLines, fillMissingRates, netOfVat, findPaymentTerms, findVatNumbers, normaliseVatNumber, parseNumber } = lineFinder;
 
 // [str, x, y, width, height] as PDF.js reports them, page 1
 const page = (rows) => toItems(rows.map(([str, x, y, w, h]) => ({ str, transform: [h, 0, 0, h, x, y], width: w, height: h })), 1);
@@ -186,6 +186,31 @@ describe('line items', () => {
     const lines = [{ total: 170, vatRate: null }, { total: 44, vatRate: 0 }];
     assert.deepEqual(fillMissingRates(lines, 442.33, 88.47).map((l) => [l.vatRate, l.vatRateFrom]), [[20, 'totals'], [0, undefined]]);
     assert.equal(fillMissingRates(lines, 100, 13)[0].vatRate, null); // 13% is not a standard rate
+  });
+
+  it('lines whose totals include VAT become net when they add up to goods + VAT', () => {
+    // Price and Totals both include VAT; only the VAT analysis gives the net
+    const lines = findLines(page([
+      ['Code', 47, 652, 20, 8], ['Items', 80, 652, 21, 8], ['Qty', 397, 652, 14, 8], ['Price', 419, 652, 20, 8], ['Totals', 450, 652, 24, 8], ['VAT Band', 488, 652, 39, 8],
+      ['11111', 47, 619, 23, 8], ['Plastic tub', 80, 619, 76, 8], ['1', 402, 619, 5, 8], ['7.48', 421, 619, 16, 8], ['7.48', 454, 619, 16, 8], ['5', 506, 619, 5, 8],
+      ['22222', 47, 607, 23, 8], ['Cutting disc', 80, 607, 80, 8], ['2', 402, 607, 5, 8], ['5.25', 421, 607, 16, 8], ['10.50', 451, 607, 20, 8], ['5', 506, 607, 5, 8],
+      ['00006', 47, 595, 23, 8], ['Collection', 80, 595, 60, 8], ['1', 402, 595, 5, 8], ['0.00', 421, 595, 16, 8], ['0.00', 454, 595, 16, 8], ['5', 506, 595, 5, 8],
+    ]));
+    assert.deepEqual(lines.map((l) => [l.quantity, l.price, l.total]), [[1, 7.48, 7.48], [2, 5.25, 10.5], [1, 0, 0]]);
+    // 7.48 + 10.50 = 17.98 gross; goods 14.98, VAT 3.00
+    const net = netOfVat(fillMissingRates(lines, '14.98', '3.00'), '14.98', '3.00');
+    assert.deepEqual(net.map((l) => [l.price, l.total, l.vatRate, l.vatInclusive]), [[6.2333, 6.23, 20, true], [4.375, 8.75, 20, true], [0, 0, 20, true]]);
+    assert.equal(Math.round(net.reduce((s, l) => s + l.total, 0) * 100) / 100, 14.98);
+  });
+
+  it('leaves net lines alone, and lines that add up to neither goods nor goods + VAT', () => {
+    const lines = [{ quantity: 1, price: 10, total: 10, vatRate: 20 }, { quantity: 1, price: 5, total: 5, vatRate: 20 }];
+    assert.equal(netOfVat(lines, 15, 3), lines);
+    assert.equal(netOfVat(lines, 20, 3), lines);
+    assert.equal(netOfVat(lines, 15, 0), lines);
+    // A penny of rounding goes on the biggest line: 9.99 + 9.99 + 9.99 gross is 24.98 net
+    const r = netOfVat([9.99, 9.99, 9.99].map((t) => ({ quantity: 1, price: t, total: t, vatRate: 20 })), 24.98, 4.99);
+    assert.equal(Math.round(r.reduce((s, l) => s + l.total, 0) * 100) / 100, 24.98);
   });
 });
 
