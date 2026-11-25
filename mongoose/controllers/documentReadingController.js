@@ -113,7 +113,9 @@ const supplierParam = (req) => {
   const n = Number(req.params.correspondentId);
   return Number.isInteger(n) && n >= 0 ? n : null;
 };
-const supplierUrl = (id) => `/paperless/reading/supplier/${id}`;
+// ?from=<paperlessId>: the document whose entry screen opened this page, so it can link back there
+const fromParam = (v) => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null; };
+const supplierUrl = (id, from = null) => `/paperless/reading/supplier/${id}${from ? `?from=${from}` : ''}`;
 const FIELD_LABELS = {
   invoiceNumber: 'Invoice number', invoiceDate: 'Invoice date', dueDate: 'Due date',
   totalGoods: 'Total goods', totalVat: 'Total VAT', invoiceTotal: 'Invoice total',
@@ -130,7 +132,8 @@ export const getSupplier = async (req, res, next) => {
       });
     }
     // The invoice to show: ?doc= if it's one of theirs with text, else the latest with text
-    const wanted = Number(req.query.doc);
+    const fromDoc = fromParam(req.query.from);
+    const wanted = Number(req.query.doc ?? fromDoc);
     const withText = detail.documents.filter((d) => d.hasText);
     const shown = withText.find((d) => d.paperlessId === wanted) || withText[0] || null;
     res.render(path.join('tailwindcss', 'paperless', 'supplierReading'), {
@@ -140,6 +143,7 @@ export const getSupplier = async (req, res, next) => {
       fields: reading.HEADER_FIELDS,
       fieldLabels: FIELD_LABELS,
       dueTermsText: describeTerms(detail.dueTerms),
+      fromDoc,
     });
   } catch (err) {
     logger.error(`[documentReading] supplier ${req.params.correspondentId}: ${err.message}`);
@@ -173,7 +177,7 @@ export const postForget = async (req, res) => {
     logger.error(`[documentReading] forget ${id}: ${err.message}`);
     req.flash('error', 'Could not forget that.');
   }
-  return res.redirect(supplierUrl(id));
+  return res.redirect(supplierUrl(id, fromParam(req.body?.from)));
 };
 
 export const postLabels = async (req, res) => {
@@ -190,7 +194,7 @@ export const postLabels = async (req, res) => {
     logger.error(`[documentReading] labels ${id}: ${err.message}`);
     req.flash('error', 'Could not save the label words.');
   }
-  return res.redirect(`${supplierUrl(id)}#labels`);
+  return res.redirect(`${supplierUrl(id, fromParam(req.body?.from))}#labels`);
 };
 
 export const postDueTerms = async (req, res) => {
@@ -212,7 +216,7 @@ export const postDueTerms = async (req, res) => {
     logger.error(`[documentReading] due-terms ${id}: ${err.message}`);
     req.flash('error', 'Could not save the due date arrangement.');
   }
-  return res.redirect(`${supplierUrl(id)}#due-terms`);
+  return res.redirect(`${supplierUrl(id, fromParam(req.body?.from))}#due-terms`);
 };
 
 export const getInsights = makeGetInsights();

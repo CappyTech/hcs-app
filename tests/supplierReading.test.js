@@ -181,7 +181,7 @@ describe('supplier reading page: routes and view', () => {
 
   it('the entry screen links to it and hands the label words to the reader', () => {
     const entry = read('mongoose/views/tailwindcss/paperless/entry.ejs');
-    assert.match(entry, /href="\/paperless\/reading\/supplier\/<%= doc\.correspondent\.id %>"/);
+    assert.match(entry, /href="\/paperless\/reading\/supplier\/<%= doc\.correspondent\.id %>\?from=<%= doc\.paperlessId %>"/);
     assert.match(entry, /data-labels="<%= JSON\.stringify\(locals\.labels \|\| \{\}\) %>"/);
     const sugg = read('public/js/document-suggestions.js');
     assert.match(sugg, /findFields\(items, \{ pageWidth: width, layout, labels \}\)/);

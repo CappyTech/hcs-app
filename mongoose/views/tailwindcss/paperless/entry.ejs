@@ -179,7 +179,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
         <h2 class="<%= railHead %>">Supplier</h2>
         <div class="font-medium text-gray-900 dark:text-white break-words"><%= doc.correspondent?.name || '—' %></div>
         <% if (kind === 'invoice' && doc.correspondent?.id != null) { %>
-          <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>" class="text-xs text-green-700 dark:text-green-400 hover:underline" title="What hcs-app has learned about this supplier's invoices, and teaching it">How it's read</a>
+          <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>?from=<%= doc.paperlessId %>" class="text-xs text-green-700 dark:text-green-400 hover:underline" title="What hcs-app has learned about this supplier's invoices, and teaching it">How it's read</a>
         <% } %>
         <% const choices = locals.supplierChoices || []; %>
         <% if (choices.length) { %>
@@ -431,7 +431,7 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
               <input id="dueDate" name="dueDate" type="date" value="<%= val(values.dueDate) %>" class="<%= inputCls('dueDate') %>" data-suggest-field="dueDate" <%= disabled %>>
               <p data-suggest-for="dueDate" hidden></p>
               <% if (doc.correspondent?.id != null) { %>
-                <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>#due-terms" class="mt-1 inline-block text-xs text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-calendar-check"></i> <%= locals.dueTerms ? 'Arrangement: ' + locals.dueTermsText : 'Set a due date arrangement' %></a>
+                <a href="/paperless/reading/supplier/<%= doc.correspondent.id %>?from=<%= doc.paperlessId %>#due-terms" class="mt-1 inline-block text-xs text-green-700 dark:text-green-400 hover:underline"><i class="bi bi-calendar-check"></i> <%= locals.dueTerms ? 'Arrangement: ' + locals.dueTermsText : 'Set a due date arrangement' %></a>
               <% } %>
             </div>
             <div>

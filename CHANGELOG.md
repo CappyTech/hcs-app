@@ -2,6 +2,14 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.150.1] - 2026-11-25
+
+### Fixed
+- **Every Documents page links back to where it was opened from.**
+  - All documents (`/paperless/ocr`) has "← Documents", and the Ingest tracker has "← All documents" (in place of its "OCR documents" link). Before, neither had a way back.
+  - A supplier's reading page opened from a document's entry screen ("How it's read", or the due date arrangement link) shows "← Back to document #N". The link stays after switching invoices or saving label words, forget or a due date arrangement. Opened from Reading accuracy, it still goes back there.
+  - "Where to send documents" says "← Queues", like the other pages under the queues.
+
 ## [6.150.0] - 2026-11-25
 
 ### Added
