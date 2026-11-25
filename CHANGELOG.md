@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.149.5] - 2026-11-25
+
+### Fixed
+- **The Unlinked Documents panel's "have a KF number — resolvable" note counted documents the panel doesn't list.** It counted every unlinked document with a KashFlow number, including statements, credit notes and other excluded documents. So it could say "1 have a KF number" when none of the listed rows had one. It now counts only the documents in the panel (`hasNumberNoIdEligible`, using `UNLINKED_ELIGIBLE_MATCH`) and says "1 has". The "Has KF# (no ID)" badge and the Resolve Numbers button still use the all-documents count, because Resolve Numbers works on every document.
+
 ## [6.149.4] - 2026-11-25
 
 ### Fixed

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import sift from 'sift';
-import { KF_ELIGIBLE_MATCH, NEVER_SENT_ELIGIBLE_MATCH } from '../mongoose/services/documentsOverviewService.js';
+import { KF_ELIGIBLE_MATCH, NEVER_SENT_ELIGIBLE_MATCH, UNLINKED_ELIGIBLE_MATCH } from '../mongoose/services/documentsOverviewService.js';
 
 /** /overview/documents agrees with what hcs-app knows about each document (6.55.5). */
 const PI = { id: 1, name: 'Purchase Invoice' };
@@ -28,6 +28,20 @@ describe('documents overview', () => {
 
   it('Unlinked leaves out credit notes and excluded invoices', () => {
     assert.deepEqual(ids({ kashflowPurchaseId: null, ...KF_ELIGIBLE_MATCH }, rows), [1]);
+  });
+
+  it("the Unlinked panel's resolvable note only counts documents the panel lists (6.149.5)", () => {
+    const withNumbers = [
+      doc(10, { kashflowPurchaseNumber: 501 }), // eligible, listed: counts
+      doc(11, { kashflowPurchaseNumber: 502, documentType: { id: 2, name: 'Supplier Statement' } }), // statement: not listed
+      doc(12, { kashflowPurchaseNumber: 503, creditNote: true }), // credit note: not listed
+      doc(13), // listed, no number
+    ];
+    assert.deepEqual(ids({ kashflowPurchaseNumber: { $ne: null }, ...UNLINKED_ELIGIBLE_MATCH }, withNumbers), [10]);
+    const svc = fs.readFileSync(path.resolve('mongoose/services/documentsOverviewService.js'), 'utf8');
+    assert.match(svc, /hasNumberNoIdEligible: \[\s*\{ \$match: \{ kashflowPurchaseNumber: \{ \$ne: null \}, \.\.\.UNLINKED_ELIGIBLE_MATCH \} \}/);
+    const view = fs.readFileSync(path.resolve('mongoose/views/tailwindcss/overview/documents.ejs'), 'utf8');
+    assert.match(view, /<%= hasNumberNoIdEligible %> <%= hasNumberNoIdEligible === 1 \? 'has' : 'have' %> a KF number — resolvable/);
   });
 
   it("Fix All leaves a purchase it can't find alone, and never takes a link another document holds", () => {
