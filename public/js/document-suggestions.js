@@ -297,7 +297,35 @@ function addLineBlock() {
   }
   last.after(copy);
   wireLineBlock(copy);
+  renumberLines();
   return copy;
+}
+
+/** Lines numbered 0, 1, 2… again in names and labels, after one is removed. */
+function renumberLines() {
+  lineBlocks().forEach((b, i) => {
+    b.dataset.line = String(i);
+    b.querySelector('[data-line-label]').textContent = `Line ${i + 1}`;
+    for (const c of b.querySelectorAll('input, select, [data-remove-line]')) {
+      if (c.name) c.name = c.name.replace(/^lines\[\d+\]/, `lines[${i}]`);
+      const aria = c.getAttribute('aria-label');
+      if (aria) c.setAttribute('aria-label', aria.replace(/\b(line) \d+/i, `$1 ${i + 1}`));
+    }
+  });
+}
+
+/**
+ * Take a line off the form. The last one left is emptied instead, so there is
+ * always a line to type into. Nothing is stored until Save, which drops blank lines.
+ */
+function removeLineBlock(block) {
+  if (lineBlocks().length > 1) {
+    block.remove();
+    renumberLines();
+    form.dispatchEvent(new Event('input', { bubbles: true })); // checks and the lines button
+  } else {
+    for (const input of block.querySelectorAll('input')) if (input.value !== '') setValue(input, '');
+  }
 }
 
 const cell = (v, dp) => (v == null ? '' : dp == null ? String(v) : Number(v).toFixed(dp));
@@ -572,6 +600,10 @@ if (root && form && Object.keys(inputs).length) {
   });
 
   fillLinesBtn?.addEventListener('click', fillLines);
+  linesBox?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-remove-line]');
+    if (btn) removeLineBlock(btn.closest('[data-line]'));
+  });
 
   // Clear entry: empty every box (header and lines) to type the invoice afresh.
   // Nothing is stored until Save, and blank lines are dropped then.

@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.152.0] - 2026-11-25
+
+### Added
+- **Remove a line from an invoice entry with one click.** Each line on the entry form has an × next to its number. Before, the only way to drop a line was to empty all five of its boxes and save, which was easy to miss. The × takes the line off the form and numbers the rest again, and the live checks update. The last line left is emptied rather than removed, so there is always one to type into. As with every other change on the form, nothing is stored until you save. The × doesn't show on an invoice that is already in KashFlow.
+
 ## [6.151.2] - 2026-11-25
 
 ### Changed
