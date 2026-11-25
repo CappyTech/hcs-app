@@ -2,6 +2,19 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.150.0] - 2026-11-25
+
+### Added
+- **OneDrive folders follow a job backwards and sideways too.** A job moved back a stage now has its folder moved back with it: a completed job back to its live jobs folder, a won job back to the quotes folder (named from its quote again). A cancelled job, or one whose quotes were all lost, has its folder moved into a "Cancelled" folder inside the year folder it's in, and back out if it's uncancelled. Changing a job's site, project number or quote number renames its folder to match, and a flash says what moved or was renamed. Jobs without a folder are left alone. The Cancelled folder's name can be changed in Admin → Config → OneDrive (job folders).
+- **Sync folder on the job page.** A job with a folder now has a Sync folder button. It checks the folder is still there (finding it again by number if it was deleted or moved somewhere unexpected), moves it to where the job belongs, renames it "<number> <site>" and refreshes the link. On a job with no folder, Find folder now does the same, and makes the folder if none is found (never for a cancelled job).
+- **Link OneDrive folders on the Job Register (admins).** One button links every job that has no folder to its folder in OneDrive: by project number in the live jobs folders (Completed Jobs and Cancelled included), otherwise by quote number in the quotes folders. It reads the whole folder structure once rather than job by job, and doesn't create, move or rename anything. The flash says how many were linked and how many had no folder. It is recorded as an `onedrive_folders_bulk_linked` security event.
+- A folder renamed without being moved is recorded as an `onedrive_folder_renamed` security event.
+
+### Fixed
+- **OneDrive steps no longer fail on a passing hiccup.** When Microsoft Graph throttles the app (429) or has a brief fault (502, 503, 504, or a dropped connection), the step is tried again up to three times, waiting as long as Graph asks (at most 30 seconds). If Graph stops accepting the access token, a new one is fetched and the step is tried once more.
+- **A job completed from Cancelled or straight from quotes goes to the right Completed Jobs folder.** Its folder used to get a "Completed Jobs" folder made inside the Cancelled or quotes folder it was in. It now goes into Completed Jobs in the live jobs folder.
+- Find folder (and the automatic moves) now also look inside Cancelled folders.
+
 ## [6.149.6] - 2026-11-25
 
 ### Fixed

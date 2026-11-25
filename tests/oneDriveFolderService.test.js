@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 const KEYS = [
   'ONEDRIVE_FOLDERS_ENABLED', 'ONEDRIVE_TENANT_ID', 'ONEDRIVE_CLIENT_ID', 'ONEDRIVE_CLIENT_SECRET',
   'ONEDRIVE_OWNER', 'ONEDRIVE_ROOT_FOLDER', 'ONEDRIVE_QUOTES_FOLDER', 'ONEDRIVE_LIVE_FOLDER', 'ONEDRIVE_COMPLETED_FOLDER',
+  'ONEDRIVE_CANCELLED_FOLDER',
 ];
 for (const k of KEYS) delete process.env[k];
 
@@ -87,7 +88,10 @@ function fakeDrive() {
     const f = fail.find((x) => x.match(method, url));
     if (f) {
       if (f.once) fail.splice(fail.indexOf(f), 1);
-      return json(f.status, { error: { code: f.code, message: f.message } });
+      if (f.network) throw new TypeError('fetch failed');
+      const r = json(f.status, { error: { code: f.code, message: f.message } });
+      if (f.retryAfter !== undefined) r.headers.set('Retry-After', String(f.retryAfter));
+      return r;
     }
     const u = new URL(url);
     const prefix = `/v1.0/users/${encodeURIComponent(OWNER)}/drive`;
@@ -233,6 +237,8 @@ describe('when off or incomplete', () => {
       await svc.moveToLive({ quoteNumber: 1, projectNumber: 2, site: 'x', quoteDate: '2026-01-01', wonDate: '2026-02-01' }),
       await svc.moveToCompleted({ projectNumber: 2, site: 'x', wonDate: '2026-02-01' }),
       await svc.findJobFolder({ projectNumber: 2 }),
+      await svc.syncJobFolder({ stage: 'won', projectNumber: 2, site: 'x' }),
+      await svc.folderIndex(),
     ];
     for (const r of await all()) assert.deepEqual(r, { skipped: 'not configured' });
 
@@ -452,6 +458,208 @@ describe('findJobFolder', () => {
   });
 });
 
+// ── Retries ─────────────────────────────────────────────────────────────────
+
+describe('retries', () => {
+  let waits;
+  beforeEach(() => {
+    configure();
+    drive.add('Jobs & Quotes');
+    waits = [];
+    svc.setSleepForTests(async (ms) => { waits.push(ms); });
+  });
+  afterEach(() => svc.setSleepForTests(null));
+  const once = (status, extra = {}) => ({ match: (m, u) => u.includes('/root:/Jobs%20%26%20Quotes') && !u.includes('children'), status, code: 'x', message: 'busy', once: true, ...extra });
+
+  it('waits as long as Retry-After says on a 429, then carries on', async () => {
+    drive.fail.push(once(429, { retryAfter: 7 }));
+    assert.equal(await svc.findJobFolder({ projectNumber: 1 }), null);
+    assert.deepEqual(waits, [7000]);
+  });
+
+  it('backs off 1s, 2s, 4s on 503s and network errors, then gives up', async () => {
+    drive.fail.push(once(503), once(0, { network: true }), once(504));
+    assert.equal(await svc.findJobFolder({ projectNumber: 1 }), null);
+    assert.deepEqual(waits, [1000, 2000, 4000]);
+
+    waits.length = 0;
+    drive.fail.push(once(503), once(503), once(503), once(503));
+    await assert.rejects(svc.findJobFolder({ projectNumber: 1 }), /HTTP 503/);
+    assert.deepEqual(waits, [1000, 2000, 4000]);
+  });
+
+  it('does not retry a request Graph refused outright', async () => {
+    drive.fail.push(once(400), once(400));
+    await assert.rejects(svc.findJobFolder({ projectNumber: 1 }), /HTTP 400/);
+    assert.deepEqual(waits, []);
+  });
+
+  it('fetches a new token once after a 401', async () => {
+    drive.fail.push(once(401));
+    assert.equal(await svc.findJobFolder({ projectNumber: 1 }), null);
+    assert.equal(drive.tokenCalls, 2);
+    assert.deepEqual(waits, []);
+
+    drive.fail.push(once(401), once(401));
+    await assert.rejects(svc.findJobFolder({ projectNumber: 1 }), /HTTP 401/);
+  });
+
+  it('caps and reads Retry-After', () => {
+    assert.equal(svc.retryDelay('3', 0), 3000);
+    assert.equal(svc.retryDelay('600', 0), 30_000);
+    assert.equal(svc.retryDelay(null, 2), 4000);
+    assert.equal(svc.retryDelay('soon', 1), 2000);
+    assert.equal(svc.retryDelay(new Date(Date.now() - 5000).toUTCString(), 0), 0);
+  });
+});
+
+// ── Where folders are ───────────────────────────────────────────────────────
+
+describe('locate and placeFor', () => {
+  const s = () => svc.settings();
+  beforeEach(() => configure());
+
+  it('tells which year folder (and Completed Jobs / Cancelled) a path is', () => {
+    assert.deepEqual(svc.locate(s(), 'Jobs & Quotes/1.1 LIVE JOBS 2025'), { kind: 'live', year: 2025, yearPath: 'Jobs & Quotes/1.1 LIVE JOBS 2025', sub: null });
+    assert.deepEqual(svc.locate(s(), 'jobs & quotes/1.1 live jobs 2025/completed jobs'), { kind: 'live', year: 2025, yearPath: 'Jobs & Quotes/1.1 live jobs 2025', sub: 'completed' });
+    assert.equal(svc.locate(s(), 'Jobs & Quotes/3. QUOTES 2026/Cancelled').sub, 'cancelled');
+    assert.equal(svc.locate(s(), 'Jobs & Quotes/3. QUOTES 2026/Completed Jobs').kind, null, 'quotes have no Completed Jobs');
+    assert.equal(svc.locate(s(), 'Jobs & Quotes/Archive').kind, null);
+    assert.equal(svc.locate(s(), 'Elsewhere/1.1 LIVE JOBS 2025').kind, null);
+    assert.equal(svc.locate(s(), 'Jobs & Quotes').kind, null);
+  });
+
+  it('keeps the year a folder is in, and takes the date when it changes kind', () => {
+    const live25 = { kind: 'live', year: 2025, sub: null };
+    const job = { quoteNumber: 51761, projectNumber: 41296, quoteDate: '2026-03-01', wonDate: '2026-05-01' };
+    assert.deepEqual(svc.placeFor({ ...job, stage: 'completed' }, live25), { kind: 'live', sub: 'completed', year: 2025, number: 41296 });
+    assert.deepEqual(svc.placeFor({ ...job, stage: 'quoted' }, live25), { kind: 'quotes', sub: null, year: 2026, number: 51761 });
+    assert.deepEqual(svc.placeFor({ ...job, stage: 'cancelled' }, live25), { kind: 'live', sub: 'cancelled', year: 2025, number: 41296 });
+    assert.deepEqual(svc.placeFor({ ...job, projectNumber: undefined, stage: 'cancelled' }), { kind: 'quotes', sub: 'cancelled', year: 2026, number: 51761 });
+    assert.match(svc.placeFor({ ...job, projectNumber: null, stage: 'won' }).wait, /no project number/);
+  });
+});
+
+// ── syncJobFolder ───────────────────────────────────────────────────────────
+
+describe('syncJobFolder', () => {
+  beforeEach(() => { configure(); drive.add('Jobs & Quotes'); });
+  const job = { quoteNumber: 51761, projectNumber: 41296, site: '3 Centre Court, Alsager', quoteDate: '2026-03-04', wonDate: '2026-05-06' };
+
+  it('moves a job back from live to quotes, named from the quote', async () => {
+    const f = drive.add('Jobs & Quotes/1.1 LIVE JOBS 2026/41296 3 Centre Court');
+    const r = await svc.syncJobFolder({ ...job, projectNumber: undefined, stage: 'quoted', folderId: f.id });
+    assert.equal(r.path, 'Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court');
+    assert.equal(r.moved, true);
+    assert.equal(r.renamed, true);
+    assert.equal(r.from, 'Jobs & Quotes/1.1 LIVE JOBS 2026/41296 3 Centre Court');
+    assert.equal(drive.pathOf(f.id), r.path);
+  });
+
+  it('moves a completed job back to live jobs in its own year, keeping a hand-tidied name', async () => {
+    const f = drive.add('Jobs & Quotes/1.1 LIVE JOBS 2025/Completed Jobs/41296 3 Centre Court - rear');
+    const r = await svc.syncJobFolder({ ...job, stage: 'won', folderId: f.id });
+    assert.equal(r.path, 'Jobs & Quotes/1.1 LIVE JOBS 2025/41296 3 Centre Court - rear');
+    assert.equal(r.renamed, false);
+    const patch = drive.calls.find((c) => c.method === 'PATCH');
+    assert.deepEqual(Object.keys(JSON.parse(patch.body)), ['parentReference']);
+  });
+
+  it('puts a cancelled job in Cancelled inside its year folder, and back out again', async () => {
+    const q = drive.add('Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court');
+    const r = await svc.syncJobFolder({ ...job, projectNumber: undefined, stage: 'cancelled', folderId: q.id });
+    assert.equal(r.path, 'Jobs & Quotes/3. QUOTES 2026/Cancelled/51761 3 Centre Court');
+    const back = await svc.syncJobFolder({ ...job, projectNumber: undefined, stage: 'quoted', folderId: q.id });
+    assert.equal(back.path, 'Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court');
+
+    const l = drive.add('Jobs & Quotes/1.1 LIVE JOBS 2024/41000 Old');
+    const r2 = await svc.syncJobFolder({ ...job, projectNumber: 41000, site: 'Old', stage: 'cancelled', folderId: l.id });
+    assert.equal(r2.path, 'Jobs & Quotes/1.1 LIVE JOBS 2024/Cancelled/41000 Old');
+  });
+
+  it('renames in place when asked to always, and leaves a folder in the right place alone', async () => {
+    const f = drive.add('Jobs & Quotes/1.1 LIVE JOBS 2026/41296 3 Centre Ct');
+    const same = await svc.syncJobFolder({ ...job, stage: 'won', folderId: f.id });
+    assert.equal(same.moved, false);
+    assert.equal(same.renamed, false);
+    assert.equal(drive.writes().length, 0);
+    const r = await svc.syncJobFolder({ ...job, stage: 'won', folderId: f.id, rename: 'always' });
+    assert.equal(r.path, 'Jobs & Quotes/1.1 LIVE JOBS 2026/41296 3 Centre Court');
+    assert.equal(r.renamed, true);
+    assert.equal(r.moved, false);
+  });
+
+  it('finds a folder whose id has gone by its number, Cancelled included', async () => {
+    const f = drive.add('Jobs & Quotes/3. QUOTES 2025/Cancelled/51761 3 Centre Court');
+    const r = await svc.syncJobFolder({ ...job, projectNumber: undefined, stage: 'quoted', folderId: 'gone' });
+    assert.equal(r.id, f.id);
+    assert.equal(r.path, 'Jobs & Quotes/3. QUOTES 2025/51761 3 Centre Court');
+  });
+
+  it('makes a missing folder where it belongs, but never for a cancelled job or when told not to', async () => {
+    assert.equal(await svc.syncJobFolder({ ...job, stage: 'cancelled' }), null);
+    assert.equal(await svc.syncJobFolder({ ...job, stage: 'won', create: false }), null);
+    assert.equal(drive.writes().length, 0);
+    const r = await svc.syncJobFolder({ ...job, stage: 'completed' });
+    assert.equal(r.created, true);
+    assert.equal(r.path, 'Jobs & Quotes/1.1 LIVE JOBS 2026/Completed Jobs/41296 3 Centre Court');
+  });
+
+  it('leaves a won job with no project number where it is, and says why', async () => {
+    const q = drive.add('Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court');
+    const r = await svc.syncJobFolder({ ...job, projectNumber: null, stage: 'won', folderId: q.id });
+    assert.equal(r.moved, false);
+    assert.match(r.note, /no project number yet/);
+    assert.equal(drive.writes().length, 0);
+  });
+
+  it('explains a name clash', async () => {
+    const f = drive.add('Jobs & Quotes/1.1 LIVE JOBS 2026/41296 3 Centre Court');
+    drive.add('Jobs & Quotes/3. QUOTES 2026/51761 3 Centre Court');
+    await assert.rejects(svc.syncJobFolder({ ...job, projectNumber: undefined, stage: 'quoted', folderId: f.id }), /a folder named "51761 3 Centre Court" is already there/);
+  });
+});
+
+describe('moveToCompleted from outside a live jobs folder', () => {
+  beforeEach(() => { configure(); drive.add('Jobs & Quotes'); });
+
+  it('goes to Completed Jobs of the live folder, not inside Cancelled or quotes', async () => {
+    const c = drive.add('Jobs & Quotes/1.1 LIVE JOBS 2025/Cancelled/41296 X');
+    const r = await svc.moveToCompleted({ projectNumber: 41296, wonDate: '2026-05-06', folderId: c.id });
+    assert.equal(r.path, 'Jobs & Quotes/1.1 LIVE JOBS 2025/Completed Jobs/41296 X');
+    const q = drive.add('Jobs & Quotes/3. QUOTES 2026/51800 Y');
+    const r2 = await svc.moveToCompleted({ projectNumber: 41300, wonDate: '2026-05-06', folderId: q.id });
+    assert.equal(r2.path, 'Jobs & Quotes/1.1 LIVE JOBS 2026/Completed Jobs/51800 Y');
+  });
+});
+
+describe('folderIndex', () => {
+  beforeEach(() => { configure(); drive.add('Jobs & Quotes'); });
+
+  it('reads every job folder once, newest year winning', async () => {
+    drive.add('Jobs & Quotes/1.1 LIVE JOBS 2026/41296 New');
+    drive.add('Jobs & Quotes/1.1 LIVE JOBS 2025/41296 Old');
+    drive.add('Jobs & Quotes/1.1 LIVE JOBS 2025/Completed Jobs/41000 Done');
+    drive.add('Jobs & Quotes/1.1 LIVE JOBS 2025/Cancelled/41001 Off');
+    drive.add('Jobs & Quotes/3. QUOTES 2026/51761 Q');
+    drive.add('Jobs & Quotes/3. QUOTES 2026/Cancelled/51762 Lost');
+    drive.add('Jobs & Quotes/3. QUOTES 2026/Notes');
+    drive.add('Jobs & Quotes/Archive/41999 Not this');
+    const idx = await svc.folderIndex();
+    assert.deepEqual([...idx.live.keys()].sort(), ['41000', '41001', '41296']);
+    assert.equal(idx.live.get('41296').path, 'Jobs & Quotes/1.1 LIVE JOBS 2026/41296 New');
+    assert.deepEqual([...idx.quotes.keys()].sort(), ['51761', '51762']);
+    assert.equal(drive.writes().length, 0);
+  });
+
+  it('reads leading numbers', () => {
+    assert.equal(svc.leadingNumber('41296 3 Centre Court'), '41296');
+    assert.equal(svc.leadingNumber('41296'), '41296');
+    assert.equal(svc.leadingNumber('41296-x'), null);
+    assert.equal(svc.leadingNumber('Notes'), null);
+  });
+});
+
 // ── Config and Test connection ──────────────────────────────────────────────
 
 describe('the OneDrive config group', () => {
@@ -553,6 +761,17 @@ describe('security events', () => {
     assert.deepEqual(ofType('onedrive_folder_created').map((e) => e.meta.path), [
       'Jobs & Quotes/1.1 LIVE JOBS 2026',
       'Jobs & Quotes/1.1 LIVE JOBS 2026/Completed Jobs',
+    ]);
+  });
+
+  it('records a sync move as moved and a rename in place as renamed', async () => {
+    const f = drive.add('Jobs & Quotes/1.1 LIVE JOBS 2026/41296 Old');
+    await svc.syncJobFolder({ stage: 'won', projectNumber: 41296, site: 'New', folderId: f.id, rename: 'always', step: 'sync' });
+    await svc.syncJobFolder({ stage: 'cancelled', projectNumber: 41296, site: 'New', folderId: f.id, step: 'stage' });
+    await settle();
+    assert.deepEqual(events.filter((e) => /moved|renamed/.test(e.type)).map((e) => [e.type, e.meta]), [
+      ['onedrive_folder_renamed', { owner: OWNER, from: 'Jobs & Quotes/1.1 LIVE JOBS 2026/41296 Old', to: 'Jobs & Quotes/1.1 LIVE JOBS 2026/41296 New', itemId: f.id, step: 'sync' }],
+      ['onedrive_folder_moved', { owner: OWNER, from: 'Jobs & Quotes/1.1 LIVE JOBS 2026/41296 New', to: 'Jobs & Quotes/1.1 LIVE JOBS 2026/Cancelled/41296 New', itemId: f.id, step: 'stage' }],
     ]);
   });
 

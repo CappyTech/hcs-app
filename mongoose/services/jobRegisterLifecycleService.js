@@ -9,7 +9,9 @@
 // (jobRegisterKashflowService). With OneDrive job folders on, the first
 // quote gets its folder, a won job's folder moves to the live jobs folder and
 // a completed job's to Completed Jobs (oneDriveFolderService); the folder is
-// kept on the job. The register's form saves call
+// kept on the job. Any other stage change that changes where the folder
+// belongs (back a stage, cancelled, uncancelled) moves it there, and a changed
+// site or number renames it (onFolderChange). The register's form saves call
 // fireStageHooks with the job before and after, so a hook runs once, when the
 // stage actually changes (and onJobWon again when a won job first gets its
 // project number, since the project needs it).
@@ -70,20 +72,32 @@ export async function storeFolder(uuid, folder) {
 
 /**
  * Run one folder step: `run()` calls oneDriveFolderService. A folder back is
- * kept on the job; { skipped } (OneDrive off) does nothing and says nothing;
- * an error is logged and returned as a notice ("couldn't be <doing>").
+ * kept on the job, and `say(folder)` may turn it into a success notice;
+ * { skipped } (OneDrive off) does nothing and says nothing; an error is
+ * logged and returned as a notice ("couldn't be <doing>").
  */
-async function folderStep(job, doing, run) {
+async function folderStep(job, doing, run, say = () => null) {
   try {
     const folder = await run();
     if (!folder || folder.skipped) return [];
     if (folder.id) await storeFolder(job.uuid, folder);
-    return [];
+    const text = say(folder);
+    return text ? [{ type: 'success', text }] : [];
   } catch (err) {
     logger.warn(`[jobRegisterLifecycle] OneDrive folder for ${label(job)} couldn't be ${doing}: ${err.message}`);
     auditFailed(job, doing, err);
     return [{ type: 'error', text: `The OneDrive folder couldn't be ${doing}: ${err.message}` }];
   }
+}
+
+/** What a sync did, in a sentence, or null when it changed nothing. Pure. */
+export function syncSaid(folder) {
+  if (!folder?.id) return null;
+  const where = folder.path || folder.name;
+  if (folder.created) return `Made the OneDrive folder: ${where}.`;
+  if (folder.moved) return `Moved the OneDrive folder to ${where}.`;
+  if (folder.renamed) return `Renamed the OneDrive folder to "${folder.name}".`;
+  return null;
 }
 
 /** The quote a job's folder is named from: its won quote, else its first. Pure. */
@@ -126,33 +140,109 @@ async function completedFolder(given) {
   }));
 }
 
+/** The values syncJobFolder needs, from a job. */
+function syncArgs(job) {
+  const q = folderQuote(job);
+  return {
+    stage: stageOf(job), quoteNumber: q?.number, projectNumber: job.projectNumber, site: job.site,
+    quoteDate: q?.date, wonDate: job.jobDate || undefined, folderId: job.oneDriveFolderId || undefined,
+  };
+}
+
 /**
- * The job page's Find folder: look the job's folder up in OneDrive by its
- * project and quote numbers and keep it. Returns { folder } (null when none
- * was found), { skipped } when OneDrive is off, or { already } when the job
- * has one. Throws a 404 for a missing job; OneDrive's errors are thrown on.
+ * The site or a number the folder is named from changed, so its name should
+ * change too: the site (up to its first comma), the project number, or (for
+ * a job with no project number) the quote it's named from. Pure.
  */
-export async function findFolder(uuid) {
+export function renameNeeded(before, after) {
+  if (!before || !after) return false;
+  if (oneDrive.siteForFolder(before.site) !== oneDrive.siteForFolder(after.site)) return true;
+  if (before.projectNumber != null && after.projectNumber != null) return Number(before.projectNumber) !== Number(after.projectNumber);
+  if (after.projectNumber == null) {
+    const a = folderQuote(before)?.number;
+    const b = folderQuote(after)?.number;
+    return a != null && b != null && Number(a) !== Number(b);
+  }
+  return false;
+}
+
+/**
+ * A change the forward hooks don't cover: the folder is moved to where the
+ * job's stage now puts it (back to quotes or live jobs, into or out of
+ * Cancelled) and renamed when the site or number changed. Only for a job that
+ * has its folder: one without is left to the hooks and Sync folder.
+ */
+export async function onFolderChange(given, before = null) {
+  const job = await fresh(given);
+  if (!job.oneDriveFolderId) return [];
+  const rename = renameNeeded(before, job) ? 'always' : 'number';
+  return folderStep(job, 'moved', () => oneDrive.syncJobFolder({ ...syncArgs(job), rename, create: false, step: 'stage' }), syncSaid);
+}
+
+/**
+ * The job page's Sync folder: find the job's folder (the one kept on it,
+ * else by its project and quote numbers), make one if there is none (not for
+ * a cancelled job), put it where the job's stage says, named
+ * "<number> <site>", and keep it. Returns { folder, linked } (folder null
+ * when there is none and none could be made, with `cancelled` when that's
+ * why) or { skipped } when OneDrive is off. Throws a 404 for a missing job;
+ * OneDrive's errors are thrown on.
+ */
+export async function syncFolder(uuid) {
   const job = await mdb.INTERNAL.jobRegister.findOne({ uuid: String(uuid || '') }).lean();
   if (!job) throw Object.assign(new Error('That register entry no longer exists.'), { status: 404 });
-  if (job.oneDriveFolderId) return { already: true, folder: { id: job.oneDriveFolderId, webUrl: job.oneDriveFolderUrl, path: job.oneDriveFolderPath } };
-  const q = folderQuote(job);
-  if (job.projectNumber == null && !q) return { folder: null };
+  const args = syncArgs(job);
+  if (args.projectNumber == null && args.quoteNumber == null && !args.folderId) return { folder: null };
   let folder;
   try {
-    folder = await oneDrive.findJobFolder({ quoteNumber: q?.number, projectNumber: job.projectNumber });
+    folder = await oneDrive.syncJobFolder({ ...args, rename: 'always', create: true, step: 'sync' });
   } catch (err) {
-    auditFailed(job, 'found', err);
+    auditFailed(job, 'synced', err);
     throw err;
   }
   if (folder?.skipped) return { skipped: folder.skipped };
-  if (!folder?.id) return { folder: null };
+  if (!folder?.id) return { folder: null, cancelled: args.stage === 'cancelled' };
+  const linked = !folder.created && !sameId(folder.id, job.oneDriveFolderId);
   await storeFolder(job.uuid, folder);
-  logger.info(`[jobRegisterLifecycle] Found the OneDrive folder for ${label(job)}: "${folder.path}"`);
-  auditLog.record('onedrive_folder_linked', null, {
-    meta: { job: label(job), jobUuid: job.uuid, path: folder.path || null, itemId: folder.id },
-  });
-  return { folder };
+  if (linked) {
+    logger.info(`[jobRegisterLifecycle] Found the OneDrive folder for ${label(job)}: "${folder.path}"`);
+    auditLog.record('onedrive_folder_linked', null, {
+      meta: { job: label(job), jobUuid: job.uuid, path: folder.path || null, itemId: folder.id },
+    });
+  }
+  return { folder, linked };
+}
+
+/**
+ * Link every job with no folder to its folder in OneDrive, from one read of
+ * the whole folder structure: by project number in the live jobs folders,
+ * else by its quote numbers (the one it's named from first) in the quotes
+ * folders. Nothing in OneDrive is created, moved or renamed. Returns
+ * { checked, linked, notFound } or { skipped } when OneDrive is off.
+ */
+export async function linkAllFolders() {
+  const index = await oneDrive.folderIndex();
+  if (index?.skipped) return { skipped: index.skipped };
+  const jobs = await mdb.INTERNAL.jobRegister.find({ oneDriveFolderId: { $in: [null, ''] } }).lean();
+  const used = new Set();
+  let linked = 0;
+  for (const job of jobs) {
+    const q = folderQuote(job);
+    const quoteNos = [q?.number, ...(job.quotes || []).map((x) => x.number)].filter((n) => n != null).map(String);
+    let hit = job.projectNumber != null ? index.live.get(String(job.projectNumber)) : null;
+    for (const n of quoteNos) {
+      if (hit) break;
+      hit = index.quotes.get(n) || null;
+    }
+    if (!hit || used.has(hit.id)) continue;
+    used.add(hit.id);
+    await storeFolder(job.uuid, hit);
+    linked += 1;
+  }
+  const out = { checked: jobs.length, linked, notFound: jobs.length - linked };
+  logger.info(`[jobRegisterLifecycle] Linked ${linked} of ${jobs.length} jobs to their OneDrive folders`);
+  auditLog.record('onedrive_folders_bulk_linked', null, { meta: out });
+  return out;
 }
 
 // ── The hooks ───────────────────────────────────────────────────────────
@@ -178,20 +268,27 @@ export async function onJobCompleted(job) {
  * Which hooks a stage change calls, by name. `before` is null for a new job.
  * Won when the stage reaches won (or later) from before it, or when a won
  * job first gets its project number; completed when it reaches completed or
- * invoiced from anything else. Pure.
+ * invoiced from anything else. onFolderChange (last) when the job's folder
+ * belongs somewhere else and neither of those moves it, or when its site or
+ * number changed. Pure.
  */
 export function stageHooks(before, after) {
   const from = before ? stageOf(before) : null;
   const to = stageOf(after);
-  if (to === 'cancelled') return [];
-  const numbered = before != null && before.projectNumber == null && after?.projectNumber != null;
   const out = [];
-  if (WON_OR_LATER.has(to) && (!WON_OR_LATER.has(from) || numbered)) out.push('onJobWon');
-  if (DONE.has(to) && !DONE.has(from)) out.push('onJobCompleted');
+  if (to !== 'cancelled') {
+    const numbered = before != null && before.projectNumber == null && after?.projectNumber != null;
+    if (WON_OR_LATER.has(to) && (!WON_OR_LATER.has(from) || numbered)) out.push('onJobWon');
+    if (DONE.has(to) && !DONE.has(from)) out.push('onJobCompleted');
+  }
+  if (before != null) {
+    const moves = oneDrive.STAGE_PLACE[from] !== oneDrive.STAGE_PLACE[to] && !out.length;
+    if (moves || renameNeeded(before, after)) out.push('onFolderChange');
+  }
   return out;
 }
 
-const HOOKS = { onJobWon, onJobCompleted };
+const HOOKS = { onJobWon, onJobCompleted, onFolderChange };
 
 /** A hook's notices (`from`) onto `into`: only well-formed ones. */
 function collect(from, into) {
@@ -202,14 +299,15 @@ function collect(from, into) {
 }
 
 /**
- * Run the hooks a save's stage change calls. Never throws. Returns the names
+ * Run the hooks a save's stage change calls (each given the job after, then
+ * before). Never throws. Returns the names
  * run; what they have to say is added to `notices`.
  */
 export async function fireStageHooks(before, after, hooks = lifecycle, notices = []) {
   const names = stageHooks(before, after);
   for (const name of names) {
     try {
-      collect(await hooks[name](after), notices);
+      collect(await hooks[name](after, before), notices);
     } catch (err) {
       logger.warn(`[jobRegisterLifecycle] ${name} failed for ${label(after)}: ${err.message}`);
     }
@@ -227,5 +325,5 @@ export async function fireQuoteAdded(job, quote, hooks = lifecycle, notices = []
 }
 
 // The object the save paths call through, so tests can swap a hook
-const lifecycle = { onQuoteAdded, ...HOOKS, stageHooks, fireStageHooks, fireQuoteAdded, findFolder, folderQuote, storeFolder };
+const lifecycle = { onQuoteAdded, ...HOOKS, stageHooks, fireStageHooks, fireQuoteAdded, syncFolder, linkAllFolders, folderQuote, storeFolder, renameNeeded, syncSaid };
 export default lifecycle;

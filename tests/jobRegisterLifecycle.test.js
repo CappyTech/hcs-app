@@ -63,6 +63,11 @@ function fakeRegister(rows) {
   };
   return {
     findOne: ({ uuid }) => lean(byUuid(uuid)),
+    // Only the filter linkAllFolders uses: { oneDriveFolderId: { $in: [...] } }
+    find: (filter = {}) => {
+      const allowed = filter.oneDriveFolderId?.$in;
+      return { lean: async () => copy(rows.filter((r) => !allowed || allowed.includes(r.oneDriveFolderId ?? null))) };
+    },
     findOneAndUpdate: (filter, update) => {
       const r = byUuid(filter.uuid);
       let ok = false;
@@ -196,7 +201,7 @@ describe('Automatic KashFlow: helpers', () => {
     const wonNoNumber = { won: true, quotes: [{ number: 1, status: 'won' }] };
     assert.deepEqual(stageHooks(wonNoNumber, { ...wonNoNumber, projectNumber: 2 }), ['onJobWon']);
     assert.deepEqual(stageHooks(wonNoNumber, { ...wonNoNumber, projectNumber: 2, completed: true }), ['onJobWon', 'onJobCompleted']);
-    assert.deepEqual(stageHooks({ ...wonNoNumber, projectNumber: 2 }, { ...wonNoNumber, projectNumber: 3 }), [], 'a changed number is not a new win');
+    assert.deepEqual(stageHooks({ ...wonNoNumber, projectNumber: 2 }, { ...wonNoNumber, projectNumber: 3 }), ['onFolderChange'], 'a changed number is not a new win, but renames the folder');
   });
 
   it('words a create the same for the buttons and the automatic create', () => {
@@ -429,7 +434,7 @@ describe('Automatic KashFlow: the flash', () => {
 // default export (what the lifecycle calls through) are replaced with fakes.
 
 describe('OneDrive folders on quote, win and completion', () => {
-  const FNS = ['ensureQuoteFolder', 'moveToLive', 'moveToCompleted', 'findJobFolder'];
+  const FNS = ['ensureQuoteFolder', 'moveToLive', 'moveToCompleted', 'findJobFolder', 'syncJobFolder', 'folderIndex'];
   let savedOd;
   let calls;
   const folder = (id, path) => ({ id, name: path.split('/').pop(), webUrl: `https://example.test/${id}`, path });
@@ -526,16 +531,16 @@ describe('OneDrive folders on quote, win and completion', () => {
   it('records a failed step and a folder found as security events, with the job', async () => {
     const events = [];
     mdb.INTERNAL.securityEvent = { create: async (doc) => { events.push(doc); return doc; } };
-    fakeOneDrive({ moveToLive: new Error('Graph says no'), findJobFolder: folder('F7', 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road') });
+    fakeOneDrive({ moveToLive: new Error('Graph says no'), syncJobFolder: folder('F7', 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road') });
     await lifecycle.onJobWon(job('won'));
-    await lifecycle.findFolder('won');
-    fakeOneDrive({ findJobFolder: new Error('Graph is down') });
-    await assert.rejects(lifecycle.findFolder('enq'));
+    await lifecycle.syncFolder('won');
+    fakeOneDrive({ syncJobFolder: new Error('Graph is down') });
+    await assert.rejects(lifecycle.syncFolder('enq'));
     await new Promise((r) => setImmediate(r));
     assert.deepEqual(events.map((e) => [e.type, e.meta]), [
       ['onedrive_folder_failed', { job: 'job 800201', jobUuid: 'won', step: 'moved to the live jobs folder', error: 'Graph says no' }],
       ['onedrive_folder_linked', { job: 'job 800201', jobUuid: 'won', path: 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road', itemId: 'F7' }],
-      ['onedrive_folder_failed', { job: 'job enq', jobUuid: 'enq', step: 'found', error: 'Graph is down' }],
+      ['onedrive_folder_failed', { job: 'job enq', jobUuid: 'enq', step: 'synced', error: 'Graph is down' }],
     ]);
   });
 
@@ -546,42 +551,164 @@ describe('OneDrive folders on quote, win and completion', () => {
     assert.equal(job('enq').oneDriveFolderUrl, undefined);
   });
 
-  describe('Find folder', () => {
-    it('finds the folder by the project and quote numbers and keeps it', async () => {
-      fakeOneDrive({ findJobFolder: folder('F7', 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road') });
-      const r = await lifecycle.findFolder('won');
-      assert.deepEqual(calls.findJobFolder, [{ quoteNumber: 900102, projectNumber: 800201 }]);
+  describe('Sync folder', () => {
+    it('syncs the folder by the job, renaming it exactly, and keeps it', async () => {
+      fakeOneDrive({ syncJobFolder: { ...folder('F7', 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road'), moved: true } });
+      job('won').oneDriveFolderId = 'F6';
+      const r = await lifecycle.syncFolder('won');
+      assert.deepEqual(calls.syncJobFolder, [{
+        stage: 'won', quoteNumber: 900102, projectNumber: 800201, site: '2 Sample Road', quoteDate: undefined,
+        wonDate: d('2026-11-10'), folderId: 'F6', rename: 'always', create: true, step: 'sync',
+      }]);
       assert.equal(r.folder.id, 'F7');
+      assert.equal(r.linked, true, 'a different folder from the one kept counts as linked');
       assert.equal(job('won').oneDriveFolderId, 'F7');
     });
 
-    it('leaves a job with a folder alone, and says when OneDrive is off or nothing was found', async () => {
-      fakeOneDrive({ findJobFolder: null });
-      assert.deepEqual(await lifecycle.findFolder('enq'), { folder: null });
-      fakeOneDrive({ findJobFolder: { skipped: 'not configured' } });
-      assert.deepEqual(await lifecycle.findFolder('enq'), { skipped: 'not configured' });
-      job('enq').oneDriveFolderId = 'F0';
-      assert.equal((await lifecycle.findFolder('enq')).already, true);
-      assert.equal(calls.findJobFolder.length, 1);
-      await assert.rejects(lifecycle.findFolder('nope'), (e) => e.status === 404);
+    it('says when OneDrive is off, nothing was found, or the job is cancelled', async () => {
+      fakeOneDrive({ syncJobFolder: null });
+      assert.deepEqual(await lifecycle.syncFolder('enq'), { folder: null, cancelled: false });
+      job('enq').cancelled = true;
+      assert.deepEqual(await lifecycle.syncFolder('enq'), { folder: null, cancelled: true });
+      fakeOneDrive({ syncJobFolder: { skipped: 'not configured' } });
+      assert.deepEqual(await lifecycle.syncFolder('enq'), { skipped: 'not configured' });
+      await assert.rejects(lifecycle.syncFolder('nope'), (e) => e.status === 404);
     });
 
     it('flashes what happened and goes back to the job', async () => {
       const run = async () => {
         const flashes = [];
         let to = null;
-        await ctrl.postFindFolder({ params: { uuid: 'won' }, flash: (t, m) => flashes.push([t, m]) }, { redirect: (u) => { to = u; } }, (e) => { throw e; });
+        await ctrl.postSyncFolder({ params: { uuid: 'won' }, flash: (t, m) => flashes.push([t, m]) }, { redirect: (u) => { to = u; } }, (e) => { throw e; });
         return { flashes, to };
       };
-      fakeOneDrive({ findJobFolder: folder('F7', 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road') });
-      assert.deepEqual(await run(), { flashes: [['success', 'Found the OneDrive folder: Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road.']], to: '/job-register/won' });
+      const where = 'Jobs & Quotes/1.1 LIVE JOBS 2025/800201 2 Sample Road';
+      fakeOneDrive({ syncJobFolder: folder('F7', where) });
+      assert.deepEqual(await run(), { flashes: [['success', `Found the OneDrive folder: ${where}.`]], to: '/job-register/won' });
+      fakeOneDrive({ syncJobFolder: { ...folder('F7', where), moved: true } });
+      assert.deepEqual((await run()).flashes, [['success', `Moved the OneDrive folder: ${where}.`]]);
+      fakeOneDrive({ syncJobFolder: { ...folder('F7', where), renamed: true } });
+      assert.deepEqual((await run()).flashes, [['success', `Renamed the OneDrive folder: ${where}.`]]);
+      fakeOneDrive({ syncJobFolder: folder('F7', where) });
+      assert.deepEqual((await run()).flashes, [['success', `The OneDrive folder is already where it should be: ${where}.`]]);
+      fakeOneDrive({ syncJobFolder: { ...folder('F8', where), created: true } });
+      assert.deepEqual((await run()).flashes, [['success', `Made the OneDrive folder: ${where}.`]]);
       setup({ on: false });
-      fakeOneDrive({ findJobFolder: new Error('Graph is down') });
-      assert.deepEqual((await run()).flashes, [['error', "The OneDrive folder couldn't be found: Graph is down"]]);
+      fakeOneDrive({ syncJobFolder: new Error('Graph is down') });
+      assert.deepEqual((await run()).flashes, [['error', "The OneDrive folder couldn't be synced: Graph is down"]]);
     });
   });
 
-  it('the job page links the folder, or offers Find folder', async () => {
+  describe('moves the stage hooks leave out', () => {
+    const base = { site: '1 Test Street', quotes: [{ number: 900101, status: 'quoted' }] };
+    it('calls onFolderChange when the folder belongs elsewhere or its name should change', () => {
+      const wonJob = { ...base, projectNumber: 800201 };
+      assert.deepEqual(stageHooks(wonJob, base), ['onFolderChange'], 'won back to quoted');
+      assert.deepEqual(stageHooks(base, { ...base, cancelled: true }), ['onFolderChange'], 'cancelled');
+      assert.deepEqual(stageHooks({ ...base, cancelled: true }, base), ['onFolderChange'], 'uncancelled');
+      assert.deepEqual(stageHooks({ ...wonJob, completed: true }, wonJob), ['onFolderChange'], 'completed back to won');
+      assert.deepEqual(stageHooks(base, { ...base, quotes: [{ number: 900101, status: 'lost' }] }), ['onFolderChange'], 'all quotes lost');
+      assert.deepEqual(stageHooks(base, { ...base, site: '2 Other Road' }), ['onFolderChange'], 'site changed');
+      assert.deepEqual(stageHooks(base, { ...base, quotes: [{ number: 900199, status: 'quoted' }] }), ['onFolderChange'], 'quote number changed');
+      assert.deepEqual(stageHooks(base, { ...base, site: '1 Test Street, Testtown' }), [], 'only past the first comma');
+      assert.deepEqual(stageHooks({ ...wonJob, completed: true }, { ...wonJob, completed: true, invoices: [{ number: 1 }] }), [], 'completed to invoiced is the same folder');
+      assert.deepEqual(stageHooks(base, { ...base, projectNumber: 800201, site: 'New' }), ['onJobWon', 'onFolderChange']);
+      assert.deepEqual(stageHooks(null, base), [], 'a new job');
+    });
+
+    it('moves a job with a folder, renaming it when the site changed, and says so', async () => {
+      job('enq').oneDriveFolderId = 'F1';
+      const where = 'Jobs & Quotes/3. QUOTES 2026/Cancelled/900101 1 Test Street';
+      fakeOneDrive({ syncJobFolder: { ...folder('F1', where), moved: true } });
+      const before = { ...job('enq') };
+      job('enq').cancelled = true;
+      assert.deepEqual(await lifecycle.onFolderChange(job('enq'), before), [{ type: 'success', text: `Moved the OneDrive folder to ${where}.` }]);
+      assert.deepEqual(calls.syncJobFolder[0], {
+        stage: 'cancelled', quoteNumber: 900101, projectNumber: undefined, site: '1 Test Street, Testtown', quoteDate: d('2026-11-02'),
+        wonDate: undefined, folderId: 'F1', rename: 'number', create: false, step: 'stage',
+      });
+      assert.equal(job('enq').oneDriveFolderPath, where);
+
+      fakeOneDrive({ syncJobFolder: { ...folder('F1', 'Jobs & Quotes/3. QUOTES 2026/900101 9 New Road'), renamed: true } });
+      const b2 = { ...job('enq') };
+      job('enq').site = '9 New Road';
+      assert.deepEqual(await lifecycle.onFolderChange(job('enq'), b2), [{ type: 'success', text: 'Renamed the OneDrive folder to "900101 9 New Road".' }]);
+      assert.equal(calls.syncJobFolder[0].rename, 'always');
+
+      fakeOneDrive({ syncJobFolder: folder('F1', where) });
+      assert.deepEqual(await lifecycle.onFolderChange(job('enq'), job('enq')), [], 'nothing changed, nothing said');
+    });
+
+    it('leaves a job with no folder alone, and reports a failure', async () => {
+      fakeOneDrive({ syncJobFolder: new Error('Graph says no') });
+      assert.deepEqual(await lifecycle.onFolderChange(job('enq'), null), []);
+      assert.equal(calls.syncJobFolder.length, 0);
+      job('enq').oneDriveFolderId = 'F1';
+      assert.deepEqual(await lifecycle.onFolderChange(job('enq'), null), [{ type: 'error', text: "The OneDrive folder couldn't be moved: Graph says no" }]);
+    });
+
+    it('runs through fireStageHooks with the job before', async () => {
+      job('won').oneDriveFolderId = 'F1';
+      fakeOneDrive({ syncJobFolder: { ...folder('F1', 'x/800201 2 Sample Road'), moved: true } });
+      const notices = [];
+      const before = { ...job('won'), completed: true };
+      await lifecycle.fireStageHooks(before, job('won'), lifecycle, notices);
+      assert.equal(calls.syncJobFolder.length, 1);
+      assert.equal(calls.syncJobFolder[0].stage, 'won');
+      assert.deepEqual(notices, [{ type: 'success', text: 'Moved the OneDrive folder to x/800201 2 Sample Road.' }]);
+    });
+  });
+
+  describe('Link OneDrive folders', () => {
+    const index = () => ({
+      live: new Map([['800201', folder('L1', 'Jobs & Quotes/1.1 LIVE JOBS 2026/800201 2 Sample Road')]]),
+      quotes: new Map([['900101', folder('Q1', 'Jobs & Quotes/3. QUOTES 2026/900101 1 Test Street')]]),
+    });
+
+    it('links every job without a folder from one read, by project then quote number', async () => {
+      const events = [];
+      mdb.INTERNAL.securityEvent = { create: async (doc) => { events.push(doc); return doc; } };
+      rows.push({ uuid: 'none', site: 'x', quotes: [{ number: 900999, status: 'quoted' }] });
+      rows.push({ uuid: 'has', site: 'y', oneDriveFolderId: 'KEEP', quotes: [{ number: 900101, status: 'quoted' }] });
+      fakeOneDrive({ folderIndex: index() });
+      assert.deepEqual(await lifecycle.linkAllFolders(), { checked: 3, linked: 2, notFound: 1 });
+      assert.equal(calls.folderIndex.length, 1);
+      assert.equal(job('won').oneDriveFolderId, 'L1');
+      assert.equal(job('enq').oneDriveFolderId, 'Q1');
+      assert.equal(job('none').oneDriveFolderId, undefined);
+      assert.equal(job('has').oneDriveFolderId, 'KEEP');
+      await new Promise((r) => setImmediate(r));
+      assert.deepEqual(events.map((e) => [e.type, e.meta]), [['onedrive_folders_bulk_linked', { checked: 3, linked: 2, notFound: 1 }]]);
+    });
+
+    it('never links one folder to two jobs', async () => {
+      rows.push({ uuid: 'dup', site: 'z', quotes: [{ number: 900101, status: 'lost' }] });
+      fakeOneDrive({ folderIndex: index() });
+      const r = await lifecycle.linkAllFolders();
+      assert.equal(r.linked, 2);
+      assert.equal(rows.filter((x) => x.oneDriveFolderId === 'Q1').length, 1);
+    });
+
+    it('flashes what it did', async () => {
+      const run = async () => {
+        const flashes = [];
+        let to = null;
+        await ctrl.postLinkFolders({ flash: (t, m) => flashes.push([t, m]) }, { redirect: (u) => { to = u; } });
+        return { flashes, to };
+      };
+      fakeOneDrive({ folderIndex: index() });
+      assert.deepEqual(await run(), { flashes: [['success', 'Linked 2 of 2 jobs without a folder to their OneDrive folders.']], to: '/job-register' });
+      assert.deepEqual((await run()).flashes, [['success', 'Every job already has its OneDrive folder.']]);
+      rows.push({ uuid: 'none', site: 'x', quotes: [{ number: 900999, status: 'quoted' }] });
+      assert.deepEqual((await run()).flashes, [['success', 'Linked 0 of 1 job without a folder to their OneDrive folders. 1 had no folder in OneDrive; Sync folder on the job page makes one.']]);
+      fakeOneDrive({ folderIndex: { skipped: 'not configured' } });
+      assert.match((await run()).flashes[0][1], /switched off or not set up/);
+      fakeOneDrive({ folderIndex: new Error('Graph is down') });
+      assert.deepEqual((await run()).flashes, [['error', "The OneDrive folders couldn't be linked: Graph is down"]]);
+    });
+  });
+
+  it('the job page links the folder with Sync folder, or offers Find folder', async () => {
     const view = path.join(root, 'mongoose/views/tailwindcss/jobRegister/show.ejs');
     const j = won();
     const locals = (over) => ({
@@ -591,7 +718,8 @@ describe('OneDrive folders on quote, win and completion', () => {
     });
     const linked = await ejs.renderFile(view, locals({ job: { ...j, oneDriveFolderId: 'F1', oneDriveFolderUrl: 'https://example.test/F1', oneDriveFolderPath: 'Jobs/800201' }, oneDriveOn: true }));
     assert.match(linked, /<a href="https:\/\/example\.test\/F1" target="_blank" rel="noopener"[^>]*>.*OneDrive folder<\/a>/);
-    assert.doesNotMatch(linked, /onedrive-folder"/);
+    assert.match(linked, /action="\/job-register\/won\/onedrive-folder"/);
+    assert.match(linked, /Sync folder/);
     const find = await ejs.renderFile(view, locals({ oneDriveOn: true }));
     assert.match(find, /action="\/job-register\/won\/onedrive-folder"/);
     assert.match(find, /Find folder/);

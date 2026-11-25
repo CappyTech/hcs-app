@@ -14,7 +14,14 @@
  * says what went wrong, or return `{ skipped: 'not configured' }` without
  * calling anything when the feature is off or incomplete.
  *
- * Every change it makes in OneDrive (a folder created or moved) and every
+ * syncJobFolder puts a folder wherever the job's stage says it should be
+ * (back to quotes or live jobs, into a Cancelled folder, renamed after the
+ * site or number changed), and folderIndex reads every job folder at once so
+ * a whole register can be linked in a few calls.
+ *
+ * Throttling (429) and passing Graph faults are retried (see graph()).
+ *
+ * Every change it makes in OneDrive (a folder created, moved or renamed) and every
  * Test connection is a security event (auditLogService, Admin → Security
  * events), attributed to the user whose request did it.
  *
@@ -34,6 +41,7 @@ export const DEFAULTS = Object.freeze({
   quotes: '3. QUOTES {year}',
   live: '1.1 LIVE JOBS {year}',
   completed: 'Completed Jobs',
+  cancelled: 'Cancelled',
 });
 
 // ── Settings ────────────────────────────────────────────────────────────────
@@ -55,6 +63,7 @@ export function settings() {
     quotes: str('ONEDRIVE_QUOTES_FOLDER', DEFAULTS.quotes),
     live: str('ONEDRIVE_LIVE_FOLDER', DEFAULTS.live),
     completed: str('ONEDRIVE_COMPLETED_FOLDER', DEFAULTS.completed),
+    cancelled: str('ONEDRIVE_CANCELLED_FOLDER', DEFAULTS.cancelled),
   };
 }
 
@@ -106,6 +115,7 @@ export function yearOf(date) {
 
 /** "3. QUOTES {year}" + a date in 2026 → "3. QUOTES 2026". A number is taken as the year itself. */
 export function yearFolder(pattern, date) {
+  if (!String(pattern).includes('{year}')) return cleanName(pattern);
   const year = typeof date === 'number' && date > 1900 && date < 3000 ? date : yearOf(date);
   return cleanName(String(pattern).replaceAll('{year}', String(year)));
 }
@@ -211,30 +221,80 @@ export async function getToken(s = settings()) {
   return _token.value;
 }
 
+// Graph throttles (429) and has the odd bad moment (502/503/504, a dropped
+// connection). Those are tried again, up to MAX_RETRIES times, waiting as long
+// as Graph's Retry-After says (capped), else 1s, 2s, 4s. Retrying is safe:
+// a create uses conflictBehavior "fail", so a repeat of one that did land
+// comes back as 409 (already there), and a move to the same place is a no-op.
+const RETRY_STATUSES = new Set([429, 502, 503, 504]);
+const MAX_RETRIES = 3;
+const MAX_WAIT_MS = 30_000;
+
+let _sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Tests replace the wait between retries (null puts the real one back). */
+export function setSleepForTests(fn) {
+  _sleep = fn || ((ms) => new Promise((r) => setTimeout(r, ms)));
+}
+
+/** How long to wait before retry number `attempt` (0-based), from Retry-After (seconds or a date) if given. */
+export function retryDelay(retryAfter, attempt) {
+  const backoff = 1000 * 2 ** attempt;
+  if (retryAfter === null || retryAfter === undefined || retryAfter === '') return backoff;
+  const secs = Number(retryAfter);
+  let ms = Number.isFinite(secs) ? secs * 1000 : Date.parse(retryAfter) - Date.now();
+  if (!Number.isFinite(ms)) return backoff;
+  return Math.min(Math.max(ms, 0), MAX_WAIT_MS);
+}
+
 async function graph(s, method, url, body, what) {
-  const token = await getToken(s);
-  let resp;
-  try {
-    resp = await fetch(url, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(20_000),
-    });
-  } catch (err) {
-    throw new OneDriveError(`OneDrive: ${what} failed: ${err.message}`);
+  let refreshed = false;
+  for (let attempt = 0; ; attempt += 1) {
+    const token = await getToken(s);
+    let resp;
+    try {
+      resp = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(20_000),
+      });
+    } catch (err) {
+      if (attempt < MAX_RETRIES) {
+        logger.warn(`[oneDrive] ${what}: ${err.message}; trying again`);
+        await _sleep(retryDelay(null, attempt));
+        continue;
+      }
+      throw new OneDriveError(`OneDrive: ${what} failed: ${err.message}`);
+    }
+    if (RETRY_STATUSES.has(resp.status) && attempt < MAX_RETRIES) {
+      const wait = retryDelay(resp.headers?.get?.('Retry-After'), attempt);
+      logger.warn(`[oneDrive] ${what}: HTTP ${resp.status}; trying again in ${Math.round(wait / 1000)}s`);
+      await resp.body?.cancel?.().catch(() => {});
+      await _sleep(wait);
+      continue;
+    }
+    // A token Graph no longer accepts (revoked, or the secret changed under
+    // it): fetch a new one and try once more.
+    if (resp.status === 401 && !refreshed) {
+      refreshed = true;
+      attempt -= 1;
+      resetToken();
+      await resp.body?.cancel?.().catch(() => {});
+      continue;
+    }
+    const data = resp.status === 204 ? {} : await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const code = data?.error?.code || null;
+      const msg = data?.error?.message || resp.statusText || 'no detail';
+      throw new OneDriveError(`OneDrive: ${what} failed (HTTP ${resp.status}${code ? ` ${code}` : ''}): ${msg}`, { status: resp.status, code });
+    }
+    return data;
   }
-  const data = resp.status === 204 ? {} : await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    const code = data?.error?.code || null;
-    const msg = data?.error?.message || resp.statusText || 'no detail';
-    throw new OneDriveError(`OneDrive: ${what} failed (HTTP ${resp.status}${code ? ` ${code}` : ''}): ${msg}`, { status: resp.status, code });
-  }
-  return data;
 }
 
 // A 404 for the item itself means "not there"; any other 404 (e.g. no such
@@ -419,10 +479,12 @@ export async function moveToLive({ quoteNumber, projectNumber, site, quoteDate, 
 }
 
 /**
- * Move a job's folder into the Completed Jobs folder inside the live jobs
- * folder it is in (created if missing). The name is unchanged. Found by
- * `folderId` when given, else by its "<job no> " prefix in the won year's live
- * jobs folder, then the year before and after. Throws when there is no folder.
+ * Move a job's folder into the Completed Jobs folder of the live jobs folder
+ * it is in (created if missing). The name is unchanged. Found by `folderId`
+ * when given, else by its "<job no> " prefix in the won year's live jobs
+ * folder, then the year before and after. A folder that isn't in a live jobs
+ * folder (still in quotes, or in Cancelled) goes to the won year's. Throws
+ * when there is no folder.
  */
 export async function moveToCompleted({ projectNumber, site, wonDate, folderId } = {}) {
   const s = settings();
@@ -431,13 +493,7 @@ export async function moveToCompleted({ projectNumber, site, wonDate, folderId }
   if (!number) throw new Error('OneDrive: a job number is needed to find the job folder.');
 
   let found = null;
-  if (folderId) {
-    const item = await getItemById(s, folderId);
-    if (item) {
-      const parentPath = parentPathOf(item);
-      if (parentPath !== null) found = { item, path: joinPath(parentPath, item.name), parentPath };
-    }
-  }
+  if (folderId) found = await byId(s, folderId);
   if (!found) {
     await requireRoot(s);
     const baseYear = yearOf(wonDate ?? new Date());
@@ -453,12 +509,15 @@ export async function moveToCompleted({ projectNumber, site, wonDate, folderId }
     throw new OneDriveError(`OneDrive: no folder for job ${number}${site ? ` (${siteForFolder(site)})` : ''} was found in "${where}" or the years either side.`, { status: 404, code: 'itemNotFound' });
   }
 
-  if (lastSegment(found.parentPath) === s.completed) {
+  const at = locate(s, found.parentPath);
+  if (at.kind === 'live' && at.sub === 'completed') {
     logger.info(`[oneDrive] job ${number}: already in "${found.path}"`);
     return result(found.item, found.path, { moved: false, note: 'Already in Completed Jobs.' });
   }
 
-  const completed = await ensureFolder(s, found.parentPath, s.completed);
+  const livePath = at.kind === 'live' ? at.yearPath : joinPath(s.root, yearFolder(s.live, wonDate ?? new Date()));
+  if (at.kind !== 'live') await ensureFolder(s, s.root, lastSegment(livePath));
+  const completed = await ensureFolder(s, livePath, s.completed);
   const moved = await moveItem(s, found.item.id, completed.item.id);
   const path = joinPath(completed.path, moved.name || found.item.name);
   logger.info(`[oneDrive] job ${number}: moved "${found.path}" to "${path}"`);
@@ -466,10 +525,127 @@ export async function moveToCompleted({ projectNumber, site, wonDate, folderId }
   return result({ ...found.item, ...moved }, path, { moved: true, from: found.path });
 }
 
+// ── Where a folder is, and where it should be ───────────────────────────────
+
+/** The item with an id and where it is, or null (gone, or not in this drive's tree). */
+async function byId(s, id) {
+  const item = await getItemById(s, id);
+  if (!item) return null;
+  const parentPath = parentPathOf(item);
+  if (parentPath === null) return null;
+  return { item, path: joinPath(parentPath, item.name), parentPath };
+}
+
+/** A year folder pattern ("3. QUOTES {year}") as a regex whose group 1 is the year. */
+export function patternRegex(pattern) {
+  const esc = (p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${cleanName(pattern).split('{year}').map(esc).join('(\\d{4})')}$`, 'i');
+}
+
+const same = (a, b) => String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase();
+
 /**
- * Find a job's folder without knowing its year: by job number in the live
- * jobs folders (and their Completed Jobs), newest year first, then by quote
- * number in the quotes folders. Null when there is none.
+ * Where a parent path sits in the folder structure:
+ *   { kind: 'quotes' | 'live', year, yearPath, sub: null | 'completed' | 'cancelled' }
+ * or { kind: null } for anywhere else (outside the top folder, an unknown
+ * folder, deeper down). Pure, given the settings.
+ */
+export function locate(s, parentPath) {
+  const none = { kind: null, year: null, yearPath: null, sub: null };
+  const root = joinPath(s.root);
+  const p = joinPath(parentPath);
+  if (!p || !(same(p, root) || p.toLowerCase().startsWith(`${root.toLowerCase()}/`))) return none;
+  const rest = p.slice(root.length).split('/').filter(Boolean);
+  if (rest.length < 1 || rest.length > 2) return none;
+  const [yearName, subName] = rest;
+  let kind = null;
+  let m = patternRegex(s.live).exec(yearName);
+  if (m) kind = 'live';
+  else if ((m = patternRegex(s.quotes).exec(yearName))) kind = 'quotes';
+  if (!kind) return none;
+  let sub = null;
+  if (subName !== undefined) {
+    if (same(subName, s.cancelled)) sub = 'cancelled';
+    else if (kind === 'live' && same(subName, s.completed)) sub = 'completed';
+    else return none;
+  }
+  const year = m[1] ? Number(m[1]) : null;
+  return { kind, year, yearPath: joinPath(s.root, yearName), sub };
+}
+
+/** Which folder a job's stage puts its folder in. */
+export const STAGE_PLACE = Object.freeze({
+  toQuote: 'quotes', quoted: 'quotes', won: 'live', completed: 'completed', invoiced: 'completed', cancelled: 'cancelled',
+});
+
+/**
+ * Where a job's folder should be, given where it is now (`at`, from locate):
+ * `{ kind, year, sub, number }`, or `{ wait: why }` when it can't be said yet.
+ * A folder already in the right kind of year folder keeps its year; one
+ * moving to another kind takes the year of the quote date (quotes) or the won
+ * date (live jobs). A cancelled job stays in the year folder it's in. Pure.
+ */
+export function placeFor({ stage, quoteNumber, projectNumber, quoteDate, wonDate }, at = { kind: null }, now = new Date()) {
+  const place = STAGE_PLACE[stage];
+  if (!place) return { wait: `"${stage}" is not a stage the folders know.` };
+  const hasQuote = Boolean(cleanName(quoteNumber));
+  const hasJob = Boolean(cleanName(projectNumber));
+  if (place === 'quotes') {
+    if (!hasQuote) return { wait: 'The job has no quote number to name its folder.' };
+    return { kind: 'quotes', sub: null, year: at.kind === 'quotes' ? at.year : yearOf(quoteDate ?? now), number: quoteNumber };
+  }
+  if (place === 'live' || place === 'completed') {
+    if (!hasJob) return { wait: 'The job has no project number yet.' };
+    return { kind: 'live', sub: place === 'completed' ? 'completed' : null, year: at.kind === 'live' ? at.year : yearOf(wonDate ?? now), number: projectNumber };
+  }
+  // Cancelled: in the year folder it's in, or (outside the structure) the
+  // one it would be in if it were live.
+  const number = hasJob ? projectNumber : quoteNumber;
+  if (!cleanName(number)) return { wait: 'The job has no number to name its folder.' };
+  if (at.kind) return { kind: at.kind, sub: 'cancelled', year: at.year, number };
+  return hasJob
+    ? { kind: 'live', sub: 'cancelled', year: yearOf(wonDate ?? now), number }
+    : { kind: 'quotes', sub: 'cancelled', year: yearOf(quoteDate ?? now), number };
+}
+
+/** The year folders under the top folder whose names fit a pattern, newest first. */
+function yearFoldersFor(s, yearFolders, pattern) {
+  const re = patternRegex(pattern);
+  return yearFolders
+    .map((f) => ({ f, m: re.exec(f.name) }))
+    .filter((x) => x.m)
+    .sort((a, b) => Number(b.m[1] || 0) - Number(a.m[1] || 0))
+    .map((x) => joinPath(s.root, x.f.name));
+}
+
+/**
+ * A job's folder by its numbers, without knowing its year: by job number in
+ * the live jobs folders (and their Completed Jobs and Cancelled), newest year
+ * first, then by quote number in the quotes folders (and their Cancelled).
+ */
+async function searchJobFolder(s, { quoteNumber, projectNumber }) {
+  const yearFolders = await listFolders(s, s.root);
+  if (cleanName(projectNumber)) {
+    for (const livePath of yearFoldersFor(s, yearFolders, s.live)) {
+      const hit = await findByPrefix(s, livePath, projectNumber)
+        || await findByPrefix(s, joinPath(livePath, s.completed), projectNumber)
+        || await findByPrefix(s, joinPath(livePath, s.cancelled), projectNumber);
+      if (hit) return hit;
+    }
+  }
+  if (cleanName(quoteNumber)) {
+    for (const quotesPath of yearFoldersFor(s, yearFolders, s.quotes)) {
+      const hit = await findByPrefix(s, quotesPath, quoteNumber)
+        || await findByPrefix(s, joinPath(quotesPath, s.cancelled), quoteNumber);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+/**
+ * Find a job's folder without knowing its year (see searchJobFolder). Null
+ * when there is none.
  */
 export async function findJobFolder({ quoteNumber, projectNumber } = {}) {
   const s = settings();
@@ -478,30 +654,128 @@ export async function findJobFolder({ quoteNumber, projectNumber } = {}) {
     throw new Error('OneDrive: a quote or job number is needed to find a folder.');
   }
   await requireRoot(s);
-  const yearFolders = await listFolders(s, s.root);
-  const byPattern = (pattern) => {
-    const re = new RegExp(`^${cleanName(pattern).split('{year}').map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(\\d{4})')}$`, 'i');
-    return yearFolders
-      .map((f) => ({ f, m: re.exec(f.name) }))
-      .filter((x) => x.m)
-      .sort((a, b) => Number(b.m[1] || 0) - Number(a.m[1] || 0))
-      .map((x) => joinPath(s.root, x.f.name));
-  };
+  const hit = await searchJobFolder(s, { quoteNumber, projectNumber });
+  return hit ? result(hit.item, hit.path) : null;
+}
 
-  if (cleanName(projectNumber)) {
-    for (const livePath of byPattern(s.live)) {
-      const hit = await findByPrefix(s, livePath, projectNumber)
-        || await findByPrefix(s, joinPath(livePath, s.completed), projectNumber);
-      if (hit) return result(hit.item, hit.path);
-    }
+/** The year folder (and Completed Jobs / Cancelled inside it) a place names, created as needed. */
+async function ensurePlace(s, place) {
+  const pattern = place.kind === 'live' ? s.live : s.quotes;
+  const year = await ensureFolder(s, s.root, yearFolder(pattern, place.year));
+  if (!place.sub) return year;
+  return ensureFolder(s, year.path, place.sub === 'completed' ? s.completed : s.cancelled);
+}
+
+function placePath(s, place) {
+  const pattern = place.kind === 'live' ? s.live : s.quotes;
+  const sub = place.sub === 'completed' ? s.completed : place.sub === 'cancelled' ? s.cancelled : '';
+  return joinPath(s.root, yearFolder(pattern, place.year), sub);
+}
+
+/**
+ * Put a job's folder where its stage says it should be, and say where it is.
+ *
+ *   stage         the job's stage (jobRegisterService.stageOf)
+ *   folderId      the folder kept on the job, if any; else (or if it's gone)
+ *                 it is looked for by number, as Find folder does
+ *   rename        'always': the folder is named "<number> <site>" exactly;
+ *                 'number' (the default): only when it doesn't already start
+ *                 with the right number, so a name tidied by hand is kept
+ *   create        make the folder where it should be when there is none
+ *                 (never for a cancelled job)
+ *   step          what the move is recorded as in the security events
+ *
+ * Returns the folder with `moved`, `renamed`, `created` and `from`, plus a
+ * `note` when it couldn't be put anywhere yet; null when there is no folder
+ * (and none was made); { skipped } when OneDrive is off.
+ */
+export async function syncJobFolder({
+  stage, quoteNumber, projectNumber, site, quoteDate, wonDate, folderId, rename = 'number', create = true, step = 'sync',
+} = {}) {
+  const s = settings();
+  if (!isConfigured(s)) return { ...SKIPPED };
+  if (!cleanName(projectNumber) && !cleanName(quoteNumber) && !folderId) {
+    throw new Error('OneDrive: a quote or job number is needed to find a folder.');
   }
-  if (cleanName(quoteNumber)) {
-    for (const quotesPath of byPattern(s.quotes)) {
-      const hit = await findByPrefix(s, quotesPath, quoteNumber);
-      if (hit) return result(hit.item, hit.path);
-    }
+  const job = { stage, quoteNumber, projectNumber, quoteDate, wonDate };
+  await requireRoot(s);
+
+  let found = folderId ? await byId(s, folderId) : null;
+  if (!found && (cleanName(projectNumber) || cleanName(quoteNumber))) found = await searchJobFolder(s, { quoteNumber, projectNumber });
+
+  if (!found) {
+    if (!create || STAGE_PLACE[stage] === 'cancelled') return null;
+    const place = placeFor(job);
+    if (place.wait) return null;
+    const parent = await ensurePlace(s, place);
+    const { item, existed } = await createFolder(s, parent.path, folderName(place.number, site));
+    return result(item, joinPath(parent.path, item.name), { moved: false, renamed: false, created: !existed });
   }
-  return null;
+
+  const at = locate(s, found.parentPath);
+  const place = placeFor(job, at);
+  if (place.wait) {
+    return result(found.item, found.path, { moved: false, renamed: false, created: false, note: `Left where it is: ${place.wait}` });
+  }
+  const wantName = rename === 'always' || !hasPrefix(found.item.name, place.number)
+    ? folderName(place.number, site)
+    : found.item.name;
+  const wantParent = placePath(s, place);
+  const move = !same(wantParent, found.parentPath);
+  const renamed = wantName !== found.item.name;
+  if (!move && !renamed) return result(found.item, found.path, { moved: false, renamed: false, created: false });
+
+  const parentId = move ? (await ensurePlace(s, place)).item.id : found.item.parentReference?.id;
+  let moved;
+  if (parentId) {
+    moved = await moveItem(s, found.item.id, parentId, renamed ? wantName : undefined);
+  } else {
+    // No parent id from Graph (unusual): a rename in place needs no parent.
+    moved = await graph(s, 'PATCH', `${GRAPH}/users/${encodeURIComponent(s.owner)}/drive/items/${encodeURIComponent(found.item.id)}`, { name: wantName }, `renaming item ${found.item.id}`);
+  }
+  const path = joinPath(move ? wantParent : found.parentPath, moved.name || wantName);
+  const meta = { owner: s.owner, from: found.path, to: path, itemId: found.item.id, step };
+  if (move) {
+    logger.info(`[oneDrive] moved "${found.path}" to "${path}" (${step})`);
+    auditLog.record('onedrive_folder_moved', null, { meta });
+  } else {
+    logger.info(`[oneDrive] renamed "${found.path}" to "${path}" (${step})`);
+    auditLog.record('onedrive_folder_renamed', null, { meta });
+  }
+  return result({ ...found.item, ...moved }, path, { moved: move, renamed, created: false, from: found.path });
+}
+
+/** The number a folder name starts with ("41296 3 Centre Court" → "41296"), or null. */
+export function leadingNumber(name) {
+  const m = /^(\d+)(?:\s|$)/.exec(String(name ?? ''));
+  return m ? m[1] : null;
+}
+
+/**
+ * Every job folder in the structure, read once, for linking many jobs:
+ * `{ live: Map<job no, folder>, quotes: Map<quote no, folder> }`. Live holds
+ * the live jobs folders with their Completed Jobs and Cancelled; quotes the
+ * quotes folders with their Cancelled. Where a number is in two years the
+ * newest wins. Reads only.
+ */
+export async function folderIndex() {
+  const s = settings();
+  if (!isConfigured(s)) return { ...SKIPPED };
+  await requireRoot(s);
+  const yearFolders = await listFolders(s, s.root);
+  const read = async (paths) => {
+    const map = new Map();
+    for (const path of paths) {
+      for (const f of await listFolders(s, path)) {
+        const n = leadingNumber(f.name);
+        if (n && !map.has(n)) map.set(n, result(f, joinPath(path, f.name)));
+      }
+    }
+    return map;
+  };
+  const live = yearFoldersFor(s, yearFolders, s.live).flatMap((p) => [p, joinPath(p, s.completed), joinPath(p, s.cancelled)]);
+  const quotes = yearFoldersFor(s, yearFolders, s.quotes).flatMap((p) => [p, joinPath(p, s.cancelled)]);
+  return { live: await read(live), quotes: await read(quotes) };
 }
 
 /**
@@ -557,6 +831,15 @@ export default {
   moveToLive,
   moveToCompleted,
   findJobFolder,
+  syncJobFolder,
+  folderIndex,
+  locate,
+  placeFor,
+  patternRegex,
+  leadingNumber,
+  retryDelay,
+  setSleepForTests,
+  STAGE_PLACE,
   testConnection,
   OneDriveError,
 };
