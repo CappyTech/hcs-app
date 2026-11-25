@@ -30,6 +30,9 @@ export const KF_ELIGIBLE_MATCH = {
   excludedReason: null,
 };
 
+// What the Unlinked panel lists: KF-eligible docs with no KashFlow purchase ID
+export const UNLINKED_ELIGIBLE_MATCH = { kashflowPurchaseId: null, ...KF_ELIGIBLE_MATCH };
+
 // "manually added to kashflow" docs are already in KashFlow (entered by hand) so the app
 // will never send them — exclude from Never Sent only; they stay in Unlinked so
 // Match References / Resolve Numbers can still attach them to their purchase.
@@ -88,7 +91,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       ],
       // Unlinked, restricted to KF-eligible docs (drives the tile + panel)
       unlinkedEligible: [
-        { $match: { kashflowPurchaseId: null, ...KF_ELIGIBLE_MATCH } },
+        { $match: UNLINKED_ELIGIBLE_MATCH },
         { $count: 'n' },
       ],
       // Tagged 'added' in Paperless but no KashFlow purchase number recorded in MongoDB
@@ -112,6 +115,11 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
       // Unlinked but have a KashFlow purchase number — can be auto-resolved via number→ID lookup
       hasNumberNoId: [
         { $match: { kashflowPurchaseId: null, kashflowPurchaseNumber: { $ne: null }, deletedInPaperlessAt: null } },
+        { $count: 'n' },
+      ],
+      // Same, but only the KF-eligible docs the Unlinked panel lists (drives its "resolvable" note)
+      hasNumberNoIdEligible: [
+        { $match: { kashflowPurchaseNumber: { $ne: null }, ...UNLINKED_ELIGIBLE_MATCH } },
         { $count: 'n' },
       ],
       // Deleted in Paperless but still in MongoDB (flagged by the grab reconciliation pass)
@@ -165,6 +173,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
   const addedNoKfNumber = facetResult?.addedNoKf?.[0]?.n        ?? 0;
   const sentButUnlinked = facetResult?.sentButUnlinked?.[0]?.n  ?? 0;
   const hasNumberNoId   = facetResult?.hasNumberNoId?.[0]?.n    ?? 0;
+  const hasNumberNoIdEligible = facetResult?.hasNumberNoIdEligible?.[0]?.n ?? 0;
   const deletedInPaperless = facetResult?.deletedInPaperless?.[0]?.n ?? 0;
 
   // ── By document type ───────────────────────────────────────────────────────
@@ -208,7 +217,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     .lean();
 
   // ── Unlinked list (no KashFlow purchase ID, includes never sent; KF-eligible only) ──
-  const unlinkedDocsList = await OcrDocument.find({ kashflowPurchaseId: null, ...KF_ELIGIBLE_MATCH })
+  const unlinkedDocsList = await OcrDocument.find(UNLINKED_ELIGIBLE_MATCH)
     .sort({ added: -1 })
     .limit(DETAIL_LIMIT)
     .select('paperlessId title documentType added lastSentAt lastSendMode lastSendStatus kashflowPurchaseNumber')
@@ -312,6 +321,7 @@ async function getDocumentsOverview({ recentLimit = 15 } = {}) {
     driftedDocs,
     sentButUnlinked,
     hasNumberNoId,
+    hasNumberNoIdEligible,
     deletedInPaperless,
     deletedInPaperlessList,
     errorDocs,
