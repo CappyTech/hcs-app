@@ -491,12 +491,12 @@ const AUDIT_DOT = { state: 'bg-blue-500', entry: 'bg-green-500', read: 'bg-slate
                   <% } else { %>
                   <div class="text-xs text-gray-400" data-line-label>Line <%= i + 1 %></div>
                   <% } %>
-                  <input name="lines[<%= i %>][description]" value="<%= val(l.description) %>" placeholder="Description" aria-label="Line <%= i + 1 %> description" class="<%= inputCls(`lines.${i}.description`) %>" <%= disabled %>>
+                  <label class="block"><span class="block text-[11px] text-gray-400 mb-0.5">Description</span><input name="lines[<%= i %>][description]" value="<%= val(l.description) %>" placeholder="Description" aria-label="Line <%= i + 1 %> description" class="<%= inputCls(`lines.${i}.description`) %>" <%= disabled %>></label>
                   <div class="grid grid-cols-4 gap-2">
-                    <input name="lines[<%= i %>][quantity]" value="<%= val(l.quantity) %>" placeholder="Qty" inputmode="decimal" aria-label="Line <%= i + 1 %> quantity" class="<%= inputCls(`lines.${i}.quantity`) %>" <%= disabled %>>
-                    <input name="lines[<%= i %>][price]" value="<%= val(l.price) %>" placeholder="Price £" inputmode="decimal" aria-label="Line <%= i + 1 %> price" class="<%= inputCls(`lines.${i}.price`) %>" <%= disabled %>>
-                    <input name="lines[<%= i %>][total]" value="<%= val(l.total) %>" placeholder="Total £" inputmode="decimal" aria-label="Line <%= i + 1 %> total" class="<%= inputCls(`lines.${i}.total`) %>" <%= disabled %>>
-                    <input name="lines[<%= i %>][vatRate]" value="<%= val(l.vatRate) %>" placeholder="VAT %" inputmode="numeric" title="VAT rate in percent: 0, 5 or 20 (not the VAT amount)" aria-label="Line <%= i + 1 %> VAT %" class="<%= inputCls(`lines.${i}.vatRate`) %>" <%= disabled %>>
+                    <label class="block"><span class="block text-[11px] text-gray-400 mb-0.5">Qty</span><input name="lines[<%= i %>][quantity]" value="<%= val(l.quantity) %>" placeholder="Qty" inputmode="decimal" aria-label="Line <%= i + 1 %> quantity" class="<%= inputCls(`lines.${i}.quantity`) %>" <%= disabled %>></label>
+                    <label class="block"><span class="block text-[11px] text-gray-400 mb-0.5">Price £</span><input name="lines[<%= i %>][price]" value="<%= val(l.price) %>" placeholder="Price £" inputmode="decimal" aria-label="Line <%= i + 1 %> price" class="<%= inputCls(`lines.${i}.price`) %>" <%= disabled %>></label>
+                    <label class="block"><span class="block text-[11px] text-gray-400 mb-0.5">Total £</span><input name="lines[<%= i %>][total]" value="<%= val(l.total) %>" placeholder="Total £" inputmode="decimal" aria-label="Line <%= i + 1 %> total" class="<%= inputCls(`lines.${i}.total`) %>" <%= disabled %>></label>
+                    <label class="block"><span class="block text-[11px] text-gray-400 mb-0.5">VAT %</span><input name="lines[<%= i %>][vatRate]" value="<%= val(l.vatRate) %>" placeholder="VAT %" inputmode="numeric" title="VAT rate in percent: 0, 5 or 20 (not the VAT amount)" aria-label="Line <%= i + 1 %> VAT %" class="<%= inputCls(`lines.${i}.vatRate`) %>" <%= disabled %>></label>
                   </div>
                 </div>
               <% } %>

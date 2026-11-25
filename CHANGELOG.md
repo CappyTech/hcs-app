@@ -2,6 +2,11 @@
 
 All notable changes to hcs-app will be documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [6.148.10] - 2026-11-25
+
+### Changed
+- **Each box on an entry screen line has a small heading** (Description, Qty, Price £, Total £, VAT %), so the numbers can be told apart once they are filled in and the placeholders are gone. Lines added with Add line get them too.
+
 ## [6.148.9] - 2026-11-24
 
 ### Fixed
