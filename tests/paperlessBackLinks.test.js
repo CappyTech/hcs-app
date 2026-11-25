@@ -22,7 +22,7 @@ describe('Documents pages: back links', () => {
       'supplierReading.ejs': /href="\/paperless\/reading"[^>]*>← Reading accuracy/,
       'match.ejs': /href="\/paperless\/ocr\/<%= doc\.paperlessId %>"[^>]*>← Back to document/,
       'sendResult.ejs': /href="\/paperless\/ocr\/<%= paperlessId %>"[^>]*>← Back to document/,
-      'draft.ejs': /← All documents/,
+      'draft.ejs': /href="\/paperless\/queues<%= _queueBack \? `\/\$\{_queueBack\.key\}` : '' %>"[^>]*>← <%= _queueBack \? _queueBack\.label : 'Queues' %>/,
       'read.ejs': /← All documents/,
       'entry.ejs': /← <%= QUEUE_LABELS\[queueBack\] \|\| 'Queues' %>/,
     };
